@@ -851,7 +851,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << L"\n}\n";
 }
 
-void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) 
+void ComputationNetwork::PlotNetworkTopology(const wstring& outputFile) 
 {
     VerifyIsCompiled("PlotNetworkTopology");
     // ValidateNetwork(false, true);

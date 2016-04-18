@@ -4,15 +4,23 @@
 
 # cntkrun <CNTK config file name> <additional CNTK args> 
 cntkrun plot.cntk 
-echo "checking generated dot file against baseline dot file" 
-echo ""
+ExitCode=$?
+# if not finished properly, return the error code directly 
+if [ $ExitCode -ne 0 ]; then 
+    exit $ExitCode
+fi
+# exit code on windows is not reliable, so checking the output 
+if [ ! -e $TEST_RUN_DIR/cntkSpeech.dnn.dot ]; then 
+    exit 1
+fi 
+# cntkrun finishes, checking the content
+echo -e "\nchecking generated dot file against baseline dot file:\n"
 diff  $TEST_RUN_DIR/cntkSpeech.dnn.dot $TEST_DIR/cntkSpeech.dnn.dot > $TEST_RUN_DIR/diff.txt
+ExitCode=$?
 if [ $? -ne 0 ]; then 
-    echo ""
-    echo "dot file of DNN topology diffs:"
+    echo -e "\ndot file of DNN topology differs:\n"
     cat $TEST_RUN_DIR/diff.txt
 else
-    echo "dot file of DNN topology matches"
+    echo -e "\ndot file of DNN topology matches\n"
 fi
-ExitCode=$?
 exit $ExitCode

@@ -704,7 +704,7 @@ public:
     // pretty-printing, wstring version 
     operator std::wstring() const
     {
-        string s = this->operator std::string(); 
+        std::string s = this->operator std::string(); 
         return msra::strfun::utf16(s);
     }
 

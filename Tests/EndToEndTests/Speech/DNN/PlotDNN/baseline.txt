@@ -1,46 +1,46 @@
-=== Running /cygdrive/d/work/Program/Code/local-src/CNTK-public/CNTK-github/x64/release/cntk.exe configFile=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN/plot.cntk currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu DeviceId=-1 timestamping=true
+=== Running /cygdrive/d/work/Program/Code/local-src/CNTK-public/CNTK-github2/x64/debug/cntk.exe configFile=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN/plot.cntk currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 15 2016 17:10:01
-		Last modified date: Mon Apr 11 11:57:54 2016
-		Build type: Release
+		Built time: Apr 18 2016 11:43:50
+		Last modified date: Mon Apr 18 10:00:14 2016
+		Build type: Debug
 		Build target: GPU
 		With 1bit-SGD: yes
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
 		CUB_PATH: D:\work\Program\Code\src\CUB
 		CUDNN_PATH: D:\work\Program\Code\src\cuDNN\cuda
-		Build Branch: PlotFix
-		Build SHA1: 08f832370bcbe5eb9826781bbe227514f1684935 (modified)
+		Build Branch: erw/PlotFix
+		Build SHA1: 4e90a514120ae6033d9bfa88b3ba296bfae0d559 (modified)
 		Built by erw on 7253-Wang
-		Build Path: D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Source\CNTK\
+		Build Path: D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-04/15/2016 17:23:27: -------------------------------------------------------------------
-04/15/2016 17:23:27: Build info: 
+Changed current directory to D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+04/18/2016 12:15:03: -------------------------------------------------------------------
+04/18/2016 12:15:03: Build info: 
 
-04/15/2016 17:23:27: 		Built time: Apr 15 2016 17:10:01
-04/15/2016 17:23:27: 		Last modified date: Mon Apr 11 11:57:54 2016
-04/15/2016 17:23:27: 		Build type: Release
-04/15/2016 17:23:27: 		Build target: GPU
-04/15/2016 17:23:27: 		With 1bit-SGD: yes
-04/15/2016 17:23:27: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-04/15/2016 17:23:27: 		CUB_PATH: D:\work\Program\Code\src\CUB
-04/15/2016 17:23:27: 		CUDNN_PATH: D:\work\Program\Code\src\cuDNN\cuda
-04/15/2016 17:23:27: 		Build Branch: PlotFix
-04/15/2016 17:23:27: 		Build SHA1: 08f832370bcbe5eb9826781bbe227514f1684935 (modified)
-04/15/2016 17:23:27: 		Built by erw on 7253-Wang
-04/15/2016 17:23:27: 		Build Path: D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Source\CNTK\
-04/15/2016 17:23:27: -------------------------------------------------------------------
+04/18/2016 12:15:03: 		Built time: Apr 18 2016 11:43:50
+04/18/2016 12:15:03: 		Last modified date: Mon Apr 18 10:00:14 2016
+04/18/2016 12:15:03: 		Build type: Debug
+04/18/2016 12:15:03: 		Build target: GPU
+04/18/2016 12:15:03: 		With 1bit-SGD: yes
+04/18/2016 12:15:03: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+04/18/2016 12:15:03: 		CUB_PATH: D:\work\Program\Code\src\CUB
+04/18/2016 12:15:03: 		CUDNN_PATH: D:\work\Program\Code\src\cuDNN\cuda
+04/18/2016 12:15:03: 		Build Branch: erw/PlotFix
+04/18/2016 12:15:03: 		Build SHA1: 4e90a514120ae6033d9bfa88b3ba296bfae0d559 (modified)
+04/18/2016 12:15:03: 		Built by erw on 7253-Wang
+04/18/2016 12:15:03: 		Build Path: D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Source\CNTK\
+04/18/2016 12:15:03: -------------------------------------------------------------------
 
-04/15/2016 17:23:27: Running on 7253-Wang at 2016/04/15 17:23:27
-04/15/2016 17:23:27: Command line: 
-D:\work\Program\Code\local-src\CNTK-public\CNTK-github\x64\release\cntk.exe  configFile=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN/plot.cntk  currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu  DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data  ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN  OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu  DeviceId=-1  timestamping=true
+04/18/2016 12:15:03: Running on 7253-Wang at 2016/04/18 12:15:03
+04/18/2016 12:15:03: Command line: 
+D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\x64\debug\cntk.exe  configFile=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN/plot.cntk  currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu  DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data  ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN  OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu  DeviceId=0  timestamping=true
 
 
 
-04/15/2016 17:23:27: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/15/2016 17:23:27: precision = "float"
+04/18/2016 12:15:03: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/18/2016 12:15:03: precision = "float"
 command = speechTrain:plot
 deviceId = $DeviceId$
 speechTrain = [
@@ -126,24 +126,24 @@ plot=[
      modelPath="$RunDir$/models/cntkSpeech.dnn"
      outputdotFile="$RunDir$/cntkSpeech.dnn.dot"
 ]
-currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
-DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN
-OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
-DeviceId=-1
+currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
+DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN
+OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
+DeviceId=0
 timestamping=true
 
-04/15/2016 17:23:27: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+04/18/2016 12:15:03: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 17:23:27: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/15/2016 17:23:27: precision = "float"
+04/18/2016 12:15:03: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/18/2016 12:15:03: precision = "float"
 command = speechTrain:plot
-deviceId = -1
+deviceId = 0
 speechTrain = [
     action = "train"
-    modelPath = "C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
+    modelPath = "C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
     traceLevel = 1
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
@@ -211,8 +211,8 @@ speechTrain = [
             scpFile = "glob_0000.scp"
         ]
         labels = [
-            mlfFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
-            labelMappingFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/state.list"
+            mlfFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
+            labelMappingFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/state.list"
             labelDim = 132
             labelType = "category"
         ]
@@ -220,38 +220,38 @@ speechTrain = [
 ]
 plot=[
      action=plot
-     modelPath="C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn"
-     outputdotFile="C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/cntkSpeech.dnn.dot"
+     modelPath="C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn"
+     outputdotFile="C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/cntkSpeech.dnn.dot"
 ]
-currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
-DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN
-OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
-DeviceId=-1
+currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
+DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN
+OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
+DeviceId=0
 timestamping=true
 
-04/15/2016 17:23:27: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/18/2016 12:15:03: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 17:23:27: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/18/2016 12:15:03: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: plot.cntk:command=speechTrain:plot
-configparameters: plot.cntk:ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\DNN\PlotDNN
-configparameters: plot.cntk:currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-configparameters: plot.cntk:DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data
-configparameters: plot.cntk:deviceId=-1
-configparameters: plot.cntk:OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
+configparameters: plot.cntk:ConfigDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\DNN\PlotDNN
+configparameters: plot.cntk:currentDirectory=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+configparameters: plot.cntk:DataDir=D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data
+configparameters: plot.cntk:deviceId=0
+configparameters: plot.cntk:OutputDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
 configparameters: plot.cntk:plot=[
      action=plot
-     modelPath="C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn"
-     outputdotFile="C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/cntkSpeech.dnn.dot"
+     modelPath="C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn"
+     outputdotFile="C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/cntkSpeech.dnn.dot"
 ]
 
 configparameters: plot.cntk:precision=float
-configparameters: plot.cntk:RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu
+configparameters: plot.cntk:RunDir=C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu
 configparameters: plot.cntk:speechTrain=[
     action = "train"
-    modelPath = "C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
+    modelPath = "C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
     traceLevel = 1
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
@@ -319,8 +319,8 @@ configparameters: plot.cntk:speechTrain=[
             scpFile = "glob_0000.scp"
         ]
         labels = [
-            mlfFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
-            labelMappingFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/state.list"
+            mlfFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
+            labelMappingFile = "D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/state.list"
             labelDim = 132
             labelType = "category"
         ]
@@ -328,29 +328,30 @@ configparameters: plot.cntk:speechTrain=[
 ]
 
 configparameters: plot.cntk:timestamping=true
-04/15/2016 17:23:27: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/15/2016 17:23:27: Commands: speechTrain plot
-04/15/2016 17:23:27: Precision = "float"
-04/15/2016 17:23:27: CNTKModelPath: C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn
-04/15/2016 17:23:27: CNTKCommandTrainInfo: speechTrain : 1
-04/15/2016 17:23:27: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+04/18/2016 12:15:03: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/18/2016 12:15:03: Commands: speechTrain plot
+04/18/2016 12:15:03: Precision = "float"
+04/18/2016 12:15:03: CNTKModelPath: C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn
+04/18/2016 12:15:03: CNTKCommandTrainInfo: speechTrain : 1
+04/18/2016 12:15:03: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
 
-04/15/2016 17:23:27: ##############################################################################
-04/15/2016 17:23:27: #                                                                            #
-04/15/2016 17:23:27: # Action "train"                                                             #
-04/15/2016 17:23:27: #                                                                            #
-04/15/2016 17:23:27: ##############################################################################
+04/18/2016 12:15:03: ##############################################################################
+04/18/2016 12:15:03: #                                                                            #
+04/18/2016 12:15:03: # Action "train"                                                             #
+04/18/2016 12:15:03: #                                                                            #
+04/18/2016 12:15:03: ##############################################################################
 
-04/15/2016 17:23:27: CNTKCommandTrainBegin: speechTrain
-SimpleNetworkBuilder Using CPU
+04/18/2016 12:15:03: CNTKCommandTrainBegin: speechTrain
+SimpleNetworkBuilder Using GPU 0
 reading script file glob_0000.scp ... 948 entries
-total 132 state names in state list D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/state.list
-htkmlfreader: reading MLF file D:\work\Program\Code\local-src\CNTK-public\CNTK-github\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file D:\work\Program\Code\local-src\CNTK-public\CNTK-github2\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 
-04/15/2016 17:23:27: Creating virgin network.
+04/18/2016 12:15:05: Creating virgin network.
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
 
@@ -402,46 +403,46 @@ Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [132 x 1 x *], 
 
 Post-processing network complete.
 
-04/15/2016 17:23:27: Created model with 25 nodes on CPU.
+04/18/2016 12:15:24: Created model with 25 nodes on GPU 0.
 
-04/15/2016 17:23:27: Training criterion node(s):
-04/15/2016 17:23:27: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+04/18/2016 12:15:24: Training criterion node(s):
+04/18/2016 12:15:24: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 
-04/15/2016 17:23:27: Evaluation criterion node(s):
+04/18/2016 12:15:24: Evaluation criterion node(s):
 
-04/15/2016 17:23:27: 	EvalErrorPrediction = ErrorPrediction
+04/18/2016 12:15:24: 	EvalErrorPrediction = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
 
-04/15/2016 17:23:27: Precomputing --> 3 PreCompute nodes found.
+04/18/2016 12:15:24: Precomputing --> 3 PreCompute nodes found.
 
-04/15/2016 17:23:27: 	MeanOfFeatures = Mean()
-04/15/2016 17:23:27: 	InvStdOfFeatures = InvStdDev()
-04/15/2016 17:23:27: 	Prior = Mean()
+04/18/2016 12:15:24: 	MeanOfFeatures = Mean()
+04/18/2016 12:15:24: 	InvStdOfFeatures = InvStdDev()
+04/18/2016 12:15:24: 	Prior = Mean()
 minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-04/15/2016 17:23:28: Precomputing --> Completed.
+04/18/2016 12:15:42: Precomputing --> Completed.
 
 
-04/15/2016 17:23:28: Starting Epoch 1: learning rate per sample = 0.003906  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+04/18/2016 12:15:42: Starting Epoch 1: learning rate per sample = 0.003906  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 0: frames [0..4096] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-04/15/2016 17:23:28: Starting minibatch loop.
-04/15/2016 17:23:29:  Epoch[ 1 of 1]-Minibatch[   1-  10, 62.50%]: SamplesSeen = 2560; TrainLossPerSample =  4.34469833; EvalErr[0]PerSample = 0.90039063; TotalTime = 0.2874s; SamplesPerSecond = 8906.9
-04/15/2016 17:23:29: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 4.2428951; TotalSamplesSeen = 4096; EvalErrPerSample = 0.89892578; AvgLearningRatePerSample = 0.00390625; EpochTime=0.45421
-04/15/2016 17:23:29: SGD: Saving checkpoint model 'C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/models/cntkSpeech.dnn'
-04/15/2016 17:23:29: CNTKCommandTrainEnd: speechTrain
+04/18/2016 12:15:42: Starting minibatch loop.
+04/18/2016 12:15:42:  Epoch[ 1 of 1]-Minibatch[   1-  10, 62.50%]: SamplesSeen = 2560; TrainLossPerSample =  4.31999168; EvalErr[0]PerSample = 0.90117187; TotalTime = 0.3796s; SamplesPerSecond = 6744.2
+04/18/2016 12:15:43: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 4.2283239; TotalSamplesSeen = 4096; EvalErrPerSample = 0.89477539; AvgLearningRatePerSample = 0.00390625; EpochTime=0.591265
+04/18/2016 12:15:43: SGD: Saving checkpoint model 'C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn'
+04/18/2016 12:15:43: CNTKCommandTrainEnd: speechTrain
 
-04/15/2016 17:23:29: Action "train" complete.
+04/18/2016 12:15:43: Action "train" complete.
 
 
-04/15/2016 17:23:29: ##############################################################################
-04/15/2016 17:23:29: #                                                                            #
-04/15/2016 17:23:29: # Action "plot"                                                              #
-04/15/2016 17:23:29: #                                                                            #
-04/15/2016 17:23:29: ##############################################################################
+04/18/2016 12:15:43: ##############################################################################
+04/18/2016 12:15:43: #                                                                            #
+04/18/2016 12:15:43: # Action "plot"                                                              #
+04/18/2016 12:15:43: #                                                                            #
+04/18/2016 12:15:43: ##############################################################################
 
 
 Post-processing network...
@@ -494,10 +495,14 @@ Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [132 x 1 x *], 
 
 Post-processing network complete.
 
-Created network description in dot format: C:\Users\erw\AppData\Local\Temp\cntk-test-20160415172325.866640\Speech\DNN_PlotDNN@release_cpu/cntkSpeech.dnn.dot
+Created network description in dot format: C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/cntkSpeech.dnn.dot
 Done.
 
-04/15/2016 17:23:29: Action "plot" complete.
+04/18/2016 12:15:43: Action "plot" complete.
 
-04/15/2016 17:23:29: __COMPLETED__
+04/18/2016 12:15:43: __COMPLETED__
+
+checking generated dot file against baseline dot file:
+
+
 dot file of DNN topology matches

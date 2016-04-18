@@ -5,7 +5,6 @@ tags:
      # running unconditionally on every Nightly job in 'S' leg
      - nightly-s (build_sku == 'gpu')
 
-    
 testCases:
     CNTK Run must be completed:
         patterns:

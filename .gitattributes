@@ -75,6 +75,9 @@ mean.363 text
 var.363 text
 prior.132 text
 
+# dot (graph description language) file 
+*.dot text 
+
 # AMI-specific
 Results text
 40fbank.conf text
