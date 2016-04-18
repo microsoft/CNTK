@@ -337,7 +337,7 @@ void PrintBuiltInfo()
     LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _WITH_ASGD_
-    fprintf(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+    LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
 #endif
 #ifdef _MATHLIB_
     LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
