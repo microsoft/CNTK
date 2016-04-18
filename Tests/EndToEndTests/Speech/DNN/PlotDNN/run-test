@@ -17,7 +17,7 @@ fi
 echo -e "\nchecking generated dot file against baseline dot file:\n"
 diff  $TEST_RUN_DIR/cntkSpeech.dnn.dot $TEST_DIR/cntkSpeech.dnn.dot > $TEST_RUN_DIR/diff.txt
 ExitCode=$?
-if [ $? -ne 0 ]; then 
+if [ $ExitCode -ne 0 ]; then 
     echo -e "\ndot file of DNN topology differs:\n"
     cat $TEST_RUN_DIR/diff.txt
 else
