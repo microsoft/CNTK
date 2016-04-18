@@ -474,22 +474,20 @@ RNNs =
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
     # TODO: remove the -2 once this works
     RecurrentLSTMP = RecurrentLSTMP2
-    RecurrentLSTMP2 (inputDim1, outputDim, cellDim1, x, previousHook=PreviousHC, enableSelfStabilization=false) =
+    RecurrentLSTMP2 (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
         prevState = previousHook (lstmState)
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // we return the state record (h,c)
 
     # a stack of recurrent LSTMs (unidirectional)
     RecurrentLSTMPStack = RecurrentLSTMP2Stack  # TODO: remove the -2 name once this works
-    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, previousHook=PreviousHC, enableSelfStabilization=false) = [
-        previousHook1 = previousHook
-        useStabilizer = enableSelfStabilization
+    RecurrentLSTMP2Stack (hiddenDims, cellDims=hiddenDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
+        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (hiddenDims)-1] =
-            RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
-                             hiddenDims[i], cellDims[i],
-                             if i == 0 then input else layers[i-1].h,
+            RecurrentLSTMP2 (hiddenDims[i], cellDim=cellDims[i],
+                             if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else hiddenDims[i-1] /*TODO: layers[i-1].dim*/,
                              previousHook=previousHook1,
                              enableSelfStabilization=useStabilizer)
     ].layers

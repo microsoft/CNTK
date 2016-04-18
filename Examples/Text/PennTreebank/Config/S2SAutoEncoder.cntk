@@ -191,30 +191,32 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ].lstmState // that's the value we return
 
     # encoder (processes inputEmbedded)
-    encoderOutputLayer = Length (encoderDims)-1
     encoder =
         if useBidirectionalEncoder
         then
         [
-            forwardEncoder  = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
+            encoderOutputLayer = Length (encoderDims)-1
+            forwardEncoder  = BS.RNNs.RecurrentLSTMP2Stack (encoderDims, /*cellDims=encoderDims,*/ inputEmbedded, inputDim=embeddingDim, enableSelfStabilization=useStabilizer)
             NextHC (lstmState) = [
                h = Loop.Next (lstmState.h)             // hidden state(t-1)
                c = Loop.Next (lstmState.c)             // cell(t-1)
             ]
-            backwardEncoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, previousHook=NextHC, enableSelfStabilization=useStabilizer)
+            backwardEncoder = BS.RNNs.RecurrentLSTMP2Stack (encoderDims, /*encoderDims,*/ inputEmbedded, inputDim=embeddingDim, previousHook=NextHC, enableSelfStabilization=useStabilizer)
             output = [
                 h = RowStack (forwardEncoder[encoderOutputLayer].h : backwardEncoder[encoderOutputLayer].h)
                 c = RowStack (forwardEncoder[encoderOutputLayer].c : backwardEncoder[encoderOutputLayer].c)
+                dim = 2 * encoderDims[encoderOutputLayer]
             ]
-            dim = 2 * encoderDims[encoderOutputLayer]
+            #dim = 2 * encoderDims[encoderOutputLayer]
         ]
         else
         [
+            encoderOutputLayer = Length (encoderDims)-1
             encoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
             output = encoder[encoderOutputLayer]
-            dim = encoderDims[encoderOutputLayer]
+            #dim = encoderDims[encoderOutputLayer]
         ]
-    encoderOutput = encoder.output
+    encoderOutput = encoder.output # TODO: remove .output indirection, no longer needed
 
     # that last frame should be fed as an additional input to every decoder step
     # Three ways of passing encoder state:
@@ -225,7 +227,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     thoughtVector = [
         h = Last (encoderOutput.h)
         c = Last (encoderOutput.c)
-        dim = encoder.dim
+        dim = encoder.output.dim
     ]
     thoughtVectorDim = thoughtVector.dim
 
@@ -298,8 +300,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
         if i == 0
-        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP2 (thoughtVectorDim + decoderInputDim, decoderDims[i], decoderDims[i],
-                                                                        RowStack (thoughtVectorEverywhere : decoderInput),
+        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
+                                                                        RowStack (thoughtVectorEverywhere : decoderInput), inputDim=thoughtVectorDim + decoderInputDim,
                                                                         previousHook=PreviousHCWithReorderingHook,
                                                                         enableSelfStabilization=useStabilizer)
              else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (/*thoughtVectorDim + //<-BUGBUG*/ decoderInputDim, decoderDims[i], decoderDims[i],
@@ -307,12 +309,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                                                                               projectedAttentionWindowBroadcast, attentionDim, attentionSpan,
                                                                                               previousHook=PreviousHCWithReorderingHook,
                                                                                               enableSelfStabilization=useStabilizer)
-             else BS.RNNs.RecurrentLSTMP2 (decoderInputDim, decoderDims[i], decoderDims[i],
-                                           decoderInput,
+             else BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
+                                           decoderInput, inputDim=decoderInputDim,
                                            previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state
                                            enableSelfStabilization=useStabilizer)
-        else BS.RNNs.RecurrentLSTMP2 (decoderDims[i-1], decoderDims[i], decoderDims[i],
-                                      decoder[i-1].h,
+        else BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
+                                      decoder[i-1].h, inputDim=decoderDims[i-1] /*TODO: decoder[i-1].dim*/,
                                       previousHook=PreviousHCWithReorderingHook,
                                       enableSelfStabilization=useStabilizer)
     decoderOutput = decoder[decoderOutputLayer].h
