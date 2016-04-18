@@ -49,15 +49,14 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto input = Input(0)->ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
+        auto input  = Input(0)->ValueTensorFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        assert(inputIndex == 0);
-        inputIndex;
+        assert(inputIndex == 0), inputIndex;
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();

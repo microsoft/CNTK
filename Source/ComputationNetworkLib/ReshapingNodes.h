@@ -171,6 +171,54 @@ template class ReshapeNode<float>;
 template class ReshapeNode<double>;
 
 // -----------------------------------------------------------------------
+// ReduceElements (op, axis=, input)
+// Reduces (e.g. sums up) all elements in each sample (column) of the input.
+// The optional axis can be 0 (meaning all elements) or a specific axis.
+// Allowed operations:
+//  - "Plus"
+//  - "LogPlus"   --not implemented yet
+//  - "Mean"      --not implemented yet
+//  - "Max"       --not implemented yet
+//  - "Min"       --not implemented yet
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ReduceElements"; }
+
+    void ValidateOp();
+public:
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = 0) :
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_op((ElementWiseOperator)-1/*invalid*/)
+    {
+        if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
+            ValidateOp();
+    }
+
+    ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp) :
+        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), configp->Get(L"axis"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNodeBase::*/ CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+    virtual void /*ComputationNodeBase::*/ Load(File& fstream, size_t modelVersion) override;
+    virtual void /*ComputationNodeBase::*/ Save(File& fstream) const override;
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
+    virtual bool /*ComputationNodeBase::*/ OutputUsedInComputingInputNodesGradients() const override;
+    virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+
+private:
+    int m_axis;
+    std::wstring m_operation; // the operation as a string, e.g. "Plus", see GetOpcode()
+    ElementWiseOperator m_op; // the operation mapped to our internal opCode
+};
+
+// -----------------------------------------------------------------------
 // ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
 // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.

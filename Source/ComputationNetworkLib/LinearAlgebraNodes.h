@@ -497,8 +497,7 @@ template class TimesNode<double>;
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
 // A common use of transposition is trace(X'X) where X is a matrix of samples.
-// This can NOT be implemented with this node. Instead, use
-// SumColumnElements (ElementTimes (X, X))
+// This can be more efficiently implemented as ReducePlus (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>

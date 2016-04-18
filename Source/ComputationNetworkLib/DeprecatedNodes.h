@@ -11,10 +11,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// SumColumnElementsNode (input)
+// SumColumnElements (input)
 // Sums up all elements in each sample (column) of the input. Every sample
 // will be reduced to a scalar. This is equivalent to multiplying with a row of ones.
-// This is deprecated, in favor of ReduceNode.
+// This is deprecated, in favor of ReduceElements().
 // -----------------------------------------------------------------------
 
 template <class ElemType>

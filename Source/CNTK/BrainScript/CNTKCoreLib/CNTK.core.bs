@@ -127,6 +127,11 @@ PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag=
 Plus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = z /*plus the function args*/ ]
+ReduceSum (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Plus"    /*plus the function args*/ ]
+#ReduceLogSum (z, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogPlus" /*plus the function args*/ ]
+#ReduceMean (z, axis=0, tag='')   = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
+#ReduceMax (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
+#ReduceMin (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -136,8 +141,7 @@ Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
-SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
-# ^^ TODO: Rename to SumElements? ReduceSum without axis?
+SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ] // deprecated
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
 # ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
