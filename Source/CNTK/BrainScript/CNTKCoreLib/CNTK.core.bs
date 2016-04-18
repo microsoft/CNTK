@@ -34,10 +34,12 @@ Parameter = LearnableParameter // deprecated
 # TODO: make Parameter take tensor dims?
 ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
-Input(dims, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
-SparseInput(dims, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
-ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
-SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
+DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
+# TODO: change from dynamicAxis by name to dynamicAxis being an actual object
+SparseInput(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
+ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
+SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
 ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
@@ -79,8 +81,9 @@ Transpose(x) = TransposeDimensions(x, 1, 2)
 Times(A, B, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( A : B ) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]
-ReconcileMBLayout(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileMBLayout' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
-CastAs (type, data) = ReconcileMBLayout (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
+ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
+ReconcileMBLayout = ReconcileDynamicAxis # back compat
+CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 Convolution(weightNode, inputValueNode, kernelDims, mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]
@@ -151,6 +154,12 @@ SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ]
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
 
+Embedding (embeddingDim, input, inputDim=input.dim, initFrom='fromFile'/*|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
+    embedding = Transpose (LearnableParameter (inputDim, embeddingDim, learningRateMultiplier = learningRateWeight, init = initFrom, initFromFilePath = embeddingPath))
+    lookup = if sparseInput then embedding * input
+             else GatherPacked (input, embedding)
+].lookup
+
 ##############################################################################
 # the more specific standard things are in a namespace called 'BS'
 # You can create shorthands for accessing these, e.g. saying B = BS.Boolean.
@@ -166,11 +175,14 @@ BS = [
 Constants = [
     Zero = ConstantTensor (0, (1))
     One  = ConstantTensor (1, (1))
+    OnesTensor (dims) = ConstantTensor (1, dims)
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
     # CastAs() does not implement broadcasting
-    ZeroesLike (x) = RowSlice (0, 1, x) .* Zero  // hack: get one row of input and multiply with zero
+    ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
+    ZeroSequenceLike = ZeroesLike   # TODO: this should yield a scalar sequence, while ZeroesLike should be a tensor
+    ZeroesLike1 (x) = x .* Zero     # get a tensor of zeroes of same dim as x  TODO: Do this as a C++ node (will be simple)
     OnesLike (x) = ZeroesLike (x) + One
     # is this like Sequences.Repeat?
     True  = 1
@@ -209,6 +221,32 @@ Boolean = [
 ##############################################################################
 
 Sequences = [
+    # broadcast a single-step sequence to a multi-step sequence
+    BroadcastSequenceAs (type, data1) = [                      # type=example sequence with desired length (outside of a loop), data1=1 time step
+        ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
+        index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
+        packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
+        out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
+    ].out
+
+    # rolling window over past N samples
+    # returns a record [ value=..., valid=... ]
+    # This implementation is suboptimal in that it creates copies for the intermediate steps.
+    PastValueWindow (N, in) = [
+        delayLine[t:0..N-1] = [     # shift register for encoder, last N inputs
+            value = if t == 0
+                    then in        # delay 0: current value
+                    else Loop.PastValue (0, in, timeStep=t)
+            valid = if t == 0
+                    then Constants.One
+                    else Constants.One - PastValue (1, Constants.ZeroesLike (in), timeStep=t, defaultHiddenActivation=1)
+        ]
+        # delayLine[t].value = value of t steps in the past
+        # delayLine[t].valid = true if we had a value t steps in the past
+        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].value)), 1, N))  # [i, delay]
+        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].valid)), 1, N))  # [i, delay]
+    ]
+
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
     # LINQ calls this Aggregate; and may or may not specify the seed value; and allows a predicate
     FoldL (binaryOp, x0, x) = _Fold (PastValue,   binaryOp, x0, x)
@@ -248,6 +286,9 @@ Sequences = [
         selected = Loop._IsWithin (DelayFn, N, x)
         out = Gather (selected, x)
     ].out
+    # Last and TakeRight
+    Last(x) = TakeRight(1, x)
+    TakeRight (N, x) = _Take (FutureValue, N, x)
     Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
         selected = Loop._IsWithin (DelayFn, N, x)
@@ -302,8 +343,24 @@ Loop = [
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
     # opposite of Id's "next"
-    Previous (x) = PastValue (0, x, timeStep=1)
-    Next (x) = FutureValue (0, x, timeStep=1)
+    Previous (x) = PastValue   (0, x, timeStep=1)
+    Next (x)     = FutureValue (0, x, timeStep=1)
+
+    PreviousOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
+    [
+        flags = BS.Loop.IsFirst (x)
+        out = BS.Boolean.If (flags,
+                    /*then*/ BS.Sequences.Scatter (flags, defaultValue),
+                    /*else*/ Previous (x))
+    ].out
+
+    NextOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value
+    [
+        flags = BS.Loop.IsLast (x)
+        out = BS.Boolean.If (flags,
+                    /*then*/ BS.Sequences.Scatter (flags, defaultValue),
+                    /*else*/ Next (x))
+    ].out
 ]
 
 ##############################################################################
@@ -313,8 +370,9 @@ Loop = [
 Parameters =
 [
     WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
-    BiasParam (dim)                   = ParameterTensor (dim, init='fixedValue', value=0.0)
-    ScalarParam()                     = Parameter (1, 1, init='fixedValue', value=0.0)
+    DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
+    BiasParam (dim)                   = ParameterTensor ((dim), init='fixedValue', value=0.0)
+    ScalarParam()                     = BiasParam (1)
 
     # route input through an extra scalar weight, for stabilization
     Stabilize (x, enabled=true) =
@@ -340,16 +398,17 @@ RNNs =
     //       If we change this, we'd need to fix the LSTM end-to-end test.
     LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
     [
+        #inputDim = x.dim   # get dimension from 'x' (if this works, we can remove the inputDim1 parameter)
         _privateInnards = [       // encapsulate the privateInnards workings
             dh = prevState.h // previous values
             dc = prevState.c
 
             // parameter macros--these carry their own weight matrices
-            B() = Parameters.BiasParam(cellDim)
+            B() = Parameters.BiasParam (cellDim)
 
             W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
             H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.WeightParam (cellDim, 1)        .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
             // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
             it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
@@ -391,6 +450,28 @@ RNNs =
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState.h // that's the value we return
+
+    # same as RecurrentLSTMP but returns both h and c
+    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    [
+        prevState =
+        [
+            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
+            c = Loop.Previous (lstmState.c)             # cell(t-1)
+        ]
+        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
+
+    # a stack of recurrent LSTMs (unidirectional)
+    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, enableSelfStabilization=false) = [
+        useStabilizer = enableSelfStabilization
+        layer[i:0..Length (hiddenDims)-1] =
+            RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
+                             hiddenDims[i], cellDims[i],
+                             if i == 0 then input else layer[i-1].h,
+                             enableSelfStabilization=useStabilizer)
+    ].layer
 ]
 
 ##############################################################################

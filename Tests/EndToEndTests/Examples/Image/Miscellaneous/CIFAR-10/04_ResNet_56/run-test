@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/cifar-10-batches-py ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [ "$OS" == "Windows_NT" ]; then
+        ExternalDataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+    else
+        ExternalDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+    fi
+
+    echo Looking for data in: $ExternalDataSourceDir
+    if [[ -d "$ExternalDataSourceDir" ]]; then
+        DataSourceDir=$ExternalDataSourceDir/Image/CIFAR/v0
+
+        # Copy the test data to the test run directory
+        echo 'Copying test data to local directory'
+        DataDir=$TEST_RUN_DIR/TestData
+        mkdir $DataDir
+        cp -R $DataSourceDir/cifar-10-batches-py $DataDir || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/Miscellaneous/CIFAR-10/README.md for instructions to get it.
+        exit 1
+    fi
+fi
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+# Note: explicitly turn off randomization, as it crashes the reader.
+cntkrun 04_ResNet_56.cntk "Train=[SGD=[maxEpochs=1]] Train=[SGD=[epochSize=128]] Train=[reader=[randomize=none]] Train=[SGD=[minibatchSize=16]] Test=[minibatchSize=16] stderr=-"
+ExitCode=$?
+
+# Delete the test data if copied
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+
+exit $ExitCode

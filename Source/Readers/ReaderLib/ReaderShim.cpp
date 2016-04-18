@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_layout(make_shared<MBLayout>()), m_factory(factory)
+    : m_factory(factory)
 {
 }
 
@@ -37,8 +37,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     // otherwise deferring - synchronous execution during .get() call
     m_launchType = prefetch ? launch::async : launch::deferred;
 
-    auto numSeqsPerMBForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
-    m_layout->Init(numSeqsPerMBForAllEpochs[0], 0);
+    m_numParallelSequences = numberOfuttsPerMinibatchForAllEpochs[0];
 
     m_reader = m_factory(config);
     m_streams = m_reader->GetStreamDescriptions();
@@ -104,7 +103,6 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
-    
     // TODO: verify that the set of matrix names is identical 
     // to the set of reader input names. Warn if it's a subset, throw
     // if it's a superset.
@@ -116,14 +114,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
-    int deviceId = matrices.begin()->second->GetDeviceId();
+    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
-    {
-        if (mx.second->GetDeviceId() != deviceId)
-        {
-            assert(false);
-        }
-    }
+        assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
 
     assert(m_prefetchTask.valid());
 
@@ -137,6 +130,15 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
+    // Reset stale mb layouts.
+    // BUGBUG: This seems incorrect. (1) layouts should all be updated below, and (2) some of these layouts are the same, we are resetting them twice.
+    for (const auto& iter : matrices)
+    {
+        iter.second.pMBLayout->Init(1, 0);
+    }
+
+    // a map to generate error messages when checking layout constraints. 
+    map<wstring, wstring> layoutToInputMap;
     if (!minibatch.m_data.empty())
     {
         // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
@@ -153,7 +155,29 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             size_t streamId = m_nameToStreamId[mx.first];
             
             const auto& stream = minibatch.m_data[streamId];
-            m_layout = stream->m_layout;
+
+            m_numParallelSequences = stream->m_layout->GetNumParallelSequences();
+
+            // This assert no longer holds - different inputs have different sequence lengths, resulting in different number 
+            // of parallel samples.
+            // assert(m_numParallelSequences == minibatch.m_data.front()->m_layout->GetNumParallelSequences());
+
+            auto& layout = mx.second.pMBLayout;
+
+            if (layout->GetNumCols() == 0)
+            {
+                // layout is empty, copy layout info from the reader
+                layout->CopyFrom(stream->m_layout, /*keepName*/ true);
+                layoutToInputMap[layout->GetAxisName()] = mx.first;
+            }
+            else if (*layout != *stream->m_layout) // this does a deep value-level comparison
+            {
+                RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
+                    "from the input data are incompatible on this axis. Are you using different sequence lengths? "
+                    "Did you consider adding a DynamicAxis() to the Input nodes?",
+                    layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), mx.first.c_str());
+            }
+
             size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
             auto& matrix = matrices.GetInputMatrix<ElemType>(mx.first);
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
@@ -204,13 +228,21 @@ bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value nev
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 {
-    layout->CopyFrom(m_layout);
+    // This method is inherited from IDataReader and should be removed in the near future.
+    NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
 size_t ReaderShim<ElemType>::GetNumParallelSequences()
 {
-    return m_layout->GetNumParallelSequences();
+    // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
+    // parallel sequences. Thus this property doesn't make sense anymore.
+    // This method is called by 
+    // * DataReaderHelpers::GetNumSubminibatchesNeeded to estimate mb size
+    // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute learning rate per sample
+    // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute actual mb size and momentum per sample
+    // * SGD::AdaptiveMinibatchSizing  to compute learning rate per sample
+    return m_numParallelSequences;
 }
 
 template class ReaderShim<float>;

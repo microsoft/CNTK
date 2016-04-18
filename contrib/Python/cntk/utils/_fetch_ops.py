@@ -6,34 +6,29 @@ import os
 import re
 import sys
 
-# This file is meant to be run as a stand-alone file, which is why relative
-# imports won't work.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from cntk.utils import CNTK_EXECUTABLE_PATH
-
-# BrainSCript's node definitions are created when a build is triggered so we
-# should be able to find the file in the path of the cntk exeutable.
-CNTKCORE_DEFS = os.path.join(
-    os.path.dirname(CNTK_EXECUTABLE_PATH), 'CNTK.core.bs')
-
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
     r'(?P<operator>\w+)\((?P<operands>.*?)\) = new ComputationNode \[')
 REGEX_ALIAS = re.compile(r'(?P<operator>\w+) = (?P<alias>\w+)\s*(//.*|)')
-REGEX_INSTANTIATION = re.compile(
-    r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
+# ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix))
+REGEX_INSTANTIATION = re.compile( r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
 
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
+OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide'}
 
 INPUT_NODES = ['Input', 'SparseInput']
 IMAGE_INPUT_NODES = ['ImageInput', 'SparseImageInput']
 
-
 class Operand(object):
 
     def __init__(self, name, init_value):
+        if '/*' in name:
+            # Example:
+            # Pooling(input, poolKind/*'max'|'average'*/, ....
+            name = name[:name.index('/*')]
+
         self.name = name
 
         if init_value is None:
@@ -139,11 +134,11 @@ class %(name)s(%(parentclass)s):
 class AliasOperator(object):
 
     def __init__(self, alias_match):
-        self.operator = alias_match.group('operator')
+        self.name = alias_match.group('operator')
         self.alias = alias_match.group('alias')
 
     def __str__(self):
-        return "%(operator)s = %(alias)s" % self.__dict__
+        return "%(name)s = %(alias)s" % self.__dict__
 
 
 class InstantiationOperator(CompNodeOperator):
@@ -161,6 +156,7 @@ class %(name)s(%(inst_operator)s):
         raw_inst_operands = match.group('inst_operands').split(',')
         inst_operands = []
         for operand in raw_inst_operands:
+
             parts = operand.split('=')
             if len(parts) == 1:
                 elem = parts[0].strip()
@@ -187,32 +183,56 @@ OPS_PREAMBLE = """\
 
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
+class Slice(ComputationNode):
+    def __init__(self, beginIndex, endIndex, input, axis=1, name='Slice',
+            var_name=None):
+        super(Slice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.input = input
+        self.axis = axis
+
+class Splice(ComputationNode):
+    def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
+            var_name=None):
+        super(Splice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.input = input
+        self.axis = axis
+
+class ElementDivide(ComputationNode):
+    def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
+        super(ElementDivide, self).__init__(params=['aMatrix', 'anotherMatrix'], name=name, var_name=var_name)
+        self.aMatrix = aMatrix
+        self.anotherMatrix = anotherMatrix
+       
+
 """
 
 
-def convert_bs_to_python(bs_fn, py_fn):
+def convert_bs_to_python(bs_fn, pyf):
     # We have to append these at the end to make sure, because the
     # BrainScript file does not keep order.
     alias_ops = []
     inst_ops = []
 
-    with open(py_fn, 'w') as pyf:
+    with pyf:
         pyf.write(OPS_PREAMBLE)
 
         in_computation_node_section = False
         in_standard_node_section = False
 
         for line in open(bs_fn, 'r'):
-            if line.startswith('# '):
-                if line.startswith('# ComputationNodes'):
-                    in_computation_node_section = True
-                else:
-                    in_computation_node_section = False
 
-                if line.startswith('# standard functions'):
-                    in_standard_node_section = True
-                else:
-                    in_standard_node_section = False
+            if line.lower().startswith('# computationnodes'):
+                in_computation_node_section = True
+                in_standard_node_section = False
+            elif line.lower().startswith('# standard functions'):
+                in_computation_node_section = False
+                in_standard_node_section = True
+            elif line.lower().startswith('# common macros'):
+                break
 
             if in_standard_node_section:
                 standard_match = REGEX_STANDARD.match(line)
@@ -224,8 +244,10 @@ def convert_bs_to_python(bs_fn, py_fn):
             if in_computation_node_section:
                 comp_match = REGEX_COMPNODE.match(line)
                 if comp_match:
-                    po = CompNodeOperator(comp_match)
-                    pyf.write(str(po) + '\n')
+                    op = CompNodeOperator(comp_match)
+                    if op.name in OPERATORS_TO_IGNORE:
+                        continue
+                    pyf.write(str(op) + '\n')
                     continue
 
                 alias_match = REGEX_ALIAS.match(line)
@@ -239,11 +261,39 @@ def convert_bs_to_python(bs_fn, py_fn):
                     continue
 
         for match in alias_ops:
-            pyf.write(str(AliasOperator(match)) + '\n')
+            op = AliasOperator(match)
+            if op.name in OPERATORS_TO_IGNORE:
+                continue
+            pyf.write(str(op) + '\n')
 
         for match in inst_ops:
-            pyf.write(str(InstantiationOperator(match)) + '\n')
-
+            op = InstantiationOperator(match)
+            if op.name in OPERATORS_TO_IGNORE:
+                continue
+            pyf.write(str(op) + '\n')
 
 if __name__ == '__main__':
-    convert_bs_to_python(CNTKCORE_DEFS, "cntk1_ops.py")
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("-c", "--cntk", dest="cntkcore_defs",
+            help="CNTK.core.bs file", metavar="FILE")
+    parser.add_option("-o", "--output", dest="output",
+            help="output file, or '-' for stdout", default='-')
+
+    (opts, args) = parser.parse_args()
+
+    if opts.cntkcore_defs:
+        CNTKCORE_DEFS = opts.cntkcore_defs
+    else:
+        CUR_DIR = os.path.dirname(__file__)
+        CNTKCORE_DEFS = os.path.join(CUR_DIR, '..', '..', '..', '..', 'Source',
+                'CNTK', 'BrainScript', 'CNTKCoreLib', 'CNTK.core.bs')
+
+    print('Using %s'%CNTKCORE_DEFS)
+
+    if opts.output == '-':
+        outfile = sys.stdout
+    else:
+        outfile = open(opts.output, "w")
+        
+    convert_bs_to_python(CNTKCORE_DEFS, outfile)

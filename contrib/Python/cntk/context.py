@@ -1,3 +1,12 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+#TODO: Settle on a centralized location for all the documentation that is in docstrings
+
+
 from abc import ABCMeta, abstractmethod
 import os
 import re
@@ -8,21 +17,21 @@ import shutil as sh
 
 from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
-from cntk.utils import CNTK_EXECUTABLE_PATH, MODEL_INDENTATION
-from .utils import cntk_to_numpy_shape, dedupe_readers
+from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
+from .utils import cntk_to_numpy_shape, aggregate_readers
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
-CNTK_PREDICT_TEMPLATE_PATH = os.path.join(
-    CNTK_TEMPLATE_DIR, "cntk_predict_template.cntk")
+CNTK_INFER_TEMPLATE_PATH = os.path.join(
+    CNTK_TEMPLATE_DIR, "cntk_infer_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
-CNTK_PREDICT_CONFIG_FILENAME = "predict.cntk"
+CNTK_INFER_CONFIG_FILENAME = "infer.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
 CNTK_OUTPUT_FILENAME = "out.txt"
 
@@ -56,22 +65,17 @@ class AbstractContext(object, metaclass=ABCMeta):
     '''
 
     def __init__(self, name,
-                 graph=None,
-                 device_id=-1,
-                 root_nodes=None,
-                 clean_up=True,
-                 node_unit_test=False):
+                 device_id=-1,                 
+                 precision="float",
+                 clean_up=True):      
         '''
         AbstractContext Constructer
 
         :param name: context name
-        :param graph: the computational graph to be used for training, testing and prediction        
-        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values
-        :param root_nodes: list of top nodes of the graph or single node itself
-        :param clean_up: whether the temporary directory should be removed when the context is left
-        are the GPUs indices.        
-        :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
-
+        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values        
+        :param clean_up: whether the temporary directory should be removed when the context is left        
+        are the GPUs indices.                
+        :param precision: either float or double
         '''
         if isinstance(name, str):
             tmpdir = name
@@ -88,13 +92,9 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         self.name = name
         self.device_id = device_id
+        self.precision = precision
         self.clean_up = clean_up
-        self.input_nodes = set()
-        if root_nodes is None:
-            self.root_nodes = None
-        else:
-            self.root_nodes = root_nodes if isinstance(root_nodes, list) else [root_nodes]
-        self.node_unit_test= node_unit_test
+        self.input_nodes = set()    
 
     def __enter__(self):
         _CONTEXT[self.name] = self
@@ -107,7 +107,54 @@ class AbstractContext(object, metaclass=ABCMeta):
         if self.clean_up:
             sh.rmtree(self.directory)
 
-    def _generate_config(self, root_nodes=None):
+    @abstractmethod
+    def train(self, root_nodes, optimizer, input_reader=None, override_existing=True):
+        '''
+        Abstract method for the action train.
+        :param root_nodes: the list of root nodes of the model
+        :param input_reader: map from input nodes to readers
+        '''
+        pass
+
+    @abstractmethod
+    def test(self, input_reader=None):
+        '''
+        Abstract method for the action test.
+        :param input_reader: map from input nodes to readers        
+        '''
+        pass
+
+    @abstractmethod
+    def infer(self, input_reader=None):
+        '''
+        Abstract method for the action write. It evaluated the trained model on 
+        the data provided by the reader.
+        :param input_reader: map from input nodes to readers
+
+        Returns the inferred output
+        '''
+        pass
+
+    @abstractmethod
+    def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
+        '''
+        Abstract method for the action write. It evaluated the passed node on the
+        data provided by the reader.
+        :param node: the node to evaluate.
+        :param input_reader: map from input nodes to readers
+        :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
+        :input_name: if backward_pass is True then input_node should contain the input name that
+        the gradient is performed with respect to.
+        Returns the output generated by `node`
+        '''
+        pass
+    
+    def _aggregate_readers(self, input_reader):
+        """ Aggregate the readers passed in the input to reader dictionary
+        """
+        return aggregate_readers([input_reader[i]._to_aggregate_form(i) for i in input_reader])
+        
+    def _generate_config(self, root_nodes=None, input_reader=None):
         '''
         Helper function to create a configuration incorporating all root nodes
         '''
@@ -120,20 +167,20 @@ class AbstractContext(object, metaclass=ABCMeta):
         node_counter = 0
         dep_inputs = tuple()
         reconciled_cache = {}
-
-        if root_nodes is None:
-            root_nodes = self.root_nodes
-        elif not isinstance(root_nodes, list):
+        
+        if not isinstance(root_nodes, list):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
             var_name, node_counter, _desc, _has_inputs, _readers, _dep_inputs = \
-                root_node._to_config(desc, 
+                root_node._to_config(input_reader,
+                        desc, 
                         unrolled_nodes, 
                         inputs,
                         readers, 
                         dep_inputs,
-                        node_counter, reconciled_cache)
+                        node_counter, 
+                        reconciled_cache)
 
             has_inputs |= _has_inputs
             readers |= _readers
@@ -141,13 +188,14 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         description = "\n".join(desc)
 
-        return description, has_inputs, dedupe_readers(readers)
+        return description, has_inputs, aggregate_readers(readers)
 
-    def _generate_train_config(self, optimizer, reader, override_existing):
+    def _generate_train_config(self, root_nodes, optimizer, input_reader, override_existing):
         '''
         Generates the configuration file for the train action.
+        :param root_nodes: list of the root nodes of the model
         :param optimizer: the SGD optimizer to use for training
-        :param reader: the reader to use for reading the data
+        : param input_reader: a map from input nodes to their readers
         :param override_existing: if the folder exists already override it
         '''
 
@@ -163,12 +211,11 @@ class AbstractContext(object, metaclass=ABCMeta):
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self._generate_config()
-        if reader:
-            readers.append(reader)
+        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelDescription': description,
             'ModelPath': model_filename,
             'Reader': '\n'.join(r.generate_config() for r in readers),
@@ -176,61 +223,59 @@ class AbstractContext(object, metaclass=ABCMeta):
         }
         return tmpl % tmpl_dict
 
-    def _generate_test_config(self, reader):
+    def _generate_test_config(self, input_reader):
         '''
         Generates the configuration file for the test action.
+        :param input_reader: a map from input nodes to their readers
         '''
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
-
-        # if no reader is passed generate the reader from the network
-        if reader:
-            reader_config = reader.generate_config()
-        else:
-            description, has_inputs, readers = self._generate_config()
-            reader_config = '\n'.join(r.generate_config() for r in readers)
+        readers = self._aggregate_readers(input_reader)
+                
+        reader_config = '\n'.join(r.generate_config() for r in readers)
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelPath': model_filename,
             'Reader': reader_config,
         }
         return tmpl % tmpl_dict
 
-    def _generate_predict_config(self, reader):
+    def _generate_infer_config(self, input_reader):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
+        :param input_reader: a map from input nodes to their readers
         '''
-        tmpl = open(CNTK_PREDICT_TEMPLATE_PATH, "r").read()
+        tmpl = open(CNTK_INFER_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(
             self.directory, 'Outputs', self.name)
 
-        # if no reader is passed generate the reader from the network
-        if reader:
-            reader_config = reader.generate_config()
-        else:
-            description, has_inputs, readers = self._generate_config()
-            reader_config = '\n'.join(r.generate_config() for r in readers)
+
+        readers = self._aggregate_readers(input_reader)
+        
+        reader_config = '\n'.join(r.generate_config() for r in readers)
 
         tmpl_dict = {
             'DevideId': self.device_id,
+            'Precision': self.precision,
             'ModelPath': model_filename,
             'PredictOutputFile': output_filename_base,
             'Reader': reader_config,
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_nodes, reader):
+    def _generate_eval_config(self, root_nodes, input_reader, node_unit_test=False):
+        
         '''
         Generates the configuration file for write action.
         :param root_nodes: the node to evaluate. 
-        :param reader: the reader used to load the data, None if the network does not have input
+        :param input_reader: a map from input nodes to their readers
+        :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
         '''
-        description, has_inputs, readers = self._generate_config(root_nodes)
-        if reader:
-            readers.append(reader)
+        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
 
         if not has_inputs and not readers:
             # add dummy input to keep CNTK happy
@@ -249,128 +294,13 @@ class AbstractContext(object, metaclass=ABCMeta):
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         tmpl_dict = {
             'DevideId': self.device_id,
-            'NodeUnitTest': self.node_unit_test,
+            'Precision': self.precision,
+            'NodeUnitTest': node_unit_test,
             'OutputFile': output_filename,
             'ModelDescription': description,
             'Reader': '\n'.join(r.generate_config() for r in readers),
         }
         return tmpl % tmpl_dict
-
-    @abstractmethod
-    def train(self, optimizer, reader=None, override_existing=True):
-        '''
-        Abstract method for the action train.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-        '''
-        pass
-
-    @abstractmethod
-    def test(self, reader=None):
-        '''
-        Abstract method for the action test.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-        '''
-        pass
-
-    @abstractmethod
-    def predict(self, reader=None):
-        '''
-        Abstract method for the action write. It evaluated the trained model on 
-        the data provided by the reader.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-
-        Returns the predicted output
-        '''
-        pass
-
-    @abstractmethod
-    def eval(self, node, reader=None):
-        '''
-        Abstract method for the action write. It evaluated the passed node on the
-        data provided by the reader.
-        :param node: the node to evaluate.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-
-        Returns the output generated by `node`
-        '''
-        pass
-
-
-class Context(AbstractContext):
-
-    '''
-    This is a sub-class of AbstractContext, use it to run CNTK locally.
-    '''
-
-    def _call_cntk(self, config_file_name, config_content):
-        '''
-        Calls the CNTK exe
-        :param config_file_name: the name of the configuration file
-        :param config_content: a string containing the configuration
-
-        Returns the output generated by the CNTK executable, which is used to
-        retrieve the node shapes.
-        '''
-        filename = os.path.join(self.directory, config_file_name)
-        with open(os.path.join(self.directory, filename), 'w') as out:
-            out.write(config_content)
-
-        try:
-            output_bytes = subprocess.check_output(
-                [CNTK_EXECUTABLE_PATH, 'configFile=%s' % filename],
-                stderr=subprocess.STDOUT)
-            output = output_bytes.decode('utf-8')
-            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
-                log.write(output)
-
-        except subprocess.CalledProcessError as e:
-            print(e.output.decode('utf-8'), file=open('error.txt', 'w'))
-            raise
-
-        if not output:
-            raise ValueError('no output returned')
-
-        return output
-
-    def train(self, optimizer, reader=None, override_existing=True):
-        '''
-        Run the train action locally.
-        :param optimizer: the SGD optimizer to use for training
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-        :param override_existing: if the folder exists already override it
-        '''
-
-        config_content = self._generate_train_config(
-            optimizer, reader, override_existing)
-        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
-
-    def test(self, reader=None):
-        '''
-        Run the test action locally.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-        '''
-        config_content = self._generate_test_config(reader)
-        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
-
-        return Context._parse_test_result(output)
-
-
-    def predict(self, reader=None):
-        '''
-        Run the write action locally, use the trained model of this context.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-
-        Returns the predicted output
-        '''
-        config_content = self._generate_predict_config(reader)
-        return self._call_cntk(CNTK_PREDICT_CONFIG_FILENAME, config_content)
 
     '''
     Regular expression to parse the shape information of the nodes out of
@@ -456,7 +386,7 @@ class Context(AbstractContext):
 
                 continue
             else:
-                data = np.asarray(data, dtype=float).reshape(shape)
+                data = np.asarray(data, dtype=float).reshape(shape, order='F')
 
             tensor_seq.append(data)
 
@@ -544,16 +474,87 @@ class Context(AbstractContext):
         #expected_shape = np.roll(expected_shape, 1) 
 
         return expected_shape, expected_size
+        
+class Context(AbstractContext):
 
-    def eval(self, node, reader=None):
+    '''
+    This is a sub-class of AbstractContext, use it to run CNTK locally.
+    '''
+
+    def _call_cntk(self, config_file_name, config_content):
+        '''
+        Calls the CNTK exe
+        :param config_file_name: the name of the configuration file
+        :param config_content: a string containing the configuration
+
+        Returns the output generated by the CNTK executable, which is used to
+        retrieve the node shapes.
+        '''
+        filename = os.path.join(self.directory, config_file_name)
+        with open(os.path.join(self.directory, filename), 'w') as out:
+            out.write(config_content)
+
+        try:
+            output_bytes = subprocess.check_output(
+                [get_cntk_cmd(), 'configFile=%s' % filename],
+                stderr=subprocess.STDOUT)
+            output = output_bytes.decode('utf-8')
+            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
+                log.write(output)
+
+        except subprocess.CalledProcessError as e:
+            print(e.output.decode('utf-8'), file=open('error.txt', 'w'))
+            raise
+
+        if not output:
+            raise ValueError('no output returned')
+
+        return output
+
+    def train(self, root_nodes, optimizer, input_reader=None, override_existing=True):
+        '''
+        Run the train action locally.
+        :param root_nodes: the list of root nodes of the model
+        :param optimizer: the SGD optimizer to use for training
+        :param input_reader: map from input nodes to readers
+        :param override_existing: if the folder exists already override it
+        '''
+
+        config_content = self._generate_train_config(
+            root_nodes, optimizer, input_reader, override_existing)
+        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
+
+    def test(self, input_reader=None):
+        '''
+        Run the test action locally.
+        :param input_reader: map from input nodes to readers
+        '''
+        config_content = self._generate_test_config(input_reader)
+        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+
+        return Context._parse_test_result(output)
+
+
+    def infer(self, input_reader=None):
+        '''
+        Run the write action locally, use the trained model of this context.
+        :param input_reader: map from input nodes to readers
+
+        Returns the inferred output
+        '''
+        config_content = self._generate_infer_config(input_reader)
+        return self._call_cntk(CNTK_INFER_CONFIG_FILENAME, config_content)
+
+    def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
         '''
         Run the write action locally to evaluate the passed node and returning
         the data it produced.
 
         :param node: the node to evaluate.
-        :param reader: the reader to use for this action. Alternatively, you
-        can attach a reader directly to the input node.
-
+        :param input_reader: map from input nodes to readers
+        :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
+        :input_name: if backward_pass is True then input_node should contain the input name that
+        the gradient is performed with respect to.
         Returns the output generated by `node`
         '''
         if not isinstance(node, ComputationNode):
@@ -564,25 +565,18 @@ class Context(AbstractContext):
         orig_node_tag = node.tag if hasattr(node, 'tag') else None
         node.tag = 'output'
 
-        config_content = self._generate_eval_config(node, reader)
-        output = self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
+        config_content = self._generate_eval_config(node, input_reader, backward_pass)
+        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
 
         node.tag = orig_node_tag
 
-        shapes = Context._parse_shapes_from_output(output)
-
+        n = input_name.var_name if isinstance(input_name, ComputationNode) else input_name
         out_name = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.' + node.var_name)
-        #data = np.loadtxt(out_name)
+            self.directory, CNTK_OUTPUT_FILENAME + '.' + \
+                ((n + '.grad') if backward_pass  else node.var_name))        
+
+
         result_content = open(out_name).read()
         data = Context._parse_result_output(result_content)
 
         return data
-
-
-class ClusterContext(AbstractContext):
-
-    '''
-    This is a sub-class of AbstractContext, use it to submit your workloads to the cluster.
-    '''
-    pass

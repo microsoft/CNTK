@@ -13,6 +13,9 @@ imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 prefetch = "true"
 parallelTrain = "false"
 
@@ -56,7 +59,7 @@ Train = [
     
     reader = [
         readerType = "ImageReader"
-        file = "$DataDir$/train_map.txt"
+        file = "$DataDir$/cifar-10-batches-py/train_map.txt"
         randomize = "auto"
         features = [
             width = 32
@@ -66,7 +69,7 @@ Train = [
             cropRatio = 0.8
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "$ConfigDir$/CIFAR-10_mean.xml"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
@@ -82,7 +85,7 @@ Test = [
 
     reader = [
         readerType = "ImageReader"
-        file = "$DataDir$/test_map.txt"
+        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
         randomize = "none"
         features = [
             width = 32
@@ -92,7 +95,7 @@ Test = [
             cropRatio = 1
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "$ConfigDir$/CIFAR-10_mean.xml"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10

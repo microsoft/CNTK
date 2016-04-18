@@ -150,6 +150,10 @@ GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 
+# Python
+*.pyc
+__pychache__/
+
 # =========================
 # Windows detritus
 # =========================

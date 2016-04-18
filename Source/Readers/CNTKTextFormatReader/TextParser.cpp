@@ -332,7 +332,7 @@ void TextParser<ElemType>::IncrementNumberOfErrorsOrDie()
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::RefillBuffer()
+bool TextParser<ElemType>::TryRefillBuffer()
 {
     size_t bytesRead = fread(m_buffer.get(), 1, BUFFER_SIZE, m_file);
     
@@ -364,7 +364,7 @@ void TextParser<ElemType>::SetFileOffset(int64_t offset)
     m_fileOffsetStart = offset;
     m_fileOffsetEnd = offset;
 
-    RefillBuffer();
+    TryRefillBuffer();
 }
 
 template <class ElemType>
@@ -384,7 +384,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     if (verifyId) 
     {
         size_t id;
-        if (!ReadUint64(id, bytesToRead) || id != sequenceDsc.m_id) 
+        if (!TryReadUint64(id, bytesToRead) || id != sequenceDsc.m_id) 
         {
             RuntimeError("Did not find the expected sequence id ( %" PRIu64 ") "
                 " at the file offset = %" PRId64 "\n", sequenceDsc.m_id, GetFileOffset());
@@ -410,7 +410,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples;
     for (size_t i = 0; i < expectedRowCount; i++)
     {
-        if ((ReadRow(sequence, bytesToRead)))
+        if ((TryReadRow(sequence, bytesToRead)))
         {
             ++numRowsRead;
         }
@@ -472,7 +472,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
     bool found = false;
     while (bytesToRead && CanRead())
@@ -496,7 +496,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
         }
 
         size_t id;
-        if (!GetInputId(id, bytesToRead))
+        if (!TryGetInputId(id, bytesToRead))
         {
             IncrementNumberOfErrorsOrDie();
             SkipToNextInput(bytesToRead);
@@ -511,7 +511,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
             vector<ElemType>& values = data->m_buffer;
             size_t size = values.size();
             assert(size % stream.m_sampleDimension == 0);
-            if (!ReadDenseSample(values, stream.m_sampleDimension, bytesToRead))
+            if (!TryReadDenseSample(values, stream.m_sampleDimension, bytesToRead))
             {
                 // expected a dense sample, but was not able to fully read it, ignore it.
                 if (values.size() != size)
@@ -533,7 +533,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
             vector<IndexType>& indices = data->m_indices;
             assert(values.size() == indices.size());
             size_t size = values.size();
-            if (!ReadSparseSample(values, indices, bytesToRead))
+            if (!TryReadSparseSample(values, indices, bytesToRead))
             {
                 // expected a sparse sample, but something went south, ignore it.
                 if (values.size() != size)
@@ -572,7 +572,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::GetInputId(size_t& id, size_t& bytesToRead)
+bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 {
     char* scratchIndex = m_scratch.get();
 
@@ -664,7 +664,7 @@ bool TextParser<ElemType>::GetInputId(size_t& id, size_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadDenseSample(vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead)
 {
     size_t counter = 0;
     ElemType value;
@@ -708,7 +708,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
             continue;
         }
 
-        if (!ReadRealNumber(value, bytesToRead))
+        if (!TryReadRealNumber(value, bytesToRead))
         {
             // bail out.
             return false;
@@ -730,7 +730,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead)
 {
     size_t index;
     ElemType value;
@@ -755,11 +755,22 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         }
 
         // read next sparse index
-        if (!ReadUint64(index, bytesToRead))
+        if (!TryReadUint64(index, bytesToRead))
         {
             // bail out.
             return false;
         } 
+        if (index > numeric_limits<IndexType>::max())
+        {
+            if (m_traceLevel >= Warning)
+            {
+                fprintf(stderr,
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+            }
+            // bail out.
+            return false;
+        }
         if (index > numeric_limits<IndexType>::max())
         {
             if (m_traceLevel >= Warning)
@@ -792,7 +803,7 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         }
 
         // read the corresponding value
-        if (!ReadRealNumber(value, bytesToRead))
+        if (!TryReadRealNumber(value, bytesToRead))
         {
             // bail out.
             return false;
@@ -847,7 +858,7 @@ void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadUint64(size_t& value, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 {
     value = 0;
     bool found = false;
@@ -900,7 +911,7 @@ bool TextParser<ElemType>::ReadUint64(size_t& value, size_t& bytesToRead)
 // cannot be parsed as part of a floating point number.
 // Returns true if parsing was successful.
 template <class ElemType>
-bool TextParser<ElemType>::ReadRealNumber(ElemType& value, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRead)
 {
     State state = State::Init;
     double coefficient = .0, number = .0, divider = .0;

@@ -34,9 +34,9 @@ protected:
     };
 
     PackerBase(MemoryProviderPtr memoryProvider,
-        TransformerPtr transformer,
-        size_t minibatchSize,
-        const std::vector<StreamDescriptionPtr>& streams);
+               TransformerPtr transformer,
+               size_t minibatchSize,
+               const std::vector<StreamDescriptionPtr>& streams);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
 

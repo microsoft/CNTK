@@ -9,6 +9,7 @@
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "ScriptableObjects.h"
+#include "Criterion.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -225,7 +226,8 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
 
-    int m_numMBsToShowResult;
+    size_t m_numMBsToShowResult = 0;
+    size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
 
     bool m_doGradientCheck;
@@ -383,9 +385,8 @@ protected:
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
-                                         /*out*/ double& epochCriterion,
-                                         /*out*/ std::vector<double>& epochEvalErrors,
-                                         /*out*/ size_t& totalSamplesSeen,
+                                         /*out*/ EpochCriterion& epochCriterion,
+                                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
@@ -448,10 +449,9 @@ protected:
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
-                         /*out*/ double& epochCriterion,
-                         /*out*/ std::vector<double>& epochEvalErrors,
-                         /*out*/ size_t& totalSamplesSeen,
-                         std::string prefixMsg = "");
+                         /*out*/ EpochCriterion& epochCriterion,
+                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
+                         const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel);
@@ -481,13 +481,19 @@ protected:
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
-    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
+    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
-    bool LoadCheckPointInfo(const size_t epochNumber,
+    bool TryLoadCheckPointInfo(const size_t epochNumber,
+                               /*out*/ size_t& totalSamplesSeen,
+                               /*out*/ double& learnRatePerSample,
+                               std::list<Matrix<ElemType>>& smoothedGradients,
+                               /*out*/ double& prevCriterion,
+                               /*out*/ size_t& minibatchSize);
+    void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
@@ -518,17 +524,17 @@ public:
                        int npos);
 
 protected:
-    wstring m_modelPath;
+    std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
     // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
-    wstring m_trainCriterionNodeName;
-    wstring m_evalCriterionNodeName;
+    std::wstring m_trainCriterionNodeName;
+    std::wstring m_evalCriterionNodeName;
 
     // enable tracing. Nodes listed here get their m_traceNodeValueXXX flags set
-    vector<wstring> m_traceNodeNamesReal;
-    vector<wstring> m_traceNodeNamesCategory;
-    vector<wstring> m_traceNodeNamesSparse;
+    std::vector<std::wstring> m_traceNodeNamesReal;
+    std::vector<std::wstring> m_traceNodeNamesCategory;
+    std::vector<std::wstring> m_traceNodeNamesSparse;
 
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;

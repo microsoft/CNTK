@@ -34,9 +34,6 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp">
       <Filter>From BrainScript</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\ExperimentalNetworkBuilder.cpp">
-      <Filter>From BrainScript</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Config">

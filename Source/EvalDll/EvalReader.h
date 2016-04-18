@@ -12,7 +12,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Evaluation Reader class
 // interface to pass to evaluation DLL
 template <class ElemType>
-class EvalReader : public IDataReader
+class EvalReader : public DataReaderBase
 {
     std::map<std::wstring, std::vector<ElemType>*>* m_inputs; // our input data
     std::map<std::wstring, size_t>* m_dimensions;             // the number of rows for the input data
@@ -109,11 +109,11 @@ public:
         m_mbSize = min(mbSize, m_recordCount);
     }
 
-    // GetMinibatch - Get the next minibatch (features and labels)
+    // TryGetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices)
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices)
     {
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);
