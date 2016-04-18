@@ -637,38 +637,46 @@ protected:
         // in which case there will be multiple outputs as a result of striding in that dimension.
         size_t mapMultiplier = outT[dimCount - 1] / mapOutCount;
         // Treating input as an "output" of reverse convolution.
-        size_t mapInCount = inT[dimCount - 1];
+        size_t mapInCount = kernT[dimCount - 1];
         size_t mapInSize = mapMultiplier * inT.GetNumElements() / mapInCount;
 
-        size_t unrollRows = mapInSize * mapMultiplier * subBatchSize;
+        size_t unrollRows = mapInSize * subBatchSize;
         // Original kernel matrix in KCHW [K x CHW] format will be transposed to CHWK [C x HWK].
-        size_t unrollCols = (kernT.GetNumElements() * mapOutCount) / kernT[dimCount - 1];
+        size_t unrollCols = (kernT.GetNumElements() * mapOutCount) / mapInCount;
 
-        // Reserve space for unrolled inputs and, if needed, intermediate outputs. 
+        // Reserve space for:
+        // 1. Transposed kernel weights.
+        // 2. Unrolled source gradients.
+        // 3. If needed, intermediate gradients. 
         // Intermediate outputs will be transposed to final outputs after GEMM operation.
         // Transpose is not required if subBatchSize == 1.
-        workspace.Resize(unrollRows, unrollCols + (subBatchSize > 1 ? mapInCount : 0));
+        size_t kernCols = mapOutCount * kernT.GetNumElements();
+        workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
+
+        // cudnn layout uses row-major kernel weight matrix.
+        auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+        kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+        // Now transpose and reshape to [C x HWK] (row-major).
+        auto kernTran = workspace.ColumnSlice(0, kernCols);
+        // Reshape to transpose shape, AssignTransposeOf requires that.
+        kernTran.Reshape(kern.GetNumCols(), kern.GetNumRows());
+        kernTran.AssignTransposeOf(kern);
+        // Reshape to final shape.
+        kernTran.Reshape(mapOutCount * kernT.GetNumElements() / mapInCount, mapInCount);
 
         for (size_t start = 0; start < batchSize; start += subBatchSize)
         {
             size_t curBatchSize = min(subBatchSize, batchSize - start);
             auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
-            auto unrolledSrcGrad = workspace.ColumnSlice(0, unrollCols);
-            //if (curBatchSize != subBatchSize)
-            //{
-            //    unrolledSrcGrad.Reshape(mapOutSize, subBatchSize * unrollCols);
-            //    unrolledSrcGrad = unrolledInput.ColumnSlice(0, curBatchSize * unrollCols);
-            //}
+            auto unrolledSrcGrad = workspace.ColumnSlice(kernCols, unrollRows * unrollCols);
+            if (curBatchSize != subBatchSize)
+                unrolledSrcGrad = unrolledSrcGrad.ColumnSlice(0, mapInSize * curBatchSize * unrollCols);
             // Need to reshape (soft transpose) as matrices are column-major.
             unrolledSrcGrad.Reshape(unrollCols, mapInSize * curBatchSize);
 
             // Unroll outputs (source gradients).
             unrolledSrcGrad.SetValue(0);
-            srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
-
-            // cudnn layout uses row-major kernel weight matrix.
-            auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-            kern.Reshape(kernT.GetNumElements() / kernT[dimCount - 1], kernT[dimCount - 1] * mapOutCount);
+            srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
 
             // Perform matrix multiplication of unrolled outputs with weights.
             // If there is just one sample in the sub-batch then compute result directly to the output matrix.
@@ -676,22 +684,21 @@ protected:
             {
                 auto gradSlice = grad.ColumnSlice(start, 1);
                 gradSlice.Reshape(mapInSize, mapInCount);
-                Mat::MultiplyAndAdd(unrolledSrcGrad, true, kern, true, gradSlice);
+                Mat::MultiplyAndAdd(unrolledSrcGrad, true, kernTran, false, gradSlice);
             }
-            //else
-            //{
-            //    auto outTempSlice = workspace.ColumnSlice(unrollCols, mapCount);
-            //    if (curBatchSize != subBatchSize)
-            //    {
-            //        outTempSlice.Reshape(mapOutSize, subBatchSize * mapCount);
-            //        outTempSlice = outTempSlice.ColumnSlice(0, curBatchSize * mapCount);
-            //        outTempSlice.Reshape(mapOutSize * curBatchSize, mapCount);
-            //    }
-            //    Mat::Multiply(unrolledInput, true, kern, false, outTempSlice);
-            //    outTempSlice.Reshape(curBatchSize, mapOutSize * mapCount);
-            //    auto outSlice = out.ColumnSlice(start, curBatchSize);
-            //    outSlice.AssignTransposeOf(outTempSlice);
-            //}
+            else
+            {
+                auto gradTempSlice = workspace.ColumnSlice(kernCols + unrollRows * unrollCols, unrollRows * mapInCount);
+                if (curBatchSize != subBatchSize)
+                    gradTempSlice = gradTempSlice.ColumnSlice(0, mapInSize * curBatchSize * mapInCount);
+                gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
+                auto gradSlice = grad.ColumnSlice(start, curBatchSize);
+                gradTempSlice.AssignTransposeOf(gradSlice);
+                gradTempSlice.Reshape(mapInSize * curBatchSize, mapInCount);
+                Mat::MultiplyAndAdd(unrolledSrcGrad, true, kernTran, false, gradTempSlice);
+                gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
+                gradSlice.AssignTransposeOf(gradTempSlice);
+            }
         }
     }
 
@@ -699,7 +706,7 @@ protected:
     {
         UNUSED(srcGrad); UNUSED(in); UNUSED(kernelGrad); UNUSED(workspace);
         //srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
-        RuntimeError("Not yet implemented.");
+        //RuntimeError("Not yet implemented.");
     }
 
 public:

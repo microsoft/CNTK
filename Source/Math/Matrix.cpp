@@ -4050,7 +4050,7 @@ void Matrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOutSi
 }
 
 template <class ElemType>
-void Matrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInSize, const Matrix<int>& mpRowCol,
+void Matrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const Matrix<int>& mpRowCol,
                                                const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
 {
     assert(mpRowCol.GetNumCols() == 1);
@@ -4061,7 +4061,7 @@ void Matrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInSi
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->UnrollConvolutionOutput(unrollCols, mapInSize, *(mpRowCol.m_CPUMatrix),
+                            m_CPUMatrix->UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, *(mpRowCol.m_CPUMatrix),
                                                                  *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED,

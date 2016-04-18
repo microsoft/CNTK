@@ -481,7 +481,7 @@ public:
 
     void UnrollConvolutionInput(size_t unrollCols, size_t mapOutSize, const Matrix<int>& mpRowCol,
                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
-    void UnrollConvolutionOutput(size_t unrollCols, size_t mapInSize, const Matrix<int>& mpRowCol,
+    void UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const Matrix<int>& mpRowCol,
                                  const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
 
     void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;

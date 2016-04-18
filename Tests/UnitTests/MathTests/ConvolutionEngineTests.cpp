@@ -52,8 +52,8 @@ std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEng
 {
     std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> res;
     // Reference engine. The engine does not use temp memory so safe to set it to 0.
-    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
-    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
 
     // Gemm engine. Implemented only for CPU for now. Uses temp memory.
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 0));
@@ -66,46 +66,51 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
 {
     std::vector<ConvolveGeometryPtr> res;
     // REVIEW alexeyk: add test cases with even dimensions of a kernel. There are some corner cases which cuDNN does not support (which essentially require negative padding).
-    //for (size_t kW : {1, 3})
-    //{
-    //    for (size_t kH : {1, 3})
-    //    {
-    //        for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
-    //        {
-    //            for (size_t inC : {1, 3})
-    //            {
-    //                for (size_t mapCount : {1, 5})
-    //                {
-    //                    for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
-    //                    {
-    //                        // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
-    //                        res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
-    //                            TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
-    //                            ConvolveGeometry::BoolVec{true},
-    //                            ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
-    //                            TensorShape(0), TensorShape(0)));
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
+    for (size_t kW : {1, 3})
+    {
+        for (size_t kH : {1, 3})
+        {
+            for (size_t inW : {kW, 2 * kW, 2 * kW - 1})
+            {
+                for (size_t inC : {1, 3})
+                {
+                    for (size_t mapCount : {1, 5})
+                    {
+                        for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
+                        {
+                            // Note: must use sharing=false in channel dimension otherwise geometry will not be cuDNN compatible but cuDNN won't fail.
+                            res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
+                                TensorShape(kW, kH, inC), TensorShape(mapCount), TensorShape(stride, stride, inC),
+                                ConvolveGeometry::BoolVec{true},
+                                ConvolveGeometry::BoolVec{(kW & 1) != 0, (kH & 1) != 0, false},
+                                TensorShape(0), TensorShape(0)));
+                        }
+                    }
+                }
+            }
+        }
+    }
     // For debugging.
-    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 2),
+        TensorShape(3, 3, 2), TensorShape(2), TensorShape(1, 1, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false, false, false},
+        TensorShape(0), TensorShape(0)));
+    // Simple 3D convolution - works only in reference engine.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 2),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
         ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false, false, false},
         TensorShape(0), TensorShape(0)));
 
-    //res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),
-    //    TensorShape(3, 3, 1), TensorShape(8), TensorShape(1, 2, 1),
-    //    ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
-    //    TensorShape(0), TensorShape(0)));
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),
+        TensorShape(3, 3, 1), TensorShape(8), TensorShape(1, 2, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        TensorShape(0), TensorShape(0)));
 
-    //// 1x1 convolution (shortcuts in ResNet).
-    //res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 2),
-    //    TensorShape(1, 1, 2), TensorShape(1), TensorShape(2, 2, 1),
-    //    ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
-    //    TensorShape(0, 0, 0), TensorShape(0)));
+    // 1x1 convolution (shortcuts in ResNet).
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 2),
+        TensorShape(1, 1, 2), TensorShape(1), TensorShape(2, 2, 1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
+        TensorShape(0, 0, 0), TensorShape(0)));
     return res;
 }
 
@@ -245,7 +250,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
             auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, maxTempMem, PoolKind::None, engKind);
 
-            size_t n = 1;//batchSizeG(rng);
+            size_t n = batchSizeG(rng);
             vec buf;
             buf.resize(g->OutputShape().GetNumElements() * n);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
