@@ -467,10 +467,44 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        // this assumes that Input(1) and Input(2) are constants
+        // expecting 3 inputs
         assert(m_inputs.size() == 3);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        
+        // make sure that the min_value and max_value tensors are compatible with Input(0) ('x')        
+        let shape0 = GetInputSampleLayout(0);
+        SmallVector<size_t> dims = shape0.GetDims();
+
+        // shapes of min_value and max_value
+        let shape1 = GetInputSampleLayout(1);
+        let shape2 = GetInputSampleLayout(2);
+        
+        // make sure we can broadcast from 1 and 2 to 0, if necessary
+        for (size_t k = 0; k < shape1.GetRank(); k++)
+        {
+            size_t dim1 = shape1[k];
+
+            // BUGBUG: We must consider the allowBroadcast flag here.
+            if (dim1 == 1)                                // if [1] is broadcasting we are fine
+                ;
+            else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting: they must match
+                InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
+        }
+        for (size_t k = 0; k < shape2.GetRank(); k++)
+        {
+            size_t dim2 = shape2[k];
+
+            // BUGBUG: We must consider the allowBroadcast flag here.
+            if (dim2 == 1)                                // if [2] is broadcasting we are fine
+                ;
+            else if (isFinalValidationPass && dim2 != dims[k]) // no broadcasting: they must match
+                InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                NodeDescription().c_str(), string(shape0).c_str(), string(shape2).c_str());
+        }
+
+        // clip results in a tensor of the same shape as Input(0)
         SetDims(Input(0));
     }
 };
