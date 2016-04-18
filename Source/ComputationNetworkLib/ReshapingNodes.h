@@ -180,6 +180,8 @@ template class ReshapeNode<double>;
 //  - "Mean"      --not implemented yet
 //  - "Max"       --not implemented yet
 //  - "Min"       --not implemented yet
+//  - "All"       --not implemented yet
+//  - "Any"       --not implemented yet
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -1368,10 +1370,10 @@ reshaping
 reductions
 ----------
 
- - ReduceSum
+ - these are/will be implemented as a node for samples, and as recurrences for sequences
+ - ReducePlus
     - sum over all elements of a dimension, or over time
-    - we already got: SumColumnElements
- - ReduceMax
+ - ReduceMax, ReduceMin
     - max
     - can use MaxPooling?
  - ReduceMean
@@ -1380,12 +1382,12 @@ reductions
  - ArgMax, ArgMin
     - we already have that somewhere, for evaluation
  - All, Any
-    - logical test --must be done over sequences
+    - logical test
  - TF also has:
-    - reduce_prod, reduce_min
+    - reduce_prod
     - segment_sum etc.; we use sequences
     - listdiff
-    - where: indices of 'true' values  -> 2D tensor of coordinates
+    - where: indices of 'true' values  -> 2D tensor of coordinates (unlike our Where)
     - unique (1D only)
     - edit_distance
     - invert_permutation: invert a permutation index vector

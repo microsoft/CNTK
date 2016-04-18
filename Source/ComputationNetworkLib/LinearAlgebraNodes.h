@@ -29,12 +29,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class PlusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Plus";
-    }
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Plus"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PlusNode);
@@ -76,12 +72,8 @@ template class PlusNode<double>;
 template <class ElemType>
 class LogPlusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"LogPlus";
-    }
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"LogPlus"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(LogPlusNode);
@@ -113,6 +105,7 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
+        // TODO: would be nice to state the derivative here in a comment
         inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
     }
 };

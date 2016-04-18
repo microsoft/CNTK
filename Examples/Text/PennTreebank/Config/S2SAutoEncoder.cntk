@@ -852,7 +852,7 @@ write = [
             #       +-----+
 
             # tokens.word:
-            #tokens.word = ReduceSum (axis=2, topPaths) # TODO: add an axis parameter to SumColumnElements()
+            #tokens.word = ReducePlus (axis=2, topPaths) # TODO: add an axis parameter to SumColumnElements()
             #   +-+
             #   |0|
             #   |0|-+
