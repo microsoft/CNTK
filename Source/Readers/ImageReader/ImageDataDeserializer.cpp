@@ -77,7 +77,7 @@ public:
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
-		image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
+        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
 
         if (!cvImage.data)
@@ -119,7 +119,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     ImageConfigHelper configHelper(config);
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
-	m_grayscale = configHelper.UseGrayscale();
+    m_grayscale = configHelper.UseGrayscale();
 	const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
@@ -273,7 +273,7 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path, 
 
     ImageDataDeserializer::SeqReaderMap::const_iterator r;
     if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
-		return m_defaultReader.Read(seqId, path, grayscale);
+        return m_defaultReader.Read(seqId, path, grayscale);
     return (*r).second->Read(seqId, path, grayscale);
 }
 
@@ -281,9 +281,9 @@ cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
 {
 	assert(!path.empty());
 
-	if (grayscale)
-		return cv::imread(path, cv::IMREAD_GRAYSCALE);
-	else
-		return cv::imread(path, cv::IMREAD_COLOR);
+    if (grayscale)
+        return cv::imread(path, cv::IMREAD_GRAYSCALE);
+    else
+        return cv::imread(path, cv::IMREAD_COLOR);
 }
 }}}
