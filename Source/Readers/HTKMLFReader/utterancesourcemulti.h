@@ -184,8 +184,8 @@ class minibatchutterancesourcemulti : public minibatchsource
                         if (p_pageintimer != nullptr)
                         {
                           double pageintime = (double)(*p_pageintimer);
-                          fprintf(stderr, "Chunk read statistics; Total time = %.8g, Num Frames read = %d, Num bytes per frame = %d, Avg I/O bandwidth = %.2g MB/sec).\n",
-                            pageintime, totalframes, (int)featdim * sizeof(float), (featdim * sizeof(float) * totalframes / 1024 / 1024 / pageintime));
+                          fprintf(stderr, "Chunk read statistics; Total time = %.8g, Num Frames read = %zu, Num bytes per frame = %zu, Avg I/O bandwidth = %.2g MB/sec).\n",
+                            pageintime, totalframes, featdim * sizeof(float), (double)(featdim * sizeof(float) * totalframes / 1024 / 1024 / pageintime));
                         }
                     }
                 }
