@@ -425,10 +425,10 @@ RNNs =
             // parameter macros--these carry their own weight matrices
             B() = Parameters.BiasParam (cellDim)
 
-            #inputDim1 = inputDim
-            #W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.StabilizeElements (v, inputDim=inputDim1, enabled=enableSelfStabilization) // input-to-hidden
-            # ^^ element-wise stab, use if input is a concatenation; vv stab for entire matrix
-            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+            # with attention models, where we concatenate two inputs, a single scalar stabilizer is not appropriate and is worse
+            useElementwiseStabilizerForW = false # flip this to true for attention model
+            stabilizerWDim = if useElementwiseStabilizerForW then inputDim else 1
+            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.StabilizeElements (v, inputDim=stabilizerWDim, enabled=enableSelfStabilization) // input-to-hidden
             H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
             C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 

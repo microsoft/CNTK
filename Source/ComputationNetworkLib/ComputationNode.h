@@ -1318,7 +1318,7 @@ public:
     void UpdateFunctionValuesSize()
     {
         UpdateDataSize(Value());
-        Value().CollapseDataLocation(); // actually before writing, should change the name
+        Value().CollapseDataLocation();
     }
 
     // -----------------------------------------------------------------------

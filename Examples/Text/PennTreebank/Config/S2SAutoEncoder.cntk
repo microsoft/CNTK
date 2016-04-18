@@ -21,20 +21,16 @@ ExpRootDir = "$RunRootDir$"
 # experiment id
 #ExpId = _run
 
-deviceId = 1
+deviceId = 4
 #ExpId = 41-$deviceId$-s2sae    # TASK
 ExpId = 14-$deviceId$-g2p
-#ExpId = 13-5-g2p # for decoding a different model
+#ExpId = 13-2-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
 stderr = $ExpDir$/S2SAutoEncoder.log3
-
-# It implements a sequence-to-sequence based auto-encoder.
-# It encodes an entire sentence into a flat vector, and tries to regenerate it.
-# Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
 
 command = writeWordAndClassInfo:train:test:write
 #command = write
@@ -44,7 +40,7 @@ precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
-decodeModelPath = "$modelPath$.35" # epoch to decode can be appended here  TASK
+decodeModelPath = "$modelPath$.17" # epoch to decode can be appended here  TASK
 beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
 decodeOutputPath = "$decodeModelPath$.b$beamDepth$"
 
@@ -200,7 +196,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             NextHC (lstmState) = [
                h = Loop.Next (lstmState.h)             // hidden state(t-1)
                c = Loop.Next (lstmState.c)             // cell(t-1)
-            ]
+            ] # TODO: use BS.RNNs.NextHC
             backwardEncoder = BS.RNNs.RecurrentLSTMP2Stack (encoderDims, /*encoderDims,*/ inputEmbedded, inputDim=embeddingDim, previousHook=NextHC, enableSelfStabilization=useStabilizer)
             output = [
                 h = RowStack (forwardEncoder[encoderOutputLayer].h : backwardEncoder[encoderOutputLayer].h)
@@ -990,7 +986,7 @@ write = [
 
             # helper macros  --> move to BS.core.bs
 
-            FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1 : 1)) else [
+            FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1)) else [
                 axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis
                 out = if axis == 1  # maybe this can be unified or pushed into Splice?
                       then RowStack (ConstantTensor (firstVal, (1)) : ConstantTensor (otherVals, (N -1)))                                # col vector: [ 1; 0; 0; 0 ... ]
