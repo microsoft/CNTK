@@ -33,6 +33,9 @@ CLIP_TUPLES = [
     # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
     # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
     ([[1.5, 2.1, 0.9, 1.0, 2.0]], [5.0], [0.5]),
+     
+    # test a more complicated broadcasting scenario
+    ([[1.0, 2.0], [3.0, 4.0]], [[1.5, 2.0], [2.5, 3.0]], [[2.0, 2.5], [2.5, 3.5]]),
     ]
 
 # -- clip_by_value operation tests --
@@ -46,12 +49,12 @@ def test_op_clip_by_value(x, min_value, max_value, device_id, precision):
     expected = [[np.clip(AA(x), AA(min_value), AA(max_value))]]
 
     a = I([x], has_sequence_dimension=False)
-    b = C([min_value])    
-    c = C([max_value])
+    b = C(min_value)    
+    c = C(max_value)
     
     result = clip_by_value(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, clean_up=False, backward_pass=False)
     
     #Backward pass test
     #==================
