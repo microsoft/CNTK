@@ -7,7 +7,7 @@
 # WORK IN PROGRESS #
 ####################
 
-makeMode = true
+makeMode = false
 
 # Command line to run in debugger:
 # configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/S2SAutoEncoder.cntk  RunRootDir=$(SolutionDir)Examples/Text/PennTreebank  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
@@ -24,13 +24,13 @@ ExpRootDir = "$RunRootDir$"
 deviceId = 1
 #ExpId = 41-$deviceId$-s2sae    # TASK
 ExpId = 14-$deviceId$-g2p
-#ExpId = 13-1-g2p # for decoding a different model
+#ExpId = 13-5-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log2
+stderr = $ExpDir$/S2SAutoEncoder.log3
 
 # It implements a sequence-to-sequence based auto-encoder.
 # It encodes an entire sentence into a flat vector, and tries to regenerate it.
@@ -44,8 +44,8 @@ precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
-decodeModelPath = "$modelPath$.21" # epoch to decode can be appended here  TASK
-beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
+decodeModelPath = "$modelPath$.35" # epoch to decode can be appended here  TASK
+beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
 decodeOutputPath = "$decodeModelPath$.b$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
@@ -98,6 +98,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     useStabilizer = true
     useEncoder    = true                # if false, this becomes a regular RNN
     useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
+    useBidirectionalEncoder = false
 
     # import some names
     Parameters = BS.Parameters
@@ -105,13 +106,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     Sequences  = BS.Sequences
     Loop       = BS.Loop
     Boolean    = BS.Boolean
-    RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
 
     # dimensions
     embeddingDim = $confVocabSize$ # 300
-    hiddenDim    = 750 #512 # 1024 # 200   --TODO: Kaisheng used 500
+    hiddenDim    = 512  #420 #768 # 1024 # 200   --TODO: Kaisheng used 500
     attentionDim = 128 # dim of attention  projection
-    maxLayer = 2 # 0
+    maxLayer = 1 # 0
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
@@ -162,33 +162,59 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     labelSentenceStart = First (streams.labels)
     labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
 
-    RecurrentLSTMPWithAttentionWindow2 (inputDim/*x.dim*/, outputDim/*h.dim*/, cellDim/*c.dim*/, x, projectedAttentionWindowBroadcast, attentionDim, attentionSpan, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+    RecurrentLSTMPWithAttentionWindow2 (inputDim1/*x.dim*/, outputDim/*h.dim*/, cellDim1/*c.dim*/, x, projectedAttentionWindowBroadcast, attentionDim, attentionSpan, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
     [
         prevState = previousHook (lstmState)
 
         # compute additional hidden state from attention
         W(x) = TraceDense(    Parameters.WeightParam (attentionDim, outputDim)    , 'Wdec') * Parameters.Stabilize (x, enabled=false/*useStabilizer*/)
-        projectedH = W (prevState.h) # [cellDim]
+        projectedH = W (prevState.h) # [outputDim]    // [outputDim x D]
         tanHOut = Tanh (TraceDense(   projectedAttentionWindowBroadcast.projectedValue,   'hencp') + TraceDense (   projectedH,   'hdecp')) # [attentionDim x attentionSpan]
+        # ^^ [attDim x 1 x attSpan] + [attDim x D] -> [attDim x D x attSpan]
         v(x) = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')  * Parameters.Stabilize (x, enabled=useStabilizer) # [1 x attentionDim]
         u = v (tanHOut)                                            # [1 x attentionSpan]
+        # [1 x D x attSpan]
         uValid = u + Log (projectedAttentionWindowBroadcast.valid) # [1 x attentionSpan]
+        # [1 x D x attSpan] + [1 x 1 x attSpan] -> [1 x D x attSpan]
         attentionWeights = TraceDense(  Softmax (uValid)    ,'weights')                    # [1 x attentionSpan]
+        # [1 x D x attSpan]   BUGBUG, needs to keep Softmax denoms separate over D
         weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* attentionWeights # [encoderHiddenDim x attentionSpan]
+        # [encDim x 1 x attSpan] .* [1 x D x attSpan] -> [encDim x D x attSpan]  BUGBUG, needs to keep Softmax denoms separate over D
         weightedAttentionAverage = weightedAttentionWindow * BS.Constants.OnesTensor (attentionSpan) # [encoderHiddenDim]
+        # [encDim x D]
 
         # feed both to LSTM as a single agumented input, so that we can reuse the existing LSTM component
         augmentedX = RowStack (weightedAttentionAverage : x)
 
         enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (projectedAttentionWindowBroadcast.dim + inputDim, outputDim, cellDim, augmentedX, prevState, enableSelfStabilization=enableSelfStabilization1)
+        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=projectedAttentionWindowBroadcast.dim + inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
     # encoder (processes inputEmbedded)
-    encoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
-
     encoderOutputLayer = Length (encoderDims)-1
-    encoderOutput = encoder[encoderOutputLayer]
+    encoder =
+        if useBidirectionalEncoder
+        then
+        [
+            forwardEncoder  = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
+            NextHC (lstmState) = [
+               h = Loop.Next (lstmState.h)             // hidden state(t-1)
+               c = Loop.Next (lstmState.c)             // cell(t-1)
+            ]
+            backwardEncoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, previousHook=NextHC, enableSelfStabilization=useStabilizer)
+            output = [
+                h = RowStack (forwardEncoder[encoderOutputLayer].h : backwardEncoder[encoderOutputLayer].h)
+                c = RowStack (forwardEncoder[encoderOutputLayer].c : backwardEncoder[encoderOutputLayer].c)
+            ]
+            dim = 2 * encoderDims[encoderOutputLayer]
+        ]
+        else
+        [
+            encoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
+            output = encoder[encoderOutputLayer]
+            dim = encoderDims[encoderOutputLayer]
+        ]
+    encoderOutput = encoder.output
 
     # that last frame should be fed as an additional input to every decoder step
     # Three ways of passing encoder state:
@@ -199,23 +225,25 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     thoughtVector = [
         h = Last (encoderOutput.h)
         c = Last (encoderOutput.c)
+        dim = encoder.dim
     ]
-    thoughtVectorDim = encoderDims[encoderOutputLayer]
+    thoughtVectorDim = thoughtVector.dim
 
     thoughtVectorPadded = [ # padded with zeroes until end of target sequence
         h = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
         c = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.c)
+        dim = thoughtVector.dim
     ]
 
     # attention (fixed rolling window)
     attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
     projectedAttentionWindowBroadcast = [
-        W(x) = TraceDense (   Parameters.WeightParam (attentionDim, thoughtVectorDim),    'Wenc')   * Parameters.Stabilize (x, enabled=false/*useStabilizer*/)
+        W(x) = TraceDense (   Parameters.WeightParam (attentionDim, thoughtVector.dim),    'Wenc')   * Parameters.Stabilize (x, enabled=false/*useStabilizer*/)
         #B = Parameters.BiasParam (vocabDim) # no bias in attention
         value          = Sequences.BroadcastSequenceAs (labelsEmbedded,    attentionWindow.value)
         projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, W (attentionWindow.value)) # apply the projection columnwise to the attentionWindow tensor
         valid          = Sequences.BroadcastSequenceAs (labelsEmbedded,    attentionWindow.valid)
-        dim            = thoughtVectorDim
+        dim            = thoughtVector.dim
     ]
 
     # NYU style: expand h to all, drop c
@@ -746,19 +774,55 @@ write = [
             #  - traceback is a right-to-left recurrence
             #     - output best hypo conditioned on the path (it is already known)
 
-            propagationEdits[i:0..8] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
+            # attention:
+            # tanHOut = Tanh (TraceDense(   projectedAttentionWindowBroadcast.projectedValue,   'hencp') + TraceDense (   projectedH,   'hdecp')) # [attentionDim x attentionSpan]
+            #   decoder[0].tanHOut.z = Plus (decoder[0].tanHOut.z.PlusArgs[0], decoder[0].tanHOut.z.PlusArgs[1]) : [128 x 20 x WhereNodeAxis1], [128] -> [128 x 20 x WhereNodeAxis1]
+            #   patch PlusArgs[0]
+            # uValid = u + Log (projectedAttentionWindowBroadcast.valid) # [1 x attentionSpan]
+            #   decoder[0].uValid = Plus (decoder[0].u, decoder[0].uValid.PlusArgs[1]) : [1 x 20 x WhereNodeAxis1], [1 x 20 x WhereNodeAxis1] -> [1 x 20 x WhereNodeAxis1]
+            #   patch PlusArgs[1]
+            # weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* attentionWeights # [encoderHiddenDim x attentionSpan]
+            #   decoder[0].weightedAttentionWindow = ElementTimes (projectedAttentionWindowBroadcast.value.out, decoder[0].attentionWeights) : [512 x 20 x WhereNodeAxis1], [1 x 20 x WhereNodeAxis1] -> [512 x 20 x WhereNodeAxis1]
+            #   patch ElementTimesArgs[0]
+            # each:
+            #   node -> SplitDimension (node, /*axis=*/, 1 /*->0:1*/)
+            #   e.g.
+            #   [512 x 20 x *] -> [(0:1) x 20 x *hereNodeAxis13] -> [512 x 1 x 20 x *]
+            # decoder[0].weightedAttentionAverage = Times (decoder[0].weightedAttentionWindow, decoder[0].weightedAttentionAverage.TimesArgs[1]) : [512 x 1 x 20 x WhereNodeAxis11], [20] -> [512] FAILED
+            #   change to outputRank=2
+            # attentionWeights = TraceDense(  Softmax (uValid)    ,'weights')                    # [1 x attentionSpan]
+            #   decoder[0].attentionWeights.h = Softmax (decoder[0].uValid) : [1 x 3 x 20 x WhereNodeAxis21] -> [1 x 3 x 20 x WhereNodeAxis21]
+            #   path SoftmaxArgs[0] to be column-wise over axis 3
+
+            ColumnwiseSoftmax (axis=1, z) = [ n = TraceDense(   Softmax (z),    'smz') ; axis1 = axis ; d = TraceDense(    ReducePlus (axis=axis1, n),    'denom') ; p = TraceDense(    n .* Reciprocal (d),    'p') ].p
+
+            #Columnwise (f, beamDepth, z) = # TODO: Takes LogSoftmax over axis=1. it is more tricky to do this over arbitrary axes
+            #[
+            #    cols[d:0..beamDepth-1] = f (Slice (d, d+1, z, axis=2) /*[:,d]*/ )
+            #    out = Splice (cols, axis=2)
+            #].out
+
+            InjectDepth (node) = SplitDimension (node, /*axis=*/1, 1 /*->0:1*/)
+
+            propagationEdits[i:0..13] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
                 # non-NYU:
-                if      i == 0 then (node => if node.name == 'decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i == 1 then (node => if node.name == 'decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                if      i ==  0 then (node => if node.name == 'decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  1 then (node => if node.name == 'decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # NYU:
-                else if i == 2 then (node => if node.name == 'decoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i == 3 then (node => if node.name == 'decoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  2 then (node => if node.name == 'decoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  3 then (node => if node.name == 'decoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # all:
-                else if i == 4 then (node => if node.name == 'decoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i == 5 then (node => if node.name == 'decoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
-                else if i == 6 then (node => if node.name == 'decoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i == 7 then (node => if node.name == 'decoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
-                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.delayedDecoderFeedback, delayedDecoderFeedback)
+                else if i ==  4 then (node => if node.name == 'decoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  5 then (node => if node.name == 'decoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  6 then (node => if node.name == 'decoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  7 then (node => if node.name == 'decoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                # attention:
+                else if i ==  8 then (node => if node.name != 'decoder[0].tanHOut.z'                then node else InjectDepth (node.PlusArgs[0])          +              node.PlusArgs[1])
+                else if i ==  9 then (node => if node.name != 'decoder[0].uValid'                   then node else              node.PlusArgs[0]           + InjectDepth (node.PlusArgs[1]))
+                else if i == 10 then (node => if node.name != 'decoder[0].weightedAttentionWindow'  then node else InjectDepth (node.ElementTimesArgs[0]) .*              node.ElementTimesArgs[1])
+                else if i == 11 then (node => if node.name != 'decoder[0].weightedAttentionAverage' then node else Times (node.TimesArgs[0], node.TimesArgs[1], outputRank=2))
+                else if i == 12 then (node => if node.name != 'decoder[0].attentionWeights.h'       then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
+                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
 
             # decoderFeedback must be updated to take actual decoder output
 
