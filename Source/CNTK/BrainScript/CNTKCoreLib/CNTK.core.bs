@@ -395,21 +395,7 @@ Parameters =
     Stabilize (x, enabled=true) =
         if enabled
         then [
-
-    # temporary tracing facility
-    TraceDenseTransposed (h, what) =
-        Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=21/*beamDepth*beamDepth*/, onlyUpToT=25, format=formatDenseTransposed)
-    formatDenseTransposed = [
-        type = "real"
-        transpose = true
-        precisionFormat = ".4"
-    ]
-    Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
-        operation = 'Trace' ; inputs = node
-    ]
-
-
-                 beta = /*TraceDenseTransposed(*/   Exp (ScalarParam())   /*,'beta')*/
+                 beta = Exp (ScalarParam())
                  result = Scale (beta, x)
              ].result
         else x
@@ -504,14 +490,7 @@ RNNs =
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    RecurrentLSTMP (inputDim, outputDim, cellDim, x, previousHook=PreviousHC, enableSelfStabilization=false) =
-    [
-        prevState = previousHook (lstmState)
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState.h // that's the value we return
-
-    # same as RecurrentLSTMP but returns both h and c
+    # It returns a record (h,c). To use its output, say .h
     RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
         prevState = previousHook (lstmState)
@@ -521,13 +500,15 @@ RNNs =
 
     # a stack of recurrent LSTMs (unidirectional)
     RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, previousHook=PreviousHC, enableSelfStabilization=false) = [
+        previousHook1 = previousHook
         useStabilizer = enableSelfStabilization
-        layer[i:0..Length (hiddenDims)-1] =
+        layers[i:0..Length (hiddenDims)-1] =
             RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
                              hiddenDims[i], cellDims[i],
-                             if i == 0 then input else layer[i-1].h,
+                             if i == 0 then input else layers[i-1].h,
+                             previousHook=previousHook1,
                              enableSelfStabilization=useStabilizer)
-    ].layer
+    ].layers
 ]
 
 ##############################################################################

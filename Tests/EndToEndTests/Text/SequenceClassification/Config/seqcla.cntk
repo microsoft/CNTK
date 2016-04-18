@@ -32,7 +32,7 @@ Train=[
                act = activation(z)
             ].act
             LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               lstm = BS.RNNs.RecurrentLSTMP2 (inputSize, outputSize, cellSize, input).h
                result = selector(lstm)
             ].result
         ]        

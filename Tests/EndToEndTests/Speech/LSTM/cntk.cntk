@@ -53,7 +53,7 @@ speechTrain = [
 
         # import some namespaces
         # TODO: allow to say import BS.RNNs LSTMP or import BS.RNNs to import all (literally creates new dict members mirroring those)
-        RecurrentLSTMP = BS.RNNs.RecurrentLSTMP
+        RecurrentLSTMP2 = BS.RNNs.RecurrentLSTMP2
         Parameters = BS.Parameters
 
         useSelfStabilization = true
@@ -79,8 +79,8 @@ speechTrain = [
         // define the stack of hidden LSTM layers
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then RecurrentLSTMP(baseFeatDim, hiddenDim, cellDim, featNorm,        enableSelfStabilization=useSelfStabilization)
-            else RecurrentLSTMP(hiddenDim,   hiddenDim, cellDim, LSTMoutput[k-1], enableSelfStabilization=useSelfStabilization)
+            then RecurrentLSTMP2 (baseFeatDim, hiddenDim, cellDim, featNorm,        enableSelfStabilization=useSelfStabilization).h
+            else RecurrentLSTMP2 (hiddenDim,   hiddenDim, cellDim, LSTMoutput[k-1], enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
         W(x) = Parameters.WeightParam(labelDim, hiddenDim) * Parameters.Stabilize (x, enabled=useSelfStabilization)
