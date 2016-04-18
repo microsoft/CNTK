@@ -2,9 +2,6 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-# On Linux it will take Anaconda
-export PATH=/usr/local/anaconda2/bin:$PATH
-
 PYAPIDIR=$TEST_ROOT_DIR/../../contrib/Python
 
 pushd $PYAPIDIR
