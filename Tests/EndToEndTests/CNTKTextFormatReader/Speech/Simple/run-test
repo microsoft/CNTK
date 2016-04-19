@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+DeleteModelsAfterTest=0
+cntkrun cntk.cntk || exit $?
+echo === Deleting last epoch data
+rm $TEST_RUN_DIR/models/*.dnn
+echo ==== Re-running from checkpoint
+DeleteExistingModels=0
+DeleteModelsAfterTest=1
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'makeMode=true' || exit $?

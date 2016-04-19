@@ -1,0 +1,34 @@
+# Sigmoid non-linearity
+DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
+    W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale) 
+    b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = Sigmoid(z)
+]
+
+# no non-linearity, as input for SoftMax
+DNNLayer(inDim, outDim, x, parmScale) = [
+    W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale)
+    b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale)
+    t = Times(W, x)
+    z = Plus(t, b)
+]
+
+# ReLU non-linearity
+ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
+    convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale)
+    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false)
+    convB = ImageParameter(1, 1, outMap, imageLayout="legacy", init="fixedValue", value=bValue)
+    convPlusB = Plus(conv, convB);
+    act = RectifiedLinear(convPlusB);
+]
+
+BatchNorm(dim, x, scaleInit, biasInit) = [
+    m = Mean(x)
+    isd = InvStdDev(x)
+    norm = ColumnElementTimes(Minus(x, m), isd)
+    sc = Parameter(dim, 1, init="uniform", initValueScale=scaleInit)
+    b  = Parameter(dim, 1, init="uniform", initValueScale=biasInit)
+    bn_norm = Plus(ColumnElementTimes(norm, sc), b)
+]

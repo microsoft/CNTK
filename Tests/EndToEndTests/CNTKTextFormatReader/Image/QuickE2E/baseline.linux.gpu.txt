@@ -1,0 +1,1252 @@
+=== Running /home/alrezni/src/cntk_git/build/release/bin/cntk configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/cntk.cntk currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 18 2016 16:16:45
+		Last modified date: Tue Apr  5 16:01:37 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: alrezni/examples_text
+		Build SHA1: 3f7e6e78467f3e03a6cbd014c30e36a5711575df (modified)
+		Built by alrezni on atleneu04
+		Build Path: /home/alrezni/src/cntk_git
+-------------------------------------------------------------------
+Changed current directory to /home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+04/19/2016 09:07:50: -------------------------------------------------------------------
+04/19/2016 09:07:50: Build info: 
+
+04/19/2016 09:07:50: 		Built time: Apr 18 2016 16:16:45
+04/19/2016 09:07:50: 		Last modified date: Tue Apr  5 16:01:37 2016
+04/19/2016 09:07:50: 		Build type: release
+04/19/2016 09:07:50: 		Build target: GPU
+04/19/2016 09:07:50: 		With 1bit-SGD: no
+04/19/2016 09:07:50: 		Math lib: acml
+04/19/2016 09:07:50: 		CUDA_PATH: /usr/local/cuda-7.0
+04/19/2016 09:07:50: 		CUB_PATH: /usr/local/cub-1.4.1
+04/19/2016 09:07:50: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/19/2016 09:07:50: 		Build Branch: alrezni/examples_text
+04/19/2016 09:07:50: 		Build SHA1: 3f7e6e78467f3e03a6cbd014c30e36a5711575df (modified)
+04/19/2016 09:07:50: 		Built by alrezni on atleneu04
+04/19/2016 09:07:50: 		Build Path: /home/alrezni/src/cntk_git
+04/19/2016 09:07:50: -------------------------------------------------------------------
+
+04/19/2016 09:07:50: Running on localhost at 2016/04/19 09:07:50
+04/19/2016 09:07:50: Command line: 
+/home/alrezni/src/cntk_git/build/release/bin/cntk  configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/cntk.cntk  currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu  DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true
+
+
+
+04/19/2016 09:07:50: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/19/2016 09:07:50: precision = "float"
+command = train:test
+deviceId = $DeviceId$
+ndlMacros = "$ConfigDir$/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 8
+train = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+test = [
+    action = "test"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+
+04/19/2016 09:07:50: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/19/2016 09:07:50: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/19/2016 09:07:50: precision = "float"
+command = train:test
+deviceId = 0
+ndlMacros = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 8
+train = [
+    action = "train"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+test = [
+    action = "test"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+
+04/19/2016 09:07:50: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/19/2016 09:07:50: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.cntk:command=train:test
+configparameters: cntk.cntk:ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:ndlMacros=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Macros.ndl
+configparameters: cntk.cntk:numCPUThreads=8
+configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:test=[
+    action = "test"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:train=[
+    action = "train"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+
+04/19/2016 09:07:50: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/19/2016 09:07:50: Commands: train test
+04/19/2016 09:07:50: Precision = "float"
+04/19/2016 09:07:50: Using 8 CPU threads.
+04/19/2016 09:07:50: CNTKModelPath: /tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn
+04/19/2016 09:07:50: CNTKCommandTrainInfo: train : 12
+04/19/2016 09:07:50: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+
+04/19/2016 09:07:50: ##############################################################################
+04/19/2016 09:07:50: #                                                                            #
+04/19/2016 09:07:50: # Action "train"                                                             #
+04/19/2016 09:07:50: #                                                                            #
+04/19/2016 09:07:50: ##############################################################################
+
+04/19/2016 09:07:50: CNTKCommandTrainBegin: train
+
+04/19/2016 09:07:50: Creating virgin network.
+SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *], [1 x 1 x 16] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *] -> [24 x 24 x 16 x *]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *] -> [12 x 12 x 16 x *]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *], [1 x 1 x 32] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *] -> [8 x 8 x 32 x *]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *] -> [4 x 4 x 32 x *]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *] -> [128 x *]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *] -> [128 x *]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+
+11 out of 27 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/19/2016 09:07:51: Created model with 27 nodes on GPU 0.
+
+04/19/2016 09:07:51: Training criterion node(s):
+04/19/2016 09:07:51: 	ce = CrossEntropyWithSoftmax
+
+04/19/2016 09:07:51: Evaluation criterion node(s):
+
+04/19/2016 09:07:51: 	err = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/19/2016 09:07:51: No PreCompute nodes found, skipping PreCompute step.
+
+04/19/2016 09:07:51: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.36708664; EvalErr[0]PerSample = 0.91000000; TotalTime = 0.1904s; SamplesPerSecond = 525.1
+04/19/2016 09:07:51: Finished Epoch[ 1 of 12]: [Training Set] TrainLossPerSample = 2.3670866; TotalSamplesSeen = 100; EvalErrPerSample = 0.91; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.190914
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.1'
+
+04/19/2016 09:07:51: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.29613388; EvalErr[0]PerSample = 0.83000000; TotalTime = 0.0203s; SamplesPerSecond = 4935.3
+04/19/2016 09:07:51: Finished Epoch[ 2 of 12]: [Training Set] TrainLossPerSample = 2.2961339; TotalSamplesSeen = 200; EvalErrPerSample = 0.83; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.024998
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.2'
+
+04/19/2016 09:07:51: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.16532867; EvalErr[0]PerSample = 0.73000000; TotalTime = 0.0173s; SamplesPerSecond = 5793.1
+04/19/2016 09:07:51: Finished Epoch[ 3 of 12]: [Training Set] TrainLossPerSample = 2.1653287; TotalSamplesSeen = 300; EvalErrPerSample = 0.73; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.017807
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.3'
+
+04/19/2016 09:07:51: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.09280807; EvalErr[0]PerSample = 0.72000000; TotalTime = 0.0188s; SamplesPerSecond = 5319.7
+04/19/2016 09:07:51: Finished Epoch[ 4 of 12]: [Training Set] TrainLossPerSample = 2.0928081; TotalSamplesSeen = 400; EvalErrPerSample = 0.72; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.021917
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.4'
+
+04/19/2016 09:07:51: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.80800537; EvalErr[0]PerSample = 0.45000000; TotalTime = 0.0200s; SamplesPerSecond = 5010.8
+04/19/2016 09:07:51: Finished Epoch[ 5 of 12]: [Training Set] TrainLossPerSample = 1.8080054; TotalSamplesSeen = 500; EvalErrPerSample = 0.45; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023083
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.5'
+
+04/19/2016 09:07:51: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.51871109; EvalErr[0]PerSample = 0.30000000; TotalTime = 0.0199s; SamplesPerSecond = 5016.8
+04/19/2016 09:07:51: Finished Epoch[ 6 of 12]: [Training Set] TrainLossPerSample = 1.5187111; TotalSamplesSeen = 600; EvalErrPerSample = 0.3; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023067
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.6'
+
+04/19/2016 09:07:51: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.24519028; EvalErr[0]PerSample = 0.11000000; TotalTime = 0.0199s; SamplesPerSecond = 5016.6
+04/19/2016 09:07:51: Finished Epoch[ 7 of 12]: [Training Set] TrainLossPerSample = 1.2451903; TotalSamplesSeen = 700; EvalErrPerSample = 0.11; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023092
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.7'
+
+04/19/2016 09:07:51: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.05314194; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.0199s; SamplesPerSecond = 5022.3
+04/19/2016 09:07:51: Finished Epoch[ 8 of 12]: [Training Set] TrainLossPerSample = 1.0531419; TotalSamplesSeen = 800; EvalErrPerSample = 0.06; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.02307
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.8'
+
+04/19/2016 09:07:51: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.74623024; EvalErr[0]PerSample = 0.02000000; TotalTime = 0.0114s; SamplesPerSecond = 8807.5
+04/19/2016 09:07:51: Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 0.74623024; TotalSamplesSeen = 900; EvalErrPerSample = 0.02; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.011568
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.9'
+
+04/19/2016 09:07:51: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.58980782; EvalErr[0]PerSample = 0.02000000; TotalTime = 0.0155s; SamplesPerSecond = 6444.5
+04/19/2016 09:07:51: Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 0.58980782; TotalSamplesSeen = 1000; EvalErrPerSample = 0.02; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.016323
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.10'
+
+04/19/2016 09:07:51: Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.44861023; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.0174s; SamplesPerSecond = 5761.4
+04/19/2016 09:07:51: Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 0.44861023; TotalSamplesSeen = 1100; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.017679
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.11'
+
+04/19/2016 09:07:51: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+
+04/19/2016 09:07:51: Starting minibatch loop.
+04/19/2016 09:07:51:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.34007164; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.0203s; SamplesPerSecond = 4922.2
+04/19/2016 09:07:51: Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.34007164; TotalSamplesSeen = 1200; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023588
+04/19/2016 09:07:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn'
+04/19/2016 09:07:51: CNTKCommandTrainEnd: train
+
+04/19/2016 09:07:51: Action "train" complete.
+
+
+04/19/2016 09:07:51: ##############################################################################
+04/19/2016 09:07:51: #                                                                            #
+04/19/2016 09:07:51: # Action "test"                                                              #
+04/19/2016 09:07:51: #                                                                            #
+04/19/2016 09:07:51: ##############################################################################
+
+
+Post-processing network...
+
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *1] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *1], [1 x 1 x 16] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *1] -> [24 x 24 x 16 x *1]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *1] -> [12 x 12 x 16 x *1]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *1] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *1], [1 x 1 x 32] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *1] -> [8 x 8 x 32 x *1]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *1] -> [4 x 4 x 32 x *1]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *1] -> [128 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *1], [128] -> [128 x *1]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *1] -> [128 x *1]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+
+11 out of 27 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+Final Results: Minibatch[1-1]: SamplesSeen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.29767233    Perplexity = 1.3467204    
+
+04/19/2016 09:07:51: Action "test" complete.
+
+04/19/2016 09:07:51: __COMPLETED__
+=== Deleting last epoch data
+==== Re-running from checkpoint
+=== Running /home/alrezni/src/cntk_git/build/release/bin/cntk configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/cntk.cntk currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true makeMode=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 18 2016 16:16:45
+		Last modified date: Tue Apr  5 16:01:37 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: alrezni/examples_text
+		Build SHA1: 3f7e6e78467f3e03a6cbd014c30e36a5711575df (modified)
+		Built by alrezni on atleneu04
+		Build Path: /home/alrezni/src/cntk_git
+-------------------------------------------------------------------
+Changed current directory to /home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+04/19/2016 09:07:52: -------------------------------------------------------------------
+04/19/2016 09:07:52: Build info: 
+
+04/19/2016 09:07:52: 		Built time: Apr 18 2016 16:16:45
+04/19/2016 09:07:52: 		Last modified date: Tue Apr  5 16:01:37 2016
+04/19/2016 09:07:52: 		Build type: release
+04/19/2016 09:07:52: 		Build target: GPU
+04/19/2016 09:07:52: 		With 1bit-SGD: no
+04/19/2016 09:07:52: 		Math lib: acml
+04/19/2016 09:07:52: 		CUDA_PATH: /usr/local/cuda-7.0
+04/19/2016 09:07:52: 		CUB_PATH: /usr/local/cub-1.4.1
+04/19/2016 09:07:52: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/19/2016 09:07:52: 		Build Branch: alrezni/examples_text
+04/19/2016 09:07:52: 		Build SHA1: 3f7e6e78467f3e03a6cbd014c30e36a5711575df (modified)
+04/19/2016 09:07:52: 		Built by alrezni on atleneu04
+04/19/2016 09:07:52: 		Build Path: /home/alrezni/src/cntk_git
+04/19/2016 09:07:52: -------------------------------------------------------------------
+
+04/19/2016 09:07:52: Running on localhost at 2016/04/19 09:07:52
+04/19/2016 09:07:52: Command line: 
+/home/alrezni/src/cntk_git/build/release/bin/cntk  configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/cntk.cntk  currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu  DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true  makeMode=true
+
+
+
+04/19/2016 09:07:52: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/19/2016 09:07:52: precision = "float"
+command = train:test
+deviceId = $DeviceId$
+ndlMacros = "$ConfigDir$/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 8
+train = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+test = [
+    action = "test"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+makeMode=true
+
+04/19/2016 09:07:52: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/19/2016 09:07:52: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/19/2016 09:07:52: precision = "float"
+command = train:test
+deviceId = 0
+ndlMacros = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 8
+train = [
+    action = "train"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+test = [
+    action = "test"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+makeMode=true
+
+04/19/2016 09:07:52: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/19/2016 09:07:52: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.cntk:command=train:test
+configparameters: cntk.cntk:ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:makeMode=true
+configparameters: cntk.cntk:ndlMacros=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Macros.ndl
+configparameters: cntk.cntk:numCPUThreads=8
+configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:test=[
+    action = "test"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    NDLNetworkBuilder = [
+        networkDescription = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Convolution.ndl"
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:train=[
+    action = "train"
+    modelPath = "/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    traceLevel = 1
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Image/QuickE2E/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+
+04/19/2016 09:07:52: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/19/2016 09:07:52: Commands: train test
+04/19/2016 09:07:52: Precision = "float"
+04/19/2016 09:07:52: Using 8 CPU threads.
+04/19/2016 09:07:52: CNTKModelPath: /tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn
+04/19/2016 09:07:52: CNTKCommandTrainInfo: train : 12
+04/19/2016 09:07:52: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+
+04/19/2016 09:07:52: ##############################################################################
+04/19/2016 09:07:52: #                                                                            #
+04/19/2016 09:07:52: # Action "train"                                                             #
+04/19/2016 09:07:52: #                                                                            #
+04/19/2016 09:07:52: ##############################################################################
+
+04/19/2016 09:07:52: CNTKCommandTrainBegin: train
+
+04/19/2016 09:07:52: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.11'.
+
+Post-processing network...
+
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *], [1 x 1 x 16] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *] -> [24 x 24 x 16 x *]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *] -> [12 x 12 x 16 x *]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *], [1 x 1 x 32] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *] -> [8 x 8 x 32 x *]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *] -> [4 x 4 x 32 x *]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *] -> [128 x *]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *] -> [128 x *]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+
+11 out of 27 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/19/2016 09:07:53: Loaded model with 27 nodes on GPU 0.
+
+04/19/2016 09:07:53: Training criterion node(s):
+04/19/2016 09:07:53: 	ce = CrossEntropyWithSoftmax
+
+04/19/2016 09:07:53: Evaluation criterion node(s):
+
+04/19/2016 09:07:53: 	err = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/19/2016 09:07:53: No PreCompute nodes found, skipping PreCompute step.
+04/19/2016 09:07:53: Warning: Checkpoint file is missing. Learning parameters will be initialized from 0
+
+04/19/2016 09:07:53: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+
+04/19/2016 09:07:53: Starting minibatch loop.
+04/19/2016 09:07:53:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.35131153; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.1944s; SamplesPerSecond = 514.5
+04/19/2016 09:07:53: Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.35131153; TotalSamplesSeen = 100; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.195044
+04/19/2016 09:07:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160419090735.280944/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn'
+04/19/2016 09:07:53: CNTKCommandTrainEnd: train
+
+04/19/2016 09:07:53: Action "train" complete.
+
+
+04/19/2016 09:07:53: ##############################################################################
+04/19/2016 09:07:53: #                                                                            #
+04/19/2016 09:07:53: # Action "test"                                                              #
+04/19/2016 09:07:53: #                                                                            #
+04/19/2016 09:07:53: ##############################################################################
+
+
+Post-processing network...
+
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *1] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *1], [1 x 1 x 16] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *1] -> [24 x 24 x 16 x *1]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *1] -> [12 x 12 x 16 x *1]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *1] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *1], [1 x 1 x 32] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *1] -> [8 x 8 x 32 x *1]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *1] -> [4 x 4 x 32 x *1]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *1] -> [128 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *1], [128] -> [128 x *1]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *1] -> [128 x *1]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+
+11 out of 27 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+Final Results: Minibatch[1-1]: SamplesSeen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.31330618    Perplexity = 1.3679403    
+
+04/19/2016 09:07:53: Action "test" complete.
+
+04/19/2016 09:07:53: __COMPLETED__

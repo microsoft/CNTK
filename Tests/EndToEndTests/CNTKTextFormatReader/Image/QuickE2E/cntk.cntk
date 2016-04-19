@@ -1,0 +1,151 @@
+#precision = "double"
+precision = "float"
+command = train:test
+deviceId = $DeviceId$
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+parallelTrain = false
+numCPUThreads = 8
+
+train = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    #deviceId = $DeviceId$
+    traceLevel = 1
+    
+    #NDLNetworkBuilder = [
+    #    networkDescription = "$ConfigDir$/Convolution.ndl"
+    #]
+    
+    BrainScriptNetworkBuilder = [
+
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+
+        # conv1
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        # weight[cMap1, kW1 * kH1 * inputChannels]
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+
+        # pool1
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+
+        # conv2
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        # weight[cMap2, kW2 * kH2 * cMap1]
+        # ConvReLULayer is defined in Macros.ndl
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+
+        # pool2
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+
+        h1Dim = 128
+        # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        # Note: 'CHW' and 'HWC' refer to row-major representations, while CNTK uses column-major, so must specify the values in reverse order
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
+    ]
+
+    SGD = [
+        epochSize = 100
+        minibatchSize = 10
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0*10:0.7
+        maxEpochs = 12
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]
+
+test = [
+    action = "test"
+    modelPath = "$RunDir$/models/cntk.dnn"
+
+    # TODO: there should be no need for a network builder upon testing
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/Convolution.ndl"
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+		input = [
+			features = [
+				dim = 784
+				format = "dense"
+			]
+			labels = [
+				dim = 10
+				format = "dense"
+			]
+		]
+    ]    
+]

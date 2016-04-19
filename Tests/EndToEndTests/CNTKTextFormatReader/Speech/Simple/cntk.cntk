@@ -1,0 +1,91 @@
+command=Simple_Demo:Simple_Demo_Output
+
+# deviceId=-1 for CPU, >=0 for GPU devices
+DeviceNumber=-1
+
+#stderr=Demo
+
+precision=float
+
+modelPath=$RunDir$/models/simple.dnn
+deviceId=$DeviceNumber$
+
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+
+#######################################
+#  TRAINING CONFIG (Simple, Fixed LR) #
+#######################################
+
+Simple_Demo=[
+    action=train
+
+    # Notation xxx:yyy*n:zzz is equivalent to xxx,
+    #  then yyy repeated n times, then zzz
+    # example: 10:20*3:5 is equivalent to 10:20:20:20:5
+    SimpleNetworkBuilder=[
+        # 2 input, 2 50-element hidden, 2 output
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+
+    SGD=[
+        # epochSize=0 means epochSize is the size of 
+        # the training set. Must be evenly divisible 
+        # into number of data frames.
+        epochSize=0 
+        minibatchSize=25
+        learningRatesPerMB=0.5:0.2*20:0.1
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=50
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+          dim = 2 # two-dimensional input data
+          format = "dense" 
+        ]
+        labels = [
+          dim = 2 # One label dimensions (two labels possible)
+          format = "dense"
+        ]
+      ]
+    ]
+]
+
+#######################################
+#  OUTPUT RESUTLS (Simple)            #
+#######################################
+Simple_Demo_Output=[
+    action=write
+
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+          dim = 2 # two-dimensional input data
+          format = "dense" 
+        ]
+        labels = [
+          dim = 2 # One label dimensions (two labels possible)
+          format = "dense"
+        ]
+      ]
+    ]
+    outputPath=$RunDir$/SimpleOutput    # Dump output as text
+]
