@@ -92,9 +92,11 @@ def test_op_roundnonstandard(device_id, precision):
     # CNTK is doing round up for values like x.5, while numpy rounds to the nearest even value for half-integers
     # Refer here: https://en.wikipedia.org/wiki/Rounding#Tie-breaking
     # This test shows such values are not equal comparing numpy and CNTK
-    arg = 0.5
+    arg = [([0.5])]
+    a = I([arg], has_sequence_dimension=False)
+    numpy_expected = [([0])]
+    op = Round(a)
+    cntk_expected = [np.array([[[1.]]])]
 
-    numArray = [[AA(arg)]]
-    cntk_exp = Round(arg)
-
-    assert not np.round(numArray) == cntk_exp
+    assert np.round(arg) == numpy_expected
+    unittest_helper(op, None, cntk_expected, device_id, precision, clean_up=True, backward_pass=False)

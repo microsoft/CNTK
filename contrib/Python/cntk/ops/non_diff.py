@@ -12,33 +12,69 @@ from cntk.ops.cntk1 import Floor, Ceil, Round
 
 def floor(arg, name=None):
     """
-    floor operation
+    Floor operation. The output of this operation is the
+    element wise value rounded to the largest integer less than
+    or equal to the input.
+
+    Example:
+        >>> floor([0.2, 1.3, 4., 5.5])
+        #[0, 1.0, 4.0, 5.0]
+
+        >>> floor([-5.5, -4.2, -3., -0.7, 0])
+        #[-6.0, -5.0, -3.0, -1.0, 0.0]
+
     Args:
-        arg: tensor input
+        arg: input tensor
+        name: the name of the node in the network
     Returns:
-        floor node
+        :class:`cntk.graph.ComputationNode`
     """
 
     return Floor(arg, var_name = name)
 
 def ceil(arg, name=None):
     """
-    round operation
+    Ceil operation. The output of this operation is the
+    element wise value rounded to the smallest integer greater than
+    or equal to the input.
+
+    Example:
+        >>> ceil([0.2, 1.3, 4., 5.5])
+        #[1.0, 2.0, 4.0, 6.0]
+
+        >>> ceil([-5.5, -4.2, -3., -0.7, 0])
+        #[-5.0, -4.0, -3.0, 0.0, 0.0]
+
     Args:
-        arg: tensor input
+        arg: input tensor
+        name: the name of the node in the network
     Returns:
-        ceil node
+        :class:`cntk.graph.ComputationNode`
     """
 
     return Ceil(arg, var_name = name)
 
 def round(arg, name=None):
     """
-    round operation
+    Round operation. The output of this operation is the
+    element wise value rounded to the nearest integer. In case
+    of tie, where element can have exact fractional part of 0.5
+    this operation follows Round half-up tie breaking strategy.
+    This is different from the round operation of numpy which follows
+    round half to even.
+
+    Example:
+        >>> round([0.2, 0.5, 1.3, 4., 5.5])
+        #[0, 1.0, 1.0, 4.0, 6.0]
+
+        >>> round([-5.5, -4.2, -3., -0.7, 0])
+        #[-5.0, -4.0, -3.0, -1.0, 0.0]
+
     Args:
-        arg: tensor input
+        arg: input tensor
+        name: the name of the node in the network
     Returns:
-        round node
+        :class:`cntk.graph.ComputationNode`
     """
 
     return Round(arg, var_name = name)
