@@ -38,7 +38,7 @@ CLIP_TUPLES = [
     ([[1.0, 2.0], [3.0, 4.0]], [[1.5, 2.0], [2.5, 3.0]], [[2.0, 2.5], [2.5, 3.5]]),
     ]
 
-# -- clip_by_value operation tests --
+# -- clip operation tests --
 @pytest.mark.parametrize("x, min_value, max_value", CLIP_TUPLES)
 def test_op_clip(x, min_value, max_value, device_id, precision):    
 
@@ -52,13 +52,13 @@ def test_op_clip(x, min_value, max_value, device_id, precision):
     b = C(min_value)    
     c = C(max_value)
     
-    result = clip_by_value(a, b, c)
+    result = clip(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 
                     precision=precision, clean_up=False, backward_pass=False)
     
     #Backward pass test
     #==================
-    # The gradient of the clip_by_value() function is equal to 1 when the element 
+    # The gradient of the clip() function is equal to 1 when the element 
     # has not been clipped, and 0 if it has been clipped
     # We only test for the case where the input_node is a -- backpropping into 
     # the others doesn't make sense (they are constants)
