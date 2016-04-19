@@ -1681,7 +1681,7 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 		// I guess since they all have the same length, they are then all complete
 		for (int s = 0; s < mToProcess.size(); s++)
 		{
-			int mp = (int)mToProcess[s];
+			int mp = (int) mToProcess[s];
 			if (mProcessed[mp])
 			{
 				mLastProcessedSentenceId = mp;
