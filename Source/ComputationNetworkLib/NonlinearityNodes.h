@@ -472,7 +472,7 @@ public:
 
         // there is only a gradient for the input tensor that is to be clipped
         if (inputIndex == 0)
-            inputGradient.AddElementwiseProductWithClipDerivativeOf(gradient, input, output);
+            inputGradient.AddCopyGradientOnEqualInputsOf(gradient, input, output);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

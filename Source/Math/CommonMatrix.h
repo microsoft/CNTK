@@ -96,7 +96,7 @@ enum ElementWiseOperator
     opCond /*a ? b : c*/,
     opClip, /*clip a within interval b..c*/
     opElementwiseProductWithLogSumDerivative,
-    opElementwiseProductWithClipDerivative
+    opCopyGradientOnEqualInputs
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -153,9 +153,9 @@ enum ElementWiseOperator
 
 #define ForAllTernaryOps(Macro)                         \
     Macro(Cond);                                        \
+    Macro(CopyGradientOnEqualInputs);                   \
     Macro(Clip);                                        \
-    Macro(ElementwiseProductWithLogSumDerivative);      \
-    Macro(ElementwiseProductWithClipDerivative);
+    Macro(ElementwiseProductWithLogSumDerivative);      
 
 // -----------------------------------------------------------------------
 // various enums to describe
