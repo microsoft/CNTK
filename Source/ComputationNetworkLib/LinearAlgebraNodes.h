@@ -232,6 +232,16 @@ public:
     {
     }
 
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
+            node->m_outputRank = m_outputRank;
+        }
+    }
+
     void Save(File& fstream) const
     {
         Base::Save(fstream);

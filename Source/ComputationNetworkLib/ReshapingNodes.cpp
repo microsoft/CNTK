@@ -31,10 +31,13 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
 {
     Base::CopyTo(nodeP, newName, flags);
-    auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-    node->m_axis      = m_axis;
-    node->m_operation = m_operation;
-    node->m_op        = m_op;
+    if (flags & CopyNodeFlags::copyNodeValue)
+    {
+        auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
+        node->m_axis      = m_axis;
+        node->m_operation = m_operation;
+        node->m_op        = m_op;
+    }
 }
 
 template <class ElemType>
