@@ -121,7 +121,7 @@ public:
     ~Matrix();
 
     // workaround to bugs in BOTH implementation: force to collapse to home location
-    void CollapseDataLocationAfterWriting() const
+    void CollapseDataLocation() const
     {
         SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
     }

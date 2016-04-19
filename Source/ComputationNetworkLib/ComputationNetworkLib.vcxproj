@@ -144,6 +144,7 @@
     <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
+    <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />

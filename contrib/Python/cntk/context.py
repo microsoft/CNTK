@@ -19,6 +19,7 @@ from cntk.graph import ComputationNode
 from cntk.ops.cntk1 import NewReshape
 from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
 from .utils import cntk_to_numpy_shape, aggregate_readers
+from .utils import with_metaclass
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
@@ -58,7 +59,7 @@ def get_new_context():
             return get_context(new_handle)
 
 
-class AbstractContext(object, metaclass=ABCMeta):
+class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
@@ -370,7 +371,9 @@ class AbstractContext(object, metaclass=ABCMeta):
 
             seq_idx = parts[0].strip()
             payload = parts[1]
-            info, *data = payload.split(' ')
+            payload_parts = payload.split(' ')
+            info = payload_parts[0]
+            data = payload_parts[1:]
 
             if seq_idx != last_seq_idx:
                 if not info == 'w.shape':
@@ -491,7 +494,9 @@ class Context(AbstractContext):
         retrieve the node shapes.
         '''
         filename = os.path.join(self.directory, config_file_name)
-        with open(os.path.join(self.directory, filename), 'w') as out:
+        filename = os.path.relpath(filename)
+
+        with open(filename, 'w') as out:
             out.write(config_content)
 
         try:
@@ -503,7 +508,11 @@ class Context(AbstractContext):
                 log.write(output)
 
         except subprocess.CalledProcessError as e:
-            print(e.output.decode('utf-8'), file=open('error.txt', 'w'))
+            with open('error.txt', 'w') as f:
+                f.write(e.output.decode('utf-8'))
+            print("="*50)
+            print(e.output.decode('utf-8'))
+            print("="*50)
             raise
 
         if not output:

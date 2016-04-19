@@ -138,6 +138,9 @@
     <ClInclude Include="ComputationEnvironment.h">
       <Filter>Environment</Filter>
     </ClInclude>
+    <ClInclude Include="DeprecatedNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
