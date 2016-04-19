@@ -83,14 +83,14 @@ cntkrun()
   mkdir -p $modelsDir || exit $?
 
   if [[ $MPIMode == 0 ]]; then
-    run /usr/bin/timeout -k=30 60 "$BinaryPath" $CNTKArgs
+    run /usr/bin/timeout --kill-after=30 60 "$BinaryPath" $CNTKArgs
     # $? == 124 or 128 + 9 for timeout
     echo Exit status is: $?
     ps auxw | grep -i cntk
   else
     # TODO think about this
     # TODO normal mpiexec should return maximum exit value
-    run "$MPI_BINARY" $MPIArgs /usr/bin/timeout -k=30 60 $BinaryPath $CNTKArgs
+    run "$MPI_BINARY" $MPIArgs /usr/bin/timeout --kill-after=30 60 $BinaryPath $CNTKArgs
     echo Exit status is: $?
     ps auxw | grep -i cntk
   fi
