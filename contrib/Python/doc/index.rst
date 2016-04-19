@@ -37,7 +37,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   CNTK operators <cntk.ops>
+   Installation <installation>
+   Getting Started <gettingstarted>
+   Operators <cntk.ops>
+   Examples <examples>
+
+
 
 
 

@@ -72,7 +72,6 @@ class CNTKTextFormatReader(AbstractReader):
 
     def _to_aggregate_form(self, input_node):
         r = TextFormatReaderAggregator(self.filename)
-        import numpy as np
         r.add_input(input_node, self.input_alias, np.multiply.reduce(input_node.dims), self.format)        
         return r
         
