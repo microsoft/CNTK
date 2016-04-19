@@ -1676,11 +1676,12 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
     // We are done if mToProcess[] contains a sequence for which mProcessed[] is set (...which likely applies to all?).
     if (mToProcess.size() > 0)
     {
-        // clear mToProcess if the last sequence in the arrya is processede
+        // clear mToProcess if the last sequence in the array is processed
         // I guess since they all have the same length, they are then all complete
-		if (mProcessed[mToProcess.size() - 1])
+		int mp = (int)(mToProcess.size() - 1);
+		if (mProcessed[mp])
 		{
-			mLastProcessedSentenceId = (int)mToProcess[mToProcess.size() - 1]; //Last processed Id should be the last one in the array
+			mLastProcessedSentenceId = mp; //Last processed Id should be the last one in the array
 			mLastPosInSentence = 0;
 			mToProcess.clear();
 		}
