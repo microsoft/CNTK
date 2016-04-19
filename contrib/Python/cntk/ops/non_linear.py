@@ -22,6 +22,10 @@ def clip(x, min_value, max_value, name=None):
     The backward pass propagates the received gradient if no clipping occurred,
     and `0` if the value was clipped.
     
+    Example:
+        >>> clip([1., 2.1, 3.0, 4.1], [2.], [4.])
+        [2.0, 2.1, 3.0, 4.0]
+    
     Args:
         x: tensor to be clipped
         min_value: the minimum value to clip element values to
