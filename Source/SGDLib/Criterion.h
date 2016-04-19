@@ -81,6 +81,7 @@ private:
         // do masking and an implicit reduction.
 
         // get a TensorView of the criterion values to aggregate
+        // TODO: Verify that node->GetSampleLayout().GetNumElements() == 1. Require explicit summation to declare intent that this is a criterion.
         FrameRange fr(node->GetMBLayout());
         node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
         auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
