@@ -20,11 +20,14 @@ def clip(x, min_value, max_value, name=None):
     For the input tensor `x`, this node outputs a tensor of the same shape with 
     all of its values clipped to fall between `min_value` and `max_value`.
     The backward pass propagates the received gradient if no clipping occurred,
-    and `0` if the value was clipped.
+    and 0 if the value was clipped.
     
     Example:
-        >>> clip([1., 2.1, 3.0, 4.1], [2.], [4.])
-        [2.0, 2.1, 3.0, 4.0]
+        >>> clip([1., 2.1, 3.0, 4.1], 2., 4.)
+        #[2.0, 2.1, 3.0, 4.0]
+        
+        >>> clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.])
+        #[-5, -5., 0., 4., 9.]
     
     Args:
         x: tensor to be clipped
