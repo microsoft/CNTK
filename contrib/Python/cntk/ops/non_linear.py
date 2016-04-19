@@ -12,15 +12,15 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import ClipByValue
+from cntk.ops.cntk1 import Clip
 
-def clip_by_value(x, min_value, max_value, name=None):
+def clip(x, min_value, max_value, name=None):
     """
-    Clips tensor values to fall between min_value and max_value.
-    For the input tensor x, this node outputs a tensor of the same shape with 
-    all of its values clipped to fall between min_value and max_value.
+    Clips tensor values to fall between `min_value` and `max_value`.
+    For the input tensor `x`, this node outputs a tensor of the same shape with 
+    all of its values clipped to fall between `min_value` and `max_value`.
     The backward pass propagates the received gradient if no clipping occurred,
-    and 0 if the value was clipped.
+    and `0` if the value was clipped.
     
     Args:
         x: tensor to be clipped
@@ -31,4 +31,4 @@ def clip_by_value(x, min_value, max_value, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     
-    return ClipByValue(x, min_value, max_value, var_name = name)
+    return Clip(x, min_value, max_value, var_name = name)
