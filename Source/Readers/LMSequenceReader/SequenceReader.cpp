@@ -1707,40 +1707,40 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
     size_t maxTokens    = mRequestedNumParallelSequences > 0 ?                       SIZE_MAX : m_mbSize;
     size_t numTokens = 0;  // token counter
 	
-	// In case of parallel reading, if this subset does not get any sequence, try getting a set of sequences with another length
+	// In case of parallel reading, if this subset does not get any sequence, it will end up getting a set of sequences with another length
 	// This does a balancing of the load over the complete epoch, since we end up dividing the whole set of sequences into m_numSubsets
-	while (sln == 0)
+	for (size_t seq = mLastProcessedSentenceId;
+		seq < mNumRead &&                 // hit end of buffer
+		mToProcess.size() < maxToProcess; // hit parallel-sequence limit
+		seq++)
 	{
-		for (size_t seq = mLastProcessedSentenceId;
-			seq < mNumRead &&                 // hit end of buffer
-			mToProcess.size() < maxToProcess; // hit parallel-sequence limit
-			seq++)
+		// skip entries that are done
+		if (mProcessed[seq])
+			continue;
+
+		// logic to partition data b/w different MPI workers.
+		// need to consider only those sequences for which seq ID modulo m_numSubsets is m_subsetNum
+		if (seq % m_numSubsets != m_subsetNum)
 		{
-			// skip entries that are done
-			if (mProcessed[seq])
-				continue;
-
-			// logic to partition data b/w different MPI workers.
-			// need to consider only those sequences for which seq ID modulo m_numSubsets is m_subsetNum
-			if (seq % m_numSubsets != m_subsetNum)
-				continue;
-
-			// first unprocessed sequence determines the length if this minibatch
-			if (sln == 0)
-				sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
-			else if (sln != m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
-				continue;
-
-			// check max tokens
-			if (numTokens > 0 && numTokens + sln >= maxTokens)
-				break;             // hit total token limit
-
-			// include all of the same length as the first
-			mToProcess.push_back(seq);
-
-			// and count tokens
-			numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+			mProcessed[seq] = true; // set this as true so as not to revisit this seq later
+			continue;
 		}
+
+		// first unprocessed sequence determines the length if this minibatch
+		if (sln == 0)
+			sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+		else if (sln != m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
+			continue;
+
+		// check max tokens
+		if (numTokens > 0 && numTokens + sln >= maxTokens)
+			break;             // hit total token limit
+
+		// include all of the same length as the first
+		mToProcess.push_back(seq);
+
+		// and count tokens
+		numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
 	}
     // if all were already done, we will get here with sln=0 and return that
 
