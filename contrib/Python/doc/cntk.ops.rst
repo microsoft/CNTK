@@ -11,14 +11,6 @@ Subpackages
 Submodules
 ----------
 
-cntk.ops.cntk1 module
----------------------
-
-.. automodule:: cntk.ops.cntk1
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 cntk.ops.convolution module
 ---------------------------
 
