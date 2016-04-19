@@ -4069,6 +4069,25 @@ void Matrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCo
 }
 
 template <class ElemType>
+void Matrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutSize, const Matrix<int>& mpRowCol,
+                                                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->UnrollConvolutionInputForKernelBackprop(mapOutSize, *(mpRowCol.m_CPUMatrix),
+                                                                                 *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
 {
     assert(mpRowCol.GetNumCols() == 1);

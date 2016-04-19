@@ -550,19 +550,9 @@ protected:
             RuntimeError("GEMM convolution engine supports only CHW/cudnn layout.");
         if (IsGpu(m_deviceId))
             RuntimeError("GEMM convolution engine currently supports only CPU device.");
-
-        const auto& inT = m_geometry->InputShape();
-        const auto& kernT = m_geometry->KernelShape();
-        size_t dimCount = inT.GetRank();
-        if (kernT[dimCount - 1] != inT[dimCount - 1])
-        {
-            RuntimeError("GEMM convolution engine does not support this convolution configuration. "
-                         "It is possible to make GEMM engine work with this configuration by defining "
-                         "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
-        }
     }
 
-    // The forward method consists of 2 parts:
+    // The forward method consists of 2 parts (using 2D convolution notation but applicable to ND as well):
     // 1. Unrolling convolution input into a matrix. Note that the matrix would be unrolled as if it were 
     //    in CHWN format. Using this format allows to perform convolution for the whole minibatch as a single GEMM
     //    which is not possible with NCHW format. Alternatively, NHWC format (used in legacy engine) could be used
@@ -647,6 +637,12 @@ protected:
         // Each row of the unrolled output will be of size/layout HWK.
         // Otherwise we need to increase convolution input/kernel dimension to dimCount + 1 (this is checked in EnsureCompatible).
         assert(kernT[dimCount - 1] == inT[dimCount - 1]);
+        if (kernT[dimCount - 1] != inT[dimCount - 1])
+        {
+            RuntimeError("GEMM convolution engine does not support this convolution configuration. "
+                         "It is possible to make GEMM engine work with this configuration by defining "
+                         "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
+        }
 
         size_t mapInCount  = kernT[dimCount - 1];
         size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
@@ -718,12 +714,80 @@ protected:
         }
     }
 
+    // The backward kernel method consists of 3 parts (using 2D convolution notation but applicable to ND as well):
+    // 1. Transpose and reshape convolution output matrix (srcGrad) into [NW'H' x K] (column-major) layout.
+    //    This step is not needed if current minibatch size == 1.
+    // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] (column-major) layaout.
+    // 3. Performing matrix multiplication of unrolled input with transposed output:
+    //    [NW'H' x WHC]^T * [NW'H' x K] = [WHC x K] (column major) - kernel gradients.
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
     {
-        UNUSED(srcGrad); UNUSED(in); UNUSED(kernelGrad); UNUSED(workspace);
-        //srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
-        //RuntimeError("Not yet implemented.");
-    }
+        size_t batchSize = srcGrad.GetNumCols();
+        size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+
+        const auto& inT = m_geometry->InputShape();
+        const auto& kernT = m_geometry->KernelShape();
+        const auto& outT = m_geometry->OutputShape();
+
+        size_t dimCount = inT.GetRank();
+        size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
+        size_t mapOutSize = outT.GetNumElements() / mapOutCount;
+
+        assert(kernT[dimCount - 1] == inT[dimCount - 1]);
+        if (kernT[dimCount - 1] != inT[dimCount - 1])
+        {
+            RuntimeError("GEMM convolution engine does not support this convolution configuration. "
+                         "It is possible to make GEMM engine work with this configuration by defining "
+                         "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
+        }
+
+        size_t unrollRows = kernT.GetNumElements();
+        size_t unrollCols = mapOutSize * subBatchSize;
+
+        // Reserve space for:
+        // 1. Unrolled inputs.
+        // 2. Transposed source gradients (optional).
+        workspace.Resize(unrollCols, unrollRows + (subBatchSize > 1 ? mapOutCount : 0));
+
+        for (size_t start = 0; start < batchSize; start += subBatchSize)
+        {
+            size_t curBatchSize = min(subBatchSize, batchSize - start);
+            // 1. Transpose and reshape srcGrad.
+            auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
+            if (curBatchSize > 1)
+            {
+                auto srcGradTranSlice = workspace.ColumnSlice(unrollRows, mapOutCount);
+                if (curBatchSize != subBatchSize)
+                {
+                    srcGradTranSlice.Reshape(mapOutCount * mapOutSize, subBatchSize);
+                    srcGradTranSlice = srcGradTranSlice.ColumnSlice(0, curBatchSize);
+                }
+                // Reshape to transposed shape - required by AssignTransposeOf.
+                srcGradTranSlice.Reshape(srcGradSlice.GetNumCols(), srcGradSlice.GetNumRows());
+                srcGradTranSlice.AssignTransposeOf(srcGradSlice);
+                srcGradSlice = srcGradTranSlice.ColumnSlice(0, srcGradTranSlice.GetNumCols());
+            }
+            srcGradSlice.Reshape(mapOutSize * curBatchSize, mapOutCount);
+
+            // 2. Unroll inputs.
+            auto inputSlice = in.ColumnSlice(start, curBatchSize);
+            auto unrolledInputSlice = workspace.ColumnSlice(0, unrollRows);
+            if (curBatchSize != subBatchSize)
+            {
+                unrolledInputSlice.Reshape(mapOutSize * unrollRows, subBatchSize);
+                unrolledInputSlice = unrolledInputSlice.ColumnSlice(0, curBatchSize);
+            }
+            unrolledInputSlice.Reshape(mapOutSize * curBatchSize, unrollRows);
+            unrolledInputSlice.SetValue(0);
+            inputSlice.UnrollConvolutionInputForKernelBackprop(mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInputSlice);
+
+            // cudnn layout uses row-major kernel weight matrix.
+            auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
+            kernGrad.Reshape(kernelGrad.GetNumCols(), kernelGrad.GetNumRows());
+            // 3. Multiply.
+            Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
+        }
+}
 
 public:
     static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry)
