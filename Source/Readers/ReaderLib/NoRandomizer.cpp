@@ -212,7 +212,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     // TODO: This will be changed, when we move transformers under the (no-) randomizer, should not deal with multithreading here.
     if (m_multithreadedGetNextSequences)
     {
-#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < subsetSize; ++i)
             process(i);
     }

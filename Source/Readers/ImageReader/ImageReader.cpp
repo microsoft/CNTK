@@ -42,6 +42,7 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     const bool multithreadedGetNextSequences = true;
     if (configHelper.ShouldRandomize())
     {
+        // We do not use legacy randomization.
         bool useLegacyRandomization = false;
         randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, useLegacyRandomization, multithreadedGetNextSequences);
     }
