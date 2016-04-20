@@ -477,7 +477,7 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateNnaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
+        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
     }
 };
 
