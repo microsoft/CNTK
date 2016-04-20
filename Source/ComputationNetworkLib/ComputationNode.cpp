@@ -161,13 +161,13 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 // N-nary zip operation, e.g. for TernaryZip for clip()
 // If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
-void ComputationNodeBase::ValidateNnaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
+void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
 {
     assert(m_inputs.size() == numInputs);
     ComputationNodeBase::Validate(isFinalValidationPass);
     InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-    ValidateInferNnaryInputDims(numInputs);
+    ValidateInferNaryInputDims(numInputs);
 
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
@@ -293,8 +293,8 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
     }
 }
 
-// as above but for ternary cases
-void ComputationNodeBase::ValidateInferNnaryInputDims(size_t numInputs)
+// as above but for N-ary cases
+void ComputationNodeBase::ValidateInferNaryInputDims(size_t numInputs)
 {
     // limited inference of children dimensions
     // if dimension not specified we assume two operands' dimensions should be the same
