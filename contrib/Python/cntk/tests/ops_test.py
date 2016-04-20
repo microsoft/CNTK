@@ -6,6 +6,9 @@ from ..context import get_new_context
 from ..graph import *
 from ..reader import *
 
+#TODO: broken due to a problem in CNTK. Once fixed merge them with the tests in linear_test.py
+
+""" 
 # keeping things short
 C = constant
 I = input_reader
@@ -52,3 +55,5 @@ if False:
         _test(C(c_left_arg) * c_right_arg, expected)
         _test(C(c_left_arg) * C(c_right_arg), expected)
         _test(c_left_arg * C(c_right_arg), expected)
+
+"""
