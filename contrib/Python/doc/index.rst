@@ -39,6 +39,7 @@ Contents:
 
    Installation <installation>
    Getting Started <gettingstarted>
+   Readers <readers>
    Operators <cntk.ops>
    Examples <examples>
 

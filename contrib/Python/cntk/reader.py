@@ -6,7 +6,7 @@ from .graph import ComputationNode
 
 
 class AbstractReader(with_metaclass(ABCMeta)):
-    """ This is the abstract class that represents a reader for one input node
+    """Abstract class that represents a reader for one input node.
     """    
     
     # required so that instances can be put into a set
@@ -21,25 +21,32 @@ class AbstractReader(with_metaclass(ABCMeta)):
         pass
 
 class UCIFastReader(AbstractReader):
-    """ A UCIFastReader for one input node
+    """`Deprecated` - A UCIFastReader for one input node. Please switch to
+    :class:`CNTKTextFormatReader`.
+
+    Note that the dimensions are not inferred from the input node's shape,
+    because in case of a label node the dimension does not match the shape
+    which would be (``numOfClasses``,1).
+
+    Used by :class:`UCIFastReaderAggregator` to generate the combined reader
+    configuration.
+
+    Args:
+        filename (str): the name of the file where the data is stored
+        custom_delimiter (str): what delimiter is used to separate columns, specify
+        it in case it neither tab nor white spaces.
+        input_start (int): the start column   
+        input_dim (int): the number of columns
+        num_of_classes (int): the number of classes
+        label_mapping_file (str): the mapping file path, it can be simply with
+        all the possible classes, one per line
     """
 
     def __init__(self, filename, input_start, input_dim, 
                  num_of_classes=None, label_mapping_file=None,
                  custom_delimiter=None):
-        """ Reader constructor. Note that the dimensions are not inferred from 
-        the input node's shape, because in case of a label node the dimension does 
-        not match the shape which would be (numOfClasses,1)
-        :param filename: the name of the file where the data is stored
-        :param custom_delimiter: what delimiter is used to separate columns, 
-        specify it in case it neither tab nor white spaces.        
-        :param input_start: the start column   
-        :param input_dim: the number of columns
-        :param num_of_classes: the number of classes
-        :param label_mapping_file: 
-            the mapping file path, it can be simply with all the possible classes, 
-            one per line
-        """
+        ''' Reader constructor. 
+        '''
     
         self.filename = filename
         self.custom_delimiter = custom_delimiter
@@ -51,17 +58,48 @@ class UCIFastReader(AbstractReader):
     def _to_aggregate_form(self, input_node):
         r = UCIFastReaderAggregator(self.filename, self.custom_delimiter)
         r.add_input(input_node, self.input_start, self.input_dim, 
-                    self.num_of_classes, self.label_mapping_file)        
+                        self.num_of_classes, self.label_mapping_file)        
         return r
             
 class CNTKTextFormatReader(AbstractReader):
-    """ A CNTKTextFormatReader for one input node
+    """A CNTKTextFormatReader for one input node that supports sequences. 
+
+    Used by :class:`TextFormatReaderAggregator` to generate the combined reader
+    configuration.
+
+    Example:
+       The following example encodes two samples, one has a sequence of one
+       scalar, while the second has a sequence of two scalars::
+
+           0	|60.0
+           1	|22.0
+           1	|24.0
+
+       The normal matrix based format, for which you would have used
+       :class:`UCIFastReader` in the past can be simply converted by prepending
+       every line by the line number and a bar (``|``). Of course it only works
+       for sequences of length 1, since in matrix format you cannot go beyound
+       that:
+
+       :class:`UCIFastReader` format::
+
+           0 1
+           10 11
+           20 21
+
+       can be easily converted to the :class:`CNTKTextFormatReader` format::
+
+           0	|0 1
+           1	|10 21
+           2	|20 21
     """
 
     def __init__(self, filename, input_alias, format="Dense"):        
         """ Reader constructor. Note that the dimension is inferred from the input node
         while generating the configuration
-        :param filename: the name of the file where the data is stored
+
+        Args:
+        filename: the name of the file where the data is stored
         input_alias: a short name for the input, it is how inputs are referenced in the data files        
         format: dense or sparse
         """                
@@ -99,8 +137,10 @@ class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
 class UCIFastReaderAggregator(AbstractReaderAggregator):
 
     """This is the reader class the maps to UCIFastReader of CNTK
-    :param filename: data file path
-    :param custom_delimiter: the default is space and tab, you can specify other delimiters to be used        
+
+    Args:
+        filename (str): data file path
+        custom_delimiter (str): the default is space and tab, you can specify other delimiters to be used        
     """
 
     def __init__(self, filename, custom_delimiter=None):
@@ -113,12 +153,13 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
 
     def add_input(self, name_or_node, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
         """Add an input to the reader
-        :param name_or_node: either name of the input in the network definition or the node itself
-        :param input_start: the start column   
-        :param input_dim: the number of columns
-        :param num_of_classes: the number of classes
-        :param label_mapping_file: 
-            the mapping file path, it can be simply with all the possible classes, one per line
+
+        Args:
+            name_or_node (str or ComputationNode): either name of the input in the network definition or the node itself
+            input_start (int): the start column   
+            input_dim (int): the number of columns
+            num_of_classes (int): the number of classes
+            label_mapping_file (str): the mapping file path, it can be simply with all the possible classes, one per line
         """
         if not name_or_node or input_start is None or input_dim is None:
             raise ValueError("one of the parameters of add_input is None")
@@ -179,7 +220,9 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
 class TextFormatReaderAggregator(AbstractReaderAggregator):
 
     """This is the reader class the maps to CNTKTextFormatReader of CNTK
-    :param filename: data file path
+
+        Args:
+            filename (str): data file path
     """
 
     def __init__(self, filename):
@@ -191,10 +234,12 @@ class TextFormatReaderAggregator(AbstractReaderAggregator):
 
     def add_input(self, name_or_node, input_alias, input_dim, format="Dense"):
         """Add an input to the reader
-        name_or_node: the name of the input in the network definition or the node itself
-        input_alias: a short name for the input, it is how inputs are referenced in the data files
-        input_dim: the lenght of the input vector
-        format: dense or sparse
+
+        Args:
+            name_or_node (str or ComputationNode): either name of the input in the network definition or the node itself
+            input_alias (str): a short name for the input, it is how inputs are referenced in the data files
+            input_dim (int): the number of columns
+            format (str): 'dense' or 'sparse'
         """
         if not name_or_node or input_dim is None or format is None:
             raise ValueError("one of the parameters of add_input is None")
