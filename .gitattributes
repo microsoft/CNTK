@@ -9,6 +9,7 @@ Dockerfile-GPU text
 *.post text
 *.cpu text
 *.gpu text
+*.rst text
 
 .gitattributes text
 .gitignore text
@@ -74,6 +75,9 @@ Makefile text
 mean.363 text
 var.363 text
 prior.132 text
+
+# dot (graph description language) file 
+*.dot text 
 
 # AMI-specific
 Results text

@@ -77,6 +77,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     m_mapPath = config(L"file");
 
+    m_grayscale = config(L"grayscale", false);
     std::string rand = config(L"randomize", "auto");
 
     if (AreEqualIgnoreCase(rand, "auto"))

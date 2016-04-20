@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args> 
+cntkrun plot.cntk 
+ExitCode=$?
+# if not finished properly, return the error code directly 
+if [ $ExitCode -ne 0 ]; then 
+    exit $ExitCode
+fi
+# exit code on windows is not reliable, so checking the output 
+if [ ! -e $TEST_RUN_DIR/cntkSpeech.dnn.dot ]; then 
+    exit 1
+fi 
+# cntkrun finishes, checking the content
+echo -e "\nchecking generated dot file against baseline dot file:\n"
+diff  $TEST_RUN_DIR/cntkSpeech.dnn.dot $TEST_DIR/cntkSpeech.dnn.dot > $TEST_RUN_DIR/diff.txt
+ExitCode=$?
+if [ $ExitCode -ne 0 ]; then 
+    echo -e "\ndot file of DNN topology differs:\n"
+    cat $TEST_RUN_DIR/diff.txt
+else
+    echo -e "\ndot file of DNN topology matches\n"
+fi
+exit $ExitCode

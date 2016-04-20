@@ -56,10 +56,13 @@ private:
     // Element type of the feature/label stream (currently float/double only).
     ElementType m_featureElementType;
 
+    // whether images shall be loaded in grayscale 
+    bool m_grayscale;
+
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
     void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
-    cv::Mat ReadImage(size_t seqId, const std::string& path);
+    cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
     using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;
