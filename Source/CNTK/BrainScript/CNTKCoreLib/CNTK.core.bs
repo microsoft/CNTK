@@ -425,10 +425,10 @@ RNNs =
             // parameter macros--these carry their own weight matrices
             B() = Parameters.BiasParam (cellDim)
 
-            #inputDim1 = inputDim
-            #W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.StabilizeElements (v, inputDim=inputDim1, enabled=enableSelfStabilization) // input-to-hidden
-            # ^^ element-wise stab, use if input is a concatenation; vv stab for entire matrix
-            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+            # with attention models, where we concatenate two inputs, a single scalar stabilizer is not appropriate and is worse
+            useElementwiseStabilizerForW = true    #%%%%%%%%%%false # flip this to true for attention model
+            stabilizerWDim = if useElementwiseStabilizerForW then inputDim else 1
+            W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.StabilizeElements (v, inputDim=stabilizerWDim, enabled=enableSelfStabilization) // input-to-hidden
             H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
             C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
@@ -474,7 +474,7 @@ RNNs =
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
     # TODO: remove the -2 once this works
     RecurrentLSTMP = RecurrentLSTMP2
-    RecurrentLSTMP2 (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
+    RecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
         prevState = previousHook (lstmState)
         inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
@@ -483,13 +483,33 @@ RNNs =
 
     # a stack of recurrent LSTMs (unidirectional)
     RecurrentLSTMPStack = RecurrentLSTMP2Stack  # TODO: remove the -2 name once this works
-    RecurrentLSTMP2Stack (hiddenDims, cellDims=hiddenDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
+    RecurrentLSTMP2Stack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
-        layers[i:0..Length (hiddenDims)-1] =
-            RecurrentLSTMP2 (hiddenDims[i], cellDim=cellDims[i],
-                             if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else hiddenDims[i-1] /*TODO: layers[i-1].dim*/,
+        layers[i:0..Length (layerDims)-1] =
+            RecurrentLSTMP2 (layerDims[i], cellDim=cellDims[i],
+                             if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else layerDims[i-1] /*TODO: layers[i-1].dim*/,
                              previousHook=previousHook1,
                              enableSelfStabilization=useStabilizer)
+    ].layers
+
+    # a stack of recurrent LSTMs (bidirectional)
+    # TODO: Should we define layerDims as the total?
+    RecurrentBirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+        previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
+        layers[i:0..Length (layerDims)-1] =
+        [
+            fwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
+                                  if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else layers[i-1].dim,
+                                  previousHook=previousHook1,
+                                  enableSelfStabilization=useStabilizer)
+            bwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
+                                  if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else layers[i-1].dim,
+                                  previousHook=nextHook1,
+                                  enableSelfStabilization=useStabilizer)
+            h = RowStack (fwd.h : bwd.h)
+            c = RowStack (fwd.c : bwd.c)
+            dim = layerDims[i] * 2  # output dimension
+        ]
     ].layers
 ]
 
