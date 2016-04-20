@@ -15,7 +15,8 @@ from ..graph import parameter as param
 
 def input_array(value, has_sequence_dimension=True, name=None):
     """
-    It creates an input node from a numpy array. 
+    It creates an input node from a numpy array. Note: you do not need a reader 
+    for this node, since the data is passed directly via numpy array
     
     Args:
         value: the numpy array, it can hold an arbitrary tensor

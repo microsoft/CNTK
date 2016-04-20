@@ -269,15 +269,26 @@ class ComputationNode(object):
         if self._is_input():
             inputs.add(self)
             
+            num_readers_mapping = 0            
+            
             if self.reader:                
                 node_reader = self.reader
-            elif self in input_reader:
-                node_reader = input_reader[self]
-            elif has_var_name and self.var_name in input_reader:
-                node_reader = input_reader[self.var_name]
-            else:
+                num_readers_mapping += 1
+                
+            if input_reader:
+                if self in input_reader:
+                    node_reader = input_reader[self]
+                    num_readers_mapping += 1
+                if has_var_name and self.var_name in input_reader:
+                    node_reader = input_reader[self.var_name]
+                    num_readers_mapping += 1
+            
+            if num_readers_mapping == 0:
                 raise RuntimeError("No reader was found for input node: {0}".format(self.var_name))
-
+            
+            if num_readers_mapping > 1:            
+                raise RuntimeError("More than one reader found for input node: {0}".format(self.var_name))
+                
             readers.add(node_reader._to_aggregate_form(self))
 
         params = self._get_cntk_param_string(param_variable_names)

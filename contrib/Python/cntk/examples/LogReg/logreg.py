@@ -27,14 +27,6 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     X = Input(2)
     y = Input(3)
     
-    # training data readers
-    rx = UCIFastReader(train_file, 0, 2)
-    ry = UCIFastReader(train_file, 2, 1, 2, mapping_file)
-    
-    # testing data readers
-    rx_t = UCIFastReader(test_file, 0, 2)
-    ry_t = UCIFastReader(test_file, 2, 1, 2, mapping_file)
-    
     W = LearnableParameter(3, 2)
     b = LearnableParameter(3, 1)
 
@@ -46,6 +38,14 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     eval = SquareError(y, out)
     eval.tag = 'eval'
     eval.var_name = eval_name
+
+    # training data readers
+    rx = UCIFastReader(train_file, 0, 2)
+    ry = UCIFastReader(train_file, 2, 1, 2, mapping_file)
+    
+    # testing data readers
+    rx_t = UCIFastReader(test_file, 0, 2)
+    ry_t = UCIFastReader(test_file, 2, 1, 2, mapping_file)    
 
     my_sgd = SGDParams(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
