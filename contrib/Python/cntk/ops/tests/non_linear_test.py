@@ -32,10 +32,10 @@ CLIP_TUPLES = [
     # test what happens if a user puts a higher "min" value than their "max" value
     # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
     # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
-    ([[1.5, 2.1, 0.9, 1.0, 2.0]], [5.0], [0.5]),
+    ([[1.5, 2.1, 0.9, -1.0, -2.0]], [5.0], [0.5]),
      
     # test a more complicated broadcasting scenario
-    ([[1.0, 2.0], [3.0, 4.0]], [[1.5, 2.0], [2.5, 3.0]], [[2.0, 2.5], [2.5, 3.5]]),
+    ([[-1.0, 2.0], [3.0, 4.0]], [[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]]),
     ]
 
 # -- clip operation tests --
