@@ -2,11 +2,13 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
+#TODO: re-write the example using the new facade
+
 import numpy as np
 
 from cntk import *
 
-# broken due to a bug in CNTK. When we do not use inputs (just constants), the 
+#TODO necessary fix of CNTK exe. When we do not use inputs (just constants), the 
 # output of the write action has a missing line.
 if (__name__ == "__main__"):
 

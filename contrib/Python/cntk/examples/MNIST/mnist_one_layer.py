@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+#TODO: re-write the example using the new facade
+
 """
 MNIST Example, one hidden layer neural network
 """
@@ -38,14 +40,17 @@ if (__name__ == "__main__"):
     training_filename = os.path.join("Data", "Train-28x28.txt")
     test_filename = os.path.join("Data", "Test-28x28.txt")
 
-    features = Input(feat_dim, var_name='features')    
+    features = Input(feat_dim)    
+    features.var_name='features'
     f_reader = UCIFastReader(training_filename, 1, feat_dim)
     f_reader_t = UCIFastReader(test_filename, 1, feat_dim)
     
     feat_scale = Constant(0.00390625)
     feats_scaled = Scale(feat_scale, features)
 
-    labels = Input(label_dim, tag='label', var_name='labels')
+    labels = Input(label_dim)
+    labels.tag='label'
+    labels.var_name='labels'
     l_reader = UCIFastReader(training_filename, 0, 1, label_dim, 
                              os.path.join("Data", "labelsmap.txt"))
     
@@ -67,6 +72,6 @@ if (__name__ == "__main__"):
     with Context('mnist_one_layer' , clean_up=False) as ctx:
         # CNTK actions
         ctx.train(ec, my_sgd, {features:f_reader, labels:l_reader})
-        ctx.infer({features:f_reader_t, labels:l_reader_t})
+        ctx.write({features:f_reader_t, labels:l_reader_t})
         print(ctx.test({features:f_reader_t, labels:l_reader_t}))
         

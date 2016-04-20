@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+#TODO: re-write the example using the new facade
+
 """
 Example of logictic regression implementation 
 """
