@@ -472,12 +472,12 @@ public:
 
         // there is only a gradient for the input tensor that is to be clipped
         if (inputIndex == 0)
-            inputGradient.AddCopyGradientOnEqualInputsOf(gradient, input, output);
+            inputGradient.AddCopyIfEqualOf(input, output, gradient);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateTernaryZip(isFinalValidationPass, true);
+        ValidateNnaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
     }
 };
 

@@ -158,66 +158,55 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     SetDims(TensorShape(dims), HasMBLayout());
 }
 
-// ternary zip operation, e.g. clip()
+// N-nary zip operation, e.g. for TernaryZip for clip()
 // If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
-void ComputationNodeBase::ValidateTernaryZip(bool isFinalValidationPass, bool allowBroadcast)
+void ComputationNodeBase::ValidateNnaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
 {
-    assert(m_inputs.size() == 3);
+    assert(m_inputs.size() == numInputs);
     ComputationNodeBase::Validate(isFinalValidationPass);
     InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-    
-    ValidateInferNaryInputDims(3);
 
-    if (isFinalValidationPass &&
-        ((Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout()) ||
-         (Input(0)->GetMBLayout() != Input(2)->GetMBLayout() && Input(0)->HasMBLayout() && Input(2)->HasMBLayout()) ||
-         (Input(1)->GetMBLayout() != Input(2)->GetMBLayout() && Input(1)->HasMBLayout() && Input(2)->HasMBLayout())))
-    {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
-    }
+    ValidateInferNnaryInputDims(numInputs);
 
-    // result has tensor shape with dimensions being the max over both
+    // check minibatch layout consistency for all possible pairs (n choose 2)
+    if (isFinalValidationPass)
+        for (size_t i = 0; i < numInputs; i++)        
+            for (size_t j = i; j < numInputs; j++)            
+                if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
+                    LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+
+    // result has tensor shape with dimensions being the max over all inputs
     let shape0 = GetInputSampleLayout(0);
-    let shape1 = GetInputSampleLayout(1);
-    let shape2 = GetInputSampleLayout(2);
 
-    // dims is max over 3 inputs
-    size_t maxRank = max(shape0.GetRank(), max(shape1.GetRank(), shape2.GetRank())); 
+    // dims is max over all inputs
+    size_t maxRank = shape0.GetRank();
     SmallVector<size_t> dims = shape0.GetDims();
-    dims.resize(maxRank, 1); // pad with 1
-    
-    // If rank of [0] is higher then we only need to take max over rank [1].
-    // If rank of [1] is higher then we have padded to equal lentgh.
-    for (size_t k = 0; k < shape1.GetRank(); k++)
+    for (size_t i = 1; i < numInputs; i++)
     {
-        size_t dim1 = shape1[k];
-        // BUGBUG: We must consider the allowBroadcast flag here.
-        if (dims[k] <= 1 && dim1 != 0)                     // is [0] broadcasting (1) or unspecified (0)?
-            dims[k] = dim1;                                // then use dimension we broadcast to
-        else if (dim1 <= 1 && dims[k] != 0)                // if [1] is broadcasting or unspecified
-            ;                                              // then dims is already correct
-        else if (isFinalValidationPass && dim1 != dims[k]) // no broadcasting or unspecified: they must match
-            InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
-            NodeDescription().c_str(), string(shape0).c_str(), string(shape1).c_str());
-    }
+        let shape = GetInputSampleLayout(i);
+        if (shape.GetRank() > maxRank)
+            maxRank = shape.GetRank();
+    }        
+    dims.resize(maxRank, 1); // pad with 1
 
     // first check for invalid dimensions
     for (size_t k = 0; k < maxRank; k++)
     {
         size_t maxDim = 0;
-        TensorShape maxShape = shape0;
-        for (size_t s = 0; s < 3; s++)
+        TensorShape maxShape = shape0; // arbitrary
+        for (size_t i = 0; i < numInputs; i++)
         {
-            let currentShape = GetInputSampleLayout(s);
+            let currentShape = GetInputSampleLayout(i);
             size_t currentRank = currentShape.GetRank();
+            // make sure that the rank of this input is bigger than the current index
             if (currentRank > k)
             {
                 size_t currentDim = currentShape[k];
-                if (currentDim > 1 && maxDim != currentDim && maxDim > 1) 
+                if (currentDim > 1 && maxDim != currentDim && maxDim > 1)
                 {
                     InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
-                    NodeDescription().c_str(), string(maxShape).c_str(), string(currentShape).c_str());
+                        NodeDescription().c_str(), string(maxShape).c_str(), string(currentShape).c_str());
                 }
                 else if (currentDim > maxDim)
                 {
@@ -231,17 +220,16 @@ void ComputationNodeBase::ValidateTernaryZip(bool isFinalValidationPass, bool al
     // now set up the right dims
     for (size_t k = 0; k < maxRank; k++)
     {
-        if (shape1.GetRank() > k)
+        for (size_t i = 0; i < numInputs; i++)
         {
-            size_t dim1 = shape1[k];
-            if (dims[k] <= 1 && dim1 != 0)
-                dims[k] = dim1;
-        }
-        if (shape2.GetRank() > k)
-        {
-            size_t dim2 = shape2[k];
-            if (dims[k] <= 1 && dim2 != 0)
-                dims[k] = dim2;
+            let shape = GetInputSampleLayout(i);
+
+            if (shape.GetRank() > k)
+            {
+                size_t dim = shape[k];
+                if (dims[k] <= 1 && dim != 0)
+                    dims[k] = dim;
+            }
         }
     }
 
@@ -306,18 +294,18 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
 }
 
 // as above but for ternary cases
-void ComputationNodeBase::ValidateInferNaryInputDims(size_t nInputs)
+void ComputationNodeBase::ValidateInferNnaryInputDims(size_t numInputs)
 {
     // limited inference of children dimensions
     // if dimension not specified we assume two operands' dimensions should be the same
-    // NOTE: The assert is set to check if >= nInputs since this is called from nodes which have more than 'nInputs' children.
+    // NOTE: The assert is set to check if >= numInputs since this is called from nodes which have more than 'nInputs' children.
     //      The number of children is formally verified elsewhere, so this will not break consistency.
-    assert(m_inputs.size() >= nInputs);
-    for (size_t index = 0; index < nInputs; index++)
+    assert(m_inputs.size() >= numInputs);
+    for (size_t index = 0; index < numInputs; index++)
     {
         auto in = Input(index);
         
-        for (size_t indexOther = 0; indexOther < nInputs; indexOther++)
+        for (size_t indexOther = 0; indexOther < numInputs; indexOther++)
         {
             if (indexOther != index) 
             {
