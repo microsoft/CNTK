@@ -971,6 +971,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{181664AC-4C9
 		Tests\EndToEndTests\Text\SLU\testcases.yml = Tests\EndToEndTests\Text\SLU\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{8A4B258E-E196-4BF9-B4E2-180B671723B8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextReadersPerfComparison", "Tests\Benchmarks\TextReadersPerfComparison\TextReadersPerfComparison.vcxproj", "{BE18D481-0AE4-43C5-B84A-33D2803C21AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1193,6 +1197,14 @@ Global
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.ActiveCfg = Release|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.Build.0 = Release|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Debug|x64.ActiveCfg = Debug_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Debug|x64.Build.0 = Debug_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Release|x64.ActiveCfg = Release_CpuOnly|x64
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD}.Release|x64.Build.0 = Release_CpuOnly|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1324,5 +1336,7 @@ Global
 		{EC780385-7580-4D15-914B-1D878A295CBC} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{181664AC-4C95-4798-A923-09B879215B33} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
+		{8A4B258E-E196-4BF9-B4E2-180B671723B8} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{BE18D481-0AE4-43C5-B84A-33D2803C21AD} = {8A4B258E-E196-4BF9-B4E2-180B671723B8}
 	EndGlobalSection
 EndGlobal

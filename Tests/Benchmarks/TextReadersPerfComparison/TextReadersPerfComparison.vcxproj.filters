@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Linked Source">
+      <UniqueIdentifier>{dae3c8a8-7606-4e71-85a7-c62e397897ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{cec2d1a2-f542-42da-a0ae-d8bd6b7ac528}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{ad9f16f9-1112-4d9a-9621-04d8f7bf3421}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\UCIFastReader\UCIParser.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\convert.py">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="Readme.md" />
+  </ItemGroup>
+</Project>
