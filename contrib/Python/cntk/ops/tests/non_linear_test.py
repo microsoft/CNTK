@@ -147,7 +147,7 @@ def test_op_softmax(batch, device_id, precision):
     if False: # FIXME: We get only zeros here!!!
         expected = [[]]
 
-        unittest_helper(op_node, expected, 
+        unittest_helper(op_node, None, expected, 
                 device_id=device_id,
                         precision=precision, clean_up=True, backward_pass=True,
                         input_node=input_node)
