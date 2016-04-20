@@ -9,6 +9,7 @@ Dockerfile-GPU text
 *.post text
 *.cpu text
 *.gpu text
+*.rst text
 
 .gitattributes text
 .gitignore text
