@@ -28,9 +28,6 @@ class UCIFastReader(AbstractReader):
     because in case of a label node the dimension does not match the shape
     which would be (``numOfClasses``,1).
 
-    Used by :class:`UCIFastReaderAggregator` to generate the combined reader
-    configuration.
-
     Args:
         filename (str): the name of the file where the data is stored
         custom_delimiter (str): what delimiter is used to separate columns, specify
@@ -64,8 +61,10 @@ class UCIFastReader(AbstractReader):
 class CNTKTextFormatReader(AbstractReader):
     """A CNTKTextFormatReader for one input node that supports sequences. 
 
-    Used by :class:`TextFormatReaderAggregator` to generate the combined reader
-    configuration.
+    Args:
+        filename (str): the name of the file where the data is stored
+        input_alias (str): a short name for the input, it is how inputs are referenced in the data files        
+        format (str): 'dense' or 'sparse'
 
     Example:
        The following example encodes two samples, one has a sequence of one
@@ -94,14 +93,9 @@ class CNTKTextFormatReader(AbstractReader):
            2	|20 21
     """
 
-    def __init__(self, filename, input_alias, format="Dense"):        
+    def __init__(self, filename, input_alias, format="dense"):        
         """ Reader constructor. Note that the dimension is inferred from the input node
         while generating the configuration
-
-        Args:
-        filename: the name of the file where the data is stored
-        input_alias: a short name for the input, it is how inputs are referenced in the data files        
-        format: dense or sparse
         """                
         self.filename = filename
         self.input_alias = input_alias
@@ -232,7 +226,7 @@ class TextFormatReaderAggregator(AbstractReaderAggregator):
         self["FileName"] = filename
         self.inputs_def = []
 
-    def add_input(self, name_or_node, input_alias, input_dim, format="Dense"):
+    def add_input(self, name_or_node, input_alias, input_dim, format="dense"):
         """Add an input to the reader
 
         Args:
