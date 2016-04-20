@@ -1,6 +1,6 @@
 import sys
 
-collect_ignore = ["setup.py"]
+collect_ignore = ["setup.py", "build"]
 
 # content of conftest.py
 _DEFAULT_DEVICE_ID=-1
