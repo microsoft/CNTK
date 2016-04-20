@@ -106,7 +106,7 @@ def softmax(X, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    return Softmax(X, var_name=name)
+    return Softmax(X)#Exp(LogSoftmax(X), var_name=name)
 
 def exp(x, name=None):
     """

@@ -144,13 +144,12 @@ def test_op_softmax(batch, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is 
-    if False: # FIXME: We get only zeros here!!!
-        expected = [[]]
+    expected = [['tbd']]
 
-        unittest_helper(op_node, None, expected, 
-                device_id=device_id,
-                        precision=precision, clean_up=True, backward_pass=True,
-                        input_node=input_node)
+    unittest_helper(op_node, None, expected, 
+            device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
 
 
 @pytest.mark.parametrize("tensor", TENSORS)
