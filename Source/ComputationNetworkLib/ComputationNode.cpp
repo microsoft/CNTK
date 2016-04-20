@@ -180,14 +180,14 @@ void ComputationNodeBase::ValidateNnaryZip(bool isFinalValidationPass, bool allo
     let shape0 = GetInputSampleLayout(0);
 
     // dims is max over all inputs
-    size_t maxRank = shape0.GetRank();
-    SmallVector<size_t> dims = shape0.GetDims();
+    size_t maxRank = shape0.GetRank();    
     for (size_t i = 1; i < numInputs; i++)
     {
         let shape = GetInputSampleLayout(i);
         if (shape.GetRank() > maxRank)
             maxRank = shape.GetRank();
     }        
+    SmallVector<size_t> dims = shape0.GetDims();
     dims.resize(maxRank, 1); // pad with 1
 
     // first check for invalid dimensions
