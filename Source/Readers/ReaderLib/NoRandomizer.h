@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class NoRandomizer : public Transformer
 {
 public:
-    NoRandomizer(IDataDeserializerPtr deserializer);
+    NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false);
 
     virtual void Initialize(TransformerPtr next, const ConfigParameters& readerConfig) override;
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -42,6 +42,10 @@ private:
     void MoveToNextSequence();
 
     IDataDeserializerPtr m_deserializer;
+
+    // Whether to get sequences using multiple thread.
+    // TODO temporary; should go away when transformers are moved closer to the deserializer
+    bool m_multithreadedGetNextSequences;
 
     // Stream descriptions
     std::vector<StreamDescriptionPtr> m_streams;
