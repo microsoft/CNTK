@@ -11,6 +11,7 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "ImageDataDeserializer.h"
+#include "FramePacker.h"
 #include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -37,13 +38,17 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     auto deserializer = std::make_shared<ImageDataDeserializer>(config);
 
     TransformerPtr randomizer;
+    // Request multi-threaded randomizer operation to speed up CPU-intensive image-decoding and transformations.
+    const bool multithreadedGetNextSequences = true;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, false);
+        // We do not use legacy randomization.
+        bool useLegacyRandomization = false;
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, useLegacyRandomization, multithreadedGetNextSequences);
     }
     else
     {
-        randomizer = std::make_shared<NoRandomizer>(deserializer);
+        randomizer = std::make_shared<NoRandomizer>(deserializer, multithreadedGetNextSequences);
     }
 
     randomizer->Initialize(nullptr, config);
@@ -81,7 +86,7 @@ void ImageReader::StartEpoch(const EpochConfiguration& config)
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
+    m_packer = std::make_shared<FramePacker>(
         m_provider,
         m_transformer,
         config.m_minibatchSizeInSamples,

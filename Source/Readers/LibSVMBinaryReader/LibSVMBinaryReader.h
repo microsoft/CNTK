@@ -226,7 +226,7 @@ private:
 };
 
 template <class ElemType>
-class LibSVMBinaryReader : public IDataReader
+class LibSVMBinaryReader : public DataReaderBase
 {
 public:
     virtual void Init(const ConfigParameters& config) override
@@ -247,13 +247,14 @@ public:
         : DSSMLabels(nullptr), DSSMCols(0)
     {
         m_pMBLayout = make_shared<MBLayout>();
+        m_pMBLayout->SetUniqueAxisName(L"LibSVMReader");
     };
 
     virtual ~LibSVMBinaryReader();
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     virtual bool SupportsDistributedMBRead() const override
     {

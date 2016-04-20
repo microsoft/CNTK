@@ -1,0 +1,17 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../Examples/Text/Miscellaneous/SLU
+
+NdlDir=$TEST_DIR 
+ExpDir=$TEST_RUN_DIR 
+OutDir=$TEST_RUN_DIR
+
+if [ "$OS" == "Windows_NT" ]; then
+  NdlDir=$(cygpath -aw $NdlDir)
+  ExpDir=$(cygpath -aw $ExpDir)
+  OutDir=$(cygpath -aw $OutDir)
+fi
+
+cntkrun rnnlu.cntk "NdlDir=$NdlDir ExpDir=$ExpDir OutDir=$OutDir" || exit $?

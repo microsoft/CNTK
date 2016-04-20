@@ -11,14 +11,40 @@
 #include "LUSequenceReader.h"
 #include "LUSequenceWriter.h"
 
+#ifdef _MSC_VER
+#include <codecvt>
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+void EnableUTF8Support() 
+{
+    // TODO: codecvt should be supported in the latest gcc,
+    // remove the #ifdef when we move to 5.3.
+#ifdef _MSC_VER
+    locale::global(locale(locale::empty(), new codecvt_utf8<wchar_t>));
+#else
+    try 
+    {
+        locale::global(locale("C.UTF-8")); 
+    }
+    catch(...) 
+    {
+        fprintf(stderr, "WARNING: \"C.UTF-8\" is not available, reverting to the default user-preferred locale.\n");
+        locale::global(locale("")); 
+    }
+    
+#endif
+}
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
+    EnableUTF8Support();
     *preader = new MultiIOBatchLUSequenceReader<float>();
 }
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
+    EnableUTF8Support();
     *preader = new MultiIOBatchLUSequenceReader<double>();
 }
 

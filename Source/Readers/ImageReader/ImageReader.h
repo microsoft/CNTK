@@ -7,7 +7,7 @@
 
 #include "Reader.h"
 #include "ImageTransformers.h"
-#include "SampleModePacker.h"
+#include "Packer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -37,7 +37,7 @@ private:
     TransformerPtr m_transformer;
 
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Seed for the random generator.
     unsigned int m_seed;

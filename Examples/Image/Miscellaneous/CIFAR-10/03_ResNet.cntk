@@ -12,12 +12,14 @@ deviceId = 0
 imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 prefetch = "true"
 parallelTrain = "false"
 
-command = Train:AddBNEval:Test
+command = Train:Test
 
 stderr = "$OutputDir$/03_ResNet"
 traceLevel = 1
@@ -57,7 +59,7 @@ Train = [
     
     reader = [
         readerType = "ImageReader"
-        file = "$DataDir$/train_map.txt"
+        file = "$DataDir$/cifar-10-batches-py/train_map.txt"
         randomize = "auto"
         features = [
             width = 32
@@ -67,7 +69,7 @@ Train = [
             cropRatio = 0.8
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "$ConfigDir$/CIFAR-10_mean.xml"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
@@ -75,22 +77,15 @@ Train = [
     ]    
 ]
 
-AddBNEval = [    
-    action = "edit"
-    CurModel = "$ModelDir$/03_ResNet"
-    NewModel = "$ModelDir$/03_ResNet.Eval"
-    editPath = "$ConfigDir$/03_ResNet.mel"
-]
-
 Test = [
     action = "test"
-    modelPath = "$ModelDir$/03_ResNet.Eval"
+    modelPath = "$ModelDir$/03_ResNet"
     # Set minibatch size for testing.
     minibatchSize = 512
 
     reader = [
         readerType = "ImageReader"
-        file = "$DataDir$/test_map.txt"
+        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
         randomize = "none"
         features = [
             width = 32
@@ -100,7 +95,7 @@ Test = [
             cropRatio = 1
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "$ConfigDir$/CIFAR-10_mean.xml"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10

@@ -73,7 +73,7 @@ QuantizedMatrix<ElemType>::~QuantizedMatrix()
         if (m_allocator != nullptr)
         {
             assert(!m_quantizedData->OwnBuffer());
-            m_allocator->Free(m_quantizedData->BufferPointer());
+            m_allocator->Free(m_quantizedData->Data());
         }
 
         delete m_quantizedData;
@@ -94,9 +94,9 @@ size_t QuantizedMatrix<ElemType>::GetSize() const
 }
 
 template <class ElemType>
-char* QuantizedMatrix<ElemType>::GetArray() const
+char* QuantizedMatrix<ElemType>::Buffer() const
 {
-    return m_quantizedData->BufferPointer();
+    return m_quantizedData->Data();
 }
 
 template <class ElemType>

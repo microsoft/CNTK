@@ -4,12 +4,14 @@
 //
 
 #include "stdafx.h"
-#include <cfloat>
 #include <inttypes.h>
+#include <cfloat>
+#include <limits>
 #include "Indexer.h"
 #include "TextParser.h"
 #include "TextReaderConstants.h"
 
+#undef max // max is defined in minwindef.h
 #define isSign(c) ((c == '-' || c == '+'))
 #define isE(c) ((c == 'e' || c == 'E'))
 
@@ -190,11 +192,11 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index[chunkId];
     result.reserve(chunk.m_sequences.size());
-    
+
     for (auto const& s : chunk.m_sequences)
     {
         result.push_back(
-        { 
+        {
             s.m_id, 
             s.m_numberOfSamples,
             s.m_chunkId,
@@ -217,8 +219,6 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 {
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
-//TODO: Remove pragma once new randomizer is in master.
-#pragma omp atomic
     ++m_sequenceRequestCount;
     result.reserve(it->second.size());
     copy(it->second.begin(), it->second.end(), back_inserter(result));
@@ -228,52 +228,47 @@ template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 {
     ChunkPtr chunk;
-    //TODO: Remove pragma once new randomizer is in master.
-#pragma omp critical
+    auto it = m_chunkCache.find(chunkId);
+    if (it != m_chunkCache.end())
     {
-        auto it = m_chunkCache.find(chunkId);
-        if (it != m_chunkCache.end())
-        {
-            chunk = it->second;
-        }
-        else
-        {
-            const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
-            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
+        chunk = it->second;
+    }
+    else
+    {
+        const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
+        auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
 
-            attempt(5, [this, &textChunk, &chunkDescriptor]()
-            {
-                LoadChunk(textChunk, chunkDescriptor);
-            });
+        attempt(5, [this, &textChunk, &chunkDescriptor]()
+        {
+            LoadChunk(textChunk, chunkDescriptor);
+        });
 
-            if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize)
+        if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize)
+        {
+            size_t candidateId = SIZE_MAX;
+            size_t minNumSequencesLeft = SIZE_MAX;
+            for (const auto& it : m_chunkCache)
             {
-                size_t candidateId = SIZE_MAX;
-                size_t minNumSequencesLeft = SIZE_MAX;
-                for (const auto& it : m_chunkCache)
+                const auto& chunk = *(it.second.get());
+                size_t numSequencesUsed = 0;
+                numSequencesUsed += chunk.m_sequenceRequestCount;
+                size_t numSequencesLeft = chunk.m_sequences.size() - numSequencesUsed;
+                if (numSequencesLeft < minNumSequencesLeft)
                 {
-                    const auto& chunk = *(it.second.get());
-                    size_t numSequencesUsed = 0;
-#pragma omp atomic
-                    numSequencesUsed += chunk.m_sequenceRequestCount;
-                    size_t numSequencesLeft = chunk.m_sequences.size() - numSequencesUsed;
-                    if (numSequencesLeft < minNumSequencesLeft)
-                    {
-                        minNumSequencesLeft = numSequencesLeft;
-                        candidateId = it.first;
-                    }
+                    minNumSequencesLeft = numSequencesLeft;
+                    candidateId = it.first;
                 }
-                assert(candidateId != SIZE_MAX);
-                m_chunkCache.erase(candidateId);
             }
-
-            if (m_chunkCacheSize > 0)
-            {
-                m_chunkCache[chunkId] = textChunk;
-            }
-
-            chunk = textChunk;
+            assert(candidateId != SIZE_MAX);
+            m_chunkCache.erase(candidateId);
         }
+
+        if (m_chunkCacheSize > 0)
+        {
+            m_chunkCache[chunkId] = textChunk;
+        }
+
+        chunk = textChunk;
     }
     return chunk;
 }
@@ -305,20 +300,13 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
                 SparseInputStreamBuffer* input = reinterpret_cast<SparseInputStreamBuffer*>(sequenceData[j].get());
                 auto data = make_shared<SparseSequenceData>();
                 data->m_data = input->m_buffer.data();
-                // TODO: will be refactored once SparseSequenceData is updated.
-                data->m_indices.resize(input->m_nnzCounts.size());
-                auto from = input->m_indices.begin();
-                for (size_t k = 0; k < input->m_nnzCounts.size(); ++k)
-                {
-                    auto& indices = data->m_indices[k];
-                    auto nnzCount = input->m_nnzCounts[k];
-                    indices.reserve(nnzCount);
-                    copy(from, from + nnzCount, indices.begin());
-                    from += nnzCount;
-                }
-
+                data->m_indices = input->m_indices.data();
+                data->m_nnzCounts.reserve(input->m_nnzCounts.size());
+                copy(input->m_nnzCounts.begin(), input->m_nnzCounts.end(), back_inserter(data->m_nnzCounts));
+                data->m_totalNnzCount = input->m_totalNnzCount;
                 data->m_chunk = chunk;
                 data->m_id = sequenceDescriptor.m_id;
+                data->m_numberOfSamples = input->m_nnzCounts.size();
                 sequencePtrs[j] = data;
             }
         }
@@ -337,7 +325,7 @@ void TextParser<ElemType>::IncrementNumberOfErrorsOrDie()
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::RefillBuffer()
+bool TextParser<ElemType>::TryRefillBuffer()
 {
     size_t bytesRead = fread(m_buffer.get(), 1, BUFFER_SIZE, m_file);
     
@@ -369,7 +357,7 @@ void TextParser<ElemType>::SetFileOffset(int64_t offset)
     m_fileOffsetStart = offset;
     m_fileOffsetEnd = offset;
 
-    RefillBuffer();
+    TryRefillBuffer();
 }
 
 template <class ElemType>
@@ -389,7 +377,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     if (verifyId) 
     {
         size_t id;
-        if (!ReadUint64(id, bytesToRead) || id != sequenceDsc.m_id) 
+        if (!TryReadUint64(id, bytesToRead) || id != sequenceDsc.m_id) 
         {
             RuntimeError("Did not find the expected sequence id ( %" PRIu64 ") "
                 " at the file offset = %" PRId64 "\n", sequenceDsc.m_id, GetFileOffset());
@@ -415,7 +403,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples;
     for (size_t i = 0; i < expectedRowCount; i++)
     {
-        if ((ReadRow(sequence, bytesToRead)))
+        if ((TryReadRow(sequence, bytesToRead)))
         {
             ++numRowsRead;
         }
@@ -477,7 +465,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
     bool found = false;
     while (bytesToRead && CanRead())
@@ -501,7 +489,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
         }
 
         size_t id;
-        if (!GetInputId(id, bytesToRead))
+        if (!TryGetInputId(id, bytesToRead))
         {
             IncrementNumberOfErrorsOrDie();
             SkipToNextInput(bytesToRead);
@@ -516,7 +504,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
             vector<ElemType>& values = data->m_buffer;
             size_t size = values.size();
             assert(size % stream.m_sampleDimension == 0);
-            if (!ReadDenseSample(values, stream.m_sampleDimension, bytesToRead))
+            if (!TryReadDenseSample(values, stream.m_sampleDimension, bytesToRead))
             {
                 // expected a dense sample, but was not able to fully read it, ignore it.
                 if (values.size() != size)
@@ -535,10 +523,10 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
         {
             SparseInputStreamBuffer* data = reinterpret_cast<SparseInputStreamBuffer*>(sequence[id].get());
             vector<ElemType>& values = data->m_buffer;
-            vector<size_t>& indices = data->m_indices;
+            vector<IndexType>& indices = data->m_indices;
             assert(values.size() == indices.size());
             size_t size = values.size();
-            if (!ReadSparseSample(values, indices, bytesToRead))
+            if (!TryReadSparseSample(values, indices, bytesToRead))
             {
                 // expected a sparse sample, but something went south, ignore it.
                 if (values.size() != size)
@@ -556,8 +544,11 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
                 SkipToNextInput(bytesToRead);
                 continue;
             }
+            assert(values.size() == indices.size());
             ++data->m_numberOfSamples;
-            data->m_nnzCounts.push_back(values.size() - size);
+            IndexType count = static_cast<IndexType>(values.size() - size);
+            data->m_nnzCounts.push_back(count);
+            data->m_totalNnzCount += count;
         }
 
         found |= true;
@@ -574,7 +565,7 @@ bool TextParser<ElemType>::ReadRow(SequenceBuffer& sequence, size_t& bytesToRead
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::GetInputId(size_t& id, size_t& bytesToRead)
+bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 {
     char* scratchIndex = m_scratch.get();
 
@@ -666,7 +657,7 @@ bool TextParser<ElemType>::GetInputId(size_t& id, size_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadDenseSample(vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead)
 {
     size_t counter = 0;
     ElemType value;
@@ -710,7 +701,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
             continue;
         }
 
-        if (!ReadRealNumber(value, bytesToRead))
+        if (!TryReadRealNumber(value, bytesToRead))
         {
             // bail out.
             return false;
@@ -732,7 +723,7 @@ bool TextParser<ElemType>::ReadDenseSample(vector<ElemType>& values, size_t samp
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::vector<size_t>& indices, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices, size_t& bytesToRead)
 {
     size_t index;
     ElemType value;
@@ -757,8 +748,30 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         }
 
         // read next sparse index
-        if (!ReadUint64(index, bytesToRead))
+        if (!TryReadUint64(index, bytesToRead))
         {
+            // bail out.
+            return false;
+        } 
+        if (index > numeric_limits<IndexType>::max())
+        {
+            if (m_traceLevel >= Warning)
+            {
+                fprintf(stderr,
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+            }
+            // bail out.
+            return false;
+        }
+        if (index > numeric_limits<IndexType>::max())
+        {
+            if (m_traceLevel >= Warning)
+            {
+                fprintf(stderr,
+                    "WARNING: sparse index value(%" PRIu64 ") exceeds the maximum allowed "
+                    " value (%" PRIu64 ")\n", index, (size_t)numeric_limits<IndexType>::max());
+            }
             // bail out.
             return false;
         }
@@ -783,14 +796,14 @@ bool TextParser<ElemType>::ReadSparseSample(std::vector<ElemType>& values, std::
         }
 
         // read the corresponding value
-        if (!ReadRealNumber(value, bytesToRead))
+        if (!TryReadRealNumber(value, bytesToRead))
         {
             // bail out.
             return false;
         }
 
         values.push_back(value);
-        indices.push_back(index);
+        indices.push_back(static_cast<IndexType>(index));
     }
 
     IncrementNumberOfErrorsOrDie();
@@ -838,7 +851,7 @@ void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
 }
 
 template <class ElemType>
-bool TextParser<ElemType>::ReadUint64(size_t& value, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 {
     value = 0;
     bool found = false;
@@ -891,7 +904,7 @@ bool TextParser<ElemType>::ReadUint64(size_t& value, size_t& bytesToRead)
 // cannot be parsed as part of a floating point number.
 // Returns true if parsing was successful.
 template <class ElemType>
-bool TextParser<ElemType>::ReadRealNumber(ElemType& value, size_t& bytesToRead)
+bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRead)
 {
     State state = State::Init;
     double coefficient = .0, number = .0, divider = .0;

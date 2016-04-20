@@ -12,11 +12,13 @@ deviceId = 0
 imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 prefetch = "true"
 
-command = Train:AddBNEval:Test
+command = Train:Test
 
 stderr = "$OutputDir$/02_BatchNormConv"
 traceLevel = 1
@@ -44,6 +46,7 @@ Train = [
         readerType = "UCIFastReader"
         file = "$DataDir$/Train.txt"
         randomize = "auto"
+        minibatchMode="full"
         features = [
             dim = 3072
             start = 1
@@ -57,16 +60,9 @@ Train = [
     ]    
 ]
 
-AddBNEval = [    
-    action = "edit"
-    CurModel = "$ModelDir$/02_BatchNormConv"
-    NewModel = "$ModelDir$/02_BatchNormConv.Eval"
-    editPath = "$ConfigDir$/02_BatchNormConv.mel"
-]
-
 Test = [
     action = "test"
-    modelPath = "$ModelDir$/02_BatchNormConv.Eval"
+    modelPath = "$ModelDir$/02_BatchNormConv"
     # Set minibatch size for testing.
     minibatchSize = 16
 

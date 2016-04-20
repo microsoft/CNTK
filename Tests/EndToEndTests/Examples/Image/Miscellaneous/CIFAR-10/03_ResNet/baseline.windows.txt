@@ -1,0 +1,975 @@
+Looking for data in: //cntk-muc00/data/CNTKTestData
+Copying test data to local directory
+=== Running /cygdrive/e/VSO/Source/Repos/CNTK_E2E/x64/release/cntk.exe configFile=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk currentDirectory=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData RunDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DataDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData ConfigDir=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10 OutputDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=1]] Train=[SGD=[epochSize=128]] Train=[reader=[randomize=none]] Train=[SGD=[minibatchSize=16]] Test=[minibatchSize=16] stderr=-
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 12 2016 16:14:24
+		Last modified date: Fri Apr  8 17:30:38 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: E:\Tools\cub-1.4.1
+		CUDNN_PATH: E:\Tools\NVIDIA\cuda_v4rc
+		Built by gaizna on GAIZKA-DESKTOP
+		Build Path: E:\VSO\Source\Repos\CNTK_E2E\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+04/15/2016 09:09:12: Redirecting stderr to file -_Train_Test.log
+04/15/2016 09:09:12: -------------------------------------------------------------------
+04/15/2016 09:09:12: Build info: 
+
+04/15/2016 09:09:12: 		Built time: Apr 12 2016 16:14:24
+04/15/2016 09:09:12: 		Last modified date: Fri Apr  8 17:30:38 2016
+04/15/2016 09:09:12: 		Build type: Release
+04/15/2016 09:09:12: 		Build target: GPU
+04/15/2016 09:09:12: 		With 1bit-SGD: no
+04/15/2016 09:09:12: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+04/15/2016 09:09:12: 		CUB_PATH: E:\Tools\cub-1.4.1
+04/15/2016 09:09:12: 		CUDNN_PATH: E:\Tools\NVIDIA\cuda_v4rc
+04/15/2016 09:09:12: 		Built by gaizna on GAIZKA-DESKTOP
+04/15/2016 09:09:12: 		Build Path: E:\VSO\Source\Repos\CNTK_E2E\Source\CNTK\
+04/15/2016 09:09:12: -------------------------------------------------------------------
+
+04/15/2016 09:09:12: Running on GAIZKA-DESKTOP at 2016/04/15 09:09:12
+04/15/2016 09:09:12: Command line: 
+E:\VSO\Source\Repos\CNTK_E2E\x64\release\cntk.exe  configFile=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk  currentDirectory=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  RunDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DataDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  ConfigDir=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10  OutputDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=1]]  Train=[SGD=[epochSize=128]]  Train=[reader=[randomize=none]]  Train=[SGD=[minibatchSize=16]]  Test=[minibatchSize=16]  stderr=-
+
+
+
+04/15/2016 09:09:12: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/15/2016 09:09:12: RootDir = "."
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+ndlMacros = "$ConfigDir$/Macros.ndl"
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+initOnCPUOnly=true
+prefetch = "true"
+parallelTrain = "false"
+command = Train:Test
+stderr = "$OutputDir$/03_ResNet"
+traceLevel = 1
+numMBsToShowResult = 200
+Proj16to32Filename = "$ConfigDir$/16to32.txt"
+Proj32to64Filename = "$ConfigDir$/32to64.txt"
+Train = [
+    action = "train"
+    modelPath = "$ModelDir$/03_ResNet"
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/03_ResNet.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+        randomize = "auto"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "random"
+            cropRatio = 0.8
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]
+Test = [
+    action = "test"
+    modelPath = "$ModelDir$/03_ResNet"
+    minibatchSize = 512
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
+        randomize = "none"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "center"
+            cropRatio = 1
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]
+currentDirectory=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+RunDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DataDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+ConfigDir=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10
+OutputDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DeviceId=0
+timestamping=true
+Train=[SGD=[maxEpochs=1]]
+Train=[SGD=[epochSize=128]]
+Train=[reader=[randomize=none]]
+Train=[SGD=[minibatchSize=16]]
+Test=[minibatchSize=16]
+stderr=-
+
+04/15/2016 09:09:12: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/15/2016 09:09:12: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/15/2016 09:09:12: RootDir = "."
+ConfigDir = "."
+DataDir = "."
+OutputDir = "./Output"
+ModelDir = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models"
+ndlMacros = "E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl"
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+initOnCPUOnly=true
+prefetch = "true"
+parallelTrain = "false"
+command = Train:Test
+stderr = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/03_ResNet"
+traceLevel = 1
+numMBsToShowResult = 200
+Proj16to32Filename = "E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/16to32.txt"
+Proj32to64Filename = "E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/32to64.txt"
+Train = [
+    action = "train"
+    modelPath = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+     NDLNetworkBuilder = [
+        networkDescription = "E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "ImageReader"
+        file = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
+        randomize = "auto"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "random"
+            cropRatio = 0.8
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]
+Test = [
+    action = "test"
+    modelPath = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    minibatchSize = 512
+    reader = [
+        readerType = "ImageReader"
+        file = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
+        randomize = "none"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "center"
+            cropRatio = 1
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]
+currentDirectory=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+RunDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DataDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+ConfigDir=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10
+OutputDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DeviceId=0
+timestamping=true
+Train=[SGD=[maxEpochs=1]]
+Train=[SGD=[epochSize=128]]
+Train=[reader=[randomize=none]]
+Train=[SGD=[minibatchSize=16]]
+Test=[minibatchSize=16]
+stderr=-
+
+04/15/2016 09:09:12: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/15/2016 09:09:12: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: 03_ResNet.cntk:command=Train:Test
+configparameters: 03_ResNet.cntk:ConfigDir=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10
+configparameters: 03_ResNet.cntk:currentDirectory=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+configparameters: 03_ResNet.cntk:DataDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+configparameters: 03_ResNet.cntk:deviceId=0
+configparameters: 03_ResNet.cntk:imageLayout=cudnn
+configparameters: 03_ResNet.cntk:initOnCPUOnly=true
+configparameters: 03_ResNet.cntk:ModelDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models
+configparameters: 03_ResNet.cntk:ndlMacros=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl
+configparameters: 03_ResNet.cntk:numMBsToShowResult=200
+configparameters: 03_ResNet.cntk:OutputDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+configparameters: 03_ResNet.cntk:parallelTrain=false
+configparameters: 03_ResNet.cntk:precision=float
+configparameters: 03_ResNet.cntk:prefetch=true
+configparameters: 03_ResNet.cntk:Proj16to32Filename=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/16to32.txt
+configparameters: 03_ResNet.cntk:Proj32to64Filename=E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/32to64.txt
+configparameters: 03_ResNet.cntk:RootDir=.
+configparameters: 03_ResNet.cntk:RunDir=E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+configparameters: 03_ResNet.cntk:stderr=-
+configparameters: 03_ResNet.cntk:Test=[
+    action = "test"
+    modelPath = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    minibatchSize = 512
+    reader = [
+        readerType = "ImageReader"
+        file = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
+        randomize = "none"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "center"
+            cropRatio = 1
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+] [minibatchSize=16]
+
+configparameters: 03_ResNet.cntk:timestamping=true
+configparameters: 03_ResNet.cntk:traceLevel=1
+configparameters: 03_ResNet.cntk:Train=[
+    action = "train"
+    modelPath = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+     NDLNetworkBuilder = [
+        networkDescription = "E:\VSO\Source\Repos\CNTK_E2E\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "ImageReader"
+        file = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
+        randomize = "auto"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "random"
+            cropRatio = 0.8
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+] [SGD=[maxEpochs=1]] [SGD=[epochSize=128]] [reader=[randomize=none]] [SGD=[minibatchSize=16]]
+
+04/15/2016 09:09:12: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/15/2016 09:09:12: Commands: Train Test
+04/15/2016 09:09:12: Precision = "float"
+04/15/2016 09:09:12: CNTKModelPath: E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet
+04/15/2016 09:09:12: CNTKCommandTrainInfo: Train : 1
+04/15/2016 09:09:12: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+
+04/15/2016 09:09:12: ##############################################################################
+04/15/2016 09:09:12: #                                                                            #
+04/15/2016 09:09:12: # Action "train"                                                             #
+04/15/2016 09:09:12: #                                                                            #
+04/15/2016 09:09:12: ##############################################################################
+
+04/15/2016 09:09:12: CNTKCommandTrainBegin: Train
+NDLBuilder Using GPU 0
+
+04/15/2016 09:09:13: Creating virgin network.
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+3 roots:
+	CE = CrossEntropyWithSoftmax()
+	Err = ErrorPrediction()
+	OutputNodes.z = Plus()
+
+Validating network. 184 nodes to process in pass 1.
+
+
+OutputNodes.t Times operation: For legacy compatibility, the sample layout of left input (OutputNodes.W LearnableParameter operation) was patched to [10 x 1 x 1 x 64] (from [10 x 64])
+
+Validating network. 75 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> OutputNodes.W = LearnableParameter() :  -> [10 x 1 x 1 x 64]
+Validating --> rn3_3.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_3.c1.c.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_2.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_2.c1.c.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_1.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_1.c1.c.W = LearnableParameter() :  -> [64 x 288]
+Validating --> rn2_3.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_3.c1.c.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_2.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_2.c1.c.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_1.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_1.c1.c.W = LearnableParameter() :  -> [32 x 144]
+Validating --> rn1_3.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_3.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_2.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_2.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_1.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_1.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> conv1.c.W = LearnableParameter() :  -> [16 x 27]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> conv1.c.c.c = Convolution (conv1.c.W, features) : [16 x 27], [32 x 32 x 3 x *] -> [32 x 32 x 16 x *]
+Validating --> conv1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> conv1.c.c.y = BatchNormalization (conv1.c.c.c, conv1.c.c.sc, conv1.c.c.b, conv1.c.c.m, conv1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> conv1.y = RectifiedLinear (conv1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_1.c1.c.c.c = Convolution (rn1_1.c1.c.W, conv1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_1.c1.c.c.y = BatchNormalization (rn1_1.c1.c.c.c, rn1_1.c1.c.c.sc, rn1_1.c1.c.c.b, rn1_1.c1.c.c.m, rn1_1.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c1.y = RectifiedLinear (rn1_1.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_1.c2.c.c = Convolution (rn1_1.c2.W, rn1_1.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_1.c2.c.y = BatchNormalization (rn1_1.c2.c.c, rn1_1.c2.c.sc, rn1_1.c2.c.b, rn1_1.c2.c.m, rn1_1.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.p = Plus (rn1_1.c2.c.y, conv1.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.y = RectifiedLinear (rn1_1.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_2.c1.c.c.c = Convolution (rn1_2.c1.c.W, rn1_1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_2.c1.c.c.y = BatchNormalization (rn1_2.c1.c.c.c, rn1_2.c1.c.c.sc, rn1_2.c1.c.c.b, rn1_2.c1.c.c.m, rn1_2.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c1.y = RectifiedLinear (rn1_2.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_2.c2.c.c = Convolution (rn1_2.c2.W, rn1_2.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_2.c2.c.y = BatchNormalization (rn1_2.c2.c.c, rn1_2.c2.c.sc, rn1_2.c2.c.b, rn1_2.c2.c.m, rn1_2.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.p = Plus (rn1_2.c2.c.y, rn1_1.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.y = RectifiedLinear (rn1_2.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_3.c1.c.c.c = Convolution (rn1_3.c1.c.W, rn1_2.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_3.c1.c.c.y = BatchNormalization (rn1_3.c1.c.c.c, rn1_3.c1.c.c.sc, rn1_3.c1.c.c.b, rn1_3.c1.c.c.m, rn1_3.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c1.y = RectifiedLinear (rn1_3.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_3.c2.c.c = Convolution (rn1_3.c2.W, rn1_3.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_3.c2.c.y = BatchNormalization (rn1_3.c2.c.c, rn1_3.c2.c.sc, rn1_3.c2.c.b, rn1_3.c2.c.m, rn1_3.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.p = Plus (rn1_3.c2.c.y, rn1_2.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.y = RectifiedLinear (rn1_3.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c1.c.c.c = Convolution (rn2_1.c1.c.W, rn1_3.y) : [32 x 144], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c1.c.c.y = BatchNormalization (rn2_1.c1.c.c.c, rn2_1.c1.c.c.sc, rn2_1.c1.c.c.b, rn2_1.c1.c.c.m, rn2_1.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c1.y = RectifiedLinear (rn2_1.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c2.c.c = Convolution (rn2_1.c2.W, rn2_1.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c2.c.y = BatchNormalization (rn2_1.c2.c.c, rn2_1.c2.c.sc, rn2_1.c2.c.b, rn2_1.c2.c.m, rn2_1.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1_Wproj = LearnableParameter() :  -> [32 x 16]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c_proj.c = Convolution (rn2_1_Wproj, rn1_3.y) : [32 x 16], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c_proj.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c_proj.y = BatchNormalization (rn2_1.c_proj.c, rn2_1.c_proj.sc, rn2_1.c_proj.b, rn2_1.c_proj.m, rn2_1.c_proj.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.p = Plus (rn2_1.c2.c.y, rn2_1.c_proj.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.y = RectifiedLinear (rn2_1.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_2.c1.c.c.c = Convolution (rn2_2.c1.c.W, rn2_1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_2.c1.c.c.y = BatchNormalization (rn2_2.c1.c.c.c, rn2_2.c1.c.c.sc, rn2_2.c1.c.c.b, rn2_2.c1.c.c.m, rn2_2.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c1.y = RectifiedLinear (rn2_2.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_2.c2.c.c = Convolution (rn2_2.c2.W, rn2_2.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_2.c2.c.y = BatchNormalization (rn2_2.c2.c.c, rn2_2.c2.c.sc, rn2_2.c2.c.b, rn2_2.c2.c.m, rn2_2.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.p = Plus (rn2_2.c2.c.y, rn2_1.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.y = RectifiedLinear (rn2_2.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_3.c1.c.c.c = Convolution (rn2_3.c1.c.W, rn2_2.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_3.c1.c.c.y = BatchNormalization (rn2_3.c1.c.c.c, rn2_3.c1.c.c.sc, rn2_3.c1.c.c.b, rn2_3.c1.c.c.m, rn2_3.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c1.y = RectifiedLinear (rn2_3.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_3.c2.c.c = Convolution (rn2_3.c2.W, rn2_3.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_3.c2.c.y = BatchNormalization (rn2_3.c2.c.c, rn2_3.c2.c.sc, rn2_3.c2.c.b, rn2_3.c2.c.m, rn2_3.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.p = Plus (rn2_3.c2.c.y, rn2_2.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.y = RectifiedLinear (rn2_3.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c1.c.c.c = Convolution (rn3_1.c1.c.W, rn2_3.y) : [64 x 288], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c1.c.c.y = BatchNormalization (rn3_1.c1.c.c.c, rn3_1.c1.c.c.sc, rn3_1.c1.c.c.b, rn3_1.c1.c.c.m, rn3_1.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c1.y = RectifiedLinear (rn3_1.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c2.c.c = Convolution (rn3_1.c2.W, rn3_1.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c2.c.y = BatchNormalization (rn3_1.c2.c.c, rn3_1.c2.c.sc, rn3_1.c2.c.b, rn3_1.c2.c.m, rn3_1.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1_Wproj = LearnableParameter() :  -> [64 x 32]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c_proj.c = Convolution (rn3_1_Wproj, rn2_3.y) : [64 x 32], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c_proj.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c_proj.y = BatchNormalization (rn3_1.c_proj.c, rn3_1.c_proj.sc, rn3_1.c_proj.b, rn3_1.c_proj.m, rn3_1.c_proj.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.p = Plus (rn3_1.c2.c.y, rn3_1.c_proj.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.y = RectifiedLinear (rn3_1.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_2.c1.c.c.c = Convolution (rn3_2.c1.c.W, rn3_1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_2.c1.c.c.y = BatchNormalization (rn3_2.c1.c.c.c, rn3_2.c1.c.c.sc, rn3_2.c1.c.c.b, rn3_2.c1.c.c.m, rn3_2.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c1.y = RectifiedLinear (rn3_2.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_2.c2.c.c = Convolution (rn3_2.c2.W, rn3_2.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_2.c2.c.y = BatchNormalization (rn3_2.c2.c.c, rn3_2.c2.c.sc, rn3_2.c2.c.b, rn3_2.c2.c.m, rn3_2.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.p = Plus (rn3_2.c2.c.y, rn3_1.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.y = RectifiedLinear (rn3_2.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_3.c1.c.c.c = Convolution (rn3_3.c1.c.W, rn3_2.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_3.c1.c.c.y = BatchNormalization (rn3_3.c1.c.c.c, rn3_3.c1.c.c.sc, rn3_3.c1.c.c.b, rn3_3.c1.c.c.m, rn3_3.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c1.y = RectifiedLinear (rn3_3.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_3.c2.c.c = Convolution (rn3_3.c2.W, rn3_3.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_3.c2.c.y = BatchNormalization (rn3_3.c2.c.c, rn3_3.c2.c.sc, rn3_3.c2.c.b, rn3_3.c2.c.m, rn3_3.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.p = Plus (rn3_3.c2.c.y, rn3_2.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.y = RectifiedLinear (rn3_3.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> pool = AveragePooling (rn3_3.y) : [8 x 8 x 64 x *] -> [1 x 1 x 64 x *]
+Validating --> OutputNodes.t = Times (OutputNodes.W, pool) : [10 x 1 x 1 x 64], [1 x 1 x 64 x *] -> [10 x *]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
+Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *], [10] -> [10 x *]
+Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+
+
+109 out of 184 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/15/2016 09:09:13: Created model with 184 nodes on GPU 0.
+
+04/15/2016 09:09:13: Training criterion node(s):
+04/15/2016 09:09:13: 	CE = CrossEntropyWithSoftmax
+
+04/15/2016 09:09:13: Evaluation criterion node(s):
+
+04/15/2016 09:09:13: 	Err = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/15/2016 09:09:13: No PreCompute nodes found, skipping PreCompute step.
+
+04/15/2016 09:09:13: Starting Epoch 1: learning rate per sample = 0.062500  effective momentum = 0.900000  momentum as time constant = 151.9 samples
+
+04/15/2016 09:09:13: Starting minibatch loop.
+04/15/2016 09:09:14: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 128; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0625; EpochTime=0.396381
+04/15/2016 09:09:14: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160415100906.604925\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet'
+04/15/2016 09:09:14: CNTKCommandTrainEnd: Train
+
+04/15/2016 09:09:14: Action "train" complete.
+
+
+04/15/2016 09:09:14: ##############################################################################
+04/15/2016 09:09:14: #                                                                            #
+04/15/2016 09:09:14: # Action "test"                                                              #
+04/15/2016 09:09:14: #                                                                            #
+04/15/2016 09:09:14: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	CE = CrossEntropyWithSoftmax()
+	Err = ErrorPrediction()
+	OutputNodes.z = Plus()
+
+Validating network. 184 nodes to process in pass 1.
+
+
+Validating network. 75 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> OutputNodes.W = LearnableParameter() :  -> [10 x 1 x 1 x 64]
+Validating --> rn3_3.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_3.c1.c.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_2.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_2.c1.c.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_1.c2.W = LearnableParameter() :  -> [64 x 576]
+Validating --> rn3_1.c1.c.W = LearnableParameter() :  -> [64 x 288]
+Validating --> rn2_3.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_3.c1.c.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_2.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_2.c1.c.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_1.c2.W = LearnableParameter() :  -> [32 x 288]
+Validating --> rn2_1.c1.c.W = LearnableParameter() :  -> [32 x 144]
+Validating --> rn1_3.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_3.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_2.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_2.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_1.c2.W = LearnableParameter() :  -> [16 x 144]
+Validating --> rn1_1.c1.c.W = LearnableParameter() :  -> [16 x 144]
+Validating --> conv1.c.W = LearnableParameter() :  -> [16 x 27]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> conv1.c.c.c = Convolution (conv1.c.W, features) : [16 x 27], [32 x 32 x 3 x *] -> [32 x 32 x 16 x *]
+Validating --> conv1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> conv1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> conv1.c.c.y = BatchNormalization (conv1.c.c.c, conv1.c.c.sc, conv1.c.c.b, conv1.c.c.m, conv1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> conv1.y = RectifiedLinear (conv1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_1.c1.c.c.c = Convolution (rn1_1.c1.c.W, conv1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_1.c1.c.c.y = BatchNormalization (rn1_1.c1.c.c.c, rn1_1.c1.c.c.sc, rn1_1.c1.c.c.b, rn1_1.c1.c.c.m, rn1_1.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c1.y = RectifiedLinear (rn1_1.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_1.c2.c.c = Convolution (rn1_1.c2.W, rn1_1.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_1.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_1.c2.c.y = BatchNormalization (rn1_1.c2.c.c, rn1_1.c2.c.sc, rn1_1.c2.c.b, rn1_1.c2.c.m, rn1_1.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.p = Plus (rn1_1.c2.c.y, conv1.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_1.y = RectifiedLinear (rn1_1.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_2.c1.c.c.c = Convolution (rn1_2.c1.c.W, rn1_1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_2.c1.c.c.y = BatchNormalization (rn1_2.c1.c.c.c, rn1_2.c1.c.c.sc, rn1_2.c1.c.c.b, rn1_2.c1.c.c.m, rn1_2.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c1.y = RectifiedLinear (rn1_2.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_2.c2.c.c = Convolution (rn1_2.c2.W, rn1_2.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_2.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_2.c2.c.y = BatchNormalization (rn1_2.c2.c.c, rn1_2.c2.c.sc, rn1_2.c2.c.b, rn1_2.c2.c.m, rn1_2.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.p = Plus (rn1_2.c2.c.y, rn1_1.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_2.y = RectifiedLinear (rn1_2.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_3.c1.c.c.c = Convolution (rn1_3.c1.c.W, rn1_2.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c1.c.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c1.c.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_3.c1.c.c.y = BatchNormalization (rn1_3.c1.c.c.c, rn1_3.c1.c.c.sc, rn1_3.c1.c.c.b, rn1_3.c1.c.c.m, rn1_3.c1.c.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c1.y = RectifiedLinear (rn1_3.c1.c.c.y) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn1_3.c2.c.c = Convolution (rn1_3.c2.W, rn1_3.c1.y) : [16 x 144], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.c2.c.sc = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.b = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.m = LearnableParameter() :  -> [16 x 1]
+Validating --> rn1_3.c2.c.isd = LearnableParameter() :  -> [16 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn1_3.c2.c.y = BatchNormalization (rn1_3.c2.c.c, rn1_3.c2.c.sc, rn1_3.c2.c.b, rn1_3.c2.c.m, rn1_3.c2.c.isd) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.p = Plus (rn1_3.c2.c.y, rn1_2.y) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> rn1_3.y = RectifiedLinear (rn1_3.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c1.c.c.c = Convolution (rn2_1.c1.c.W, rn1_3.y) : [32 x 144], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c1.c.c.y = BatchNormalization (rn2_1.c1.c.c.c, rn2_1.c1.c.c.sc, rn2_1.c1.c.c.b, rn2_1.c1.c.c.m, rn2_1.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c1.y = RectifiedLinear (rn2_1.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c2.c.c = Convolution (rn2_1.c2.W, rn2_1.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c2.c.y = BatchNormalization (rn2_1.c2.c.c, rn2_1.c2.c.sc, rn2_1.c2.c.b, rn2_1.c2.c.m, rn2_1.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1_Wproj = LearnableParameter() :  -> [32 x 16]
+
+Using reference convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_1.c_proj.c = Convolution (rn2_1_Wproj, rn1_3.y) : [32 x 16], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.c_proj.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_1.c_proj.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_1.c_proj.y = BatchNormalization (rn2_1.c_proj.c, rn2_1.c_proj.sc, rn2_1.c_proj.b, rn2_1.c_proj.m, rn2_1.c_proj.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.p = Plus (rn2_1.c2.c.y, rn2_1.c_proj.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_1.y = RectifiedLinear (rn2_1.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_2.c1.c.c.c = Convolution (rn2_2.c1.c.W, rn2_1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_2.c1.c.c.y = BatchNormalization (rn2_2.c1.c.c.c, rn2_2.c1.c.c.sc, rn2_2.c1.c.c.b, rn2_2.c1.c.c.m, rn2_2.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c1.y = RectifiedLinear (rn2_2.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_2.c2.c.c = Convolution (rn2_2.c2.W, rn2_2.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_2.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_2.c2.c.y = BatchNormalization (rn2_2.c2.c.c, rn2_2.c2.c.sc, rn2_2.c2.c.b, rn2_2.c2.c.m, rn2_2.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.p = Plus (rn2_2.c2.c.y, rn2_1.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_2.y = RectifiedLinear (rn2_2.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_3.c1.c.c.c = Convolution (rn2_3.c1.c.W, rn2_2.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c1.c.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c1.c.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_3.c1.c.c.y = BatchNormalization (rn2_3.c1.c.c.c, rn2_3.c1.c.c.sc, rn2_3.c1.c.c.b, rn2_3.c1.c.c.m, rn2_3.c1.c.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c1.y = RectifiedLinear (rn2_3.c1.c.c.y) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn2_3.c2.c.c = Convolution (rn2_3.c2.W, rn2_3.c1.y) : [32 x 288], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.c2.c.sc = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.b = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.m = LearnableParameter() :  -> [32 x 1]
+Validating --> rn2_3.c2.c.isd = LearnableParameter() :  -> [32 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn2_3.c2.c.y = BatchNormalization (rn2_3.c2.c.c, rn2_3.c2.c.sc, rn2_3.c2.c.b, rn2_3.c2.c.m, rn2_3.c2.c.isd) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.p = Plus (rn2_3.c2.c.y, rn2_2.y) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> rn2_3.y = RectifiedLinear (rn2_3.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c1.c.c.c = Convolution (rn3_1.c1.c.W, rn2_3.y) : [64 x 288], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c1.c.c.y = BatchNormalization (rn3_1.c1.c.c.c, rn3_1.c1.c.c.sc, rn3_1.c1.c.c.b, rn3_1.c1.c.c.m, rn3_1.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c1.y = RectifiedLinear (rn3_1.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c2.c.c = Convolution (rn3_1.c2.W, rn3_1.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c2.c.y = BatchNormalization (rn3_1.c2.c.c, rn3_1.c2.c.sc, rn3_1.c2.c.b, rn3_1.c2.c.m, rn3_1.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1_Wproj = LearnableParameter() :  -> [64 x 32]
+
+Using reference convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_1.c_proj.c = Convolution (rn3_1_Wproj, rn2_3.y) : [64 x 32], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.c_proj.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_1.c_proj.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_1.c_proj.y = BatchNormalization (rn3_1.c_proj.c, rn3_1.c_proj.sc, rn3_1.c_proj.b, rn3_1.c_proj.m, rn3_1.c_proj.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.p = Plus (rn3_1.c2.c.y, rn3_1.c_proj.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_1.y = RectifiedLinear (rn3_1.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_2.c1.c.c.c = Convolution (rn3_2.c1.c.W, rn3_1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_2.c1.c.c.y = BatchNormalization (rn3_2.c1.c.c.c, rn3_2.c1.c.c.sc, rn3_2.c1.c.c.b, rn3_2.c1.c.c.m, rn3_2.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c1.y = RectifiedLinear (rn3_2.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_2.c2.c.c = Convolution (rn3_2.c2.W, rn3_2.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_2.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_2.c2.c.y = BatchNormalization (rn3_2.c2.c.c, rn3_2.c2.c.sc, rn3_2.c2.c.b, rn3_2.c2.c.m, rn3_2.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.p = Plus (rn3_2.c2.c.y, rn3_1.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_2.y = RectifiedLinear (rn3_2.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_3.c1.c.c.c = Convolution (rn3_3.c1.c.W, rn3_2.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c1.c.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c1.c.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_3.c1.c.c.y = BatchNormalization (rn3_3.c1.c.c.c, rn3_3.c1.c.c.sc, rn3_3.c1.c.c.b, rn3_3.c1.c.c.m, rn3_3.c1.c.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c1.y = RectifiedLinear (rn3_3.c1.c.c.y) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+Validating --> rn3_3.c2.c.c = Convolution (rn3_3.c2.W, rn3_3.c1.y) : [64 x 576], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.c2.c.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.b = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.m = LearnableParameter() :  -> [64 x 1]
+Validating --> rn3_3.c2.c.isd = LearnableParameter() :  -> [64 x 1]
+
+Using CNTK batch normalization engine.
+Validating --> rn3_3.c2.c.y = BatchNormalization (rn3_3.c2.c.c, rn3_3.c2.c.sc, rn3_3.c2.c.b, rn3_3.c2.c.m, rn3_3.c2.c.isd) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.p = Plus (rn3_3.c2.c.y, rn3_2.y) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> rn3_3.y = RectifiedLinear (rn3_3.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+
+Using reference convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Validating --> pool = AveragePooling (rn3_3.y) : [8 x 8 x 64 x *] -> [1 x 1 x 64 x *]
+Validating --> OutputNodes.t = Times (OutputNodes.W, pool) : [10 x 1 x 1 x 64], [1 x 1 x 64 x *] -> [10 x *]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
+Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *], [10] -> [10 x *]
+Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+
+
+109 out of 184 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+Minibatch[1-200]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[201-400]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[401-600]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[601-625]: SamplesSeen = 400    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    Perplexity = 1    
+
+04/15/2016 09:09:16: Action "test" complete.
+
+04/15/2016 09:09:16: __COMPLETED__

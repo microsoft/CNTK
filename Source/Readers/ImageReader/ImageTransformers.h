@@ -53,7 +53,7 @@ protected:
                           const StreamDescription &outputStream) override;
 
     // The only function that should be redefined by the inherited classes.
-    virtual void Apply(cv::Mat &from) = 0;
+    virtual void Apply(size_t id, cv::Mat &from) = 0;
 
 private:
     std::vector<StreamDescriptionPtr> m_outputStreams;
@@ -70,13 +70,14 @@ public:
                             const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class CropType
     {
         Center = 0,
-        Random = 1
+        Random = 1,
+        MultiView10 = 2
     };
     enum class RatioJitterType
     {
@@ -89,7 +90,7 @@ private:
     void InitFromConfig(const ConfigParameters &config);
     CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio,
+    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
                          std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
@@ -110,7 +111,7 @@ public:
 
 private:
     void InitFromConfig(const ConfigParameters &config);
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
@@ -131,7 +132,7 @@ public:
                             const ConfigParameters &readerConfig) override;
 
 private:
-    virtual void Apply(cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
     cv::Mat m_meanImg;

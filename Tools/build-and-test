@@ -223,7 +223,7 @@ if [[ $BUILD == 1 ]]; then
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
-                make -C $BUILD_DIR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
+                make -C $BUILD_DIR -j `nproc` -f $MAKEFILE 1>&6 2>&7 || exit $?
 
             fi
             if [[ $QUIET_BUILD == 1 ]]; then

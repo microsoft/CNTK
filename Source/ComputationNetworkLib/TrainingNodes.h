@@ -6,7 +6,7 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
-#include "ConvolutionEngine.h"
+#include "BatchNormalizationEngine.h"
 
 #include <map>
 #include <string>
@@ -18,42 +18,21 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-/// SquareErrorNode (left, right)
+// SquareErrorNode (left, right)
+// = SumElements ((left - right) .* (left - right))
 // -----------------------------------------------------------------------
-
-//note: to save computation the gradient may be scaled by an constant.
 
 template <class ElemType>
 class SquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"SquareError";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"SquareError"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SquareErrorNode);
     SquareErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        FrameRange fr(Input(0)->GetMBLayout());
-        auto gradient = Input(inputIndex)->GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -66,13 +45,23 @@ public:
         FrameRange fr(Input(0)->GetMBLayout());
         m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
-        ElemType v = m_leftMinusRight->FrobeniusNorm();
+        ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v / 2);
+        Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif
     }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        auto gradient = Input(inputIndex)->GradientFor(fr);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -139,7 +128,7 @@ public:
         if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
-            *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+            m_logSoftmaxOfRight->Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
@@ -154,7 +143,7 @@ public:
         else if (inputIndex == 1) // right derivative
         {
 #if DUMPOUTPUT
-            *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            m_softmaxOfRight->Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             Input(0)->ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
             Input(1)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
@@ -310,7 +299,7 @@ public:
         Value().AssignInnerProductOfMatrices(Input(0)->MaskedValueFor(fr), *m_logOfRight);
         Value() *= -1;
 #if NANCHECK
-        functionValues.HasNan("CrossEntropy");
+        Value().HasNan("CrossEntropy");
 #endif
     }
 
@@ -1104,7 +1093,7 @@ public:
 
         Matrix<ElemType> a = alpha.ColumnSlice(nObs - 1, 1);
         ElemType fAlpha;
-        fAlpha = a.LogAddSumOfElements();
+        fAlpha = a.LogSumOfElements();
 
         // transition score
         ElemType tscore = 0;
@@ -1254,7 +1243,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------
-// LogisticNode (labels, prediction, weight)
+// Logistic (labels, prediction, weight)
 // calculates: -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
 // -----------------------------------------------------------------------
 
@@ -1531,12 +1520,43 @@ template class DropoutNode<float>;
 template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
-// BatchNormalizationNode (...)  --TODO: document inputs
-// -----------------------------------------------------------------------
-
+// BatchNormalizationNode (input, scale, bias, runMean, runInvStdDev, spatial,
+//                         normalizationTimeConstant = 0, blendTimeConstant = 0,
+//                         epsilon = 0.00001,
+//                         useCntkEngine = true, imageLayout = 'cudnn')
+//
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
 // http://arxiv.org/abs/1502.03167
+// In short, it normalizes layer outputs for every minibatch for each output(feature) independently and applies affine transformation to preserve representation of the layer.
+// That is, for layer input:
+// 
+// m = mean(input)
+// var = variance(input)
+// input_norm = (input - mean) / sqrt(var)
+// output = gamma * input_norm + beta
+// 
+// where gamma and beta are trainable parameters(represented as LearnableParameter).
+// 
+// * input is the input of the batch normalization node
+// * scale is a LearnableParameter that stores scale vector(gamma term in the equation above).
+// * bias is a LearnableParameter that stores bias vector(beta term). scale and bias must have the same dimensions which must be equal 
+//      to the input dimensions in case of spatial = false or number of output convolution feature maps in case of spatial = true.
+// * runMean is the running mean which is used during evaluation phase and might be used during training as well.
+//      It is represented as a LearnableParameter with the same dimensions as scale and bias.
+// * runInvStdDev is the running inverse square root of variance(so InvStdDev = 1 / sqrt(var + epsilon)).
+//      It is represented as a LearnableParameter with the same dimensions as scale and bias.
+// * spatial is a flag that specifies whether to compute mean / var for each feature in a mininbatch independently or, in case of convolutional layers, per feature map.
+// * normalizationTimeConstant is the time constant which is used to compute running average of mean and variance.
+//      Value 0 (default) means there will be no exponential smoothing and running mean / variance will always have values computed for the last seen mininbatch.
+//      Value 1#INF (infinity)means running values are "frozen" (i.e.will not be updated).
+// * blendTimeConstant is the time constant which allows to specify how much of running mean / var should be "blended" into mean / var of the current minibatch.
+//      Value 0 (default) means no blending will happen and only the current minibatch statistics will be used.
+//      Value 1#INF (infinity)means only running mean / var will be used(this is used, for example, in evaluation phase).
+// * epsilon is a conditioner constant used in computing InvStdDev
+// * useCntkEngine is a boolean flag that specifies which batch normalization implementation to use : CNTK or cuDNN - based.
+// * imageLayout is the image layout.Only cudnn is supported.
+// -----------------------------------------------------------------------
 template <class ElemType>
 class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
 {
@@ -1549,32 +1569,32 @@ class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInput
 
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_eval(false), m_spatial(false), m_normTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
+        : Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
         m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
     {
     }
-	BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool eval, bool spatial, double normalizationTimeConstant, double epsilon,
-                           bool useCntkEngine, ImageLayoutKind imageLayoutKind)
-						   : Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_epsilon(epsilon),
-          m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
+    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind)
+                           : Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
+                           m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"),
-                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"), 
+                                 configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                  ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputs(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
 
-        fstream << m_eval;
         fstream << m_spatial;
         fstream << m_normTimeConst;
+        fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         fstream << m_mbCount;
         fstream << m_epsilon;
@@ -1585,39 +1605,55 @@ public:
     {
         Base::Load(fstream, modelVersion);
 
-        // Read and check version.
-        // REVIEW alexeyk: extract version checking so it can be re-used in other places.
-        // BUGBUG: We must serialize m_inputLayout.
-        int32_t verWritten;
-        int32_t verReadable;
-        fstream >> verWritten >> verReadable;
-
-        if (verReadable > verWritten)
-            RuntimeError("Corrupt model file.");
-        if (verWritten < m_version.VerWeCanReadBack())
-            RuntimeError("Model is too old.");
-        if (verReadable > m_version.VerWrittenCur())
-            RuntimeError("Model is too new.");
-
-        fstream >> m_eval;
-        fstream >> m_spatial;
-        if (verWritten >= 0x00010004)
+        if (modelVersion >= CNTK_MODEL_VERSION_6)
+        {
+            fstream >> m_spatial;
             fstream >> m_normTimeConst;
-        else
-        {
-            double expAvgFactor;
-            fstream >> expAvgFactor;
-            UNUSED(expAvgFactor); // Used in previous versions, replaced by m_normTimeConst.
-        }
-        if (verWritten >= 0x00010002)
-        {
+            fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             fstream >> m_mbCount;
-        }
-        if (verWritten >= 0x00010003)
-        {
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
+        }
+        else
+        {
+            // Use old versioning scheme for older models.
+
+            // Read and check version.
+            // REVIEW alexeyk: extract version checking so it can be re-used in other places.
+            int32_t verWritten;
+            int32_t verReadable;
+            fstream >> verWritten >> verReadable;
+    
+            if (verReadable > verWritten)
+                RuntimeError("Corrupt model file.");
+            if (verWritten < m_version.VerWeCanReadBack())
+                RuntimeError("Model is too old.");
+            if (verReadable > m_version.VerWrittenCur())
+                RuntimeError("Model is too new.");
+
+            bool eval;
+            fstream >> eval;
+            UNUSED(eval);
+            fstream >> m_spatial;
+            if (verWritten >= 0x00010004)
+                fstream >> m_normTimeConst;
+            else
+            {
+                double expAvgFactor;
+                fstream >> expAvgFactor;
+                UNUSED(expAvgFactor); // Used in previous versions, replaced by m_normTimeConst.
+            }
+            if (verWritten >= 0x00010002)
+            {
+                fstream >> m_imageLayoutKind;
+                fstream >> m_mbCount;
+            }
+            if (verWritten >= 0x00010003)
+            {
+                fstream >> m_epsilon;
+                fstream >> m_useCntkEngine;
+            }
         }
     }
 
@@ -1629,9 +1665,9 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_eval = m_eval;
             node->m_spatial = m_spatial;
             node->m_normTimeConst = m_normTimeConst;
+            node->m_blendTimeConst = m_blendTimeConst;
             node->m_imageLayoutKind = m_imageLayoutKind;
             node->m_mbCount = m_mbCount;
             node->m_epsilon = m_epsilon;
@@ -1639,20 +1675,8 @@ public:
         }
     }
 
-    void SetNormalizationTimeConstant(const double normalizationTimeConstant)
-    {
-        m_normTimeConst = normalizationTimeConstant;
-    }
-
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        static bool m_evalWarningIssued = false;  //make sure we only print warning once
-        if (m_eval && !m_evalWarningIssued)
-        {
-            fprintf(stderr, "WARNING: You turned BatchNormalization to evaluation mode during training. Please make sure this is intended.\n");
-            m_evalWarningIssued = true;
-        }
-
         if (inputIndex == 0) // derivative with respect to the input.
         {
             auto sliceOutputGrad = GradientFor(fr);
@@ -1660,28 +1684,24 @@ public:
             const Matrix<ElemType>& scale = Input(1)->Value();
             const Matrix<ElemType>& bias = Input(2)->Value();
 
-            size_t batchSize = sliceInputValue.GetNumCols();
-            m_inT->setN(batchSize);
-            assert(m_convEng != nullptr);
-
             auto sliceInputGrad = Input(0)->GradientFor(fr);
             m_dScale->Resize(scale);
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
+            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, sliceInputGrad, scale,
                                               *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
             // Derivative with respect to the scale was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(1)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->BufferPointer());
+            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
         }
         else if (inputIndex == 2) // derivative with respect to the bias
         {
             // Derivative with respect to the bias was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(2)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
+            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
         }
         // No derivatives with respect to running mean and InvStdDev.
     }
@@ -1710,53 +1730,50 @@ public:
 
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        size_t batchSize = sliceInputValue.GetNumCols();
-        m_inT->setN(batchSize);
-        assert(m_convEng != nullptr);
-#if NANCHECK
-        sliceInputValue.HasNan("BatchNormalization-input");
-#endif
-        if (m_eval)
-            m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
+        double expAvgFactor;
+        double blendFactor;
+        if (!Environment().IsTraining())
+        {
+            expAvgFactor = 0;
+            blendFactor = 1.0;
+
+            m_saveMean->Resize(0, 0);
+            m_saveInvStdDev->Resize(0, 0);
+        }
         else
         {
-            double expAvgFactor;
+            double numSamples = (double)GetMBLayout()->GetActualNumSamples();
             if (m_normTimeConst > 0)
             {
-                // Convert to per-minibatch factor.
-                expAvgFactor = 1.0 - exp(-(double)GetMBLayout()->GetActualNumSamples() / m_normTimeConst);
+                // Convert to per-minibatch factor. Treat positivie infinity as if running mean/var parameters are "frozen"
+                // that is, do not require updates.
+                expAvgFactor = !isfinite(m_normTimeConst) ? 0 : (1.0 - exp(-numSamples / m_normTimeConst));
             }
             else
             {
                 // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to compute CMA.
-                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1;
+                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1.0;
             }
 
-            if (m_saveMean == nullptr)
-                fprintf(stderr, "WARNING: m_saveMean is null\n");
-            if (m_saveInvStdDev == nullptr)
-                fprintf(stderr, "WARNING: m_saveInvStdDev is null\n");
+            if (!isfinite(m_blendTimeConst))
+                blendFactor = 1.0;
+            else
+                blendFactor = m_blendTimeConst > 0 ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) : 0;
+
             m_saveMean->Resize(runMean);
             m_saveInvStdDev->Resize(runMean);
+        }
 
-            m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
+        m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
             m_mbCount++;
         }
-#if NANCHECK
-        sliceOutputValue.HasNan("BatchNormalization-output");
-        runMean.HasNan("BatchNormalization-runMean");
-        runInvStdDev.HasNan("BatchNormalization-runInvStdDev");
-        m_saveMean->HasNan("BatchNormalization-saveMean");
-        m_saveInvStdDev->HasNan("BatchNormalization-saveInvStdDev");
-#endif
-    }
 
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         SetDims(Input(0));
 
@@ -1765,34 +1782,23 @@ public:
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
-                    "Batch normalization currently supports only cuDNN (CHW) data layout. " 
+                    "%ls %ls currently supports only cuDNN (CHW) data layout. " 
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
-                    "and make sure your input data layout is CHW");
+                    "and make sure your input data layout is CHW", NodeName().c_str(), OperationName().c_str());
             }
             double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
             if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
                 fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);
 
+            if (m_blendTimeConst < 0)
+                InvalidArgument("%ls %ls requires blend time constant to be >= 0.", NodeName().c_str(), OperationName().c_str());
+
             auto shape = GetSampleLayout();
 
-            if (m_factory == nullptr)
-                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_imageLayoutKind, 0, m_useCntkEngine ? BatchNormImpl::Cntk : BatchNormImpl::CuDnn);
-            if (m_spatial)
+            if (m_bnEng == nullptr)
             {
-                auto dims = ImageDimensions(shape, m_imageLayoutKind);
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-            }
-            else
-            {
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
-                if (m_scaleBiasT == nullptr)
-                    m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
+                m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
+                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }
         }
     }
@@ -1800,41 +1806,39 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        //if (!m_eval)
-        {
             RequestMatrixFromPool(m_saveMean, matrixPool);
             RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
         }
-    }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        //if (!m_eval)
-        {
             RequestMatrixFromPool(m_dScale, matrixPool);
             RequestMatrixFromPool(m_dBias, matrixPool);
         }
-    }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        //if (!m_eval)
-        {
             ReleaseMatrixToPool(m_saveMean, matrixPool);
             ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
             ReleaseMatrixToPool(m_dScale, matrixPool);
             ReleaseMatrixToPool(m_dBias, matrixPool);
         }
-    }
 
-    void SetEvalMode(bool bnEvalMode)
+    void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
+                                       double blendTimeConstant, double prevBlendTimeConstant)
     {
-        m_eval = bnEvalMode;
+        // As this function is called from SGD solver (global), make sure we don't
+        // override settings set in NDL when it's not necessary.
+        if (normalizationTimeConstant != prevNormalizationTimeConstant)
+            m_normTimeConst = normalizationTimeConstant;
+        if (blendTimeConstant != prevBlendTimeConstant)
+            m_blendTimeConst = blendTimeConstant;
     }
 
 private:
+    // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
     {
         //int32_t VerWrittenCur() const      { return 0x00010001; } // Initial
@@ -1847,13 +1851,20 @@ private:
     VersionInfo m_version;
 
 private:
-    // Determines whether to use training or inference(evaluation) mode.
-    bool m_eval;
     // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
     // or spatial (used after convolutional layers).
     bool m_spatial;
     // Time constant for running mean and variance.
     double m_normTimeConst;
+    // Time constant for blending running mean/var and current minibatch mean/var.
+    // The main idea is to represent current minibatch statistics as MAP estimate, linear interpolation
+    // of smoothed and minibatch statistics. 
+    // The idea is due to Frank Seide et al.
+    // It should also work well in data parallelism scenario
+    // as opposed to plain vanilla BN implementation which would require aggregation of statistics
+    // from all nodes.
+    // REVIEW alexeyk: if this works, document it properly in Wiki.
+    double m_blendTimeConst;
     // Epsilon used to compute inverse std deviation.
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
@@ -1872,13 +1883,10 @@ private:
     // Stores bias derivatives.
     shared_ptr<Matrix<ElemType>> m_dBias;
 
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
-    std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-    std::unique_ptr<ConvolutionTensor4D> m_inT;
-    std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
+    std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 };
 
 template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 
-} } }
+}}}

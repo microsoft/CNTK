@@ -2075,4 +2075,4 @@ Starting minibatch loop.
  Epoch[ 2 of 2]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.78207207; EvalErr[0]PerSample = 0.50322266; TotalTime = 0.63083s; TotalTimePerSample = 0.06160ms; SamplesPerSecond = 16232
 Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.7974522; EvalErrPerSample = 0.50405276; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.447972
 CNTKCommandTrainEnd: SVDTrain
-COMPLETED
+__COMPLETED__

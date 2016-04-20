@@ -612,7 +612,7 @@ MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358831; EvalErr[0]PerSample = 0.51542969; TotalTime = 0.82689s; TotalTimePerSample = 0.08075ms; SamplesPerSecond = 12383
 MPI Rank 0: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8705584; EvalErrPerSample = 0.51860352; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.909274
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
-MPI Rank 0: COMPLETED
+MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20151024141411.953694\Speech\DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank1
 MPI Rank 1: -------------------------------------------------------------------
@@ -1200,7 +1200,7 @@ MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358831; EvalErr[0]PerSample = 0.51542969; TotalTime = 0.82899s; TotalTimePerSample = 0.08096ms; SamplesPerSecond = 12352
 MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8705584; EvalErrPerSample = 0.51860352; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.90997
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
-MPI Rank 1: COMPLETED
+MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20151024141411.953694\Speech\DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank2
 MPI Rank 2: -------------------------------------------------------------------
@@ -1788,5 +1788,5 @@ MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; Tra
 MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358831; EvalErr[0]PerSample = 0.51542969; TotalTime = 0.82561s; TotalTimePerSample = 0.08063ms; SamplesPerSecond = 12402
 MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8705584; EvalErrPerSample = 0.51860352; AvgLearningRatePerSample = 9.765625146e-005; EpochTime=1.906446
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
-MPI Rank 2: COMPLETED
+MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper

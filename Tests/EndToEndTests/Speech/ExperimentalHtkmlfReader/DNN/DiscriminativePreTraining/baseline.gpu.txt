@@ -3872,4 +3872,4 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97961731; EvalErr[0]PerSample = 0.29921875; TotalTime = 0.15761s; TotalTimePerSample = 0.03078ms; SamplesPerSecond = 32486
 Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.0073979; EvalErrPerSample = 0.31477052; AvgLearningRatePerSample = 0.003125000047; EpochTime=2.874394
 CNTKCommandTrainEnd: speechTrain
-COMPLETED
+__COMPLETED__

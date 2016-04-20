@@ -46,6 +46,16 @@ public:
         return m_randomize;
     }
 
+    bool UseGrayscale() const
+    {
+        return m_grayscale;
+    }
+	
+	bool IsMultiViewCrop() const
+    {
+        return m_multiViewCrop;
+    }
+
 private:
     ImageConfigHelper(const ImageConfigHelper&) = delete;
     ImageConfigHelper& operator=(const ImageConfigHelper&) = delete;
@@ -55,6 +65,8 @@ private:
     ImageLayoutKind m_dataFormat;
     int m_cpuThreadCount;
     bool m_randomize;
+    bool m_multiViewCrop;
+    bool m_grayscale;
 };
 
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;

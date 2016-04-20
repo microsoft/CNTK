@@ -58,7 +58,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
     auto featuresMatrix = make_shared<Matrix<ElemType>>(CPUDEVICE);
     auto labelsMatrix   = make_shared<Matrix<ElemType>>(CPUDEVICE);
     StreamMinibatchInputs matrices;
-    matrices.AddInputMatrix(featureNames[0], featuresMatrix);
+    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
+    matrices.AddInput(featureNames[0], featuresMatrix, pMBLayout, TensorShape());
     if (labelNames.size() == 0)
         RuntimeError("CreateLabelMap: no labels found to process");
 
@@ -67,7 +68,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     for (const std::wstring& labelsName : labelNames)
     {
         // take the last label file defined (the other one might be input)
-        matrices.AddInputMatrix(labelsName, labelsMatrix);
+        matrices.AddInput(labelsName, labelsMatrix, pMBLayout, TensorShape());
 
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
@@ -262,8 +263,8 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         InvalidArgument("Please specify parameters 'beginSequence' and 'endSequence'.");
 
     if (!outputMappingFile.empty())
-        cerr << "Mapping file       --> " << outputVocabFile << endl;
-    cerr     << "Vocabulary file    --> " << outputVocabFile << endl;
+        cerr << "Mapping file       --> " << outputMappingFile << endl;
+    cerr     << "Vocabulary file    --> " << outputVocabFile   << endl;
     if (nbrCls > 0)
     {
         cerr << "Word-to-class map  --> " << outputWord2Cls  << endl;
@@ -320,7 +321,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             str = str + endSequencePattern;
 
         vstr = msra::strfun::split(str, "\t ");
-        for (int i = 1; i < vstr.size(); i++)
+        // This loop used to start with 1, assuming begin and end symbol are the same.
+        // If they are not, I am now counting them both. No idea whether that is correct w.r.t. the class algorithm.
+        bool startWith1 = !beginSequence.empty() && beginSequence == endSequence;
+        for (size_t i = startWith1 ? 1 : 0; i < vstr.size(); i++)
             v_count[vstr[i]]++;
     }
     fp.close();
@@ -354,93 +358,108 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         vocabSize = wordCountLessCutoff;
     }
 
-    // form classes
-    // Implements an algorithm by Mikolov --TODO: get the reference
-    wrd2cls.Resize(vocabSize, 1);
-
-    typedef pair<string, double> stringdouble;
-    unordered_map<string, double> removed; // note: std::map is supposedly faster
-    double unkCount = 0; // TODO: why double?
-    size_t size = 0;
-    size_t actual_vocab_size = vocabSize - 1;
-    priority_queue<stringdouble, vector<stringdouble>, compare_second<stringdouble>>
-        q(compare_second<stringdouble>(), vector<stringdouble>(v_count.begin(), v_count.end()));
-    while (size < actual_vocab_size && !q.empty()) // ==for (q=...; cond; q.pop())
-    {
-        size++;
-        string word = q.top().first;
-        double freq = q.top().second; // TODO: why double?
-        if (word == unkWord)
-        {
-            unkCount += freq;
-            actual_vocab_size++;
-        }
-        removed[q.top().first] = q.top().second;
-        q.pop();
-    }
-    while (!q.empty())
-    {
-        unkCount += q.top().second;
-        q.pop();
-    }
-    removed[unkWord] = unkCount;
-    m_count.resize(removed.size());
-    double total = 0;
-    double dd = 0;
     if (nbrCls > 0)
     {
-        for (const auto& iter : removed)
-            total += iter.second;
+        // form classes
+        // Implements an algorithm by Mikolov --TODO: get the reference
+        wrd2cls.Resize(vocabSize, 1);
 
-        for (const auto& iter : removed)
-            dd += sqrt(iter.second / total);
-    }
-
-    double df = 0;
-    size_t class_id = 0;
-    m_class.resize(removed.size());
-
-    priority_queue<stringdouble, vector<stringdouble>, compare_second<stringdouble>>
-        p(compare_second<stringdouble>(), vector<stringdouble>(removed.begin(), removed.end()));
-    while (!p.empty())
-    {
-        string word = p.top().first;
-        double freq = p.top().second;
+        typedef pair<string, double> stringdouble;
+        unordered_map<string, double> removed; // note: std::map is supposedly faster
+        double unkCount = 0; // TODO: why double?
+        size_t size = 0;
+        size_t actual_vocab_size = vocabSize - 1;
+        priority_queue<stringdouble, vector<stringdouble>, compare_second<stringdouble>>
+            q(compare_second<stringdouble>(), vector<stringdouble>(v_count.begin(), v_count.end()));
+        while (size < actual_vocab_size && !q.empty()) // ==for (q=...; cond; q.pop())
+        {
+            size++;
+            string word = q.top().first;
+            double freq = q.top().second; // TODO: why double?
+            if (word == unkWord)
+            {
+                unkCount += freq;
+                actual_vocab_size++;
+            }
+            removed[q.top().first] = q.top().second;
+            q.pop();
+        }
+        while (!q.empty())
+        {
+            unkCount += q.top().second;
+            q.pop();
+        }
+        removed[unkWord] = unkCount;
+        m_count.resize(removed.size());
+        double total = 0;
+        double dd = 0;
         if (nbrCls > 0)
         {
-            df += sqrt(freq / total) / dd;
-            if (df > 1)
-                df = 1;
+            for (const auto& iter : removed)
+                total += iter.second;
 
-            if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-                class_id++;
+            for (const auto& iter : removed)
+                dd += sqrt(iter.second / total);
         }
 
-        size_t wid = m_words.size();
-        bool inserted = m_index.insert(make_pair(word, wid)).second;
-        if (inserted)
-            m_words.push_back(word);
+        double df = 0;
+        size_t class_id = 0;
+        m_class.resize(removed.size());
 
-        m_count[wid] = freq;
-        if (nbrCls > 0)
-            m_class[wid] = class_id;
-        p.pop();
+        priority_queue<stringdouble, vector<stringdouble>, compare_second<stringdouble>>
+            p(compare_second<stringdouble>(), vector<stringdouble>(removed.begin(), removed.end()));
+        while (!p.empty())
+        {
+            string word = p.top().first;
+            double freq = p.top().second;
+            if (nbrCls > 0)
+            {
+                df += sqrt(freq / total) / dd;
+                if (df > 1)
+                    df = 1;
+
+                if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+                    class_id++;
+            }
+
+            size_t wid = m_words.size();
+            bool inserted = m_index.insert(make_pair(word, wid)).second;
+            if (inserted)
+                m_words.push_back(word);
+
+            m_count[wid] = freq;
+            if (nbrCls > 0)
+                m_class[wid] = class_id;
+            p.pop();
+        }
+        assert(m_words.size() == m_index.size() && m_words.size() == m_class.size());
     }
+    else // no classes
+    {
+        for (let& iter : v_count)
+            m_words.push_back(iter.first);
+        sort(m_words.begin(), m_words.end());
+        m_count.resize(m_words.size());
+        for (size_t i = 0; i < m_words.size(); i++)
+            m_count[i] = v_count.find(m_words[i])->second;
+    }
+
+    assert(m_words.size() == m_count.size());
 
     // write the files
     if (!outputMappingFile.empty())
     {
         msra::files::make_intermediate_dirs(s2ws(outputMappingFile));
         ofstream ofmapping(outputMappingFile.c_str());
-        for (size_t i = 0; i < m_index.size(); i++)
-            ofmapping << m_words[i] << endl;
+        for (let& word : m_words)
+            ofmapping << word << endl;
         ofmapping.close();
         cerr << "Created label-mapping file with " << v_count.size() << " entries.\n";
     }
 
     msra::files::make_intermediate_dirs(s2ws(outputVocabFile));
     ofstream ofvocab(outputVocabFile.c_str());
-    for (size_t i = 0; i < m_index.size(); i++)
+    for (size_t i = 0; i < m_words.size(); i++)
     {
         if (nbrCls > 0)
             wrd2cls(i, 0) = (ElemType) m_class[i];
@@ -491,11 +510,11 @@ template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
     wstring modelPath     = config(L"modelPath");
-    wstring outputDotFile = config(L"outputDotFile"); // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outputFile    = config(L"outputFile");    // filename for the rendered topology plot
+    wstring outputDotFile = config(L"outputDotFile", L""); // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outputFile    = config(L"outputFile", L"");    // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
     // or if this is set, renderCmd must be set, so CNTK will call re
-    wstring renderCmd = config(L"renderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    wstring renderCmd = config(L"renderCmd", L""); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
@@ -525,7 +544,8 @@ void DoTopologyPlot(const ConfigParameters& config)
         renderCmd = msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
 
-
+    if (!renderCmd.empty())
+    {
         fprintf(stderr, "Executing third-party tool for rendering dot:\n%ls\n", renderCmd.c_str());
 #ifdef __unix__
         auto rc = system(msra::strfun::utf8(renderCmd).c_str());
@@ -533,7 +553,8 @@ void DoTopologyPlot(const ConfigParameters& config)
 #else
         _wsystem(renderCmd.c_str());
 #endif
-        fprintf(stderr, "Done.\n");
+    }
+    fprintf(stderr, "Done.\n");
 }
 
 template void DoTopologyPlot<float>(const ConfigParameters& config);

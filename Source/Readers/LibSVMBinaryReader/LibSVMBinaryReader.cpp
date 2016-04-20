@@ -745,7 +745,7 @@ void LibSVMBinaryReader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matr
     {
         for (auto inmat : matrices)
         {
-            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second->GetDeviceId());
+            shared_ptr<BinaryMatrix<ElemType>> mat = m_dataInput->CreateMatrix(inmat.first, inmat.second.matrix->GetDeviceId());
             if (mat != nullptr)
             {
                 m_dataMatrices[inmat.first] = mat;
@@ -780,7 +780,7 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
 }
 
 template <class ElemType>
-bool LibSVMBinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool LibSVMBinaryReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
 //timer = clock();
 #if DEBUG
