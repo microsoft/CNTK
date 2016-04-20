@@ -70,9 +70,29 @@ class CNTKTextFormatReader(AbstractReader):
        The following example encodes two samples, one has a sequence of one
        scalar, while the second has a sequence of two scalars::
 
-           0	|60.0
-           1	|22.0
-           1	|24.0
+           0	|I 60.0
+           1	|I 22.0
+           1	|I 24.0
+
+       The ``I`` is the alias, which would be used to connect the data to the
+       input node. Let's say above data is stored in ``data.txt``, you would
+       set up the reader as follows::
+
+           r = CNTKTextFormatReader('data.txt', 'I')
+
+       
+       The alias is required, because using this format you can set up
+       multiple inputs per sample::
+
+           0	|I 60.0 |W 1 2
+           1	|I 22.0 |W 0 0
+           1    |I 24.0
+
+       In this example, the first sample has ``I`` and ``W`` defined, while
+       the second sample has ``I`` for both sequence elements, while ``W`` is
+       providing only one data point for the full sequence. This is useful, if
+       e.g. a sentence being a sequence of varying number of words is tagged
+       with a label.
 
        The normal matrix based format, for which you would have used
        :class:`UCIFastReader` in the past can be simply converted by prepending
@@ -88,9 +108,9 @@ class CNTKTextFormatReader(AbstractReader):
 
        can be easily converted to the :class:`CNTKTextFormatReader` format::
 
-           0	|0 1
-           1	|10 21
-           2	|20 21
+           0	|I 0 1
+           1	|I 10 21
+           2	|I 20 21
     """
 
     def __init__(self, filename, input_alias, format="dense"):        
