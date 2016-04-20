@@ -17,15 +17,21 @@ def floor(arg, name=None):
     or equal to the input.
 
     Example:
-        >>> floor([0.2, 1.3, 4., 5.5])
-        #[0, 1.0, 4.0, 5.0]
+        >>> floor([0.2, 1.3, 4., 5.5, 0.0])
+        #[0.0, 1.0, 4.0, 5.0, 0.0]
+
+        >>> floor([[0.6, 3.3], [1.9, 5.6]])
+        #[[0.0, 3.0], [1.0, 5.0]]
 
         >>> floor([-5.5, -4.2, -3., -0.7, 0])
         #[-6.0, -5.0, -3.0, -1.0, 0.0]
 
+        >>> floor([[-0.6, -4.3], [1.9, -3.2]])
+        #[[-1.0, -5.0], [1.0, -4.0]]
+
     Args:
         arg: input tensor
-        name: the name of the node in the network
+        name: the name of the node in the network (optional)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -39,15 +45,21 @@ def ceil(arg, name=None):
     or equal to the input.
 
     Example:
-        >>> ceil([0.2, 1.3, 4., 5.5])
-        #[1.0, 2.0, 4.0, 6.0]
+        >>> ceil([0.2, 1.3, 4., 5.5, 0.0])
+        #[1.0, 2.0, 4.0, 6.0, 0.0]
+
+        >>> ceil([[0.6, 3.3], [1.9, 5.6]])
+        #[[1.0, 4.0], [2.0, 6.0]]
 
         >>> ceil([-5.5, -4.2, -3., -0.7, 0])
         #[-5.0, -4.0, -3.0, 0.0, 0.0]
 
+        >>> ceil([[-0.6, -4.3], [1.9, -3.2]])
+        #[[0.0, -4.0], [2.0, -3.0]]
+
     Args:
         arg: input tensor
-        name: the name of the node in the network
+        name: the name of the node in the network (optional)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -64,15 +76,21 @@ def round(arg, name=None):
     round half to even.
 
     Example:
-        >>> round([0.2, 0.5, 1.3, 4., 5.5])
-        #[0, 1.0, 1.0, 4.0, 6.0]
+        >>> round([0.2, 1.3, 4., 5.5, 0.0])
+        #[0.0, 1.0, 4.0, 6.0, 0.0]
+
+        >>> round([[0.6, 3.3], [1.9, 5.6]])
+        #[[1.0, 3.0], [2.0, 6.0]]
 
         >>> round([-5.5, -4.2, -3., -0.7, 0])
         #[-5.0, -4.0, -3.0, -1.0, 0.0]
 
+        >>> round([[-0.6, -4.3], [1.9, -3.2]])
+        #[[-1.0, -4.0], [2.0, -3.0]]
+
     Args:
         arg: input tensor
-        name: the name of the node in the network
+        name: the name of the node in the network (optional)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
