@@ -60,8 +60,6 @@ def test_op_clip(x, min_value, max_value, device_id, precision):
     #==================
     # The gradient of the clip() function is equal to 1 when the element 
     # has not been clipped, and 0 if it has been clipped
-    # We only test for the case where the input_node is a -- backpropping into 
-    # the others doesn't make sense (they are constants)
     expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
     unittest_helper(result, None, expected, device_id=device_id, 
                     precision=precision, clean_up=False, backward_pass=True, input_node=a)
