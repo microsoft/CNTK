@@ -50,7 +50,13 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
         dims: the shape of the input tensor. If init='fromLiteral', dims is not 
         needed as it will be inferred from the litteral.
         name: the name of the node in the network
-        TODO: document the rest of the arguments
+        learning_rate_multiplier: 
+        init: 'uniform', 'fromFile' or 'fromLiteral' 
+        init_value_scale: a sacling factor for the initial value
+        value: a scalar initial value that would be replicated for every element in the tensor
+        init_from_file_path: the file that contains the initial tensor value
+        init_from_literal: the numpy array used to initialize the tensor parameter
+        random_seed: the seed used for initialization
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
