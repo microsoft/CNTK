@@ -54,7 +54,7 @@ def rectified_linear(x, name=None):
 
 def rectified_linear(x, name=None):
     """
-    computes the element-wise rectified linear of `x`: `max(x, 0)`
+    computes the element-wise rectified linear of `x`: ``max(x, 0)``
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
@@ -106,7 +106,7 @@ def softmax(X, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    return Softmax(x, var_name=name)
+    return Softmax(X, var_name=name)
 
 def exp(x, name=None):
     """
