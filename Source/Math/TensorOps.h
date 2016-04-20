@@ -255,7 +255,7 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
     }
 
 DefTernaryOp(Cond, a ? b : c);
-DefTernaryOp(CopyIfEqual, c * (a == b ? 1 : 0));    // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
+DefTernaryOp(CopyIfEqual, a == b ? c : 0);    // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 
