@@ -954,6 +954,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 {
+    return NULL;
 }
 
 template <class ElemType>
