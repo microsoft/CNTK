@@ -518,15 +518,15 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
         RuntimeError("Matrix and column mask must have equal number of columns");
 
     if (val != 0)
-        RuntimeError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
+        NOT_IMPLEMENTED;
 
-    // We could do this on the GPU, but for now C++ is easier.
-    
-    // Download the binary columns mask
-    char* maskedCols = columnsMask.CopyToArray();
-
+#ifdef _DEBUG
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
+        // TODO: We could do this on the GPU, but for now C++ is easier.
+        // Download the binary columns mask
+        char* maskedCols = columnsMask.CopyToArray();
+
         // If we're CSC, we only need to verify that the columns to be zeroed are empty, since val == 0.
         // So just download the condensed column vector.
         GPUSPARSE_INDEX_TYPE* colVector = GetCondensedVector();
@@ -535,13 +535,12 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
         #pragma omp parallel for
         for (long j = 0; j < n; j++)
             if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
-                RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", j, (colVector[j + 1] - colVector[j]));
+                NOT_IMPLEMENTED;
 
     }
     else
-    {
         NOT_IMPLEMENTED;
-    }
+#endif
 }
 
 

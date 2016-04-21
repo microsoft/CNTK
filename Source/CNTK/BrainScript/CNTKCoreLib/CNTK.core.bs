@@ -59,7 +59,6 @@ Splice (inputs, axis=1) = # TODO: This is a workaround. RowStack itself shall in
         ].inputsT
         out = TransposeDimensions (RowStack (ArrayTransposeDimensions (inputs, 1, axis)), 1, axis)
     ].out
-LookupTable(dictionary, input, tag='') = new ComputationNode [ operation = 'LookupTable' ; inputs = (dictionary : input) ]
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
 NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
