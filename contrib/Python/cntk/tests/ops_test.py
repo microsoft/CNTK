@@ -7,6 +7,7 @@ from ..graph import *
 from ..reader import *
 
 #TODO: broken due to a problem in CNTK. Once fixed merge them with the tests in linear_test.py
+#The issue is as follows: When you have no input in your graph then only one row is output.
 
 """ 
 # keeping things short

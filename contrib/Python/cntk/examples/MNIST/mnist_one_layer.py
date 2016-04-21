@@ -42,8 +42,7 @@ if (__name__ == "__main__"):
 
     features = Input(feat_dim)    
     features.var_name='features'
-    f_reader = UCIFastReader(training_filename, 1, feat_dim)
-    f_reader_t = UCIFastReader(test_filename, 1, feat_dim)
+
     
     feat_scale = Constant(0.00390625)
     feats_scaled = Scale(feat_scale, features)
@@ -51,9 +50,12 @@ if (__name__ == "__main__"):
     labels = Input(label_dim)
     labels.tag='label'
     labels.var_name='labels'
-    l_reader = UCIFastReader(training_filename, 0, 1, label_dim, 
-                             os.path.join("Data", "labelsmap.txt"))
     
+    f_reader = UCIFastReader(training_filename, 1, feat_dim)
+    l_reader = UCIFastReader(training_filename, 0, 1, label_dim, 
+                             os.path.join("Data", "labelsmap.txt"))    
+    
+    f_reader_t = UCIFastReader(test_filename, 1, feat_dim)
     l_reader_t = UCIFastReader(test_filename, 0, 1, label_dim, 
                              os.path.join("Data", "labelsmap.txt"))
     
