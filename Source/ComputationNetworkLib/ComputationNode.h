@@ -1420,6 +1420,16 @@ public:
     // memory sharing
     // -----------------------------------------------------------------------
 
+    //this function is for displaying memeory sharing information
+    //TODO: customize this function for all nodes that uses temp internal matrices.
+    virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
+    {
+        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
+        matrixInfo.insert(make_pair(&Value(), NodeName() + L" Value" + msra::strfun::utf16(ShapeDescription())));
+        matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
+        return matrixInfo;
+    }
+
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {

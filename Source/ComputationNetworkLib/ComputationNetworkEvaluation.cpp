@@ -105,7 +105,7 @@ ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNod
 ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>>& recurrentInfo, const std::list<ComputationNodeBasePtr>& allNodes /*must be in eval order*/)
 {
     // traverse the network in evaluation order and create a new list that replaces all recurrence by a SEQTraversalFlowControlNode
-    set<shared_ptr<IComputationNode>> loopsSeen; // for consistency check only
+    std::set<shared_ptr<IComputationNode>> loopsSeen; // for consistency check only
     for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end();)
     {
         shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(recurrentInfo, *nodeIter); // check if this node participates in a recurrent loop
@@ -803,6 +803,44 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     }
 }
 
+template <class ElemType>
+void ComputationNetwork::PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes)
+{
+    std::map <const Matrix<ElemType>*, std::set<const wstring>> memSharingStructure;
+    for (auto& n : nodes)
+    {
+        ComputationNode<ElemType>* node = n->As<ComputationNode<ElemType>>();
+        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo = node->GetMatrixInfo();
+        for (const auto&item : matrixInfo)
+        {
+            AddToMemorySharingStructure(memSharingStructure, item.first, item.second);
+        }
+    }
+
+    fprintf(stderr, "\nMemory Sharing Structure:\n\n");
+    for (const auto& item : memSharingStructure)
+    {
+        const std::set<const wstring>& s = item.second;
+        fprintf(stderr, "%x: {", (size_t)item.first);
+        for (const auto& tag: s)
+        {
+            fprintf(stderr, "[%ls] ", tag.c_str());
+        }
+        fprintf(stderr, "}\n");
+    }
+    fprintf(stderr, "\n");
+}
+
+template <class ElemType>
+void ComputationNetwork::AddToMemorySharingStructure(std::map <const Matrix<ElemType>*, std::set<const wstring>> & memSharingStructure, const Matrix<ElemType>* matrix, const wstring tag)
+{
+    if (memSharingStructure.find(matrix) == memSharingStructure.end())
+        memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<const wstring>>(matrix, std::set<const wstring>()));
+    
+    std::set<const wstring>& s = memSharingStructure[matrix];
+    s.insert(tag);
+}
+
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.
 // TODO: find a simple topological order and allocateEvalMatrices on that order directly
@@ -947,6 +985,18 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     }
 
     m_areMatricesAllocated = true;
+
+    //print the memory sharing structure
+    std::vector<ComputationNodeBasePtr> allNodes = GetAllNodes();
+    if (allNodes.size() == 0)
+        LogicError("Network has no computation node.");
+
+    if (allNodes[0]->Is<ComputationNode<float>>())
+        PrintMemorySharingStructure<float>(allNodes);
+    else if (allNodes[0]->Is<ComputationNode<double>>())
+        PrintMemorySharingStructure<double>(allNodes);
+    else
+        LogicError("Unexpected node precision type.");
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
