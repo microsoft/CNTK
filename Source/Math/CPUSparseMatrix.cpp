@@ -276,7 +276,7 @@ void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsM
         RuntimeError("Matrix and column mask must have equal number of columns.");
 
     if (val != 0)
-        NOT_IMPLEMENTED;
+        LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
 
 #ifdef _DEBUG
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
@@ -290,7 +290,7 @@ void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsM
 #pragma omp parallel for
         for (long j = 0; j < n; j++)
             if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
-                NOT_IMPLEMENTED;
+                LogicError("CPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", j, (colVector[j + 1] - colVector[j]));
     }
     else
         NOT_IMPLEMENTED;
