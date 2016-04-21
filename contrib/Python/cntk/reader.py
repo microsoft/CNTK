@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
+from .utils import with_metaclass
 from .graph import ComputationNode
 
 
-class AbstractReader(metaclass=ABCMeta):
+class AbstractReader(with_metaclass(ABCMeta)):
     """ This is the abstract class that represents a reader for one input node
     """    
     
@@ -75,7 +76,7 @@ class CNTKTextFormatReader(AbstractReader):
         r.add_input(input_node, self.input_alias, np.multiply.reduce(input_node.dims), self.format)        
         return r
         
-class AbstractReaderAggregator(dict, metaclass=ABCMeta):
+class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
 
     """ This is the abstract reader class. The sub-classes of this class
     are not exposed to the user and are used to aggregate all inputs' readers
