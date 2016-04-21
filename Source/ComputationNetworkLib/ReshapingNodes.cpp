@@ -124,6 +124,10 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
+#if 1 // legacy with initial experiments, delete this soon
+    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    else
+#endif
     if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());

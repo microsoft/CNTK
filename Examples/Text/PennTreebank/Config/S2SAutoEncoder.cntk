@@ -20,10 +20,10 @@ ExpRootDir = "$RunRootDir$"
 
 # experiment id
 
-deviceId = 5
+deviceId = 4
 #ExpId = 41-$deviceId$-s2sae    # TASK
-ExpId = 18-$deviceId$-g2p
-#ExpId = 19-1-g2p # for decoding a different model
+#ExpId = 18-$deviceId$-g2p
+ExpId = 18-1-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -31,8 +31,8 @@ ModelDir  = "$ExpDir$/Models"
 
 stderr = $ExpDir$/S2SAutoEncoder.log1
 
-command = writeWordAndClassInfo:train:test:write
-#command = write
+#command = writeWordAndClassInfo:train:test:write
+command = write
 #command = dump
 
 precision  = "float"
@@ -40,7 +40,7 @@ traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
 # decoding config
-decodeModelPath = "$modelPath$.9" # epoch to decode can be appended here  TASK
+decodeModelPath = "$modelPath$.6" # epoch to decode can be appended here  TASK
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 decodeOutputPath = "$decodeModelPath$.bm$beamDepth$"
 
