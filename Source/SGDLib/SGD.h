@@ -544,8 +544,8 @@ protected:
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
-private:
-    int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
+//private:
+//    int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
 };
 
 }}}

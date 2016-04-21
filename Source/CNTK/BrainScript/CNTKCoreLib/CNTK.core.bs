@@ -132,7 +132,7 @@ RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear'
 ReduceSum (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Sum"    /*plus the function args*/ ]
 # the following is a temporary workaround until we have the C++ version
 ReduceLogSum (z, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
-    else [ tag1=tag ; axis1=axis ; out = Minus (z, LogSoftmax (z), tag=tag1) ].out
+    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, z - LogSoftmax (z), tag=tag1) ].out
 #ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]

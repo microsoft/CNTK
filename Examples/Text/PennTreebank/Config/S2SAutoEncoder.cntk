@@ -22,8 +22,8 @@ ExpRootDir = "$RunRootDir$"
 
 deviceId = 4
 #ExpId = 41-$deviceId$-s2sae    # TASK
-#ExpId = 18-$deviceId$-g2p
-ExpId = 18-1-g2p # for decoding a different model
+ExpId = 19-$deviceId$-g2p
+#ExpId = 18-3-g2p # for decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -31,8 +31,8 @@ ModelDir  = "$ExpDir$/Models"
 
 stderr = $ExpDir$/S2SAutoEncoder.log1
 
-#command = writeWordAndClassInfo:train:test:write
-command = write
+command = writeWordAndClassInfo:train:test:write
+#command = write
 #command = dump
 
 precision  = "float"
@@ -40,8 +40,8 @@ traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
 # decoding config
-decodeModelPath = "$modelPath$.6" # epoch to decode can be appended here  TASK
-beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
+decodeModelPath = "$modelPath$.16" # epoch to decode can be appended here  TASK
+beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
 decodeOutputPath = "$decodeModelPath$.bm$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
@@ -65,7 +65,7 @@ confVocabSize = 69
 confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
-isBidirectional=true
+isBidirectional=false
 
 trainFile = "g014b2b.train-dev-20-21.bsf.joint"
 #trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
@@ -94,7 +94,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     attentionSpan = $maxLength$         # 0 to disable. We only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
     useBidirectionalEncoder = $isBidirectional$ # bi-directional LSTM for encoder
 
-    useStabilizer = true
+    useStabilizer = false  #true
     useEncoder    = true                # if false, this becomes a regular RNN
     useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
 
@@ -107,7 +107,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # dimensions
     embeddingDim = $confVocabSize$ # 300
-    hiddenDim    = 360 #512  #420 # 1024 # 200   --TODO: Kaisheng used 500
+    hiddenDim    = 512  #420 # 1024 # 200   --TODO: Kaisheng used 500
     attentionDim = 128 # dim of attention  projection
     maxLayer = 2 # 0
 
@@ -352,10 +352,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     z = W * S(decoderOutput) + B;  // top-level input to Softmax
 
+    # once ReduceLogSum becomes proper C++, we shall make CrossEntropyWithSoftmax() a BS function as follows:
+    NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
+
     # training criteria
-    ce  = CrossEntropyWithSoftmax (labelSequence, z, tag='criterion')   // this is the training objective
-    ce1 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
-    wer = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+    ce = NewCrossEntropyWithSoftmax (labelSequence, z, tag='criterion')
+    ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
+    ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
+    errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
 ])
 
 #######################################
@@ -532,7 +536,7 @@ train = [
         learningRatesPerSample = 0.007*2:0.0035 #0.01 #0.005 # 0.01
         momentumAsTimeConstant = 2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
-        clippingThresholdPerSample = 15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
+        clippingThresholdPerSample = 1   #15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
         maxEpochs = 50
         numMBsToShowResult = 100
         firstMBsToShowResult = 10
