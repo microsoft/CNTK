@@ -556,20 +556,20 @@ protected:
     // for simplicity we use cuDNN-style notation for 2D convolutions (though this engine supports arbitrary convolution configuration)
     // where N - is the number of samples in a batch, C, H, W are number of channels, height and width of the input respectively.
     // For the output we use K as the number of output feature maps and H', W' as height and width of the output.
-    // We also use column-major notation everywhere (as opposed to cuDNN which user row-major) to follow CNTK rules.
+    // We also use column-major notation everywhere (as opposed to cuDNN which uses row-major) to follow CNTK rules.
     // For kernels we use X, Y, Z to represent width, height and depth. This engine requires Z == C which is
     // not a significant restriction as tensors of higher dimensions (+1) can be used to describe the same convolution configuration.
     // Example: [WHC x N] - is a matrix of WHC rows by N columns and represents a convolution input
     // where each column is a sample that has layout of WHC, so W dimension stride is 1.
     //
-    // The forward method consists of 3 parts (using 2D convolution notation but applicable to ND as well):
+    // The forward method consists of 3 parts:
     // 1. Unrolling convolution input (in) into a matrix: [WHC x N] -> [XYC x NW'H']
     //    Using this format allows to perform convolution for the whole minibatch as a single GEMM
     //    which is not possible with NCHW format. Alternatively, NHWC format (used in legacy engine) could be used
     //    but this would require both unrolling the input and transforming the weight matrix.
     // 2. Performing matrix multiplication of unrolled input with weight matrix:
     //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
-    // 3. Transpose and reshape result to [W'H'K x N]: res := [NW'H' x K]^T
+    // 3. Reshape and transpose result: [NW'H' x K] -> [N x W'H'K]^T -> [W'H'K x N]
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
