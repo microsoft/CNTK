@@ -269,15 +269,26 @@ class ComputationNode(object):
         if self._is_input():
             inputs.add(self)
             
+            num_readers_mapping = 0            
+            
             if self.reader:                
                 node_reader = self.reader
-            elif self in input_reader:
-                node_reader = input_reader[self]
-            elif has_var_name and self.var_name in input_reader:
-                node_reader = input_reader[self.var_name]
-            else:
+                num_readers_mapping += 1
+                
+            if input_reader:
+                if self in input_reader:
+                    node_reader = input_reader[self]
+                    num_readers_mapping += 1
+                if has_var_name and self.var_name in input_reader:
+                    node_reader = input_reader[self.var_name]
+                    num_readers_mapping += 1
+            
+            if num_readers_mapping == 0:
                 raise RuntimeError("No reader was found for input node: {0}".format(self.var_name))
-
+            
+            if num_readers_mapping > 1:            
+                raise RuntimeError("More than one reader found for input node: {0}".format(self.var_name))
+                
             readers.add(node_reader._to_aggregate_form(self))
 
         params = self._get_cntk_param_string(param_variable_names)
@@ -389,49 +400,6 @@ def _tensor_to_text_format(idx, alias, tensor, has_sequence_dimension=True):
     else:
         return '%i\t|%s %s'%(idx, alias, to_str(tensor))
 
-
-def _get_constant_node(value, **kw):
-    '''
-    This function creates a node that represents `value` as a constant tensor
-    in the graph.
-
-    To be as generic as possible, we 
-     - flatten the data 
-     - initialize a ParameterTensor operator with it
-     - ensure that the graph does not backprob to it.  
-     - Finally we to reshape it.
-    '''
-
-    # FIXME We need to better manage the context. How can we get hold
-    # of the overall context without having to always pass it
-    # explicitly?
-
-    if isinstance(value, list) or np.isscalar(value):
-        value = np.asarray(value)
-
-    if sparse.issparse(value):
-        raise ValueError('only dense data is supported')
-
-    param_shape = value.shape if value.shape else (1,)
-    literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
-    
-    literal_array = np.reshape(value, literal_shape)        
-
-    from io import BytesIO
-    s = BytesIO()    
-    np.savetxt(s, literal_array, '%.4f')
-
-    # TODO switch to ConstantTensor once it is in the core.bs file
-    node = cntk1_ops.ParameterTensor(
-        dims=param_shape,
-        learningRateMultiplier=0.0,
-        init='fromLiteral',
-        initFromLiteral=s.getvalue().decode(),
-        **kw)
-
-    return node
-
-
 def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
     '''
     :param list_of_tensors: list of tensors potentially having sequences of
@@ -452,10 +420,11 @@ def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
                                      dir=get_context().directory, delete=False)
     tf.close()
 
-    if 'alias' in kw:
+    if 'alias' in kw:        
         alias = kw['alias']
         del kw['alias']  # don't confuse with constructor's parameters
-    else:
+        
+    if not alias:
         # TODO make sure we don't have clashes
         alias = '_I_%i' % np.random.randint(1000)
 
@@ -548,11 +517,67 @@ def input_reader(value, has_sequence_dimension=True, **kw):
         raise ValueError('value type is not supported: %s' % type(value))
 
 
-def constant(value, **kw):
+def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform', 
+              init_value_scale=1, value=0, init_from_file_path='', 
+              init_from_literal=None, random_seed=-1):
     '''
-    creates a constant tensor node.
-    '''
-    if np.isscalar(value) or is_tensor(value):
-        return _get_constant_node(value, **kw)
-    else:
-        raise ValueError('value type is not supported: %s' % type(value))
+    creates a parameter tensor node.
+    '''            
+     
+    # FIXME We need to better manage the context. How can we get hold
+    # of the overall context without having to always pass it
+    # explicitly?
+    
+    # if the parameter is initialized from a literal value
+    if (init=='fromLiteral'):        
+        """
+        To be as generic as possible, we 
+         - flatten the data 
+         - initialize a ParameterTensor operator with it
+         - ensure that the graph does not backprob to it.  
+         - Finally we to reshape it.
+        """
+        
+        value = init_from_literal
+        
+        if not (np.isscalar(value) or is_tensor(value)):
+            raise ValueError('value type is not supported: %s' % type(value))
+            
+        if isinstance(value, list) or np.isscalar(value):
+            value = np.asarray(value)
+    
+        if sparse.issparse(value):
+            raise ValueError('only dense data is supported')
+    
+        param_shape = value.shape if value.shape else (1,)
+        literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
+        
+        literal_array = np.reshape(value, literal_shape)        
+    
+        from io import BytesIO
+        s = BytesIO()    
+        np.savetxt(s, literal_array, '%.4f')
+    
+        return cntk1_ops.ParameterTensor(
+            dims=param_shape,
+            learningRateMultiplier=learning_rate_multiplier,
+            init='fromLiteral',
+            initFromLiteral=s.getvalue().decode())
+        
+    return cntk1_ops.ParameterTensor(dims, learning_rate_multiplier, init, 
+                                     init_value_scale, value, init_from_file_path,
+                                     randomSeed=random_seed, var_name=name)
+
+def constant(value, name=None):
+    """
+    It creates constant tensor initialized from a numpy array
+    
+    Args:
+        value: the tensor constant passed as numpy array
+        name: the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    
+    return parameter(name=name, init='fromLiteral', init_from_literal=value,
+                     learning_rate_multiplier=0.0)    

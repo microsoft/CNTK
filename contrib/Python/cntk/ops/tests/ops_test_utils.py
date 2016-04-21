@@ -11,12 +11,12 @@ Utils for operations unit tests
 import numpy as np
 import pytest
 from ...context import get_new_context
-from ...graph import *
 from ...reader import *
+from ..variables_and_parameters import *
 
 #Keeping things short
 C = constant
-I = input_reader
+I = input_array
 AA = np.asarray
 
 @pytest.fixture(params=["float","double"])
