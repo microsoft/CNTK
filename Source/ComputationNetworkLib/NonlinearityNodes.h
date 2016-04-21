@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum GradientOperationType 
 {
-    noneGradient,
+    noGradient,
     unaryGradient,
     binaryWithInputGradient,
     binaryWithOutputGradient
@@ -64,15 +64,13 @@ public:
         auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
         auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
-        // we expect a constant conditional expression here -- suppress the warning that leads to an error
-        // TODO: alternative: assign to a non-const variable and test that.
-#pragma warning( push )
-#pragma warning( disable : 4127 )
-        if (opType == noneGradient)
+        GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
+
+        if (opTypeHolder == noGradient)
         {
             // Do nothing
         }
-        else if (opType == unaryGradient) 
+        else if (opTypeHolder == unaryGradient)
         {
             sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward, opSum);
         }
@@ -84,7 +82,6 @@ public:
                 Input(0)->ValueTensorFor(rank, fr);
             sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
-#pragma warning( pop )
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -151,7 +148,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             Elementw
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Floor,           Floor,           None,                                                      noneGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Floor,           Floor,           None,                                                      noGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    unaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                binaryWithOutputGradient);
