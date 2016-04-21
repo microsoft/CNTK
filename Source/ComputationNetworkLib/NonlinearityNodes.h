@@ -424,7 +424,7 @@ template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
 // -----------------------------------------------------------------------
-// ClipNode (tensor, minValue, maxValue)
+// ClipNode (minValue, maxValue, tensor)
 // -----------------------------------------------------------------------
 // This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
 // The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
@@ -468,7 +468,7 @@ public:
         auto output =                           ValueTensorFor   (rank, fr.AllowBroadcast());
 
         // there is only a gradient for the input tensor that is to be clipped
-        if (inputIndex == 0)
+        if (inputIndex == 2)
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
     }
 
