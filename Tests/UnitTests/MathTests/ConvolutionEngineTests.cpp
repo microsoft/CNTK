@@ -52,8 +52,8 @@ std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEng
 {
     std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> res;
     // Reference engine. The engine does not use temp memory so safe to set it to 0.
-    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
-    //res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
 
     // Gemm engine. Implemented only for CPU for now. Uses temp memory.
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 0));
