@@ -535,7 +535,7 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
         #pragma omp parallel for
         for (long j = 0; j < n; j++)
             if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
-                RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", j, (colVector[j + 1] - colVector[j]));
+                RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
     }
     else
         NOT_IMPLEMENTED;

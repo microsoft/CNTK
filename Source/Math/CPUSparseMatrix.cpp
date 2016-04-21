@@ -290,7 +290,7 @@ void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsM
 #pragma omp parallel for
         for (long j = 0; j < n; j++)
             if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
-                LogicError("CPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", j, (colVector[j + 1] - colVector[j]));
+                LogicError("CPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
     }
     else
         NOT_IMPLEMENTED;
