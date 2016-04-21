@@ -214,7 +214,7 @@ void DoWriteOutput(const ConfigParameters& config)
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
-    if (readerConfig["evalreader"])
+    if (readerConfig["readerType"] == "evalreader")
     {
         // get the evaluation names from the output string
         vector<wstring> outputNodeNames;
