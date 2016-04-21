@@ -549,9 +549,9 @@ protected:
     void EnsureCompatible() override
     {
         if (m_imageLayout != ImageLayoutKind::CHW)
-            RuntimeError("GEMM convolution engine supports only CHW/cudnn layout.");
+            LogicError("GEMM convolution engine supports only CHW/cudnn layout.");
         if (IsGpu(m_deviceId))
-            RuntimeError("GEMM convolution engine currently supports only CPU device.");
+            LogicError("GEMM convolution engine currently supports only CPU device.");
     }
 
     // A note on notation used in the documentation for the next 3 functions: 
@@ -566,8 +566,8 @@ protected:
     //
     // The forward method consists of 3 parts:
     // 1. Unrolling convolution input (in) into a matrix: [WHC x N] -> [XYC x NW'H']
-    //    Using this format allows to perform convolution for the whole minibatch as a single GEMM
-    //    which is not possible with NCHW format. Alternatively, NHWC format (used in legacy engine) could be used
+    //    Using this format allows to perform convolution for the whole minibatch as a single GEMM operation
+    //    which is not possible with WHCN format. Alternatively, CWHN format (used in legacy engine) could be used
     //    but this would require both unrolling the input and transforming the weight matrix.
     // 2. Performing matrix multiplication of unrolled input with weight matrix:
     //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
@@ -634,13 +634,10 @@ protected:
     }
     
     // The backward data method works by representing this operation as a "reverse" convolution
-    // in case kernel's last dimension is equal to input dimension. Gradients (grad) become
+    // in case kernel's last dimension is equal to input dimension. Gradients matrix (grad) becomes
     // an output of such reverse convolution.
-    // In this case, kernel matrix will have dimensions/layout of:
-    // [C x HWK] (row-major notation) and can be GEMM-ed with appropriately unrolled output (srcGrad in this case).
-    // Each row of the unrolled output will be of size/layout HWK.
-    // It consists of 4 steps:
-    // 1. Transpose and reshape kernel weights: [XYC x K]^T -> [KXY x C]
+    // There are 4 steps:
+    // 1. Transpose and reshape kernel weights: [XYC x K]^T -> [K x XYC] -> [KXY x C]
     // 2. Unroll convolution output (here source gradients, srcGrad):
     //    [W'H'K' x N] -> [KXY x NWH]
     // 3. Performing matrix multiplication of unrolled scrGrad with transposed weights:
@@ -669,7 +666,6 @@ protected:
         size_t mapInSize   = inT.GetNumElements() / mapInCount;
 
         size_t unrollRows = mapInSize * subBatchSize;
-        // Original kernel matrix in KCHW [K x CHW] format will be transposed to CHWK [C x HWK].
         size_t unrollCols = kernel.GetNumElements() / mapInCount;
 
         // Reserve space for:
@@ -684,7 +680,7 @@ protected:
         auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
         // cudnn layout uses row-major kernel weight matrix.
         kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
-        // Now transpose and reshape to [C x HWK] (row-major).
+        // Now transpose and reshape to [KXY x C].
         auto kernTran = workspace.ColumnSlice(0, kernCols);
         // Reshape to transpose shape, AssignTransposeOf requires that.
         kernTran.Reshape(kern.GetNumCols(), kern.GetNumRows());
