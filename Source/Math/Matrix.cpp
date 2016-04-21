@@ -1152,12 +1152,11 @@ void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemTyp
     else if (GetDeviceId() != columnsMask.GetDeviceId() && columnsMask.GetCurrentMatrixLocation() != BOTH)
         RuntimeError("MaskColumnsValue: Matrix and column mask must be on the same device.");
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val),
-                            m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
+        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); },
+        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
+        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); });
 }
 
 template <class ElemType>
