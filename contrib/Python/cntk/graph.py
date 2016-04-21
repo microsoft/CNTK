@@ -20,10 +20,6 @@ from .utils import MODEL_INDENTATION
 from .utils import aggregate_readers
 from .utils import with_metaclass, is_string
 
-def _tuple_to_cntk_shape(shape):
-    return ':'.join(str(v) for v in shape)
-
-
 class ComputationNode(object):
 
     '''
@@ -358,6 +354,9 @@ from cntk.ops.cntk1 import *
 from cntk.ops import cntk1 as cntk1_ops
 from .reader import CNTKTextFormatReader
 
+def _tuple_to_cntk_shape(shape):
+    return ':'.join(str(v) for v in shape)
+
 # redefine some operators to work with NumPy and sequences as input
 
 
@@ -581,3 +580,33 @@ def constant(value, name=None):
     
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)    
+    
+def eval(node):        
+    """
+    It evaluates a node that has taken a numpy array as input. Note that sequences
+    are not supported yet by this method
+    
+    Args:
+        node: the node to evaluate        
+    Returns:
+        numpy array containing the result
+    """    
+    
+    from cntk.context import get_context        
+    # get default context
+    ctx = get_context()    
+    
+    # the params are passed as arryas e.g. plus([1,2], [3,4]), we need to 
+    # wrap them with input and parameter nodes
+    if node.params and len(node.params) > 0:
+        # one param needs to be an Input() node    
+        first = node.params[0]
+        val = getattr(node, first)
+        if not isinstance(val, list):
+            val = [val]
+        setattr(node, first, input_reader([val], False, 
+                                          var_name=first, alias=first))
+        for p in node.params[1:]:
+            val = getattr(node, p)
+            setattr(node, p, constant(getattr(node, p), name=p))
+    return ctx.eval(node)
