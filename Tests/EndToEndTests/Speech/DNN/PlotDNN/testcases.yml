@@ -1,9 +1,10 @@
 dataDir: ../../Data
 tags:
      # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     # disable the test case on windows due to possible missing tools (such as diff)
+     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu')) and (os=='linux')
      # running unconditionally on every Nightly job in 'S' leg
-     - nightly-s (build_sku == 'gpu')
+     - nightly-s (build_sku == 'gpu') and (os=='linux')
 
 testCases:
     CNTK Run must be completed:
