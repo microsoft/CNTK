@@ -552,14 +552,25 @@ protected:
             RuntimeError("GEMM convolution engine currently supports only CPU device.");
     }
 
-    // The forward method consists of 2 parts (using 2D convolution notation but applicable to ND as well):
-    // 1. Unrolling convolution input into a matrix. Note that the matrix would be unrolled as if it were 
-    //    in CHWN format. Using this format allows to perform convolution for the whole minibatch as a single GEMM
+    // A note on notation used in the documentation for the next 3 functions: 
+    // for simplicity we use cuDNN-style notation for 2D convolutions (though this engine supports arbitrary convolution configuration)
+    // where N - is the number of samples in a batch, C, H, W are number of channels, height and width of the input respectively.
+    // For the output we use K as the number of output feature maps and H', W' as height and width of the output.
+    // We also use column-major notation everywhere (as opposed to cuDNN which user row-major) to follow CNTK rules.
+    // For kernels we use X, Y, Z to represent width, height and depth. This engine requires Z == C which is
+    // not a significant restriction as tensors of higher dimensions (+1) can be used to describe the same convolution configuration.
+    // Example: [WHC x N] - is a matrix of WHC rows by N columns and represents a convolution input
+    // where each column is a sample that has layout of WHC, so W dimension stride is 1.
+    //
+    // The forward method consists of 3 parts (using 2D convolution notation but applicable to ND as well):
+    // 1. Unrolling convolution input (in) into a matrix: [WHC x N] -> [XYC x NW'H']
+    //    Using this format allows to perform convolution for the whole minibatch as a single GEMM
     //    which is not possible with NCHW format. Alternatively, NHWC format (used in legacy engine) could be used
     //    but this would require both unrolling the input and transforming the weight matrix.
-    // 2. Performing matrix multiplication of unrolled input with weight matrix.
-    //    In case minibatch size > 1 simple transpose is required to bring data back to NCHW format.
-    // REVIEW alexeyk: document unrolling process with examples? People will thank me later...
+    // 2. Performing matrix multiplication of unrolled input with weight matrix:
+    //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
+    // 3. Transpose and reshape result to [W'H'K x N]: res := [NW'H' x K]^T
+    //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
@@ -620,6 +631,20 @@ protected:
         }
     }
     
+    // The backward data method works by representing this operation as a "reverse" convolution
+    // in case kernel's last dimension is equal to input dimension. Gradients (grad) become
+    // an output of such reverse convolution.
+    // In this case, kernel matrix will have dimensions/layout of:
+    // [C x HWK] (row-major notation) and can be GEMM-ed with appropriately unrolled output (srcGrad in this case).
+    // Each row of the unrolled output will be of size/layout HWK.
+    // It consists of 4 steps:
+    // 1. Transpose and reshape kernel weights: [XYC x K]^T -> [KXY x C]
+    // 2. Unroll convolution output (here source gradients, srcGrad):
+    //    [W'H'K' x N] -> [KXY x NWH]
+    // 3. Performing matrix multiplication of unrolled scrGrad with transposed weights:
+    //    [KXY x NWH]^T * [KXY x C] -> [NWH x C]
+    // 4. Reshape and transpose outputs (grad): [NWH x C] -> [N x WHC]^T -> [WHC x N]
+    //    In case minibatch size == 1 this step is not required and step 3 writes results directly to output (grad).
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
@@ -629,13 +654,6 @@ protected:
         const auto& kernT = m_geometry->KernelShape();
 
         size_t dimCount = inT.GetRank();
-        // In case kernel's last dimension is equal to input dimension, we can
-        // represent the "backward" convolution as a convolution of transposed/reshaped kernels
-        // over the output (srcGrad) and treat input (grad) as an "output" of that reverse convolution.
-        // In this case, kernel matrix will have dimensions/layout of:
-        // [C x HWK] (row-major notation) and can be GEMM-ed with appropriately unrolled output (srcGrad in this case).
-        // Each row of the unrolled output will be of size/layout HWK.
-        // Otherwise we need to increase convolution input/kernel dimension to dimCount + 1 (this is checked in EnsureCompatible).
         assert(kernT[dimCount - 1] == inT[dimCount - 1]);
         if (kernT[dimCount - 1] != inT[dimCount - 1])
         {
@@ -714,12 +732,12 @@ protected:
         }
     }
 
-    // The backward kernel method consists of 3 parts (using 2D convolution notation but applicable to ND as well):
-    // 1. Transpose and reshape convolution output matrix (srcGrad) into [NW'H' x K] (column-major) layout.
-    //    This step is not needed if current minibatch size == 1.
-    // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] (column-major) layaout.
+    // The backward kernel method consists of 3 parts:
+    // 1. Transpose and reshape convolution output matrix (srcGrad) into [NW'H' x K] layout.
+    //    This step is not needed if current minibatch size == 1 and srcGrad are used instead.
+    // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
-    //    [NW'H' x WHC]^T * [NW'H' x K] = [WHC x K] (column major) - kernel gradients.
+    //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
