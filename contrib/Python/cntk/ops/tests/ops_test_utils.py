@@ -19,6 +19,9 @@ C = constant
 I = input_array
 AA = np.asarray
 
+#for generic precision
+PRECISION_TO_TYPE = {'float':np.float32, 'double':np.float64}
+
 @pytest.fixture(params=["float","double"])
 def precision(request):
     return request.param
