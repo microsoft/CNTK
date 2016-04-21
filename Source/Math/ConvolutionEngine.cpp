@@ -534,6 +534,8 @@ public:
 protected:
     using typename Base::IntMatPtr;
 
+    using Base::IsGpu;
+
     using Base::m_geometry;
     using Base::m_deviceId;
     using Base::m_imageLayout;
