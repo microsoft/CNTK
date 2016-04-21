@@ -493,6 +493,57 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
 }
 
 template <class ElemType>
+GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
+{
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+    {
+        PrepareDevice();
+        GPUSPARSE_INDEX_TYPE* pArray = new GPUSPARSE_INDEX_TYPE[SecondaryIndexCount()];
+        CUDA_CALL(cudaMemcpy(pArray, SecondaryIndexLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * SecondaryIndexCount(), cudaMemcpyDeviceToHost));
+        return pArray;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+{
+    VerifyWritable(__func__);
+
+    size_t n = GetNumCols();
+    if (n != columnsMask.GetNumCols())
+        RuntimeError("Matrix and column mask must have equal number of columns");
+
+    if (val != 0)
+        LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
+
+#ifdef _DEBUG
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        // TODO: We could do this on the GPU, but for now C++ is easier.
+        // Download the binary columns mask
+        char* maskedCols = columnsMask.CopyToArray();
+
+        // If we're CSC, we only need to verify that the columns to be zeroed are empty, since val == 0.
+        // So just download the condensed column vector.
+        GPUSPARSE_INDEX_TYPE* colVector = GetCondensedVector();
+
+        // Verify that if the column is to be masked, there are no elements in it.
+        #pragma omp parallel for
+        for (long j = 0; j < n; j++)
+            if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
+                RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
+    }
+    else
+        NOT_IMPLEMENTED;
+#endif
+}
+
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
 {
     if (this != &deepCopy)
