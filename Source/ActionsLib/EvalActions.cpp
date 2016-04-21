@@ -34,7 +34,6 @@
 #ifndef let
 #define let const auto
 #endif
-#include "../EvalDll/EvalWriter.h"
 
 using namespace std;
 using namespace Microsoft::MSR;
