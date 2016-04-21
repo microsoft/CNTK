@@ -31,7 +31,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <UseIntelMKL>No</UseIntelMKL>
+    <UseIntelMKL>Parallel</UseIntelMKL>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -39,7 +39,7 @@
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <UseIntelMKL>No</UseIntelMKL>
+    <UseIntelMKL>Parallel</UseIntelMKL>
     <UseIntelIPP>false</UseIntelIPP>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -65,7 +65,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>USE_ACML; NO_SYNC; WIN32; _DEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_MKL; NO_SYNC; WIN32; _DEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
@@ -77,13 +77,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutputPath)"</Command>
-      <Message>Copying ACML DLLs</Message>
+      <Command>@REM xcopy /D /I /Y "c:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\redist\intel64_win\mkl\*.dll" "$(OutputPath)"</Command>
+      <Message>Copying MKL DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -103,7 +103,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_ACML; NO_SYNC; WIN32; NDEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_MKL; NO_SYNC; WIN32; NDEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -119,13 +119,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutputPath)"</Command>
-      <Message>Copying ACML DLLs</Message>
+      <Command>@REM xcopy /D /I /Y "c:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\redist\intel64_win\mkl\*.dll" "$(OutputPath)"</Command>
+      <Message>Copying MKL DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
