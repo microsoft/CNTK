@@ -34,6 +34,7 @@
 #ifndef let
 #define let const auto
 #endif
+#include "../EvalDll/EvalWriter.h"
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -208,49 +209,70 @@ template void DoCrossValidate<double>(const ConfigParameters& config);
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+
     ConfigParameters readerConfig(config(L"reader"));
-    // Why?
-    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
-    DataReader testDataReader(readerConfig);
-
-    ConfigArray minibatchSize = config(L"minibatchSize", "2048");
-    intargvector mbSize = minibatchSize;
-
-    size_t epochSize = config(L"epochSize", "0");
-    if (epochSize == 0)
+    if (readerConfig["evalreader"])
     {
-        epochSize = requestDataSize;
-    }
+        // get the evaluation names from the output string
+        vector<wstring> outputNodeNames;
+        ComputationNetworkPtr net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNames);
+        
+        SimpleOutputWriter<ElemType> eval(net, 1);
+        if (config.Exists("outputPath"))
+        {
+            wstring outputPath = config(L"outputPath");
+            WriteFormattingOptions formattingOptions(config);
 
-    vector<wstring> outputNodeNamesVector;
-
-    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
-
-    // set tracing flags
-    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
-                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
-
-    SimpleOutputWriter<ElemType> writer(net, 1);
-
-    if (config.Exists("writer"))
-    {
-        ConfigParameters writerConfig(config(L"writer"));
-        bool writerUnittest = writerConfig(L"unittest", "false");
-        DataWriter testDataWriter(writerConfig);
-        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
-    }
-    else if (config.Exists("outputPath"))
-    {
-        wstring outputPath = config(L"outputPath");
-        WriteFormattingOptions formattingOptions(config);
-        bool nodeUnitTest = config(L"nodeUnitTest", "false");
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
+            // Evaluate the network (without a reader) and output to a file.
+            eval.WriteOutput(outputPath, outputNodeNames, formattingOptions);
+        }
+        else
+            InvalidArgument("write command: You must specify 'outputPath' when specifying a reader of type 'evalreader'");
     }
     else
-        InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");
+    {
+        DataReader testDataReader(readerConfig);
+
+        ConfigArray minibatchSize = config(L"minibatchSize", "2048");
+        intargvector mbSize = minibatchSize;
+
+        size_t epochSize = config(L"epochSize", "0");
+        if (epochSize == 0)
+        {
+            epochSize = requestDataSize;
+        }
+
+        vector<wstring> outputNodeNamesVector;
+
+        let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
+
+        // set tracing flags
+        net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                               config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                               config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
+        SimpleOutputWriter<ElemType> writer(net, 1);
+
+        if (config.Exists("writer"))
+        {
+            ConfigParameters writerConfig(config(L"writer"));
+            bool writerUnittest = writerConfig(L"unittest", "false");
+            DataWriter testDataWriter(writerConfig);
+            writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        }
+        else if (config.Exists("outputPath"))
+        {
+            wstring outputPath = config(L"outputPath");
+            WriteFormattingOptions formattingOptions(config);
+            bool nodeUnitTest = config(L"nodeUnitTest", "false");
+            writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
+        }
+        else
+            InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");
+    }
 }
 
 template void DoWriteOutput<float>(const ConfigParameters& config);

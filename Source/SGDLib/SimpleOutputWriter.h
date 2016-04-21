@@ -340,6 +340,39 @@ public:
             iter.second->Flush();
     }
 
+    // Performs a single forward pass to compute the network then outputs the results to a file
+    void WriteOutput(std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions& formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false)
+    {
+        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
+
+        char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
+        std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
+
+        // load a label mapping if requested
+        std::vector<std::string> labelMapping;
+        if ((formattingOptions.isCategoryLabel || formattingOptions.isSparse) && !formattingOptions.labelMappingFile.empty())
+            File::LoadLabelFile(formattingOptions.labelMappingFile, labelMapping);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+        m_net->StartEvaluateMinibatchLoop(outputNodes);
+
+        File::MakeIntermediateDirs(outputPath);
+        for (auto& node : outputNodes)
+        {
+            m_net->ForwardProp(node);
+
+            // open output files
+            std::wstring nodeOutputPath = outputPath;
+            if (nodeOutputPath != L"-")
+                nodeOutputPath += L"." + node->GetName();
+            shared_ptr<File> f = make_shared<File>(nodeOutputPath, fileOptionsWrite | fileOptionsText);
+            FILE* file = *f;
+            WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(node), formattingOptions, formatChar, valueFormatString, labelMapping, 0, /* gradient */ false);
+        }
+    }
+
 private:
     ComputationNetworkPtr m_net;
     int m_verbosity;
