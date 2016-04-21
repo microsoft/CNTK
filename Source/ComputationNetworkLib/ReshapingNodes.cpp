@@ -63,7 +63,7 @@ template <class ElemType>
     auto result =           ValueTensorFor(rank, fr);
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
-    // the actual operation is a Copy with a reduction op
+    // the actual operation is a Copy with reduction, where the magic is in the reduction op
     result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
     // note: we can implement "Mean" by passing 1/dim for alpha
 }
@@ -82,7 +82,7 @@ template <class ElemType>
     switch (m_op)
     {
     case ElementWiseOperator::opSum:
-        // "Plus": broadcast the gradient
+        // "Sum": broadcast the gradient
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
@@ -124,9 +124,9 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
-    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Plus'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>

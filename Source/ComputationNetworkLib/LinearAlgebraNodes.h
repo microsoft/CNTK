@@ -219,6 +219,7 @@ template class ElementTimesNode<double>;
 // If A is minibatch data, then this operation is currently not efficient.
 // TODO: Implement this with TensorView::DoElementwiseProductOf() and stride magic
 // TODO: Transpose flags for all matrices, inputs and outputs?
+// TODO: allow outputRank < 0 meaning to denote "all but", from right
 // -----------------------------------------------------------------------
 
 template <class ElemType, bool m_transpose>
@@ -500,7 +501,7 @@ template class TimesNode<double>;
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
 // A common use of transposition is trace(X'X) where X is a matrix of samples.
-// This can be more efficiently implemented as ReducePlus (ElementTimes (X, X))
+// This can be more efficiently implemented as ReduceSum (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>

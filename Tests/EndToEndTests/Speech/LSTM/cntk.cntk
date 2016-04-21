@@ -77,21 +77,22 @@ speechTrain = [
         featNorm = MeanVarNorm(feashift)
 
         // define the stack of hidden LSTM layers
+        S(x) = Parameters.Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, featNorm,        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
-            else RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, LSTMoutput[k-1], inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+            then RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, S(featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, S(LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
-        W(x) = Parameters.WeightParam (labelDim, hiddenDim) * Parameters.Stabilize (x, enabled=useSelfStabilization)
-        B = Parameters.BiasParam (labelDim)
+        W = Parameters.WeightParam (labelDim, hiddenDim)
+        B = Parameters.BiasParam   (labelDim)
 
-        z = W(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
         // training
         useExplicitCriterion = true
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        crExplicit = -(ReducePlus (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
+        crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
         cr = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
         Err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
 

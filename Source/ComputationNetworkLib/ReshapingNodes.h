@@ -175,13 +175,16 @@ template class ReshapeNode<double>;
 // Reduces (e.g. sums up) all elements in each sample (column) of the input.
 // The optional axis can be 0 (meaning all elements) or a specific axis.
 // Allowed operations:
-//  - "Plus"
-//  - "LogPlus"   --not implemented yet
+//  - "Sum"
+//  - "LogSum"    --not implemented yet
 //  - "Mean"      --not implemented yet
 //  - "Max"       --not implemented yet
 //  - "Min"       --not implemented yet
 //  - "All"       --not implemented yet
 //  - "Any"       --not implemented yet
+// TODO:
+//  - move to a different header, since it's not really Reshaping
+//  - consider to change to pass in a set of axes instead of only one
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -216,7 +219,7 @@ public:
 
 private:
     int m_axis;
-    std::wstring m_operation; // the operation as a string, e.g. "Plus", see GetOpcode()
+    std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
     ElementWiseOperator m_op; // the operation mapped to our internal opCode
 };
 
@@ -1371,7 +1374,7 @@ reductions
 ----------
 
  - these are/will be implemented as a node for samples, and as recurrences for sequences
- - ReducePlus
+ - ReduceSum
     - sum over all elements of a dimension, or over time
  - ReduceMax, ReduceMin
     - max
