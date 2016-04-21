@@ -432,12 +432,12 @@ class ClassBasedCrossEntropyWithSoftmax(ComputationNode):
 
 class Clip(ComputationNode):
 
-    def __init__(self, x, minValue, maxValue, name='Clip', var_name=None):
+    def __init__(self, minValue, maxValue, x, name='Clip', var_name=None):
         super(Clip, self).__init__(
-            params=['x', 'minValue', 'maxValue'], name=name, var_name=var_name)
-        self.x = x
+            params=['minValue', 'maxValue', 'x'], name=name, var_name=var_name)        
         self.minValue = minValue
         self.maxValue = maxValue
+        self.x = x
         self.params_with_defaults = []
 
 

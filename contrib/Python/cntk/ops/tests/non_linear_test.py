@@ -17,43 +17,43 @@ from ...reader import *
 from ..non_linear import clip
 
 CLIP_TUPLES = [
-    ([1.5], [1.0], [2.0]), # value shouldn't be clipped; gradient is [1.0]
-    ([0.5], [1.0], [2.0]), # value should be clipped to 1.0; gradient is [0.0]
-    ([2.5], [1.0], [2.0]), # value should be clipped to 2.0; gradient is [0.0]
+    ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
+    ([1.0], [2.0], [0.5]), # value should be clipped to 1.0; gradient is [0.0]
+    ([1.0], [2.0], [2.5]), # value should be clipped to 2.0; gradient is [0.0]
     
     # should clip to [1.5, 2.0, 1.0]; gradient is [[1.0, 0.0, 0.0]]
-    ([[1.5, 2.1, 0.9]], [1.0], [2.0]),
+    ([1.0], [2.0], [[1.5, 2.1, 0.9]]),
 
     # should clip to [[1.0, 2.0], [1.0, 2.0], [1.5, 2.0]];
     # gradient is [[0.0, 0.0], [1.0, 1.0], [1.0, 0.0]]
-    ([[0.0, 3.0], [1.0, 2.0], [1.5, 2.5]], [1.0], [2.0]),
+    ([1.0], [2.0], [[0.0, 3.0], [1.0, 2.0], [1.5, 2.5]]),
      
     # test what happens if a user puts a higher "min" value than their "max" value
     # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
     # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
-    ([[1.5, 2.1, 0.9, -1.0, -2.0]], [5.0], [0.5]),
+    ([5.0], [0.5], [[1.5, 2.1, 0.9, -1.0, -2.0]]),
      
     # test a more complicated broadcasting scenario
-    ([[-1.0, 2.0], [3.0, 4.0]], [[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]]),
+    ([[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]], [[-1.0, 2.0], [3.0, 4.0]]),
     ]
 
 # -- clip operation tests --
-@pytest.mark.parametrize("x, min_value, max_value", CLIP_TUPLES)
-def test_op_clip(x, min_value, max_value, device_id, precision):    
+@pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
+def test_op_clip(min_value, max_value, x, device_id, precision):    
 
     #Forward pass test
     #==================
     # we compute the expected output for the forward pass
-    # Compare to numpy's implementation of clip()
+    # Compare to numpy's implementation of np.clip(x, min, max)
     expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
-
-    a = I([x], has_sequence_dimension=False)
-    b = C(min_value)    
-    c = C(max_value)
+    
+    a = C(min_value)    
+    b = C(max_value)
+    c = I([x], has_sequence_dimension=False)
     
     result = clip(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
     #==================
@@ -62,4 +62,4 @@ def test_op_clip(x, min_value, max_value, device_id, precision):
     expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
 
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+                    precision=precision, clean_up=True, backward_pass=True, input_node=c)
