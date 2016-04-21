@@ -952,6 +952,16 @@ void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the
 }
 
 template <class ElemType>
+GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
 {
 }
