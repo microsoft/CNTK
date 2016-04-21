@@ -138,7 +138,7 @@ private:
     cv::Mat m_meanImg;
 };
 
-// Transpose transformation from HWC to CHW.
+// Transpose transformation from HWC to CHW (note: row-major notation).
 class TransposeTransformer : public TransformerBase
 {
 public:
@@ -168,6 +168,31 @@ private:
 
     std::vector<StreamDescriptionPtr> m_outputStreams;
     std::vector<StreamId> m_appliedStreamIds;
+};
+
+// Intensity jittering based on PCA transform as described in original AlexNet paper
+// (http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+// Currently uses precomputed values from 
+// https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
+// but should be replaced with pre-class values?
+class IntensityTransformer : public ImageTransformerBase
+{
+public:
+    virtual void Initialize(TransformerPtr next,
+                            const ConfigParameters &readerConfig) override;
+
+private:
+    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void InitFromConfig(const ConfigParameters &config);
+
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    double m_stdDev;
+    cv::Mat m_eigVal;
+    cv::Mat m_eigVec;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 };
 
 }}}

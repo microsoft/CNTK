@@ -424,6 +424,8 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void TransposeTransformer::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
@@ -444,7 +446,7 @@ void TransposeTransformer::Initialize(TransformerPtr next,
 
         ImageDimensions dimensions(*stream->m_sampleLayout, HWC);
 
-        // Changing from NHWC to NCHW
+        // Changing from NHWC to NCHW (note: row-major notation)
         auto changedStream = std::make_shared<StreamDescription>(*stream);
         changedStream->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
         m_outputStreams[id] = changedStream;
@@ -471,17 +473,16 @@ TransposeTransformer::Apply(SequenceDataPtr inputSequence,
 
 // The class represents a sequence that owns an internal data buffer.
 // Passed from the TransposeTransformer.
-// TODO: Trasposition potentially could be done in place.
+// TODO: Transposition potentially could be done in place (alexeyk: performance might be much worse than of out-of-place transpose).
 struct DenseSequenceWithBuffer : DenseSequenceData
 {
     std::vector<char> m_buffer;
 };
 
 template <class TElemType>
-SequenceDataPtr
-TransposeTransformer::TypedApply(SequenceDataPtr sequence,
-                                 const StreamDescription &inputStream,
-                                 const StreamDescription &outputStream)
+SequenceDataPtr TransposeTransformer::TypedApply(SequenceDataPtr sequence,
+                                                 const StreamDescription &inputStream,
+                                                 const StreamDescription &outputStream)
 {
     assert(inputStream.m_storageType == StorageType::dense);
     auto inputSequence = static_cast<DenseSequenceData&>(*sequence.get());
@@ -512,6 +513,100 @@ TransposeTransformer::TypedApply(SequenceDataPtr sequence,
     result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void IntensityTransformer::Initialize(TransformerPtr next,
+                                 const ConfigParameters &readerConfig)
+{
+    ImageTransformerBase::Initialize(next, readerConfig);
+
+    auto featureStreamIds = GetAppliedStreamIds();
+
+    if (featureStreamIds.size() != 1)
+    {
+        RuntimeError("Only a single feature stream is supported.");
+    }
+
+    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
+}
+
+void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
+{
+    std::wstring intFile = config(L"intensityFile", L"");
+    if (intFile.empty())
+    {
+        m_eigVal.release();
+        m_eigVec.release();
+    }
+    else
+    {
+        cv::FileStorage fs;
+        fs.open(msra::strfun::utf8(intFile).c_str(), cv::FileStorage::READ);
+        if (!fs.isOpened())
+            RuntimeError("Could not open file: %ls", intFile.c_str());
+        fs["EigVal"] >> m_eigVal;
+        if (m_eigVal.rows != 1 || m_eigVal.cols != 3 || m_eigVal.channels() != 1)
+            RuntimeError("Invalid EigVal data in file: %ls", intFile.c_str());
+        fs["EigVec"] >> m_eigVec;
+        if (m_eigVec.rows != 3 || m_eigVec.cols != 3 || m_eigVec.channels() != 1)
+            RuntimeError("Invalid EigVec data in file: %ls", intFile.c_str());
+        fs.release();
+
+        m_stdDev = config(L"intensityStdDev", 0.1);
+    }
+}
+
+void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+
+    if (m_eigVal.empty() || m_eigVec.empty())
+        return;
+
+    if (mat.type() == CV_64FC(mat.channels()))
+        Apply<double>(mat);
+    else if (mat.type() == CV_32FC(mat.channels()))
+        Apply<float>(mat);
+    else
+        RuntimeError("Unsupported type");
+}
+
+template <typename ElemType>
+void IntensityTransformer::Apply(cv::Mat &mat)
+{
+    auto seed = GetSeed();
+    auto rng = m_rngs.pop_or_create(
+        [seed]()
+    {
+        return std::make_unique<std::mt19937>(seed);
+    });
+
+    // Using single precision as EigVal and EigVec matrices are single precision.
+    std::normal_distribution<float> d(0, (float)m_stdDev);
+    cv::Mat alphas(1, 3, CV_32FC1);
+    assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
+    alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
+    alphas.at<float>(1) = d(*rng) * m_eigVal.at<float>(1);
+    alphas.at<float>(2) = d(*rng) * m_eigVal.at<float>(2);
+    m_rngs.push(std::move(rng));
+
+    assert(m_eigVec.rows == 3 && m_eigVec.cols == 3);
+
+    cv::Mat shifts = m_eigVec * alphas.t();
+
+    // For multi-channel images data is in BGR format.
+    size_t cdst = mat.rows * mat.cols * mat.channels();
+    ElemType* pdstBase = reinterpret_cast<ElemType*>(mat.data);
+    for (ElemType* pdst = pdstBase; pdst < pdstBase + cdst;)
+    {
+        for (int c = 0; c < mat.channels(); c++)
+        {
+            *pdst += shifts.at<float>(mat.channels() - c - 1);
+            pdst++;
+        }
+    }
 }
 
 }}}

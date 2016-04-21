@@ -75,7 +75,13 @@ Train=[
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations="Linear"
-            # Stores mean values for each pixel in OpenCV matrix XML format.
+            # Intensity jittering: enabled if file is specified. 
+            # The file stores 1x3 vector (eigenvalues) and 3x3 matrix (eigenvectors) in OpenCV XML format.
+            intensityFile="$ConfigDir$/ImageNet1K_intensity.xml"
+            # StdDev for intensity jittering.
+            intensityStdDev=0.1
+            # Mean subtraction: enabled if file is specified.
+            # The file stores mean values for each pixel in OpenCV matrix XML format.
             meanFile="$ConfigDir$/ImageNet1K_mean.xml"
         ]
         labels=[

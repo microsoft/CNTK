@@ -59,8 +59,11 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     auto scaler = std::make_shared<ScaleTransformer>();
     scaler->Initialize(cropper, config);
 
+    auto intensity = std::make_shared<IntensityTransformer>();
+    intensity->Initialize(scaler, config);
+
     auto mean = std::make_shared<MeanTransformer>();
-    mean->Initialize(scaler, config);
+    mean->Initialize(intensity, config);
 
     TransformerPtr last = mean;
     if (configHelper.GetDataFormat() == CHW)
