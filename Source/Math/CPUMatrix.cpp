@@ -4214,7 +4214,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutS
     size_t batchSize = GetNumCols();
     size_t unrollCols = mapOutSize * batchSize;
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
