@@ -1,4 +1,4 @@
-CNTK – Computational Network Toolkit (https://github.com/Microsoft/CNTK/wiki)
+CNTK - Computational Network Toolkit (https://github.com/Microsoft/CNTK/wiki)
 This archive contains binary version of CNTK for 64bit Linux systems
 This archive binary version is designed for systems with NVIDIA GPU
 This archive does not contain support of
