@@ -581,18 +581,6 @@ def constant(value, name=None):
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)    
 
-# ops arguments to wrap by input or constant nodes
-ARGS_TO_WRAP=['A', 'B', 'a', 'aMatrix', 'aVectorSequence', 
-              'activationVectorSequence', 'anotherMatrix', 
-              'anotherVectorSequence', 'b', 'classLogProbsBeforeSoftmax', 
-              'cols', 'dataInput', 
-              'dataVectorSequence', 'diagonalMatrixAsColumnVector', 
-              'horizontalSubsample', 'inputsinvStdDevVector', 
-              'labelVectorSequence', 'leftMatrix', 'logStdDevAsRows', 
-              'matrix', 'meanVector', 'meansAsRows', 'rightMatrix', 'rows', 
-              'sourceData', 'unnormalizedPriorVector', 'vectorSequence', 
-              'verticalSubsamplex', 'z']
-    
 def eval(node):        
     """
     It evaluates a node that has taken a numpy array as input. Note that sequences
@@ -607,7 +595,7 @@ def eval(node):
         >>> print (cntk.eval(cntk.ops.element_times([[-30.,40.], [1.,2.]], 5)))
         #   [array([[[-150., 200.], [5., 10.]]])]        
     Args:
-        node: the node to evaluate        
+        node (cntk.graph.ComputationNode): the node to evaluate        
     Returns:
         numpy array containing the result
     """    
@@ -619,9 +607,9 @@ def eval(node):
     
     # the params are passed as arryas e.g. plus([1,2], [3,4]), we need to 
     # wrap them with input and parameter nodes
-    if node.params and len(node.params) > 0:
+    if node.params:
         for p in node.params:
-            if p in ARGS_TO_WRAP:
+            if p in node.inputs:
                 val = getattr(node, p)
                 # one param needs to be an Input() node. This is being fixed in 
                 #CNTK we will remove this workaround onces we can evaluate a 
@@ -630,8 +618,7 @@ def eval(node):
                     if not isinstance(val, list):                
                         # inputs have the outmost dimension for sequences
                         val = [val]
-                    setattr(node, p, input_reader([val], False, 
-                                                  var_name=p, alias=p))            
+                    setattr(node, p, input_reader([val], False, var_name=p, alias=p))            
                     first = False
                 else:
                     setattr(node, p, constant(getattr(node, p), name=p))
