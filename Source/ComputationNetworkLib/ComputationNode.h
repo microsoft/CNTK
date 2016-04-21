@@ -649,8 +649,10 @@ protected:
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
+    void ValidateInferNaryInputDims(size_t nInputs);
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
     void ValidateBinaryReduce(bool isFinalValidationPass);
+    void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
 

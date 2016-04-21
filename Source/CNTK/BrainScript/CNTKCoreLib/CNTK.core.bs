@@ -216,9 +216,9 @@ Boolean = [
         state = Xor (PastValue (1, state, defaultHiddenActivation=initialValue), clk)
     ].state
 
-    # select a value
+	# select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
+    If (cond, thenVal, elseVal) =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) ] /*plus the function args*/
 ]
 
 ##############################################################################

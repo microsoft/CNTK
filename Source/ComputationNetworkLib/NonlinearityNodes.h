@@ -422,4 +422,79 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
+
+// 'If' Node. Similar if (a ? b : c). If first input is !=0 return second input, else third
+template <class ElemType>
+class IfNode : public ComputationNode<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName()
+    {
+        return L"If";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(IfNode);
+    IfNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+#if DUMPOUTPUT
+    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return true; }
+#else
+    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return false; }
+#endif
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/)  const override { return false; }
+
+    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+    {
+        Base::BeginForwardProp();
+        // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+        // TODO: This is a stopgap. Is this the right thing to do? It changes the matrix type in-place.
+        Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignCondOf(input0, input1, input2);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto input0        = Input(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        // Do we need some reductions like in same method of BinaryElementWiseNode??
+
+        if (inputIndex == 1)
+        {
+            inputGradient.AddCopyIfOf(input0, gradient);
+        }
+        else if (inputIndex == 2)
+        {
+            inputGradient.AddCopyIfNotOf(input0, gradient);
+        }
+    }
+
+};
+
+template class IfNode<float>;
+template class IfNode<double>;
+
 }}}
