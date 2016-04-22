@@ -434,7 +434,7 @@ template <class ElemType>
 class ClipNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
     typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    UsingComputationNodeMembersBoilerPlate;
 
     static const std::wstring TypeName()
     {
@@ -461,15 +461,17 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient =                         GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-        auto input =         Input(inputIndex)->ValueTensorFor   (rank, fr.AllowBroadcast());
-        auto output =                           ValueTensorFor   (rank, fr.AllowBroadcast());
-
         // there is only a gradient for the input tensor that is to be clipped
         if (inputIndex == 2)
+        {
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
+        }        
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
