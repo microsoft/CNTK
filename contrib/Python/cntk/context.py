@@ -5,18 +5,16 @@
 # ==============================================================================
 
 #TODO: Settle on a centralized location for all the documentation that is in docstrings
-
+#TODO: Take out the saved model from the context
 
 from abc import ABCMeta, abstractmethod
 import os
 import re
-import sys
 import subprocess
 import numpy as np
 import shutil as sh
 
 from cntk.graph import ComputationNode
-from cntk.ops.cntk1 import NewReshape
 from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
 from .utils import cntk_to_numpy_shape, aggregate_readers
 from .utils import with_metaclass
@@ -26,19 +24,20 @@ CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
-CNTK_INFER_TEMPLATE_PATH = os.path.join(
-    CNTK_TEMPLATE_DIR, "cntk_infer_template.cntk")
+CNTK_WRITE_TEMPLATE_PATH = os.path.join(
+    CNTK_TEMPLATE_DIR, "cntk_write_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
-CNTK_INFER_CONFIG_FILENAME = "infer.cntk"
+CNTK_WRITE_CONFIG_FILENAME = "write.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
 CNTK_OUTPUT_FILENAME = "out.txt"
 
 # TODO: add validate method
 # TODO: overload action methods to support numpy matrices as inputs
 # TODO: overload action methods to have versions that do not need reader
+# TODO: clean_up should become a property of train()
 # or numpy inputs
 
 _CONTEXT = {}
@@ -126,7 +125,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def infer(self, input_reader=None):
+    def write(self, input_reader=None):
         '''
         Abstract method for the action write. It evaluated the trained model on 
         the data provided by the reader.
@@ -243,13 +242,13 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         }
         return tmpl % tmpl_dict
 
-    def _generate_infer_config(self, input_reader):
+    def _generate_write_config(self, input_reader):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
         :param input_reader: a map from input nodes to their readers
         '''
-        tmpl = open(CNTK_INFER_TEMPLATE_PATH, "r").read()
+        tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(
             self.directory, 'Outputs', self.name)
@@ -544,15 +543,15 @@ class Context(AbstractContext):
         return Context._parse_test_result(output)
 
 
-    def infer(self, input_reader=None):
+    def write(self, input_reader=None):
         '''
         Run the write action locally, use the trained model of this context.
         :param input_reader: map from input nodes to readers
 
         Returns the inferred output
         '''
-        config_content = self._generate_infer_config(input_reader)
-        return self._call_cntk(CNTK_INFER_CONFIG_FILENAME, config_content)
+        config_content = self._generate_write_config(input_reader)
+        return self._call_cntk(CNTK_WRITE_CONFIG_FILENAME, config_content)
 
     def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
         '''
