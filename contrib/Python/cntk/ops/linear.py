@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Times, Plus, ElementDivide, ElementTimes
+from cntk.ops.cntk1 import Times, Plus, Minus, ElementDivide, ElementTimes
 
 def plus(left, right, name=None):
     """
@@ -29,6 +29,22 @@ def plus(left, right, name=None):
     """    
     
     return Plus(left, right, var_name = name)  
+
+def minus(left, right, name=None):
+    """
+    Tensor subtraction operation. The output of this operation is left minus
+    right tensor. It supports broadcasting. In case of scalars its backward
+    pass propagates the received gradient. 
+    
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    
+    return Minus(left, right, var_name = name)  
 
 def element_times(left, right, name=None):
     """

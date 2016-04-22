@@ -64,6 +64,40 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)    
 
+# -- minus operation tests --
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
+def test_op_minus(left_operand, right_operand, device_id, precision):    
+
+    #Forward pass test
+    #==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the second for batch of one sample
+    expected = [[AA(left_operand) - AA(right_operand)]]
+
+    a = I([left_operand], has_sequence_dimension=False)
+    b = I([right_operand], has_sequence_dimension=False)    
+    
+    left_as_input = a - right_operand    
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    right_as_input = left_operand - b
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    #Backward pass test
+    #==================
+    #the expected results for the backward pass is all ones for left and
+    #negative ones for right operand
+    expected = [[[np.ones_like(x) for x in left_operand]]]
+    unittest_helper(left_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)    
+    expected = [[[-np.ones_like(x) for x in left_operand]]]
+    unittest_helper(right_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)    
+
 # -- element times tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
