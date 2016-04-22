@@ -580,12 +580,32 @@ def constant(value, name=None):
     
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)    
+
+# ops arguments to wrap by input or constant nodes
+ARGS_TO_WRAP=['A', 'B', 'a', 'aMatrix', 'aVectorSequence', 
+              'activationVectorSequence', 'anotherMatrix', 
+              'anotherVectorSequence', 'b', 'classLogProbsBeforeSoftmax', 
+              'cols', 'dataInput', 
+              'dataVectorSequence', 'diagonalMatrixAsColumnVector', 
+              'horizontalSubsample', 'inputsinvStdDevVector', 
+              'labelVectorSequence', 'leftMatrix', 'logStdDevAsRows', 
+              'matrix', 'meanVector', 'meansAsRows', 'rightMatrix', 'rows', 
+              'sourceData', 'unnormalizedPriorVector', 'vectorSequence', 
+              'verticalSubsamplex', 'z']
     
 def eval(node):        
     """
     It evaluates a node that has taken a numpy array as input. Note that sequences
     are not supported yet by this method
     
+    Examples:
+        Plus with two matrices
+        >>> print (cntk.eval(cntk.ops.plus([[-30.,40.], [1.,2.]], [[-30.,40.], [1.,2.]])))
+        #   [array([[[-60., 80.], [2., 4.]]])]
+        
+        Times with broadcast of a scalar over a matrix
+        >>> print (cntk.eval(cntk.ops.element_times([[-30.,40.], [1.,2.]], 5)))
+        #   [array([[[-150., 200.], [5., 10.]]])]        
     Args:
         node: the node to evaluate        
     Returns:
@@ -593,20 +613,26 @@ def eval(node):
     """    
     
     from cntk.context import get_context        
-    # get default context
+    # call a helper method to get a context
     ctx = get_context()    
+    first = True    
     
     # the params are passed as arryas e.g. plus([1,2], [3,4]), we need to 
     # wrap them with input and parameter nodes
     if node.params and len(node.params) > 0:
-        # one param needs to be an Input() node    
-        first = node.params[0]
-        val = getattr(node, first)
-        if not isinstance(val, list):
-            val = [val]
-        setattr(node, first, input_reader([val], False, 
-                                          var_name=first, alias=first))
-        for p in node.params[1:]:
-            val = getattr(node, p)
-            setattr(node, p, constant(getattr(node, p), name=p))
+        for p in node.params:
+            if p in ARGS_TO_WRAP:
+                val = getattr(node, p)
+                # one param needs to be an Input() node. This is being fixed in 
+                #CNTK we will remove this workaround onces we can evaluate a 
+                #network with no inputs
+                if first:
+                    if not isinstance(val, list):                
+                        # inputs have the outmost dimension for sequences
+                        val = [val]
+                    setattr(node, p, input_reader([val], False, 
+                                                  var_name=p, alias=p))            
+                    first = False
+                else:
+                    setattr(node, p, constant(getattr(node, p), name=p))
     return ctx.eval(node)
