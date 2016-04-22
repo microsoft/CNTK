@@ -579,9 +579,8 @@ def constant(value, name=None):
     """    
     
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
-                     learning_rate_multiplier=0.0)    
+                     learning_rate_multiplier=0.0)
 					 
-
 def eval(node):        
     """
     It evaluates a node that has taken a numpy array as input. Note that sequences
