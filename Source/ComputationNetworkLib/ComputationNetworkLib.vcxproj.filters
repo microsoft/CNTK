@@ -141,6 +141,9 @@
     <ClInclude Include="DeprecatedNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="RNNNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

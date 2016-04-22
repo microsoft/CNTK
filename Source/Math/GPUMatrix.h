@@ -141,6 +141,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
     mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
+	mutable std::unique_ptr<struct RNNInfo> m_rnnworkspace;
 #pragma warning(pop)
 
 private:
@@ -446,6 +447,11 @@ public:
                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const;
     void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
+
+	// RNN support functions
+	void RNNForward(const GPUMatrix<ElemType>& w, int numLayers, bool bidirectional, const GPUMatrix<ElemType> &output ) const;
+	void RNNBackwardData() const;
+	void RNNBackwardGradient() const;
 
 public:
     // static BLAS functions

@@ -3138,6 +3138,12 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
                                                     in.Data(), Data(), grad.Data(), scale.Data(), scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
 }
 
+#pragma RNN Functions
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType>& w, int numLayers, bool bidirectional, const GPUMatrix<ElemType> &output) const
+{
+}
+
 #pragma region Static BLAS Functions
 // float/double overloads of cublasSgemm()/cublasDgemm()
 static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)

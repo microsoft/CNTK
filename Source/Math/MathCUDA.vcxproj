@@ -190,6 +190,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
       <FileType>CppCode</FileType>
     </CudaCompile>
     <ClCompile Include="CuDnnCommon.cpp" />
+    <ClCompile Include="CuDnnRNN.cpp" />
     <ClCompile Include="GPUDataTransferer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
