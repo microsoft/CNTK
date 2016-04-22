@@ -132,8 +132,6 @@ def test_op_softmax(batch, device_id, precision):
 
     input_node = I(batch, has_sequence_dimension=False)
     op_node = softmax(input_node)
-    #from cntk.ops.cntk1 import CrossEntropyWithSoftmax
-    #op_node = CrossEntropyWithSoftmax(I([[0,1],[0,1]], has_sequence_dimension=False), input_node)
 
     expected = [[numpy_op(sample)] for sample in batch]
     unittest_helper(op_node, None, expected,
@@ -143,8 +141,22 @@ def test_op_softmax(batch, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is 
-    expected = [['tbd']]
+    # The expected results for the backward pass is fi(1-fi) for i and -fi*fj
+    # for element j!=i.
+    def numpy_grad(x):
+        grads = np.zeros((len(x), len(x)), dtype=PRECISION_TO_TYPE[precision])
+
+        for i in range(len(x)):
+            # deriving wrt i-th element
+            for j in range(len(x)):
+                if i==j:
+                    grads[i,j] = x[i]*(1-x[i])
+                else:
+                    grads[i,j] = x[i]*(-x[j]) 
+
+        return grads.sum(axis=0)
+
+    expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
 
     unittest_helper(op_node, None, expected, 
             device_id=device_id,
