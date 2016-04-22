@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Clip, Exp, RectifiedLinear, Sigmoid, Softmax, Tanh
+from cntk.ops.cntk1 import Abs, Clip, Exp, RectifiedLinear, Sigmoid, Softmax, Tanh
 
 def clip(min_value, max_value, x, name=None):
     """
@@ -106,7 +106,7 @@ def softmax(X, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    return Softmax(X)#Exp(LogSoftmax(X), var_name=name)
+    return Softmax(X)
 
 def exp(x, name=None):
     """
@@ -121,3 +121,17 @@ def exp(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return Exp(x, var_name=name)
+
+def abs(x, name=None):
+    """
+    computes the element-wise absolute of `x`: 
+
+    :math:`abs(x) = |x|`
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    return Abs(x, var_name=name)

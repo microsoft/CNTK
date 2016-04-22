@@ -253,3 +253,39 @@ def test_op_rectified_linear(tensor, device_id, precision):
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_abs(tensor, device_id, precision):
+
+    np_tensor = AA(tensor, dtype=PRECISION_TO_TYPE[precision])
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the second for batch of one sample
+
+    expected = [[np.abs(tensor)]]
+
+    input_node = I([tensor], has_sequence_dimension=False)
+    op_node = abs(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is x/|x|
+    
+    expected = np_tensor / np.abs(np_tensor)
+    # For 0 NumPy gives a gradient non, while CNTK gives 0
+    expected[np.isnan(expected)] = 0
+    expected = [[expected]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
