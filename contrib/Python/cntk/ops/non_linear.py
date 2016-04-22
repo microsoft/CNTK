@@ -61,6 +61,10 @@ def rectified_linear(x, name=None):
 
     Returns:
         :class:`cntk.graph.ComputationNode`
+
+    Example:
+        >>> cntk.eval(cntk.ops.rectified_linear([[-1, -0.5, 0, 1, 2]]))
+        [[[0, 0, 0, 1, 2]]]
     """
     return RectifiedLinear(x, var_name=name)
 
@@ -105,6 +109,13 @@ def softmax(X, name=None):
 
     Returns:
         :class:`cntk.graph.ComputationNode`
+
+    Examples:
+        >>> cntk.eval(cntk.ops.softmax([[1, 1, 2, 3]]))
+        [[[0.08259454, 0.08259454, 0.22451524, 0.61029569]
+
+        >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
+        [[[0.5, 0.5]]]
     """
     return Softmax(X)
 
