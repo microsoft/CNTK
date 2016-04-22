@@ -18,17 +18,17 @@ typedef std::shared_ptr<SequenceBuffer> SequenceBufferPtr;
 
 // A bptt packer that densely packs samples in parallel for GPU consumptions.
 // TODO: Currently supports only packing of streams with sequences of equal length.
-class BpttPacker : public PackerBase
+class TruncatedBPTTPacker : public PackerBase
 {
 public:
-    BpttPacker(
+    TruncatedBPTTPacker(
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
-        size_t minibatchSize,
-        size_t truncationSize,
         const std::vector<StreamDescriptionPtr>& streams);
 
     virtual Minibatch ReadMinibatch() override;
+
+    virtual void StartEpoch(const EpochConfiguration& config) override;
 
 private:
     // Reads sequences to slot with the specified index.
@@ -65,6 +65,6 @@ private:
     std::vector<MBLayoutPtr> m_currentLayouts;
 };
 
-typedef std::shared_ptr<BpttPacker> BpttPackerPtr;
+typedef std::shared_ptr<TruncatedBPTTPacker> TruncatedBPTTPackerPtr;
 
 }}}
