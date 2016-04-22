@@ -154,7 +154,6 @@ if exist "$(CuDnnDll)" xcopy /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="GPUWatcher.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
     <CudaCompile Include="CuDnnConvolutionEngine.cu">

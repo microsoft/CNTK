@@ -120,18 +120,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Common\Config.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\DataReader.cpp" />
-    <ClCompile Include="..\Common\DataWriter.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\TimerUtility.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="SGD.cpp" />
     <ClCompile Include="stdafx.cpp" />

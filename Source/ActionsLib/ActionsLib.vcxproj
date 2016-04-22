@@ -102,13 +102,6 @@
     <ClInclude Include="SimpleNetworkBuilder.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Common\File.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\TimerUtility.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="NetworkFactory.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />

@@ -111,13 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\BestGpu.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\TimerUtility.cpp" />
     <ClCompile Include="ComputationNetwork.cpp" />
     <ClCompile Include="ComputationNetworkAnalysis.cpp" />
     <ClCompile Include="ComputationNetworkBuilder.cpp" />

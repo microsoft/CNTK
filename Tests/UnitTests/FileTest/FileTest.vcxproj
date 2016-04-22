@@ -154,8 +154,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\Common\File.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp" />
     <ClCompile Include="FileTest.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
