@@ -1198,7 +1198,7 @@ void Matrix<ElemType>::SetColumn(const Matrix<ElemType>& colMat, size_t colInd)
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AssignDeepClone_OrValues_Of(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR)
+void Matrix<ElemType>::AssignDeepClone_OrValues_Of(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
 {
     if (this == &deepCopyFrom)
         return;

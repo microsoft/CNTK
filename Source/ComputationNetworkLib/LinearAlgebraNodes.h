@@ -422,7 +422,7 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
             // update if LearnableParameter
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
-#if 0
+#if 0 // Removed this, because the check is just wrong.
             // and verify once again
             if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
                 InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
