@@ -29,8 +29,17 @@ struct ComputationEnvironment
 {
     // networkOperationMode tells whether we are training or inferring, which affects some nodes' behavior
     NetworkOperationMode m_networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
+    bool IsInferring()     const { return m_networkOperationMode == NetworkOperationMode::inferring; }
     bool IsTraining()     const { return m_networkOperationMode == NetworkOperationMode::training; }
     bool IsPreComputing() const { return m_networkOperationMode == NetworkOperationMode::preComputing; }
+
+    //set new value and return old one
+    NetworkOperationMode SetOperationMode(NetworkOperationMode mode)
+    {
+        NetworkOperationMode oldMode = m_networkOperationMode;
+        m_networkOperationMode = mode;
+        return oldMode;
+    }
     // more properties should be added here as needed
 };
 typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
