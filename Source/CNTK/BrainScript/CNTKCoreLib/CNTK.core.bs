@@ -92,6 +92,7 @@ Delay = PastValue
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
+Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 // TODO: ColumnElementTimes = ElementTimes
@@ -108,8 +109,6 @@ ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
 Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
-Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
-Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
@@ -134,6 +133,7 @@ ReducePlus (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceEl
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
 #ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
+Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]

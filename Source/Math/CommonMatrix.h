@@ -73,10 +73,10 @@ private:
 enum ElementWiseOperator
 {
     // nullary
-    opConstOne,
+    opConstOne, opNone,
     // unary (or binary with constant parameter)
     opCopy,
-    opNegate, opNot, opAbs, opFloor, opReciprocal, opNone,
+    opNegate, opNot, opAbs, opFloor, opReciprocal,
     opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,

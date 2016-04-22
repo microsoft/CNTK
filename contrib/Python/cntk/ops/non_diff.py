@@ -71,7 +71,7 @@ def round(arg, name=None):
     Round operation. The output of this operation is the
     element wise value rounded to the nearest integer. In case
     of tie, where element can have exact fractional part of 0.5
-    this operation follows Round half-up tie breaking strategy.
+    this operation follows "round half-up" tie breaking strategy.
     This is different from the round operation of numpy which follows
     round half to even.
 

@@ -139,19 +139,19 @@ public:
     }
 
 //                                    Name             Forward and      Backward opcodes                                           Gradient optype
-DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Floor,           Floor,           None,                                                      noGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      unaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            binaryWithOutputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
