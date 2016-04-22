@@ -580,6 +580,7 @@ def constant(value, name=None):
     
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)    
+					 
 
 def eval(node):        
     """
