@@ -226,7 +226,7 @@ bool UtteranceDerivativeBuffer<ElemType>::GetDerivative(
         derivatives.TransferFromDeviceToDevice(
             CPUDEVICE, derivativesOut->GetDeviceId(), true, false, false);
     }
-    derivativesOut->SetValue(derivatives);
+    derivativesOut->AssignDeepCloneOf(derivatives);
 
     // Keeps the utterance information so we can check next time when we
     // gives the objectives.
