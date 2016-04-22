@@ -29,6 +29,7 @@ struct EpochConfiguration
     size_t m_minibatchSizeInSamples;        // Maximum minibatch size for the epoch in samples
     size_t m_totalEpochSizeInSamples;       // Total size of the epoch in samples
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
+    size_t m_truncationSize;                // Truncation size in samples for truncated BPTT mode.
 };
 
 // Supported primitive element types, will be extended in the future.

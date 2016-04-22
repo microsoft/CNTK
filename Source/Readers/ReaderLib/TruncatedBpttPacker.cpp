@@ -7,7 +7,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include <deque>
-#include "BpttPacker.h"
+#include "TruncatedBpttPacker.h"
 #include "ElementTypeUtils.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -105,34 +105,59 @@ struct SequenceBuffer
     vector<Slot> m_slots;
 };
 
-BpttPacker::BpttPacker(
+TruncatedBPTTPacker::TruncatedBPTTPacker(
     MemoryProviderPtr memoryProvider,
     TransformerPtr transformer,
-    size_t minibatchSize,
-    size_t truncationSize,
     const vector<StreamDescriptionPtr>& streams)
-    : PackerBase(memoryProvider, transformer, minibatchSize, streams),
-    m_truncationSize(truncationSize)
+    : PackerBase(memoryProvider, transformer, streams),
+    m_truncationSize(0)
 {
     auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
     if (sparseOutput != m_outputStreamDescriptions.end())
     {
+        // TODO: add support for sparse.
         RuntimeError("Sparse output is not supported in BPTT mode.");
     }
 
-    // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-    m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
-
-    // Preparing the buffers.
+    // Preparing layouts.
     for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
-        const auto& stream = m_outputStreamDescriptions[i];
-        auto& buffer = m_streamBuffers[i];
-        buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
-        m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
         auto pMBLayout = make_shared<MBLayout>();
-        pMBLayout->SetUniqueAxisName(L"BpttPacker");
+        pMBLayout->SetUniqueAxisName(L"TruncatedBPTTPacker");
         m_currentLayouts.push_back(pMBLayout);
+    }
+}
+
+void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config)
+{
+    if (m_minibatchSize != config.m_minibatchSizeInSamples ||
+        m_truncationSize != config.m_truncationSize)
+    {
+        m_minibatchSize = config.m_minibatchSizeInSamples;
+        m_truncationSize = config.m_truncationSize;
+
+        if (m_minibatchSize == 0)
+        {
+            LogicError("Minibatch size cannot be zero.");
+        }
+        if (m_truncationSize == 0)
+        {
+            LogicError("Truncation size cannot be zero.");
+        }
+
+        // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
+        m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
+
+        m_sequenceBufferPerStream.clear();
+
+        // Preparing the buffers.
+        for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
+        {
+            const auto& stream = m_outputStreamDescriptions[i];
+            auto& buffer = m_streamBuffers[i];
+            buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
+            m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
+        }
     }
 
     // Filling in the initial set of sequences
@@ -142,7 +167,7 @@ BpttPacker::BpttPacker(
     }
 }
 
-Minibatch BpttPacker::ReadMinibatch()
+Minibatch TruncatedBPTTPacker::ReadMinibatch()
 {
     Minibatch result;
 
@@ -174,7 +199,7 @@ Minibatch BpttPacker::ReadMinibatch()
 }
 
 // Packs a slot of sequences into the minibatch.
-void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId)
+void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId)
 {
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
@@ -274,7 +299,7 @@ void BpttPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequence
     }
 }
 
-void BpttPacker::ReadSequencesToSlot(size_t slotIndex)
+void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
 {
     const auto& slot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
     while (m_truncationSize > slot.AvailableNumberOfSamples())

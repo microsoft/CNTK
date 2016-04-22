@@ -70,6 +70,11 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     }
 
     m_transformer = last;
+
+    m_packer = std::make_shared<FramePacker>(
+        m_provider,
+        m_transformer,
+        m_streams);
 }
 
 std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
@@ -80,17 +85,13 @@ std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
 
 void ImageReader::StartEpoch(const EpochConfiguration& config)
 {
-    if (config.m_totalEpochSizeInSamples <= 0)
+    if (config.m_totalEpochSizeInSamples == 0)
     {
-        RuntimeError("Unsupported minibatch size '%u'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Epoch size cannot be 0.");
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<FramePacker>(
-        m_provider,
-        m_transformer,
-        config.m_minibatchSizeInSamples,
-        m_streams);
+    m_packer->StartEpoch(config);
 }
 
 Minibatch ImageReader::ReadMinibatch()

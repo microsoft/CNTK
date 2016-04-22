@@ -15,6 +15,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class Packer
 {
 public:
+    // Sets current epoch configuration.
+    virtual void StartEpoch(const EpochConfiguration& config) = 0;
+
     virtual Minibatch ReadMinibatch() = 0;
     virtual ~Packer() {}
 };
