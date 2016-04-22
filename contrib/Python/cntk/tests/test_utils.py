@@ -5,34 +5,33 @@
 # ==============================================================================
 
 """
-Utils for operations unit tests
+Utils for unit tests
 """
 
 import numpy as np
 import pytest
 
-from cntk.tests.test_utils import *
+# NumPy's allclose() has 1e08 as the absolute tolerance, which is too strict for
+# functions like sigmoid.
+TOLERANCE_ABSOLUTE = 1E-06 
 
-from ...context import get_new_context
-from ...reader import *
-from ..variables_and_parameters import *
+PRECISION_TO_TYPE = {'float': np.float32, 'double':np.float64}
 
+# NumPy's allclose() has 1e08 as the absolute tolerance, which is too strict for
+# functions like sigmoid.
+TOLERANCE_ABSOLUTE = 1E-06 
 
-#Keeping things short
-C = constant
-I = input_array
+PRECISION_TO_TYPE = {'float': np.float32, 'double':np.float64}
+
 AA = np.asarray
 
-#for generic precision
-PRECISION_TO_TYPE = {'float':np.float32, 'double':np.float64}
-
 @pytest.fixture(params=["float", "double"])
-
 def precision(request):
     return request.param
 
 def unittest_helper(root_node, input_reader, expected, device_id = -1, precision="float", 
                     clean_up=True, backward_pass = False, input_node = None):
+    from cntk.context import get_new_context
     with get_new_context() as ctx:
         ctx.clean_up = clean_up
         ctx.device_id = device_id

@@ -9,13 +9,6 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-# Workaround until we have switched to Anaconde with scipy support
-#import scipy.sparse as sparse 
-class sparse(object):
-    @staticmethod
-    def issparse(obj):
-        return hasattr(obj, 'todense')
-
 from .utils import MODEL_INDENTATION
 from .utils import aggregate_readers
 from .utils import with_metaclass, is_string
@@ -53,73 +46,73 @@ class ComputationNode(object):
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
         if not isinstance(other, ComputationNode):            
-            other = constant(other)
-        return Plus(self, other)
+            other = ops.constant(other)
+        return ops.plus(self, other)
 
     # operator overload for (+) where self is the right operand
     def __radd__(self, other):
         if not isinstance(other, ComputationNode):            
-            other = constant(other)
-        return Plus(other, self)
+            other = ops.constant(other)
+        return ops.plus(other, self)
     
     # operator overload for (-) where self is the left operand
     def __sub__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
-        return Minus(self, other)
+            other = ops.constant(other)
+        return ops.minus(self, other)
 
     # operator overload for (-) where self is the right operand
     def __rsub__(self, other):
         if not isinstance(other, ComputationNode):            
-            other = constant(other)
-        return Minus(other, self)
+            other = ops.constant(other)
+        return ops.minus(other, self)
 
     # operator overload for (*) where self is the left operand
     def __mul__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
-        return ElementTimes(self, other)
+            other = ops.constant(other)
+        return ops.element_times(self, other)
 
     # operator overload for (*) where self is the right operand
     def __rmul__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
-        return ElementTimes(other, self)
+            other = ops.constant(other)
+        return ops.element_times(other, self)
 
     # operator overload for (@) where self is the left operand
     def __matmul__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
+            other = ops.constant(other)
         # NOTE supported in Python 3.5
-        return Times(self, other)
+        return ops.times(self, other)
 
     # operator overload for (@) where self is the right operand
     def __rmatmul__(self, other):
         if not isinstance(other, ComputationNode):            
-            other = constant(other)
+            other = ops.constant(other)
         # NOTE supported in Python 3.5
-        return Times(other, self)
+        return ops.times(other, self)
 
     # operator overload for (\) where self is the left operand
     def __truediv__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
+            other = ops.constant(other)
         self.__div__ = self.__truediv__
-        return ElementDivide(self, other)
+        return ops.element_divide(self, other)
 
     # operator overload for (\) where self is the right operand
     def __rtruediv__(self, other):
         if not isinstance(other, ComputationNode):
-            other = constant(other)
+            other = ops.constant(other)
         self.__rdiv__ = self.__rtruediv__
-        return ElementDivide(other, self)
+        return ops.element_divide(other, self)
 
     # Python2 compatibility
     __div__ = __truediv__
     __rdiv__ = __rtruediv__
 
     def __abs__(self):
-        return Abs(self)
+        return ops.abs(self)
 
     def __getitem__(self, so):
         if so.stop == None:
@@ -349,239 +342,6 @@ class ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
     '''
     pass
 
-# importing after defining ComputationNode to work around circular imports
-from cntk.ops.cntk1 import *
-# to have a separate namespace when we want to override below
-from cntk.ops import cntk1 as cntk1_ops
-from .reader import CNTKTextFormatReader
-
-def _tuple_to_cntk_shape(shape):
-    return ':'.join(str(v) for v in shape)
-
-# redefine some operators to work with NumPy and sequences as input
-
-
-def _dense_to_str(data):
-    return ' '.join(data.ravel(order='F').astype(np.str))
-
-def _sparse_to_str(data):
-    # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
-    raise NotImplementedError
-
-
-def _tensor_to_text_format(idx, alias, tensor, has_sequence_dimension=True):
-    '''
-    Converts a NumPy array representing tensor of one input into a format that
-    is readable by `CNTKTextReader`.
-
-    :param `alias`: alias to be used in the temporary file
-    :param `tensor`: a NumPy array having sequence as its innermost dimension
-    '''
-    if not alias:
-        raise ValueError('alias is missing')
-
-    if isinstance(tensor, np.ndarray):
-        to_str = _dense_to_str
-    elif sparse.issparse(tensor):
-        raise ValueError('sparse is not yet supported')
-        #to_str = _sparse_to_str
-    else:
-        raise ValueError('sequence elements have to be of type numpy.ndarray' +
-                ' (dense) or dictionary (sparse), you gave "%s"' % \
-                str(type(tensor)))
-
-    if has_sequence_dimension:
-        num_seq_elements = tensor.shape[0]
-        lines = []
-        for seq_idx in range(0, num_seq_elements):
-            lines.append('%i\t|%s %s'%(idx, alias, to_str(tensor[seq_idx])))
-
-        return '\n'.join(lines)
-    else:
-        return '%i\t|%s %s'%(idx, alias, to_str(tensor))
-
-def _get_input_node(list_of_tensors, has_sequence_dimension, **kw):
-    '''
-    :param list_of_tensors: list of tensors potentially having sequences of
-    different lengths.
-    '''
-
-    # FIXME We need to better manage the context. How can we get hold
-    # of the overall context without having to always pass it
-    # explicitly?
-
-    from cntk.context import get_context
-    import tempfile
-
-    # We have to use NamedTemporaryFile and close it, because the obvious first
-    # choice, mkstemp(), would later fail in cntk.exe because the file would
-    # still be locked.
-    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt',
-                                     dir=get_context().directory, delete=False)
-    tf.close()
-
-    if 'alias' in kw:        
-        alias = kw['alias']
-        del kw['alias']  # don't confuse with constructor's parameters
-        
-    if not alias:
-        # TODO make sure we don't have clashes
-        alias = '_I_%i' % np.random.randint(1000)
-
-    shapes = set()
-    with open(tf.name, 'w') as f:
-        for idx,tensor in enumerate(list_of_tensors):
-            if isinstance(tensor, list):
-                tensor = np.asarray(tensor)
-
-            if has_sequence_dimension:
-                # collecting the shapes ignoring the sequence dimension
-                shapes.add(tensor.shape[1:])
-            else:
-                shapes.add(tensor.shape)
-
-            f.write(_tensor_to_text_format(idx, alias, tensor,
-                has_sequence_dimension) + '\n')
-
-    # ignoring the sequence dimension, all shapes should be equal
-    if len(shapes)!=1:
-        raise ValueError('except for the sequence dimensions all shapes ' +
-                'should be the same - instead we have: %s'%(", ".join(str(s) for s in shapes)))
-
-    # shapes now contains only one shape, which has the sequence dimension
-    # removed.
-    value_shape = shapes.pop()
-
-    cntk_shape = value_shape if value_shape else (1,)
-    
-    node = cntk1_ops.Input(cntk_shape, **kw)
-    node.reader = CNTKTextFormatReader(tf.name, alias)
-        
-    return node
-
-
-def is_tensor_list(data):
-    '''
-    Checks whether the data is a CNTK sequence, which is expressed in Python as
-    a list of varying sized NumPy objects.
-    '''
-    is_list = isinstance(data, list)
-    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
-
-
-def is_tensor(data):
-    '''
-    Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
-    list of NumPy arrays.
-
-    :param `data`: data to check
-    '''
-    if isinstance(data, np.ndarray):
-        return True
-
-    if not isinstance(data, list):
-        return False
-
-    while len(data) > 0:
-        # All but the innermost dimension's values have to be lists
-        try:
-            data[0][0]
-        except:
-            # We reached the innermost dimension
-            break
-
-        if not isinstance(data[0], list):
-            return False
-
-        data = data[0]
-
-    return True
-
-
-def input_reader(value, has_sequence_dimension=True, **kw):
-    '''
-    creates an input node.
-
-    Args:
-        value: is a list of NumPy tensors.  Currently, only dense tensors are supported. Sparse will come soon by the power of scipy.
-        has_sequence_dimension: If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
-        alias: optional the alias to be used when serializing the data into an intermediate file
-        kw: will be passed on to the input operator [TODO: specify most commonly used options]
-
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    '''
-    if is_tensor_list(value) or is_tensor(value):
-        return _get_input_node(value, has_sequence_dimension, **kw)
-    else:
-        raise ValueError('value type is not supported: %s' % type(value))
-
-
-def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform', 
-              init_value_scale=1, value=0, init_from_file_path='', 
-              init_from_literal=None, random_seed=-1):
-    '''
-    creates a parameter tensor node.
-    '''            
-     
-    # FIXME We need to better manage the context. How can we get hold
-    # of the overall context without having to always pass it
-    # explicitly?
-    
-    # if the parameter is initialized from a literal value
-    if (init=='fromLiteral'):        
-        """
-        To be as generic as possible, we 
-         - flatten the data 
-         - initialize a ParameterTensor operator with it
-         - ensure that the graph does not backprob to it.  
-         - Finally we to reshape it.
-        """
-        
-        value = init_from_literal
-        
-        if not (np.isscalar(value) or is_tensor(value)):
-            raise ValueError('value type is not supported: %s' % type(value))
-            
-        if isinstance(value, list) or np.isscalar(value):
-            value = np.asarray(value)
-    
-        if sparse.issparse(value):
-            raise ValueError('only dense data is supported')
-    
-        param_shape = value.shape if value.shape else (1,)
-        literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
-        
-        literal_array = np.reshape(value, literal_shape)        
-    
-        from io import BytesIO
-        s = BytesIO()    
-        np.savetxt(s, literal_array, '%.4f')
-    
-        return cntk1_ops.ParameterTensor(
-            dims=param_shape,
-            learningRateMultiplier=learning_rate_multiplier,
-            init='fromLiteral',
-            initFromLiteral=s.getvalue().decode())
-        
-    return cntk1_ops.ParameterTensor(dims, learning_rate_multiplier, init, 
-                                     init_value_scale, value, init_from_file_path,
-                                     randomSeed=random_seed, var_name=name)
-
-def constant(value, name=None):
-    """
-    It creates constant tensor initialized from a numpy array
-    
-    Args:
-        value: the tensor constant passed as numpy array
-        name: the name of the node in the network
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """    
-    
-    return parameter(name=name, init='fromLiteral', init_from_literal=value,
-                     learning_rate_multiplier=0.0)
-
 def eval(node):        
     """
     It evaluates a node that has taken a numpy array as input. Note that sequences
@@ -595,6 +355,7 @@ def eval(node):
         Times with broadcast of a scalar over a matrix
         >>> print (cntk.eval(cntk.ops.element_times([[-30.,40.], [1.,2.]], 5)))
         #   [array([[[-150., 200.], [5., 10.]]])]        
+
     Args:
         node (cntk.graph.ComputationNode): the node to evaluate        
     Returns:
@@ -624,3 +385,6 @@ def eval(node):
                 else:
                     setattr(node, p, constant(getattr(node, p), name=p))
     return ctx.eval(node)
+
+# At the bottom to avoid circular import
+from . import ops
