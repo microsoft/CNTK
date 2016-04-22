@@ -433,8 +433,8 @@ template class HardmaxNode<double>;
 template <class ElemType>
 class ClipNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerPlate;
+    typedef ComputationNode<ElemType> Base;    
+    UsingComputationNodeMembersBoilerplate;
 
     static const std::wstring TypeName()
     {
