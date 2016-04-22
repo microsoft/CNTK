@@ -27,7 +27,7 @@ command = writeWordAndClassInfo:train:test:write
 decodeModel = 15
 beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 2
+deviceId = 5
 ExpId = 19-$deviceId$-g2p
 #ExpId = 19-4-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
@@ -68,6 +68,7 @@ dumpModelPath = "$modelPath$.2" # model to dump if needed
 ##testFile  = "ptb.test.txt-econ1"
 ##testFile = "ptb.small.train.txt" # test on train, to see whether model makes sense at all
 #startSymbol = "</s>"
+#useCNTKTextFormatReader = false
 
 confVocabSize = 69
 confClassSize = 0
@@ -80,6 +81,15 @@ validFile = "g014b2b.train-dev-1-21.bsf.joint"
 testFile  = "g014b2b.test.bsf.joint"
 #testFile  = "g014b2b.test.bsf.joint.masked"
 startSymbol = "<s>"
+useCNTKTextFormatReader = false
+
+#trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+##trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf"
+##testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+#startSymbol = "<s>"
+#useCNTKTextFormatReader = true
 
 #######################################
 #  network definition                 #
@@ -133,6 +143,13 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             input  = rawInput
             labels = rawInput
         ]
+        else if $useCNTKTextFormatReader$ then [
+            src = SparseInput (29, dynamicAxis=DynamicAxis())
+            tgt = SparseInput (40, dynamicAxis=DynamicAxis())
+            input  = Pass (src)
+            labels = Pass (tgt)
+            # BUGBUG: Sparse/dense conversion
+        ]
         else [
             # we encode input and label as a single input; this splits it into two
             # This dance will become unnecessary once the new Reader API is fully hooked in.
@@ -182,7 +199,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         tanHOut = Tanh (projectedAttentionWindowBroadcast.projectedValue + projectedH) # [attentionDim x beamDepth x attentionSpan]
 
         v = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')                           # [1 x attentionDim]
-        u = v * S(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
+        u = v * /*S*/(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
         # ^^ mask 'v' for purpose of stabiliziation; TODO: don't do that if no stabiliziation
         uValid = u + Log (projectedAttentionWindowBroadcast.valid)    # [1 x beamDepth x attentionSpan]
 
@@ -342,6 +359,28 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 #######################################
 # shared reader definition            #
 #######################################
+
+cntkreader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$trainFile$"
+    randomize="auto"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = 29     # 26 letters plus start, end, apostrophe
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = 40     # 39 phonemes (~AX missing), end symbol (in index 0)
+            format = "sparse"
+        ]
+    ]
+]
 
 reader = [
     file = "$DataDir$/$trainFile$"

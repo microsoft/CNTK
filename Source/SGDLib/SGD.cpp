@@ -139,6 +139,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
 // -----------------------------------------------------------------------
 
 static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
+static void LogCriterion(const wstring& name, const EpochCriterion& crit);
 
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
@@ -491,7 +492,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 #endif
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
         for (size_t j = 0; j < epochEvalErrors.size(); j++)
-            fprintf(stderr, "%ls = %.8f * %d; ", evaluationNodes[j]->NodeName().c_str(), epochEvalErrors[j].Average(), (int)epochEvalErrors[j].second);
+            LogCriterion(evaluationNodes[j]->NodeName(), epochEvalErrors[j]);
         fprintf(stderr, "learningRatePerSample = %.8g; epochTime=%.6gs\n", learnRatePerSample, epochTime);
 #if 0
         // TODO: This was only printed if >1 eval criterion. Why? Needed?
@@ -520,9 +521,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
             let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validatn]", i + 1, (int)m_maxEpochs);
-            for (size_t k = 0; k < vScore.size() && k < 2; k++)
-                LOGPRINTF(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate]", i + 1, (int)m_maxEpochs);
+            for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
+                LogCriterion(cvSetTrainAndEvalNodes[k], vScore[k]);
+                //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
             fprintf(stderr, "\n");
 
             if (m_useCVSetControlLRIfCVExists)
@@ -710,7 +712,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
 static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value);
 
-// log a criterion value
+// log a criterion value in a form like 'av * count; '
 static void LogCriterion(const wstring& name, const EpochCriterion& crit)
 {
     double evalErrorSinceLastLogged =      crit.Average();
