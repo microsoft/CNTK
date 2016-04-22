@@ -151,6 +151,7 @@ SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; 
 # ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
+Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 
@@ -250,13 +251,25 @@ Sequences = [
     # returns a record [ value=..., valid=... ], both being 1-step sequences of [dim x N]. N can optionally be moved to axes >2.
     # This implementation is suboptimal in that it creates copies for the intermediate steps.
     PastValueWindow (N, in, axis=2) = [
+        isLast = Loop.IsLast (in)
+        isLastIndex = PackedIndex (in, Where (isLast))
+        GatherLast (x) = GatherPacked (isLastIndex, x) # 'cond' matches 'x'
+        onesLikeIn = Constants.OnesLike (in)
         delayLine[t:0..N-1] = [     # shift register for encoder, last N inputs
             value = if t == 0
-                    then in        # delay 0: current value
+                    then in         # delay 0: current value
                     else PastValue (0, in, timeStep=t, defaultHiddenActivation=0)
             valid = if t == 0
-                    then Constants.One
-                    else Constants.One - PastValue (1, Constants.ZeroesLike (in), timeStep=t, defaultHiddenActivation=1)
+                    then onesLikeIn   # BUGBUG: if I say Constant.Ones here, it outputs 0. Ones has no MBLayout
+                    else PastValue (1, onesLikeIn, timeStep=t, defaultHiddenActivation=0)
+
+
+            TraceDenseTransposed (h, what) = h
+            #    Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = true ; precisionFormat = ".4" ])
+
+
+            lastValue = TraceDenseTransposed(  GatherLast (value)  ,'dvalue')  # [i, delay]
+            lastValid = TraceDenseTransposed(  GatherLast (valid)  ,'dvalid')  # [i, delay]
         ]
         # delayLine[t].value = value of t steps in the past
         # delayLine[t].valid = true if we had a value t steps in the past
@@ -264,8 +277,8 @@ Sequences = [
             if      axis == 2 then SplitDimension (x, 1, N)
             else if axis > 2  then TransposeDimensions (SplitDimension (x, 1, N), 2, axis)
             else Fail ("PastValueWindow: axis>2 required.") # BUGBUG: We also require that input is a single vector. Address later.
-        value = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].value))))  # [i, delay]
-        valid = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].valid))))  # [i, delay]
+        value = SplitStack (RowStack (array[0..N-1](t=>delayLine[t].lastValue)))  # [i, delay]
+        valid = SplitStack (RowStack (array[0..N-1](t=>delayLine[t].lastValid)))  # [i, delay]
     ]
 
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
@@ -499,16 +512,18 @@ RNNs =
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
         [
+            v    = if i == 0 then input    else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer)
+            vDim = if i == 0 then inputDim else                       layers[i-1].dim
             fwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
-                                  if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
+                                  v, inputDim=vDim,
                                   previousHook=previousHook1,
                                   enableSelfStabilization=useStabilizer)
             bwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
-                                  if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
+                                  v, inputDim=vDim,
                                   previousHook=nextHook1,
                                   enableSelfStabilization=useStabilizer)
-            h = RowStack (fwd.h : bwd.h)
-            c = RowStack (fwd.c : bwd.c)
+            h = Splice ((fwd.h : bwd.h), axis=1)
+            c = Splice ((fwd.c : bwd.c), axis=1)
             dim = layerDims[i] * 2  # output dimension
         ]
     ].layers

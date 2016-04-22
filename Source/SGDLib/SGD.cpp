@@ -492,7 +492,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
         for (size_t j = 0; j < epochEvalErrors.size(); j++)
             fprintf(stderr, "%ls = %.8f * %d; ", evaluationNodes[j]->NodeName().c_str(), epochEvalErrors[j].Average(), (int)epochEvalErrors[j].second);
-        fprintf(stderr, "learningRatePerSample = %.8g; EpochTime=%.6gs\n", learnRatePerSample, epochTime);
+        fprintf(stderr, "learningRatePerSample = %.8g; epochTime=%.6gs\n", learnRatePerSample, epochTime);
 #if 0
         // TODO: This was only printed if >1 eval criterion. Why? Needed?
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
