@@ -1946,7 +1946,7 @@ protected:                                                                      
     using Base::NodeDescription;                                                                                                                         \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
-    using Base::FormatOperationPrototype;                                                                                                               \
+    using Base::FormatOperationPrototype;                                                                                                                \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
     using Base::ReleaseMatrixToPool;                                                                                                                     \
@@ -1963,7 +1963,9 @@ protected:                                                                      
     using Base::Validate;                                                                                                                                \
     using Base::ValidateBinaryReduce;                                                                                                                    \
     using Base::ValidateBinaryZip;                                                                                                                       \
+    using Base::ValidateNaryZip;                                                                                                                         \
     using Base::ValidateInferBinaryInputDims;                                                                                                            \
+    using Base::ValidateInferNaryInputDims;                                                                                                              \
     using Base::ValidateInferInputDimsFrom;                                                                                                              \
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateUnaryReduce;                                                                                                                     \
