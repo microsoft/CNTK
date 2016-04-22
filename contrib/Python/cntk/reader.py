@@ -119,6 +119,8 @@ class CNTKTextFormatReader(AbstractReader):
         """                
         self.filename = filename
         self.input_alias = input_alias
+        if format not in {'sparse', 'dense'}:
+            raise ValueError('format "%s" is not supported - only "sparse" or "dense"'%format)
         self.format = format
         self.input_dim = None # to be inferred from the input node.
 
