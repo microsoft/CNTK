@@ -220,6 +220,7 @@ class ComputationNode(object):
                                     child_var, dep_inputs = reconciled_cache[(pv, first_unreconciled_input)]
                                 else:
                                     unrec_pv = pv
+                                    from .ops.cntk1 import ReconcileMBLayout
                                     pv = ReconcileMBLayout(unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
                                         input_reader, desc, unrolled_nodes, inputs, readers,
