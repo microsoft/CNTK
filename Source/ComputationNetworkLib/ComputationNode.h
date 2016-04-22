@@ -1963,7 +1963,9 @@ protected:                                                                      
     using Base::Validate;                                                                                                                                \
     using Base::ValidateBinaryReduce;                                                                                                                    \
     using Base::ValidateBinaryZip;                                                                                                                       \
+    using Base::ValidateNaryZip;                                                                                                                         \
     using Base::ValidateInferBinaryInputDims;                                                                                                            \
+    using Base::ValidateInferNaryInputDims;                                                                                                              \
     using Base::ValidateInferInputDimsFrom;                                                                                                              \
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateUnaryReduce;                                                                                                                     \
