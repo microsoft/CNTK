@@ -218,7 +218,7 @@ Boolean = [
 
 	# select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal) =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) ] /*plus the function args*/
+    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) /*plus the function args*/ ]
 ]
 
 ##############################################################################
