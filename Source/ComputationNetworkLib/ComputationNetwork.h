@@ -189,8 +189,6 @@ public:
 
 private:
     template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
-    template <class ElemType>
-    void AddToMemorySharingStructure(std::map <const Matrix<ElemType>*, std::set<const wstring>> & memSharingStructure, const Matrix<ElemType>* matrix, const wstring tag);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 

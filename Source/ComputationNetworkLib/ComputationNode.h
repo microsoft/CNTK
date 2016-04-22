@@ -1425,7 +1425,7 @@ public:
     virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
     {
         std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
-        matrixInfo.insert(make_pair(&Value(), NodeName() + L" Value" + msra::strfun::utf16(ShapeDescription())));
+        matrixInfo.insert(make_pair(&Value(),    NodeName() + L" Value"    + msra::strfun::utf16(ShapeDescription())));
         matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
         return matrixInfo;
     }

@@ -806,40 +806,36 @@ void ComputationNetwork::MarkValueNonSharableNodes()
 template <class ElemType>
 void ComputationNetwork::PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes)
 {
-    std::map <const Matrix<ElemType>*, std::set<const wstring>> memSharingStructure;
+    std::map <const Matrix<ElemType>*, std::set<wstring>> memSharingStructure;
     for (auto& n : nodes)
     {
         ComputationNode<ElemType>* node = n->As<ComputationNode<ElemType>>();
         std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo = node->GetMatrixInfo();
         for (const auto&item : matrixInfo)
         {
-            AddToMemorySharingStructure(memSharingStructure, item.first, item.second);
+            const Matrix<ElemType>* matrix = item.first;
+            if (memSharingStructure.find(matrix) == memSharingStructure.end())
+                memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<wstring>>(matrix, std::set<wstring>()));
+
+            std::set<wstring>& s = memSharingStructure[matrix];
+            s.insert(item.second);
         }
     }
 
     fprintf(stderr, "\nMemory Sharing Structure:\n\n");
     for (const auto& item : memSharingStructure)
     {
-        const std::set<const wstring>& s = item.second;
-        fprintf(stderr, "%x: {", (size_t)item.first);
-        for (const auto& tag: s)
+        const std::set<wstring>& s = item.second;
+        fprintf(stderr, "%p: {", item.first);
+        for (const auto& memShareInfo: s)
         {
-            fprintf(stderr, "[%ls] ", tag.c_str());
+            fprintf(stderr, "[%ls] ", memShareInfo.c_str());
         }
         fprintf(stderr, "}\n");
     }
     fprintf(stderr, "\n");
 }
 
-template <class ElemType>
-void ComputationNetwork::AddToMemorySharingStructure(std::map <const Matrix<ElemType>*, std::set<const wstring>> & memSharingStructure, const Matrix<ElemType>* matrix, const wstring tag)
-{
-    if (memSharingStructure.find(matrix) == memSharingStructure.end())
-        memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<const wstring>>(matrix, std::set<const wstring>()));
-    
-    std::set<const wstring>& s = memSharingStructure[matrix];
-    s.insert(tag);
-}
 
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.
