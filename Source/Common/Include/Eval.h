@@ -36,6 +36,9 @@ enum NodeGroup
 };
 
 // IEvaluateModel - interface used by decoders and other components that need just evaluator functionality in DLL form
+// NOTICE: This interface is a public interface for evaluating models in CNTK. 
+//         Changes to this interface may affect other projects, such as Argon and LatGen,
+//         and therefore need to be communicated with such groups.
 template <class ElemType>
 class IEvaluateModel // Evaluate Model Interface
 {

@@ -219,8 +219,6 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 {
     auto it = m_sequencePtrMap.find(sequenceId);
     assert(it != m_sequencePtrMap.end());
-//TODO: Remove pragma once new randomizer is in master.
-#pragma omp atomic
     ++m_sequenceRequestCount;
     result.reserve(it->second.size());
     copy(it->second.begin(), it->second.end(), back_inserter(result));
@@ -230,52 +228,47 @@ template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 {
     ChunkPtr chunk;
-    //TODO: Remove pragma once new randomizer is in master.
-#pragma omp critical
+    auto it = m_chunkCache.find(chunkId);
+    if (it != m_chunkCache.end())
     {
-        auto it = m_chunkCache.find(chunkId);
-        if (it != m_chunkCache.end())
-        {
-            chunk = it->second;
-        }
-        else
-        {
-            const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
-            auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
+        chunk = it->second;
+    }
+    else
+    {
+        const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
+        auto textChunk = make_shared<TextDataChunk>(chunkDescriptor);
 
-            attempt(5, [this, &textChunk, &chunkDescriptor]()
-            {
-                LoadChunk(textChunk, chunkDescriptor);
-            });
+        attempt(5, [this, &textChunk, &chunkDescriptor]()
+        {
+            LoadChunk(textChunk, chunkDescriptor);
+        });
 
-            if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize)
+        if (m_chunkCacheSize > 0 && m_chunkCache.size() == m_chunkCacheSize)
+        {
+            size_t candidateId = SIZE_MAX;
+            size_t minNumSequencesLeft = SIZE_MAX;
+            for (const auto& it : m_chunkCache)
             {
-                size_t candidateId = SIZE_MAX;
-                size_t minNumSequencesLeft = SIZE_MAX;
-                for (const auto& it : m_chunkCache)
+                const auto& chunk = *(it.second.get());
+                size_t numSequencesUsed = 0;
+                numSequencesUsed += chunk.m_sequenceRequestCount;
+                size_t numSequencesLeft = chunk.m_sequences.size() - numSequencesUsed;
+                if (numSequencesLeft < minNumSequencesLeft)
                 {
-                    const auto& chunk = *(it.second.get());
-                    size_t numSequencesUsed = 0;
-#pragma omp atomic
-                    numSequencesUsed += chunk.m_sequenceRequestCount;
-                    size_t numSequencesLeft = chunk.m_sequences.size() - numSequencesUsed;
-                    if (numSequencesLeft < minNumSequencesLeft)
-                    {
-                        minNumSequencesLeft = numSequencesLeft;
-                        candidateId = it.first;
-                    }
+                    minNumSequencesLeft = numSequencesLeft;
+                    candidateId = it.first;
                 }
-                assert(candidateId != SIZE_MAX);
-                m_chunkCache.erase(candidateId);
             }
-
-            if (m_chunkCacheSize > 0)
-            {
-                m_chunkCache[chunkId] = textChunk;
-            }
-
-            chunk = textChunk;
+            assert(candidateId != SIZE_MAX);
+            m_chunkCache.erase(candidateId);
         }
+
+        if (m_chunkCacheSize > 0)
+        {
+            m_chunkCache[chunkId] = textChunk;
+        }
+
+        chunk = textChunk;
     }
     return chunk;
 }

@@ -832,7 +832,7 @@ private:
 
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
-    void PlotNetworkTopology(const std::wstring outputFile);
+    void PlotNetworkTopology(const std::wstring& outputFile);
 
     // -----------------------------------------------------------------------
     // scripting integration
