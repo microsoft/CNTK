@@ -236,7 +236,10 @@ public:
 
     void SetValue(const ElemType v);
     void SetValue(const DeviceBoundNumber<ElemType>& db_number);
-    void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
+    //void SetValue       (const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
+    void AssignDeepClone_OrValues_Of(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR);
+    void AssignDeepCloneOf(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR);
+    void AssignValuesOf   (const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR);
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});

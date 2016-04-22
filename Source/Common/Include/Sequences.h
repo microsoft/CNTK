@@ -130,15 +130,15 @@ struct MBLayout
         m_numFramesDeclared = other->m_numFramesDeclared;
         m_numGapFrames = other->m_numGapFrames;
 
-        m_distanceToStart.SetValue(other->m_distanceToStart);
-        m_distanceToEnd.SetValue(other->m_distanceToEnd);
+        m_distanceToStart.AssignDeepCloneOf(other->m_distanceToStart);
+        m_distanceToEnd.AssignDeepCloneOf(other->m_distanceToEnd);
 
         m_distanceToNearestStart = other->m_distanceToNearestStart;
         m_distanceToNearestEnd = other->m_distanceToNearestEnd;
 
         m_timeStepHasGap = other->m_timeStepHasGap;
 
-        m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
+        m_columnsValidityMask.AssignDeepCloneOf(other->m_columnsValidityMask);
         m_writable = other->m_writable;
 
         if (!keepName)

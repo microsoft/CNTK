@@ -422,9 +422,11 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
             // update if LearnableParameter
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
+#if 0
             // and verify once again
             if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
                 InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
+#endif
         }
     }
 
@@ -546,7 +548,7 @@ public:
         {
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
-            m_rightGradient->SetValue(sliceOutputGrad);
+            m_rightGradient->AssignDeepCloneOf(sliceOutputGrad);
             m_rightGradient->ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
             sliceInput1Grad += *m_rightGradient;
         }
@@ -564,7 +566,7 @@ public:
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        sliceOutputValue.SetValue(sliceInput1Value);
+        sliceOutputValue.AssignValuesOf(sliceInput1Value);
         sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
     }
 
@@ -611,8 +613,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-            node->m_innerproduct->SetValue(*m_innerproduct);
-            node->m_rightGradient->SetValue(*m_rightGradient);
+            node->m_innerproduct->AssignDeepCloneOf(*m_innerproduct);
+            node->m_rightGradient->AssignDeepCloneOf(*m_rightGradient);
         }
     }
     // request matrices that are needed for gradient computation
@@ -841,11 +843,11 @@ public:
             m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
 
         m_temp->ElementMultiplyWith(ValueFor(fr));
-        m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
+        m_rightTerm->AssignDeepCloneOf(Input(inputIndex)->ValueFor(fr));
         m_rightTerm->RowElementMultiplyWith(*m_temp);
 
         m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-        m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
+        m_leftTerm->AssignDeepCloneOf(Input(1 - inputIndex)->ValueFor(fr));
         m_leftTerm->RowElementMultiplyWith(*m_temp);
 
         *m_leftTerm -= *m_rightTerm;
@@ -889,11 +891,11 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-            node->m_invNorm0->SetValue(*m_invNorm0);
-            node->m_invNorm1->SetValue(*m_invNorm1);
-            node->m_leftTerm->SetValue(*m_leftTerm);
-            node->m_rightTerm->SetValue(*m_rightTerm);
-            node->m_temp->SetValue(*m_temp);
+            node->m_invNorm0->AssignDeepCloneOf(*m_invNorm0);
+            node->m_invNorm1->AssignDeepCloneOf(*m_invNorm1);
+            node->m_leftTerm->AssignDeepCloneOf(*m_leftTerm);
+            node->m_rightTerm->AssignDeepCloneOf(*m_rightTerm);
+            node->m_temp->AssignDeepCloneOf(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1207,12 +1209,12 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
-            node->m_invNorm0->SetValue(*m_invNorm0);
-            node->m_invNorm1->SetValue(*m_invNorm1);
-            node->m_invNormSquare->SetValue(*m_invNormSquare);
-            node->m_leftTerm->SetValue(*m_leftTerm);
-            node->m_rightTerm->SetValue(*m_rightTerm);
-            node->m_temp->SetValue(*m_temp);
+            node->m_invNorm0->AssignDeepCloneOf(*m_invNorm0);
+            node->m_invNorm1->AssignDeepCloneOf(*m_invNorm1);
+            node->m_invNormSquare->AssignDeepCloneOf(*m_invNormSquare);
+            node->m_leftTerm->AssignDeepCloneOf(*m_leftTerm);
+            node->m_rightTerm->AssignDeepCloneOf(*m_rightTerm);
+            node->m_temp->AssignDeepCloneOf(*m_temp);
         }
     }
     // request matrices needed to do node function value evaluation

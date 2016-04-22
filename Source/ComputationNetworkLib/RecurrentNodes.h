@@ -44,7 +44,7 @@ public:
     }
     void CacheState(const Matrix<ElemType>& cachedActivity)
     {
-        m_cachedActivity.SetValue(cachedActivity);
+        m_cachedActivity.AssignDeepClone_OrValues_Of(cachedActivity);
         m_isEmpty = false;
     }
     void ExportDelayedMBLayout(MBLayoutPtr& pMBLayout)
@@ -255,7 +255,7 @@ public:
         //  - we don't need to keep anything if all sequences are closed (sentence end)
         //    This condition includes full-sequence mode.
         // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-        m_delayedValue.SetValue(Input(0)->Value());
+        m_delayedValue.AssignDeepCloneOf(Input(0)->Value());
         if (!m_delayedActivationMBLayout)
             m_delayedActivationMBLayout = make_shared<MBLayout>();
         m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
@@ -321,7 +321,7 @@ public:
                         inp = Input(0)->ValueFor(frDelayed.Sequence(id));
                     // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
-                    out.SetValue(inp);
+                    out.AssignValuesOf(inp);
                 }
             }
         }
@@ -358,7 +358,7 @@ public:
                 inp = Input(0)->ValueFor(frDelayed);
             // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
-            out.SetValue(inp);
+            out.AssignValuesOf(inp);
         }
     }
 
@@ -380,7 +380,7 @@ public:
             auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
             node->m_timeStep = m_timeStep;
             node->m_initialActivationValue = m_initialActivationValue;
-            node->m_delayedValue.SetValue(m_delayedValue);
+            node->m_delayedValue.AssignDeepClone_OrValues_Of(m_delayedValue);
             if (m_delayedActivationMBLayout)
                 (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
             else

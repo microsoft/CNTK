@@ -150,12 +150,12 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).SetValue(Input(0)->ValueFor(fr));
+        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(inputIndex)->GradientFor(fr).SetValue(GradientFor(fr));
+        Input(inputIndex)->GradientFor(fr).AssignValuesOf(GradientFor(fr));
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -252,7 +252,7 @@ public:
                             Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
         // copy the data from 'dataInput'
-        ValueFor(fr).SetValue(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
+        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
 
@@ -1077,7 +1077,7 @@ public:
         // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
         if (!m_pMBLayout || factor() == 1)
         {
-            Value().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
+            Value().Reshaped(newCols * m_numTargetRows, 1).AssignValuesOf(Input(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
         }
         // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
         else

@@ -219,7 +219,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SoftmaxNodeBase<ElemType>>(nodeP);
-            node->m_gradientTemp->SetValue(*m_gradientTemp);
+            node->m_gradientTemp->AssignDeepCloneOf(*m_gradientTemp);
         }
     }
 
@@ -291,7 +291,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
-            node->m_diff->SetValue(*m_diff);
+            node->m_diff->AssignDeepCloneOf(*m_diff);
         }
     }
     // request matrices that are needed for gradient computation
@@ -358,7 +358,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
-            node->m_softmax->SetValue(*m_softmax);
+            node->m_softmax->AssignDeepCloneOf(*m_softmax);
         }
     }
     // request matrices that are needed for gradient computation
