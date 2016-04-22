@@ -30,7 +30,7 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
     // e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0
 
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
-    colPos.SetValue(sentenceBegin);                                                     // -1 0 1
+    colPos.AssignDeepCloneOf(sentenceBegin);                                                     // -1 0 1
     colPos.InplaceTruncateBottom(1 << 0 /*(int)MinibatchPackingFlags::SequenceStart*/); // TODO: these flags no longer exist, this test probably no longer applies
     Matrix<ElemType>::Scale((ElemType) -1.0, colPos);
     colPos += 0; // (int)MinibatchPackingFlags::None; // TODO: these flags no longer exist, this test probably no longer applies
@@ -63,7 +63,7 @@ void rnnForwardPropSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<Ele
             Matrix<ElemType> colSeg((DEVICEID_TYPE) functionValues.GetDeviceId());
             colSeg.Resize(mNbr, mNbr);
             colSeg.SetValue(0);
-            colSegPastActivity.SetValue(colBegin);
+            colSegPastActivity.AssignDeepCloneOf(colBegin);
             colSegPastActivity.InplaceTruncateBottom(1 << 0 /*(int)MinibatchPackingFlags::SequenceStart*/); // TODO: these flags no longer exist, this test probably no longer applies
             colSeg.SetDiagonalValue(colSegPastActivity);
             Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
@@ -120,7 +120,7 @@ void oldRNNForwardPropSRP(const size_t timeIdxInSeq, const int delay, const bool
             inp = pastActivity.ColumnSlice(d + indexInBatch, 1);
         else
             inp = inputFunctionValues.ColumnSlice(d + indexInBatch, 1);
-        out.SetValue(inp);
+        out.AssignValuesOf(inp);
     }
 }
 

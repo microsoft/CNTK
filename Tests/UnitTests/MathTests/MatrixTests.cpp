@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
     BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
 
-    b.SetValue(a);
+    b.AssignDeepCloneOf(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -107,7 +107,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
     b(2, 3) = 9;
     BOOST_CHECK_EQUAL(b(2, 3), 9);
 
-    b.SetValue(a);
+    b.AssignDeepCloneOf(a);
     BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
     BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
     BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
@@ -234,7 +234,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
 
     // void SetValue(const Matrix<ElemType>& deepCopyFrom);
     SingleMatrix b(c_deviceIdZero);
-    b.SetValue(a);
+    b.AssignDeepCloneOf(a);
     foreach_coord (i, j, b)
     {
         BOOST_CHECK_EQUAL(v, b(i, j));
@@ -545,7 +545,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE4));
 
     SingleMatrix m4 = SingleMatrix::Zeros(2, 3, c_deviceIdZero);
-    m4.SetValue(m4.AddElementProductOf(m0, m00));
+    m4.AssignDeepCloneOf(m4.AddElementProductOf(m0, m00));
     BOOST_CHECK(m4.IsEqualTo(m1, c_epsilonFloatE4));
 
     m3 = m0 ^ 4;
@@ -558,15 +558,15 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 1296;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3 ^= 4;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.ElementMultiplyWith(m00);
     BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE3));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.ElementInverse();
     BOOST_CHECK(m3.IsEqualTo(m00, c_epsilonFloatE3));
 
@@ -580,7 +580,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2.ElementMultiplyWith(m00);
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceSigmoid();
     m2(0, 0) = 0.7311f;
     m2(0, 1) = 0.8808f;
@@ -590,7 +590,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 0.9975f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceTanh();
     m2(0, 0) = 0.7616f;
     m2(0, 1) = 0.9640f;
@@ -600,7 +600,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 1.0000f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceLogSoftmax(true);
     m3.InplaceExp();
     m2(0, 0) = 0.0474f;
@@ -611,7 +611,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 0.9526f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceLogSoftmax(false);
     m3.InplaceExp();
     m2(0, 0) = 0.0900f;
@@ -622,7 +622,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 0.6652f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceHardmax(true);
     m2(0, 0) = 0.0f;
     m2(0, 1) = 0.0f;
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 1.0f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceSqrt();
     m2(0, 0) = 1.0f;
     m2(0, 1) = 1.4142f;
@@ -642,7 +642,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 2.4495f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceExp();
     m2(0, 0) = 2.7183f;
     m2(0, 1) = 7.3891f;
@@ -652,7 +652,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 403.4288f;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceExp();
     m2(0, 0) = 2.7183f;
     m2(0, 1) = 7.3891f;
@@ -665,7 +665,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m3.InplaceLog();
     BOOST_CHECK(m3.IsEqualTo(m0, c_epsilonFloatE4));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceTruncateBottom(2);
     m2(0, 0) = 2;
     m2(0, 1) = 2;
@@ -675,7 +675,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
     m2(1, 2) = 6;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
 
-    m3.SetValue(m0);
+    m3.AssignDeepCloneOf(m0);
     m3.InplaceTruncateTop(4);
     m2(0, 0) = 1;
     m2(0, 1) = 2;
@@ -884,7 +884,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnSlice, RandomSeedFixture)
     cg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
     Matrix<float> dg(k, m, c_deviceIdZero);
-    dg.SetValue(cg);
+    dg.AssignValuesOf(cg);
 
     Matrix<float>::MultiplyAndAdd(ag, false, bg, false, dg);
 
