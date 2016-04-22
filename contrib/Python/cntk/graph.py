@@ -323,7 +323,7 @@ class ComputationNode(object):
         '''
         var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
             self._to_config(input_reader={},
-					description=[], 
+                    description=[], 
                     unrolled_nodes={},
                     inputs=set(),
                     readers=set(), 
