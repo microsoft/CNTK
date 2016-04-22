@@ -422,8 +422,10 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
-
-// 'If' Node. Similar if (a ? b : c). If first input is !=0 return second input, else third
+// -----------------------------------------------------------------------
+// If (flag, ifValue, elseValue)
+// -----------------------------------------------------------------------
+// Similar to C's ternary operator "flag ? ifValue : elseValue". If first input is !=0 return second input, else third
 template <class ElemType>
 class IfNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
@@ -442,13 +444,7 @@ public:
     {
     }
 
-#if DUMPOUTPUT
-    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return true; }
-#else
-    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return false; }
-#endif
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/)  const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/)  const override { return true; }
 
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
@@ -480,7 +476,9 @@ public:
         auto input0        = Input(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
-        // Do we need some reductions like in same method of BinaryElementWiseNode??
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
 
         if (inputIndex == 1)
         {
