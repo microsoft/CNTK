@@ -863,38 +863,29 @@ The dimension reduced matrix consisting of the maximum value within each pooling
 
 This function is often associated with Convolution() operations.
 
-### Delay
+### PastValue, FutureValue
 
-Delay node used in recurrent networks, allows creation of a loop in the convolutional network that will repeat a specified number of times.
+Used to get the past or future value of a node. It is most often used to create recurrent networks. 
 
-`Delay(rows, [cols], delayNode, delayTime=1, needGradient=true, defaultHiddenActivity=0.1)`
+```
+PastValue(rows, cols, m, [timeStep=1, defaultHiddenActivity=0.1])
+FutureValue(rows, cols, m, [timeStep=1, defaultHiddenActivity=0.1])
+```
 
 #### Parameters
 
-`cvweight` – convolution weight matrix, it has the dimensions of \[outputChannels, kernelWidth \* kernelHeight \* inputChannels\]
+`rows` - the number of rows in the input matrix. This parameter is needed be- cause under some loopy conditions the dimensions cannot be automatically inferred from the input matrix.
 
-`kernelWidth` – width of the kernel
+`cols` - the number of columns in the input matrix.
 
-`kernelHeight` – height of the kernel
+`m` - input matrix from which the past or future value is obtained. Each col- umn is a sample. The samples may be from different utterances as explained in Chapter 2.
 
-`outputChannels` – number of output channels
+#### Optional Paramters
 
-`horizontalSubsample` – subsamples in the horizontal direction
+`timeStep, delayTime` - the amount of time steps look into past or future. Default is 1.
 
-`verticalSubsample` – subsamples in the vertical direction
-
-#### Optional Parameters
-
-`delayTime` – \[default = 1\] the amount of delay that will be introduced (number of times the loop will happen)
-
-`needGradient` – \[default = true\] does the gradient need to be computed for this node
-
-`defaultHiddenActivity` – \[default = 0.1\] the numerical amount for the defaultHiddenActivity
+`defaultHiddenActivity,defaultPastValue`- thedefaultvalue to use if the past or future values are not available. Default is 0.1.
 
 #### Returns
 
-The results of the completed Delay loop
-
-#### Notes
-
-This node is used in recurrent networks, where a delay is introduced to examine values from a previous time, such as the prior value (t-1). This has the affect of creating a loop in the computational network that will repeat delayTime number of iterations.
+The resulting matrix has the same dimension as that of the input matrix.
