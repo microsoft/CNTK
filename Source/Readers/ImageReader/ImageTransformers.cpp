@@ -609,4 +609,61 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ColorTransformer::Initialize(TransformerPtr next, const ConfigParameters &readerConfig)
+{
+    ImageTransformerBase::Initialize(next, readerConfig);
+
+    auto featureStreamIds = GetAppliedStreamIds();
+
+    if (featureStreamIds.size() != 1)
+    {
+        RuntimeError("Only a single feature stream is supported.");
+    }
+
+    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
+}
+
+void ColorTransformer::InitFromConfig(const ConfigParameters &config)
+{
+    m_brightnessRadius = config(L"brightnessRadius", 0);
+    m_contrastRadius = config(L"contrastRadius", 0);
+    m_saturationRadius = config(L"saturationRadius", 0);
+}
+
+void ColorTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+
+    if (m_brightnessRadius == 0 && m_contrastRadius == 0 && m_saturationRadius == 0)
+        return;
+
+    if (mat.type() == CV_64FC(mat.channels()))
+        Apply<double>(mat);
+    else if (mat.type() == CV_32FC(mat.channels()))
+        Apply<float>(mat);
+    else
+        RuntimeError("Unsupported type");
+}
+
+template <typename ElemType>
+void ColorTransformer::Apply(cv::Mat &mat)
+{
+    auto seed = GetSeed();
+    auto rng = m_rngs.pop_or_create(
+        [seed]()
+    {
+        return std::make_unique<std::mt19937>(seed);
+    });
+
+    if (m_brightnessRadius > 0)
+    {
+        std::uniform_real_distribution<ElemType> d(-m_brightnessRadius, m_brightnessRadius);
+        mat *= ((ElemType)1 - d(*rng));
+    }
+
+    m_rngs.push(std::move(rng));
+}
+
 }}}

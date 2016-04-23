@@ -74,7 +74,7 @@ Train=[
             jitterType="UniRatio"
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
-            interpolations="Linear"
+            interpolations="cubic"
             # Intensity jittering: enabled if file is specified. 
             # The file stores 1x3 vector (eigenvalues) and 3x3 matrix (eigenvectors) in OpenCV XML format.
             intensityFile="$ConfigDir$/ImageNet1K_intensity.xml"

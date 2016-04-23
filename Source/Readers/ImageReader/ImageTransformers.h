@@ -23,16 +23,16 @@ class ImageTransformerBase : public TransformerBase
 {
 public:
     // Initializes the transformer.
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual const std::vector<StreamId> &GetAppliedStreamIds() const override
+    const std::vector<StreamId> &GetAppliedStreamIds() const override
     {
         return m_appliedStreamIds;
     }
 
-    virtual const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
+    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
     {
         return m_outputStreams;
     }
@@ -66,11 +66,11 @@ private:
 class CropTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class CropType
@@ -106,12 +106,12 @@ private:
 class ScaleTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 private:
     void InitFromConfig(const ConfigParameters &config);
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
@@ -128,11 +128,11 @@ private:
 class MeanTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 private:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
     cv::Mat m_meanImg;
@@ -142,16 +142,15 @@ private:
 class TransposeTransformer : public TransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual const std::vector<StreamId>& GetAppliedStreamIds() const override
+    const std::vector<StreamId>& GetAppliedStreamIds() const override
     {
         return m_appliedStreamIds;
     }
 
-    virtual const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
+    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
     {
         return m_outputStreams;
     }
@@ -178,17 +177,40 @@ private:
 class IntensityTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 private:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
     double m_stdDev;
+    cv::Mat m_eigVal;
+    cv::Mat m_eigVec;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+};
+
+// Color jittering transform based on the paper: http://arxiv.org/abs/1312.5402
+// In short, the transform randomly changes contrast, brightness and color of the image.
+class ColorTransformer : public ImageTransformerBase
+{
+public:
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+
+private:
+    void Apply(size_t id, cv::Mat &mat) override;
+    void InitFromConfig(const ConfigParameters &config);
+
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    double m_brightnessRadius;
+    double m_contrastRadius;
+    double m_saturationRadius;
+
     cv::Mat m_eigVal;
     cv::Mat m_eigVec;
 

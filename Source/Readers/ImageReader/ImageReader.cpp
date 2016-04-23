@@ -59,8 +59,11 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     auto scaler = std::make_shared<ScaleTransformer>();
     scaler->Initialize(cropper, config);
 
+    auto color = std::make_shared<ColorTransformer>();
+    color->Initialize(scaler, config);
+
     auto intensity = std::make_shared<IntensityTransformer>();
-    intensity->Initialize(scaler, config);
+    intensity->Initialize(color, config);
 
     auto mean = std::make_shared<MeanTransformer>();
     mean->Initialize(intensity, config);
