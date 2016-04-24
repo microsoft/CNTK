@@ -12,7 +12,8 @@
 #include "latticearchive.h"
 #include "msra_mgram.h" // for MLF reading for numer lattices
 #include <stdio.h>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <vector>
 #include <string>
 #include <set>

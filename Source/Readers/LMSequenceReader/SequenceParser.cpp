@@ -7,7 +7,8 @@
 
 #include "stdafx.h"
 #include <stdexcept>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "Basics.h"
 #include "SequenceParser.h"
 #include "fileutil.h"

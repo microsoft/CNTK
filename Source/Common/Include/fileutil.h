@@ -26,7 +26,8 @@
 #include <functional>
 #include <cctype>
 #include <errno.h>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <assert.h>
 #include <string.h>  // for strerror()
 #include <stdexcept> // for exception

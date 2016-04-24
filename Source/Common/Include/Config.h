@@ -7,7 +7,8 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 using namespace std;
 

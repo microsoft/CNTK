@@ -9,7 +9,8 @@
 #include "DataReader.h"
 #include "BinaryReader.h"
 #include <limits.h>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

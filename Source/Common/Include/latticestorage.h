@@ -10,7 +10,8 @@
 #include "Basics.h"
 #include <string> // for the error message in checkoverflow() only
 #include <stdexcept>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <cstdio>
 
 #undef INITIAL_STRANGE // [v-hansu] intialize structs to strange values

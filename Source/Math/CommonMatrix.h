@@ -15,7 +15,8 @@
 
 #include "Basics.h"
 #include <string>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <memory>
 
 #pragma warning( disable: 4251 )

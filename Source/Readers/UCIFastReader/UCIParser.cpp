@@ -9,7 +9,8 @@
 #include "Basics.h"
 #include "UCIParser.h"
 #include <stdexcept>
-#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #if WIN32
 #define ftell64 _ftelli64
