@@ -493,7 +493,7 @@ Parameters =
 RNNs =
 [
     # LSTMP -- LSTM function with projection and self-stabilization
-    # Projection it enabled by passing different values for outputDim and cellDim.
+    # Projection is enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
