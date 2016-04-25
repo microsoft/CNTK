@@ -58,7 +58,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     argvector<ConfigValue> inputs = cfg("inputs");
     if (inputs.size() != 1)
     {
-        LogicError("HTKDataDeserializer supports a single input stream.");
+        LogicError("MLFDataDeserializer supports a single input stream.");
     }
 
     ConfigParameters input = inputs.front();

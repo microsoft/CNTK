@@ -19,7 +19,7 @@
 #include "NoRandomizer.h"
 #include "FramePacker.h"
 #include "SequencePacker.h"
-#include "BpttPacker.h"
+#include "TruncatedBpttPacker.h"
 #include "HeapMemoryProvider.h"
 #include "CorpusDescriptor.h"
 
@@ -150,10 +150,10 @@ bool CompositeDataReader::GetMinibatch(StreamMinibatchInputs& matrices)
 
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
-    int deviceId = matrices.begin()->second->GetDeviceId();
+    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
     for (auto mx : matrices)
     {
-        if (mx.second->GetDeviceId() != deviceId)
+        if (mx.second.matrix->GetDeviceId() != deviceId)
         {
             assert(false);
         }
@@ -189,13 +189,13 @@ bool CompositeDataReader::GetMinibatch(StreamMinibatchInputs& matrices)
             if (m_precision == "float")
             {
                 auto* data = reinterpret_cast<const float*>(stream->m_data);
-                matrices.GetInputMatrix<float>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<float*>(data), matrixFlagNormal);
+                matrices.GetInputMatrix<float>(mx.first).SetValue(rowNumber, columnNumber, mx.second.matrix->GetDeviceId(), const_cast<float*>(data), matrixFlagNormal);
             }
             else
             {
                 assert(m_precision == "double");
                 auto* data = reinterpret_cast<const double*>(stream->m_data);
-                matrices.GetInputMatrix<double>(mx.first).SetValue(rowNumber, columnNumber, mx.second->GetDeviceId(), const_cast<double*>(data), matrixFlagNormal);
+                matrices.GetInputMatrix<double>(mx.first).SetValue(rowNumber, columnNumber, mx.second.matrix->GetDeviceId(), const_cast<double*>(data), matrixFlagNormal);
             }
         }
     }
@@ -278,23 +278,19 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
         m_packer = std::make_shared<FramePacker>(
             m_provider,
             m_randomizer,
-            config.m_minibatchSizeInSamples,
             m_streams);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
             m_randomizer,
-            config.m_minibatchSizeInSamples,
             m_streams);
         break;
     case PackingMode::truncated:
     {
-        m_packer = std::make_shared<BpttPacker>(
+        m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_provider,
             m_randomizer,
-            config.m_minibatchSizeInSamples,
-            m_truncationLength,
             m_streams);
         break;
     }
