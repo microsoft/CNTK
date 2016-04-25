@@ -177,6 +177,7 @@ public:
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
+        // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->AssignDeepCloneOf(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
