@@ -75,6 +75,10 @@ Train=[
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations="cubic"
+            # Brightness, contrast and color jittering. Use 0 to disable jittering.
+            brightnessRadius=0.4
+            contrastRadius=0.4
+            saturationRadius=0.4
             # Intensity jittering: enabled if file is specified. 
             # The file stores 1x3 vector (eigenvalues) and 3x3 matrix (eigenvectors) in OpenCV XML format.
             intensityFile="$ConfigDir$/ImageNet1K_intensity.xml"

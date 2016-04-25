@@ -215,6 +215,7 @@ private:
     cv::Mat m_eigVec;
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
 };
 
 }}}

@@ -627,9 +627,17 @@ void ColorTransformer::Initialize(TransformerPtr next, const ConfigParameters &r
 
 void ColorTransformer::InitFromConfig(const ConfigParameters &config)
 {
-    m_brightnessRadius = config(L"brightnessRadius", 0);
-    m_contrastRadius = config(L"contrastRadius", 0);
-    m_saturationRadius = config(L"saturationRadius", 0);
+    m_brightnessRadius = config(L"brightnessRadius", 0.0);
+    if (!(0 <= m_brightnessRadius && m_brightnessRadius <= 1.0))
+        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
+
+    m_contrastRadius = config(L"contrastRadius", 0.0);
+    if (!(0 <= m_contrastRadius && m_contrastRadius <= 1.0))
+        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
+
+    m_saturationRadius = config(L"saturationRadius", 0.0);
+    if (!(0 <= m_saturationRadius && m_saturationRadius <= 1.0))
+        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 }
 
 void ColorTransformer::Apply(size_t id, cv::Mat &mat)
@@ -651,16 +659,46 @@ template <typename ElemType>
 void ColorTransformer::Apply(cv::Mat &mat)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create(
-        [seed]()
-    {
-        return std::make_unique<std::mt19937>(seed);
-    });
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
-    if (m_brightnessRadius > 0)
+    if (m_brightnessRadius > 0 || m_contrastRadius > 0)
     {
-        std::uniform_real_distribution<ElemType> d(-m_brightnessRadius, m_brightnessRadius);
-        mat *= ((ElemType)1 - d(*rng));
+        ElemType beta = 0;
+        if (m_brightnessRadius > 0)
+        {
+            std::uniform_real_distribution<ElemType> d(-(ElemType)m_brightnessRadius, (ElemType)m_brightnessRadius);
+            beta = d(*rng) * 255;
+        }
+
+        ElemType alpha = 1;
+        if (m_contrastRadius > 0)
+        {
+            std::uniform_real_distribution<ElemType> d(-(ElemType)m_contrastRadius, (ElemType)m_contrastRadius);
+            alpha = d(*rng);
+        }
+
+        mat.convertTo(mat, -1, alpha, beta);
+    }
+
+    if (m_saturationRadius > 0 && mat.channels() == 3)
+    {
+        std::uniform_real_distribution<ElemType> d(-(ElemType)m_saturationRadius, (ElemType)m_saturationRadius);
+        double ratio = (ElemType)1 + d(*rng);
+        
+        auto hsv = m_hsvTemp.pop_or_create([]() { return std::make_unique<cv::Mat>(); });
+
+        cv::cvtColor(mat, *hsv, CV_BGR2HSV);
+        assert(hsv->rows == mat.rows && hsv->cols == mat.cols);
+        size_t count = hsv->rows * hsv->cols * mat.channels();
+        ElemType* phsvBase = reinterpret_cast<ElemType*>(hsv->data);
+        for (ElemType* phsv = phsvBase; phsv < phsvBase + count; phsv += 3)
+        {
+            const int HsvIndex = 1;
+            phsv[HsvIndex] = cv::saturate_cast<ElemType>(phsv[HsvIndex] * ratio);
+        }
+        cv::cvtColor(*hsv, mat, CV_HSV2BGR);
+
+        m_hsvTemp.push(std::move(hsv));
     }
 
     m_rngs.push(std::move(rng));
