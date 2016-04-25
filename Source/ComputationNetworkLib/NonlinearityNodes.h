@@ -445,6 +445,7 @@ public:
     }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
