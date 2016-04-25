@@ -54,7 +54,7 @@ def test_op_ceil(arg, device_id, precision):
 
     a = I([arg], has_sequence_dimension=False)
     op = Ceil(a)
-    unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
+    unittest_helper(op, None, exp, device_id, precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -77,7 +77,7 @@ def test_op_round(arg, device_id, precision):
 
     a = I([arg], has_sequence_dimension=False)
     op = Round(a)
-    unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
+    unittest_helper(op, None, exp, device_id, precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
     # ==================

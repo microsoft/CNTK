@@ -5,37 +5,41 @@ from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComp
 class Slice(ComputationNode):
     def __init__(self, beginIndex, endIndex, input, axis=1, name='Slice',
             var_name=None):
-        super(Slice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        super(Slice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
         self.axis = axis
+        self.inputs = ['input']
 
 class Splice(ComputationNode):
     def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
             var_name=None):
-        super(Splice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        super(Splice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
         self.axis = axis
-
+        self.inputs = ['input']
+    
 class ElementDivide(ComputationNode):
     def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
         super(ElementDivide, self).__init__(params=['aMatrix', 'anotherMatrix'], name=name, var_name=var_name)
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
-       
+        self.inputs = ['aMatrix', 'anotherMatrix']
+        
 class Round(ComputationNode):
     def __init__(self, x, name='Round', var_name=None):
         super(Round, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
-
+        self.inputs = ['x']
+        
 class Ceil(ComputationNode):
     def __init__(self, x, name='Ceil', var_name=None):
         super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
-
+        self.inputs = ['x']
 
 class Sign(ComputationNode):
     def __init__(self, x, name='Sign', var_name=None):
