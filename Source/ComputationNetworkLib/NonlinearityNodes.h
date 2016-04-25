@@ -444,7 +444,7 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/)  const override { return true; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
 
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
@@ -471,6 +471,9 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        if (inputIndex == 0) // derivative of the first input (the flag) is always 0 => no action.
+            return;
+
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
         auto input0        = Input(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
