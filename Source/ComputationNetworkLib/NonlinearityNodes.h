@@ -465,10 +465,10 @@ public:
         if (inputIndex == 2)
         {
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient =                         GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-            auto input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input =         Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output =                           ValueTensorFor(rank, fr.AllowBroadcast());
 
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
         }        
