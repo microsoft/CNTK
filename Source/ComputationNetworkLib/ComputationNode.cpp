@@ -172,7 +172,7 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
         for (size_t i = 0; i < numInputs; i++)        
-            for (size_t j = i; j < numInputs; j++)            
+            for (size_t j = i+1; j < numInputs; j++)            
                 if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
                     LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
 
@@ -194,16 +194,16 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
     for (size_t k = 0; k < maxRank; k++)
     {
         size_t maxDim = 0;
-        TensorShape maxShape = shape0; // arbitrary
+        TensorShape maxShape = shape0; // arbitrary; this is just used for the error message
         for (size_t i = 0; i < numInputs; i++)
         {
             let currentShape = GetInputSampleLayout(i);
             size_t currentRank = currentShape.GetRank();
-            // make sure that the rank of this input is bigger than the current index
+            // make sure that the rank of this input is bigger than the current index (otherwise, these are implied singleton dimensions that do not need to be checked)
             if (currentRank > k)
             {
                 size_t currentDim = currentShape[k];
-                if (currentDim > 1 && maxDim != currentDim && maxDim > 1)
+                if (currentDim > 1 && maxDim != currentDim && maxDim > 1) // 1=broadcasting, 0=not known yet, meant to be inferred
                 {
                     InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
                         NodeDescription().c_str(), string(maxShape).c_str(), string(currentShape).c_str());
@@ -303,13 +303,13 @@ void ComputationNodeBase::ValidateInferNaryInputDims(size_t numInputs)
     assert(m_inputs.size() >= numInputs);
     for (size_t index = 0; index < numInputs; index++)
     {
-        auto in = Input(index);
+        const auto& in = Input(index);
         
         for (size_t indexOther = 0; indexOther < numInputs; indexOther++)
         {
             if (indexOther != index) 
             {
-                auto other = Input(indexOther);
+                const auto& other = Input(indexOther);
                 // borrow any unset dimension on one input from the other input
                 in->ValidateInferInputDimsFrom(other->GetSampleLayout());
             }
