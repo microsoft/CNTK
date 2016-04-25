@@ -158,7 +158,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     SetDims(TensorShape(dims), HasMBLayout());
 }
 
-// N-nary zip operation, e.g. for TernaryZip for clip()
+// N-ary zip operation, e.g. for TernaryZip for clip()
 // If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
 void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
@@ -172,7 +172,7 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
         for (size_t i = 0; i < numInputs; i++)
-            for (size_t j = i; j+1 < numInputs; j++)
+            for (size_t j = i + 1; j < numInputs; j++)
                 if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
                     LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
 
