@@ -29,10 +29,10 @@ ExpId = 14-0-g2p # for decoding a different model
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log
+#stderr = $ExpDir$/S2SAutoEncoder.log
 
-#command = writeWordAndClassInfo:train:test:write
-command = write
+command = writeWordAndClassInfo:train:test:write
+#command = write
 #command = dump
 
 precision  = "float"
