@@ -36,7 +36,6 @@ TENSOR_PAIRS = [
 # -- plus operation tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_plus(left_operand, right_operand, device_id, precision):    
-
     #Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -50,10 +49,13 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     
     left_as_input = a + right_operand    
     unittest_helper(left_as_input, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
-    
+                    precision=precision, clean_up=True, backward_pass=False)
+        
     right_as_input = left_operand + b
     unittest_helper(right_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    unittest_helper(a + b, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
@@ -88,6 +90,9 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
     unittest_helper(right_as_input, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
+    unittest_helper(a - b, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+
     #Backward pass test
     #==================
     #the expected results for the backward pass is all ones for left and
@@ -120,6 +125,9 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
     
     right_as_input = left_operand * b
     unittest_helper(right_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    unittest_helper(a * b, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
@@ -155,6 +163,9 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
     
     right_as_input = left_operand / b
     unittest_helper(right_as_input, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    unittest_helper(a / b, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test

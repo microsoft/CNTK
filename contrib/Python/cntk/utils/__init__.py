@@ -162,7 +162,7 @@ def serialize_input_data(lazy_inputs_def, filename):
     used_aliases = set()
     for l in lazy_inputs_def:
         # make sure all inputs have valid unique aliases
-        if l.input_alias is None:
+        if l.input_alias is None or l.input_alias.startswith('_'):
             new_alias = '_I_%i'%alias_counter 
             alias_counter += 1
             while new_alias in used_aliases:
