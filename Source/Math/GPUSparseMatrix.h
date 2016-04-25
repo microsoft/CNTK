@@ -453,6 +453,14 @@ private:
     DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
     size_t IdentifyRowsWithValues() const;
 
+private:
+	static double multimer;
+	static long mulcounter;
 };
+
+template <class ElemType>
+double GPUSparseMatrix<ElemType>::multimer = 0.;
+template <class ElemType>
+long GPUSparseMatrix<ElemType>::mulcounter = 0;
 
 }}}
