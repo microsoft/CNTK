@@ -35,6 +35,15 @@ class ElementDivide(ComputationNode):
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
 
+
+class Floor(ComputationNode):
+
+    def __init__(self, x, name='Floor', var_name=None):
+        super(Floor, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+        self.params_with_defaults = []
+
+
 class Ceil(ComputationNode):
 
     def __init__(self, x, name='Ceil', var_name=None):
