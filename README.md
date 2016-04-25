@@ -2,7 +2,7 @@
 
 ## Latest news
 *2016-04-25.* V 1.1 Binary release
-CNTK v.1.1 binaries are on the [CNTK Releases page](../releases)
+CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
 
 *2016-04-12.* CNTK is available as [Azure Virtual Machines](https://github.com/Microsoft/CNTK/wiki/CNTK-on-Azure) and [Docker Containers](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)
 
