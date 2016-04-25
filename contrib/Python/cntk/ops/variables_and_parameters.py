@@ -11,46 +11,46 @@ This modules contains the interfaces to Inputs and Parameters.
 
 import numpy as np
 import scipy.sparse
-from . import cntk1 
 from ..reader import CNTKTextFormatReader
 from .. import utils
 
-def input_reader(value, has_sequence_dimension=True, **kw):
+def input_reader(value, alias=None, has_sequence_dimension=True):
     '''
-    creates an input node.
+    Creates an input node from a list of tensors. The tensors represent one
+    sample and can have sequences of different lengths. 
 
     Args:
-        value: is a list of NumPy tensors.  Currently, only dense tensors are supported. Sparse will come soon by the power of scipy.
-        has_sequence_dimension: If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
-        alias: optional the alias to be used when serializing the data into an intermediate file
-        kw: will be passed on to the input operator [TODO: specify most commonly used options]
+        value (list): list of tensors potentially having sequences of different lengths.
+        alias (str): alias to be used in the data file
+        has_sequence_dimension (bool): If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
+        alias (str): optional the alias to be used when serializing the data into an intermediate file
 
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
     if utils.is_tensor_list(value) or utils.is_tensor(value):
-        return utils.get_input_node(value, has_sequence_dimension, **kw)
+        if has_sequence_dimension:
+            cntk_shape = value[0][1:]
+        else:
+            cntk_shape = value[0]
+            
+        from ..ops import cntk1 
+        from ..reader import LazyInputReader
+        node = cntk1.Input(cntk_shape)
+        node.reader = LazyInputReader(
+                value, 
+                input_alias=alias,
+                has_sequence_dimension=has_sequence_dimension,
+                node=node)
+        
+        return node
     else:
         raise ValueError('value type is not supported: %s' % type(value))
 
-def input_array(value, has_sequence_dimension=True, name=None):
-    """
-    It creates an input node from a numpy array. Note: you do not need a reader 
-    for this node, since the data is passed directly via numpy array
-    
-    Args:
-        value: the numpy array, it can hold an arbitrary tensor
-        has_sequence_dimension: if the array carries a sequence of elements
-        name: the name of the node in the network
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """    
-    
-    return input_reader(value, has_sequence_dimension, var_name=name, alias=name)  
-    
 def input(dims, name=None):
     """
-    It creates an input node, the data will be read by a CNTK reader
+    It creates an input node. The graph requires a separate reader that will be
+    fed to this input.
     
     Args:
         dims: the shape of the input tensor
@@ -81,6 +81,8 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
+
+    from . import cntk1 
 
     # if the parameter is initialized from a literal value
     if (init=='fromLiteral'):        

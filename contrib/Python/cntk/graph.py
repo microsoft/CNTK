@@ -40,7 +40,10 @@ class ComputationNode(object):
         self.reader = None
         self.has_sequence_dimensions = False
 
-    def _is_input(self):
+    def is_input(self):
+        '''
+        Returns: True if this node is an input node.
+        '''
         return isinstance(self, InputComputationNodeBase)
 
     # operator overload for (+) where self is the left operand
@@ -257,7 +260,7 @@ class ComputationNode(object):
         self.var_name = self.var_name or "v%i" % node_counter
         node_counter += 1
 
-        if self._is_input():
+        if self.is_input():
             inputs.add(self)
             
             num_readers_mapping = 0            
@@ -280,7 +283,7 @@ class ComputationNode(object):
             if num_readers_mapping > 1:            
                 raise RuntimeError("More than one reader found for input node: {0}".format(self.var_name))
                 
-            readers.add(node_reader._to_aggregate_form(self))
+            readers.add(node_reader)
 
         params = self._get_cntk_param_string(param_variable_names)
 
@@ -288,7 +291,7 @@ class ComputationNode(object):
             "%s = %s(%s)" % (self.var_name, self.name, params)
         desc.append(line)
 
-        if self._is_input():
+        if self.is_input():
             dep_inputs += (self.var_name,)
 
         return self.var_name, node_counter, desc, dep_inputs
@@ -309,14 +312,14 @@ class ComputationNode(object):
             node_counter=node_counter, 
             reconciled_cache=reconciled_cache)
 
-        return var_name, node_counter, desc, len(inputs) > 0, readers, dep_inputs
+        return var_name, node_counter, desc, inputs, readers, dep_inputs
 
     def to_config(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
+        var_name, node_counter, desc, inputs, readers, dep_inputs = \
             self._to_config(input_reader={},
                     description=[], 
                     unrolled_nodes={},
@@ -326,7 +329,7 @@ class ComputationNode(object):
                     node_counter=0,
                     reconciled_cache={})
 
-        return "\n".join(desc), has_inputs, aggregate_readers(readers)
+        return "\n".join(desc), inputs, aggregate_readers(readers)
 
 
 class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
@@ -386,6 +389,35 @@ def eval(node):
                 else:
                     setattr(node, p, constant(getattr(node, p), name=p))
     return ctx.eval(node)
+
+class LazyInput(InputComputationNodeBase):
+    '''
+    Lazy reader that takes an NumPy array and serializes it to disk only when
+    the complete graph is specified. This is necessary in case of multiple
+    inputs, because they have to reside in the same file.
+
+    Note:
+        All readers of this type need to have the exact same number of samples,
+        as they will be aligned by the first index.
+
+    Note:
+        This class will be deprecated once the reader bundlers have arrived in
+        CNTK.
+
+    Args:
+        value (ndarray): the data to be serialized.
+        input_alias (str): a short name for the input, it is how inputs are
+        referenced in the data files. If not provided, it will be automatically
+        assigned.
+        has_sequence_dimension (bool): whether the tensor has already the data
+        packaged as sequences. If not, it will wrapped again in a sequence of
+        length 1.
+
+    '''
+    def __init__(self, value, input_alias=None, has_sequence_dimension=True):
+        self.value = value
+        self.input_alias = input_alias
+        self.has_sequence_dimension = has_sequence_dimension
 
 # At the bottom to avoid circular import
 from . import ops

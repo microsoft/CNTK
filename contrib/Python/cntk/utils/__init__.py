@@ -1,7 +1,8 @@
 import os
 import sys
+import collections
 import numpy as np
-
+import scipy.sparse
 
 def get_cntk_cmd():
     if "CNTK_EXECUTABLE_PATH" not in os.environ:
@@ -18,9 +19,11 @@ def cntk_to_numpy_shape(shape):
     '''
     Removes the sequence dimension.
 
-    :param shape: CNTK shape iterable
+    Arts:
+        shape (tuple): CNTK shape iterable
 
-    Returns a tuple that describes the NumPy shape of a tensor
+    Returns:
+        a tuple that describes the NumPy shape of a tensor
     '''
     
     shape = tuple(int(s) for s in shape)
@@ -32,17 +35,41 @@ def cntk_to_numpy_shape(shape):
     return shape
 
 def aggregate_readers(readers):
+    '''
+    Aggregates the readers. If readers is provided, all elements have to
+    reference the same filename. 
+    '''
     import copy
     readers_map = {}
-    for r in readers:
-        filename = r['FileName']
-        if filename in readers_map and\
-                r.__class__.__name__ == readers_map[filename].__class__.__name__:
-            readers_map[filename].inputs_def.extend(r.inputs_def)
-        else:
-            readers_map[filename] = copy.deepcopy(r)
 
-    return [r for r in readers_map.values()]
+    reader_types = set([type(r) for r in readers])
+    if len(reader_types)==0:
+        return None
+
+    if len(reader_types)>1:
+        raise ValueError('only one reader type is provided. You gave: %s'%str(reader_types))
+
+    from ..reader import LazyInputReader, CNTKTextFormatReader
+    if reader_types.pop() == LazyInputReader:
+        from ..context import get_context
+        filename = get_temp_filename(get_context().directory)
+        r = CNTKTextFormatReader(filename)
+        for lr in readers:
+            r.add_lazy_input(lr)
+
+        return r
+
+    else:
+        for r in readers:
+            filename = r['FileName']
+            if filename in readers_map and\
+                    r.__class__.__name__ == readers_map[filename].__class__.__name__:
+                readers_map[filename].inputs_def.extend(r.inputs_def)
+            else:
+                readers_map[filename] = copy.deepcopy(r)
+
+        return list(readers_map.values())[0]
+
 
 def is_string(value):
     if sys.version_info.major<3:
@@ -70,105 +97,139 @@ def sparse_to_str(data):
     raise NotImplementedError
 
 
-def tensor_to_text_format(idx, alias, tensor, has_sequence_dimension=True):
+def tensors_to_text_format(sample_idx, alias_tensor_map):
     '''
-    Converts a NumPy array representing tensor of one input into a format that
+    Converts a list of NumPy arrays representing tensors of inputs into a format that
     is readable by `CNTKTextReader`.
 
-    :param `alias`: alias to be used in the temporary file
-    :param `tensor`: a NumPy array having sequence as its innermost dimension
-    '''
-    if not alias:
-        raise ValueError('alias is missing')
+    Args:
+        sample_idx (int): number of current sample
+        alias_tensor_map (dict): maps alias (str) to tensor (ndarray). Tensors
+        are assumed to have dynamic axis.
 
-    import scipy.sparse
-    if isinstance(tensor, np.ndarray):
-        to_str = dense_to_str
-    elif scipy.sparse.issparse(tensor):
-        raise ValueError('sparse is not yet supported')
-        #to_str = sparse_to_str
-    else:
-        raise ValueError('sequence elements have to be of type numpy.ndarray' +
-                ' (dense) or dictionary (sparse), you gave "%s"' % \
-                str(type(tensor)))
-
-    if has_sequence_dimension:
-        num_seq_elements = tensor.shape[0]
-        lines = []
-        for seq_idx in range(0, num_seq_elements):
-            lines.append('%i\t|%s %s'%(idx, alias, to_str(tensor[seq_idx])))
-
-        return '\n'.join(lines)
-    else:
-        return '%i\t|%s %s'%(idx, alias, to_str(tensor))
-
-def get_input_node(list_of_tensors, has_sequence_dimension, **kw):
-    '''
-    :param list_of_tensors: list of tensors potentially having sequences of
-    different lengths.
+    Returns:
+        String representation in CNTKTextReader format
     '''
 
-    # FIXME We need to better manage the context. How can we get hold
-    # of the overall context without having to always pass it
-    # explicitly?
+    max_seq_length = max(len(t) for t in alias_tensor_map.values())
 
-    from cntk.context import get_context
-    import tempfile
+    if max_seq_length==0:
+        return ''
 
-    # We have to use NamedTemporaryFile and close it, because the obvious first
-    # choice, mkstemp(), would later fail in cntk.exe because the file would
-    # still be locked.
-    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt',
-                                     dir=get_context().directory, delete=False)
-    tf.close()
+    lines = []
+    for seq_idx in range(0, max_seq_length):
+        line = []
 
-    if 'alias' in kw:        
-        alias = kw['alias']
-        del kw['alias']  # don't confuse with constructor's parameters
-        
-    if not alias:
-        # TODO make sure we don't have clashes
-        alias = '_I_%i' % np.random.randint(1000)
+        for alias, tensor in sorted(alias_tensor_map.items()):
+            if seq_idx >= len(tensor):
+                # for this alias there no more sequence elements
+                continue
 
-    shapes = set()
-    with open(tf.name, 'w') as f:
-        for idx,tensor in enumerate(list_of_tensors):
+            if is_tensor(tensor):
+                if not isinstance(tensor, np.ndarray):
+                    tensor = np.asarray(tensor)
+                to_str = dense_to_str
+            else:
+                raise ValueError('expected a tensor, but got "%s"'%type(tensor))
+
+            line.append('%s %s'%(alias, to_str(tensor[seq_idx])))
+
+        lines.append('%i\t|'%sample_idx + ' |'.join(line))
+
+    return '\n'.join(lines)
+
+
+def serialize_input_data(lazy_inputs_def, filename):
+    '''
+    Generates a file readable with `cntk.readers.CNTKTextFormatReader` that
+    can be connected to the inputs of the network and fills in missing
+    information in the lazy input defs (shape, alias).
+
+    Args:
+        lazy_inputs_def (list of `LazyInputReader`s): a list of all the lazy
+        input readers that will be serialized in the filename
+        filename (str): name of the file
+
+    Returns:
+        dictionary of alias -> LazyInputReader that has shape determined and
+        input_alias filled in case it was None
+    '''
+
+    alias_lazy_map = {}
+
+    alias_counter = 0
+    sample_sizes = collections.defaultdict(list)
+    used_aliases = set()
+    for l in lazy_inputs_def:
+        # make sure all inputs have valid unique aliases
+        if l.input_alias is None:
+            new_alias = '_I_%i'%alias_counter 
+            alias_counter += 1
+            while new_alias in used_aliases:
+                new_alias = '_I_%i'%alias_counter 
+                alias_counter += 1
+
+            l.input_alias = new_alias
+            used_aliases.add(new_alias)
+
+        alias_lazy_map[l.input_alias] = l
+
+        # keep track of sample sizes 
+        sample_sizes[len(l.batch)].append(l.input_alias)
+
+        shapes_in_tensor = set()
+
+        # make sure that modulo sequence length all tensors of one lazy input have
+        # the same shape
+        for tensor in l.batch:
             if isinstance(tensor, list):
                 tensor = np.asarray(tensor)
 
-            if has_sequence_dimension:
+            if l.has_sequence_dimension:
                 # collecting the shapes ignoring the sequence dimension
-                shapes.add(tensor.shape[1:])
+                shapes_in_tensor.add(tensor.shape[1:])
             else:
-                shapes.add(tensor.shape)
+                shapes_in_tensor.add(tensor.shape)
 
-            f.write(tensor_to_text_format(idx, alias, tensor,
-                has_sequence_dimension) + '\n')
+        # ignoring the sequence dimension, all shapes should be equal
+        if len(shapes_in_tensor)!=1:
+            raise ValueError('except for the sequence dimensions all shapes ' +
+                    'should be the same - instead we %s'%\
+                            (", ".join(str(s) for s in shapes_in_tensor)))
 
-    # ignoring the sequence dimension, all shapes should be equal
-    if len(shapes)!=1:
-        raise ValueError('except for the sequence dimensions all shapes ' +
-                'should be the same - instead we have: %s'%(", ".join(str(s) for s in shapes)))
+        # shapes_in_tensor now contains only one shape, which has the sequence
+        # dimension removed.
+        value_shape = shapes_in_tensor.pop()
+        l.shape = value_shape if value_shape else (1,)
 
-    # shapes now contains only one shape, which has the sequence dimension
-    # removed.
-    value_shape = shapes.pop()
+    # make sure all inputs have same sample size
+    if len(sample_sizes) != 1:
+        raise ValueError('LazyInputReaders have different sizes: %s'%str(sample_sizes))
 
-    cntk_shape = value_shape if value_shape else (1,)
-    
-    from ..ops import cntk1 
-    node = cntk1.Input(cntk_shape, **kw)
-    from ..reader import CNTKTextFormatReader
-    node.reader = CNTKTextFormatReader(tf.name, alias)
-        
-    return node
+    sample_size = list(sample_sizes)[0]
+
+    # ready to serialize
+    with open(filename, 'w') as f:
+        for idx in range(sample_size):
+            alias_tensor_map = {}
+            for l in lazy_inputs_def:
+                if l.has_sequence_dimension:
+                    alias_tensor_map[l.input_alias] = l.batch[idx] 
+                else:
+                    alias_tensor_map[l.input_alias] = [l.batch[idx]]
+            f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
+
+    return alias_lazy_map
 
 def is_tensor(data):
     '''
     Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
     list of NumPy arrays.
 
-    :param `data`: data to check
+    Args:
+        data: data to check
+
+    Returns: True, if it is a tensor.
     '''
     if isinstance(data, np.ndarray):
         return True
@@ -182,7 +243,15 @@ def is_tensor(data):
             data[0][0]
         except:
             # We reached the innermost dimension
-            break
+            try:
+                data[0]+0
+                return True
+            except:
+                # Innermost type is not a number
+                return False
+
+        if isinstance(data, np.ndarray):
+            return True
 
         if not isinstance(data[0], list):
             return False
@@ -199,3 +268,26 @@ def is_tensor_list(data):
     '''
     is_list = isinstance(data, list)
     return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
+
+def get_temp_filename(directory=None):
+    '''
+    Create and return a temporary filename.
+
+    Args:
+        directory (str): optional directory, in which the temporary file will
+        be created
+
+    Returns:
+        Filename of the temporary file 
+    '''
+    import tempfile
+
+    # We have to use NamedTemporaryFile and close it, because the obvious first
+    # choice, mkstemp(), would later fail in cntk.exe because the file would
+    # still be locked.
+    tf = tempfile.NamedTemporaryFile(prefix='_input_', suffix='.txt',
+                                     dir=directory, delete=False)
+    tf.close()
+
+    return tf.name
+

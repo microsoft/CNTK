@@ -149,16 +149,16 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         '''
         pass
     
-    def _aggregate_readers(self, input_reader):
+    def _aggregate_readers(self, input_readers):
         """ Aggregate the readers passed in the input to reader dictionary
         """
-        return aggregate_readers([input_reader[i]._to_aggregate_form(i) for i in input_reader])
+        return aggregate_readers([input_reader[i]._to_aggregate_form(i) for i in input_readers])
         
     def _generate_config(self, root_nodes=None, input_reader=None):
         '''
         Helper function to create a configuration incorporating all root nodes
         '''
-        has_inputs = False
+        inputs = set()
 
         desc = []
         inputs = set()
@@ -172,7 +172,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
-            var_name, node_counter, _desc, _has_inputs, _readers, _dep_inputs = \
+            var_name, node_counter, _desc, _inputs, _readers, _dep_inputs = \
                 root_node._to_config(input_reader,
                         desc, 
                         unrolled_nodes, 
@@ -182,20 +182,20 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
                         node_counter, 
                         reconciled_cache)
 
-            has_inputs |= _has_inputs
+            inputs |= _inputs
             readers |= _readers
             dep_inputs += _dep_inputs
 
         description = "\n".join(desc)
 
-        return description, has_inputs, aggregate_readers(readers)
+        return description, inputs, aggregate_readers(readers)
 
-    def _generate_train_config(self, root_nodes, optimizer, input_reader, override_existing):
+    def _generate_train_config(self, root_nodes, optimizer, input_readers, override_existing):
         '''
         Generates the configuration file for the train action.
         :param root_nodes: list of the root nodes of the model
         :param optimizer: the SGD optimizer to use for training
-        : param input_reader: a map from input nodes to their readers
+        : param input_readers: a map from input nodes to their readers
         :param override_existing: if the folder exists already override it
         '''
 
@@ -211,14 +211,14 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
+        description, inputs, reader = self._generate_config(root_nodes, input_readers)
 
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelDescription': description,
             'ModelPath': model_filename,
-            'Reader': '\n'.join(r.generate_config() for r in readers),
+            'Reader': reader.generate_config(),
             'SGD': optimizer.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -230,54 +230,49 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         '''
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
-        readers = self._aggregate_readers(input_reader)
+        reader = self._aggregate_readers(input_reader)
                 
-        reader_config = '\n'.join(r.generate_config() for r in readers)
-
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelPath': model_filename,
-            'Reader': reader_config,
+            'Reader': reader.generate_config(),
         }
         return tmpl % tmpl_dict
 
-    def _generate_write_config(self, input_reader):
+    def _generate_write_config(self, input_readers):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
-        :param input_reader: a map from input nodes to their readers
+        :param input_readers: a map from input nodes to their readers
         '''
         tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
         model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(
             self.directory, 'Outputs', self.name)
 
-
-        readers = self._aggregate_readers(input_reader)
+        reader = self._aggregate_readers(input_readers)
         
-        reader_config = '\n'.join(r.generate_config() for r in readers)
-
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelPath': model_filename,
             'PredictOutputFile': output_filename_base,
-            'Reader': reader_config,
+            'Reader': reader.generate_config(),
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_nodes, input_reader, node_unit_test=False):
+    def _generate_eval_config(self, root_nodes, input_readers, node_unit_test=False):
         
         '''
         Generates the configuration file for write action.
         :param root_nodes: the node to evaluate. 
-        :param input_reader: a map from input nodes to their readers
+        :param input_readers: a map from input nodes to their readers
         :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
         '''
-        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
+        description, inputs, reader = self._generate_config(root_nodes, input_readers)
 
-        if not has_inputs and not readers:
+        if len(inputs)==0 and not readers:
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement on CNTK side
             data = [[1, 2], [3, 4]]
@@ -288,7 +283,6 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             dummy_input_node = Input(2, var_name='dummy_node')
             reader.add_input(dummy_input_node, 0, 2)
             description += "\n" + " "*MODEL_INDENTATION + "dummy_node = Input(2, tag='output')"
-            readers.append(reader)
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
@@ -298,7 +292,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             'NodeUnitTest': node_unit_test,
             'OutputFile': output_filename,
             'ModelDescription': description,
-            'Reader': '\n'.join(r.generate_config() for r in readers),
+            'Reader': reader.generate_config(),
         }
         return tmpl % tmpl_dict
 
