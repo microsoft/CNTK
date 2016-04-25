@@ -1451,7 +1451,11 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (m_dropoutRate > 0)
+        if (Environment().IsInferring() || m_dropoutRate <= 0)
+        {
+            sliceOutputValue.SetValue(sliceInput0Value);
+        }
+        else
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
@@ -1459,10 +1463,6 @@ public:
             m_randomSeed += 1073807359; // 1073807359 is a very large prime number to avoid collision with other dropout nodes
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
-        }
-        else
-        {
-            sliceOutputValue.SetValue(sliceInput0Value);
         }
     }
 
