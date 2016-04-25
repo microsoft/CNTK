@@ -394,6 +394,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
+    let matCols   = outputValues.GetNumCols();
     let matStride = matRows; // how to get from one column to the next
     unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
     ElemType* matData = matDataPtr.get();
@@ -446,7 +447,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         // get sequence matrix -> seqData, seqRows, seqCols, seqStride
         let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, t0 - tBegin) * matStride;
         auto seqRows   = matRows;
-        let  seqCols   = t1 - t0;
+        let  seqCols   = pMBLayout->GetNumParallelSequences() == 1 ? matCols : t1 - t0;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;
 
         auto seqProl = sequencePrologue;
