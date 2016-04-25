@@ -35,7 +35,6 @@ class ElementDivide(ComputationNode):
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
 
-
 class Ceil(ComputationNode):
 
     def __init__(self, x, name='Ceil', var_name=None):
@@ -365,8 +364,8 @@ class Pooling(ComputationNode):
 class MaxPooling(ComputationNode):
 
     def __init__(self, input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', name='MaxPooling', var_name=None):
-        super(MaxPooling, self).__init__(params=['input', 'windowWidth', 'windowHeight',
-                                                 'horizontalSubsample', 'verticalSubsample', 'imageLayout'], name=name, var_name=var_name)
+        super(MaxPooling, self).__init__(params=[
+            'input', 'windowWidth', 'windowHeight', 'horizontalSubsample', 'verticalSubsample', 'imageLayout'], name=name, var_name=var_name)
         self.input = input
         self.windowWidth = windowWidth
         self.windowHeight = windowHeight
@@ -379,8 +378,8 @@ class MaxPooling(ComputationNode):
 class AveragePooling(ComputationNode):
 
     def __init__(self, input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', name='AveragePooling', var_name=None):
-        super(AveragePooling, self).__init__(params=['input', 'windowWidth', 'windowHeight',
-                                                     'horizontalSubsample', 'verticalSubsample', 'imageLayout'], name=name, var_name=var_name)
+        super(AveragePooling, self).__init__(params=[
+            'input', 'windowWidth', 'windowHeight', 'horizontalSubsample', 'verticalSubsample', 'imageLayout'], name=name, var_name=var_name)
         self.input = input
         self.windowWidth = windowWidth
         self.windowHeight = windowHeight
@@ -406,8 +405,8 @@ class BatchNormalization(ComputationNode):
         self.epsilon = epsilon
         self.useCntkEngine = useCntkEngine
         self.imageLayout = imageLayout
-        self.params_with_defaults = ['normalizationTimeConstant',
-                                     'blendTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout']
+        self.params_with_defaults = [
+            'normalizationTimeConstant', 'blendTimeConstant', 'epsilon', 'useCntkEngine', 'imageLayout']
 
 
 class Abs(ComputationNode):
@@ -455,8 +454,8 @@ class ClipByValue(ComputationNode):
 class ColumnElementTimes(ComputationNode):
 
     def __init__(self, aVectorSequence, anotherVectorSequence, name='ColumnElementTimes', var_name=None):
-        super(ColumnElementTimes, self).__init__(params=[
-            'aVectorSequence', 'anotherVectorSequence'], name=name, var_name=var_name)
+        super(ColumnElementTimes, self).__init__(
+            params=['aVectorSequence', 'anotherVectorSequence'], name=name, var_name=var_name)
         self.aVectorSequence = aVectorSequence
         self.anotherVectorSequence = anotherVectorSequence
         self.params_with_defaults = []
@@ -465,8 +464,8 @@ class ColumnElementTimes(ComputationNode):
 class CosDistance(ComputationNode):
 
     def __init__(self, aVectorSequence, anotherVectorSequence, name='CosDistance', var_name=None):
-        super(CosDistance, self).__init__(params=[
-            'aVectorSequence', 'anotherVectorSequence'], name=name, var_name=var_name)
+        super(CosDistance, self).__init__(
+            params=['aVectorSequence', 'anotherVectorSequence'], name=name, var_name=var_name)
         self.aVectorSequence = aVectorSequence
         self.anotherVectorSequence = anotherVectorSequence
         self.params_with_defaults = []
@@ -545,8 +544,8 @@ class ElementTimes(ComputationNode):
 class ErrorPrediction(ComputationNode):
 
     def __init__(self, labelVectorSequence, outVectorSequence, name='ErrorPrediction', var_name=None):
-        super(ErrorPrediction, self).__init__(params=[
-            'labelVectorSequence', 'outVectorSequence'], name=name, var_name=var_name)
+        super(ErrorPrediction, self).__init__(
+            params=['labelVectorSequence', 'outVectorSequence'], name=name, var_name=var_name)
         self.labelVectorSequence = labelVectorSequence
         self.outVectorSequence = outVectorSequence
         self.params_with_defaults = []
@@ -762,14 +761,6 @@ class Sigmoid(ComputationNode):
         self.params_with_defaults = []
 
 
-class Sin(ComputationNode):
-
-    def __init__(self, z, name='Sin', var_name=None):
-        super(Sin, self).__init__(params=['z'], name=name, var_name=var_name)
-        self.z = z
-        self.params_with_defaults = []
-
-
 class Softmax(ComputationNode):
 
     def __init__(self, z, name='Softmax', var_name=None):
@@ -886,8 +877,8 @@ class Constant(Parameter):
 class RowSlice(Slice):
 
     def __init__(self, beginIndex, numRows, input, name='RowSlice', var_name=None):
-        super(RowSlice, self).__init__(beginIndex, beginIndex +
-                                       numRows, input, axis=1, name=name, var_name=var_name)
+        super(RowSlice, self).__init__(
+            beginIndex, beginIndex + numRows, input, axis=1, name=name, var_name=var_name)
         self.params = ['beginIndex', 'numRows', 'input']
         self.params_with_defaults = []
 
@@ -895,8 +886,8 @@ class RowSlice(Slice):
 class ReshapeDimension(NewReshape):
 
     def __init__(self, x, axis, tensorShape, name='ReshapeDimension', var_name=None):
-        super(ReshapeDimension, self).__init__(x, tensorShape,
-                                               beginAxis=axis, endAxis=axis + 1, name=name, var_name=var_name)
+        super(ReshapeDimension, self).__init__(
+            x, tensorShape, beginAxis=axis, endAxis=axis + 1, name=name, var_name=var_name)
         self.params = ['x', 'axis', 'tensorShape']
         self.params_with_defaults = []
 
@@ -904,8 +895,8 @@ class ReshapeDimension(NewReshape):
 class FlattenDimensions(NewReshape):
 
     def __init__(self, x, axis, num, name='FlattenDimensions', var_name=None):
-        super(FlattenDimensions, self).__init__(x, 0, beginAxis=axis,
-                                                endAxis=axis + num, name=name, var_name=var_name)
+        super(FlattenDimensions, self).__init__(
+            x, 0, beginAxis=axis, endAxis=axis + num, name=name, var_name=var_name)
         self.params = ['x', 'axis', 'num']
         self.params_with_defaults = []
 
