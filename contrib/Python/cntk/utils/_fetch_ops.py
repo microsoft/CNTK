@@ -16,7 +16,7 @@ REGEX_INSTANTIATION = re.compile( r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
-OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide'}
+OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide', 'Ceil', 'Round'}
 
 INPUT_NODES = ['Input', 'SparseInput']
 IMAGE_INPUT_NODES = ['ImageInput', 'SparseImageInput']
@@ -207,6 +207,16 @@ class ElementDivide(ComputationNode):
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
        
+class Round(ComputationNode):
+    def __init__(self, x, name='Round', var_name=None):
+        super(Round, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+
+class Ceil(ComputationNode):
+    def __init__(self, x, name='Ceil', var_name=None):
+        super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+
 
 """
 
