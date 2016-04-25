@@ -20,10 +20,6 @@ from .utils import MODEL_INDENTATION
 from .utils import aggregate_readers
 from .utils import with_metaclass, is_string
 
-def _tuple_to_cntk_shape(shape):
-    return ':'.join(str(v) for v in shape)
-
-
 class ComputationNode(object):
 
     '''
@@ -148,10 +144,10 @@ class ComputationNode(object):
     def __str__(self):
         return "%s / params=%s" % (self.name, self.params)
 
-    def _param_to_brainscript(self, p_name, p_value):
+    def _param_to_brainscript(self, p_name, p_value, is_node=False):
         if isinstance(p_value, bool):
             p_value = str(p_value).lower()
-        elif is_string(p_value):
+        elif is_string(p_value) and not is_node:
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
@@ -244,14 +240,15 @@ class ComputationNode(object):
 
                         input_nodes_vars.append(child_var)
 
-                    param_variable_names.append(
-                        _tuple_to_cntk_shape(input_nodes_vars))
+                    param_variable_names.append(self._param_to_brainscript(p_name,
+                        _tuple_to_cntk_shape(input_nodes_vars), True))
                 else:
                     if self._is_forward_ref(p_name, p_value):
                         # We have a forward reference to a node that will be
                         # later on defined. p_value is the var_name of the
                         # later defined node.
-                        param_variable_names.append(p_value)
+                        param_variable_names.append(self._param_to_brainscript
+                        (p_name, p_value, True))
                     else:
                         param_variable_names.append(
                             self._param_to_brainscript(p_name, p_value))
@@ -327,7 +324,7 @@ class ComputationNode(object):
         '''
         var_name, node_counter, desc, has_inputs, readers, dep_inputs = \
             self._to_config(input_reader={},
-					description=[], 
+                    description=[], 
                     unrolled_nodes={},
                     inputs=set(),
                     readers=set(), 
@@ -357,6 +354,9 @@ from cntk.ops.cntk1 import *
 # to have a separate namespace when we want to override below
 from cntk.ops import cntk1 as cntk1_ops
 from .reader import CNTKTextFormatReader
+
+def _tuple_to_cntk_shape(shape):
+    return ':'.join(str(v) for v in shape)
 
 # redefine some operators to work with NumPy and sequences as input
 
@@ -580,4 +580,47 @@ def constant(value, name=None):
     """    
     
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
-                     learning_rate_multiplier=0.0)    
+                     learning_rate_multiplier=0.0)
+
+def eval(node):        
+    """
+    It evaluates a node that has taken a numpy array as input. Note that sequences
+    are not supported yet by this method
+    
+    Examples:
+        Plus with two matrices
+        >>> print (cntk.eval(cntk.ops.plus([[-30.,40.], [1.,2.]], [[-30.,40.], [1.,2.]])))
+        #   [array([[[-60., 80.], [2., 4.]]])]
+        
+        Times with broadcast of a scalar over a matrix
+        >>> print (cntk.eval(cntk.ops.element_times([[-30.,40.], [1.,2.]], 5)))
+        #   [array([[[-150., 200.], [5., 10.]]])]        
+    Args:
+        node (cntk.graph.ComputationNode): the node to evaluate        
+    Returns:
+        numpy array containing the result
+    """    
+    
+    from cntk.context import get_context        
+    # call a helper method to get a context
+    ctx = get_context()    
+    first = True    
+    
+    # the params are passed as arryas e.g. plus([1,2], [3,4]), we need to 
+    # wrap them with input and parameter nodes
+    if node.params:
+        for p in node.params:
+            if p in node.inputs:
+                val = getattr(node, p)
+                # one param needs to be an Input() node. This is being fixed in 
+                #CNTK we will remove this workaround onces we can evaluate a 
+                #network with no inputs
+                if first:
+                    if not isinstance(val, list):                
+                        # inputs have the outmost dimension for sequences
+                        val = [val]
+                    setattr(node, p, input_reader([val], False, var_name=p, alias=p))            
+                    first = False
+                else:
+                    setattr(node, p, constant(getattr(node, p), name=p))
+    return ctx.eval(node)
