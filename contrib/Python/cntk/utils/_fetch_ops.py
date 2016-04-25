@@ -8,7 +8,7 @@ import sys
 
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
-    r'(?P<operator>\w+)\((?P<operands>.*?)\) = new ComputationNode \[')
+    r'(?P<operator>\w+) ?\((?P<operands>.*?)\) = new ComputationNode \[ (?P<inputs>.*?inputs = .*?[;|\/])?')
 REGEX_ALIAS = re.compile(r'(?P<operator>\w+) = (?P<alias>\w+)\s*(//.*|)')
 # ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix))
 REGEX_INSTANTIATION = re.compile( r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
@@ -16,7 +16,8 @@ REGEX_INSTANTIATION = re.compile( r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
 OPERANDS_TO_IGNORE = {"tag=''"}
-OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide'}
+
+OPERATORS_TO_IGNORE = {'Print', 'Fail', 'Format', 'Replace', 'Substr', 'Chr', 'Length', 'ConstantFromString', 'ElementDivide', 'Ceil', 'Round', 'Constant'}
 
 INPUT_NODES = ['Input', 'SparseInput']
 IMAGE_INPUT_NODES = ['ImageInput', 'SparseImageInput']
@@ -60,10 +61,11 @@ SMOOTH_NAMING = {
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(%(parentclass)s):
-    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
+    def __init__(self, %(signature)sname='%(name)s', var_name=None):
         super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name)
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
+        self.inputs = [%(inputs_string)s]
 """
 
     def _smooth(self, name):
@@ -82,8 +84,21 @@ class %(name)s(%(parentclass)s):
             self.parentclass = 'ComputationNode'
 
         self.raw_operands = comp_match.group('operands')
-
-        self.operands = []
+        
+        self.raw_inputs = []
+        self.inputs = []
+        try:
+            self.raw_inputs = comp_match.group('inputs')
+            if (self.raw_inputs):
+                self.raw_inputs = self.raw_inputs.split("inputs =")[1]                
+                self. inputs = ["'%s'" % i for i in re.split("[\/|:| |\)|\(|;]", 
+                                                    self.raw_inputs.strip()) if i]                    
+        except IndexError:            
+            pass
+            
+        self.inputs_string = ', '.join(self.inputs)            
+        
+        self.operands = []                
         for op in self.raw_operands.split(','):
             if op.strip() in OPERANDS_TO_IGNORE:
                 continue
@@ -99,12 +114,14 @@ class %(name)s(%(parentclass)s):
                 raise ValueError('Did not expect this format')
 
         self.signature = ", ".join(self.sig(op) for op in self.operands)
+        if self.signature:
+            self.signature += ", "
 
         self.initialization = "\n".join(
             (" " * 8 + "self.%s = %s" % (op.name, op.name) for op in self.operands))
 
-        self.paramlist = ", ".join(("'%s'" % op.name for op in self.operands))
-
+        self.paramlist = ", ".join(("'%s'" % op.name for op in self.operands))                
+        
         default_init_started = False
         params_with_defaults = []
         for op in self.operands:
@@ -144,7 +161,7 @@ class AliasOperator(object):
 class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
-    def __init__(self, %(signature)s, name='%(name)s', var_name=None):
+    def __init__(self, %(signature)s name='%(name)s', var_name=None):
         super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name)
         self.params=[%(paramlist)s]
         self.params_with_defaults = [%(params_with_defaults)s]
@@ -186,27 +203,46 @@ from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComp
 class Slice(ComputationNode):
     def __init__(self, beginIndex, endIndex, input, axis=1, name='Slice',
             var_name=None):
-        super(Slice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        super(Slice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
         self.axis = axis
+        self.inputs = ['input']
+        self.params_with_defaults = []
 
 class Splice(ComputationNode):
     def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
             var_name=None):
-        super(Splice, self).__init__(params=['value', 'format'], name=name, var_name=var_name)
+        super(Splice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
         self.axis = axis
-
+        self.inputs = ['input']
+        self.params_with_defaults = []
+    
 class ElementDivide(ComputationNode):
     def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
         super(ElementDivide, self).__init__(params=['aMatrix', 'anotherMatrix'], name=name, var_name=var_name)
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
-       
+        self.inputs = ['aMatrix', 'anotherMatrix']
+        self.params_with_defaults = []
+        
+class Round(ComputationNode):
+    def __init__(self, x, name='Round', var_name=None):
+        super(Round, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+        self.inputs = ['x']
+        self.params_with_defaults = []
+        
+class Ceil(ComputationNode):
+    def __init__(self, x, name='Ceil', var_name=None):
+        super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
+        self.x = x
+        self.inputs = ['x']
+        self.params_with_defaults = []
 
 """
 
@@ -238,6 +274,8 @@ def convert_bs_to_python(bs_fn, pyf):
                 standard_match = REGEX_STANDARD.match(line)
                 if standard_match:
                     po = CompNodeOperator(standard_match)
+                    if po.name in OPERATORS_TO_IGNORE:
+                        continue
                     pyf.write(str(po) + '\n')
                     continue
 
