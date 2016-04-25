@@ -370,6 +370,17 @@ class ClassBasedCrossEntropyWithSoftmax(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['labelClassDescriptorVectorSequence', 'mainInputInfo', 'mainWeight', 'classLogProbsBeforeSoftmax']
 
+class Clip(ComputationNode):
+
+    def __init__(self, minValue, maxValue, x, name='Clip', var_name=None):
+        super(Clip, self).__init__(
+            params=['minValue', 'maxValue', 'x'], name=name, var_name=var_name)        
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.x = x
+        self.params_with_defaults = []
+
+
 class ColumnElementTimes(ComputationNode):
     def __init__(self, aVectorSequence, anotherVectorSequence, name='ColumnElementTimes', var_name=None):
         super(ColumnElementTimes, self).__init__(params=['aVectorSequence', 'anotherVectorSequence'], name=name, var_name=var_name)
