@@ -1119,8 +1119,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 PREPENDTS(stderr);
                 fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
-                        prefixMsg.c_str(), epochNumber + 1, m_maxEpochs,
-                        numMBsRun - m_numMBsToShowResult + 1, numMBsRun);
+                        prefixMsg.c_str(), epochNumber + 1, (int)m_maxEpochs,
+                        (int)(numMBsRun - m_numMBsToShowResult + 1), numMBsRun);
                 if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
                 fprintf(stderr, "]: ");
