@@ -440,17 +440,6 @@ class Clip(ComputationNode):
         self.params_with_defaults = []
 
 
-class ClipByValue(ComputationNode):
-
-    def __init__(self, x, minValue, maxValue, name='ClipByValue', var_name=None):
-        super(ClipByValue, self).__init__(
-            params=['x', 'minValue', 'maxValue'], name=name, var_name=var_name)
-        self.x = x
-        self.minValue = minValue
-        self.maxValue = maxValue
-        self.params_with_defaults = []
-
-
 class ColumnElementTimes(ComputationNode):
 
     def __init__(self, aVectorSequence, anotherVectorSequence, name='ColumnElementTimes', var_name=None):
