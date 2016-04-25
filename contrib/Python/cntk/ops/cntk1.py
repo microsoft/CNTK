@@ -11,6 +11,7 @@ class Slice(ComputationNode):
         self.input = input
         self.axis = axis
         self.inputs = ['input']
+        self.params_with_defaults = []
 
 class Splice(ComputationNode):
     def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
@@ -21,6 +22,7 @@ class Splice(ComputationNode):
         self.input = input
         self.axis = axis
         self.inputs = ['input']
+        self.params_with_defaults = []
     
 class ElementDivide(ComputationNode):
     def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
@@ -28,18 +30,21 @@ class ElementDivide(ComputationNode):
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
         self.inputs = ['aMatrix', 'anotherMatrix']
+        self.params_with_defaults = []
         
 class Round(ComputationNode):
     def __init__(self, x, name='Round', var_name=None):
         super(Round, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
         self.inputs = ['x']
+        self.params_with_defaults = []
         
 class Ceil(ComputationNode):
     def __init__(self, x, name='Ceil', var_name=None):
         super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
         self.inputs = ['x']
+        self.params_with_defaults = []
 
 class Sign(ComputationNode):
     def __init__(self, x, name='Sign', var_name=None):

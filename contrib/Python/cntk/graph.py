@@ -144,10 +144,10 @@ class ComputationNode(object):
     def __str__(self):
         return "%s / params=%s" % (self.name, self.params)
 
-    def _param_to_brainscript(self, p_name, p_value):
+    def _param_to_brainscript(self, p_name, p_value, is_node=False):
         if isinstance(p_value, bool):
             p_value = str(p_value).lower()
-        elif is_string(p_value):
+        elif is_string(p_value) and not is_node:
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
@@ -240,14 +240,15 @@ class ComputationNode(object):
 
                         input_nodes_vars.append(child_var)
 
-                    param_variable_names.append(
-                        _tuple_to_cntk_shape(input_nodes_vars))
+                    param_variable_names.append(self._param_to_brainscript(p_name,
+                        _tuple_to_cntk_shape(input_nodes_vars), True))
                 else:
                     if self._is_forward_ref(p_name, p_value):
                         # We have a forward reference to a node that will be
                         # later on defined. p_value is the var_name of the
                         # later defined node.
-                        param_variable_names.append(p_value)
+                        param_variable_names.append(self._param_to_brainscript
+                        (p_name, p_value, True))
                     else:
                         param_variable_names.append(
                             self._param_to_brainscript(p_name, p_value))
