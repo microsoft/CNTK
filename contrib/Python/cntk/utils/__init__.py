@@ -25,7 +25,7 @@ MODEL_INDENTATION = 8
 
 def cntk_to_numpy_shape(shape):
     '''
-    Removes the dynamic axis and returns a tuple represneint the NumPy shape.
+    Removes the dynamic axis and returns a tuple representing the NumPy shape.
 
     Args:
         shape (tuple): CNTK shape iterable
