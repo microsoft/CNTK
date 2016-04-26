@@ -24,12 +24,12 @@ command = writeWordAndClassInfo:train:test:write
 
 # experiment id
 
-decodeModel = 15
-beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
+decodeModel = 32
+beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
 deviceId = 5
-ExpId = 19-$deviceId$-g2p
-#ExpId = 19-4-g2p # for decoding a different model
+ExpId = 22-$deviceId$-g2p
+#ExpId = 19-1-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
 
 hiddenDim = 512  #420 # 1024 # 200
@@ -195,11 +195,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
         # compute additional hidden state from attention
         W = Parameters.WeightParam (attentionDim, outputDim)   # note: stabilizer causes numeric clipping. Possibly fixed by setting window values to 0 when outside.
-        projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
+        #projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
+        projectedH = W * S(prevState.h)                           # [outputDim] or [outputDim x D] in beam search
         tanHOut = Tanh (projectedAttentionWindowBroadcast.projectedValue + projectedH) # [attentionDim x beamDepth x attentionSpan]
 
         v = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')                           # [1 x attentionDim]
-        u = v * /*S*/(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
+        u = v * S(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
         # ^^ mask 'v' for purpose of stabiliziation; TODO: don't do that if no stabiliziation
         uValid = u + Log (projectedAttentionWindowBroadcast.valid)    # [1 x beamDepth x attentionSpan]
 
@@ -261,7 +262,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
         value          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
         valid          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
-        projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+        #projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+        projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
         dim            = thoughtVector.dim
     ]
 
