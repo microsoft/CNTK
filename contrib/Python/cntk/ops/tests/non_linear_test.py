@@ -49,7 +49,7 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     
     a = C(min_value)    
     b = C(max_value)
-    c = I([x], has_sequence_dimension=False)
+    c = I([x], has_dynamic_axis=False)
     
     result = clip(a, b, c)
     unittest_helper(result, None, expected, device_id=device_id, 

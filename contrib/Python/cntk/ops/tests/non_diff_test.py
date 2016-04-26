@@ -25,7 +25,7 @@ def test_op_floor(arg, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
     numArray = [[AA(arg)]]
     exp = np.floor(numArray)
