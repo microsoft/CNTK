@@ -1,4 +1,4 @@
-dataDir: .
+dataDir: ../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
 
 tags:
     # Execution time: Release-GPU ~ 20sec
