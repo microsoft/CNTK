@@ -34,7 +34,7 @@ Installing the Python module
 
 >>> import cntk as cn
 >>> cn.__version__
-1.5
+1.4
 >>> with cn.Context('demo', clean_up=False) as ctx:
 ...     a = cn.constant([[1,2], [3,4]])
 ...     print(ctx.eval(a + [[10,20], [30, 40]]))
