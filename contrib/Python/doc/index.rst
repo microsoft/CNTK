@@ -20,10 +20,13 @@ them on sample data in real time.
 .. toctree::
    :maxdepth: 2
 
-   Installation <installation>
    Getting Started <gettingstarted>
-   Readers <readers>
-   Operators <cntk.ops>
+   Release Notes <releasenotes>
+   Concepts <concepts>
+   API
+        Readers <readers>
+        Operators <cntk.ops>
+        Execution Context <context>
    Examples <examples>
 
 
