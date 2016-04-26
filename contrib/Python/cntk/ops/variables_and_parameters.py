@@ -49,29 +49,29 @@ def input_reader(value, alias=None, has_dynamic_axis=True):
         raise ValueError('value type is not supported: %s' % type(value))
 
 
-def input(dims, name=None):
+def input(shape, name=None):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
 
     Args:
-        dims: the shape of the input tensor
+        shape: the shape of the input tensor
         name: the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
-    return Input(dims, var_name=name)
+    return Input(shape, var_name=name)
 
 
-def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform',
+def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform',
               init_value_scale=1, value=0, init_from_file_path='', init_from_literal=None,
               random_seed=-1):
     """
     It creates a parameter tensor. 
 
     Args:
-        dims (shape or int): the shape of the input tensor. If `init='fromLiteral'`, dims is not 
+        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not 
         needed as it will be inferred from the literal.
         name (str, optional): the name of the node in the network
         learning_rate_multiplier (float): 
@@ -124,7 +124,7 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
             initFromLiteral=s.getvalue().decode())
 
     else:
-        return cntk1.ParameterTensor(dims, learning_rate_multiplier, init,
+        return cntk1.ParameterTensor(shape, learning_rate_multiplier, init,
                                      init_value_scale, value, init_from_file_path,
                                      randomSeed=random_seed, var_name=name)
 
