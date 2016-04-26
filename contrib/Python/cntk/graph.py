@@ -177,8 +177,8 @@ class ComputationNode(object):
         is_loop_node = self.name in ('Delay', 'PastValue', 'FutureValue')
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
-    def _to_config_recursively(self, input_reader, desc, unrolled_nodes, inputs,
-                               readers, dep_inputs, node_counter, reconciled_cache):
+    def _to_config_recursively(self, input_map, desc, unrolled_nodes, inputs,
+                               dep_inputs, node_counter, reconciled_cache):
 
         param_variable_names = []
         # In case we have multiple unreconciled inputs, we will reconcile each
@@ -208,7 +208,7 @@ class ComputationNode(object):
                             child_var, child_dep_inputs = unrolled_nodes[pv]
                         else:
                             child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
-                                input_reader, desc, unrolled_nodes, inputs, readers,
+                                input_map, desc, unrolled_nodes, inputs, 
                                 dep_inputs, node_counter, reconciled_cache)
 
                             unrolled_nodes[pv] = child_var, dep_inputs
@@ -232,7 +232,7 @@ class ComputationNode(object):
                                     pv = ReconcileMBLayout(
                                         unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
-                                        input_reader, desc, unrolled_nodes, inputs, readers,
+                                        input_map, desc, unrolled_nodes, inputs, 
                                         dep_inputs, node_counter,
                                         reconciled_cache)
                                     reconciled_cache[
@@ -267,33 +267,6 @@ class ComputationNode(object):
         self.var_name = self.var_name or "v%i" % node_counter
         node_counter += 1
 
-        if self.is_input():
-            inputs.add(self)
-
-            num_readers_mapping = 0
-
-            if self.reader:
-                node_reader = self.reader
-                num_readers_mapping += 1
-
-            if input_reader:
-                if self in input_reader:
-                    node_reader = input_reader[self]
-                    num_readers_mapping += 1
-                if has_var_name and self.var_name in input_reader:
-                    node_reader = input_reader[self.var_name]
-                    num_readers_mapping += 1
-
-            if num_readers_mapping == 0:
-                raise RuntimeError(
-                    "No reader was found for input node: {0}".format(self.var_name))
-
-            if num_readers_mapping > 1:
-                raise RuntimeError(
-                    "More than one reader found for input node: {0}".format(self.var_name))
-
-            readers.add(node_reader)
-
         params = self._get_cntk_param_string(param_variable_names)
 
         line = ' ' * MODEL_INDENTATION + \
@@ -301,39 +274,40 @@ class ComputationNode(object):
         desc.append(line)
 
         if self.is_input():
+            if not self in input_map:
+                input_map._add_unmapped(self)
+            inputs.add(self)
             dep_inputs += (self.var_name,)
 
         return self.var_name, node_counter, desc, dep_inputs
 
-    def _to_config(self, input_reader, description, unrolled_nodes, inputs, readers,
+    def _to_config(self, input_map, description, unrolled_nodes, inputs, 
                    dep_inputs, node_counter, reconciled_cache):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
 
         var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
-            input_reader,
+            input_map,
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
-            readers=readers,
             dep_inputs=dep_inputs,
             node_counter=node_counter,
             reconciled_cache=reconciled_cache)
 
-        return var_name, node_counter, desc, inputs, readers, dep_inputs
+        return var_name, node_counter, desc, inputs, dep_inputs
 
     def to_config(self):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
         '''
-        var_name, node_counter, desc, inputs, readers, dep_inputs = \
-            self._to_config(input_reader={},
+        var_name, node_counter, desc, inputs, dep_inputs = \
+            self._to_config(input_map=None,
                             description=[],
                             unrolled_nodes={},
                             inputs=set(),
-                            readers=set(),
                             dep_inputs=tuple(),
                             node_counter=0,
                             reconciled_cache={})
@@ -398,6 +372,7 @@ def eval(node):
                     first = False
                 else:
                     setattr(node, p, constant(getattr(node, p), name=p))
+
     return ctx.eval(node)
 
 class LazyInput(InputComputationNodeBase):

@@ -53,7 +53,7 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
 
     left_as_input = a + right_operand
     unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, clean_up=False, backward_pass=False)
 
     right_as_input = left_operand + b
     unittest_helper(right_as_input, None, expected, device_id=device_id,
