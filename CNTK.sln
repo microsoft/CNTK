@@ -897,8 +897,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{01
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_Convolution", "01_Convolution", "{58286327-6742-44C4-A34E-D2583419E55E}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt
-		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml

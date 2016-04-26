@@ -216,7 +216,8 @@ DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
         return expr;                             \
     }
 //#define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(const ElemType & a, ElemType b, int i = 0) { UNUSED(i); return expr; }
-
+DefBinaryOp(CopyIf, a != 0 ? b : 0);
+DefBinaryOp(CopyIfNot, a == 0 ? b : 0);
 DefBinaryOp(Sum, a + b);
 DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
