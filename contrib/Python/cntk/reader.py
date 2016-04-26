@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
@@ -74,7 +80,7 @@ class CNTKTextFormatReader(AbstractReader):
            1\t|I 24.0
 
        The ``I`` is the alias, which would be used to connect the data to the
-       input node. Let's say above data is stored in ``data.txt``, you would
+       input node. Let's say the above data is stored in ``data.txt``, you would
        set up the reader as follows::
 
            r = CNTKTextFormatReader('data.txt', 'I')
@@ -96,7 +102,7 @@ class CNTKTextFormatReader(AbstractReader):
        The normal matrix based format, for which you would have used
        :class:`UCIFastReader` in the past can be simply converted by prepending
        every line by the line number and a bar (``|``). Of course it only works
-       for sequences of length 1, since in matrix format you cannot go beyound
+       for sequences of length 1, since in matrix format you cannot go beyond
        that:
 
        :class:`UCIFastReader` format::

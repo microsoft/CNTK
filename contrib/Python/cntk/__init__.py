@@ -1,4 +1,10 @@
-__version__ = '1.5'
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root 
+# for full license information.
+# ==============================================================================
+
+__version__ = '1.4'
 
 from .context import *
 from .graph import *

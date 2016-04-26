@@ -409,8 +409,8 @@ class LazyInput(InputComputationNodeBase):
         input_alias (str): a short name for the input, it is how inputs are
         referenced in the data files. If not provided, it will be automatically
         assigned.
-        has_sequence_dimension (bool): whether the tensor has already the data
-        packaged as sequences. If not, it will wrapped again in a sequence of
+        has_sequence_dimension (bool): whether the tensor already has the data
+        packaged as sequences. If not, it will be wrapped again in a sequence of
         length 1.
 
     '''

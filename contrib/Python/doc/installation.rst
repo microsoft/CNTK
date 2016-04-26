@@ -3,30 +3,34 @@ Installation
 This page will guide you through three required steps:
 
 #. Make sure that all Python requirements are met
-#. Install the CNTK binaries
+#. Build and install CNTK
 #. Install the Python API and set it up
 
 Requirements
 ------------
 You will need the following Python packages: 
 
-:Python: 2.7 (but you have already 3.3+ running, have you?)
+:Python: 2.7+ or 3.3+
 :NumPy: 1.10
 :Scipy: 0.17
 
-On Linux a simply ``pip install`` should suffice. On Windows, you will get
+On Linux a simple ``pip install`` should suffice. On Windows, you will get
 everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
 
 Installing CNTK
 ---------------
-Please follow the instruction on `CNTK's GitHub page <https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration>`_. After you have built the CNTK binary, find the build location. It will be something like ``<cntkpath>/x64/Debug_CpuOnly/cntk``. You will need this for the next step.
+Please follow the instruction on `CNTK's GitHub page 
+<https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration>`_. 
+After you have built the CNTK binary, find the build location. It will be 
+something like ``<cntkpath>/x64/Debug_CpuOnly/cntk``. You will need this for 
+the next step.
 
 Installing the Python module
 ----------------------------
 #. Go to ``<cntkpath>/contrib/Python`` and run ``python setup.py install``
 #. Set up the environment variable ``CNTK_EXECUTABLE_PATH`` to point to the
    CNTK executable
-#. Enjoy Python's easy of use with CNTK's speed::
+#. Enjoy Python's ease of use with CNTK's speed::
 
 >>> import cntk as cn
 >>> cn.__version__

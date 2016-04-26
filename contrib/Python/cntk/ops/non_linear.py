@@ -94,14 +94,13 @@ def tanh(x, name=None):
     """
     return Tanh(x, var_name=name)
 
-def softmax(X, name=None):
+def softmax(x, name=None):
     """
-    computes the element-wise sigmoid of `X`: 
+    computes the element-wise sigmoid of `x`: 
 
-    :math:`softmax(x) = {\exp(x) - \max_{x \in X}(\exp(x)) \over {\sum_{x \in
-    X} \exp(x)- \max_{x \in X}(\exp(x)) }}`
+    :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
 
-    The term :math:`\max_{x \in X}(\exp(x))` is subtracted for numerical
+    The term :math:`\max_{x_i \in x}(\exp(x_i))` is subtracted for numerical
     stability.
 
     Args:
@@ -117,7 +116,7 @@ def softmax(X, name=None):
         >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
         [[[0.5, 0.5]]]
     """
-    return Softmax(X)
+    return Softmax(x)
 
 def exp(x, name=None):
     """

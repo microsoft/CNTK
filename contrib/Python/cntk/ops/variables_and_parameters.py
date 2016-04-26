@@ -73,7 +73,7 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
         name (str, optional): the name of the node in the network
         learning_rate_multiplier (float): 
         init (str): 'uniform', 'fromFile' or 'fromLiteral' 
-        init_value_scale (float): a sacling factor for the initial value
+        init_value_scale (float): a scaling factor for the initial value
         value: a scalar initial value that would be replicated for every element in the tensor
         init_from_file_path (str): the file that contains the initial tensor value
         init_from_literal (ndarray): the numpy array used to initialize the tensor parameter
