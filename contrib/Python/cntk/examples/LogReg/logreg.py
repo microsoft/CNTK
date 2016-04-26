@@ -15,6 +15,8 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 from cntk import *
+from cntk.ops import *
+from cntk.ops import cntk1
 
 cur_dir = os.path.dirname(__file__)
 
@@ -25,28 +27,26 @@ mapping_file = os.path.join(cur_dir, "SimpleMapping-3Classes.txt")
 
 
 def train_eval_logistic_regression(criterion_name=None, eval_name=None):
-    X = Input(2)
-    y = Input(3)
+    X = input(2)
+    y = input(3)
+    
+    W = parameter((3, 2))
+    b = parameter((3, 1))
 
-    W = LearnableParameter(3, 2)
-    b = LearnableParameter(3, 1)
-
-    out = Times(W, X) + b
+    out = times(W, X) + b
     out.tag = 'output'
-    ce = CrossEntropyWithSoftmax(y, out)
+    ce = cntk1.CrossEntropyWithSoftmax(y, out)
     ce.var_name = criterion_name
     ce.tag = 'criterion'
-    eval = SquareError(y, out)
+    eval = cntk1.SquareError(y, out)
     eval.tag = 'eval'
     eval.var_name = eval_name
 
     # training data readers
-    rx = CNTKTextFormatReader(train_file, 'I')
-    ry = CNTKTextFormatReader(train_file, 'L')
+    train_reader = CNTKTextFormatReader(train_file)
 
     # testing data readers
-    rx_t = CNTKTextFormatReader(test_file, 'I')
-    ry_t = CNTKTextFormatReader(test_file, 'L')
+    test_reader = CNTKTextFormatReader(test_file)
 
     my_sgd = SGDParams(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
@@ -54,8 +54,11 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     with Context('demo', clean_up=False) as ctx:
 
         ctx.train(
-            root_nodes=[ce, eval], optimizer=my_sgd, input_reader={X: rx, y: ry})
-        result = ctx.test(input_reader={X: rx_t, y: ry_t})
+            root_nodes=[ce, eval], 
+            optimizer=my_sgd,
+            input_map=train_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
+
+        result = ctx.test(input_map=test_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
 
         return result
 
