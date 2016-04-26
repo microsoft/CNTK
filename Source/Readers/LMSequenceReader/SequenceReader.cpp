@@ -1707,8 +1707,6 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
     size_t maxTokens    = mRequestedNumParallelSequences > 0 ?                       SIZE_MAX : m_mbSize;
     size_t numTokens = 0;  // token counter
 	
-	// In case of parallel reading, if this subset does not get any sequence, it will end up getting a set of sequences with another length
-	// This does a balancing of the load over the complete epoch, since we end up dividing the whole set of sequences into m_numSubsets
 	for (size_t seq = mLastProcessedSentenceId;
 		seq < mNumRead &&                 // hit end of buffer
 		mToProcess.size() < maxToProcess; // hit parallel-sequence limit
@@ -1717,14 +1715,6 @@ size_t BatchSequenceReader<ElemType>::DetermineSequencesToProcess()
 		// skip entries that are done
 		if (mProcessed[seq])
 			continue;
-
-		// logic to partition data b/w different MPI workers.
-		// need to consider only those sequences for which seq ID modulo m_numSubsets is m_subsetNum
-		if (seq % m_numSubsets != m_subsetNum)
-		{
-			mProcessed[seq] = true; // set this as true so as not to revisit this seq later
-			continue;
-		}
 
 		// first unprocessed sequence determines the length if this minibatch
 		if (sln == 0)
@@ -1776,9 +1766,9 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
         Reset();
 
         std::vector<SequencePosition> seqPos;
-        fprintf(stderr, "LMSequenceReader: Reading epoch data..."), fflush(stderr);
+        fprintf(stderr, "LMSequenceReader Rank %d: Reading epoch data...", (int) m_subsetNum), fflush(stderr);
         mNumRead = m_parser.Parse(m_cacheBlockSize, &m_labelTemp, &m_featureTemp, &seqPos);
-        fprintf(stderr, " %d sequences read.\n", (int) mNumRead);
+        fprintf(stderr, " %d sequences read by Rank %d\n", (int) mNumRead, (int) m_subsetNum);
         firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0)
             return false; // end
@@ -1801,7 +1791,19 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
         sLn = DetermineSequencesToProcess();
     }
 
-    // --- STEP 2: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
+	// --- STEP 2: distribute the sequences in mToProcess across parallel workers
+	std::vector<size_t> mToProcessTemp;
+	size_t totalNumberSequencesToProcess = mToProcess.size();
+	size_t numberSequencesPerWorker = (totalNumberSequencesToProcess >= m_numSubsets) ? (totalNumberSequencesToProcess / m_numSubsets) : 1;
+	size_t startIndex = m_subsetNum * numberSequencesPerWorker;
+
+	if (startIndex >= totalNumberSequencesToProcess) // this worker does not have any sequences to process
+		return true;	// return true since other workers are processing sequences
+
+	size_t endIndex = (m_subsetNum + 1) * numberSequencesPerWorker;
+
+
+    // --- STEP 3: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
 
     const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
     LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1816,7 +1818,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
     const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
 	for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
     {
-        for (int k = 0; k < mToProcess.size(); k++)
+        for (size_t k = startIndex; k < endIndex; k++)
         {
             size_t seq = mToProcess[k];
             size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
@@ -1893,11 +1895,16 @@ bool BatchSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matri
 
     size_t firstPosInSentence;
     bool moreData = GetMinibatchData(firstPosInSentence);
-    if (!moreData)
+    if (!moreData)	// none of the workers got any sequences to process
     {
         m_pMBLayout->Init(mToProcess.size(), 0);
         return false;
     }
+
+	// --- STEP 2: check if this worker got at least one sequence to process
+	if (m_featureData.empty())
+		return true;	// this worker has nothing to process, so just return
+
     // now:
     //  - there is at least one sequence to return
     //  - mToProcess[] lists all sequences
@@ -1905,7 +1912,7 @@ bool BatchSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matri
     //  - m_featureData[j] contains the input label indices
     //  - m_labelIdData[j] contains the output label indices
 
-    // --- STEP 2: transfer the data to the matrices
+    // --- STEP 3: transfer the data to the matrices
 
     size_t actualmbsize = m_featureData.size(); // total number of tokens across all sequences in this MB
     assert(actualmbsize > 0);
@@ -1986,25 +1993,6 @@ bool BatchSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matri
 
     // go to the next sequence
     m_seqIndex++;
-
-#if 0 // what is this?
-    // now transfer to the GPU as needed
-    // get the features array
-    if (matrices.find(m_featuresName) == matrices.end())
-    {
-        Matrix<ElemType>& nbs = *matrices[L"numberobs"]; // TODO: what is this? We fall back to a different node?
-        int curDevId = nbs.GetDeviceId();
-        nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-        nbs(0, 0) = (float)actualmbsize;
-        nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-        for (size_t i = 0; i < actualmbsize; i++)
-        {
-            std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
-            Matrix<ElemType>& features = *matrices[ws];
-            features.SetValue(featureDim, 1, features.GetDeviceId(), &m_featuresBuffer[i * featureDim], matrixFlagNormal);
-        }
-    }
-#endif
 
     // we read some records, so process them
     return true;
