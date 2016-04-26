@@ -2077,6 +2077,14 @@ public:
 #endif
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
+    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+    {
+        Base::BeginForwardProp();
+        // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+        // TODO: This is a stopgap. Is this the right thing to do? It changes the matrix type in-place.
+        Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+    }
+
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryZip(isFinalValidationPass, true /*allowBroadcast*/);
