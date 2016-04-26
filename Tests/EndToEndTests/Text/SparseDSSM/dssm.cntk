@@ -36,6 +36,8 @@ train = [
 		gradUpdateType=none
 		gradientClippingWithTruncation=true
 		clippingThresholdPerSample=1#INF
+		# We are testing checkpointing, keep all checkpoint (.ckp) files
+		keepCheckPointFiles = true
     ]
 
 ]

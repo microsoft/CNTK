@@ -1,16 +1,15 @@
 # CNTK
 
 ## Latest news
+*2016-04-25.* V 1.1 Binary release
+CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
+
 *2016-04-12.* CNTK is available as [Azure Virtual Machines](https://github.com/Microsoft/CNTK/wiki/CNTK-on-Azure) and [Docker Containers](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)
 
 *2016-04-12.* Added support for ND convolution and ND pooling and CPU support for `cudnn` layout in convolution, pooling and batch normalization nodes.
 Read [documentation](https://github.com/Microsoft/CNTK/wiki/Full-NDL-Function-Reference) on convolution, pooling and batch normalization nodes.
 
 *2016-04-05.* CUDA7.5 support for Windows Build: Windows project files have been updated to automatically utilize CUDA 7.5 if present
-
-## March 2016
-*2016-03-24.* New Text Reader (CNTKTextFormatReader) is available
-Read description here https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

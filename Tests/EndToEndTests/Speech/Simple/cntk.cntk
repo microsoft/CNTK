@@ -45,6 +45,8 @@ Simple_Demo=[
         momentumPerMB=0.9
         dropoutRate=0.0
         maxEpochs=50
+        # We are testing checkpointing, keep all checkpoint (.ckp) files
+        keepCheckPointFiles = true
     ]
        
     # Parameter values for the reader

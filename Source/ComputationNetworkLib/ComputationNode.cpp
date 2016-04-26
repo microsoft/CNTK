@@ -158,7 +158,7 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     SetDims(TensorShape(dims), HasMBLayout());
 }
 
-// N-ary zip operation, e.g. for TernaryZip for clip()
+// N-nary zip operation, e.g. for TernaryZip for clip()
 // If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
 // This also helpfully resizes the children if not yet sized.
 void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
@@ -171,8 +171,8 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
-        for (size_t i = 0; i < numInputs; i++)
-            for (size_t j = i + 1; j < numInputs; j++)
+        for (size_t i = 0; i < numInputs; i++)        
+            for (size_t j = i+1; j < numInputs; j++)            
                 if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
                     LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
 
@@ -180,13 +180,13 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
     let shape0 = GetInputSampleLayout(0);
 
     // dims is max over all inputs
-    size_t maxRank = shape0.GetRank();
+    size_t maxRank = shape0.GetRank();    
     for (size_t i = 1; i < numInputs; i++)
     {
         let shape = GetInputSampleLayout(i);
         if (shape.GetRank() > maxRank)
             maxRank = shape.GetRank();
-    }
+    }        
     SmallVector<size_t> dims = shape0.GetDims();
     dims.resize(maxRank, 1); // pad with 1
 
@@ -293,7 +293,7 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
     }
 }
 
-// as above but for n-ary cases
+// as above but for N-ary cases
 void ComputationNodeBase::ValidateInferNaryInputDims(size_t numInputs)
 {
     // limited inference of children dimensions
@@ -304,10 +304,10 @@ void ComputationNodeBase::ValidateInferNaryInputDims(size_t numInputs)
     for (size_t index = 0; index < numInputs; index++)
     {
         const auto& in = Input(index);
-
+        
         for (size_t indexOther = 0; indexOther < numInputs; indexOther++)
         {
-            if (indexOther != index)
+            if (indexOther != index) 
             {
                 const auto& other = Input(indexOther);
                 // borrow any unset dimension on one input from the other input

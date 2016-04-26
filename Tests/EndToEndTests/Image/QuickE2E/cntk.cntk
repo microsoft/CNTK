@@ -107,6 +107,8 @@ train = [
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        # We are testing checkpointing, keep all checkpoint (.ckp) files
+        keepCheckPointFiles = true
     ]
     
     reader = [
