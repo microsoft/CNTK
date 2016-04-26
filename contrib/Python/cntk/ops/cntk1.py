@@ -499,6 +499,15 @@ class GMMLogLikelihood(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['unnormalizedPriorVector', 'meansAsRows', 'logStdDevAsRows', 'dataVectorSequence']
 
+class If(ComputationNode):
+    def __init__(self, cond, thenVal, elseVal, name='BS.Boolean.If', var_name=None):
+        super(If, self).__init__(
+            params=['cond', 'thenVal', 'elseVal'], name=name, var_name=var_name)
+        self.cond = cond
+        self.thenVal = thenVal
+        self.elseVal = elseVal
+        self.params_with_defaults = []
+
 class InvStdDev(ComputationNode):
     def __init__(self, dataVectorSequence, name='InvStdDev', var_name=None):
         super(InvStdDev, self).__init__(params=['dataVectorSequence'], name=name, var_name=var_name)
