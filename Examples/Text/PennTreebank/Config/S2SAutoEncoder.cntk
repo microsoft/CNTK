@@ -226,18 +226,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         dim = thoughtVector.dim
     ]
 
-    # attention (fixed rolling window)
-    attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
-    projectedAttentionWindowBroadcast = [
-        W = Parameters.WeightParam (attentionDim, thoughtVector.dim)
-        # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
-        value          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
-        valid          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
-        #projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
-        projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
-        dim            = thoughtVector.dim
-    ]
-
     # NYU style: expand h to all, drop c
     # TODO: just use use thoughtVectorPadded.h (do this when we next test this branch again)
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
@@ -276,28 +264,35 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
 
-    #PreviousOrDefault1 (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
-    #[
-    #    flags = Loop.IsFirst (defaultValue/*x*/)
-    #    out = Boolean.If (flags,
-    #             /*then*/ defaultValue,
-    #             /*else*/ Loop.Previous (x))
-    #].out
     labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
 
     decoderInput    = Pass (Boolean.If (isFirstLabel/*Loop.IsFirst (labelSentenceStartEmbeddedScattered)*/, labelSentenceStartEmbeddedScattered, Loop.Previous (decoderHistoryHook)))
     decoderInputDim = embeddingDim #labelsEmbedded.dim
 
     # create a lambda for augmenting the input vector from a fixed-size attention window
-    CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, projectedAttentionWindowBroadcast, outputDim=projectedAttentionWindowBroadcast.value.dim, enableSelfStabilization=false) =
+    CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, encoderOutput, enableSelfStabilization=false) =
     [
+        # attention (fixed rolling window)
+        attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
+
+        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
+        outputDim = decoderDims[0]
+
+        # project it for Tanh() expression
+        projectedAttentionWindowBroadcast = [
+            W = Parameters.WeightParam (attentionDim, encoderOutput.dim)
+            # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
+            value          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
+            valid          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
+            #projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+            projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+            dim            = encoderOutput.dim
+        ]
+
         # this lambda gets passed to the RecurrentLSTMP() function as the augmentInputHook parameter
         AugmentInputHook (input, prevState) =
         [
-            S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
-
             # compute additional hidden state from attention
-            outputDim = decoderDims[0]
             W = Parameters.WeightParam (attentionDim, outputDim)
             #projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
             projectedH = W * S(prevState.h)                           # [outputDim] or [outputDim x D] in beam search
@@ -319,7 +314,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         ].augmentedX
     ].AugmentInputHook
 
-    FixedWindowAttentionHook = CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, projectedAttentionWindowBroadcast, outputDim=projectedAttentionWindowBroadcast.value.dim, enableSelfStabilization=false)
+    FixedWindowAttentionHook = CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, encoderOutput, enableSelfStabilization=false)
 
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
@@ -330,7 +325,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                                                         enableSelfStabilization=useStabilizer)
              else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
                                                                                               S(decoderInput), inputDim=decoderInputDim,
-                                                                                              augmentInputHook=FixedWindowAttentionHook, augmentInputDim=projectedAttentionWindowBroadcast.dim,
+                                                                                              augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
                                                                                               previousHook=PreviousHCWithReorderingHook,
                                                                                               enableSelfStabilization=useStabilizer)
              else BS.RNNs.RecurrentLSTMP2 (decoderDims[i], cellDim=decoderDims[i],
