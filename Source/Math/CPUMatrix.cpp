@@ -4136,6 +4136,111 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOutSize, const CPUMatrix<int>& mpRowCol,
+                                                 const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    size_t batchSize = GetNumCols();
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                output.Data()[(row * batchSize + sample) * unrollCols + skip + i] = (*this)(colBase + dcol, sample);
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const CPUMatrix<int>& mpRowCol,
+                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    assert((mpRowCol.GetNumRows() % mapOutCount) == 0);
+    size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
+    size_t batchSize = GetNumCols();
+
+    size_t kernelSize = runs(1, 0);
+    assert((kernelSize % mapInCount) == 0);
+    size_t kernelMapSize = kernelSize / mapInCount;
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < std::min(size, (int)kernelMapSize); i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                size_t isrc = row;
+                size_t idst = ((colBase + dcol) * batchSize + sample) * unrollCols + ((skip + i) % kernelMapSize) * mapOutCount;
+                for (size_t outMap = 0; outMap < mapOutCount; outMap++, isrc += mapOutSize)
+                {
+                    assert(isrc < GetNumElements());
+                    assert(idst + outMap < output.GetNumElements());
+
+                    output.Data()[idst + outMap] = (*this)(isrc, sample);
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutSize, const CPUMatrix<int>& mpRowCol,
+                                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    size_t batchSize = GetNumCols();
+    size_t unrollCols = mapOutSize * batchSize;
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                size_t idst = (skip + i) * unrollCols + row * batchSize + sample;
+                assert(idst < output.GetNumElements());
+                output.Data()[idst] = (*this)(colBase + dcol, sample);
+            }
+        }
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for

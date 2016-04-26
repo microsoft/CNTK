@@ -1,0 +1,71 @@
+ strict digraph {
+ rankdir = BT ;  
+ // special nodes 
+ node [ shape = box     , color = gray , style = "filled, rounded"  ]; "B0" "B1" "B2" "W0" "W1" "W2" ; 
+ node [ shape = ellipse , color = red  , fillcolor = white ]; "features" ; 
+ node [ shape = diamond, color = brown, style = bold ] ;  "labels" ; 
+ node [ shape = doublecircle , color =  red , fillcolor = white  ]; "CrossEntropyWithSoftmax" ; 
+ node [ shape = box    , color = black, style = "dashed, filled",  fillcolor= limegreen ] ;"InvStdOfFeatures" "MeanOfFeatures" "Prior" ; 
+   node [ shape = ellipse, color = blue, fillcolor = white, style = solid ];  
+ 
+// add labels and operation name
+  "B0" [ label = "B0 [512 x 1]\nLearnableParameter" ] ;
+  "B1" [ label = "B1 [512 x 1]\nLearnableParameter" ] ;
+  "B2" [ label = "B2 [132 x 1]\nLearnableParameter" ] ;
+  "CrossEntropyWithSoftmax" [ label = "CrossEntropyWithSoftmax [1]\nCrossEntropyWithSoftmax" ] ;
+  "EvalErrorPrediction" [ label = "EvalErrorPrediction [1]\nErrorPrediction" ] ;
+  "features" [ label = "features [363 x *]\nInputValue" ] ;
+  "H1" [ label = "H1 [512 x 1 x *]\nSigmoid" ] ;
+  "H2" [ label = "H2 [512 x 1 x *]\nSigmoid" ] ;
+  "HLast" [ label = "HLast [132 x 1 x *]\nPlus" ] ;
+  "InvStdOfFeatures" [ label = "InvStdOfFeatures [363]\nInvStdDev" ] ;
+  "labels" [ label = "labels [132 x *]\nInputValue" ] ;
+  "LogOfPrior" [ label = "LogOfPrior [132]\nLog" ] ;
+  "MeanOfFeatures" [ label = "MeanOfFeatures [363]\nMean" ] ;
+  "MVNormalizedFeatures" [ label = "MVNormalizedFeatures [363 x *]\nPerDimMeanVarNormalization" ] ;
+  "PosteriorProb" [ label = "PosteriorProb [132 x 1 x *]\nSoftmax" ] ;
+  "Prior" [ label = "Prior [132]\nMean" ] ;
+  "ScaledLogLikelihood" [ label = "ScaledLogLikelihood [132 x 1 x *]\nMinus" ] ;
+  "W0" [ label = "W0 [512 x 363]\nLearnableParameter" ] ;
+  "W0*features" [ label = "W0*features [512 x *]\nTimes" ] ;
+  "W0*features+B0" [ label = "W0*features+B0 [512 x 1 x *]\nPlus" ] ;
+  "W1" [ label = "W1 [512 x 512]\nLearnableParameter" ] ;
+  "W1*H1" [ label = "W1*H1 [512 x 1 x *]\nTimes" ] ;
+  "W1*H1+B1" [ label = "W1*H1+B1 [512 x 1 x *]\nPlus" ] ;
+  "W2" [ label = "W2 [132 x 512]\nLearnableParameter" ] ;
+  "W2*H1" [ label = "W2*H1 [132 x 1 x *]\nTimes" ] ;
+ subgraph {
+ 		 rank=source ;  "features"  
+}
+ subgraph {
+ 		 rank=sink ;  "CrossEntropyWithSoftmax" "ScaledLogLikelihood" "EvalErrorPrediction"  
+}
+ "labels" -> "CrossEntropyWithSoftmax" ; 
+ "HLast" -> "CrossEntropyWithSoftmax" ; 
+ "W2*H1" -> "HLast" ; 
+ "B2" -> "HLast" ; 
+ "W2" -> "W2*H1" ; 
+ "H2" -> "W2*H1" ; 
+ "W1*H1+B1" -> "H2" ; 
+ "W1*H1" -> "W1*H1+B1" ; 
+ "B1" -> "W1*H1+B1" ; 
+ "W1" -> "W1*H1" ; 
+ "H1" -> "W1*H1" ; 
+ "W0*features+B0" -> "H1" ; 
+ "W0*features" -> "W0*features+B0" ; 
+ "B0" -> "W0*features+B0" ; 
+ "W0" -> "W0*features" ; 
+ "MVNormalizedFeatures" -> "W0*features" ; 
+ "features" -> "MVNormalizedFeatures" ; 
+ "MeanOfFeatures" -> "MVNormalizedFeatures" ; 
+ "InvStdOfFeatures" -> "MVNormalizedFeatures" ; 
+ "features" -> "InvStdOfFeatures" ; 
+ "features" -> "MeanOfFeatures" ; 
+ "labels" -> "EvalErrorPrediction" ; 
+ "HLast" -> "EvalErrorPrediction" ; 
+ "HLast" -> "ScaledLogLikelihood" ; 
+ "LogOfPrior" -> "ScaledLogLikelihood" ; 
+ "Prior" -> "LogOfPrior" ; 
+ "labels" -> "Prior" ; 
+ 
+}
