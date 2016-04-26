@@ -103,6 +103,8 @@ CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = x /*plus the function args*/ ]
 CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 CrossEntropyWithSoftmax(labelVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (labelVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
+# once ReduceLogSum becomes proper C++, CrossEntropyWithSoftmax() will become this:
+NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
 DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
 // TODO: DiagTimes = ElementTimes
 Dropout(activationVectorSequence, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = activationVectorSequence /*plus the function args*/ ]
@@ -488,12 +490,14 @@ RNNs =
     PreviousHC (lstmState) = [
        h = Loop.Previous (lstmState.h)         // hidden state(t-1)
        c = Loop.Previous (lstmState.c)         // cell(t-1)
+       dim = lstmState.dim
     ]
 
     # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
     NextHC (lstmState) = [
        h = Loop.Next (lstmState.h)             // hidden state(t-1)
        c = Loop.Next (lstmState.c)             // cell(t-1)
+       dim = lstmState.dim
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
@@ -507,6 +511,24 @@ RNNs =
         inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // we return the state record (h,c)
+
+    DontAugmentInputHook (input, lstmState) = input
+    # TODO: replace RecurrentLSTMP() with this
+    RecurrentLSTMPWithAttentionWindow2 (outputDim/*h.dim*/, cellDim=outputDim,
+                                        x, inputDim=x.dim,
+                                        previousHook=BS.RNNs.PreviousHC,
+                                        augmentInputHook=DontAugmentInputHook, augmentInputDim=0,
+                                        enableSelfStabilization=false) =
+    [
+        prevState = previousHook (lstmState)
+
+        augmentedX = augmentInputHook(x, prevState)
+
+        augmentedXDim = augmentInputDim + inputDim
+
+        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=augmentedXDim, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
     RecurrentLSTMPStack = RecurrentLSTMP2Stack  # TODO: remove the -2 name once this works
@@ -540,6 +562,58 @@ RNNs =
             dim = layerDims[i] * 2  # output dimension
         ]
     ].layers
+
+    # create a lambda for augmenting the input vector from a fixed-size attention window
+    CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=false) =
+    [
+        # attention (fixed rolling window)
+        attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
+
+        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
+
+        # project it for Tanh() expression
+        # expected to be [attentionDim x 1 x attentionSpan], where that 1 is the axis of the beam in beam decoding
+        # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
+        projectedAttentionWindowBroadcast = [
+            W = Parameters.WeightParam (attentionDim, encoderOutput.dim)
+            value          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
+            valid          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
+            #projectedValue = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+            projectedValue = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+            dim            = encoderOutput.dim
+        ]
+
+        # the return value of this function is this lambda, which gets passed to the RecurrentLSTMP() function as the augmentInputHook parameter
+        AugmentInputHook (input, prevState) =
+        [
+            # compute additional hidden state from attention
+            #outputDim = decoderDims[0]
+            outputDim = prevState.dim
+            W = Parameters.WeightParam (attentionDim, outputDim)
+            #projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
+            projectedH = W * S(prevState.h)                           # [outputDim] or [outputDim x D] in beam search
+            tanHOut = Tanh (projectedAttentionWindowBroadcast.projectedValue + projectedH) # [attentionDim x beamDepth x attentionSpan]
+
+            TraceDense (h, what) =
+                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".4" ])
+            TraceDenseTransposed (h, what) =
+                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = true ; precisionFormat = ".4" ])
+
+            v = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')                           # [1 x attentionDim]
+            u = v * S(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
+            # ^^ mask 'v' for purpose of stabiliziation; TODO: don't do that if no stabiliziation
+            uValid = u + Log (projectedAttentionWindowBroadcast.valid)    # [1 x beamDepth x attentionSpan]
+
+            attentionWeights = Softmax (uValid, axis=3)                    # [1 x beamDepth x attentionSpan]
+            #attentionWeights = Softmax (uValid)                    # [1 x beamDepth x attentionSpan]
+            weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* TraceDense(  attentionWeights    ,'weights') # [encoderHiddenDim x beamDepth x attentionSpan]
+            # TODO: use ReduceSum:
+            weightedAttentionAverage = S(Times (weightedAttentionWindow, BS.Constants.OnesTensor (attentionSpan), outputRank=2)) # [encoderHiddenDim x beamDepth]
+
+            # feed both to LSTM as a single augmented input, so that we can reuse the existing LSTM component
+            augmentedX = RowStack (weightedAttentionAverage : input)  # TODO: change to Splice()
+        ].augmentedX
+    ].AugmentInputHook
 ]
 
 ##############################################################################

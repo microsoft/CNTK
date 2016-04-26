@@ -27,8 +27,8 @@ command = writeWordAndClassInfo:train:test:write
 decodeModel = 32
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = -1
-ExpId = 22-$deviceId$-g2p
+deviceId = 1
+ExpId = 24-$deviceId$-g2p
 #ExpId = 19-1-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
 
@@ -181,24 +181,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
-    labelSentenceStart = First (streams.labels)
-    labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
-
-    # projectedAttentionWindowBroadcast must be [attentionDim x 1 x attentionSpan], where that 1 is the axis of the beam in beam decoding
-    # TODO: split the attention bit out into a lambda
-    #       (problem: we need the dimension)
-    ReturnFirst(x,y) = x
-    RecurrentLSTMPWithAttentionWindow2 (outputDim/*h.dim*/, cellDim=outputDim, x, inputDim=x.dim, augmentInputHook=ReturnFirst, augmentInputDim=0, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
-    [
-        prevState = previousHook (lstmState)
-
-        augmentedX = augmentInputHook(x, prevState)
-
-        augmentedXDim = augmentInputDim + inputDim
-
-        enableSelfStabilization1 = enableSelfStabilization ; inputDim1 = inputDim ; cellDim1 = cellDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=augmentedXDim, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState // that's the value we return
+    #labelSentenceStart = First (streams.labels)
+    #labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
+    labelSentenceStartEmbedded = Pass (EmbedLabels (First (streams.labels)))  # TODO: remove Pass() if not actually needed in decoder
+    labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
 
     S(x) = Parameters.Stabilize (x, enabled=useStabilizer)
 
@@ -218,7 +204,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         c = Last (encoderOutput.c)
         dim = encoderOutput.dim
     ]
-    #thoughtVector.dim = thoughtVector.dim
 
     thoughtVectorPadded = [ # padded with zeroes until end of target sequence
         h = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
@@ -231,7 +216,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
-    # TODO: use thoughtVectorPadded.h
+    # TODO: use thoughtVectorPadded.h  --TODO: use the new LSTM with augmentation
 
     # decoder
     # NYU style:
@@ -241,20 +226,22 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # we bake into the LSTMs to multiply h and c with beamSearchReorderHook, which we will patch in decoding
     # ReorderTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past'), TraceDense (tokens.from, 'backp'))
 
-    beamSearchReorderHook = Pass (Constants.One)
+    beamSearchReorderHook = Pass (Constants.One)   # TODO: Get this to work!
 
     # helper functions to delay h and c with possibility to later hook in a different matrix
 
     PreviousHCFromThoughtVectorWithReorderingHook (lstmState) = [ # with thought vector and beam-search hook
        isFirst = Loop.IsFirst (initialState.h)
        # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
-       h = Boolean.If (isFirst, thoughtVectorPadded.h, Loop.Previous (lstmState.h/* * beamSearchReorderHook*/))             // hidden state(t-1)
-       c = Boolean.If (isFirst, thoughtVectorPadded.c, Loop.Previous (lstmState.c/* * beamSearchReorderHook*/))             // cell(t-1)
+       h = Boolean.If (isFirst, thoughtVectorPadded.h, Loop.Previous (lstmState.h /* * beamSearchReorderHook*/))             // hidden state(t-1)
+       c = Boolean.If (isFirst, thoughtVectorPadded.c, Loop.Previous (lstmState.c /* * beamSearchReorderHook*/))             // cell(t-1)
+       dim = lstmState.dim
     ]
 
     PreviousHCWithReorderingHook (lstmState) = [
-       h = Loop.Previous (lstmState.h/* * beamSearchReorderHook*/)             // hidden state(t-1)
-       c = Loop.Previous (lstmState.c/* * beamSearchReorderHook*/)             // cell(t-1)
+       h = Loop.Previous (lstmState.h /* * beamSearchReorderHook*/)             // hidden state(t-1)
+       c = Loop.Previous (lstmState.c /* * beamSearchReorderHook*/)             // cell(t-1)
+       dim = lstmState.dim
     ]
 
     decoderHistoryFromGroundTruth = labelsEmbedded                            # decoder input for training is ground truth...
@@ -264,58 +251,13 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
 
-    labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
-
     decoderInput    = Pass (Boolean.If (isFirstLabel/*Loop.IsFirst (labelSentenceStartEmbeddedScattered)*/, labelSentenceStartEmbeddedScattered, Loop.Previous (decoderHistoryHook)))
     decoderInputDim = embeddingDim #labelsEmbedded.dim
 
-    # create a lambda for augmenting the input vector from a fixed-size attention window
-    CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, encoderOutput, enableSelfStabilization=false) =
-    [
-        # attention (fixed rolling window)
-        attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
+    decoderDynamicAxis = labelsEmbedded
+    FixedWindowAttentionHook = BS.RNNs.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
 
-        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
-        outputDim = decoderDims[0]
-
-        # project it for Tanh() expression
-        projectedAttentionWindowBroadcast = [
-            W = Parameters.WeightParam (attentionDim, encoderOutput.dim)
-            # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
-            value          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
-            valid          = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
-            #projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
-            projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
-            dim            = encoderOutput.dim
-        ]
-
-        # this lambda gets passed to the RecurrentLSTMP() function as the augmentInputHook parameter
-        AugmentInputHook (input, prevState) =
-        [
-            # compute additional hidden state from attention
-            W = Parameters.WeightParam (attentionDim, outputDim)
-            #projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
-            projectedH = W * S(prevState.h)                           # [outputDim] or [outputDim x D] in beam search
-            tanHOut = Tanh (projectedAttentionWindowBroadcast.projectedValue + projectedH) # [attentionDim x beamDepth x attentionSpan]
-
-            v = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')                           # [1 x attentionDim]
-            u = v * S(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
-            # ^^ mask 'v' for purpose of stabiliziation; TODO: don't do that if no stabiliziation
-            uValid = u + Log (projectedAttentionWindowBroadcast.valid)    # [1 x beamDepth x attentionSpan]
-
-            attentionWeights = Softmax (uValid, axis=3)                    # [1 x beamDepth x attentionSpan]
-            #attentionWeights = Softmax (uValid)                    # [1 x beamDepth x attentionSpan]
-            weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* TraceDense(  attentionWeights    ,'weights') # [encoderHiddenDim x beamDepth x attentionSpan]
-            # TODO: use ReduceSum:
-            weightedAttentionAverage = S(Times (weightedAttentionWindow, BS.Constants.OnesTensor (attentionSpan), outputRank=2)) # [encoderHiddenDim x beamDepth]
-
-            # feed both to LSTM as a single augmented input, so that we can reuse the existing LSTM component
-            augmentedX    = RowStack (weightedAttentionAverage : input)  # TODO: change to Splice()
-        ].augmentedX
-    ].AugmentInputHook
-
-    FixedWindowAttentionHook = CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, encoderOutput, enableSelfStabilization=false)
-
+    # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
         if i == 0
@@ -323,7 +265,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                                                         RowStack (S(thoughtVectorEverywhere) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
                                                                         previousHook=PreviousHCWithReorderingHook,
                                                                         enableSelfStabilization=useStabilizer)
-             else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
+             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
                                                                                               S(decoderInput), inputDim=decoderInputDim,
                                                                                               augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
                                                                                               previousHook=PreviousHCWithReorderingHook,
@@ -346,9 +288,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     B = Parameters.BiasParam (vocabDim)
 
     z = W * S(decoderOutput) + B;  // top-level input to Softmax
-
-    # once ReduceLogSum becomes proper C++, we shall make CrossEntropyWithSoftmax() a BS function as follows:
-    NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
 
     # training criteria
     ce = NewCrossEntropyWithSoftmax (labelSequence, z, tag='criterion')
