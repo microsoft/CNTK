@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..non_linear import clip, exp, rectified_linear, sigmoid, softmax, tanh
+from ..non_linear import clip, cond, exp, rectified_linear, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -41,7 +41,7 @@ CLIP_TUPLES = [
 @pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
 def test_op_clip(min_value, max_value, x, device_id, precision):    
 
-    #Forward pass test
+    # Forward pass test
     #==================
     # we compute the expected output for the forward pass
     # Compare to numpy's implementation of np.clip(x, min, max)
@@ -306,10 +306,6 @@ def test_op_abs(tensor, device_id, precision):
                     input_node=input_node)
 
 
-
-
-
-
 COND_TUPLES = [ 
                 ([-1], [2], [3]), 
                 ([0], [20], [30]),
@@ -330,9 +326,9 @@ def test_op_cond(flag, value_a, value_b, device_id, precision):
     value_a_as_const = C([value_a])    
     value_b_as_const = C([value_b])   
 
-    cond_as_input    = I([flag],    has_sequence_dimension=False)
-    value_a_as_input = I([value_a], has_sequence_dimension=False)
-    value_b_as_input = I([value_b], has_sequence_dimension=False)
+    cond_as_input    = I([flag],    has_dynamic_axis=False)
+    value_a_as_input = I([value_a], has_dynamic_axis=False)
+    value_b_as_input = I([value_b], has_dynamic_axis=False)
 
     result = cond(cond_as_input, value_a_as_const, value_b_as_const)
     unittest_helper(result, None, expected, device_id=device_id, 
