@@ -49,7 +49,12 @@ files=(;c:\data.txt;c:\labels.txt)
 		<td>Parameter Set</td>
 		<td>
 			
-<pre><code>section1=[id=1;size=256]section2=[  subsection=[string="hi";num=5]  value=1e-10  array=10:"this is a test":1.25]
+<pre><code>section1=[id=1;size=256]
+section2=[
+  subsection=[string="hi";num=5]
+  value=1e-10
+  array=10:"this is a test":1.25
+]
 </code></pre>
 			
 		</td>
@@ -66,7 +71,7 @@ files=(;c:\data.txt;c:\labels.txt)
 
 ### Organization
 
-In CNTK configuration files Parameter Sets are organized in a hierarchal fashion. The actual data values are not evaluated until a CNTK components requests the value. When a value is requested, by a component, it will search that components section of the configuration file, if the value is not found, it will continue looking in the parent parameter set and continue looking in parent parameter sets until the parameter is found, or the top level of the configuration hierarchy is reached without a match.
+In CNTK configuration files Parameter Sets are organized in a hierarchical fashion. The actual data values are not evaluated until a CNTK components requests the value. When a value is requested, by a component, it will search that components section of the configuration file, if the value is not found, it will continue looking in the parent parameter set and continue looking in parent parameter sets until the parameter is found, or the top level of the configuration hierarchy is reached without a match.
 
 ### Default Values
 
@@ -107,7 +112,69 @@ This section will go through a sample configuration file that creates a simple D
 Here is a simple example of a configuration file:
 
 ```
-# sample configuration file for CNTK command=mnistTrain:mnistTest#global parameters, all commands use these values unless overridden at a higher levelprecision=floatdeviceId=auto#commands used will be appended the stderr name to create a path stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appendedtraceLevel=0 # larger values mean more outputndlMacros=C:\cntk\config\DefaultMacros.ndlmodelPath=c:\cntk\model\sample.dnnlabelMappingFile=c:\cntk\data\mnist\labels.mapmnistTrain=[    action=train    minibatchSize=32    epochSize=60000    NDLNetworkBuilder=[        networkDescription=c:\cntk\config\sample.ndl        run=ndlMacroUse    ]    SGD=[        #modelPath - moved to root level to share with mnistTest        learningRatesPerMB=0.001        maxEpochs=50    ]    reader=[        readerType=UCIFastReader        file=c:\cntk\data\mnist\mnist_train.txt        features=[            dim=784            start=1                ]        labels=[            dim=1            start=0            labelDim=10        ]    ]]mnistTest=[    action=eval    maxEpochs=1    epochSize=10000    minibatchSize=1000        reader=[        readerType=UCIFastReader        randomize=None        file=c:\data\mnist\mnist_test.txt        features=[            dim=784            start=1        ]        labels=[            dim=1            start=0            labelDim=10        ]    ]]
+# sample configuration file for CNTK 
+command=mnistTrain:mnistTest
+
+#global parameters, all commands use these values unless overridden at a higher level
+precision=float
+deviceId=auto
+
+#commands used will be appended the stderr name to create a path 
+stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
+traceLevel=0 # larger values mean more output
+ndlMacros=C:\cntk\config\DefaultMacros.ndl
+modelPath=c:\cntk\model\sample.dnn
+labelMappingFile=c:\cntk\data\mnist\labels.map
+
+mnistTrain=[
+    action=train
+    minibatchSize=32
+    epochSize=60000
+
+    NDLNetworkBuilder=[
+        networkDescription=c:\cntk\config\sample.ndl
+        run=ndlMacroUse
+    ]
+    SGD=[
+        #modelPath - moved to root level to share with mnistTest
+        learningRatesPerMB=0.001
+        maxEpochs=50
+    ]
+    reader=[
+        readerType=UCIFastReader
+        file=c:\cntk\data\mnist\mnist_train.txt
+        features=[
+            dim=784
+            start=1        
+        ]
+        labels=[
+            dim=1
+            start=0
+            labelDim=10
+        ]
+    ]
+]
+
+mnistTest=[
+    action=eval
+    maxEpochs=1
+    epochSize=10000
+    minibatchSize=1000    
+    reader=[
+        readerType=UCIFastReader
+        randomize=None
+        file=c:\data\mnist\mnist_test.txt
+        features=[
+            dim=784
+            start=1
+        ]
+        labels=[
+            dim=1
+            start=0
+            labelDim=10
+        ]
+    ]
+]
 ```
 
 ### Commands and actions
@@ -121,7 +188,9 @@ command=mnistTrain:mnistTest
 This command instructs CNTK to execute the **mnistTrain** section of the config file, followed by mnistTest. Each of these Config sections has an action associated with it:
 
 ```
-mnistTrain=[    action=train    …
+mnistTrain=[
+    action=train
+    …
 ```
 The **mnistTrain** section will execute the **train** action, and the **mnistTest** section will execute **eval**. The names of the sections is arbitrary, but the configuration parameter names must be command and action.
 
@@ -158,7 +227,9 @@ all | Use all the available GPU devices (will use PTask engine if more than one 
 Log files are redirection of the normal standard error output. All log information is sent to standard error, and will appear on the console screen unless the stderr parameter is defined, or some other form of user redirection is active. The stderr parameter defines the directory and the prefix for the log file. The suffix is defined by what commands are being run. As an example if “abc” is the setting “abc\_mnistTrain.log” would be the log file name. It is important to note that this file is overwritten on subsequent executions if the stderr parameter and the command being run are identical.
 
 ```
-#commands used will be appended the stderr name to create a path stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appendedtraceLevel=0 # larger values mean more output
+#commands used will be appended the stderr name to create a path 
+stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
+traceLevel=0 # larger values mean more output
 ```
 
 The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium ouput, 2-verbose output are the only values supported.
@@ -168,7 +239,9 @@ The **traceLevel** parameter is uniformly used by the code in CNTK to specify ho
 It is often advantageous to set some values at the top level of the config file. This is because config searches start with the target section and continue the search to higher level sections. If the same parameter is used in multiple sections putting the parameter at a higher level where both sections can share it can be a good idea. In our example the following parameters are used by both the train and the test step:
 
 ```
-ndlMacros=C:\cntk\config\DefaultMacros.ndlmodelPath=c:\cntk\model\sample.dnnlabelMappingFile=c:\cntk\data\mnist\labels.map
+ndlMacros=C:\cntk\config\DefaultMacros.ndl
+modelPath=c:\cntk\model\sample.dnn
+labelMappingFile=c:\cntk\data\mnist\labels.map
 ```
 
 It can also be advantageous to specify parameters that often change all in one area, rather than separated into the sections to which the parameters belong. These commonly modified parameters can even be placed in a separate file if desired. See the layered config files in the reference section for more information.
@@ -193,7 +266,34 @@ sub-section     | Options              | Description
 For the Network Builder and the Trainer the existence of the sub-section name tells the train action which component to use. For example, **NDLNetworkBuilder** is specified in our example, so CNTK will use the NDL Network Builder to define the network. Similarly **SGD** is specified, so that trainer will be used. The reader sub-section is a little different, and is always called **reader**, the **readerType** parameter in the sub-section defines which reader will actually be used. Readers are implemented as separate DLLs, and the name of the reader is also the name of the DLL file that will be loaded.
 
 ```
-mnistTrain=[    action=train    minibatchSize=32    epochSize=60000    NDLNetworkBuilder=[        networkDescription=c:\cntk\config\sample.ndl        run=ndlMacroUse    ]    SGD=[        #modelPath - moved to root level to share with mnistTest        learningRatesPerMB=0.001        maxEpochs=50    ]    reader=[        readerType=UCIFastReader        file=c:\cntk\data\mnist\mnist_train.txt        features=[            dim=784            start=1                ]        labels=[            dim=1            start=0            labelDim=10        ]    ]]
+mnistTrain=[
+    action=train
+    minibatchSize=32
+    epochSize=60000
+
+    NDLNetworkBuilder=[
+        networkDescription=c:\cntk\config\sample.ndl
+        run=ndlMacroUse
+    ]
+    SGD=[
+        #modelPath - moved to root level to share with mnistTest
+        learningRatesPerMB=0.001
+        maxEpochs=50
+    ]
+    reader=[
+        readerType=UCIFastReader
+        file=c:\cntk\data\mnist\mnist_train.txt
+        features=[
+            dim=784
+            start=1        
+        ]
+        labels=[
+            dim=1
+            start=0
+            labelDim=10
+        ]
+    ]
+]
 ```
 
 The rest of the parameters in the mnistTrain Command Section are briefly explained here, more details about the parameters available for each component are available in the Configuration Reference section of this document.
@@ -212,7 +312,11 @@ epochSize=60000
 **epochSize** is the number of dataset records that will be processed in a training pass. It is most often set to be the same as the dataset size, but can be smaller or larger that the dataset. It defaults to the size of the dataset if not present in the configuration file. It can also be set to zero for SGD, which has the same meaning.
 
 ```
-SGD=[    #modelPath - moved to root level to share with mnistTest    learningRatesPerMB=0.001    maxEpochs=50]
+SGD=[
+    #modelPath - moved to root level to share with mnistTest
+    learningRatesPerMB=0.001
+    maxEpochs=50
+]
 ```
 
 **modelPath** is the path to the model file, and will be the name used when a model is completely trained. For epochs prior to the final model a number will be appended to the end signifying the epoch that was saved (i.e. myModel.dnn.5). These intermediate files are important to allow the training process to restart after an interruption. Training will automatically resume at the first non-existent epoch when training is restarted.
@@ -246,7 +350,19 @@ readerType=UCIFastReader
 Each of the readers uses the same interface into CNTK, and each reader is implemented in a separate DLL. There are many parameters in the reader section that are used by all the different types of readers, and some are specific to a particular reader. Our example reader section is as follows:
 
 ```
-reader=[    readerType=UCIFastReader    file=c:\cntk\data\mnist\mnist_train.txt    features=[        dim=784        start=1            ]    labels=[        dim=1        start=0        labelDim=10    ]]
+reader=[
+    readerType=UCIFastReader
+    file=c:\cntk\data\mnist\mnist_train.txt
+    features=[
+        dim=784
+        start=1        
+    ]
+    labels=[
+        dim=1
+        start=0
+        labelDim=10
+    ]
+]
 ```
 
 The two sub-sections in the reader section identify two different data sets. In our example they are named **features** and **labels**, though any names could be used. These names need to match the names used in the NDL network definition Inputs in our example, so the correct definition is used for each input dataset. Each of these sections for the UCIFastReader have the following parameters:
@@ -327,7 +443,17 @@ In addition being able to specify multiple configuration files at the command li
 While layered configuration files allow users to reuse configuration files across experiments, this can still be a cumbersome process. For each experiment, a user might have to override several parameters, some of which might be long file paths (eg, ‘stderr’, ‘modelPath’, ‘file’, etc). The “stringize” functionality can make this process much easier. It allows a user to specify configuration like the following:
 
 ```
-command=SpeechTrainstderr=$Root$\$RunName$.logspeechTrain=[    modelPath=$Root$\$RunName$.model    SGD=[        reader=[            features=[                type=Real                dim=$DataSet1_Dim$                file=$DataSet1_Features$]]]] 
+command=SpeechTrain
+stderr=$Root$\$RunName$.log
+speechTrain=[
+    modelPath=$Root$\$RunName$.model
+    SGD=[
+        reader=[
+            features=[
+                type=Real
+                dim=$DataSet1_Dim$
+                file=$DataSet1_Features$
+]]]] 
 ```
 
 Here, “Root”,“RunName”, “DataSet1\_Dim”, and “DataSet1\_Features” are variables specified elsewhere in the configuration (at a scope visible from the point at which they are used). When interpreting this configuration file, the parser would replace every string of the form “$VarName$” with the string “VarValue”, where “VarValue” represents the value of the variable called “VarName”. The variable resolution process is recursive; for example, if A=$B$, B=$C$, and C=HelloWorld.txt, then A would be resolved as “HelloWorld.txt”.
@@ -350,7 +476,16 @@ If a parameter occurs more than once in a given parameter set, the last occurren
 There must be a top-level command parameter, which defines the commands that will be executed in the configuration file. Each command references a Command section of the file, which must contain an action parameter defining the operation that section will perform:
 
 ```
-command=mnistTrain:mnistTestmnistTrain=[    action=train    …]mnistTest=[    action=eval    …]
+command=mnistTrain:mnistTest
+
+mnistTrain=[
+    action=train
+    …
+]
+mnistTest=[
+    action=eval
+    …
+]
 ```
 
 This snippet will execute the **mnistTrain** section which executes the **train** action, followed by the **mnistTest** section.
@@ -525,7 +660,18 @@ Each of the readers uses the same interface into CNTK, and each reader is implem
 There are many parameters in the reader section that are used by all the different types of readers, and others are specific to a particular reader. There are sub-sections under the reader section which are used to define the data records to be read. For UCIFastReader these look like:
 
 ```
-reader=[    readerType=UCIFastReader    file=c:\cntk\data\mnist\mnist_train.txt    features=[        dim=784        start=1            ]    labels=[        dim=1        start=0        labelDim=10    ]
+reader=[
+    readerType=UCIFastReader
+    file=c:\cntk\data\mnist\mnist_train.txt
+    features=[
+        dim=784
+        start=1        
+    ]
+    labels=[
+        dim=1
+        start=0
+        labelDim=10
+    ]
 ]
 ```
 
@@ -654,7 +800,8 @@ For dataset processing the following parameters are used:
 SequenceReader is a reader that reads text string. It is mostly often used for language modeling tasks. An example of the text string is as follows:
 
 ```
-</s> pierre <unk> N years old will join the board as a nonexecutive director nov. N </s></s> mr. <unk> is chairman of <unk> n.v. the dutch publishing group </s>
+</s> pierre <unk> N years old will join the board as a nonexecutive director nov. N </s>
+</s> mr. <unk> is chairman of <unk> n.v. the dutch publishing group </s>
 ```
 
 Symbol &lt;/s&gt; is used to denote both beginning and ending of a sentence. However, this symbol can be specified by beginSequence and endSequence.
@@ -686,7 +833,19 @@ A subsection is for input label information.
 LUSequenceReader is similar to SequenceReader. It however is used for language understanding tasks which have input and output strings that are different. The content of an example file is listed below
 
 ```
-BOS Oi Owant Oto Ofly Ofrom Oboston B-fromloc.city_nameat O1110 B-arrive_time.timein Othe Omorning B-arrive_time.period_of_dayEOS O
+BOS O
+i O
+want O
+to O
+fly O
+from O
+boston B-fromloc.city_name
+at O
+1110 B-arrive_time.time
+in O
+the O
+morning B-arrive_time.period_of_day
+EOS O
 ```
 
 consists of some unique setups as follows:
@@ -704,7 +863,8 @@ The LUSequenceReader has some unique setups as follows:
 -   Wordmap – this specifies a file that maps inputs to other inputs. This is useful if the user wants to map some inputs to unknown symbols. For example:
 
 ```
-    buy buy	trans <unk>
+    buy buy
+	trans <unk>
 ```
 
 -   File – the corpus file
@@ -752,7 +912,67 @@ BinaryWriter is an implementation of a hierarchal file format the mirrors the co
 The following is an example of a BinaryWriter definition. Since it is most commonly used as a cache for UCIFastReader, this definition is show as a UCIFastReader cache. The parameters needed for BinaryWriter are in bold type below:
 
 ```
-    # Parameter values for the reader with cache    reader=[      # reader to use      readerType=UCIFastReader      # if writerType is set, we will cache to a binary file      # if the binary file exists, we will use it instead of parsing this file      writerType=BinaryReader      miniBatchMode=Partial      randomize=Auto      windowSize=10000      #### write definition      wfile=c:\data\mnist\mnist_train.bin      #wsize - inital size of the file in MB      # if calculated size would be bigger, that is used instead      wsize=256      #wrecords - number of records we should allocate space for in the file      # files cannot be expanded, so this should be large enough.       wrecords=60000      features=[        dim=784        start=1                file=c:\data\mnist\mnist_train.txt        ### write definition        #wsize=200        #wfile=c:\data\mnist\mnist_train_features.bin        sectionType=data      ]      labels=[        dim=1        start=0        file=c:\data\mnist\mnist_train.txt        labelMappingFile=c:\temp\labels.txt        labelDim=10        labelType=Category        #### Write definition ####        # sizeof(unsigned) which is the label index type        #wsize=10        #wfile=c:\data\mnist\mnist_train_labels.bin        elementSize=4        wref=features        sectionType=labels        mapping=[          #redefine number of records for this section,           #since we don't need to save it for each data record          wrecords=10          #variable size so use an average string size          elementSize=10          sectionType=labelMapping        ]        category=[          dim=10          #elementSize=sizeof(ElemType) is default          sectionType=categoryLabels        ]      ]    ]
+    # Parameter values for the reader with cache
+    reader=[
+      # reader to use
+      readerType=UCIFastReader
+      # if writerType is set, we will cache to a binary file
+      # if the binary file exists, we will use it instead of parsing this file
+      writerType=BinaryReader
+      miniBatchMode=Partial
+      randomize=Auto
+      windowSize=10000
+
+      #### write definition
+      wfile=c:\data\mnist\mnist_train.bin
+      #wsize - inital size of the file in MB
+      # if calculated size would be bigger, that is used instead
+      wsize=256
+
+      #wrecords - number of records we should allocate space for in the file
+      # files cannot be expanded, so this should be large enough. 
+      wrecords=60000
+
+      features=[
+        dim=784
+        start=1        
+        file=c:\data\mnist\mnist_train.txt
+
+        ### write definition
+        #wsize=200
+        #wfile=c:\data\mnist\mnist_train_features.bin
+        sectionType=data
+      ]
+      labels=[
+        dim=1
+        start=0
+        file=c:\data\mnist\mnist_train.txt
+        labelMappingFile=c:\temp\labels.txt
+        labelDim=10
+        labelType=Category
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        #wsize=10
+        #wfile=c:\data\mnist\mnist_train_labels.bin
+        elementSize=4
+        wref=features
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, 
+          #since we don't need to save it for each data record
+          wrecords=10
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=10
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+    ]
 ]
 ```
 
@@ -865,13 +1085,18 @@ array | ConfigArray |
 
 				<li>
 				
-<pre><code>{valuevaluevalue*#}</code></pre>
+<pre><code>{
+value
+value
+value*#
+}</code></pre>
 				
 				</li>
 
 			</ul>
 		</td>
-		<td>Multiple values in an array are separated by colons ‘:’. A value may be repeated multiple times with the ‘*’ character followed by an integer (the # in the examples). Values in an array may be of any supported type and need not be uniform. The values in a vector can also be surrounded by curly braces ‘{}’, braces are required if new lines are used as separators. An alternate separation character can be specified immediately following the opening brace if desired.</td>
+		<td>Multiple values in an array are separated by colons ‘:’. A value may be repeated multiple times with the ‘*’ character followed by an integer (the # in the examples). Values in an array may be of any supported type and need not be uniform. The values in a vector can also be surrounded by curly braces ‘{}’, braces are required if new lines are used as separators. An alternate separation character can be specified immediately following the opening brace if desired.
+</td>
 	</tr>
 	
 	<!-- DICTIONARY ROW -->
@@ -894,12 +1119,18 @@ boolparam</code></pre>
 				</li>
 				<li>
 				
-<pre><code>[parameter1=value1parameter2=value2boolparam]</code></pre>
+<pre><code>[
+parameter1=value1
+parameter2=value2
+boolparam
+]
+</code></pre>
 				
 				</li>
 			</ul>
 		</td>
-		<td>Multiple parameters grouped together in a dictionary. The contents of the dictionary are each named values and can be of different types. Dictionaries can be used to create a configuration hierarchy. When specified on the same line a ‘;’ semicolon is used as the default separator. The values can optionally be surrounded by square braces ‘[]’. Braces are required when using newlines as separators in a config file. An unnamed dictionary is also allowed in the case of an array of dictionaries. An alternate separation character can be specified immediately following the opening brace if desired.</td>
+		<td>Multiple parameters grouped together in a dictionary. The contents of the dictionary are each named values and can be of different types. Dictionaries can be used to create a configuration hierarchy. When specified on the same line a ‘;’ semicolon is used as the default separator. The values can optionally be surrounded by square braces ‘[]’. Braces are required when using newlines as separators in a config file. An unnamed dictionary is also allowed in the case of an array of dictionaries. An alternate separation character can be specified immediately following the opening brace if desired.
+</td>
 	</tr>
 </table>
 
@@ -910,7 +1141,9 @@ boolparam</code></pre>
 There are three main classes that are used to access configuration files. *ConfigParameters* and *ConfigArray* contain instances of *ConfigValue*. The main definitions are as follows:
 
 ```
-class ConfigValue : public std::stringclass ConfigParameters : public ConfigParser, public ConfigDictionaryclass ConfigArray:public ConfigParser, public std::vector<ConfigValue>
+class ConfigValue : public std::string
+class ConfigParameters : public ConfigParser, public ConfigDictionary
+class ConfigArray:public ConfigParser, public std::vector<ConfigValue>
 ```
 
 ##### ConfigValue
@@ -968,7 +1201,8 @@ To use this method with a ConfigArray, the file can simply contain a list of val
 ConfigArray instances can also be converted to argvector&lt;T&gt; instances simply by assigning them. Care should be taken to assign to a local variable, and not just passing as a parameter due to lifetime issues, as follows:
 
 ```
-ConfigArray configLearnRatesPerMB = config("learningRatesPerMB");argvector<float> learnRatesPerMB = configLearnRatesPerMB;
+ConfigArray configLearnRatesPerMB = config("learningRatesPerMB");
+argvector<float> learnRatesPerMB = configLearnRatesPerMB;
 ```
 
 ConfigParameters and ConfigArray instances are very flexible, but require parsing every time a value is accessed. argvector&lt;T&gt; ,on the other hand, parses once and then accesses values as a standard vector.
@@ -978,7 +1212,60 @@ ConfigParameters and ConfigArray instances are very flexible, but require parsin
 Some sample code that would parse the example configuration file given at the beginning of this document follows. This is a revised version of actual code in CNTK:
 
 ```
-#include "commandArgUtil.h"// process the commandvoid DoCommand(const ConfigParameters& config){    ConfigArray command = config("command");    for (int i=0; i < command.size(); i++)    {        //get the configuration parameters that match the command        ConfigParameters commandParams=config(command[i]);        ConfigArray action = commandParams("action","train");        // determine the action to perform, and do it        for (int j=0; j < action.size(); j++)        {            if (action[j] == "train")                DoTrain(commandParams);            else if (action[j] == "test" || action[j] == "eval")                DoEval(commandParams);            else                throw runtime_error("unknown action: " + action[j] + " in command set: " + command[i]);        }    }}void DoTrain(const ConfigParameters& config){    ConfigParameters configSGD=config("SGD");    ConfigParameters readerConfig = config("reader");    IComputationNetBuilder* netBuilder = NULL;    ConfigParameters configNDL = config("NDLNetworkBuilder");    netBuilder = (IComputationNetBuilder*)new NDLBuilder(configNDL);    DataReader* dataReader = new DataReader(readerConfig);    ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");    floatargvector learningRatesPerMB = learningRatesPerMBStr;    ConfigArray minibatchSize = configSGD("minibatchSize", "256");    size_t epochSize = configSGD("epochSize", "0");    if (epochSize == 0)    {        epochSize = requestDataSize;    }    size_t maxEpochs = configSGD("maxEpochs");    wstring modelPath = configSGD("modelPath");    int traceLevel = configSGD("traceLevel", "0");    SGD = sgd(learningRatesPerMB, minibatchSize, epochSize, maxEpochs, modelPath, traceLevel);    sgd.Train(netBuilder, dataReader);    delete netBuilder;    delete dataReader;}
+#include "commandArgUtil.h"
+
+// process the command
+void DoCommand(const ConfigParameters& config)
+{
+    ConfigArray command = config("command");
+    for (int i=0; i < command.size(); i++)
+    {
+        //get the configuration parameters that match the command
+        ConfigParameters commandParams=config(command[i]);
+        ConfigArray action = commandParams("action","train");
+
+        // determine the action to perform, and do it
+        for (int j=0; j < action.size(); j++)
+        {
+            if (action[j] == "train")
+                DoTrain(commandParams);
+            else if (action[j] == "test" || action[j] == "eval")
+                DoEval(commandParams);
+            else
+                throw runtime_error("unknown action: " + action[j] + " in command set: " + command[i]);
+        }
+    }
+}
+
+void DoTrain(const ConfigParameters& config)
+{
+    ConfigParameters configSGD=config("SGD");
+    ConfigParameters readerConfig = config("reader");
+
+    IComputationNetBuilder* netBuilder = NULL;
+    ConfigParameters configNDL = config("NDLNetworkBuilder");
+    netBuilder = (IComputationNetBuilder*)new NDLBuilder(configNDL);
+
+    DataReader* dataReader = new DataReader(readerConfig);
+
+    ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
+    floatargvector learningRatesPerMB = learningRatesPerMBStr;
+
+    ConfigArray minibatchSize = configSGD("minibatchSize", "256");
+    size_t epochSize = configSGD("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    size_t maxEpochs = configSGD("maxEpochs");
+    wstring modelPath = configSGD("modelPath");
+    int traceLevel = configSGD("traceLevel", "0");
+    SGD = sgd(learningRatesPerMB, minibatchSize, epochSize, maxEpochs, modelPath, traceLevel);
+    sgd.Train(netBuilder, dataReader);
+
+    delete netBuilder;
+    delete dataReader;
+}
 ```
 
 The code above is very easy to code, you simply delare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
@@ -994,7 +1281,10 @@ Other possible scenarios are also enabled by using a common interface, for examp
 The five readers and one writer provided with CNTK all use these same interfaces and each is housed in its own DLL. CNTK loads the DLL and looks for exported functions that will return the interface of interest. The functions are defined as follows:
 
 ```
-extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter);extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
+extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
+extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
+extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter);
+extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 ```
 
 each reader or writer DLL exports the appropriate functions, and will return the interface when called. The following sections defined the interfaces:
@@ -1002,7 +1292,31 @@ each reader or writer DLL exports the appropriate functions, and will return the
 #### Reader Interface
 
 ```
-/ Data Reader interface// implemented by DataReader and underlying classestemplate<class ElemType>class DATAREADER_API IDataReader{public:    typedef std::string LabelType;    typedef unsigned LabelIdType;    virtual void Init(const ConfigParameters& config) = 0;    virtual void Destroy() = 0;    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0;     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;    virtual bool DataEnd(EndDataType endDataType) = 0;    // Recursive network specific methods    virtual size_t NumberSlicesInEachRecurrentIter() = 0;     virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;    virtual void ReloadLabels() = 0;    virtual void SaveLabels() = 0;    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd)=0;};
+/ Data Reader interface
+// implemented by DataReader and underlying classes
+template<class ElemType>
+class DATAREADER_API IDataReader
+{
+public:
+    typedef std::string LabelType;
+    typedef unsigned LabelIdType;
+
+    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Destroy() = 0;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
+    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
+    virtual bool DataEnd(EndDataType endDataType) = 0;
+
+    // Recursive network specific methods
+    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
+    virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
+    virtual void ReloadLabels() = 0;
+    virtual void SaveLabels() = 0;
+    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd)=0;
+};
 ```
 
 The methods are as follows:
@@ -1068,7 +1382,21 @@ The methods are as follows:
 #### Writer Interface
 
 ```
-// Data Writer interface// implemented by some DataWriterstemplate<class ElemType>class DATAWRITER_API IDataWriter{public:    typedef std::string LabelType;    typedef unsigned LabelIdType;    virtual void Init(const ConfigParameters& config) = 0;    virtual void Destroy() = 0;    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;    virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;};
+// Data Writer interface
+// implemented by some DataWriters
+template<class ElemType>
+class DATAWRITER_API IDataWriter
+{
+public:
+    typedef std::string LabelType;
+    typedef unsigned LabelIdType;
+
+    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Destroy() = 0;
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
+    virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
+};
 ```
 
 The methods are as follows:
@@ -1111,22 +1439,63 @@ The library uses BLAS libraries from NVidia for the GPU (CuBLAS) and AMD for the
 
 ### PTask support
 
-PTask is a library used in CTNK to enable multiple GPU computation on a single machine. PTask uses the concept of a “Tasks organized in a filter graph. It allows fully asynchronous operation of the tasks, each only depending on inputs being available to execute. PTask distributes the tasks across the available hardware and handles data transfers.
+PTask is a library used in CNTK to enable multiple GPU computation on a single machine. PTask uses the concept of a “Tasks organized in a filter graph. It allows fully asynchronous operation of the tasks, each only depending on inputs being available to execute. PTask distributes the tasks across the available hardware and handles data transfers.
 
-CTNK is organized in a different fashion with Computation Nodes. However, each node has two methods that do all the computation work: EvaluateThisNode() and ComputeInputPartial(), which can be used as the “Tasks”. However, since Tasks can be executed asynchronously, they need to be stateless. To enable these methods as task a static version of each method that takes all inputs and outputs as parameters are created. The class methods simply call these “Task” functions with the class variables for their implementation.
+CNTK is organized in a different fashion with Computation Nodes. However, each node has two methods that do all the computation work: EvaluateThisNode() and ComputeInputPartial(), which can be used as the “Tasks”. However, since Tasks can be executed asynchronously, they need to be stateless. To enable these methods as task a static version of each method that takes all inputs and outputs as parameters are created. The class methods simply call these “Task” functions with the class variables for their implementation.
 
 The PTaskGraphBuilder component takes a computation network and transforms it into a filter graph. In order to do this work it requires the parameter description for each of the tasks. Since C++ does not have a reflection mechanism as in available in C\# and some other languages, a class method has been introduced to ComputationNode to provide this information. The method GetPTaskDescriptor() provides this information to PTaskGraphBuilder so it can build the graph.
 
 The following is an example of a GetPTaskDescriptor() implementation. This function returns a TaskDescriptor class containing all the parameter and other information necessary to build the filter graph for a particular node. This node is the “TimesNode” and does a matrix multiply. The following implementation of the two important member functions are:
 
 ```
-virtual void EvaluateThisNode()  {    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());}virtual void ComputeInputPartial(const size_t inputIndex){    if (inputIndex > 1)        throw std::invalid_argument("Times operation only takes two inputs.");    if (inputIndex == 0)  //left derivative    {        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());    }    else  //right derivative    {        ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());    }}
+virtual void EvaluateThisNode()  
+{
+    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+}
+virtual void ComputeInputPartial(const size_t inputIndex)
+{
+    if (inputIndex > 1)
+        throw std::invalid_argument("Times operation only takes two inputs.");
+
+    if (inputIndex == 0)  //left derivative
+    {
+        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+    }
+    else  //right derivative
+    {
+        ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
+    }
+}
 ```
 
 The GPTaskDescriptor() method describes the necessary parameter information for each method. Each node has a FunctionValue matrix and a GradientValue matrix associated with it, and the descriptor methods identify which values are needed, and if they come from the current node or one of its inputs as follows:
 
 ```
-// GetTaskDescriptor - Get a task descriptor for this node// taskType - task type we are generating a task forvirtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const{    TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);    switch(taskType)    {    case taskComputeInputPartial:        descriptor->FunctionParam(1-inputIndex, paramOptionsInput);        descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);        descriptor->GradientParam();        descriptor->SetFunction( (inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));        break;    case taskEvaluate:        descriptor->FunctionParam();        descriptor->FunctionParam(0, paramOptionsInput);        descriptor->FunctionParam(1, paramOptionsInput);        descriptor->SetFunction((FARPROC)EvaluateThisNodeS);        break;    default:        assert(false);        throw std::logic_error("Unsupported task requested");    }    return descriptor;}
+// GetTaskDescriptor - Get a task descriptor for this node
+// taskType - task type we are generating a task for
+virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+{
+    TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+    switch(taskType)
+    {
+    case taskComputeInputPartial:
+        descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
+        descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+        descriptor->GradientParam();
+        descriptor->SetFunction( (inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));
+        break;
+    case taskEvaluate:
+        descriptor->FunctionParam();
+        descriptor->FunctionParam(0, paramOptionsInput);
+        descriptor->FunctionParam(1, paramOptionsInput);
+        descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+        break;
+    default:
+        assert(false);
+        throw std::logic_error("Unsupported task requested");
+    }
+    return descriptor;
+}
 ```
 
 For the Evaluate method, the first parameter is an output to the FunctionValue matrix of the current node.
@@ -1138,7 +1507,8 @@ descriptor->FunctionParam();
 The default value for this method is “current node, output” so no parameters are needed. The next two parameters are inputs and are the function values from the two inputs:
 
 ```
-descriptor->FunctionParam(0, paramOptionsInput);descriptor->FunctionParam(1, paramOptionsInput);
+descriptor->FunctionParam(0, paramOptionsInput);
+descriptor->FunctionParam(1, paramOptionsInput);
 ```
 
 The last call passes a pointer to the task function:
@@ -1150,7 +1520,8 @@ descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
 and the descriptor is complete. The two ComputeInputPartial task function parameters are very similar. Depending on the inputIndex, the values are switched. The first parameter is an input of the function value of one of the inputs, and the second is an output value to the gradient matrix of the other input:
 
 ```
-descriptor->FunctionParam(1-inputIndex, paramOptionsInput);descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
+descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
 ```
 
 The second parameter is interesting because it is required to retain it value from one call to the next, this is done in a filter graph by having a parameter be input and output at the same time, meaning it updates itself. There is a clear distinction between values that need to be maintained and those that are transcient in a filter graph, and this idiom is how we instruct PTaskGraphBuilder to retain the value. The Initialize option is also necessary so on the first iteration the matrix will be cleared out (zeros).
@@ -1170,7 +1541,12 @@ descriptor->SetFunction((inputIndex ? (FARPROC)ComputeInputPartialRight : (FARPR
 For reference the three task functions are as follows:
 
 ```
-static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  ```
+static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+
+static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+
+static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
+```
 
 ### NDL classes and processing
 
