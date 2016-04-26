@@ -102,7 +102,6 @@ public:
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
         size_t numMBsRun = 0;
-        size_t actualMBSize = 0;
         size_t numSamplesLastLogged = 0;
         size_t numMBsRunLastLogged = 0; // MBs run before this display
 
@@ -131,31 +130,48 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi))
+        bool noMoreSamplesToProcess = false;
+        for (;;)
         {
-            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
-            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
+            size_t actualMBSize = 0;
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            // in case of distributed reading, we do a few more loops until all ranks have completed
+            // end of epoch
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
+                break;
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+            if (!wasDataRead)
+                actualMBSize = 0; // (undefined if !wasDataRead)
+
+            if (actualMBSize > 0)
             {
-                if (actualNumSubminibatches > 1)
+
+                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
                 {
-                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
-                }
+                    if (actualNumSubminibatches > 1)
+                    {
+                        smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                    }
 
-                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-                m_net->ForwardProp(evalNodes);
+                    m_net->ForwardProp(evalNodes);
 
-                // house-keeping for sub-minibatching
+                    // house-keeping for sub-minibatching
+                    if (actualNumSubminibatches > 1)
+                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+                } // end sub-minibatch loop
+
                 if (actualNumSubminibatches > 1)
-                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-            } // end sub-minibatch loop
-
-            if (actualNumSubminibatches > 1)
-                smbDispatcher.DoneWithCurrentMinibatch();
+                    smbDispatcher.DoneWithCurrentMinibatch();
+            } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
-            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
+            size_t numSamplesWithLabel = wasDataRead ? m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
             if (useParallelTrain)
             {
@@ -183,15 +199,20 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                noMoreSamplesToProcess = !samplesProcessed;
+
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 for (size_t i = 0; i < evalResults.size(); i++)
                     evalResults[i] += m_gradHeader->evalErrors[i];
             }
             else
             {
-                for (int i = 0; i < evalNodes.size(); i++)
-                    evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                if (actualMBSize != 0)
+                {
+                    for (int i = 0; i < evalNodes.size(); i++)
+                        evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                }
             }
 
             totalEpochSamples += aggregateNumSamplesWithLabel;
