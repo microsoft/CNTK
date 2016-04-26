@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -9,6 +9,7 @@ import sys
 import collections
 import numpy as np
 import scipy.sparse
+
 
 def get_cntk_cmd():
     if "CNTK_EXECUTABLE_PATH" not in os.environ:
@@ -21,6 +22,7 @@ def get_cntk_cmd():
 # Indent model description by how many spaces
 MODEL_INDENTATION = 8
 
+
 def cntk_to_numpy_shape(shape):
     '''
     Removes the sequence dimension.
@@ -31,7 +33,7 @@ def cntk_to_numpy_shape(shape):
     Returns:
         a tuple that describes the NumPy shape of a tensor
     '''
-    
+
     shape = tuple(int(s) for s in shape)
 
     shape = shape[:-1]
@@ -39,6 +41,7 @@ def cntk_to_numpy_shape(shape):
         shape = (1,)
 
     return shape
+
 
 def aggregate_readers(readers):
     '''
@@ -49,11 +52,12 @@ def aggregate_readers(readers):
     readers_map = {}
 
     reader_types = set([type(r) for r in readers])
-    if len(reader_types)==0:
+    if len(reader_types) == 0:
         return None
 
-    if len(reader_types)>1:
-        raise ValueError('only one reader type is provided. You gave: %s'%str(reader_types))
+    if len(reader_types) > 1:
+        raise ValueError(
+            'only one reader type is provided. You gave: %s' % str(reader_types))
 
     from ..reader import LazyInputReader, CNTKTextFormatReader
     if reader_types.pop() == LazyInputReader:
@@ -78,12 +82,14 @@ def aggregate_readers(readers):
 
 
 def is_string(value):
-    if sys.version_info.major<3:
+    if sys.version_info.major < 3:
         return isinstance(value, basestring)
-    
+
     return isinstance(value, str)
 
 # Copied from six
+
+
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy
@@ -95,8 +101,10 @@ def with_metaclass(meta, *bases):
             return meta(name, bases, d)
     return type.__new__(metaclass, 'temporary_class', (), {})
 
+
 def dense_to_str(data):
     return ' '.join(data.ravel(order='F').astype(np.str))
+
 
 def sparse_to_str(data):
     # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
@@ -119,7 +127,7 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
 
     max_seq_length = max(len(t) for t in alias_tensor_map.values())
 
-    if max_seq_length==0:
+    if max_seq_length == 0:
         return ''
 
     lines = []
@@ -136,11 +144,12 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
                     tensor = np.asarray(tensor)
                 to_str = dense_to_str
             else:
-                raise ValueError('expected a tensor, but got "%s"'%type(tensor))
+                raise ValueError(
+                    'expected a tensor, but got "%s"' % type(tensor))
 
-            line.append('%s %s'%(alias, to_str(tensor[seq_idx])))
+            line.append('%s %s' % (alias, to_str(tensor[seq_idx])))
 
-        lines.append('%i\t|'%sample_idx + ' |'.join(line))
+        lines.append('%i\t|' % sample_idx + ' |'.join(line))
 
     return '\n'.join(lines)
 
@@ -169,10 +178,10 @@ def serialize_input_data(lazy_inputs_def, filename):
     for l in lazy_inputs_def:
         # make sure all inputs have valid unique aliases
         if l.input_alias is None or l.input_alias.startswith('_'):
-            new_alias = '_I_%i'%alias_counter 
+            new_alias = '_I_%i' % alias_counter
             alias_counter += 1
             while new_alias in used_aliases:
-                new_alias = '_I_%i'%alias_counter 
+                new_alias = '_I_%i' % alias_counter
                 alias_counter += 1
 
             l.input_alias = new_alias
@@ -180,7 +189,7 @@ def serialize_input_data(lazy_inputs_def, filename):
 
         alias_lazy_map[l.input_alias] = l
 
-        # keep track of sample sizes 
+        # keep track of sample sizes
         sample_sizes[len(l.batch)].append(l.input_alias)
 
         shapes_in_tensor = set()
@@ -198,10 +207,10 @@ def serialize_input_data(lazy_inputs_def, filename):
                 shapes_in_tensor.add(tensor.shape)
 
         # ignoring the sequence dimension, all shapes should be equal
-        if len(shapes_in_tensor)!=1:
+        if len(shapes_in_tensor) != 1:
             raise ValueError('except for the sequence dimensions all shapes ' +
-                    'should be the same - instead we %s'%\
-                            (", ".join(str(s) for s in shapes_in_tensor)))
+                             'should be the same - instead we %s' %
+                             (", ".join(str(s) for s in shapes_in_tensor)))
 
         # shapes_in_tensor now contains only one shape, which has the sequence
         # dimension removed.
@@ -210,7 +219,8 @@ def serialize_input_data(lazy_inputs_def, filename):
 
     # make sure all inputs have same sample size
     if len(sample_sizes) != 1:
-        raise ValueError('LazyInputReaders have different sizes: %s'%str(sample_sizes))
+        raise ValueError(
+            'LazyInputReaders have different sizes: %s' % str(sample_sizes))
 
     sample_size = list(sample_sizes)[0]
 
@@ -220,12 +230,13 @@ def serialize_input_data(lazy_inputs_def, filename):
             alias_tensor_map = {}
             for l in lazy_inputs_def:
                 if l.has_sequence_dimension:
-                    alias_tensor_map[l.input_alias] = l.batch[idx] 
+                    alias_tensor_map[l.input_alias] = l.batch[idx]
                 else:
                     alias_tensor_map[l.input_alias] = [l.batch[idx]]
             f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
 
     return alias_lazy_map
+
 
 def is_tensor(data):
     '''
@@ -250,7 +261,7 @@ def is_tensor(data):
         except:
             # We reached the innermost dimension
             try:
-                data[0]+0
+                data[0] + 0
                 return True
             except:
                 # Innermost type is not a number
@@ -275,6 +286,7 @@ def is_tensor_list(data):
     is_list = isinstance(data, list)
     return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
 
+
 def get_temp_filename(directory=None):
     '''
     Create and return a temporary filename.
@@ -296,4 +308,3 @@ def get_temp_filename(directory=None):
     tf.close()
 
     return tf.name
-

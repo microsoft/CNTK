@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -11,10 +11,11 @@ from cntk.tests.test_utils import unittest_helper, precision, PRECISION_TO_TYPE
 from cntk.ops.variables_and_parameters import *
 from cntk.utils import *
 
-#Keeping things short
+# Keeping things short
 AA = np.asarray
 C = constant
 I = input_reader
+
 
 @pytest.mark.parametrize("idx, alias_tensor_map, expected", [
     (0, {'A': [object()]}, ValueError),
@@ -32,14 +33,14 @@ def test_tensor_conversion_exceptions(idx, alias_tensor_map, expected):
     (0, {
         'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]]),
         'L': AA([[[2]]])
-        }, 
+    },
         """\
 0\t|L 2 |W 1 1 0 0 0 0 0 0\
 """),
     (0, {
-        'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]), 
+        'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]),
         'L': AA([[[2]]])
-        }, 
+    },
         """\
 0\t|L 2 |W 1 1 0 0
 0\t|W 5 7 6 8"""),
@@ -47,22 +48,23 @@ def test_tensor_conversion_exceptions(idx, alias_tensor_map, expected):
 def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
     assert tensors_to_text_format(idx, alias_tensor_map) == expected
 
+
 def test_serialize_input_data(tmpdir):
     tmpfile = str(tmpdir / 'out.txt')
     from cntk.reader import LazyInputReader
     i1 = input_reader(
-             # 2 samples with 2 sequences each
-             [
-                 AA([[[1,2]],[[3,4]]]),
-                 AA([[[10,20]]])
-             ], alias='X', has_sequence_dimension=True)
+        # 2 samples with 2 sequences each
+        [
+            AA([[[1, 2]], [[3, 4]]]),
+            AA([[[10, 20]]])
+        ], alias='X', has_sequence_dimension=True)
 
-    i2 = input_reader( #
-            # 2 samples with 1 sequence each
-            [
-                AA([[[44,55]]]),
-                AA([[[66,77]]]) 
-            ], has_sequence_dimension=True)
+    i2 = input_reader(
+        # 2 samples with 1 sequence each
+        [
+            AA([[[44, 55]]]),
+            AA([[[66, 77]]])
+        ], has_sequence_dimension=True)
 
     expected = '''\
 0	|X 1 2 |_I_0 44 55
@@ -99,4 +101,3 @@ def test_is_tensor(data, expected):
 ])
 def test_is_tensor_list(data, expected):
     assert is_tensor_list(data) == expected
-

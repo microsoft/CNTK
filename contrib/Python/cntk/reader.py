@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -12,9 +12,10 @@ from .graph import ComputationNode
 
 
 class AbstractReader(with_metaclass(ABCMeta)):
+
     """Abstract class that represents a reader for one input node.
-    """    
-    
+    """
+
     # required so that instances can be put into a set
     def __hash__(self): return hash(id(self))
 
@@ -25,7 +26,9 @@ class AbstractReader(with_metaclass(ABCMeta)):
     def _to_aggregate_form():
         pass
 
+
 class UCIFastReader(AbstractReader):
+
     """`Deprecated` - A UCIFastReader for one input node. Please switch to
     :class:`CNTKTextFormatReader`.
 
@@ -44,26 +47,28 @@ class UCIFastReader(AbstractReader):
         all the possible classes, one per line
     """
 
-    def __init__(self, filename, input_start, input_dim, 
+    def __init__(self, filename, input_start, input_dim,
                  num_of_classes=None, label_mapping_file=None,
                  custom_delimiter=None):
         ''' Reader constructor. 
         '''
-    
+
         self.filename = filename
         self.custom_delimiter = custom_delimiter
         self.input_start = input_start
-        self.input_dim = input_dim 
+        self.input_dim = input_dim
         self.num_of_classes = num_of_classes
         self.label_mapping_file = label_mapping_file
-        
+
     def _to_aggregate_form(self, input_node):
         r = UCIFastReaderAggregator(self.filename, self.custom_delimiter)
-        r.add_input(input_node, self.input_start, self.input_dim, 
-                        self.num_of_classes, self.label_mapping_file)        
+        r.add_input(input_node, self.input_start, self.input_dim,
+                    self.num_of_classes, self.label_mapping_file)
         return r
-            
+
+
 class CNTKTextFormatReader(AbstractReader):
+
     """A CNTKTextFormatReader for one input node that supports sequences. 
 
     Args:
@@ -85,7 +90,7 @@ class CNTKTextFormatReader(AbstractReader):
 
            r = CNTKTextFormatReader('data.txt', 'I')
 
-       
+
        The alias is required, because using this format you can set up
        multiple inputs per sample::
 
@@ -119,7 +124,7 @@ class CNTKTextFormatReader(AbstractReader):
            2\t|I 20 21
     """
 
-    def __init__(self, filename):        
+    def __init__(self, filename):
         self.filename = filename
         self.inputs_def = []
         self.lazy_inputs_def = []
@@ -157,15 +162,15 @@ class CNTKTextFormatReader(AbstractReader):
         Write the reader configuration. For this, all previously registered
         `LazyInputReader`s will be serialized into one common file.
         '''
-        
+
         from cntk.context import get_context
         template = ''' 
         reader = [
             traceLevel = 2
             readerType = CNTKTextFormatReader
             file = "%(FileName)s"                
-        '''%{'FileName':self.filename}
-        
+        ''' % {'FileName': self.filename}
+
         if self.inputs_def or self.lazy_inputs_def:
             template += '''
                 input = [
@@ -191,12 +196,13 @@ class CNTKTextFormatReader(AbstractReader):
                 ]'''.format(name, a, dim, format)
 
         if not self.inputs_def and self.lazy_inputs_def:
-            alias_lazy_map = serialize_input_data(self.lazy_inputs_def, self.filename)
+            alias_lazy_map = serialize_input_data(
+                self.lazy_inputs_def, self.filename)
 
             for alias, lazy in alias_lazy_map.items():
 
                 dim = np.multiply.reduce(lazy.shape)
-                format = 'dense' # TODO: sparse
+                format = 'dense'  # TODO: sparse
 
                 template += '''
                 {0}=[
@@ -205,7 +211,6 @@ class CNTKTextFormatReader(AbstractReader):
                     format = "{3}"
                 ]'''.format(lazy.node.var_name, alias, dim, format)
 
-
         if self.inputs_def or self.lazy_inputs_def:
             template += '''
             ]
@@ -213,8 +218,10 @@ class CNTKTextFormatReader(AbstractReader):
             '''
 
         return template
-        
+
+
 class LazyInputReader(object):
+
     '''
     Lazy reader that takes an NumPy array and serializes it to disk only when
     the complete graph is specified. This is necessary in case of multiple
@@ -239,9 +246,11 @@ class LazyInputReader(object):
         packaged as sequences. If not, it will wrapped again in a sequence of
         length 1.
     '''
+
     def __init__(self, batch, node, input_alias=None, has_sequence_dimension=True):
         if not batch:
-            raise ValueError('you initalized LazyInputReader without valid batch data')
+            raise ValueError(
+                'you initalized LazyInputReader without valid batch data')
 
         self.batch = batch
         if not node.is_input():
@@ -258,6 +267,7 @@ class LazyInputReader(object):
 
         self.input_alias = input_alias
         self.has_sequence_dimension = has_sequence_dimension
+
 
 class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
 
@@ -279,6 +289,7 @@ class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
     def __eq__(self, x): return x is self
 
     def __ne__(self, x): return x is not self
+
 
 class UCIFastReaderAggregator(AbstractReaderAggregator):
 
@@ -361,4 +372,3 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
 '''
 
         return template % self
-

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -12,8 +12,9 @@ from ..context import get_new_context
 from ..graph import *
 from ..reader import *
 
-#TODO: broken due to a problem in CNTK. Once fixed merge them with the tests in linear_test.py
-#The issue is as follows: When you have no input in your graph then only one row is output.
+# TODO: broken due to a problem in CNTK. Once fixed merge them with the tests in linear_test.py
+# The issue is as follows: When you have no input in your graph then only
+# one row is output.
 
 """ 
 # keeping things short

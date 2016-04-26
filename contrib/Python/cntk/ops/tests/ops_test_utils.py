@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -18,6 +18,6 @@ from ...reader import *
 from ..variables_and_parameters import *
 
 
-#Keeping things short
+# Keeping things short
 C = constant
 I = input_reader

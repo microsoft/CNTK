@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -8,13 +8,13 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
-#TODO: re-write the example using the new facade
+# TODO: re-write the example using the new facade
 
 import numpy as np
 
 from cntk import *
 
-#TODO necessary fix of CNTK exe. When we do not use inputs (just constants), the 
+# TODO necessary fix of CNTK exe. When we do not use inputs (just constants), the
 # output of the write action has a missing line.
 if (__name__ == "__main__"):
 

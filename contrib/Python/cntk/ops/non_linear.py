@@ -52,6 +52,7 @@ def rectified_linear(x, name=None):
     """
     return RectifiedLinear(x, var_name=name)
 
+
 def rectified_linear(x, name=None):
     """
     computes the element-wise rectified linear of `x`: ``max(x, 0)``
@@ -68,6 +69,7 @@ def rectified_linear(x, name=None):
     """
     return RectifiedLinear(x, var_name=name)
 
+
 def sigmoid(x, name=None):
     """
     computes the element-wise sigmoid of `x`: 
@@ -82,6 +84,7 @@ def sigmoid(x, name=None):
     """
     return Sigmoid(x, var_name=name)
 
+
 def tanh(x, name=None):
     """
     computes the element-wise tanh of `x`: 
@@ -93,6 +96,7 @@ def tanh(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return Tanh(x, var_name=name)
+
 
 def softmax(x, name=None):
     """
@@ -118,6 +122,7 @@ def softmax(x, name=None):
     """
     return Softmax(x)
 
+
 def exp(x, name=None):
     """
     computes the element-wise exponential of `x`: 
@@ -131,6 +136,7 @@ def exp(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     return Exp(x, var_name=name)
+
 
 def abs(x, name=None):
     """

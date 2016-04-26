@@ -70,6 +70,7 @@ TENSORS = [
       [0.001, 0.01], [0.1, 1], [10, 100]]),
 ]
 
+
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
 
@@ -103,21 +104,22 @@ def test_op_sigmoid(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-@pytest.mark.parametrize("batch", 
-        [
-         [ # 2 samples having 4 classes
-          [1,1,2,3],
-          [0,0,0,0]
-         ],
-            ])
+
+@pytest.mark.parametrize("batch",
+                         [
+                             [  # 2 samples having 4 classes
+                                 [1, 1, 2, 3],
+                                 [0, 0, 0, 0]
+                             ],
+                         ])
 def test_op_softmax(batch, device_id, precision):
 
     def numpy_op(x):
         x = AA(x, dtype=PRECISION_TO_TYPE[precision])
-        # Expecting classes of one sample 
+        # Expecting classes of one sample
         assert len(x.shape) == 1
 
-        ox = x-x.max() # subtract max to avoid overflow
+        ox = x - x.max()  # subtract max to avoid overflow
 
         expX = np.exp(ox)
         return expX / np.sum(expX)
@@ -128,7 +130,6 @@ def test_op_softmax(batch, device_id, precision):
     # we need two surrounding brackets
     # the first for sequences (length=1, since we have has_sequence_dimension=False)
     # the second for batch of one sample
-
 
     input_node = I(batch, has_sequence_dimension=False)
     op_node = softmax(input_node)
@@ -149,17 +150,17 @@ def test_op_softmax(batch, device_id, precision):
         for i in range(len(x)):
             # deriving wrt i-th element
             for j in range(len(x)):
-                if i==j:
-                    grads[i,j] = x[i]*(1-x[i])
+                if i == j:
+                    grads[i, j] = x[i] * (1 - x[i])
                 else:
-                    grads[i,j] = x[i]*(-x[j]) 
+                    grads[i, j] = x[i] * (-x[j])
 
         return grads.sum(axis=0)
 
     expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
 
-    unittest_helper(op_node, None, expected, 
-            device_id=device_id,
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
@@ -196,6 +197,7 @@ def test_op_exp(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_tanh(tensor, device_id, precision):
 
@@ -222,11 +224,12 @@ def test_op_tanh(tensor, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is 1-tanh(x)^2
-    expected = [[1-numpy_op(tensor)**2]]
+    expected = [[1 - numpy_op(tensor)**2]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
+
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_rectified_linear(tensor, device_id, precision):
@@ -258,13 +261,14 @@ def test_op_rectified_linear(tensor, device_id, precision):
     # positive
     def numpy_op_grad(x):
         npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
-        return np.asarray(npx>0, dtype=int)
+        return np.asarray(npx > 0, dtype=int)
 
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
+
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_abs(tensor, device_id, precision):
@@ -291,7 +295,7 @@ def test_op_abs(tensor, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is x/|x|
-    
+
     expected = np_tensor / np.abs(np_tensor)
     # For 0 NumPy gives a gradient non, while CNTK gives 0
     expected[np.isnan(expected)] = 0
@@ -300,4 +304,3 @@ def test_op_abs(tensor, device_id, precision):
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
-

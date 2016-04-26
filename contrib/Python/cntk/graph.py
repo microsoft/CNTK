@@ -1,10 +1,11 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
-#TODO: Formalize the naming convention and the transformation rules from C++ to Python
+# TODO: Formalize the naming convention and the transformation rules from
+# C++ to Python
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
@@ -12,6 +13,11 @@ import numpy as np
 from .utils import MODEL_INDENTATION
 from .utils import aggregate_readers
 from .utils import with_metaclass, is_string
+
+
+def _tuple_to_cntk_shape(shape):
+    return ':'.join(str(v) for v in shape)
+
 
 class ComputationNode(object):
 
@@ -36,7 +42,7 @@ class ComputationNode(object):
             if hasattr(p, 'consumers'):
                 p.consumers.append(self)
 
-        # Create sub-class construtor and more these 
+        # Create sub-class construtor and more these
         self.reader = None
         self.has_sequence_dimensions = False
 
@@ -48,16 +54,16 @@ class ComputationNode(object):
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
-        if not isinstance(other, ComputationNode):            
+        if not isinstance(other, ComputationNode):
             other = ops.constant(other)
         return ops.plus(self, other)
 
     # operator overload for (+) where self is the right operand
     def __radd__(self, other):
-        if not isinstance(other, ComputationNode):            
+        if not isinstance(other, ComputationNode):
             other = ops.constant(other)
         return ops.plus(other, self)
-    
+
     # operator overload for (-) where self is the left operand
     def __sub__(self, other):
         if not isinstance(other, ComputationNode):
@@ -66,7 +72,7 @@ class ComputationNode(object):
 
     # operator overload for (-) where self is the right operand
     def __rsub__(self, other):
-        if not isinstance(other, ComputationNode):            
+        if not isinstance(other, ComputationNode):
             other = ops.constant(other)
         return ops.minus(other, self)
 
@@ -91,7 +97,7 @@ class ComputationNode(object):
 
     # operator overload for (@) where self is the right operand
     def __rmatmul__(self, other):
-        if not isinstance(other, ComputationNode):            
+        if not isinstance(other, ComputationNode):
             other = ops.constant(other)
         # NOTE supported in Python 3.5
         return ops.times(other, self)
@@ -162,8 +168,7 @@ class ComputationNode(object):
 
         return param
 
-
-    def _is_forward_ref(self, p_name, p_value): 
+    def _is_forward_ref(self, p_name, p_value):
         '''
         Although the unrolled graph is a DAG, when we specify recurrence we
         naturally have loops. We can resolve this by using forward references.
@@ -220,16 +225,19 @@ class ComputationNode(object):
 
                             else:
                                 if (pv, first_unreconciled_input) in reconciled_cache:
-                                    child_var, dep_inputs = reconciled_cache[(pv, first_unreconciled_input)]
+                                    child_var, dep_inputs = reconciled_cache[
+                                        (pv, first_unreconciled_input)]
                                 else:
                                     unrec_pv = pv
                                     from .ops.cntk1 import ReconcileMBLayout
-                                    pv = ReconcileMBLayout(unrec_pv, first_unreconciled_input)
+                                    pv = ReconcileMBLayout(
+                                        unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
                                         input_reader, desc, unrolled_nodes, inputs, readers,
                                         dep_inputs, node_counter,
                                         reconciled_cache)
-                                    reconciled_cache[(unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
+                                    reconciled_cache[
+                                        (unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
 
                                 unrolled_nodes[pv] = child_var, dep_inputs
 
@@ -252,23 +260,23 @@ class ComputationNode(object):
 
         if hasattr(self, 'tag') and 'tag' not in self.params:
             param_variable_names.append("tag='%s'" % self.tag)
-        
+
         has_var_name = False
         if (self.var_name):
             has_var_name = True
-            
+
         self.var_name = self.var_name or "v%i" % node_counter
         node_counter += 1
 
         if self.is_input():
             inputs.add(self)
-            
-            num_readers_mapping = 0            
-            
-            if self.reader:                
+
+            num_readers_mapping = 0
+
+            if self.reader:
                 node_reader = self.reader
                 num_readers_mapping += 1
-                
+
             if input_reader:
                 if self in input_reader:
                     node_reader = input_reader[self]
@@ -276,13 +284,15 @@ class ComputationNode(object):
                 if has_var_name and self.var_name in input_reader:
                     node_reader = input_reader[self.var_name]
                     num_readers_mapping += 1
-            
+
             if num_readers_mapping == 0:
-                raise RuntimeError("No reader was found for input node: {0}".format(self.var_name))
-            
-            if num_readers_mapping > 1:            
-                raise RuntimeError("More than one reader found for input node: {0}".format(self.var_name))
-                
+                raise RuntimeError(
+                    "No reader was found for input node: {0}".format(self.var_name))
+
+            if num_readers_mapping > 1:
+                raise RuntimeError(
+                    "More than one reader found for input node: {0}".format(self.var_name))
+
             readers.add(node_reader)
 
         params = self._get_cntk_param_string(param_variable_names)
@@ -297,7 +307,7 @@ class ComputationNode(object):
         return self.var_name, node_counter, desc, dep_inputs
 
     def _to_config(self, input_reader, description, unrolled_nodes, inputs, readers,
-            dep_inputs, node_counter, reconciled_cache):
+                   dep_inputs, node_counter, reconciled_cache):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
@@ -307,9 +317,9 @@ class ComputationNode(object):
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
-            readers=readers, 
+            readers=readers,
             dep_inputs=dep_inputs,
-            node_counter=node_counter, 
+            node_counter=node_counter,
             reconciled_cache=reconciled_cache)
 
         return var_name, node_counter, desc, inputs, readers, dep_inputs
@@ -321,18 +331,19 @@ class ComputationNode(object):
         '''
         var_name, node_counter, desc, inputs, readers, dep_inputs = \
             self._to_config(input_reader={},
-                    description=[], 
-                    unrolled_nodes={},
-                    inputs=set(),
-                    readers=set(), 
-                    dep_inputs=tuple(), 
-                    node_counter=0,
-                    reconciled_cache={})
+                            description=[],
+                            unrolled_nodes={},
+                            inputs=set(),
+                            readers=set(),
+                            dep_inputs=tuple(),
+                            node_counter=0,
+                            reconciled_cache={})
 
         return "\n".join(desc), inputs, aggregate_readers(readers)
 
 
 class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
+
     '''
     Base class for all non-image input nodes nodes and operators. 
     '''
@@ -391,6 +402,7 @@ def eval(node):
     return ctx.eval(node)
 
 class LazyInput(InputComputationNodeBase):
+
     '''
     Lazy reader that takes an NumPy array and serializes it to disk only when
     the complete graph is specified. This is necessary in case of multiple
@@ -414,6 +426,7 @@ class LazyInput(InputComputationNodeBase):
         length 1.
 
     '''
+
     def __init__(self, value, input_alias=None, has_sequence_dimension=True):
         self.value = value
         self.input_alias = input_alias

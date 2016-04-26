@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -13,6 +13,7 @@ import numpy as np
 import scipy.sparse
 from ..reader import CNTKTextFormatReader
 from .. import utils
+
 
 def input_reader(value, alias=None, has_sequence_dimension=True):
     '''
@@ -33,40 +34,42 @@ def input_reader(value, alias=None, has_sequence_dimension=True):
             cntk_shape = value[0][1:]
         else:
             cntk_shape = value[0]
-            
-        from ..ops import cntk1 
+
+        from ..ops import cntk1
         from ..reader import LazyInputReader
         node = cntk1.Input(cntk_shape)
         node.reader = LazyInputReader(
-                value, 
-                input_alias=alias,
-                has_sequence_dimension=has_sequence_dimension,
-                node=node)
-        
+            value,
+            input_alias=alias,
+            has_sequence_dimension=has_sequence_dimension,
+            node=node)
+
         return node
     else:
         raise ValueError('value type is not supported: %s' % type(value))
+
 
 def input(dims, name=None):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
-    
+
     Args:
         dims: the shape of the input tensor
         name: the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
-    """    
-    
-    return Input(dims, var_name = name)  
-    
-def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform', 
+    """
+
+    return Input(dims, var_name=name)
+
+
+def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform',
               init_value_scale=1, value=0, init_from_file_path='', init_from_literal=None,
               random_seed=-1):
     """
     It creates a parameter tensor. 
-    
+
     Args:
         dims (shape or int): the shape of the input tensor. If `init='fromLiteral'`, dims is not 
         needed as it will be inferred from the literal.
@@ -80,12 +83,12 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
         random_seed (float): the seed used for initialization
     Returns:
         :class:`cntk.graph.ComputationNode`
-    """    
+    """
 
-    from . import cntk1 
+    from . import cntk1
 
     # if the parameter is initialized from a literal value
-    if (init=='fromLiteral'):        
+    if (init == 'fromLiteral'):
         """
         To be as generic as possible, we 
          - flatten the data 
@@ -93,27 +96,27 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
          - ensure that the graph does not backprob to it.  
          - Finally we to reshape it.
         """
-        
+
         value = init_from_literal
-        
+
         if not (np.isscalar(value) or utils.is_tensor(value)):
             raise ValueError('value type is not supported: %s' % type(value))
-            
+
         if isinstance(value, list) or np.isscalar(value):
             value = np.asarray(value)
-    
+
         if scipy.sparse.issparse(value):
             raise ValueError('only dense data is supported')
-    
+
         param_shape = value.shape if value.shape else (1,)
         literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
-        
-        literal_array = np.reshape(value, literal_shape)        
-    
+
+        literal_array = np.reshape(value, literal_shape)
+
         from io import BytesIO
-        s = BytesIO()    
+        s = BytesIO()
         np.savetxt(s, literal_array, '%.4f')
-    
+
         return cntk1.ParameterTensor(
             dims=param_shape,
             learningRateMultiplier=learning_rate_multiplier,
@@ -121,21 +124,21 @@ def parameter(dims=None, name=None, learning_rate_multiplier=1.0, init='uniform'
             initFromLiteral=s.getvalue().decode())
 
     else:
-        return cntk1.ParameterTensor(dims, learning_rate_multiplier, init, 
-                                         init_value_scale, value, init_from_file_path,
-                                         randomSeed=random_seed, var_name=name)
-    
+        return cntk1.ParameterTensor(dims, learning_rate_multiplier, init,
+                                     init_value_scale, value, init_from_file_path,
+                                     randomSeed=random_seed, var_name=name)
+
+
 def constant(value, name=None):
     """
     It creates constant tensor initialized from a numpy array
-    
+
     Args:
         value: the tensor constant passed as numpy array
         name: the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
-    """    
-    
-    return parameter(name=name, init='fromLiteral', init_from_literal=value,
-                     learning_rate_multiplier=0.0)    
+    """
 
+    return parameter(name=name, init='fromLiteral', init_from_literal=value,
+                     learning_rate_multiplier=0.0)
