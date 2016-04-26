@@ -11,10 +11,10 @@ Subpackages
 Submodules
 ----------
 
-cntk.ops.convolution module
+cntk.ops module
 ---------------------------
 
-.. automodule:: cntk.ops.convolution
+.. automodule:: cntk.ops
     :members:
     :undoc-members:
     :show-inheritance:
@@ -31,6 +31,14 @@ cntk.ops.linear module
 ----------------------
 
 .. automodule:: cntk.ops.linear
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+cntk.ops.non_diff module
+--------------------------
+
+.. automodule:: cntk.ops.non_diff
     :members:
     :undoc-members:
     :show-inheritance:
