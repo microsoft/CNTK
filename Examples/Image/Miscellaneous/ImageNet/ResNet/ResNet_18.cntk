@@ -18,10 +18,14 @@ stderr="$OutputDir$/ResNet_18"
 traceLevel=1
 numMBsToShowResult=500
 
+# Strides for increasing layers. Defaults (paper) are 2 for 1x1 and 1 for 3x3.
+stride1x1=2
+stride3x3=1
+
 Train=[
     action="train"
     modelPath="$ModelDir$/ResNet_18"
-
+    
      NDLNetworkBuilder=[
         networkDescription="$ConfigDir$/ResNet_18.ndl"
     ]

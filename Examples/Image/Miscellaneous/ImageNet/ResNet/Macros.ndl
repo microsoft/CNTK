@@ -73,12 +73,12 @@ ResNetNode2AInc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, 
 ]
 
 # Standard building block for ResNet with padding (option B).
-ResNetNode2BInc(inp, outMap, inMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, bnTimeConst)
+ResNetNode2BInc(inp, outMap, inMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, bnTimeConst, stride1x1, stride3x3)
 [
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, bnTimeConst)
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, stride1x1, stride1x1, wScale, bValue, scValue, bnTimeConst)
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, bnTimeConst)
+    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, stride3x3, stride3x3, wScale, bValue, scValue, bnTimeConst)
     
     # Projection convolution layer.
     c_proj = Conv1x1(inp, outMap, inMap, 2, 2, wScale, bValue, scValue, bnTimeConst)

@@ -134,11 +134,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
 void CropTransformer::Apply(size_t id, cv::Mat &mat)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create(
-        [seed]()
-        {
-            return std::make_unique<std::mt19937>(seed);
-        });
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
     double ratio = 1;
     switch (m_jitterType)
@@ -348,12 +344,7 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
     }
 
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create(
-        [seed]()
-        {
-            return std::make_unique<std::mt19937>(seed);
-        });
-
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
     auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
     assert(m_interp.size() > 0);
@@ -577,11 +568,7 @@ template <typename ElemType>
 void IntensityTransformer::Apply(cv::Mat &mat)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create(
-        [seed]()
-    {
-        return std::make_unique<std::mt19937>(seed);
-    });
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
     std::normal_distribution<float> d(0, (float)m_stdDev);
