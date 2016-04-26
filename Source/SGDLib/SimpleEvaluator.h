@@ -32,7 +32,7 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
                     const size_t numSubminiBatches = 1)
         : m_net(net), 
           m_numMBsToShowResult(numMBsToShowResult), 
@@ -42,7 +42,8 @@ public:
           m_numSubminiBatches(numSubminiBatches), 
           m_mpi(mpi), 
           m_distGradAgg(nullptr),
-          m_gradHeader(nullptr)
+          m_gradHeader(nullptr),
+          m_enableDistributedMBReading(enableDistributedMBReading)
     {
     }
 
@@ -107,8 +108,13 @@ public:
 
         std::vector<EpochCriterion> evalResultsLastLogged(evalResults.size(), EpochCriterion(0));
 
-        //TODO: we should add support for distributed reading
-        dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+        bool useParallelTrain = (m_mpi != nullptr);
+        bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
+        if (useDistributedMBReading)
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+        else
+            dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
@@ -125,7 +131,7 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, dataReader->SupportsDistributedMBRead(), m_mpi != nullptr, inputMatrices, actualMBSize, m_mpi))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi))
         {
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
@@ -151,7 +157,7 @@ public:
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
             size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
-            if (m_mpi != nullptr)
+            if (useParallelTrain)
             {
                 if (m_gradHeader == nullptr)
                 {
@@ -268,6 +274,7 @@ protected:
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
     MPIWrapperPtr m_mpi;
+    bool m_enableDistributedMBReading;
 
     shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
