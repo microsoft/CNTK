@@ -12,7 +12,27 @@ class SGDParams(dict):
 
     def __init__(self, epoch_size=0, minibatch_size=1, learning_ratesPerMB="0.1",
                  learning_rates_per_sample=None, momentum_per_mb="0.9",
-                 momentum_per_sample=None, max_epochs=5, dropout_rate=None):
+                 momentum_per_sample=None, max_epochs=5, dropout_rate=None,
+                 momentumAsTimeConstant=None,
+                 gradientClippingWithTruncation=None,
+                 clippingThresholdPerSample=None,
+                 numMBsToShowResult=None,
+                 firstMBsToShowResult=None,
+                 gradUpdateType=None,
+                 loadBestModel=None,
+                 traceNodeNamesReal=None,
+                 traceNodeNamesCategory=None,
+                 	# settings for Auto Adjust Learning Rate 
+                 autoAdjustLR=None,
+                 reduceLearnRateIfImproveLessThan=None,
+                 continueReduce=None,
+                 increaseLearnRateIfImproveMoreThan=None,
+                 learnRateDecreaseFactor=None,
+                 learnRateIncreaseFactor=None,
+                 numMiniBatch4LRSearch=None,
+                 numPrevLearnRates=None,
+                 numBestSearchEpoch=None):
+        
         """ SGDParmas constructor
 
         :param epoch_size: the number of samples to use in each epoch. An intermediate
