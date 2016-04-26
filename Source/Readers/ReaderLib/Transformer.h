@@ -32,10 +32,6 @@ struct Sequences
 class Transformer;
 typedef std::shared_ptr<Transformer> TransformerPtr;
 
-// Defines a data transformation interface.
-// Transformers are responsible for doing custom transformation of sequences.
-// For example for images, there could be scale, crop, or median transformation.
-// TODO: Adopt to the C#/Java iterator pattern.
 class Transformer
 {
 public:
@@ -58,4 +54,25 @@ public:
     {
     }
 };
-} } }
+
+// Defines a data transformation interface.
+// Transformers are responsible for doing custom transformation of sequences.
+// For example for images, there could be scale, crop, or median transformation.
+class SlimTransformer
+{
+public:
+    // Transformation of the stream.
+    virtual StreamDescriptionPtr Transform(const StreamDescription& inputStream) const = 0;
+
+    // Transformation of the sequence.
+    virtual SequenceDataPtr Transform(SequenceDataPtr sequence) = 0;
+
+    virtual ~SlimTransformer()
+    {
+    }
+};
+
+typedef std::shared_ptr<SlimTransformer> SlimTransformerPtr;
+
+
+}}}
