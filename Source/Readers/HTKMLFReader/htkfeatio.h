@@ -81,7 +81,7 @@ protected:
     {
         int nsamples;
         int sampperiod;
-        short sampsize;
+        unsigned short sampsize;
         short sampkind;
         void read(FILE* f)
         {
