@@ -57,14 +57,14 @@ def test_serialize_input_data(tmpdir):
         [
             AA([[[1, 2]], [[3, 4]]]),
             AA([[[10, 20]]])
-        ], alias='X', has_sequence_dimension=True)
+        ], alias='X', has_dynamic_axis=True)
 
     i2 = input_reader(
         # 2 samples with 1 sequence each
         [
             AA([[[44, 55]]]),
             AA([[[66, 77]]])
-        ], has_sequence_dimension=True)
+        ], has_dynamic_axis=True)
 
     expected = '''\
 0	|X 1 2 |_I_0 44 55

@@ -15,7 +15,7 @@ from ..reader import CNTKTextFormatReader
 from .. import utils
 
 
-def input_reader(value, alias=None, has_sequence_dimension=True):
+def input_reader(value, alias=None, has_dynamic_axis=True):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -23,14 +23,14 @@ def input_reader(value, alias=None, has_sequence_dimension=True):
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
         alias (str): alias to be used in the data file
-        has_sequence_dimension (bool): If True, the outermost dimension is treated as the sequence dimension. If False, it will wrap each sample into its own 1-dimensional array.
+        has_dynamic_axis (bool): If True, the outermost dimension is treated as the dynamic axis. If False, it will wrap each sample into its own 1-dimensional array.
         alias (str): optional the alias to be used when serializing the data into an intermediate file
 
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
     if utils.is_tensor_list(value) or utils.is_tensor(value):
-        if has_sequence_dimension:
+        if has_dynamic_axis:
             cntk_shape = value[0][1:]
         else:
             cntk_shape = value[0]
@@ -41,7 +41,7 @@ def input_reader(value, alias=None, has_sequence_dimension=True):
         node.reader = LazyInputReader(
             value,
             input_alias=alias,
-            has_sequence_dimension=has_sequence_dimension,
+            has_dynamic_axis=has_dynamic_axis,
             node=node)
 
         return node

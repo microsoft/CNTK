@@ -26,8 +26,8 @@ def test_two_inputs(device_id, precision):
 
     expected = a + b
 
-    op_node = I([a], has_sequence_dimension=True) + \
-        I([b], has_sequence_dimension=True)
+    op_node = I([a], has_dynamic_axis=True) + \
+        I([b], has_dynamic_axis=True)
 
     unittest_helper(op_node, None, [expected], device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)

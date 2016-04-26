@@ -44,7 +44,6 @@ class ComputationNode(object):
 
         # Create sub-class construtor and more these
         self.reader = None
-        self.has_sequence_dimensions = False
 
     def is_input(self):
         '''
@@ -421,16 +420,16 @@ class LazyInput(InputComputationNodeBase):
         input_alias (str): a short name for the input, it is how inputs are
         referenced in the data files. If not provided, it will be automatically
         assigned.
-        has_sequence_dimension (bool): whether the tensor already has the data
+        has_dynamic_axis (bool): whether the tensor already has the data
         packaged as sequences. If not, it will be wrapped again in a sequence of
         length 1.
 
     '''
 
-    def __init__(self, value, input_alias=None, has_sequence_dimension=True):
+    def __init__(self, value, input_alias=None, has_dynamic_axis=True):
         self.value = value
         self.input_alias = input_alias
-        self.has_sequence_dimension = has_sequence_dimension
+        self.has_dynamic_axis = has_dynamic_axis
 
 # At the bottom to avoid circular import
 from . import ops

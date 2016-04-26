@@ -242,12 +242,12 @@ class LazyInputReader(object):
         input_alias (str): a short name for the input, it is how inputs are
         referenced in the data files. If not provided, it will be automatically
         assigned.
-        has_sequence_dimension (bool): whether the tensor has already the data
+        has_dynamic_axis (bool): whether the tensor has already the data
         packaged as sequences. If not, it will wrapped again in a sequence of
         length 1.
     '''
 
-    def __init__(self, batch, node, input_alias=None, has_sequence_dimension=True):
+    def __init__(self, batch, node, input_alias=None, has_dynamic_axis=True):
         if not batch:
             raise ValueError(
                 'you initalized LazyInputReader without valid batch data')
@@ -259,14 +259,14 @@ class LazyInputReader(object):
         self.node = node
 
         sample = batch[0]
-        if has_sequence_dimension:
-            # collecting the shapes ignoring the sequence dimension
+        if has_dynamic_axis:
+            # collecting the shapes ignoring the dynamic axis
             self.node.dims = np.asarray(sample).shape[1:]
         else:
             self.node.dims = np.asarray(sample).shape
 
         self.input_alias = input_alias
-        self.has_sequence_dimension = has_sequence_dimension
+        self.has_dynamic_axis = has_dynamic_axis
 
 
 class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):

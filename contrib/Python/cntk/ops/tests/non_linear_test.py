@@ -81,12 +81,12 @@ def test_op_sigmoid(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_sequence_dimension=False)
+    input_node = I([tensor], has_dynamic_axis=False)
     op_node = sigmoid(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -128,10 +128,10 @@ def test_op_softmax(batch, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
-    input_node = I(batch, has_sequence_dimension=False)
+    input_node = I(batch, has_dynamic_axis=False)
     op_node = softmax(input_node)
 
     expected = [[numpy_op(sample)] for sample in batch]
@@ -175,12 +175,12 @@ def test_op_exp(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_sequence_dimension=False)
+    input_node = I([tensor], has_dynamic_axis=False)
     op_node = exp(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -208,12 +208,12 @@ def test_op_tanh(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_sequence_dimension=False)
+    input_node = I([tensor], has_dynamic_axis=False)
     op_node = tanh(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -242,12 +242,12 @@ def test_op_rectified_linear(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_sequence_dimension=False)
+    input_node = I([tensor], has_dynamic_axis=False)
     op_node = rectified_linear(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -279,12 +279,12 @@ def test_op_abs(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
 
     expected = [[np.abs(tensor)]]
 
-    input_node = I([tensor], has_sequence_dimension=False)
+    input_node = I([tensor], has_dynamic_axis=False)
     op_node = abs(input_node)
 
     unittest_helper(op_node, None, expected,

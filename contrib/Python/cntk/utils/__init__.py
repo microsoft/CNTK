@@ -25,9 +25,9 @@ MODEL_INDENTATION = 8
 
 def cntk_to_numpy_shape(shape):
     '''
-    Removes the sequence dimension.
+    Removes the dynamic axis and returns a tuple represneint the NumPy shape.
 
-    Arts:
+    Args:
         shape (tuple): CNTK shape iterable
 
     Returns:
@@ -47,6 +47,9 @@ def aggregate_readers(readers):
     '''
     Aggregates the readers. If readers is provided, all elements have to
     reference the same filename. 
+
+    Args:
+        readers (iterable): readers to be aggregated
     '''
     import copy
     readers_map = {}
@@ -194,19 +197,19 @@ def serialize_input_data(lazy_inputs_def, filename):
 
         shapes_in_tensor = set()
 
-        # make sure that modulo sequence length all tensors of one lazy input have
+        # make sure that modulo dynamic axis all tensors of one lazy input have
         # the same shape
         for tensor in l.batch:
             if isinstance(tensor, list):
                 tensor = np.asarray(tensor)
 
-            if l.has_sequence_dimension:
-                # collecting the shapes ignoring the sequence dimension
+            if l.has_dynamic_axis:
+                # collecting the shapes ignoring the dynamic axis
                 shapes_in_tensor.add(tensor.shape[1:])
             else:
                 shapes_in_tensor.add(tensor.shape)
 
-        # ignoring the sequence dimension, all shapes should be equal
+        # ignoring the dynamic axis, all shapes should be equal
         if len(shapes_in_tensor) != 1:
             raise ValueError('except for the sequence dimensions all shapes ' +
                              'should be the same - instead we %s' %
@@ -229,7 +232,7 @@ def serialize_input_data(lazy_inputs_def, filename):
         for idx in range(sample_size):
             alias_tensor_map = {}
             for l in lazy_inputs_def:
-                if l.has_sequence_dimension:
+                if l.has_dynamic_axis:
                     alias_tensor_map[l.input_alias] = l.batch[idx]
                 else:
                     alias_tensor_map[l.input_alias] = [l.batch[idx]]
