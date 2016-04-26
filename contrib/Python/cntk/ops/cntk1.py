@@ -502,7 +502,6 @@ class If(ComputationNode):
         self.elseVal = elseVal
         self.params_with_defaults = []
 
-
 class InvStdDev(ComputationNode):
     def __init__(self, dataVectorSequence, name='InvStdDev', var_name=None):
         super(InvStdDev, self).__init__(params=['dataVectorSequence'], name=name, var_name=var_name)
