@@ -41,8 +41,9 @@ void CompositeDataReader::Init(const ConfigParameters& config)
     bool prefetch = config(L"prefetch", true);
     m_launchType = prefetch ? launch::async : launch::deferred;
 
-    auto numSequencesPerMinibatchForAllEpochs = config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));;
-    m_layout->Init(numSequencesPerMinibatchForAllEpochs[0], 0);
+    // Layout can be asked before actual reading.
+    // TODO: should be gone when SGD changed.
+    m_layout->Init(0, 0);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", true);
