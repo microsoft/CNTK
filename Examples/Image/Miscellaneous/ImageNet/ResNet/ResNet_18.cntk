@@ -80,10 +80,10 @@ Train=[
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations="cubic"
             # Brightness, contrast and color jittering. Use 0 to disable jittering.
-            brightnessRadius=0.4
-            contrastRadius=0.4
+            brightnessRadius=0.2
+            contrastRadius=0.2
             saturationRadius=0.4
-            # Intensity jittering: enabled if file is specified. 
+            # Intensity jittering: enabled if file is specified and intensityStdDev > 0. 
             # The file stores 1x3 vector (eigenvalues) and 3x3 matrix (eigenvectors) in OpenCV XML format.
             intensityFile="$ConfigDir$/ImageNet1K_intensity.xml"
             # StdDev for intensity jittering.

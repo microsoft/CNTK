@@ -553,7 +553,7 @@ void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    if (m_eigVal.empty() || m_eigVec.empty())
+    if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0)
         return;
 
     if (mat.type() == CV_64FC(mat.channels()))
@@ -650,28 +650,42 @@ void ColorTransformer::Apply(cv::Mat &mat)
 
     if (m_brightnessRadius > 0 || m_contrastRadius > 0)
     {
+        // To change brightness and/or contrast the following standard transformation is used:
+        // Xij = alpha * Xij + beta, where
+        // alpha is a contrast adjustment and beta - brightness adjustment.
         ElemType beta = 0;
         if (m_brightnessRadius > 0)
         {
             std::uniform_real_distribution<ElemType> d(-(ElemType)m_brightnessRadius, (ElemType)m_brightnessRadius);
-            beta = d(*rng) * 255;
+            // Compute mean value of the image.
+            cv::Scalar imgMean = cv::sum(cv::sum(mat));
+            // Compute beta as a fraction of the mean.
+            beta = (ElemType)(d(*rng) * imgMean[0] / (mat.rows * mat.cols * mat.channels()));
         }
 
         ElemType alpha = 1;
         if (m_contrastRadius > 0)
         {
             std::uniform_real_distribution<ElemType> d(-(ElemType)m_contrastRadius, (ElemType)m_contrastRadius);
-            alpha = d(*rng);
+            alpha = (ElemType)1 + d(*rng);
         }
 
-        mat.convertTo(mat, -1, alpha, beta);
+        // Could potentially use mat.convertTo(mat, -1, alpha, beta) 
+        // but it does not do range checking for single/double precision matrix. saturate_cast won't work either.
+        size_t count = mat.rows * mat.cols * mat.channels();
+        ElemType* pbase = reinterpret_cast<ElemType*>(mat.data);
+        for (ElemType* p = pbase; p < pbase + count; p++)
+        {
+            *p = std::min(std::max(*p * alpha + beta, (ElemType)0), (ElemType)255);
+        }
     }
 
     if (m_saturationRadius > 0 && mat.channels() == 3)
     {
         std::uniform_real_distribution<ElemType> d(-(ElemType)m_saturationRadius, (ElemType)m_saturationRadius);
         double ratio = (ElemType)1 + d(*rng);
-        
+        assert(0 <= ratio && ratio <= 2);
+
         auto hsv = m_hsvTemp.pop_or_create([]() { return std::make_unique<cv::Mat>(); });
 
         cv::cvtColor(mat, *hsv, CV_BGR2HSV);
@@ -681,7 +695,7 @@ void ColorTransformer::Apply(cv::Mat &mat)
         for (ElemType* phsv = phsvBase; phsv < phsvBase + count; phsv += 3)
         {
             const int HsvIndex = 1;
-            phsv[HsvIndex] = cv::saturate_cast<ElemType>(phsv[HsvIndex] * ratio);
+            phsv[HsvIndex] = std::min((ElemType)(phsv[HsvIndex] * ratio), (ElemType)1);
         }
         cv::cvtColor(*hsv, mat, CV_HSV2BGR);
 

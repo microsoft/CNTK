@@ -23,8 +23,7 @@ class ImageTransformerBase : public TransformerBase
 {
 public:
     // Initializes the transformer.
-    void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 protected:
     const std::vector<StreamId> &GetAppliedStreamIds() const override
