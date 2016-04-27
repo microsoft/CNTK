@@ -403,12 +403,12 @@ SequenceDataPtr SlimTransposeTransformer::Transform(SequenceDataPtr sequence)
 {
     if (m_inputStream.m_elementType == ElementType::tdouble)
     {
-        return TypedApply<double>(sequence);
+        return TypedTransform<double>(sequence);
     }
 
     if (m_inputStream.m_elementType == ElementType::tfloat)
     {
-        return TypedApply<float>(sequence);
+        return TypedTransform<float>(sequence);
     }
 
     RuntimeError("Unsupported type");
@@ -423,7 +423,7 @@ struct DenseSequenceWithBuffer : DenseSequenceData
 };
 
 template <class TElemType>
-SequenceDataPtr SlimTransposeTransformer::TypedApply(SequenceDataPtr sequence)
+SequenceDataPtr SlimTransposeTransformer::TypedTransform(SequenceDataPtr sequence)
 {
     auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
     assert(inputSequence.m_numberOfSamples == 1);

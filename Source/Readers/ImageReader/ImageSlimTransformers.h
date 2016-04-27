@@ -135,7 +135,7 @@ public:
 
 private:
     template <class TElement>
-    SequenceDataPtr TypedApply(SequenceDataPtr inputSequence);
+    SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
 
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
