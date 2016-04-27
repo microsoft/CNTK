@@ -1011,8 +1011,10 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 	GPUSparseMatrix<ElemType>::multimer += cuTime;
 	GPUSparseMatrix<ElemType>::mulcounter++;
 
-	fprintf(stderr, "TotalGPUTime = %12.6f  MulCounter = %12d\n", 
-		GPUSparseMatrix<ElemType>::multimer, GPUSparseMatrix<ElemType>::mulcounter);
+	if (GPUSparseMatrix<ElemType>::mulcounter % 10 == 0) {
+		fprintf(stderr, "TotalGPUTime = %16.4f ms     MulCounter = %16d\n",
+			GPUSparseMatrix<ElemType>::multimer, GPUSparseMatrix<ElemType>::mulcounter);
+	}
 }
 
 // dense X sparse = dense
