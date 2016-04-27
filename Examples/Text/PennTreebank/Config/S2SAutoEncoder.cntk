@@ -25,9 +25,9 @@ command = write
 # experiment id
 
 decodeModel = 4
-beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
+beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 5
+deviceId = 3
 #ExpId = 26-$deviceId$-g2p
 ExpId = 26-4-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
@@ -51,7 +51,7 @@ modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
 # decoding config
 decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
-decodeOutputPath = "$decodeModelPath$.bbbbb$beamDepth$"
+decodeOutputPath = "$decodeModelPath$.bc$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
 
@@ -638,10 +638,11 @@ test = [
 write = [
     action = "write"
 
+    #BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
+
     # last trained model
     # We need to make a change:
-    BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
-    xBrainScriptNetworkBuilder = ([
+    BrainScriptNetworkBuilder = ([
 
         enableTracing = true
         traceFrequency = 1000
@@ -684,7 +685,7 @@ write = [
 
         modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
-        useNYUStyle = false     # TODO: we should be able to infer this from some dimensions
+        #useNYUStyle = false     # TODO: we should be able to infer this from some dimensions
         hasEmbeddings = false   # TODO: infer this
 
         top1DecodingModel(model) = new ComputationNetwork [
@@ -745,8 +746,8 @@ write = [
             #  decoder[0].prevState.h.elseVal = PastValue (decoder[0].lstmState._privateInnards.ht) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
             #  decoder[0].prevState.c.elseVal = PastValue (decoder[0].lstmState._privateInnards.ct) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
 
-            hiddenDim    = modelAsTrained.decoderFeedback.dim
-            embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
+            #hiddenDim    = modelAsTrained.decoderFeedback.dim
+            #embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
             vocabSize    = modelAsTrained.z.dim
 
             # replace every reference of these by PropagateTopN(of these)
@@ -788,7 +789,8 @@ write = [
             #   decoder[0].attentionWeights.h = Softmax (decoder[0].uValid) : [1 x 3 x 20 x WhereNodeAxis21] -> [1 x 3 x 20 x WhereNodeAxis21]
             #   path SoftmaxArgs[0] to be column-wise over axis 3
 
-            ColumnwiseSoftmax (axis=1, z) = [ n = TraceDense(   Softmax (z),    'smz') ; axis1 = axis ; d = TraceDense(    ReduceSum (axis=axis1, n),    'denom') ; p = TraceDense(    n .* Reciprocal (d),    'p') ].p
+            ColumnwiseSoftmax = Softmax
+            #ColumnwiseSoftmax (axis=1, z) = [ n = TraceDense(   Softmax (z),    'smz') ; axis1 = axis ; d = TraceDense(    ReduceSum (axis=axis1, n),    'denom') ; p = TraceDense(    n .* Reciprocal (d),    'p') ].p
 
             #Columnwise (f, beamDepth, z) = # TODO: Takes LogSoftmax over axis=1. it is more tricky to do this over arbitrary axes
             #[
@@ -799,28 +801,32 @@ write = [
             #InjectDepth (node) = SplitDimension (node, /*axis=*/1, 1 /*->0:1*/)
             InjectDepth (node) = node     # use this with newer models (16+) that do this in the model already
 
+            # decoderFeedback must be updated to take actual decoder output
+
             propagationEdits[i:0..14] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
                 # non-NYU:
-                if      i ==  0 then (node => if node.name == 'xdecoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  1 then (node => if node.name == 'xdecoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                if      i ==  0 then (node => if node.name == '#decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  1 then (node => if node.name == '#decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # NYU:
-                else if i ==  2 then (node => if node.name == 'xdecoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  3 then (node => if node.name == 'xdecoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  2 then (node => if node.name == '#decoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  3 then (node => if node.name == '#decoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # all:
-                else if i ==  4 then (node => if node.name == 'xdecoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  5 then (node => if node.name == 'xdecoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
-                else if i ==  6 then (node => if node.name == 'xdecoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  7 then (node => if node.name == 'xdecoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  4 then (node => if node.name == '#decoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  5 then (node => if node.name == '#decoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  6 then (node => if node.name == '#decoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  7 then (node => if node.name == '#decoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # attention:
                 else if i ==  8 then (node => if node.name != '#decoder[0].tanHOut.z'                then node else InjectDepth (node.PlusArgs[0])          +              node.PlusArgs[1])
                 else if i ==  9 then (node => if node.name != '#decoder[0].uValid'                   then node else              node.PlusArgs[0]           + InjectDepth (node.PlusArgs[1]))
                 else if i == 10 then (node => if node.name != '#decoder[0].weightedAttentionWindow'  then node else InjectDepth (node.ElementTimesArgs[0]) .*              node.ElementTimesArgs[1])
                 else if i == 11 then (node => if node.name != '#decoder[0].weightedAttentionAverage' then node else Times (node.TimesArgs[0], node.TimesArgs[1], outputRank=2))
                 else if i == 12 then (node => if node.name != '#decoder[0].attentionWeights'         then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
-                else if i == 13 then (node => if node.name != 'beamSearchReorderHook'               then node else tokens.from)
-                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
 
-            # decoderFeedback must be updated to take actual decoder output
+                else if i == 13 then (node => if node.name != 'beamSearchReorderHook'               then node else tokens.from)
+                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, decoderFeedback)
+                #else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
+
+            # decoderHistoryHook --> decoderFeedback
 
             m2 = BS.Network.Edit (modelAsTrained,
                                   propagationEdits,
@@ -1015,7 +1021,7 @@ write = [
     #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
 
     # joint:
-    #outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     #outputNodeNames = labels1:network.beamDecodingModel.decode.out
     #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
