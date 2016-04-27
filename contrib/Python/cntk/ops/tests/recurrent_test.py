@@ -5,5 +5,7 @@
 # ==============================================================================
 
 """
-
+Unit tests for recurrent operations. Each operation is tested for 
+the forward and the backward pass
 """
+
