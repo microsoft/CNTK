@@ -1,12 +1,13 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
-from ..graph import _tensor_to_text_format
+from ..ops.cntk1 import Abs, Plus, Minus, ElementTimes, Times
+from ..ops import constant, input_reader, plus, times
 
 import pytest
 
@@ -38,11 +39,6 @@ I = input_reader
 
     # __abs__
     (abs(C(0)), Abs),
-
-    # __getitem__
-    (C(np.arange(0, 10))[2:5], RowSlice),
-    (C(np.arange(0, 10))[:5], RowSlice),
-
 ])
 def test_overload_types(root_node, expected):
     assert isinstance(root_node, expected)
@@ -61,30 +57,13 @@ def _to_list(desc):
 
 
 def test_graph_with_same_node_twice():
-    v0 = ConstantTensor(1,1)
-    root_node = Plus(v0, v0)
+    v0 = constant(1)
+    root_node = ops.plus(v0, v0)
     description, has_inputs, readers = root_node.to_config()
-    assert len(_to_list(description)) == 2
+    expected = ["v0 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='1.0000", "', initOnCPUOnly=true, randomSeed=-1)",
+                'v1 = Plus(v0, v0)']
+    assert _to_list(description) == expected
 
-
-@pytest.mark.parametrize("alias, idx, data, expected", [
-    ('', 0, [A([1, 0]), A([0, 0, 1, 0])], ValueError),  # no alias given
-    ('A', 0, [object()], ValueError),
-])
-def test_tensor_conversion_exceptions(alias, idx, data, expected):
-    with pytest.raises(expected):
-        _tensor_to_text_format(idx, alias, data)
-
-
-@pytest.mark.parametrize("alias, idx, data, expected", [
-    ('W', 0, A([]), "0\t|W "),
-    ('W', 0, A([[1, 0, 0, 0], [1, 0, 0, 0]]), """\
-0\t|W 1 1 0 0 0 0 0 0\
-"""),
-])
-def test_tensor_conversion_dense(alias, idx, data, expected):
-    assert _tensor_to_text_format(idx, alias, data,
-            has_sequence_dimension=False) == expected
 
 if False:
     import scipy.sparse
@@ -108,41 +87,14 @@ if False:
         assert _tensor_to_text_format(idx, alias, dok_data) == expected
 
 
-@pytest.mark.parametrize("data, expected", [
-    ([], True),
-    ([1], True),
-    ([[1, 2]], True),
-    ([[]], True),
-    ([[A([1, 2])]], False),
-    ([A([1, 2])], False),
-    ([A([1, 2]), A([])], False),
-])
-def test_is_tensor(data, expected):
-    assert is_tensor(data) == expected
-
-
-@pytest.mark.parametrize("data, expected", [
-    ([], False),
-    ([1], False),
-    ([[1, 2]], False),
-    ([[]], False),
-    ([[A([1, 2])]], False),
-    ([A([1, 2])], True),
-    ([A([1, 2]), A([])], True),
-])
-def test_is_tensor_list(data, expected):
-    assert is_tensor_list(data) == expected
-
 def test_loose_coupling():
     from cntk.ops.cntk1 import PastValue
     dh = PastValue(1, 'outnode')
-    out = Times(dh, ConstantTensor(2,1), var_name='outnode')
+    out = times(dh, constant(2), name='outnode')
 
-    expected = ['v0 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)', 
-            'v1 = ConstantTensor(2, 1)',
-            'outnode = Times(v0, v1, outputRank=1)']
+    expected = ['v0 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)',
+                "v1 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='2.0000", "', initOnCPUOnly=true, randomSeed=-1)",
+                'outnode = Times(v0, v1, outputRank=1)']
 
     description, has_inputs, readers = out.to_config()
     assert _to_list(description) == expected
-
-

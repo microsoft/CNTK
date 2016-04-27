@@ -61,6 +61,12 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     size_t numSubsets,
     size_t requestedEpochSamples /*= requestDataSize*/)
 {
+    // For adaptive minibatch, make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+    {
+        m_prefetchTask.wait();
+    }
+
     EpochConfiguration config;
     config.m_workerRank = subsetNum;
     config.m_numberOfWorkers = numSubsets;
@@ -70,12 +76,6 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 
     m_reader->StartEpoch(config);
     m_endOfEpoch = false;
-
-    // For adaptive minibatch, make sure there are no outstanding reads.
-    if (m_prefetchTask.valid())
-    {
-        m_prefetchTask.wait();
-    }
 
     m_prefetchTask = std::async(m_launchType, [this]()
     {

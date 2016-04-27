@@ -129,7 +129,8 @@ public:
         }
         catch (...)
         {
-            ReleaseData();
+            // Releasing all data
+            m_frames.resize(0, 0);
             throw;
         }
     }

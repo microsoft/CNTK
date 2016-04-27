@@ -75,7 +75,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ReaderLib.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ReaderLib.lib;Common.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if "$(HasOpenCv)" == "true" xcopy /I /D /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" "$(TargetDir)"
@@ -126,18 +126,6 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\DataReader.cpp" />
-    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp" />
-    <ClCompile Include="..\..\Common\File.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\Config.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="$(ReleaseBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="dllmain.cpp" />

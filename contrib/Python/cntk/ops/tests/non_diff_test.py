@@ -15,7 +15,7 @@ from .ops_test_utils import unittest_helper, C, AA, I, precision
 from ...graph import *
 from ...reader import *
 import numpy as np
-from ..non_diff import floor
+from ..non_diff import ceil, floor, round
 
 # Testing inputs
 @pytest.mark.parametrize("arg", [([12.3, -12.3]), ([10.2, -10.2]), ([0.5, -0.5]), ([0.01, -0.01]), ([0.499, -0.499]), ([5.0, -5.0]), ([0.0]), ([[2.1, 9.9], [4.7, 5.3]])])
@@ -25,13 +25,13 @@ def test_op_floor(arg, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
     numArray = [[AA(arg)]]
     exp = np.floor(numArray)
 
-    a = I([arg], has_sequence_dimension=False)
-    op = Floor(a)
+    a = I([arg], has_dynamic_axis=False)
+    op = floor(a)
     unittest_helper(op, None, exp, device_id, precision, clean_up=False, backward_pass=False)
 
     # Backward pass test
@@ -47,13 +47,13 @@ def test_op_ceil(arg, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
     numArray = [[AA(arg)]]
     exp = np.ceil(numArray)
 
-    a = I([arg], has_sequence_dimension=False)
-    op = Ceil(a)
+    a = I([arg], has_dynamic_axis=False)
+    op = ceil(a)
     unittest_helper(op, None, exp, device_id, precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
@@ -69,14 +69,14 @@ def test_op_round(arg, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_sequence_dimension=False)
+    # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
     # Refere to test test_op_roundnonstandard for values in form of x.5
     numArray = [[AA(arg)]]
     exp = np.round(numArray)
 
-    a = I([arg], has_sequence_dimension=False)
-    op = Round(a)
+    a = I([arg], has_dynamic_axis=False)
+    op = round(a)
     unittest_helper(op, None, exp, device_id, precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
@@ -93,9 +93,9 @@ def test_op_roundnonstandard(device_id, precision):
     # Refer here: https://en.wikipedia.org/wiki/Rounding#Tie-breaking
     # This test shows such values are not equal comparing numpy and CNTK
     arg = [([0.5, 1.5, 2.5, 3.5])]
-    a = I([arg], has_sequence_dimension=False)
+    a = I([arg], has_dynamic_axis=False)
     numpy_expected = [([0.0, 2.0, 2.0, 4.0])]
-    op = Round(a)
+    op = round(a)
     cntk_expected = [np.array([[[1., 2., 3., 4.]]])]
 
     np.testing.assert_array_equal(np.round(arg),numpy_expected)
