@@ -27,7 +27,7 @@ command = write
 decodeModel = 4
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 1
+deviceId = 5
 #ExpId = 26-$deviceId$-g2p
 ExpId = 26-4-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
@@ -51,7 +51,7 @@ modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
 # decoding config
 decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
-decodeOutputPath = "$decodeModelPath$.bbb$beamDepth$"
+decodeOutputPath = "$decodeModelPath$.bbbbb$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
 
@@ -244,8 +244,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
        dim = lstmState.dim
     ]
 
-    decoderHistoryFromGroundTruth = labelsEmbedded                            # decoder input for training is ground truth...
-    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z)), tag='output') # ...but for (greedy) decoding, it's the output. Make an 'output' to make it a root that is kept --TODO: No, not needed.
+    decoderHistoryFromGroundTruth = labelsEmbedded              # decoder input for training is ground truth...
+    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z))) # ...but for (greedy) decoding, the decoder's output is its input
 
     # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
@@ -293,6 +293,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
     ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
     errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+
+    # score output for decoding
+    scoreSequence = Pass (z)
 ])
 
 #######################################
@@ -637,7 +640,8 @@ write = [
 
     # last trained model
     # We need to make a change:
-    BrainScriptNetworkBuilder = ([
+    BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
+    xBrainScriptNetworkBuilder = ([
 
         enableTracing = true
         traceFrequency = 1000
@@ -1011,7 +1015,7 @@ write = [
     #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
 
     # joint:
-    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+    #outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     #outputNodeNames = labels1:network.beamDecodingModel.decode.out
     #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores

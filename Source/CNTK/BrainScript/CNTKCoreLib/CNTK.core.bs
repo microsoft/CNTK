@@ -503,8 +503,11 @@ RNNs =
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
     # It returns a record (h,c). To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
+
     # TODO: remove the -2 once this works
-    RecurrentLSTMP = RecurrentLSTMP2
+    RecurrentLSTMPWithAttentionWindow2 = RecurrentLSTMP2
+    RecurrentLSTMP2 = RecurrentLSTMP
+    RecurrentLSTMP2Stack = RecurrentLSTMPStack  # TODO: remove the -2 name once this works
     #xRecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
     #[
     #    prevState = previousHook (lstmState)
@@ -512,19 +515,16 @@ RNNs =
     #    lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
     #].lstmState // we return the state record (h,c)
 
-    DontAugmentInputHook (input, lstmState) = input
-    # TODO: complete replacing RecurrentLSTMP() with this
-    RecurrentLSTMP2 = RecurrentLSTMPWithAttentionWindow2
-    RecurrentLSTMPWithAttentionWindow2 (outputDim/*h.dim*/, cellDim=outputDim,
-                                        x, inputDim=x.dim,
-                                        previousHook=BS.RNNs.PreviousHC,
-                                        augmentInputHook=DontAugmentInputHook, augmentInputDim=0,
-                                        enableSelfStabilization=false) =
+    #DontAugmentInputHook (input, lstmState) = input
+    RecurrentLSTMP (outputDim/*h.dim*/, cellDim=outputDim,
+                    x, inputDim=x.dim,
+                    previousHook=BS.RNNs.PreviousHC,
+                    augmentInputHook=[DontAugmentInputHook (input, lstmState) = input].DontAugmentInputHook, augmentInputDim=0,
+                    enableSelfStabilization=false) =
     [
-        prevState = previousHook (lstmState)
+        prevState = previousHook (lstmState)        # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
-        augmentedX = augmentInputHook(x, prevState)
-
+        augmentedX = augmentInputHook(x, prevState) # optionally augment input, e.g. 
         augmentedXDim = augmentInputDim + inputDim
 
         enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
@@ -532,18 +532,17 @@ RNNs =
     ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
-    RecurrentLSTMPStack = RecurrentLSTMP2Stack  # TODO: remove the -2 name once this works
-    RecurrentLSTMP2Stack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
+    RecurrentLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
-            RecurrentLSTMP2 (layerDims[i], cellDim=cellDims[i],
-                             if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layerDims[i-1] /*TODO: layers[i-1].dim*/,
-                             previousHook=previousHook1,
-                             enableSelfStabilization=useStabilizer)
+            RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
+                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layerDims[i-1] /*TODO: layers[i-1].dim*/,
+                            previousHook=previousHook1,
+                            enableSelfStabilization=useStabilizer)
     ].layers
 
     # a stack of recurrent LSTMs (bidirectional)
-    # TODO: Should we define layerDims as the total?
+    # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
     RecurrentBirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
@@ -563,24 +562,38 @@ RNNs =
             dim = layerDims[i] * 2  # output dimension
         ]
     ].layers
+]
 
-    # create a lambda for augmenting the input vector from a fixed-size attention window
+##############################################################################
+# sequence-to-sequence models
+##############################################################################
+
+S2S =
+[
+    # attention model
+    # The attention model is an additional input vector to the LSTM.
+    # Here, it is implemented by augmenting this vector to the regular input of the LSTM.
+    # The RecurrentLSTMP function does this inside through an optional lambda that the caller can pass in.
+    # This function creates such a lambda, which augments the input vector from a fixed-size attention window.
     CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=false) =
     [
         # attention (fixed rolling window)
-        attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
+        attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We should have this in axis=3 right away for beam search. Track this down.
 
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
 
         # project it for Tanh() expression
         # expected to be [attentionDim x 1 x attentionSpan], where that 1 is the axis of the beam in beam decoding
-        # reserve an additional singleton dimension at second axis, as a stand-in for the beam depth
         projectedAttentionWindowBroadcast = [
             W = Parameters.WeightParam (attentionDim, encoderOutput.dim)
-            value          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (    attentionWindow.value, /*axis*/1, /*N:*/1)) # 1 -> 0:1 -> N:1
-            valid          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (    attentionWindow.valid, /*axis*/1, /*N:*/1))
-            #projectedValue = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (W * attentionWindow.value, /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
-            projectedValue = Sequences.BroadcastSequenceAs (decoderDynamicAxis, SplitDimension (W * S(attentionWindow.value .* attentionWindow.valid), /*axis*/1, /*N:*/1)) # apply the projection columnwise to the attentionWindow tensor
+            # inject an additional singleton dimension at second axis, as a stand-in for the beam depth in decoding
+            InjectBeamDepth (node) = SplitDimension (node, /*axis*/1, /*N:*/1)
+           #projectedValue = Sequences.BroadcastSequenceAs (decoderDynamicAxis, InjectBeamDepth (W * attentionWindow.value)) # apply the projection columnwise to the attentionWindow tensor
+            projectedValue = if enableSelfStabilization  # apply the projection columnwise to the attentionWindow tensor
+                        then Sequences.BroadcastSequenceAs (decoderDynamicAxis, InjectBeamDepth (W * S(attentionWindow.value .* attentionWindow.valid))) # (mask invalid frames for stabilizer)
+                        else Sequences.BroadcastSequenceAs (decoderDynamicAxis, InjectBeamDepth (W *   attentionWindow.value))
+            value          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, InjectBeamDepth (      attentionWindow.value))
+            valid          = Sequences.BroadcastSequenceAs (decoderDynamicAxis, InjectBeamDepth (      attentionWindow.valid))
             dim            = encoderOutput.dim
         ]
 
@@ -615,10 +628,36 @@ RNNs =
             augmentedX = RowStack (weightedAttentionAverage : input)  # TODO: change to Splice()
         ].augmentedX
     ].AugmentInputHook
+
+    # Create a greedy decoder model from an existing trained model.
+    # The input model is expected to have these nodes:
+    #  - decoderHistoryFromOutput: the decoding output of a time step (Hardmax (outputProbability))
+    #  - decoderHistoryHook: a node that is the word sequence that will be used as the history for the next time step
+    #    In training, this is the label sequence.
+    #    In greedy decoding, it must be decoderHistoryHook = decoderHistoryFromOutput
+    #  - z: scaled log prediction probability   --TODO: rename this: scoreSequence = Pass (z)
+    #  - inputSequence
+    #  - labelSequence (only passed through for scoring, not used in decoding)
+    # The returned model has the following one-hot outputs:
+    #  - decodedSequence
+    #  - inputSequence
+    #  - labelSequence
+    # To decode greedily, in "write" or "eval" specify the model as:
+    #    BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
+    GreedySequenceDecoderFrom (modelAsTrained) = [
+        scoreSequence = modelAsTrained.z
+        decodedSequence = Pass (      Hardmax (scoreSequence), tag='output')
+        inputSequence   = Pass (modelAsTrained.inputSequence,  tag='output')
+        labelSequence   = Pass (modelAsTrained.labelSequence,  tag='output')
+        model = BS.Network.Edit (modelAsTrained,
+                                 #BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback),
+                                 BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, modelAsTrained.decoderHistoryFromOutput),
+                                 decodedSequence : inputSequence : labelSequence)
+    ].model
 ]
 
 ##############################################################################
-# Network operations
+# Network-level operations
 # These operations will have undefined behavior for input values != 0 or 1.
 ##############################################################################
 
