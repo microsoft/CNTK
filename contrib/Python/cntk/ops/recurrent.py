@@ -17,28 +17,26 @@ tensors are added up.
 
 from cntk.ops.cntk1 import FutureValue, PastValue
 
-def future_value(dims, input, timeStep=1, defaultHiddenActivation=0.1, name=None):
+def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
-    Clips tensor values to fall between `min_value` and `max_value`.
-    For the input tensor `x`, this node outputs a tensor of the same shape with 
-    all of its values clipped to fall between `min_value` and `max_value`.
-    The backward pass propagates the received gradient if no clipping occurred,
-    and 0 if the value was clipped.
+    This function returns the future value of `x`. It is most often used when 
+    creating RNNs. The resulting tensor has the same shape as the input but is 
+    the next logical sample. The `time_step` parameter is the number of steps 
+    to look into the future and is 1 by default. If there is no future value (i.e. 
+    the current sample is the last one in the tensor) then the `default_hidden_activation` 
+    value is returned which is 0.1 by default.
     
     Example:
-        >>> clip(2., 4., [1., 2.1, 3.0, 4.1])
-        #[2.0, 2.1, 3.0, 4.0]
-        
-        >>> clip([-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.], [-10., -5., 0., 5., 10.])
-        #[-5, -4., 0., 4., 9.]
+        >>> 
     
     Args:        
-        min_value: the minimum value to clip element values to
-        max_value: the maximum value to clip element values to
-        x: tensor to be clipped
-        name: the name of the node in the network            
+        dims: dimensions of the input `x`
+        x: the tensor from which the future value is obtained
+        time_step: the number of time steps to look into the future (default 1)
+        default_hidden_activation: the default value to use when no future value 
+        is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     
-    return FutureValue(dims, input, timeStep=1, defaultHiddenActivation=0.1, var_name = name)
+    return FutureValue(dims, x, time_step, default_hidden_activation, var_name = name)
