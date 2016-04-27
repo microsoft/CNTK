@@ -33,7 +33,7 @@ TENSORS = [
     ([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7]], 1, 0.1),
 ]
 
-# -- future_value tests tests --
+# -- future_value tests --
 @pytest.mark.parametrize("tensor, time_step, default_value", TENSORS)
 def test_op_future_value(tensor, time_step, default_value, device_id, precision):    
 
@@ -77,3 +77,48 @@ def test_op_future_value(tensor, time_step, default_value, device_id, precision)
 
     unittest_helper(result, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
+                    
+
+# -- past_value tests --
+@pytest.mark.parametrize("tensor, time_step, default_value", TENSORS)
+def test_op_past_value(tensor, time_step, default_value, device_id, precision):    
+
+    """
+    This function shifts the tensor along its columns by -`time_step`. It replaces 
+    the "shifted-out" values with `default_value`.
+    """
+    def shift(x):
+        x_shape = np.shape(x)        
+        elements_to_roll = x_shape[1] * time_step
+        x = np.roll(AA(x, dtype=PRECISION_TO_TYPE[precision]), elements_to_roll)
+        np.put(x, range(elements_to_roll), default_value)
+        return x
+
+    #Forward pass test
+    #==================
+    # We compute the expected output for the forward pass.
+    # A tensor of the same shape is expected, but shifted `time step`s into 
+    # the past. If we get to the start, then the `default_hidden_activation` 
+    # value is used for that entry.
+    expected = [shift(tensor)]
+    
+    a = 0
+    b = I([tensor], has_dynamic_axis=True)
+    c = time_step    
+    d = default_value  
+    
+    result = past_value(a, b, time_step=c, default_hidden_activation=d)
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    #Backward pass test
+    #==================
+    # The gradient of the past_value() function is equal to 1 everywhere 
+    # with respect to the original input except for the column[s] that was[were] shifted 
+    # out which will now contain zeros (we pass on the gradient for all other 
+    # samples).
+    #expected = [[np.ones_like(x) for x in tensor]]
+    #expected[0][0:time_step] = [np.zeros_like(x) for x in expected[0][0:time_step]]
+
+    #unittest_helper(result, None, expected, device_id=device_id, 
+    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)
