@@ -23,10 +23,9 @@ them on sample data in real time.
    Getting Started <gettingstarted>
    Release Notes <releasenotes>
    Concepts <concepts>
-   API
-        Readers <readers>
-        Operators <cntk.ops>
-        Execution Context <context>
+   Readers <readers>
+   Operators <cntk.ops>
+   Execution Context <context>
    Examples <examples>
 
 
