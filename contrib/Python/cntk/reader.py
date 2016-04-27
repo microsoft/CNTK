@@ -140,7 +140,6 @@ class CNTKTextFormatReader(AbstractReader):
             dim (int): the dimension of the imput
         '''
 
-        from . import context
         return InputMap(self).map(node_or_name, **kw)
 
     def generate_config(self, input_map):
