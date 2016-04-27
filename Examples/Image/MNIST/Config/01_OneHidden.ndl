@@ -25,7 +25,6 @@ DNN = [
     err = ErrorPrediction(labels, ol)
     
     # Special Nodes
-    errTop5 = ErrorPrediction(labels, ol, Const(1), tag="eval")
     FeatureNodes = (features)
     LabelNodes = (labels)
     CriterionNodes = (ce)

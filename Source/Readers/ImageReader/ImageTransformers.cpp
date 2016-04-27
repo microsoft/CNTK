@@ -135,7 +135,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
 
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
+    m_curAspectRatioRadius = !m_aspectRatioRadius.empty() ? m_aspectRatioRadius[config.m_epochIndex] : 0;
     if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
         InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
 
@@ -254,7 +254,7 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
             cropSizeY = (int)std::sqrt(newArea);
             cropSizeX = (int)(area / cropSizeY);
         }
-        // This clamping should be ok is jittering ratio is not too big.
+        // This clamping should be ok if jittering ratio is not too big.
         cropSizeX = std::min(cropSizeX, ccol);
         cropSizeY = std::min(cropSizeY, crow);
     }
@@ -584,7 +584,7 @@ void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
 
 void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curStdDev = m_stdDev[config.m_epochIndex];
+    m_curStdDev = !m_stdDev.empty() ? m_stdDev[config.m_epochIndex] : 0;
 
     ImageTransformerBase::StartEpoch(config);
 }
@@ -661,15 +661,15 @@ void ColorTransformer::InitFromConfig(const ConfigParameters &config)
 
 void ColorTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
+    m_curBrightnessRadius = !m_brightnessRadius.empty() ? m_brightnessRadius[config.m_epochIndex] : 0;
     if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
         InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
 
-    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
+    m_curContrastRadius = !m_contrastRadius.empty() ? m_contrastRadius[config.m_epochIndex] : 0;
     if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
         InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
 
-    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
+    m_curSaturationRadius = !m_saturationRadius.empty() ? m_saturationRadius[config.m_epochIndex] : 0;
     if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
         InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 

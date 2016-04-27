@@ -426,7 +426,8 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     // REVIEW alexeyk: IsSupported check should be performed by cuDNN itself. Is there a good way to do that?
 
     cudaDeviceProp props = {0};
-    if (cudaGetDeviceProperties(&props, deviceId) != cudaSuccess || props.major < 3)
+    // Note that cudaGetDeviceProperties also sets CUDA last error so need to check/clear both.
+    if (deviceId < 0 || cudaGetDeviceProperties(&props, deviceId) != cudaSuccess || cudaGetLastError() != cudaSuccess || props.major < 3)
         return false;
 
     const auto& input = geometry->InputShape();
