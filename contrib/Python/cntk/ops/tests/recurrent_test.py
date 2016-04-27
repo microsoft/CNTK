@@ -28,12 +28,19 @@ TENSORS = [
     # future: [[7,8,9],[10,11,12],[0.1,0.1,0.1],[0.1,0.1,0.1]]
     # past: [[0.1,0.1,0.1],[0.1,0.1,0.1],[1,2,3],[4,5,6]]
     ([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], 2, 0.1),
+
+    # and finally a different shape
+    ([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7]], 1, 0.1),
 ]
 
 # -- future_value tests tests --
 @pytest.mark.parametrize("tensor, time_step, default_value", TENSORS)
 def test_op_future_value(tensor, time_step, default_value, device_id, precision):    
 
+    """
+    This function shifts the tensor along its columns by `time_step`. It replaces 
+    the "shifted-out" values with `default_value`.
+    """
     def shift(x):
         x_shape = np.shape(x)        
         total_elements = x_shape[0] * x_shape[1]
@@ -57,13 +64,16 @@ def test_op_future_value(tensor, time_step, default_value, device_id, precision)
     
     result = future_value(a, b, time_step=c, default_hidden_activation=d)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
     
     #Backward pass test
     #==================
-    # The gradient of the clip() function is equal to 1 when the element 
-    # has not been clipped, and 0 if it has been clipped
-    #expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
+    # The gradient of the future_value() function is equal to 1 everywhere 
+    # with respect to the original input except for the column that was shifted 
+    # out which will now contain zeros (we pass on the gradient for all other 
+    # samples).
+    expected = [[np.ones_like(x) for x in tensor]]
+    expected[0][0:time_step] = [np.zeros_like(x) for x in expected[0][0:time_step]]
 
-    #unittest_helper(result, None, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=c)
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
