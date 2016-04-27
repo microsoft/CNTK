@@ -8,15 +8,13 @@
 Unary operators which are not differentiable
 """
 
-from cntk.ops.cntk1 import Floor, Ceil, Round
-
 def floor(arg, name=None):
     """
     Floor operation. The output of this operation is the
     element wise value rounded to the largest integer less than
     or equal to the input.
 
-    Example:
+    Examples:
         >>> floor([0.2, 1.3, 4., 5.5, 0.0])
         #[0.0, 1.0, 4.0, 5.0, 0.0]
 
@@ -35,7 +33,7 @@ def floor(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Floor
     return Floor(arg, var_name = name)
 
 def ceil(arg, name=None):
@@ -44,7 +42,7 @@ def ceil(arg, name=None):
     element wise value rounded to the smallest integer greater than
     or equal to the input.
 
-    Example:
+    Examples:
         >>> ceil([0.2, 1.3, 4., 5.5, 0.0])
         #[1.0, 2.0, 4.0, 6.0, 0.0]
 
@@ -63,7 +61,7 @@ def ceil(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Ceil
     return Ceil(arg, var_name = name)
 
 def round(arg, name=None):
@@ -75,7 +73,7 @@ def round(arg, name=None):
     This is different from the round operation of numpy which follows
     round half to even.
 
-    Example:
+    Examples:
         >>> round([0.2, 1.3, 4., 5.5, 0.0])
         #[0.0, 1.0, 4.0, 6.0, 0.0]
 
@@ -94,6 +92,6 @@ def round(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Round
     return Round(arg, var_name = name)
 

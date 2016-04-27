@@ -59,12 +59,12 @@ def input(shape, name=None):
         name: the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
-    """    
-    
-    from ..ops import cntk1 
-    return cntk1.Input(shape, var_name = name)  
-    
-def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform', 
+    """
+    from cntk.ops.cntk1 import Input
+    return Input(shape, var_name=name)
+
+
+def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform',
               init_value_scale=1, value=0, init_from_file_path='', init_from_literal=None,
               random_seed=-1):
     """

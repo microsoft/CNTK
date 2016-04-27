@@ -12,17 +12,18 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Abs, Clip, Exp, If, RectifiedLinear, Sigmoid, Softmax, Tanh
-
 def clip(min_value, max_value, x, name=None):
     """
-    Clips tensor values to fall between `min_value` and `max_value`.
-    For the input tensor `x`, this node outputs a tensor of the same shape with 
-    all of its values clipped to fall between `min_value` and `max_value`.
+    Clip operation. Computes a tensor with all of its values clipped to fall
+    between `min_value` and `max_value`, i.e.
+    ``min(max(x, min_value), max_value)``.
+
+    The output tensor has the same shape as `x`.
+    
     The backward pass propagates the received gradient if no clipping occurred,
     and 0 if the value was clipped.
     
-    Example:
+    Examples:
         >>> clip(2., 4., [1., 2.1, 3.0, 4.1])
         #[2.0, 2.1, 3.0, 4.0]
         
@@ -37,26 +38,17 @@ def clip(min_value, max_value, x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    
+    from cntk.ops.cntk1 import Clip
     return Clip(min_value, max_value, x, var_name = name)
 
-def rectified_linear(x, name=None):
-    """
-    computes the element-wise rectified linear of `x`: ``max(x, 0)``
-
-    Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """
-    return RectifiedLinear(x, var_name=name)
-
 
 def rectified_linear(x, name=None):
     """
-    computes the element-wise rectified linear of `x`: ``max(x, 0)``
+    RectifiedLinear operation. Computes the element-wise rectified linear
+    of `x`: ``max(x, 0)``
 
+    The output tensor has the same shape as `x`.
+    
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
@@ -67,40 +59,49 @@ def rectified_linear(x, name=None):
         >>> cntk.eval(cntk.ops.rectified_linear([[-1, -0.5, 0, 1, 2]]))
         [[[0, 0, 0, 1, 2]]]
     """
+    from cntk.ops.cntk1 import RectifiedLinear
     return RectifiedLinear(x, var_name=name)
 
 
 def sigmoid(x, name=None):
     """
-    computes the element-wise sigmoid of `x`: 
+    Sigmoid operation. Computes the element-wise sigmoid of `x`: 
 
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
 
+    The output tensor has the same shape as `x`.
+    
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+    from cntk.ops.cntk1 import Sigmoid
     return Sigmoid(x, var_name=name)
 
 
 def tanh(x, name=None):
     """
-    computes the element-wise tanh of `x`: 
+    Tanh operation. Computes the element-wise tanh of `x`: 
 
+    The output tensor has the same shape as `x`.
+    
+    Example:
+    
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+    from cntk.ops.cntk1 import Tanh
     return Tanh(x, var_name=name)
 
 
 def softmax(x, name=None):
     """
-    computes the element-wise sigmoid of `x`: 
+    Softmax operation. Squashes the input values `x` such that they add up to 1: 
 
     :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
 
@@ -120,12 +121,13 @@ def softmax(x, name=None):
         >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
         [[[0.5, 0.5]]]
     """
+    from cntk.ops.cntk1 import Softmax
     return Softmax(x)
 
 
 def exp(x, name=None):
     """
-    computes the element-wise exponential of `x`: 
+    Exp operation. Computes the element-wise exponential of `x`: 
 
     :math:`exp(x) = {e^x}`
 
@@ -135,12 +137,13 @@ def exp(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+    from cntk.ops.cntk1 import Exp
     return Exp(x, var_name=name)
 
 
 def abs(x, name=None):
     """
-    computes the element-wise absolute of `x`: 
+    Abs operation. Computes the element-wise absolute of `x`: 
 
     :math:`abs(x) = |x|`
 
@@ -149,7 +152,12 @@ def abs(x, name=None):
 
     Returns:
         :class:`cntk.graph.ComputationNode`
+
+    Example:
+        >>> cntk.eval(cntk.ops.abs([-1, 1, -2, 3]))
+        [[1, 1, 2, 3]]
     """
+    from cntk.ops.cntk1 import Abs
     return Abs(x, var_name=name)
 
 
