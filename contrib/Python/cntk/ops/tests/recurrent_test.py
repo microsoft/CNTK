@@ -69,7 +69,7 @@ def test_op_future_value(tensor, time_step, default_value, device_id, precision)
     #Backward pass test
     #==================
     # The gradient of the future_value() function is equal to 1 everywhere 
-    # with respect to the original input except for the column that was shifted 
+    # with respect to the original input except for the column[s] that was[were] shifted 
     # out which will now contain zeros (we pass on the gradient for all other 
     # samples).
     expected = [[np.ones_like(x) for x in tensor]]
