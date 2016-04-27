@@ -98,6 +98,7 @@ public:
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    void AssignColumnSliceToDense(CPUMatrix<ElemType> slice, size_t startColumn, size_t numCols) const;
 
     CPUMatrix<ElemType> DiagonalToDense() const;
 

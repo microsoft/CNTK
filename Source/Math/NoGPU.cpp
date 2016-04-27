@@ -455,6 +455,10 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     return a;
 }
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType> slice, size_t startColumn, size_t numCols) const
+{
+}
+template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
 {
     GPUMatrix<ElemType> a(0);
