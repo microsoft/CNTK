@@ -62,7 +62,7 @@ class SlimTransformer
 {
 public:
     // Transformation of the stream.
-    virtual StreamDescriptionPtr Transform(const StreamDescription& inputStream) const = 0;
+    virtual StreamDescription Transform(const StreamDescription& inputStream) = 0;
 
     // Transformation of the sequence.
     virtual SequenceDataPtr Transform(SequenceDataPtr sequence) = 0;
