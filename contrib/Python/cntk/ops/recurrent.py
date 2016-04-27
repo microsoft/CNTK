@@ -19,7 +19,7 @@ from cntk.ops.cntk1 import FutureValue, PastValue
 
 def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
-    This function returns the future value of `x`. It is most often used when 
+    This function returns the future value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
     the next logical sample. The `time_step` parameter is the number of steps 
     to look into the future and is 1 by default. If there is no future value (i.e. 
@@ -40,3 +40,27 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     """    
     
     return FutureValue(dims, x, time_step, default_hidden_activation, var_name = name)
+    
+def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
+    """
+    This function returns the past value wrt `x`. It is most often used when 
+    creating RNNs. The resulting tensor has the same shape as the input but is 
+    the previous logical sample. The `time_step` parameter is the number of steps 
+    to look into the past and is 1 by default. If there is no past value (i.e. 
+    the current sample is the first one in the tensor) then the `default_hidden_activation` 
+    value is returned which is 0.1 by default.
+    
+    Example:
+        >>> 
+    
+    Args:        
+        dims: dimensions of the input `x`
+        x: the tensor from which the past value is obtained
+        time_step: the number of time steps to look into the past (default 1)
+        default_hidden_activation: the default value to use when no past value 
+        is available (default 0.1)
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    
+    return PastValue(dims, x, time_step, default_hidden_activation, var_name = name)
