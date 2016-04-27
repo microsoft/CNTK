@@ -12,6 +12,7 @@
 #include "Transformer.h"
 #include "ConcStack.h"
 #include "TransformerBase.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -65,10 +66,9 @@ private:
 class CropTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
-protected:
+private:
     void Apply(size_t id, cv::Mat &mat) override;
 
 private:
@@ -87,10 +87,12 @@ private:
     };
 
     void InitFromConfig(const ConfigParameters &config);
+
+    void StartEpoch(const EpochConfiguration &config) override;
+
     CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
-                         std::mt19937 &rng);
+    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     CropType m_cropType;
@@ -98,6 +100,8 @@ private:
     double m_cropRatioMax;
     RatioJitterType m_jitterType;
     bool m_hFlip;
+    doubleargvector m_aspectRatioRadius;
+    double m_curAspectRatioRadius;
 };
 
 // Scale transformation of the image.
@@ -179,13 +183,17 @@ public:
     void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 private:
-    void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
-    double m_stdDev;
+    doubleargvector m_stdDev;
+    double m_curStdDev;
+
     cv::Mat m_eigVal;
     cv::Mat m_eigVec;
 
@@ -200,18 +208,20 @@ public:
     void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 private:
-    void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
-    double m_brightnessRadius;
-    double m_contrastRadius;
-    double m_saturationRadius;
-
-    cv::Mat m_eigVal;
-    cv::Mat m_eigVec;
+    doubleargvector m_brightnessRadius;
+    double m_curBrightnessRadius;
+    doubleargvector m_contrastRadius;
+    double m_curContrastRadius;
+    doubleargvector m_saturationRadius;
+    double m_curSaturationRadius;
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;

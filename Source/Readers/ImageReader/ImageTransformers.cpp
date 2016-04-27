@@ -129,6 +129,17 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
     {
         m_hFlip = config(L"hflip");
     }
+
+    m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+}
+
+void CropTransformer::StartEpoch(const EpochConfiguration &config)
+{
+    m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
+    if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
+        InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
+
+    ImageTransformerBase::StartEpoch(config);
 }
 
 void CropTransformer::Apply(size_t id, cv::Mat &mat)
@@ -223,20 +234,44 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
     assert(ccol > 0);
     assert(0 < cropRatio && cropRatio <= 1.0);
 
-    int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
+    // Get square crop size that preserves aspect ratio.
+    int cropSize = (int)(std::min(crow, ccol) * cropRatio);
+    int cropSizeX = cropSize;
+    int cropSizeY = cropSize;
+    // Change aspect ratio, if this option is enabled.
+    if (m_curAspectRatioRadius > 0)
+    {
+        double factor = 1.0 + UniRealT(-m_curAspectRatioRadius, m_curAspectRatioRadius)(rng);
+        double area = cropSize * cropSize;
+        double newArea = area * factor;
+        if (std::bernoulli_distribution()(rng))
+        {
+            cropSizeX = (int)std::sqrt(newArea);
+            cropSizeY = (int)(area / cropSizeX);
+        }
+        else
+        {
+            cropSizeY = (int)std::sqrt(newArea);
+            cropSizeX = (int)(area / cropSizeY);
+        }
+        // This clamping should be ok is jittering ratio is not too big.
+        cropSizeX = std::min(cropSizeX, ccol);
+        cropSizeY = std::min(cropSizeY, crow);
+    }
+
     int xOff = -1;
     int yOff = -1;
     switch (type)
     {
     case CropType::Center:
         assert(viewIndex == 0);
-        xOff = (ccol - cropSize) / 2;
-        yOff = (crow - cropSize) / 2;
+        xOff = (ccol - cropSizeX) / 2;
+        yOff = (crow - cropSizeY) / 2;
         break;
     case CropType::Random:
         assert(viewIndex == 0);
-        xOff = UniIntT(0, ccol - cropSize)(rng);
-        yOff = UniIntT(0, crow - cropSize)(rng);
+        xOff = UniIntT(0, ccol - cropSizeX)(rng);
+        yOff = UniIntT(0, crow - cropSizeY)(rng);
         break;
     case CropType::MultiView10:
     {
@@ -252,23 +287,23 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
             break;
         // top-right
         case 1:
-            xOff = ccol - cropSize;
+            xOff = ccol - cropSizeX;
             yOff = 0;
             break;
         // bottom-left
         case 2:
             xOff = 0;
-            yOff = crow - cropSize;
+            yOff = crow - cropSizeY;
             break;
         // bottom-right
         case 3:
-            xOff = ccol - cropSize;
-            yOff = crow - cropSize;
+            xOff = ccol - cropSizeX;
+            yOff = crow - cropSizeY;
             break;
         // center
         case 4:
-            xOff = (ccol - cropSize) / 2;
-            yOff = (crow - cropSize) / 2;
+            xOff = (ccol - cropSizeX) / 2;
+            yOff = (crow - cropSizeY) / 2;
             break;
         }
         break;
@@ -277,9 +312,9 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
         assert(false);
     }
 
-    assert(0 <= xOff && xOff <= ccol - cropSize);
-    assert(0 <= yOff && yOff <= crow - cropSize);
-    return cv::Rect(xOff, yOff, cropSize, cropSize);
+    assert(0 <= xOff && xOff <= ccol - cropSizeX);
+    assert(0 <= yOff && yOff <= crow - cropSizeY);
+    return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -348,10 +383,8 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 
     auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
     assert(m_interp.size() > 0);
-    cv::resize(
-        mat, mat,
-        cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0,
-        0, m_interp[index]);
+
+    cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
 
     m_rngs.push(std::move(rng));
 }
@@ -545,15 +578,22 @@ void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
             RuntimeError("Invalid EigVec data in file: %ls", intFile.c_str());
         fs.release();
 
-        m_stdDev = config(L"intensityStdDev", 0.1);
+        m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
     }
+}
+
+void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
+{
+    m_curStdDev = m_stdDev[config.m_epochIndex];
+
+    ImageTransformerBase::StartEpoch(config);
 }
 
 void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0)
+    if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
         return;
 
     if (mat.type() == CV_64FC(mat.channels()))
@@ -571,7 +611,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
-    std::normal_distribution<float> d(0, (float)m_stdDev);
+    std::normal_distribution<float> d(0, (float)m_curStdDev);
     cv::Mat alphas(1, 3, CV_32FC1);
     assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
@@ -614,24 +654,33 @@ void ColorTransformer::Initialize(TransformerPtr next, const ConfigParameters &r
 
 void ColorTransformer::InitFromConfig(const ConfigParameters &config)
 {
-    m_brightnessRadius = config(L"brightnessRadius", 0.0);
-    if (!(0 <= m_brightnessRadius && m_brightnessRadius <= 1.0))
+    m_brightnessRadius = config(L"brightnessRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_contrastRadius = config(L"contrastRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_saturationRadius = config(L"saturationRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+}
+
+void ColorTransformer::StartEpoch(const EpochConfiguration &config)
+{
+    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
+    if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
         InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
 
-    m_contrastRadius = config(L"contrastRadius", 0.0);
-    if (!(0 <= m_contrastRadius && m_contrastRadius <= 1.0))
+    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
+    if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
         InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
 
-    m_saturationRadius = config(L"saturationRadius", 0.0);
-    if (!(0 <= m_saturationRadius && m_saturationRadius <= 1.0))
+    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
+    if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
         InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
+
+    ImageTransformerBase::StartEpoch(config);
 }
 
 void ColorTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    if (m_brightnessRadius == 0 && m_contrastRadius == 0 && m_saturationRadius == 0)
+    if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
         return;
 
     if (mat.type() == CV_64FC(mat.channels()))
@@ -648,15 +697,15 @@ void ColorTransformer::Apply(cv::Mat &mat)
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
-    if (m_brightnessRadius > 0 || m_contrastRadius > 0)
+    if (m_curBrightnessRadius > 0 || m_curContrastRadius > 0)
     {
         // To change brightness and/or contrast the following standard transformation is used:
         // Xij = alpha * Xij + beta, where
         // alpha is a contrast adjustment and beta - brightness adjustment.
         ElemType beta = 0;
-        if (m_brightnessRadius > 0)
+        if (m_curBrightnessRadius > 0)
         {
-            std::uniform_real_distribution<ElemType> d(-(ElemType)m_brightnessRadius, (ElemType)m_brightnessRadius);
+            UniRealT d(-m_curBrightnessRadius, m_curBrightnessRadius);
             // Compute mean value of the image.
             cv::Scalar imgMean = cv::sum(cv::sum(mat));
             // Compute beta as a fraction of the mean.
@@ -664,10 +713,10 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
 
         ElemType alpha = 1;
-        if (m_contrastRadius > 0)
+        if (m_curContrastRadius > 0)
         {
-            std::uniform_real_distribution<ElemType> d(-(ElemType)m_contrastRadius, (ElemType)m_contrastRadius);
-            alpha = (ElemType)1 + d(*rng);
+            UniRealT d(-m_curContrastRadius, m_curContrastRadius);
+            alpha = (ElemType)(1 + d(*rng));
         }
 
         // Could potentially use mat.convertTo(mat, -1, alpha, beta) 
@@ -680,10 +729,10 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
     }
 
-    if (m_saturationRadius > 0 && mat.channels() == 3)
+    if (m_curSaturationRadius > 0 && mat.channels() == 3)
     {
-        std::uniform_real_distribution<ElemType> d(-(ElemType)m_saturationRadius, (ElemType)m_saturationRadius);
-        double ratio = (ElemType)1 + d(*rng);
+        UniRealT d(-m_curSaturationRadius, m_curSaturationRadius);
+        double ratio = 1.0 + d(*rng);
         assert(0 <= ratio && ratio <= 2);
 
         auto hsv = m_hsvTemp.pop_or_create([]() { return std::make_unique<cv::Mat>(); });
