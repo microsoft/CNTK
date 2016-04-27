@@ -94,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
             sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
-            if (samples - sequence->m_numberOfSamples >= 0)
+            if (samples - (int)sequence->m_numberOfSamples >= 0)
             {
                 result.push_back(*sequence);
                 m_currentSequenceCursor++;
@@ -106,6 +106,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Moving to the next chunk.
                     MoveChunkCursor();
                 }
+            }
+            else
+            {
+                break;
             }
         }
 
