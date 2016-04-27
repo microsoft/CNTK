@@ -312,7 +312,7 @@ class ComputationNode(object):
                             node_counter=0,
                             reconciled_cache={})
 
-        return "\n".join(desc), inputs, aggregate_readers(readers)
+        return "\n".join(desc), inputs
 
 
 class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
