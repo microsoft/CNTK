@@ -96,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            // Always descrease the available number of samples.
+            // Always decrease the available number of samples.
             samples -= (int)sequence->m_numberOfSamples;
         }
 

@@ -274,6 +274,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
 
 BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
 {
+    const int sequenceLength = 3;
     const int seed = 42;
     const int numChunks = 100;
     const int numSequencesPerChunk = 10;
@@ -283,7 +284,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
     std::mt19937 rng(seed);
     std::uniform_int_distribution<int> distr(1, 10);
 
-    auto mockDeserializer = std::make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, 3);
+    auto mockDeserializer = std::make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
     auto randomizer = std::make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 
