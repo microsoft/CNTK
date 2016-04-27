@@ -60,7 +60,7 @@ def input(shape, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Input
     return Input(shape, var_name=name)
 
 

@@ -12,9 +12,6 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import Times, Plus, Minus, ElementDivide, ElementTimes
-
-
 def plus(left, right, name=None):
     """
     Tensor addition operation. The output of this operation is the sum of the 
@@ -28,7 +25,7 @@ def plus(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Plus
     return Plus(left, right, var_name=name)
 
 
@@ -46,6 +43,7 @@ def minus(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
 
+    from cntk.ops.cntk1 import Minus
     return Minus(left, right, var_name=name)
 
 
@@ -62,7 +60,7 @@ def element_times(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import ElementTimes
     return ElementTimes(left, right, var_name=name)
 
 
@@ -81,7 +79,7 @@ def element_divide(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import ElementDivide
     return ElementDivide(left, right, var_name=name)
 
 
@@ -99,5 +97,5 @@ def times(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import Times
     return Times(left, right, var_name=name)
