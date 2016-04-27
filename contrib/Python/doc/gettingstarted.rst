@@ -84,8 +84,6 @@ current state given the result of a previous state. In other words, they allow i
 to persist.
 
 
-
-
 Operators
 ----------
 
