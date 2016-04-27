@@ -505,15 +505,16 @@ RNNs =
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
     # TODO: remove the -2 once this works
     RecurrentLSTMP = RecurrentLSTMP2
-    RecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
-    [
-        prevState = previousHook (lstmState)
-        inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState // we return the state record (h,c)
+    #xRecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
+    #[
+    #    prevState = previousHook (lstmState)
+    #    inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+    #    lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+    #].lstmState // we return the state record (h,c)
 
     DontAugmentInputHook (input, lstmState) = input
-    # TODO: replace RecurrentLSTMP() with this
+    # TODO: complete replacing RecurrentLSTMP() with this
+    RecurrentLSTMP2 = RecurrentLSTMPWithAttentionWindow2
     RecurrentLSTMPWithAttentionWindow2 (outputDim/*h.dim*/, cellDim=outputDim,
                                         x, inputDim=x.dim,
                                         previousHook=BS.RNNs.PreviousHC,

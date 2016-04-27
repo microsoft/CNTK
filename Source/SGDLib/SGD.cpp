@@ -514,14 +514,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             {
                 cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
             }
-            if (evaluationNodes.size() > 0)
+            for (let node : evaluationNodes)
             {
-                cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
+                cvSetTrainAndEvalNodes.push_back(node->NodeName());
             }
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
             let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate]", i + 1, (int)m_maxEpochs);
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
                 LogCriterion(cvSetTrainAndEvalNodes[k], vScore[k]);
                 //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
