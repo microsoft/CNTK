@@ -17,6 +17,7 @@ tensors are added up.
 
 from cntk.ops.cntk1 import FutureValue, PastValue
 
+
 def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
     This function returns the future value wrt `x`. It is most often used when 
