@@ -117,8 +117,8 @@ def test_op_past_value(tensor, time_step, default_value, device_id, precision):
     # with respect to the original input except for the column[s] that was[were] shifted 
     # out which will now contain zeros (we pass on the gradient for all other 
     # samples).
-    #expected = [[np.ones_like(x) for x in tensor]]
-    #expected[0][0:time_step] = [np.zeros_like(x) for x in expected[0][0:time_step]]
+    expected = [[np.ones_like(x) for x in tensor]]
+    expected[0][-time_step:] = [np.zeros_like(x) for x in expected[0][0:time_step]]
 
-    #unittest_helper(result, None, expected, device_id=device_id, 
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
