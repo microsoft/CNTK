@@ -60,8 +60,25 @@ def input(shape, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+
     from cntk.ops.cntk1 import Input
     return Input(shape, var_name=name)
+    
+
+def sparse_input(shape, name=None):
+    """
+    It creates an sparse input node. The graph requires a separate reader that will be
+    fed to this input.
+
+    Args:
+        shape: the shape of the input tensor
+        name: the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import SparseInput
+    return SparseInput(shape, var_name=name)
 
 
 def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform',
