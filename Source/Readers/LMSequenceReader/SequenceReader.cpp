@@ -1791,88 +1791,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
         sLn = DetermineSequencesToProcess();
     }
 
-	// --- STEP 2: distribute the sequences in mToProcess across parallel workers
-	std::vector<size_t> mToProcessTemp;
-	size_t totalNumberSequencesToProcess = mToProcess.size();
-	size_t numberSequencesPerWorker = (totalNumberSequencesToProcess >= m_numSubsets) ? (totalNumberSequencesToProcess / m_numSubsets) : 1;
-	size_t startIndex = m_subsetNum * numberSequencesPerWorker;
-
-	if (startIndex >= totalNumberSequencesToProcess) // this worker does not have any sequences to process
-		return true;	// return true since other workers are processing sequences
-
-	size_t endIndex = (m_subsetNum + 1) * numberSequencesPerWorker;
-
-
-    // --- STEP 3: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
-
-    const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
-    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-
-    firstPosInSentence = mLastPosInSentence;
-
-    size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
-    // ############### BREAKING CHANGE ################
-    // We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
-    // ############### BREAKING CHANGE ################
-    const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
-	for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
-    {
-        for (size_t k = startIndex; k < endIndex; k++)
-        {
-            size_t seq = mToProcess[k];
-            size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
-
-            // labelIn should be a category label
-            const auto& labelValue = m_labelTemp[pos];
-            pos++; // consume it
-
-            // generate the feature token
-            if (labelIn.type == labelCategory)
-            {
-                LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
-
-                // use the found value, and set the appropriate location to a 1.0
-                assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
-                m_featureData.push_back((float) labelId);
-            }
-            else
-                RuntimeError("Input labels are expected to be category labels.");
-
-            // generate the output label token
-            if (labelOut.type != labelNone)
-            {
-                const auto& labelValue = m_labelTemp[pos];
-                LabelIdType labelId;
-                if (labelOut.type == labelCategory)
-                {
-                    pos++; // consume it   --TODO: value is not used after this
-                    labelId = GetIdFromLabel(labelValue, labelOut);
-                }
-                else if (nextWord)
-                {
-                    // this is the next word (pos was already incremented above when reading out labelValue)
-                    if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
-                        labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
-                    else
-                        labelId = GetIdFromLabel(labelValue, labelIn);
-                }
-                else
-                    LogicError("Unexpected output label type."); // should never get here
-
-                m_labelIdData.push_back(labelId);
-            }
-
-            m_totalSamples++;
-            m_epochSamplesReturned++;
-        }
-    }
-    //mLastPosInSentence = i; // (we could also iterate over mLastPosInSentence directly)
+	LabelInfo& labelOut = m_labelInfo[labelInfoOut];
+	size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
+																					// ############### BREAKING CHANGE ################
+																					// We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
 
     // remember if we are at the end
     // Note: This flag will propagate into setting mProcessed[] in DataEnd(), which seems a bit fragile. Can't we do it here?
     mSentenceEnd = (mLastPosInSentence == effectiveInputSequenceLength);
-
     return true;
 }
 
@@ -1895,15 +1821,11 @@ bool BatchSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matri
 
     size_t firstPosInSentence;
     bool moreData = GetMinibatchData(firstPosInSentence);
-    if (!moreData)	// none of the workers got any sequences to process
+    if (!moreData)	// this worker does not have any sequences to process
     {
-        m_pMBLayout->Init(mToProcess.size(), 0);
+		m_pMBLayout->Init(mToProcess.size(), 0);
         return false;
     }
-
-	// --- STEP 2: check if this worker got at least one sequence to process
-	if (m_featureData.empty())
-		return true;	// this worker has nothing to process, so just return
 
     // now:
     //  - there is at least one sequence to return
@@ -1912,11 +1834,100 @@ bool BatchSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matri
     //  - m_featureData[j] contains the input label indices
     //  - m_labelIdData[j] contains the output label indices
 
+	// --- STEP 2: distribute the data across workers
+
+	size_t totalNumSequencesToProcess = mToProcess.size();
+	size_t numSequencesPerWorker = (totalNumSequencesToProcess > m_numSubsets) ? (totalNumSequencesToProcess / m_numSubsets) : 1;
+	size_t startIndex = m_subsetNum * numSequencesPerWorker;
+	size_t endIndex = (m_subsetNum + 1) * numSequencesPerWorker;
+
+	if (startIndex >= totalNumSequencesToProcess)
+	{
+		// no data to process for this worker, so return false
+		m_pMBLayout->Init(mToProcess.size(), 0);
+		return false;
+	}
+	else
+	{
+		// --- STEP 2a: get only this worker's subset to process.
+		std::vector<size_t> toProcessTemp(mToProcess.begin() + startIndex, mToProcess.begin() + endIndex);
+		mToProcess = toProcessTemp;
+		toProcessTemp.clear();
+
+		// --- STEP 2b: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
+
+		size_t sLn = m_parser.mSentenceIndex2SentenceInfo[mToProcess[0]].sLen;	// since all sequences in the minibatch have the same length
+		const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
+		LabelInfo& labelIn = m_labelInfo[labelInfoIn];
+		LabelInfo& labelOut = m_labelInfo[labelInfoOut];
+
+		firstPosInSentence = mLastPosInSentence;
+
+		size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
+																						// ############### BREAKING CHANGE ################
+																						// We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
+																						// ############### BREAKING CHANGE ################
+		const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
+		for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
+		{
+			for (size_t k = 0; k < mToProcess.size(); k++)
+			{
+				size_t seq = mToProcess[k];
+				size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
+
+				// labelIn should be a category label
+				const auto& labelValue = m_labelTemp[pos];
+				pos++; // consume it
+
+					   // generate the feature token
+				if (labelIn.type == labelCategory)
+				{
+					LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
+
+					// use the found value, and set the appropriate location to a 1.0
+					assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
+					m_featureData.push_back((float)labelId);
+				}
+				else
+					RuntimeError("Input labels are expected to be category labels.");
+
+				// generate the output label token
+				if (labelOut.type != labelNone)
+				{
+					const auto& labelValue = m_labelTemp[pos];
+					LabelIdType labelId;
+					if (labelOut.type == labelCategory)
+					{
+						pos++; // consume it   --TODO: value is not used after this
+						labelId = GetIdFromLabel(labelValue, labelOut);
+					}
+					else if (nextWord)
+					{
+						// this is the next word (pos was already incremented above when reading out labelValue)
+						if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
+							labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
+						else
+							labelId = GetIdFromLabel(labelValue, labelIn);
+					}
+					else
+						LogicError("Unexpected output label type."); // should never get here
+
+					m_labelIdData.push_back(labelId);
+				}
+
+				m_totalSamples++;
+				m_epochSamplesReturned++;
+			}
+		}
+
+	}
+
     // --- STEP 3: transfer the data to the matrices
 
     size_t actualmbsize = m_featureData.size(); // total number of tokens across all sequences in this MB
-    assert(actualmbsize > 0);
-    assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
+
+	assert(actualmbsize > 0);
+	assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
 
     // create MBLayout
     // This handles variable-length sequences.
