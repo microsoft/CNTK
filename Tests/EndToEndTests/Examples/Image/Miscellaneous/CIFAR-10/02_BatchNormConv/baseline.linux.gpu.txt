@@ -512,9 +512,9 @@ UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  10000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-Minibatch[1-500]: SamplesSeen = 8000    Err: ErrorPrediction/Sample = 0.890625    CE: CrossEntropyWithSoftmax/Sample = 2.3015966    
-Minibatch[501-625]: SamplesSeen = 2000    Err: ErrorPrediction/Sample = 0.8905    CE: CrossEntropyWithSoftmax/Sample = 2.3015046    
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0.8906    CE: CrossEntropyWithSoftmax/Sample = 2.3015782    Perplexity = 9.9899361    
+Minibatch[1-500]: * 8000    Err: ErrorPrediction/Sample = 0.890625    CE: CrossEntropyWithSoftmax/Sample = 2.3015966    
+Minibatch[501-625]: * 2000    Err: ErrorPrediction/Sample = 0.8905    CE: CrossEntropyWithSoftmax/Sample = 2.3015046    
+Final Results: Minibatch[1-625]: * 10000    Err: ErrorPrediction/Sample = 0.8906    CE: CrossEntropyWithSoftmax/Sample = 2.3015782    Perplexity = 9.9899361    
 
 04/13/2016 15:42:35: Action "test" complete.
 

@@ -1069,7 +1069,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.7969978    Perplexity = 121.14617    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.7969978    Perplexity = 121.14617    
 04/14/2016 16:42:29: Finished Epoch[ 1 of 100]: [Validation Set] CrossEntropyWithSoftmax = 4.7969978
 04/14/2016 16:42:29: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.1'
 
@@ -1087,7 +1087,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.7258124    Perplexity = 112.82211    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.7258124    Perplexity = 112.82211    
 04/14/2016 16:42:29: Finished Epoch[ 2 of 100]: [Validation Set] CrossEntropyWithSoftmax = 4.7258124
 04/14/2016 16:42:29: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.2'
 
@@ -1105,7 +1105,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.6210998    Perplexity = 101.60571    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.6210998    Perplexity = 101.60571    
 04/14/2016 16:42:29: Finished Epoch[ 3 of 100]: [Validation Set] CrossEntropyWithSoftmax = 4.6210998
 04/14/2016 16:42:29: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.3'
 
@@ -1123,7 +1123,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.4769167    Perplexity = 87.963034    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.4769167    Perplexity = 87.963034    
 04/14/2016 16:42:30: Finished Epoch[ 4 of 100]: [Validation Set] CrossEntropyWithSoftmax = 4.4769167
 04/14/2016 16:42:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.4'
 
@@ -1141,7 +1141,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.2774394    Perplexity = 72.055701    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 4.2774394    Perplexity = 72.055701    
 04/14/2016 16:42:30: Finished Epoch[ 5 of 100]: [Validation Set] CrossEntropyWithSoftmax = 4.2774394
 04/14/2016 16:42:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.5'
 
@@ -1159,7 +1159,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 3.9931347    Perplexity = 54.2246    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 3.9931347    Perplexity = 54.2246    
 04/14/2016 16:42:30: Finished Epoch[ 6 of 100]: [Validation Set] CrossEntropyWithSoftmax = 3.9931347
 04/14/2016 16:42:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.6'
 
@@ -1177,7 +1177,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 3.5787112    Perplexity = 35.827338    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 3.5787112    Perplexity = 35.827338    
 04/14/2016 16:42:31: Finished Epoch[ 7 of 100]: [Validation Set] CrossEntropyWithSoftmax = 3.5787112
 04/14/2016 16:42:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.7'
 
@@ -1195,7 +1195,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.9940001    Perplexity = 19.965386    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.9940001    Perplexity = 19.965386    
 04/14/2016 16:42:31: Finished Epoch[ 8 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.9940001
 04/14/2016 16:42:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.8'
 
@@ -1213,7 +1213,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.4150701    Perplexity = 11.190555    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.4150701    Perplexity = 11.190555    
 04/14/2016 16:42:31: Finished Epoch[ 9 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.4150701
 04/14/2016 16:42:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.9'
 
@@ -1231,7 +1231,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5668985    Perplexity = 13.025363    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5668985    Perplexity = 13.025363    
 04/14/2016 16:42:32: Finished Epoch[10 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5668985
 04/14/2016 16:42:32: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.9.
 04/14/2016 16:42:32: learnRatePerSample reduced to 0.050000001
@@ -1251,7 +1251,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5347324    Perplexity = 12.613055    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5347324    Perplexity = 12.613055    
 04/14/2016 16:42:32: Finished Epoch[11 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5347324
 04/14/2016 16:42:32: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.10.
 04/14/2016 16:42:32: learnRatePerSample reduced to 0.025
@@ -1271,7 +1271,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5199338    Perplexity = 12.427774    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5199338    Perplexity = 12.427774    
 04/14/2016 16:42:32: Finished Epoch[12 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5199338
 04/14/2016 16:42:32: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.11.
 04/14/2016 16:42:33: learnRatePerSample reduced to 0.0125
@@ -1291,7 +1291,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5128603    Perplexity = 12.340177    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5128603    Perplexity = 12.340177    
 04/14/2016 16:42:33: Finished Epoch[13 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5128603
 04/14/2016 16:42:33: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.12.
 04/14/2016 16:42:33: learnRatePerSample reduced to 0.0062500001
@@ -1311,7 +1311,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5094058    Perplexity = 12.297621    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5094058    Perplexity = 12.297621    
 04/14/2016 16:42:33: Finished Epoch[14 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5094058
 04/14/2016 16:42:33: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.13.
 04/14/2016 16:42:34: learnRatePerSample reduced to 0.003125
@@ -1331,7 +1331,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5076989    Perplexity = 12.276648    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5076989    Perplexity = 12.276648    
 04/14/2016 16:42:34: Finished Epoch[15 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5076989
 04/14/2016 16:42:34: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.14.
 04/14/2016 16:42:34: learnRatePerSample reduced to 0.0015625
@@ -1351,7 +1351,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5068508    Perplexity = 12.266241    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5068508    Perplexity = 12.266241    
 04/14/2016 16:42:34: Finished Epoch[16 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5068508
 04/14/2016 16:42:34: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.15.
 04/14/2016 16:42:35: learnRatePerSample reduced to 0.00078125001
@@ -1371,7 +1371,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5064279    Perplexity = 12.261054    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5064279    Perplexity = 12.261054    
 04/14/2016 16:42:35: Finished Epoch[17 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5064279
 04/14/2016 16:42:35: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.16.
 04/14/2016 16:42:35: learnRatePerSample reduced to 0.00039062501
@@ -1391,7 +1391,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5062167    Perplexity = 12.258465    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5062167    Perplexity = 12.258465    
 04/14/2016 16:42:35: Finished Epoch[18 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5062167
 04/14/2016 16:42:35: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.17.
 04/14/2016 16:42:36: learnRatePerSample reduced to 0.0001953125
@@ -1411,7 +1411,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5061114    Perplexity = 12.257174    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5061114    Perplexity = 12.257174    
 04/14/2016 16:42:36: Finished Epoch[19 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5061114
 04/14/2016 16:42:36: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.18.
 04/14/2016 16:42:36: learnRatePerSample reduced to 9.7656251e-05
@@ -1431,7 +1431,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060585    Perplexity = 12.256526    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060585    Perplexity = 12.256526    
 04/14/2016 16:42:36: Finished Epoch[20 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060585
 04/14/2016 16:42:36: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.19.
 04/14/2016 16:42:37: learnRatePerSample reduced to 4.8828126e-05
@@ -1451,7 +1451,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060321    Perplexity = 12.256202    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060321    Perplexity = 12.256202    
 04/14/2016 16:42:37: Finished Epoch[21 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060321
 04/14/2016 16:42:37: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.20.
 04/14/2016 16:42:37: learnRatePerSample reduced to 2.4414063e-05
@@ -1471,7 +1471,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060191    Perplexity = 12.256043    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060191    Perplexity = 12.256043    
 04/14/2016 16:42:37: Finished Epoch[22 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060191
 04/14/2016 16:42:37: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.21.
 04/14/2016 16:42:38: learnRatePerSample reduced to 1.2207031e-05
@@ -1491,7 +1491,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060123    Perplexity = 12.25596    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060123    Perplexity = 12.25596    
 04/14/2016 16:42:38: Finished Epoch[23 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060123
 04/14/2016 16:42:38: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.22.
 04/14/2016 16:42:38: learnRatePerSample reduced to 6.1035157e-06
@@ -1511,7 +1511,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060093    Perplexity = 12.255923    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060093    Perplexity = 12.255923    
 04/14/2016 16:42:38: Finished Epoch[24 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060093
 04/14/2016 16:42:38: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.23.
 04/14/2016 16:42:39: learnRatePerSample reduced to 3.0517579e-06
@@ -1531,7 +1531,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060074    Perplexity = 12.2559    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060074    Perplexity = 12.2559    
 04/14/2016 16:42:39: Finished Epoch[25 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060074
 04/14/2016 16:42:39: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.24.
 04/14/2016 16:42:39: learnRatePerSample reduced to 1.5258789e-06
@@ -1551,7 +1551,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060067    Perplexity = 12.255891    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060067    Perplexity = 12.255891    
 04/14/2016 16:42:39: Finished Epoch[26 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060067
 04/14/2016 16:42:39: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.25.
 04/14/2016 16:42:40: learnRatePerSample reduced to 7.6293946e-07
@@ -1571,7 +1571,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060063    Perplexity = 12.255886    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060063    Perplexity = 12.255886    
 04/14/2016 16:42:40: Finished Epoch[27 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060063
 04/14/2016 16:42:40: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.26.
 04/14/2016 16:42:40: learnRatePerSample reduced to 3.8146973e-07
@@ -1591,7 +1591,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060061    Perplexity = 12.255884    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060061    Perplexity = 12.255884    
 04/14/2016 16:42:40: Finished Epoch[28 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060061
 04/14/2016 16:42:40: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.27.
 04/14/2016 16:42:41: learnRatePerSample reduced to 1.9073487e-07
@@ -1611,7 +1611,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:41: Finished Epoch[29 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:41: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.28.
 04/14/2016 16:42:41: learnRatePerSample reduced to 9.5367433e-08
@@ -1631,7 +1631,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:41: Finished Epoch[30 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:41: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.29.
 04/14/2016 16:42:42: learnRatePerSample reduced to 4.7683717e-08
@@ -1651,7 +1651,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:42: Finished Epoch[31 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:42: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.30.
 04/14/2016 16:42:42: learnRatePerSample reduced to 2.3841858e-08
@@ -1671,7 +1671,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:42: Finished Epoch[32 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:42: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.31.
 04/14/2016 16:42:43: learnRatePerSample reduced to 1.1920929e-08
@@ -1691,7 +1691,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:43: Finished Epoch[33 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:43: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.32.
 04/14/2016 16:42:43: learnRatePerSample reduced to 5.9604646e-09
@@ -1711,7 +1711,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:43: Finished Epoch[34 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:43: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.33.
 04/14/2016 16:42:44: learnRatePerSample reduced to 2.9802323e-09
@@ -1731,7 +1731,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:44: Finished Epoch[35 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:44: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.34.
 04/14/2016 16:42:44: learnRatePerSample reduced to 1.4901161e-09
@@ -1751,7 +1751,7 @@ BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-1]: SamplesSeen = 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
+Final Results: Minibatch[1-1]: * 81    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.5060059    Perplexity = 12.255881    
 04/14/2016 16:42:44: Finished Epoch[36 of 100]: [Validation Set] CrossEntropyWithSoftmax = 2.5060059
 04/14/2016 16:42:44: Loading previous model with best training-criterion value: /tmp/cntk-test-20160414164101.805799/Examples/Text/Miscellaneous_SLU@release_cpu/cntkdebug.dnn.35.
 04/14/2016 16:42:45: learnRatePerSample reduced to 7.4505807e-10

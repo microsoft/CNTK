@@ -643,7 +643,7 @@ UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  10000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0.8638    CE: CrossEntropyWithSoftmax/Sample = 2.2684776    Perplexity = 9.6646765    
+Final Results: Minibatch[1-625]: * 10000    Err: ErrorPrediction/Sample = 0.8638    CE: CrossEntropyWithSoftmax/Sample = 2.2684776    Perplexity = 9.6646765    
 
 04/26/2016 16:20:46: Action "test" complete.
 

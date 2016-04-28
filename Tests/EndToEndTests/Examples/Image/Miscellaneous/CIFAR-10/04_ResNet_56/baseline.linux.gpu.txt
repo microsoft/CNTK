@@ -3217,9 +3217,9 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
-Minibatch[1-200]: SamplesSeen = 6400    Err: ErrorPrediction/Sample = 0.9021875    CE: CrossEntropyWithSoftmax/Sample = 2.3025788    
-Minibatch[201-313]: SamplesSeen = 3600    Err: ErrorPrediction/Sample = 0.89611111    CE: CrossEntropyWithSoftmax/Sample = 2.3026026    
-Final Results: Minibatch[1-313]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0.9    CE: CrossEntropyWithSoftmax/Sample = 2.3025874    Perplexity = 10.000023    
+Minibatch[1-200]: * 6400    Err: ErrorPrediction/Sample = 0.9021875    CE: CrossEntropyWithSoftmax/Sample = 2.3025788    
+Minibatch[201-313]: * 3600    Err: ErrorPrediction/Sample = 0.89611111    CE: CrossEntropyWithSoftmax/Sample = 2.3026026    
+Final Results: Minibatch[1-313]: * 10000    Err: ErrorPrediction/Sample = 0.9    CE: CrossEntropyWithSoftmax/Sample = 2.3025874    Perplexity = 10.000023    
 
 04/13/2016 17:03:41: Action "test" complete.
 

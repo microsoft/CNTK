@@ -930,7 +930,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    Err: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    
+Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    Err: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    
 04/11/2016 16:26:38: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 4.4589574; EvalErrorPrediction = 4.4589574
 04/11/2016 16:26:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_gpu/cntkdebug.dnn.1'
 
@@ -948,7 +948,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    Err: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    
+Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    Err: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    
 04/11/2016 16:26:38: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 3.4404076; EvalErrorPrediction = 3.4404076
 04/11/2016 16:26:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_gpu/cntkdebug.dnn.2'
 
@@ -966,7 +966,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    Err: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    
+Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    Err: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    
 04/11/2016 16:26:38: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.2055314; EvalErrorPrediction = 2.2055314
 04/11/2016 16:26:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_gpu/cntkdebug.dnn'
 04/11/2016 16:26:38: CNTKCommandTrainEnd: LSTM
