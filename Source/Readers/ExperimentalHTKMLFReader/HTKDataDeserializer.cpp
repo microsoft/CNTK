@@ -33,15 +33,13 @@ HTKDataDeserializer::HTKDataDeserializer(
     m_totalNumberOfFrames(0),
     m_primary(primary)
 {
-    // The frame mode is currently specified once per configuration,
-    // not in the configuration of a particular deserializer, but on a higher level in the configuration.
-    // Because of that we are using find method below.
-    m_frameMode = cfg.Find("frameMode", "true");
+    // TODO: This should be read in one place, potentially given by SGD.
+    m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
     argvector<ConfigValue> inputs = cfg("inputs");
     if (inputs.size() != 1)
     {
-        LogicError("HTKDataDeserializer supports a single input stream.");
+        InvalidArgument("HTKDataDeserializer supports a single input stream only.");
     }
 
     ConfigParameters input = inputs.front();

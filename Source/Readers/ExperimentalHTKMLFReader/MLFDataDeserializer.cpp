@@ -22,8 +22,7 @@ static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
 
 // Currently we only have a single mlf chunk that contains a vector of all labels.
-// TODO: This will be changed in the future to work only on a subset of chunks
-// at each point in time.
+// TODO: In the future MLF should be converted to a more compact format that is amenable to chunking.
 class MLFDataDeserializer::MLFChunk : public Chunk
 {
     MLFDataDeserializer* m_parent;
@@ -45,20 +44,19 @@ struct MLFUtterance : SequenceDescription
 
 MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg, bool primary)
 {
-    // The frame mode is currently specified once per configuration,
-    // not in the configuration of a particular deserializer, but on a higher level in the configuration.
-    // Because of that we are using find method below.
-    m_frameMode = cfg.Find("frameMode", "true");
+    // TODO: This should be read in one place, potentially given by SGD.
+    m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
+    // MLF cannot control chunking.
     if (primary)
     {
-        LogicError("Mlf deserializer does not support primary mode.");
+        LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
     }
 
     argvector<ConfigValue> inputs = cfg("inputs");
     if (inputs.size() != 1)
     {
-        LogicError("MLFDataDeserializer supports a single input stream.");
+        LogicError("MLFDataDeserializer supports a single input stream only.");
     }
 
     ConfigParameters input = inputs.front();

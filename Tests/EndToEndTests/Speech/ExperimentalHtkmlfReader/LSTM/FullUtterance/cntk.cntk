@@ -36,7 +36,6 @@ speechTrain = [
         ]
 
         # A list of deserializers to use.
-        # TODO: change this to readers/dataProviders(?)
         deserializers = [
             [   
                 type = "HTKDataDeserializer"        

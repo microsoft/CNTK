@@ -16,6 +16,20 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template<class TElement>
+class CompositeReaderShim : ReaderShim<TElement>
+{
+public:
+    explicit CompositeReaderShim(ReaderFactory f) : ReaderShim(f) {}
+
+    // Returning 0 for composite configs.
+    // This forbids the use of learning-rate and momentum per MB if truncation is enabled.
+    size_t GetNumParallelSequences() override
+    {
+        return 0;
+    }
+};
+
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
     return std::make_shared<CompositeDataReader>(parameters, std::make_shared<HeapMemoryProvider>());

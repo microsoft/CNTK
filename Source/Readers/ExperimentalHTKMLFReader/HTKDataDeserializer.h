@@ -22,7 +22,7 @@ public:
     // Expects new configuration.
     HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
-    // TODO: Should be removed, when all readers go away, expects configuration in a legacy mode.
+    // TODO: Should be removed, when legacy config goes away, expects configuration in a legacy mode.
     HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.
