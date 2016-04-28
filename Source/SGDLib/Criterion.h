@@ -76,6 +76,10 @@ private:
         const auto& node = nodes[i]; // multiple nodes are managed by this struct
         size_t beta = reset ? 0 : 1;
         size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
+
+		if (numSamples == 0)
+			return *this;
+
 #if 1
         // For criterion nodes that emit criteria per frame, we will at this point
         // do masking and an implicit reduction.
