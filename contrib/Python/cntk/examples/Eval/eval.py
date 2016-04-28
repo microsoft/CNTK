@@ -18,7 +18,7 @@ def test_eval_example():
 
 def eval_example():
     sample = [2, 3], [4, 5]
-    sequence = [sample]
+    sequence = np.asarray([sample])
     batch = [sequence]
     X = input_reader(batch)
     out = 2.5 * X + 100
