@@ -502,7 +502,7 @@ public:
 
     void RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX);
-    void RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw;
+    void RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw);
 
 public:
     // TODO: why are these not static? And why are they here?
