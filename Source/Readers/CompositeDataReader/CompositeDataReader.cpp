@@ -25,26 +25,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-CompositeDataReader::CompositeDataReader(const std::string& precision) : m_layout(make_shared<MBLayout>()),
-    m_precision(precision),
+CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryProviderPtr provider) : m_layout(make_shared<MBLayout>()),
     m_corpus(std::make_shared<CorpusDescriptor>()),
-    m_endOfEpoch(false)
+    m_provider(provider)
 {
-}
-
-void CompositeDataReader::Init(const ConfigParameters& config)
-{
-    m_provider = std::make_shared<HeapMemoryProvider>();
-
-    // if prefetch - launching asynchronously,
-    // otherwise deferring - synchronous execution during .get() call
-    bool prefetch = config(L"prefetch", true);
-    m_launchType = prefetch ? launch::async : launch::deferred;
-
-    // Layout can be asked before actual reading.
-    // TODO: should be gone when SGD changed.
-    m_layout->Init(0, 0);
-
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", true);
     bool truncated = config(L"truncated", false);
@@ -60,6 +44,11 @@ void CompositeDataReader::Init(const ConfigParameters& config)
     else if (truncated)
     {
         m_packingMode = PackingMode::truncated;
+        m_truncationLength = config(L"truncationLength", 0);
+        if (m_truncationLength == 0)
+        {
+            InvalidArgument("Truncation length cannot be 0.");
+        }
     }
     else
     {
@@ -105,124 +94,14 @@ void CompositeDataReader::Init(const ConfigParameters& config)
     }
 }
 
-void CompositeDataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+std::vector<StreamDescriptionPtr> CompositeDataReader::GetStreamDescriptions()
 {
-    return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    return m_streams;
 }
 
-void CompositeDataReader::StartDistributedMinibatchLoop(
-    size_t requestedMBSize,
-    size_t epoch,
-    size_t subsetNum,
-    size_t numSubsets,
-    size_t requestedEpochSamples /*= requestDataSize*/)
+Minibatch CompositeDataReader::ReadMinibatch()
 {
-    EpochConfiguration config;
-    config.m_workerRank = subsetNum;
-    config.m_numberOfWorkers = numSubsets;
-    config.m_minibatchSizeInSamples = requestedMBSize;
-    config.m_totalEpochSizeInSamples = requestedEpochSamples;
-    config.m_epochIndex = epoch;
-
-    // Make sure there are no outstanding reads.
-    if (m_prefetchTask.valid())
-    {
-        m_prefetchTask.wait();
-    }
-
-    m_endOfEpoch = false;
-
-    // Nothing is running, let's reconfigure the packer according to the new epoch.
-    StartEpoch(config);
-
-    // Ok, start reading in sync or async manner.
-    m_prefetchTask = std::async(m_launchType, [this]()
-    {
-        return m_packer->ReadMinibatch();
-    });
-}
-
-bool CompositeDataReader::GetMinibatch(StreamMinibatchInputs& matrices)
-{
-    if (m_endOfEpoch)
-    {
-        return false;
-    }
-
-    // Check that all matrices have the same device id.
-    // If not we should inject the IMemoryProvider per stream.
-    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
-    for (auto mx : matrices)
-    {
-        if (mx.second.matrix->GetDeviceId() != deviceId)
-        {
-            assert(false);
-        }
-    }
-
-    assert(m_prefetchTask.valid());
-
-    Minibatch minibatch = m_prefetchTask.get();
-    if (minibatch.m_endOfEpoch)
-    {
-        m_endOfEpoch = true;
-        if (minibatch.m_data.empty())
-        {
-            return false;
-        }
-    }
-
-    if (!minibatch.m_data.empty())
-    {
-        // TODO: Use alternating pinned buffer in the packer, do not copy anything, but pack into the pinned memory.
-        // Copy returned minibatch to the matrices.
-        for (const auto& mx : matrices)
-        {
-            assert(m_nameToStreamId.find(mx.first) != m_nameToStreamId.end());
-            size_t streamId = m_nameToStreamId[mx.first];
-
-            const auto& stream = minibatch.m_data[streamId];
-            m_layout->CopyFrom(stream->m_layout);
-
-            size_t columnNumber = m_layout->GetNumCols();
-            size_t rowNumber = m_streams[streamId]->m_sampleLayout->GetNumElements();
-
-            if (m_precision == "float")
-            {
-                auto* data = reinterpret_cast<const float*>(stream->m_data);
-                matrices.GetInputMatrix<float>(mx.first).SetValue(rowNumber, columnNumber, mx.second.matrix->GetDeviceId(), const_cast<float*>(data), matrixFlagNormal);
-            }
-            else
-            {
-                assert(m_precision == "double");
-                auto* data = reinterpret_cast<const double*>(stream->m_data);
-                matrices.GetInputMatrix<double>(mx.first).SetValue(rowNumber, columnNumber, mx.second.matrix->GetDeviceId(), const_cast<double*>(data), matrixFlagNormal);
-            }
-        }
-    }
-
-    m_prefetchTask = std::async(m_launchType, [this]()
-    {
-        return m_packer->ReadMinibatch();
-    });
-
-    return !minibatch.m_data.empty();
-}
-
-bool CompositeDataReader::DataEnd()
-{
-    // Note: Return value never used.
-    return false;
-}
-
-void CompositeDataReader::CopyMBLayoutTo(MBLayoutPtr layout)
-{
-    layout->CopyFrom(m_layout);
-}
-
-size_t CompositeDataReader::GetNumParallelSequences()
-{
-    return m_layout->GetNumParallelSequences();
+    return m_packer->ReadMinibatch();
 }
 
 void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
@@ -263,8 +142,10 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
     return IDataDeserializerPtr(d);
 }
 
-void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
+void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
 {
+    EpochConfiguration config = cfg;
+
     if (config.m_totalEpochSizeInSamples <= 0)
     {
         RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
@@ -289,6 +170,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
         break;
     case PackingMode::truncated:
     {
+        config.m_truncationSize = m_truncationLength;
         m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_provider,
             m_randomizer,
@@ -298,7 +180,8 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& config)
     default:
         LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
+
+    m_packer->StartEpoch(config);
 }
 
 }}}
-

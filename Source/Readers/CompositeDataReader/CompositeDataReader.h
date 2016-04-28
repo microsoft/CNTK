@@ -9,6 +9,7 @@
 #include <string>
 #include <future>
 #include "DataReader.h"
+#include <Reader.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -48,41 +49,24 @@ struct Minibatch;
 // TODO: Add transformers as the next step.
 // TODO: Same code as in ReaderLib shim, the one in the ReaderLib will be deleted as the next step.
 // TODO: Change this interface when SGD is changed.
-class CompositeDataReader : public IDataReader, protected Plugin, public ScriptableObjects::Object
+class CompositeDataReader : public Reader, protected Plugin
 {
 public:
-    CompositeDataReader(const std::string& precision);
+    CompositeDataReader(const ConfigParameters& parameters, MemoryProviderPtr provider);
 
-    // Currently we do not support BS configuration.
-    virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
-    {
-        assert(false);
-    }
+    // Describes the streams this reader produces.
+    std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
-    virtual void Init(const ConfigParameters& config) override;
+    // Starts a new epoch with the provided configuration
+    void StartEpoch(const EpochConfiguration& config) override;
 
-    virtual void Destroy() override
-    {
-        delete this;
-    }
-
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
-    virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
-
-    virtual bool SupportsDistributedMBRead() const override
-    {
-        return true;
-    }
-
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
-    virtual bool DataEnd() override;
-    void CopyMBLayoutTo(MBLayoutPtr) override;
-    virtual size_t GetNumParallelSequences() override;
+    // Reads a minibatch that contains data across all streams.
+    Minibatch ReadMinibatch() override;
 
 private:
     void CreateDeserializers(const ConfigParameters& readerConfig);
     IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
-    void StartEpoch(const EpochConfiguration& config);
+
 
     enum class PackingMode
     {

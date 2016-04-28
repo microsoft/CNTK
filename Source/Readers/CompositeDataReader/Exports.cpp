@@ -11,17 +11,24 @@
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
 #include "CompositeDataReader.h"
+#include "ReaderShim.h"
+#include "HeapMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
+{
+    return std::make_shared<CompositeDataReader>(parameters, std::make_shared<HeapMemoryProvider>());
+};
+
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new CompositeDataReader("float");
+    *preader = new ReaderShim<float>(factory);
 }
 
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
-    *preader = new CompositeDataReader("double");
+    *preader = new ReaderShim<double>(factory);
 }
 
 }}}
