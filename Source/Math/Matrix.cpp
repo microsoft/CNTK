@@ -4207,37 +4207,37 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
 template <class ElemType>
 void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden)
 {
-	//DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
-	DISPATCH_MATRIX_ON_FLAG(this,
-		this,
-		NOT_IMPLEMENTED,
-		m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, numRows, numHidden),
-		NOT_IMPLEMENTED,
-		NOT_IMPLEMENTED);
+    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        NOT_IMPLEMENTED,
+        m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, numRows, numHidden),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
 void Matrix<ElemType>::RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX)
 {
-	//DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
-	DISPATCH_MATRIX_ON_FLAG(this,
-		this,
-		NOT_IMPLEMENTED,
-		m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), shapeY, *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), shapeDX),
-		NOT_IMPLEMENTED,
-		NOT_IMPLEMENTED);
+    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        NOT_IMPLEMENTED,
+        m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), shapeY, *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), shapeDX),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
 void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw)
 {
-	//DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
-	DISPATCH_MATRIX_ON_FLAG(this,
-		this,
-		NOT_IMPLEMENTED,
-		m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), shapeX, *(outputY.m_GPUMatrix), shapeY, *(dw.m_GPUMatrix)),
-		NOT_IMPLEMENTED,
-		NOT_IMPLEMENTED);
+    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        NOT_IMPLEMENTED,
+        m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), shapeX, *(outputY.m_GPUMatrix), shapeY, *(dw.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 }
 
 #pragma region Static BLAS Functions
