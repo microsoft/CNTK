@@ -135,6 +135,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     input = Input(vocabDim, tag='feature');
 
     # get out input and label data
+    # This will go away once we can switch to CNTKTextFormatReader.
     streams = [
         rawInput = input
         out = if isAutoencoder
@@ -188,7 +189,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     S(x) = Parameters.Stabilize (x, enabled=useStabilizer)
 
+    #############################################################
     # encoder (processes inputEmbedded)
+    #############################################################
+
     encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
     encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=embeddingDim, enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[Length (encoderDims)-1]
@@ -225,6 +229,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # we bake into the LSTMs to multiply h and c with beamSearchReorderHook, which we will patch in decoding
     # ReorderTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past'), TraceDense (tokens.from, 'backp'))
+
+    #############################################################
+    # decoder
+    #############################################################
 
     beamSearchReorderHook = Pass (Constants.OnesTensor (1:1))
 
@@ -288,7 +296,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     z = W * S(decoderOutput) + B;  // top-level input to Softmax
 
+    #############################################################
     # training criteria
+    #############################################################
+
     ce = NewCrossEntropyWithSoftmax (labelSequence, z, tag='criterion')
     ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
     ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
@@ -638,9 +649,11 @@ test = [
 write = [
     action = "write"
 
+    # these two lines select the decoder
     BrainScriptNetworkBuilder = (BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
     #BrainScriptNetworkBuilder = (BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), beamDepth))
 
+    # (old version, ignore:)
     # last trained model
     # We need to make a change:
     xBrainScriptNetworkBuilder = ([
