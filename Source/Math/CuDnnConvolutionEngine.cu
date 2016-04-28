@@ -140,7 +140,9 @@ public:
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+#if CUDNN_MAJOR >= 5
                                                cudnnNanPropagation_t::CUDNN_PROPAGATE_NAN, // this is a new option - setting based on best guess
+#endif
                                                (int)dims.size(), dims.data(), pad.data(), stride.data()));
     }
 
