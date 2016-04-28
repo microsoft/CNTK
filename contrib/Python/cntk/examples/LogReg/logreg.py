@@ -23,7 +23,6 @@ cur_dir = os.path.dirname(__file__)
 # Using data from https://github.com/Microsoft/CNTK/wiki/Tutorial
 train_file = os.path.join(cur_dir, "Train-3Classes.txt")
 test_file = os.path.join(cur_dir, "Test-3Classes.txt")
-mapping_file = os.path.join(cur_dir, "SimpleMapping-3Classes.txt")
 
 
 def train_eval_logistic_regression(criterion_name=None, eval_name=None):
@@ -51,7 +50,7 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     my_sgd = SGDParams(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
-    with Context('demo', clean_up=False) as ctx:
+    with Context('demo') as ctx:
 
         ctx.train(
             root_nodes=[ce, eval], 
@@ -67,9 +66,9 @@ def test_logistic_regression():
     result = train_eval_logistic_regression('crit_node', 'eval_node')
 
     assert result['SamplesSeen'] == 500
-    assert np.allclose(result['Perplexity'], 1.2216067)
-    assert np.allclose(result['crit_node'], 0.2001669)
-    assert np.allclose(result['eval_node'], 27.558445)
+    assert np.allclose(result['Perplexity'], 1.5584637)
+    assert np.allclose(result['crit_node'], 0.4437005)
+    assert np.allclose(result['eval_node'], 2.7779043)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression())
