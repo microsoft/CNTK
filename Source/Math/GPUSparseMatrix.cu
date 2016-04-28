@@ -111,6 +111,31 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*
     return newId;
 }
 
+// GetCublasHandle - get a cublas handle for the given GPU, should only need one per GPU
+// computeDevice - The compute device for which the cublas handle is desired
+// returns: cublas handle
+// NOTE: we currently don't bother to ever free the CUBLAS handle, it will be freed automatically by CUDA when the process ends
+template <class ElemType>
+cusparseHandle_t GPUSparseMatrix<ElemType>::s_cusparseHandle[GPUSparseMatrix<ElemType>::MaxGpus] = { 0 };
+template <class ElemType>
+cusparseHandle_t GPUSparseMatrix<ElemType>::GetCusparseHandle(DEVICEID_TYPE deviceId /*=-1*/)
+{
+	// if the compute device is not passed, get the current device from CUDA
+	if (deviceId < 0)
+		cudaGetDevice(&deviceId);
+	if (deviceId < 0 || deviceId >= MaxGpus)
+		LogicError("GetSparseHandle: Maximum GPU exceeded");
+	cusparseHandle_t cusparseHandle = s_cusparseHandle[deviceId];
+	if (cusparseHandle == NULL)
+	{
+		Microsoft::MSR::CNTK::PrepareDevice(deviceId);
+		CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
+		s_cusparseHandle[deviceId] = cusparseHandle;
+	}
+	CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
+	return cusparseHandle;
+}
+
 template <class ElemType>
 /*private*/ void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy)
 {
@@ -952,50 +977,174 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_
 #pragma endregion Constructors and Destructor
 
 #pragma region Static BLAS Functions
-
 // dense X sparse = dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
-                                                       const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
+	const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
 {
-    if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
-        RuntimeError("GPUSparseMatrix::MultiplyAndWeightedAdd: All matrices must be on the same GPU");
+	if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || lhs.GetComputeDeviceId() != c.GetComputeDeviceId())
+		RuntimeError("GPUSparseMatrix::MultiplyAndWeightedAdd: All matrices must be on the same GPU");
+	if (lhs.IsEmpty() || rhs.IsEmpty())
+		LogicError("GPUSparseMatrix::MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
-    if (lhs.IsEmpty() || rhs.IsEmpty())
-        LogicError("GPUSparseMatrix::MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+	int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
+	int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
+	int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows();
+	int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols();
 
-    int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows();
-    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols();
-    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows();
-    int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
+	assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+	assert(k == l);
+	if (k != l)
+	{
+		InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
+	}
 
-    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
-    if (k != l)
-    {
-        InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
-    }
+	if (beta == 0)
+		c.Resize(m, n);
+	else
+		c.VerifySize(m, n); // Can't resize if beta != 0
 
-    if (beta == 0)
-        c.RequireSize(m, n);
-    else
-        c.VerifySize(m, n); // Can't resize if beta != 0
+	cudaEvent_t cuStart, cuEnd;
+	float cuTime;
+	cudaEventCreate(&cuStart);
+	cudaEventCreate(&cuEnd);
+	cudaEventRecord(cuStart, 0);
 
-    c.PrepareDevice();
-    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
-    {
-        ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
-    }
-    else if (rhs.GetFormat() == matrixFormatSparseCSR)
-    {
-        GPUSparseMatrix<ElemType> tempMatrix(rhs.GetComputeDeviceId(), matrixFormatSparseCSC);
-        rhs.ConvertToSparseFormat(matrixFormatSparseCSC, tempMatrix);
-        MultiplyAndWeightedAdd(alpha, lhs, transposeA, tempMatrix, transposeB, beta, c);
-    }
-    else
-    {
-        NOT_IMPLEMENTED;
-    }
+	// cusparse has Sparse x Dense = Dense
+	// in order to use this function, we do a transform DxS = (S(T)xD(T))(T)
+	cusparseOperation_t operB = transposeA ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
+	cusparseOperation_t operA = transposeB ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
+
+	// c needs to be transposed first
+	GPUMatrix<ElemType> matrixC(c.GetNumCols(), c.GetNumRows(), c.GetComputeDeviceId());
+	// matrixC doesn't need value if beta == 0
+	if (beta != 0) {
+		cublasHandle_t cublas_handle = matrixC.GetCublasHandle(matrixC.GetComputeDeviceId());
+		ElemType one = 1;
+		ElemType zero = 0;
+		if (sizeof(ElemType) == sizeof(float))
+		{
+			cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, (int)c.GetNumCols(), (int)c.GetNumRows(), reinterpret_cast<float*>(&one),
+				reinterpret_cast<float*>(c.Data()), (int)c.GetNumRows(), reinterpret_cast<float*>(&zero), reinterpret_cast<float*>(c.Data()),
+				(int)c.GetNumRows(), reinterpret_cast<float*>(matrixC.Data()), (int)matrixC.GetNumRows());
+		}
+		else if (sizeof(ElemType) == sizeof(double))
+		{
+			cublasDgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, (int)c.GetNumCols(), (int)c.GetNumRows(), reinterpret_cast<double*>(&one),
+				reinterpret_cast<double*>(c.Data()), (int)c.GetNumRows(), reinterpret_cast<double*>(&zero), reinterpret_cast<double*>(c.Data()),
+				(int)c.GetNumRows(), reinterpret_cast<double*>(matrixC.Data()), (int)matrixC.GetNumRows());
+		}
+		else
+		{
+			RuntimeError("Unsupported template argument in GPUMatrix");
+		}
+	}
+
+	// cusparse does not support T(A) x T(B)
+	bool transposeFlag = false;
+	GPUSparseMatrix<ElemType> matrixA(rhs);
+	if (operA == CUSPARSE_OPERATION_TRANSPOSE
+		&& operB == CUSPARSE_OPERATION_TRANSPOSE)
+	{
+		matrixA.InplaceTranspose();
+		operA = CUSPARSE_OPERATION_NON_TRANSPOSE;
+		transposeFlag = true;
+	}
+
+	int p = operB == CUSPARSE_OPERATION_TRANSPOSE ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
+	int ldb = (int)lhs.GetNumRows();
+	int ldc = (int)matrixC.GetNumRows();
+
+	//cusparseHandle_t cusparseHandle = 0;
+	//CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
+	cusparseHandle_t cusparseHandle = rhs.GetCusparseHandle(rhs.GetComputeDeviceId());
+	cusparseMatDescr_t descr;
+	CUSPARSE_CALL(cusparseCreateMatDescr(&descr));
+	cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
+	cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
+
+	SyncGuard syncGuard;
+	if (matrixA.GetFormat() == matrixFormatSparseCSR) {
+		if (sizeof(ElemType) == sizeof(float))
+		{
+			CUSPARSE_CALL(cusparseScsrmm2(cusparseHandle, operA, operB, (int)matrixA.GetNumRows(), p, (int)matrixA.GetNumCols(),
+				(int)matrixA.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(matrixA.Buffer()),
+				matrixA.RowLocation(), matrixA.ColLocation(), reinterpret_cast<float*>(lhs.Data()),
+				ldb, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(matrixC.Data()), ldc));
+		}
+		else
+		{
+			CUSPARSE_CALL(cusparseDcsrmm2(cusparseHandle, operA, operB, (int)matrixA.GetNumRows(), p, (int)matrixA.GetNumCols(),
+				(int)matrixA.GetNumElemAllocated(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(matrixA.Buffer()),
+				matrixA.RowLocation(), matrixA.ColLocation(), reinterpret_cast<double*>(lhs.Data()),
+				ldb, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(matrixC.Data()), ldc));
+		}
+	}
+	else if (matrixA.GetFormat() == matrixFormatSparseCSC)
+	{
+		GPUSparseMatrix<ElemType> tmp = rhs;
+		if (transposeFlag == false)
+		{
+			tmp.InplaceTranspose();
+		}
+
+		if (sizeof(ElemType) == sizeof(float))
+		{
+			CUSPARSE_CALL(cusparseScsrmm2(cusparseHandle, operA, operB, (int)matrixA.GetNumRows(), p, (int)matrixA.GetNumCols(),
+				(int)matrixA.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(tmp.Buffer()),
+				tmp.ColLocation(), tmp.RowLocation(), reinterpret_cast<float*>(lhs.Data()),
+				ldb, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(matrixC.Data()), ldc));
+		}
+		else if (sizeof(ElemType) == sizeof(double))
+		{
+			CUSPARSE_CALL(cusparseDcsrmm2(cusparseHandle, operA, operB, (int)matrixA.GetNumRows(), p, (int)matrixA.GetNumCols(),
+				(int)matrixA.GetNumElemAllocated(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(tmp.Buffer()),
+				tmp.ColLocation(), tmp.RowLocation(), reinterpret_cast<double*>(lhs.Data()),
+				ldb, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(matrixC.Data()), ldc));
+		}
+	}
+	else
+	{
+		NOT_IMPLEMENTED;
+	}
+	//CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
+
+	// transpose the result
+	cublasHandle_t cublas_handle = matrixC.GetCublasHandle(matrixC.GetComputeDeviceId());
+	ElemType one = 1;
+	ElemType zero = 0;
+	if (sizeof(ElemType) == sizeof(float))
+	{
+		cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, (int)matrixC.GetNumCols(), (int)matrixC.GetNumRows(), reinterpret_cast<float*>(&one),
+			reinterpret_cast<float*>(matrixC.Data()), (int)matrixC.GetNumRows(), reinterpret_cast<float*>(&zero), reinterpret_cast<float*>(matrixC.Data()),
+			(int)matrixC.GetNumRows(), reinterpret_cast<float*>(c.Data()), (int)c.GetNumRows());
+	}
+	else if (sizeof(ElemType) == sizeof(double))
+	{
+		cublasDgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, (int)matrixC.GetNumCols(), (int)matrixC.GetNumRows(), reinterpret_cast<double*>(&one),
+			reinterpret_cast<double*>(matrixC.Data()), (int)matrixC.GetNumRows(), reinterpret_cast<double*>(&zero), reinterpret_cast<double*>(matrixC.Data()),
+			(int)matrixC.GetNumRows(), reinterpret_cast<double*>(c.Data()), (int)c.GetNumRows());
+	}
+	else
+	{
+		RuntimeError("Unsupported template argument in GPUMatrix");
+	}
+
+	cudaEventRecord(cuEnd, 0);
+	cudaEventSynchronize(cuEnd);
+	cudaEventElapsedTime(&cuTime, cuStart, cuEnd);
+	cudaEventDestroy(cuStart);
+	cudaEventDestroy(cuEnd);
+
+	GPUSparseMatrix<ElemType>::multimer += cuTime;
+	GPUSparseMatrix<ElemType>::mulcounter++;
+
+	if (GPUSparseMatrix<ElemType>::mulcounter % 2000 == 0) {
+		fprintf(stderr, "TotalGPUTime = %16.4f ms     MulCounter = %16ld\n",
+			GPUSparseMatrix<ElemType>::multimer, GPUSparseMatrix<ElemType>::mulcounter);
+		GPUSparseMatrix<ElemType>::multimer = 0.;
+		GPUSparseMatrix<ElemType>::mulcounter = 0L;
+	}
 }
 
 // dense X sparse = dense
