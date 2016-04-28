@@ -228,8 +228,8 @@ class ComputationNode(object):
                                         (pv, first_unreconciled_input)]
                                 else:
                                     unrec_pv = pv
-                                    from .ops.cntk1 import ReconcileMBLayout
-                                    pv = ReconcileMBLayout(
+                                    from .ops.cntk1 import ReconcileDynamicAxis
+                                    pv = ReconcileDynamicAxis(
                                         unrec_pv, first_unreconciled_input)
                                     child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
                                         input_map, desc, unrolled_nodes, inputs, 
