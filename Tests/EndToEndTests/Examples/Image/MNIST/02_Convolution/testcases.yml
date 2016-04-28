@@ -22,7 +22,7 @@ testCases:
       - Finished Epoch[{{integer}} of {{integer}}]
       - CrossEntropyWithSoftmax = 0.0
       - CrossEntropyWithSoftmax = {{float,tolerance=0.05}}
-      - EvalErrPerSample = {{float,tolerance=0.005}}
+      - EvalErrorPrediction = {{float,tolerance=0.005}}
       - learningRatePerSample = {{float,tolerance=0.1%}}
 
   Per-minibatch (with low train loss) training results must match:

@@ -515,7 +515,7 @@ already there from last epoch
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
 04/25/2016 08:18:18:  Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  2.39150986; EvalErrorPrediction = 0.94000000; TotalTime = 0.1717s; SamplesPerSecond = 582.4
-04/25/2016 08:18:18: Finished Epoch[ 1 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.3915099; TotalSamplesSeen = 100; EvalErrPerSample = 0.94; learningRatePerSample = 0.0049999999; EpochTime=0.195409
+04/25/2016 08:18:18: Finished Epoch[ 1 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.3915099; TotalSamplesSeen = 100; EvalErrorPrediction = 0.94; learningRatePerSample = 0.0049999999; EpochTime=0.195409
 04/25/2016 08:18:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.1'
 
 04/25/2016 08:18:18: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -526,7 +526,7 @@ already there from last epoch
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 1: 38, 46, ...
 04/25/2016 08:18:18:  Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  2.29544357; EvalErrorPrediction = 0.87000000; TotalTime = 0.0502s; SamplesPerSecond = 1990.7
-04/25/2016 08:18:18: Finished Epoch[ 2 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.2954436; TotalSamplesSeen = 200; EvalErrPerSample = 0.87; learningRatePerSample = 0.0049999999; EpochTime=0.050588
+04/25/2016 08:18:18: Finished Epoch[ 2 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.2954436; TotalSamplesSeen = 200; EvalErrorPrediction = 0.87; learningRatePerSample = 0.0049999999; EpochTime=0.050588
 04/25/2016 08:18:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.2'
 
 04/25/2016 08:18:18: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -537,7 +537,7 @@ already there from last epoch
 RandomOrdering: 30 retries for 100 elements (30.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 2: 34, 6, ...
 04/25/2016 08:18:18:  Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  2.11703629; EvalErrorPrediction = 0.69000000; TotalTime = 0.0501s; SamplesPerSecond = 1994.8
-04/25/2016 08:18:18: Finished Epoch[ 3 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.1170363; TotalSamplesSeen = 300; EvalErrPerSample = 0.69; learningRatePerSample = 0.0049999999; EpochTime=0.050473
+04/25/2016 08:18:18: Finished Epoch[ 3 of 12]: [Training Set] CrossEntropyWithSoftmax = 2.1170363; TotalSamplesSeen = 300; EvalErrorPrediction = 0.69; learningRatePerSample = 0.0049999999; EpochTime=0.050473
 04/25/2016 08:18:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.3'
 
 04/25/2016 08:18:18: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -548,7 +548,7 @@ already there from last epoch
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 3: 35, 34, ...
 04/25/2016 08:18:19:  Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  1.99407211; EvalErrorPrediction = 0.65000000; TotalTime = 0.0502s; SamplesPerSecond = 1990.1
-04/25/2016 08:18:19: Finished Epoch[ 4 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.9940721; TotalSamplesSeen = 400; EvalErrPerSample = 0.65; learningRatePerSample = 0.0049999999; EpochTime=0.050595
+04/25/2016 08:18:19: Finished Epoch[ 4 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.9940721; TotalSamplesSeen = 400; EvalErrorPrediction = 0.65; learningRatePerSample = 0.0049999999; EpochTime=0.050595
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.4'
 
 04/25/2016 08:18:19: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -559,7 +559,7 @@ already there from last epoch
 RandomOrdering: 13 retries for 100 elements (13.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 4: 30, 23, ...
 04/25/2016 08:18:19:  Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  1.72756805; EvalErrorPrediction = 0.45000000; TotalTime = 0.0500s; SamplesPerSecond = 1999.8
-04/25/2016 08:18:19: Finished Epoch[ 5 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.7275681; TotalSamplesSeen = 500; EvalErrPerSample = 0.45; learningRatePerSample = 0.0049999999; EpochTime=0.050365
+04/25/2016 08:18:19: Finished Epoch[ 5 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.7275681; TotalSamplesSeen = 500; EvalErrorPrediction = 0.45; learningRatePerSample = 0.0049999999; EpochTime=0.050365
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.5'
 
 04/25/2016 08:18:19: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -570,7 +570,7 @@ already there from last epoch
 RandomOrdering: 25 retries for 100 elements (25.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 5: 33, 43, ...
 04/25/2016 08:18:19:  Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  1.51963470; EvalErrorPrediction = 0.21000000; TotalTime = 0.0528s; SamplesPerSecond = 1893.2
-04/25/2016 08:18:19: Finished Epoch[ 6 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.5196347; TotalSamplesSeen = 600; EvalErrPerSample = 0.21; learningRatePerSample = 0.0049999999; EpochTime=0.053154
+04/25/2016 08:18:19: Finished Epoch[ 6 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.5196347; TotalSamplesSeen = 600; EvalErrorPrediction = 0.21; learningRatePerSample = 0.0049999999; EpochTime=0.053154
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.6'
 
 04/25/2016 08:18:19: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -581,7 +581,7 @@ already there from last epoch
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 6: 12, 17, ...
 04/25/2016 08:18:19:  Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  1.29057800; EvalErrorPrediction = 0.20000000; TotalTime = 0.0528s; SamplesPerSecond = 1893.5
-04/25/2016 08:18:19: Finished Epoch[ 7 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.290578; TotalSamplesSeen = 700; EvalErrPerSample = 0.2; learningRatePerSample = 0.0049999999; EpochTime=0.05323
+04/25/2016 08:18:19: Finished Epoch[ 7 of 12]: [Training Set] CrossEntropyWithSoftmax = 1.290578; TotalSamplesSeen = 700; EvalErrorPrediction = 0.2; learningRatePerSample = 0.0049999999; EpochTime=0.05323
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.7'
 
 04/25/2016 08:18:19: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -592,7 +592,7 @@ already there from last epoch
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 7: 40, 7, ...
 04/25/2016 08:18:19:  Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.97353958; EvalErrorPrediction = 0.05000000; TotalTime = 0.0525s; SamplesPerSecond = 1906.3
-04/25/2016 08:18:19: Finished Epoch[ 8 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.97353958; TotalSamplesSeen = 800; EvalErrPerSample = 0.05; learningRatePerSample = 0.0049999999; EpochTime=0.052803
+04/25/2016 08:18:19: Finished Epoch[ 8 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.97353958; TotalSamplesSeen = 800; EvalErrorPrediction = 0.05; learningRatePerSample = 0.0049999999; EpochTime=0.052803
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.8'
 
 04/25/2016 08:18:19: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -603,7 +603,7 @@ already there from last epoch
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 8: 8, 48, ...
 04/25/2016 08:18:19:  Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.73900360; EvalErrorPrediction = 0.03000000; TotalTime = 0.0531s; SamplesPerSecond = 1882.0
-04/25/2016 08:18:19: Finished Epoch[ 9 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.7390036; TotalSamplesSeen = 900; EvalErrPerSample = 0.03; learningRatePerSample = 0.0049999999; EpochTime=0.053471
+04/25/2016 08:18:19: Finished Epoch[ 9 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.7390036; TotalSamplesSeen = 900; EvalErrorPrediction = 0.03; learningRatePerSample = 0.0049999999; EpochTime=0.053471
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.9'
 
 04/25/2016 08:18:19: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -614,7 +614,7 @@ already there from last epoch
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 9: 14, 26, ...
 04/25/2016 08:18:19:  Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.57409992; EvalErrorPrediction = 0.00000000; TotalTime = 0.0527s; SamplesPerSecond = 1898.8
-04/25/2016 08:18:19: Finished Epoch[10 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.57409992; TotalSamplesSeen = 1000; EvalErrPerSample = 0; learningRatePerSample = 0.0049999999; EpochTime=0.053
+04/25/2016 08:18:19: Finished Epoch[10 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.57409992; TotalSamplesSeen = 1000; EvalErrorPrediction = 0; learningRatePerSample = 0.0049999999; EpochTime=0.053
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.10'
 
 04/25/2016 08:18:19: Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
@@ -625,7 +625,7 @@ already there from last epoch
 RandomOrdering: 31 retries for 100 elements (31.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 10: 22, 4, ...
 04/25/2016 08:18:19:  Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.45136490; EvalErrorPrediction = 0.00000000; TotalTime = 0.0524s; SamplesPerSecond = 1909.7
-04/25/2016 08:18:19: Finished Epoch[11 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.4513649; TotalSamplesSeen = 1100; EvalErrPerSample = 0; learningRatePerSample = 0.0049999999; EpochTime=0.052718
+04/25/2016 08:18:19: Finished Epoch[11 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.4513649; TotalSamplesSeen = 1100; EvalErrorPrediction = 0; learningRatePerSample = 0.0049999999; EpochTime=0.052718
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn.11'
 
 04/25/2016 08:18:19: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
@@ -636,7 +636,7 @@ already there from last epoch
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 2, 40, ...
 04/25/2016 08:18:19:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.34551861; EvalErrorPrediction = 0.00000000; TotalTime = 0.0523s; SamplesPerSecond = 1910.3
-04/25/2016 08:18:19: Finished Epoch[12 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.34551861; TotalSamplesSeen = 1200; EvalErrPerSample = 0; learningRatePerSample = 0.0049999999; EpochTime=0.052686
+04/25/2016 08:18:19: Finished Epoch[12 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.34551861; TotalSamplesSeen = 1200; EvalErrorPrediction = 0; learningRatePerSample = 0.0049999999; EpochTime=0.052686
 04/25/2016 08:18:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn'
 04/25/2016 08:18:19: CNTKCommandTrainEnd: train
 
@@ -1239,7 +1239,7 @@ reading from record 0 to 100 to be positioned properly for epoch
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 2, 40, ...
 04/25/2016 08:18:20:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; CrossEntropyWithSoftmax =  0.34551861; EvalErrorPrediction = 0.00000000; TotalTime = 0.1683s; SamplesPerSecond = 594.3
-04/25/2016 08:18:20: Finished Epoch[12 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.34551861; TotalSamplesSeen = 1200; EvalErrPerSample = 0; learningRatePerSample = 0.0049999999; EpochTime=0.195143
+04/25/2016 08:18:20: Finished Epoch[12 of 12]: [Training Set] CrossEntropyWithSoftmax = 0.34551861; TotalSamplesSeen = 1200; EvalErrorPrediction = 0; learningRatePerSample = 0.0049999999; EpochTime=0.195143
 04/25/2016 08:18:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160425081817.213778/Image_QuickE2E@debug_gpu/models/cntk.dnn'
 04/25/2016 08:18:20: CNTKCommandTrainEnd: train
 

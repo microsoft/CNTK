@@ -8687,7 +8687,7 @@ Starting minibatch loop.
  Epoch[ 1 of 2]-Minibatch[   3-   3 of 128]: SamplesSeen = 704; CrossEntropyWithSoftmax =  4.06727739; EvalErrorPrediction = 0.81534091; TotalTime = 4.95236s; TotalTimePerSample = 7.03461ms; SamplesPerSecond = 142
  Epoch[ 1 of 2]-Minibatch[   4-   4 of 128]: SamplesSeen = 566; CrossEntropyWithSoftmax =  4.57916368; EvalErrorPrediction = 0.90282686; TotalTime = 3.93890s; TotalTimePerSample = 6.95918ms; SamplesPerSecond = 143
  Epoch[ 1 of 2]-Minibatch[   5-   5 of 128]: SamplesSeen = 454; CrossEntropyWithSoftmax =  4.13725650; EvalErrorPrediction = 0.93171806; TotalTime = 4.04865s; TotalTimePerSample = 8.91774ms; SamplesPerSecond = 112
-Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 4.4157038; EvalErrPerSample = 0.89354599; learningRatePerSample = 0.02500000037; EpochTime=23.36309
+Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 4.4157038; EvalErrorPrediction = 0.89354599; learningRatePerSample = 0.02500000037; EpochTime=23.36309
 Starting Epoch 2: learning rate per sample = 0.025000  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [2560..5120] (first utterance at frame 2598), data subset 0 of 1, with 1 datapasses
 
@@ -8697,6 +8697,6 @@ Starting minibatch loop.
  Epoch[ 2 of 2]-Minibatch[   3-   3 of 128]: SamplesSeen = 496; CrossEntropyWithSoftmax =  4.08474141; EvalErrorPrediction = 0.88911290; TotalTime = 3.64828s; TotalTimePerSample = 7.35541ms; SamplesPerSecond = 135
  Epoch[ 2 of 2]-Minibatch[   4-   4 of 128]: SamplesSeen = 576; CrossEntropyWithSoftmax =  4.28329807; EvalErrorPrediction = 0.93402778; TotalTime = 4.47669s; TotalTimePerSample = 7.77202ms; SamplesPerSecond = 128
  Epoch[ 2 of 2]-Minibatch[   5-   5 of 128]: SamplesSeen = 596; CrossEntropyWithSoftmax =  4.22185009; EvalErrorPrediction = 0.91778523; TotalTime = 4.28988s; TotalTimePerSample = 7.19778ms; SamplesPerSecond = 138
-Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 4.1590457; EvalErrPerSample = 0.89682537; learningRatePerSample = 0.02500000037; EpochTime=22.958186
+Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 4.1590457; EvalErrorPrediction = 0.89682537; learningRatePerSample = 0.02500000037; EpochTime=22.958186
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__

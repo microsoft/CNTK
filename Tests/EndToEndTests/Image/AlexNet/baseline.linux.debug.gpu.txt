@@ -796,17 +796,17 @@ Starting Epoch 1: learning rate per sample = 0.000625  effective momentum = 0.90
 
 Starting minibatch loop.
  Epoch[ 1 of 3]-Minibatch[   1- 100]: SamplesSeen = 1600; CrossEntropyWithSoftmax =  7.41011780; EvalErrorPrediction = 1.00000000; TotalTime = 22.4203s; SamplesPerSecond = 71.4
-Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 7.2227564; EvalErrPerSample = 0.99966657; learningRatePerSample = 0.00062499999; EpochTime=41.5204
+Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 7.2227564; EvalErrorPrediction = 0.99966657; learningRatePerSample = 0.00062499999; EpochTime=41.5204
 Starting Epoch 2: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
  Epoch[ 2 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; CrossEntropyWithSoftmax =  6.90544067; EvalErrorPrediction = 0.99750000; TotalTime = 21.9407s; SamplesPerSecond = 72.9
-Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.9181705; EvalErrPerSample = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=41.0468
+Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.9181705; EvalErrorPrediction = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=41.0468
 Starting Epoch 3: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; CrossEntropyWithSoftmax =  6.87414368; EvalErrorPrediction = 0.99812500; TotalTime = 21.8825s; SamplesPerSecond = 73.1
-Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.884582; EvalErrPerSample = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=40.9431
+Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.884582; EvalErrorPrediction = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=40.9431
 CNTKCommandTrainEnd: Train
 WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.
 WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.

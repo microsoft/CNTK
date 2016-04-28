@@ -903,7 +903,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.20528259; EvalErrorPrediction = 0.36718750; TotalTime = 0.07469s; TotalTimePerSample = 0.02918ms; SamplesPerSecond = 34273
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.23613586; EvalErrorPrediction = 0.37343750; TotalTime = 0.07473s; TotalTimePerSample = 0.02919ms; SamplesPerSecond = 34256
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.25615234; EvalErrorPrediction = 0.38164063; TotalTime = 0.06937s; TotalTimePerSample = 0.02710ms; SamplesPerSecond = 36905
-Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.6294507; EvalErrPerSample = 0.46030274; learningRatePerSample = 0.003125000047; EpochTime=6.064291
+Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.6294507; EvalErrorPrediction = 0.46030274; learningRatePerSample = 0.003125000047; EpochTime=6.064291
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -941,7 +941,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.09596558; EvalErrorPrediction = 0.33476563; TotalTime = 0.07488s; TotalTimePerSample = 0.02925ms; SamplesPerSecond = 34185
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.08180847; EvalErrorPrediction = 0.33242187; TotalTime = 0.07475s; TotalTimePerSample = 0.02920ms; SamplesPerSecond = 34248
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.06572876; EvalErrorPrediction = 0.33632812; TotalTime = 0.06930s; TotalTimePerSample = 0.02707ms; SamplesPerSecond = 36938
-Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.1615628; EvalErrPerSample = 0.35460207; learningRatePerSample = 0.003125000047; EpochTime=2.397192
+Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.1615628; EvalErrorPrediction = 0.35460207; learningRatePerSample = 0.003125000047; EpochTime=2.397192
 CNTKCommandTrainEnd: DPT_Pre1
 
 
@@ -2313,7 +2313,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.17502136; EvalErrorPrediction = 0.35664062; TotalTime = 0.10139s; TotalTimePerSample = 0.03960ms; SamplesPerSecond = 25250
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.16159058; EvalErrorPrediction = 0.35195312; TotalTime = 0.10142s; TotalTimePerSample = 0.03962ms; SamplesPerSecond = 25242
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.17113953; EvalErrorPrediction = 0.35429688; TotalTime = 0.09582s; TotalTimePerSample = 0.03743ms; SamplesPerSecond = 26715
-Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.4990798; EvalErrPerSample = 0.42547607; learningRatePerSample = 0.003125000047; EpochTime=4.080698
+Finished Epoch[ 1 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.4990798; EvalErrorPrediction = 0.42547607; learningRatePerSample = 0.003125000047; EpochTime=4.080698
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -2351,7 +2351,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.07533875; EvalErrorPrediction = 0.33515625; TotalTime = 0.10161s; TotalTimePerSample = 0.03969ms; SamplesPerSecond = 25195
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.06417236; EvalErrorPrediction = 0.33007812; TotalTime = 0.10142s; TotalTimePerSample = 0.03962ms; SamplesPerSecond = 25242
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.04990234; EvalErrorPrediction = 0.33359375; TotalTime = 0.09606s; TotalTimePerSample = 0.03752ms; SamplesPerSecond = 26651
-Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.1123269; EvalErrPerSample = 0.34179688; learningRatePerSample = 0.003125000047; EpochTime=3.247955
+Finished Epoch[ 2 of 2]: [Training Set] CrossEntropyWithSoftmax = 1.1123269; EvalErrorPrediction = 0.34179688; learningRatePerSample = 0.003125000047; EpochTime=3.247955
 CNTKCommandTrainEnd: DPT_Pre2
 
 
@@ -4008,7 +4008,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.12955627; EvalErrorPrediction = 0.34296875; TotalTime = 0.12609s; TotalTimePerSample = 0.04926ms; SamplesPerSecond = 20302
  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.12482300; EvalErrorPrediction = 0.34570312; TotalTime = 0.12601s; TotalTimePerSample = 0.04922ms; SamplesPerSecond = 20315
  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; CrossEntropyWithSoftmax =  1.12771912; EvalErrorPrediction = 0.34453125; TotalTime = 0.12070s; TotalTimePerSample = 0.04715ms; SamplesPerSecond = 21209
-Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.4063962; EvalErrPerSample = 0.40274659; learningRatePerSample = 0.003125000047; EpochTime=4.879822
+Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.4063962; EvalErrorPrediction = 0.40274659; learningRatePerSample = 0.003125000047; EpochTime=4.879822
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -4030,7 +4030,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.06779022; EvalErrorPrediction = 0.31855469; TotalTime = 0.17932s; TotalTimePerSample = 0.03502ms; SamplesPerSecond = 28552
  Epoch[ 2 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.04079590; EvalErrorPrediction = 0.32910156; TotalTime = 0.17972s; TotalTimePerSample = 0.03510ms; SamplesPerSecond = 28488
  Epoch[ 2 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.06249695; EvalErrorPrediction = 0.32968750; TotalTime = 0.16769s; TotalTimePerSample = 0.03275ms; SamplesPerSecond = 30533
-Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.1440711; EvalErrPerSample = 0.34866944; learningRatePerSample = 0.003125000047; EpochTime=2.888686
+Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.1440711; EvalErrorPrediction = 0.34866944; learningRatePerSample = 0.003125000047; EpochTime=2.888686
 Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
 
@@ -4052,7 +4052,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 3 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.03016815; EvalErrorPrediction = 0.32480469; TotalTime = 0.17997s; TotalTimePerSample = 0.03515ms; SamplesPerSecond = 28448
  Epoch[ 3 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.04644623; EvalErrorPrediction = 0.32929687; TotalTime = 0.18024s; TotalTimePerSample = 0.03520ms; SamplesPerSecond = 28405
  Epoch[ 3 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  1.02751465; EvalErrorPrediction = 0.32265625; TotalTime = 0.16988s; TotalTimePerSample = 0.03318ms; SamplesPerSecond = 30138
-Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.0759742; EvalErrPerSample = 0.33315429; learningRatePerSample = 0.003125000047; EpochTime=2.893692
+Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.0759742; EvalErrorPrediction = 0.33315429; learningRatePerSample = 0.003125000047; EpochTime=2.893692
 Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
 
@@ -4074,7 +4074,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 4 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  0.96488800; EvalErrorPrediction = 0.30156250; TotalTime = 0.18003s; TotalTimePerSample = 0.03516ms; SamplesPerSecond = 28439
  Epoch[ 4 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  0.99069977; EvalErrorPrediction = 0.31640625; TotalTime = 0.17865s; TotalTimePerSample = 0.03489ms; SamplesPerSecond = 28659
  Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; CrossEntropyWithSoftmax =  0.97961731; EvalErrorPrediction = 0.29921875; TotalTime = 0.17196s; TotalTimePerSample = 0.03359ms; SamplesPerSecond = 29775
-Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.0073979; EvalErrPerSample = 0.31477052; learningRatePerSample = 0.003125000047; EpochTime=3.10907
+Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 1.0073979; EvalErrorPrediction = 0.31477052; learningRatePerSample = 0.003125000047; EpochTime=3.10907
 CNTKCommandTrainEnd: speechTrain
 
 
@@ -7725,7 +7725,7 @@ dengamma value 1.002380
 backpointers: 24.2% edges have at least one /sil/ unit inside
 parallelforwardbackwardlattice: 121 launches for forward, 121 launches for backward
 dengamma value 1.055052
-Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082210436; EvalErrPerSample = 0.33285296; learningRatePerSample = 1.999999995e-06; EpochTime=47.99884
+Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082210436; EvalErrorPrediction = 0.33285296; learningRatePerSample = 1.999999995e-06; EpochTime=47.99884
 Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.995898 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 82146), data subset 0 of 1, with 1 datapasses
 
@@ -8650,7 +8650,7 @@ dengamma value 1.161398
 backpointers: 37.9% edges have at least one /sil/ unit inside
 parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
 dengamma value 1.039845
-Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082834214; EvalErrPerSample = 0.33025581; learningRatePerSample = 1.999999995e-06; EpochTime=15.979751
+Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082834214; EvalErrorPrediction = 0.33025581; learningRatePerSample = 1.999999995e-06; EpochTime=15.979751
 Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.995898 
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163922), data subset 0 of 1, with 1 datapasses
 
@@ -9584,6 +9584,6 @@ dengamma value 1.062592
 backpointers: 28.7% edges have at least one /sil/ unit inside
 parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
 dengamma value 1.062592
-Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082648888; EvalErrPerSample = 0.32607052; learningRatePerSample = 1.999999995e-06; EpochTime=15.94079
+Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 0.082648888; EvalErrorPrediction = 0.32607052; learningRatePerSample = 1.999999995e-06; EpochTime=15.94079
 CNTKCommandTrainEnd: sequenceTrain
 __COMPLETED__

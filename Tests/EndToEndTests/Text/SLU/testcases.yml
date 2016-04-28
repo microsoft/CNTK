@@ -23,14 +23,14 @@ testCases:
     patterns:
       - "Finished Epoch[{{integer}} of {{integer}}]: [Validation Set]"
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrPerSample = {{float,tolerance=0.001%}}
+      - EvalErrorPrediction = {{float,tolerance=0.001%}}
       
   Epochs must be finished with expected results (training set):
     patterns:
       - "Finished Epoch[{{integer}} of {{integer}}]: [Training Set]"
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
       - TotalSamplesSeen = {{integer}}
-      - EvalErrPerSample = {{float,tolerance=0.001%}}
+      - EvalErrorPrediction = {{float,tolerance=0.001%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch (with low train loss) training results must match:
