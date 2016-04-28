@@ -421,6 +421,10 @@ class InputMap(object):
 
     def generate_config(self):
         if self.reader is None:
+            if not self.unmapped_nodes:
+                # No inputs in the graph
+                return ''
+
             # We have found only inputs that were directly initialized.
             # In this case, we need to serialize them into one file.
 

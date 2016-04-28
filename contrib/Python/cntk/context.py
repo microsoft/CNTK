@@ -319,7 +319,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_nodes, input_map, node_unit_test=False):
+    def _generate_eval_config(self, root_nodes, input_map=None, node_unit_test=False):
         '''
         Generates the configuration file for write action.
 
@@ -340,15 +340,14 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         if len(inputs) == 0:
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement on CNTK side
-            data = [[1, 2], [3, 4]]
-            fn = os.path.join(self.directory, 'dummy_input.txt')
-            from .reader import NumPyReader
-            reader = NumPyReader(data, fn)
-            from .ops.cntk1 import Input
-            dummy_input_node = Input(2, var_name='dummy_node')
-            reader.add_input(dummy_input_node, 0, 2)
-            description += "\n" + " " * MODEL_INDENTATION + \
-                "dummy_node = Input(2, tag='output')"
+            #import ipdb;ipdb.set_trace()
+            from cntk.ops import input_reader
+            dummy_input = input_reader([[[1]]])
+            dummy_input.var_name='_dummy_input'
+            input_map._add_unmapped(dummy_input)
+            desc, _inputs = dummy_input.to_config(input_map)
+            description += '\n\n' + desc
+
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
