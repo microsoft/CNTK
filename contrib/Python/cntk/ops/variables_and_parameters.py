@@ -15,7 +15,7 @@ from ..reader import CNTKTextFormatReader
 from .. import utils
 
 
-def input_reader(value, alias=None, has_dynamic_axis=True):
+def input_reader(value, alias=None, has_dynamic_axis=True, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -35,9 +35,8 @@ def input_reader(value, alias=None, has_dynamic_axis=True):
         else:
             cntk_shape = value[0]
 
-        from ..ops import cntk1
+        node = input(cntk_shape)
         from ..reader import LazyInputReader
-        node = cntk1.Input(cntk_shape)
         node.reader = LazyInputReader(
             value,
             input_alias=alias,
