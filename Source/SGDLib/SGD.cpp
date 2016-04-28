@@ -139,7 +139,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
 // -----------------------------------------------------------------------
 
 static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
-static void LogCriterion(const wstring& name, const EpochCriterion& crit);
+static void LogCriterion(const wstring& name, const EpochCriterion& crit, bool addSemicolon = true);
 
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
@@ -480,11 +480,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
             lrControlCriterion = epochCriterion.Average();
 
-        // note: TrainLossPerSample is for this epoch, while TotalSamplesSeen is the total over all epochs.
 #if 1
-        LOGPRINTF(stderr,
-                  "Finished Epoch[%2d of %d]: [Training] %ls = %.8f * %d; ",
-                  i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average(), (int)epochCriterion.second);
+        //LOGPRINTF(stderr,
+        //          "Finished Epoch[%2d of %d]: [Training] %ls = %.8f * %d; ",
+        //          i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average(), (int)epochCriterion.second);
+        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
+        LogCriterion(criterionNodes[0]->NodeName(), epochCriterion);
 #else
         LOGPRINTF(stderr,
                   "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; TotalSamplesSeen = %d; ",
@@ -523,14 +524,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
-                LogCriterion(cvSetTrainAndEvalNodes[k], vScore[k]);
+                LogCriterion(cvSetTrainAndEvalNodes[k], vScore[k], k + 1 < vScore.size());
                 //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
             fprintf(stderr, "\n");
 
             if (m_useCVSetControlLRIfCVExists)
             {
                 if (m_useEvalCriterionControlLR && vScore.size() > 1)
-                    lrControlCriterion = vScore[1].Average();
+                    lrControlCriterion = vScore[1].Average(); // use the first of possibly multiple eval criteria
                 else
                     lrControlCriterion = vScore[0].Average(); // the first one is the training criterion
             }
@@ -713,7 +714,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value);
 
 // log a criterion value in a form like 'av * count; '
-static void LogCriterion(const wstring& name, const EpochCriterion& crit)
+static void LogCriterion(const wstring& name, const EpochCriterion& crit, bool addSemicolon /*= true*/)
 {
     double evalErrorSinceLastLogged =      crit.Average();
     int evalSamplesSinceLastLogged  = (int)crit.second;
@@ -724,7 +725,9 @@ static void LogCriterion(const wstring& name, const EpochCriterion& crit)
         fprintf(stderr, (GeneratePaddedFloatOrExpFormat(2, 3, 100*evalErrorSinceLastLogged) + "%%").c_str(), 100*evalErrorSinceLastLogged);
     else
         fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 8, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
-    fprintf(stderr, " * %d; ", evalSamplesSinceLastLogged);
+    fprintf(stderr, " * %d", evalSamplesSinceLastLogged);
+    if (addSemicolon) // if no more numbers follow, then use addSemicolon = false
+        fprintf(stderr, "; ");
 }
 
 template <class ElemType>
@@ -1637,8 +1640,8 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
 
         fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Evaluating trial minibatchSize=%zd out of range %zd..%zd ...\n\n",
-                  trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
+        LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Evaluating trial minibatchSize=%d out of range %d..%d ...\n\n",
+                  (int)trialMinibatchSize, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
 
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
         EpochCriterion epochCriterion(EpochCriterion::Infinity());
@@ -1663,7 +1666,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             lastTriedTrialEpochCriterion = baseCriterion;
             isFirstIteration = false;
 
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Computed BaseCriterion %.10g\n", baseCriterion.Average());
+            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Computed baseCriterion %.8f\n", baseCriterion.Average());
         }
         else if (!epochCriterion.IsNan() &&
                  epochCriterion.Average() > (baseCriterion.Average() * (1.0 + (m_minibatchSearchCriterionErrorMargin / 100.0))))
@@ -1680,12 +1683,12 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             lastTriedTrialEpochCriterion = epochCriterion;
             if (trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
             {
-                LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Keep searching... EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
+                LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Keep searching... epochCriterion = %.8f vs bBaseCriterion = %.8f\n",
                           epochCriterion.Average(), baseCriterion.Average());
             }
         }
     }
-    LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search successful. New minibatchSize is %d. EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
+    LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n\n",
               (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion.Average(), baseCriterion.Average());
 
     return lastTriedTrialMinibatchSize;
@@ -1717,18 +1720,11 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                   prefixMsg);
 
-    // BUGBUG: This must also log the criterion-node name.
-    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: CrossEntropyWithSoftmax = %.8g;", epochCriterion.Average());
-
-    if (epochEvalErrors.size() == 1)
-        LOGPRINTF(stderr, "EvalErrPerSample = %.8g; learningRatePerSample = %.8g\n", epochEvalErrors[0].Average(), learnRatePerSample);
-    else
-    {
-        LOGPRINTF(stderr, "EvalErrPerSample ");
-        for (size_t i = 0; i < epochEvalErrors.size(); i++)
-            LOGPRINTF(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i].Average());
-        LOGPRINTF(stderr, "learningRatePerSample = %.8g\n", learnRatePerSample);
-    }
+    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: ");
+    LogCriterion(criterionNodes[0]->NodeName(), epochCriterion);
+    for (size_t j = 0; j < epochEvalErrors.size(); j++)
+        LogCriterion(evaluationNodes[j]->NodeName(), epochEvalErrors[j]);
+    fprintf(stderr, "learningRatePerSample = %.8g\n", learnRatePerSample);
 
     // go back to where we came from
     int baseModelEpoch = epochNumber - 1;
