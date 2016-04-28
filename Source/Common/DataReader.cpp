@@ -16,7 +16,6 @@
 #include "Config.h"
 #include "ScriptableObjects.h"
 #include <string>
-#include "CompositeDataReader.h"
 
 using namespace std;
 
@@ -108,9 +107,13 @@ DataReader::DataReader(const ConfigRecordType& config)
     }
     else if (hasDeserializers)
     {
+        // Creating Composite Data Reader that allow to combine deserializers.
+        // This should be changed to link statically when SGD uses the new interfaces.
         wstring ioName = L"ioName";
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"CompositeDataReader"), GetReaderName(precision));
         m_ioNames.push_back(ioName);
-        m_dataReaders[ioName] = new CompositeDataReader(precision);
+        assert(getReaderProc != nullptr);
+        getReaderProc(&m_dataReaders[ioName]);
     }
     else // legacy
     {
