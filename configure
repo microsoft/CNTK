@@ -32,6 +32,7 @@ default_buildtype=release
 have_gdk=no
 gdk_path=
 gdk_check=include/nvidia/gdk/nvml.h
+gdk_check_alternate=include/nvml.h
 
 have_cub=no
 cub_path=
@@ -40,6 +41,7 @@ cub_check=cub/cub.cuh
 have_cudnn=no
 cudnn_path=
 cudnn_check=cuda/include/cudnn.h
+cudnn_check_alternate=include/cudnn.h
 
 have_opencv=no
 opencv_path=
@@ -337,7 +339,7 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $gdk_check) = yes
+                if test $(check_dir $optarg $gdk_check) = yes || test $(check_dir $optarg $gdk_check_alternate) = yes
                 then
                     gdk_path=$optarg
                 else
@@ -358,7 +360,7 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $cudnn_check) = yes
+                if test $(check_dir $optarg $cudnn_check) = yes || test $(check_dir $optarg $cudnn_check_alternate) = yes
                 then
                     cudnn_path=$optarg
                 else
