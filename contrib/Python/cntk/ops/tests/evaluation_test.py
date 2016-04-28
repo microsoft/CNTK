@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for evalation operations. Each operation is tested for 
+Unit tests for evaluation operations. Each operation is tested for 
 the forward and the backward pass
 """
 
