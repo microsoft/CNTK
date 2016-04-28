@@ -1717,16 +1717,17 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                   prefixMsg);
 
-    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion.Average());
+    // BUGBUG: This must also log the criterion-node name.
+    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: CrossEntropyWithSoftmax = %.8g;", epochCriterion.Average());
 
     if (epochEvalErrors.size() == 1)
-        LOGPRINTF(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0].Average(), learnRatePerSample);
+        LOGPRINTF(stderr, "EvalErrPerSample = %.8g; learningRatePerSample = %.8g\n", epochEvalErrors[0].Average(), learnRatePerSample);
     else
     {
         LOGPRINTF(stderr, "EvalErrPerSample ");
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
             LOGPRINTF(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i].Average());
-        LOGPRINTF(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
+        LOGPRINTF(stderr, "learningRatePerSample = %.8g\n", learnRatePerSample);
     }
 
     // go back to where we came from

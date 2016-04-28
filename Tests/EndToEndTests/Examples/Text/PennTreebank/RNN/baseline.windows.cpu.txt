@@ -1162,22 +1162,22 @@ Allocating matrices for forward and/or backward propagation.
 
 04/15/2016 13:36:28: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:36:30: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 6.8161039; TotalSamplesSeen = 2061; AvgLearningRatePerSample = 0.1; EpochTime=1.47982
+04/15/2016 13:36:30: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.8161039; TotalSamplesSeen = 2061; learningRatePerSample = 0.1; EpochTime=1.47982
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-704]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.4959439    Perplexity = 662.44921    
-04/15/2016 13:36:45: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 6.4959439
+04/15/2016 13:36:45: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 6.4959439
 04/15/2016 13:36:45: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160415142636.929316\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.1'
 
 04/15/2016 13:36:46: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 04/15/2016 13:36:46: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:36:47: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 6.4938383; TotalSamplesSeen = 4142; AvgLearningRatePerSample = 0.1; EpochTime=1.10728
+04/15/2016 13:36:47: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.4938383; TotalSamplesSeen = 4142; learningRatePerSample = 0.1; EpochTime=1.10728
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-353]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.6035933    Perplexity = 737.74136    
-04/15/2016 13:37:00: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 6.6035933
+04/15/2016 13:37:00: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 6.6035933
 04/15/2016 13:37:00: Loading previous model with best training-criterion value: E:\cygwin64\tmp\cntk-test-20160415142636.929316\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.1.
 04/15/2016 13:37:00: learnRatePerSample reduced to 0.050000001
 04/15/2016 13:37:01: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160415142636.929316\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2'
@@ -1186,11 +1186,11 @@ Final Results: Minibatch[1-353]: SamplesSeen = 73760    TrainNodeClassBasedCross
 
 04/15/2016 13:37:01: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:37:02: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 6.3918738; TotalSamplesSeen = 4404; AvgLearningRatePerSample = 0.050000001; EpochTime=1.08123
+04/15/2016 13:37:02: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 6.3918738; TotalSamplesSeen = 4404; learningRatePerSample = 0.050000001; EpochTime=1.08123
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-193]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.9517403    Perplexity = 1044.9667    
-04/15/2016 13:37:14: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 6.9517403
+04/15/2016 13:37:14: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 6.9517403
 04/15/2016 13:37:14: Loading previous model with best training-criterion value: E:\cygwin64\tmp\cntk-test-20160415142636.929316\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2.
 04/15/2016 13:37:14: learnRatePerSample reduced to 0.025
 04/15/2016 13:37:15: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160415142636.929316\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn'

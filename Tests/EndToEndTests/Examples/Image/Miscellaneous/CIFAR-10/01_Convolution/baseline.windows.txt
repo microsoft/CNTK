@@ -380,7 +380,7 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 04/26/2016 16:11:37: Starting minibatch loop.
-04/26/2016 16:11:37: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 128; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=2.99685
+04/26/2016 16:11:37: Finished Epoch[ 1 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 128; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=2.99685
 04/26/2016 16:11:37: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.1'
 
 04/26/2016 16:11:37: Starting Epoch 2: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -389,7 +389,7 @@ starting epoch 1 at record count 128, and file position 128
 already there from last epoch
 
 04/26/2016 16:11:37: Starting minibatch loop.
-04/26/2016 16:11:37: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 256; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.037881
+04/26/2016 16:11:37: Finished Epoch[ 2 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 256; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.037881
 04/26/2016 16:11:37: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.2'
 
 04/26/2016 16:11:37: Starting Epoch 3: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -398,7 +398,7 @@ starting epoch 2 at record count 256, and file position 256
 already there from last epoch
 
 04/26/2016 16:11:37: Starting minibatch loop.
-04/26/2016 16:11:37: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 384; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.038201
+04/26/2016 16:11:37: Finished Epoch[ 3 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 384; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.038201
 04/26/2016 16:11:37: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.3'
 
 04/26/2016 16:11:37: Starting Epoch 4: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -407,7 +407,7 @@ starting epoch 3 at record count 384, and file position 384
 already there from last epoch
 
 04/26/2016 16:11:37: Starting minibatch loop.
-04/26/2016 16:11:37: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 512; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.045227
+04/26/2016 16:11:37: Finished Epoch[ 4 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 512; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.045227
 04/26/2016 16:11:37: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.4'
 
 04/26/2016 16:11:37: Starting Epoch 5: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -416,7 +416,7 @@ starting epoch 4 at record count 512, and file position 512
 already there from last epoch
 
 04/26/2016 16:11:37: Starting minibatch loop.
-04/26/2016 16:11:37: Finished Epoch[ 5 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 640; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.037139
+04/26/2016 16:11:37: Finished Epoch[ 5 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 640; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.037139
 04/26/2016 16:11:37: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.5'
 Setting dropout rate to 0.5.
 
@@ -426,7 +426,7 @@ starting epoch 5 at record count 640, and file position 640
 already there from last epoch
 
 04/26/2016 16:11:38: Starting minibatch loop.
-04/26/2016 16:11:38: Finished Epoch[ 6 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 768; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.033937
+04/26/2016 16:11:38: Finished Epoch[ 6 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 768; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.033937
 04/26/2016 16:11:38: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.6'
 
 04/26/2016 16:11:38: Starting Epoch 7: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -435,7 +435,7 @@ starting epoch 6 at record count 768, and file position 768
 already there from last epoch
 
 04/26/2016 16:11:38: Starting minibatch loop.
-04/26/2016 16:11:38: Finished Epoch[ 7 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 896; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.030754
+04/26/2016 16:11:38: Finished Epoch[ 7 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 896; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.030754
 04/26/2016 16:11:38: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.7'
 
 04/26/2016 16:11:38: Starting Epoch 8: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -444,7 +444,7 @@ starting epoch 7 at record count 896, and file position 896
 already there from last epoch
 
 04/26/2016 16:11:38: Starting minibatch loop.
-04/26/2016 16:11:38: Finished Epoch[ 8 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 1024; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.035039
+04/26/2016 16:11:38: Finished Epoch[ 8 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 1024; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.035039
 04/26/2016 16:11:38: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.8'
 
 04/26/2016 16:11:38: Starting Epoch 9: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -453,7 +453,7 @@ starting epoch 8 at record count 1024, and file position 1024
 already there from last epoch
 
 04/26/2016 16:11:38: Starting minibatch loop.
-04/26/2016 16:11:38: Finished Epoch[ 9 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 1152; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.03513
+04/26/2016 16:11:38: Finished Epoch[ 9 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 1152; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.03513
 04/26/2016 16:11:38: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.9'
 
 04/26/2016 16:11:38: Starting Epoch 10: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
@@ -462,7 +462,7 @@ starting epoch 9 at record count 1152, and file position 1152
 already there from last epoch
 
 04/26/2016 16:11:38: Starting minibatch loop.
-04/26/2016 16:11:38: Finished Epoch[10 of 10]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 1280; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.00015625; EpochTime=0.030829
+04/26/2016 16:11:38: Finished Epoch[10 of 10]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 1280; EvalErrPerSample = 0; learningRatePerSample = 0.00015625; EpochTime=0.030829
 04/26/2016 16:11:38: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160426171121.207882\Examples\Image\Miscellaneous\CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution'
 04/26/2016 16:11:38: CNTKCommandTrainEnd: Train
 
