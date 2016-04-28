@@ -24,10 +24,10 @@ command = write
 
 # experiment id
 
-decodeModel = 4
-beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
+decodeModel = 8
+beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 3
+deviceId = 5
 #ExpId = 26-$deviceId$-g2p
 ExpId = 26-4-g2p # for decoding a different model
 #ExpId = 41-$deviceId$-s2sae    # TASK
@@ -43,7 +43,7 @@ isBidirectional=false
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log1
+stderr = $ExpDir$/S2SAutoEncoder.log2
 
 precision  = "float"
 traceLevel = 1
@@ -51,7 +51,7 @@ modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
 # decoding config
 decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
-decodeOutputPath = "$decodeModelPath$.bc$beamDepth$"
+decodeOutputPath = "$decodeModelPath$.bl$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
 
@@ -254,7 +254,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderInputDim = embeddingDim #labelsEmbedded.dim
 
     decoderDynamicAxis = labelsEmbedded
-    FixedWindowAttentionHook = BS.RNNs.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
+    FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
 
     # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
     decoderOutputLayer = Length (decoderDims)-1
@@ -638,11 +638,12 @@ test = [
 write = [
     action = "write"
 
-    #BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
+    BrainScriptNetworkBuilder = (BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
+    #BrainScriptNetworkBuilder = (BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), beamDepth))
 
     # last trained model
     # We need to make a change:
-    BrainScriptNetworkBuilder = ([
+    xBrainScriptNetworkBuilder = ([
 
         enableTracing = true
         traceFrequency = 1000
@@ -659,29 +660,6 @@ write = [
         IsFirst = Loop.IsFirst
         If = Boolean.If
         OnesTensor = Constants.OnesTensor
-
-        # macro that extracts top D hypotheses from a 2D tensor
-        # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)
-        # output: [w,n1,n2]     n1 = input hyp index (prev top N); n2 = output hyp index (new top N)
-        # e.g. 4 words, beam 3; view this as 3 [4x3] planes "drawn" 3-dimensionally, with depth being the 3rd tensor index
-        GetTopNTensor (D, scores) = [
-            # recurse over up to D elements
-            # In each recursion:
-            #  - pick the best over (w,n)
-            #  - subtract it out from scores
-            recursion[n:0..D-1] =
-            [
-                curBestScores = if n == 0                            # scores excluding paths better than rank n
-                                then scores                          # top: just the path scores
-                                else recursion[n - 1].nextBestScores # next: path scores after removing all we already got
-                best = TraceOneHot (Hardmax (curBestScores), 'best')                       # best = one-hot over (w,n)
-                nextBestScores = curBestScores + Constant (-1e30) .* best     # set the ones we've already got to -INF
-                # TODO: use proper -INF; e.g. -1/0 in BS. Needs to be tested thoroughly.
-            ]
-            # splice them together into a single tensor
-            asArray[n:0..D-1] = recursion[n].best  # this is a BS array consisting only of the 'best' field    ('from r in recursion select r.best')
-            spliced = Splice (axis = 3, asArray)   # convert BS array index n to tensor index n1
-        ].spliced
 
         modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
@@ -1006,7 +984,8 @@ write = [
 
         model = if beamDepth == 0 then top1DecodingModel (modelAsTrained)
            else if beamDepth == 1 then top1DecodingModel (greedyDecodingModel)
-           else                        beamDecodingModel
+           #else                        beamDecodingModel
+           else                        BS.Seq2Seq.BeamSearchSequenceDecoderFrom (modelAsTrained, beamDepth)
 
     ].model)
 
@@ -1021,7 +1000,7 @@ write = [
     #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
 
     # joint:
-    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+    #outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     #outputNodeNames = labels1:network.beamDecodingModel.decode.out
     #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores

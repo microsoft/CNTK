@@ -568,7 +568,7 @@ RNNs =
 # sequence-to-sequence models
 ##############################################################################
 
-S2S =
+Seq2Seq =
 [
     # attention model
     # The attention model is an additional input vector to the LSTM.
@@ -629,6 +629,29 @@ S2S =
         ].augmentedX
     ].AugmentInputHook
 
+    # helper macro that extracts top D hypotheses from a 2D tensor
+    # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)
+    # output: [w,n1,n2]     n1 = input hyp index (prev top N); n2 = output hyp index (new top N)
+    # e.g. 4 words, beam 3; view this as 3 [4x3] planes "drawn" 3-dimensionally, with depth being the 3rd tensor index
+    GetTopNTensor (D, scores) = [
+        # recurse over up to D elements
+        # In each recursion:
+        #  - pick the best over (w,n)
+        #  - subtract it out from scores
+        recursion[n:0..D-1] =
+        [
+            curBestScores = if n == 0                            # scores excluding paths better than rank n
+                            then scores                          # top: just the path scores
+                            else recursion[n - 1].nextBestScores # next: path scores after removing all we already got
+            best = Hardmax (curBestScores)                       # best = one-hot over (w,n)
+            nextBestScores = curBestScores + Constant (-1e30) .* best     # set the ones we've already got to -INF
+            # TODO: use proper -INF; e.g. -1/0 in BS. Needs to be tested thoroughly.
+        ]
+        # splice them together into a single tensor
+        asArray[n:0..D-1] = recursion[n].best  # this is a BS array consisting only of the 'best' field    ('from r in recursion select r.best')
+        spliced = Splice (axis = 3, asArray)   # convert BS array index n to tensor index n1
+    ].spliced
+
     # Create a greedy decoder model from an existing trained model.
     # The input model is expected to have these nodes:
     #  - decoderHistoryFromOutput: the decoding output of a time step (Hardmax (outputProbability))
@@ -639,20 +662,213 @@ S2S =
     #  - inputSequence
     #  - labelSequence (only passed through for scoring, not used in decoding)
     # The returned model has the following one-hot outputs:
-    #  - decodedSequence
+    #  - decodedSequence  --TODO: currently decodeOut; rename this
     #  - inputSequence
     #  - labelSequence
     # To decode greedily, in "write" or "eval" specify the model as:
     #    BrainScriptNetworkBuilder = (BS.S2S.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
     GreedySequenceDecoderFrom (modelAsTrained) = [
         scoreSequence = modelAsTrained.z
-        decodedSequence = Pass (      Hardmax (scoreSequence), tag='output')
-        inputSequence   = Pass (modelAsTrained.inputSequence,  tag='output')
-        labelSequence   = Pass (modelAsTrained.labelSequence,  tag='output')
+        decodeOut = Pass (      Hardmax (scoreSequence), tag='output')
+        inputsOut = Pass (modelAsTrained.inputSequence,  tag='output')
+        labelsOut = Pass (modelAsTrained.labelSequence,  tag='output')
         model = BS.Network.Edit (modelAsTrained,
                                  #BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback),
                                  BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, modelAsTrained.decoderHistoryFromOutput),
-                                 decodedSequence : inputSequence : labelSequence)
+                                 decodeOut : inputsOut : labelsOut)
+    ].model
+
+    # turning a regular LSTM to a top-N beam-search decoder:
+    #  - add a depth axis of dimension N to all nodes inside the decoder loop
+    #     - only needs the init signal for PastValue to be that
+    #  - h and c must be shuffled versions of their PastValue
+    #     - since what are the top N in one time step is not the top N in the next
+    #     - reshufling and adding depth to the init signal can be done at the same place
+    #  - decoder output must determine the top N and a reshuffling matrix for h and c
+    #     - the current Hardmax needs to be replaced by something that outputs these (output depth N)
+    #     - we get a N^2 depth: [V x (input set) x (top N output hypos)]
+    #     - reshuffling matrix is reduction over V (multiply with row of V ones) plus possibly a transposition
+    #  - we need an accumulated path score
+    #     - start value constructed by stacking a 0 and N-1 -INF
+    #  - for testing, we can output the current best in each step
+    #     - that's a Slice()
+    #  - traceback is a right-to-left recurrence
+    #     - output best hypo conditioned on the path (it is already known)
+    # beam search of width 'beamDepth'
+    BeamSearchSequenceDecoderFrom (modelAsTrained, beamDepth) = [
+
+        scoreSequence = modelAsTrained.z
+        vocabSize    = scoreSequence.dim
+
+        # TODO: use ReduceSum
+        ReduceAxis (axisDim, x, axis=1) =   # unfortunately, we must feed in the dimension of the axis, it can't be inferred
+            if      axis == 1 then Times (Constants.OnesTensor (axisDim), x, outputRank=0)
+            else if axis == 2 then ReduceAxis (axisDim, TransposeDimensions (x, 1, 2), axis=1)
+            else Fail("ReduceAxis: Only supports axes 1 and 2.")
+
+        # === BEGIN DECODER ===
+
+        # constants for initial score and final traceback
+        initialPathScores = FirstAndOther (0, LOGZERO, beamDepth, axis = 2)  # [1 x D]: [ 0, -INF, -INF, -INF, ... ]
+        finalHyp          = FirstAndOther (1, 0,       beamDepth, axis = 1)  # [D] the final token is the top-scoring hypothesis, that is, hyp[0]
+
+        # path expansion of the D hypotheses that were best in previous time step (ordered as in previous time step)
+        logLLs = Columnwise (LogSoftmax, beamDepth, scoreSequence)                                      # [V x Dprev] log  P(w|hist)
+        expandedPathScores = logLLs + Boolean.If (Loop.IsFirst (logLLs), initialPathScores, Loop.Previous (tokens.score)) # [V x Dprev] log (P(w|hist) * P(hist)) for all top D hypotheses
+
+        # determine top D of expanded paths
+        topPaths      = GetTopNTensor (beamDepth, expandedPathScores) # [V x Dprev] -> [V x Dprev x Dnew]
+        topPathScores = topPaths .* expandedPathScores                #                [V x Dprev x Dnew]
+
+        # form new decoding token, by reducing topPaths(Scores) along relevant dimensions
+        tokens = [                                    # [. x Dnew]
+            from  = ReduceAxis (axis=1, vocabSize, topPaths) # [Dprev x Dnew], reduced over V
+            word  = ReduceAxis (axis=2, beamDepth, topPaths) # [V x Dnew], reduced over Dprev
+            score = Constants.OnesTensor (1/*output dim*/ : /*reduction dims: */vocabSize : beamDepth/*Dprev*/) * topPathScores # [1 x Dnew], reduced over [V x Dprev] and inserted a '1'
+        ]
+
+        # network feedback for next time step
+        # BUGBUG: Need to import EmbedLabels functionality from models
+        decoderFeedback = /*EmbedLabels*/ (tokens.word) # [embeddingDim x Dnew]
+        delayedDecoderFeedback = Boolean.If (Loop.IsFirst (labelSentenceStartEmbeddedScattered), labelSentenceStartEmbeddedScattered, Loop.Previous (decoderFeedback))
+
+        # final traceback
+        traceback = Boolean.If (Loop.IsLast (modelAsTrained.labelSentenceStartEmbeddedScattered/*tokens.from*/), finalHyp, Loop.Next (tokens.from * traceback)) # [D] one-hot, multiplying tokens.from from the left will select another one-hot row of tokens.from
+        decodeHyp = Times (topPaths, traceback, outputRank=2) # [V x Dprev] 2D one-hot, selected the best hyp according to traceback
+        decode = decodeHyp * Constants.OnesTensor (beamDepth) # [V] reduces over Dprev -> 1D one-hot
+        # TODO: Can this be done in one ^^ go?
+
+        # === END DECODER ===
+
+        # propagate LSTM state to the right top-N rank given where that rank came from in the previous time step
+
+        # PropagateTopN:
+        # tokens.from: [Dprev, Dnew]
+        #   v--------- best came from input hyp[1]
+        #     v------- second best came from input hyp[0]
+        #       v----- third best came from input hyp[2]
+        #   0 1 0
+        #   1 0 0
+        #   0 0 1
+        # tokens.from[:,n] one-hot encodes the best predecessor at top-N rank n
+        # each column is a one-hot vector
+        # multiplying with such a column from the right will select the column represented by the one-hot value
+
+        # logLLs: get decoder log likelihoods
+
+        # initialPathScores: decoder start token: 0 for first hyp, -INF for the others
+        LOGZERO = -1e30
+
+        # expandedPathScores: path expansion, [V x 1] + [1 x D] -> [V x D]
+
+        # topPaths:
+        #   +-----+
+        #   |0 0 0|
+        #   |0 0 0|-+
+        #   |0 1 0|0|     means word[2] in input hyp[1] was the best
+        #   |0 0 0|0|-+
+        #   +-----+0|0|
+        #     |1 0 0|0|   means word[3] in input hyp[0] was the second best
+        #     +-----+1|   means word[2] in input hyp[2] was the third best
+        #       |0 0 0|
+        #       +-----+
+
+        # tokens.word:
+        #tokens.word = ReduceSum (axis=2, topPaths) # TODO: add an axis parameter to SumColumnElements()
+        #   +-+
+        #   |0|
+        #   |0|-+
+        #   |1|0|     means word[2] in input hyp[1] was the best
+        #   |0|0|-+
+        #   +-+0|0|
+        #     |1|0|   means word[3] in input hyp[0] was the second best
+        #     +-+1|   means word[2] in input hyp[2] was the third best
+        #       |0|
+        #       +-+
+
+        # tokens.from:
+        # before dropping the first dimension: [V x Dprev x Dnew]
+        #   +-----+
+        #   |0 1 0|       means input hyp[1] gave rise to the best    
+        #   +-----+-+  
+        #     |1 0 0|     means input hyp[0] gave rise to second best
+        #     +-----+-+
+        #       |0 0 1|   means input hyp[2] gave rise to third best
+        #       +-----+
+        # after: [Dprev x Dnew]        e.g. "0 1 0" goes into first column, vertically
+        #   v--------- best came from input hyp[1]
+        #     v------- second best came from input hyp[0]
+        #       v----- third best came from input hyp[2]
+        #   0 1 0
+        #   1 0 0
+        #   0 0 1
+        # tokens.from[:,n] one-hot encodes the best predecessor at top-N rank n
+
+        # topPathScores:
+        #   +-----+
+        #   |0 0 0|
+        #   |0 0 0|-+
+        #   |0 x 0|0|     x denotes the accumulated path score max_w P(w|hyp[1])
+        #   |0 0 0|0|-+
+        #   +-----+0|0|
+        #     |y 0 0|0|   y denotes the accumulated path score max_w P(w|hyp[0])
+        #     +-----+z|   z denotes the accumulated path score max_w P(w|hyp[2])
+        #       |0 0 0|
+        #       +-----+
+
+        # traceback:
+        # last state: take Hardmax over tokens.score
+        # previous states: multiply wth respective tokens.from matrix
+        # -> hyp index for every time step
+        # then finally use that to select the actual output   TODO: That's a sample-wise matrix product between two sequences!!!
+        # TODO: condition must be 1-dim, not 2-dim tensor, so we use labelSentenceStartEmbeddedScattered instead of tokens.from
+        # +-+
+        # |0|
+        # |1|  means at this time step, hyp[1] was the best globally
+        # |0|
+        # +-+
+
+        # decode: and the actual decoding output
+        # This is the one to output (top sentence-level hypothesis after traceback).
+
+        # traceback : [Dnew]
+        # topPaths : [V x Dprev x Dnew]
+        #   +-----+
+        #   |0 0 0|
+        #   |0 0 0|-+
+        #   |0 1 0|0|     means word[2] in input hyp[1] was the best
+        #   |0 0 0|0|-+
+        #   +-----+0|0|
+        #     |1 0 0|0|   means word[3] in input hyp[0] was the second best
+        #     +-----+1|   means word[2] in input hyp[2] was the third best
+        #       |0 0 0|
+        #       +-----+
+
+        # helper macros  --> move to BS.core.bs
+
+        Columnwise (f, beamDepth, z) = # TODO: Takes LogSoftmax over axis=1. it is more tricky to do this over arbitrary axes
+        [
+            cols[d:0..beamDepth-1] = f (Slice (d, d+1, z, axis=2) /*[:,d]*/ )
+            out = Splice (cols, axis=2)
+        ].out
+
+        FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1)) else [
+            axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis
+            out = if axis == 1  # maybe this can be unified or pushed into Splice?
+                  then RowStack (ConstantTensor (firstVal, (1)) : ConstantTensor (otherVals, (N -1)))                                # col vector: [ 1; 0; 0; 0 ... ]
+                  else Splice   (Constant       (firstVal)      : ConstantTensor (otherVals, (1 : N -1)), axis = axis1 /*, axis*/)   # row vector: [ 0, -INF, -INF, -INF, ... ]
+        ].out
+
+        model = BS.Network.Edit (modelAsTrained,
+                                 (
+                                     BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.beamSearchReorderHook, tokens.from) :   # reorder LSTM states
+                                     BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook,    decoderFeedback) # feed decoder output back in
+                                 ),
+                                 (inputsOut : labelsOut : decodeOut)) # additional roots
+
+        inputsOut = Pass (modelAsTrained.inputSequence, tag='output')
+        labelsOut = Pass (modelAsTrained.labelSequence, tag='output')
+        decodeOut = Pass (decode, tag='output')
     ].model
 ]
 
