@@ -6,24 +6,29 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
-# TODO: re-write the example using the new facade
-
 import numpy as np
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from cntk import *
 
-# TODO necessary fix of CNTK exe. When we do not use inputs (just constants), the
-# output of the write action has a missing line.
-if (__name__ == "__main__"):
 
-    X = constant(np.asarray([[2, 3], [4, 5]]))
+def test_eval_example():
+    result = eval_example()
+    assert np.allclose(result, np.asarray([[105., 107.5], [ 110., 112.5]]))
+
+def eval_example():
+    sample = [2, 3], [4, 5]
+    sequence = np.asarray([sample])
+    batch = [sequence]
+    X = input_reader(batch)
     out = 2.5 * X + 100
 
-    with Context('demo', clean_up=True) as ctx:
+    with Context('demo', clean_up=False) as ctx:
         result = ctx.eval(out)
-        print(result)
-        # outputs:
-        # [[ 105.   107.5]
-        #  [ 110.   112.5]]
+        return result
+
+if __name__ == "__main__":
+    print(eval_example())
+    # outputs:
+    # [[ 105.   107.5]
+    #  [ 110.   112.5]]
