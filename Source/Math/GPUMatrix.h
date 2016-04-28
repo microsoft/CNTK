@@ -140,8 +140,9 @@ private:
 // The only workaround is to use naked pointer.
 #pragma warning(push)
 #pragma warning(disable : 4251)
-    mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
-	mutable std::unique_ptr<struct RNNInfo> m_rnnworkspace;
+	mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
+	struct rnnwrapper;
+	mutable std::unique_ptr<struct rnnwrapper> m_rnnwrapper;
 #pragma warning(pop)
 
 private:
@@ -449,9 +450,14 @@ public:
                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
 
 	// RNN support functions
-	void RNNForward(const GPUMatrix<ElemType>& w, int numLayers, bool bidirectional, const GPUMatrix<ElemType> &output ) const;
+	void RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden);
+	void RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape shapeY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape shapeDX);
+	void RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, const GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& dw);
+
+		/*
 	void RNNBackwardData() const;
 	void RNNBackwardGradient() const;
+	*/
 
 public:
     // static BLAS functions

@@ -148,6 +148,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
     <ClInclude Include="cudalib.h" />
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
+    <ClInclude Include="CuDnnRNN.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPUTensor.h" />
     <ClInclude Include="latticefunctionskernels.h" />

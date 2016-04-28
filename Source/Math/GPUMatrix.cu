@@ -26,6 +26,7 @@
 #include <memory>
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
+#include "CuDnnRnn.h"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -3138,10 +3139,35 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
                                                     in.Data(), Data(), grad.Data(), scale.Data(), scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
 }
 
-#pragma RNN Functions
-template <class ElemType>
-void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType>& w, int numLayers, bool bidirectional, const GPUMatrix<ElemType> &output) const
+#pragma region RNN Functions
+
+template<class ElemType>
+struct GPUMatrix<ElemType>::rnnwrapper
 {
+	std::unique_ptr<CuDnnRNNExecutor<ElemType>> m_jasha = nullptr;
+};
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const size_t numLayers, const size_t hiddenSize)
+{
+	// numLayers, hiddenSize are input parameters
+	if (!m_rnnwrapper)
+		m_rnnwrapper = std::make_unique<rnnwrapper>();
+	if (!m_rnnwrapper->m_jasha)
+		m_rnnwrapper->m_jasha = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, shapeY, numLayers, hiddenSize);
+	m_rnnwrapper->m_jasha->ForwardCore(paramW, inputX, shapeX, *this, shapeY);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape /*shapeY*/, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape /*shapeDX*/)
+{
+	m_rnnwrapper->m_jasha->BackwardDataCore(*this, outputDY, paramW, outputDX);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape /*shapeX*/, const GPUMatrix<ElemType>& outputY, const TensorShape /*shapeY*/, GPUMatrix<ElemType>& dw)
+{
+	m_rnnwrapper->m_jasha->BackwardWeightsCore(inputX, outputY, dw);
 }
 
 #pragma region Static BLAS Functions
