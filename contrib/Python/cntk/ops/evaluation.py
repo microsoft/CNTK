@@ -12,8 +12,6 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-from cntk.ops.cntk1 import CrossEntropyWithSoftmax
-
 def crossentropy_with_softmax(target_values, feature_values, name=None):
     """
     This operator computes the cross entropy over the softmax of the `feature_values`.
@@ -35,5 +33,5 @@ def crossentropy_with_softmax(target_values, feature_values, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-
+    from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     return CrossEntropyWithSoftmax(target_values, feature_values, var_name = name)
