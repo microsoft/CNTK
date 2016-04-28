@@ -354,6 +354,8 @@ def eval(node):
     """    
     
     from cntk.context import get_context        
+    from cntk.ops import input_reader
+
     # call a helper method to get a context
     ctx = get_context()    
     first = True    
@@ -371,12 +373,14 @@ def eval(node):
                     if not isinstance(val, list):                
                         # inputs have the outmost dimension for sequences
                         val = [val]
-                    setattr(node, p, input_reader([val], False, var_name=p, alias=p))            
+                    setattr(node, p, input_reader([val], alias=p,
+                        has_dynamic_axis=False, name=p))            
                     first = False
                 else:
                     setattr(node, p, constant(getattr(node, p), name=p))
 
     return ctx.eval(node)
+
 
 class LazyInput(InputComputationNodeBase):
 
