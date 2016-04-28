@@ -12,7 +12,7 @@ is computed as follows: for each element in the output tensor, its gradient with
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-def crossentropy_with_softmax(target_values, feature_values, name=None):
+def cross_entropy_with_softmax(target_values, feature_values, name=None):
     """
     This operator computes the cross entropy over the softmax of the `feature_values`.
     This op expects the `feature_values` as unscaled, it computes softmax over 
@@ -20,10 +20,10 @@ def crossentropy_with_softmax(target_values, feature_values, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> crossentropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.])
+        >>> cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.])
         #[1.3862]
         
-        >>> crossentropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.])
+        >>> cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.])
         #[1.840]
     
     Args:

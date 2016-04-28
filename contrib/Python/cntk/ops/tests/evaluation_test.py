@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..evaluation import crossentropy_with_softmax
+from ..evaluation import cross_entropy_with_softmax
 
 TARGET_OUT_PAIRS = [
     ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
@@ -39,7 +39,7 @@ def test_op_crossentropywithsoftmax(target_values, feature_values, device_id, pr
     input_target = I([target_values], has_dynamic_axis=True)
     input_features = I([feature_values], has_dynamic_axis=True)
     
-    op_node = crossentropy_with_softmax(input_target, input_features)
+    op_node = cross_entropy_with_softmax(input_target, input_features)
 
     #Forward pass test
     #==================
