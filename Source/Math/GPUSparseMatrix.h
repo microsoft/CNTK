@@ -285,6 +285,9 @@ public:
     void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix);
+    
+    GPUSPARSE_INDEX_TYPE* GetCondensedVector() const;
+    void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
 
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);

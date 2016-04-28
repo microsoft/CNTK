@@ -121,7 +121,7 @@ public:
     ~Matrix();
 
     // workaround to bugs in BOTH implementation: force to collapse to home location
-    void CollapseDataLocationAfterWriting() const
+    void CollapseDataLocation() const
     {
         SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
     }
@@ -478,6 +478,13 @@ public:
                                  const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& grad) const;
     void ConvolutionBackwardKernel(const Matrix<ElemType>& in, const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIwht,
                                    const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& kernelGrad) const;
+
+    void UnrollConvolutionInput(size_t unrollCols, size_t mapOutSize, const Matrix<int>& mpRowCol,
+                                const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+    void UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const Matrix<int>& mpRowCol,
+                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
+    void UnrollConvolutionInputForKernelBackprop(size_t mapOutSize, const Matrix<int>& mpRowCol,
+                                                 const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const;
 
     void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,

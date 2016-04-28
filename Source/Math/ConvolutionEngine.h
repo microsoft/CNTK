@@ -18,11 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 enum class ConvolutionEngineKind
 {
     None      = 0,
-    Reference = 1,
-    CuDnn     = 1 << 1,
-    Legacy    = 1 << 2,
+    Reference = 1,      // Reference, lookup-based implementation. Very slow but works for any convo configuration.
+    CuDnn     = 1 << 1, // cuDNN, works only for 2D/3D convos with full sharing.
+    Legacy    = 1 << 2, // Legacy, for backwards compatibility. REVIEW alexeyk: implement sparse version and remove Legacy altogether.
+    Gemm      = 1 << 3, // Uses convolution unrolling+GEMM technique. Works only for convos with full sharing.
 
-    All     = Reference | CuDnn | Legacy
+    All       = Reference | CuDnn | Legacy | Gemm
 };
 
 enum class PoolKind

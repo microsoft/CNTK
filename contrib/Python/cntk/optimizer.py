@@ -1,3 +1,10 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
+
 class SGDParams(dict):
 
     """This is the Stochastic Gradien Descent optimizer used to train the networks
@@ -29,7 +36,7 @@ class SGDParams(dict):
         :param momentum_per_mb: The default value is 0.9. Different values can
         be given to different epochs. It is important to note that CNTK has a particular
         behaviour when dealing with momentum, the learning rate is automatically further
-        scaled by a factor of (1 – momentum).
+        scaled by a factor of (1 - momentum).
 
         :param momentum_per_sample: similarly to learning rate, momentum can be defined
         on the sample level, also, different values can be given to different epochs.

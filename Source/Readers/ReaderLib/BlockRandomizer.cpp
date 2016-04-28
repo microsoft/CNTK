@@ -21,7 +21,8 @@ BlockRandomizer::BlockRandomizer(
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
     DecimationMode decimationMode,
-    bool useLegacyRandomization)
+    bool useLegacyRandomization,
+    bool multithreadedGetNextSequence)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_decimationMode(decimationMode),
@@ -31,7 +32,8 @@ BlockRandomizer::BlockRandomizer(
       m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
       m_lastSeenChunkId(SIZE_MAX),
-      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization))
+      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
+      m_multithreadedGetNextSequences(multithreadedGetNextSequence)
 {
     assert(deserializer != nullptr);
 
@@ -116,11 +118,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(decimated.size()));
 
-    // TODO: This will be changed, when we move transformers under the randomizer.
-    // TODO: Randomizer won't should not deal with multithreading.
-#pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < decimated.size(); ++i)
-    {
+    auto process = [&](int i) -> void {
         const auto& description = decimated[i];
         std::vector<SequenceDataPtr> sequence;
         auto it = m_chunks.find(description.m_chunk->m_chunkId);
@@ -134,6 +132,19 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         {
             result.m_data[j][i] = sequence[j];
         }
+    };
+
+    // TODO: This will be changed, when we move transformers under the randomizer, should not deal with multithreading here.
+    if (m_multithreadedGetNextSequences)
+    {
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < decimated.size(); ++i)
+            process(i);
+    }
+    else
+    {
+        for (int i = 0; i < decimated.size(); ++i)
+            process(i);
     }
 
     m_sequenceRandomizer->ReleaseChunks();
@@ -214,7 +225,7 @@ void BlockRandomizer::RetrieveDataChunks()
     m_lastSeenChunkId = window.back().m_chunkId;
 
     // in the loop we are building a new map of currently loaded chunks:
-    // we are iterating thru all chunks in the window and if they are not in m_chunks map - 
+    // we are iterating thru all chunks in the window and if they are not in m_chunks map -
     // they get requested from the deserializer.
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;

@@ -77,7 +77,7 @@ public:
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<DeserializedImage>();
-        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path));
+        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
 
         if (!cvImage.data)
@@ -119,7 +119,8 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     ImageConfigHelper configHelper(config);
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
-    const auto& label = m_streams[configHelper.GetLabelStreamId()];
+    m_grayscale = configHelper.UseGrayscale();
+	const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
     // Expect data in HWC.
@@ -214,8 +215,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
             description.m_chunkId = curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_major = description.m_id;
-            description.m_key.m_minor = 0;
+            description.m_key.m_sequence = description.m_id;
+            description.m_key.m_sample = 0;
 
             m_imageSequences.push_back(description);
             RegisterByteReader(description.m_id, description.m_path, knownReaders);
@@ -266,20 +267,23 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
 #endif
 }
 
-cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
+cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path, bool grayscale)
 {
     assert(!path.empty());
 
     ImageDataDeserializer::SeqReaderMap::const_iterator r;
     if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
-        return m_defaultReader.Read(seqId, path);
-    return (*r).second->Read(seqId, path);
+        return m_defaultReader.Read(seqId, path, grayscale);
+    return (*r).second->Read(seqId, path, grayscale);
 }
 
-cv::Mat FileByteReader::Read(size_t, const std::string& path)
+cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
 {
-    assert(!path.empty());
+	assert(!path.empty());
 
-    return cv::imread(path, cv::IMREAD_COLOR);
+    if (grayscale)
+        return cv::imread(path, cv::IMREAD_GRAYSCALE);
+    else
+        return cv::imread(path, cv::IMREAD_COLOR);
 }
 }}}

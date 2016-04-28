@@ -3,6 +3,10 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // CNTKEval.h - Include file for the CNTK Evaluation DLL
+// 
+// NOTICE: This interface is a public interface for evaluating models in CNTK. 
+//         Changes to this interface may affect other projects, such as Argon and LatGen,
+//         and therefore need to be communicated with such groups.
 //
 #pragma once
 

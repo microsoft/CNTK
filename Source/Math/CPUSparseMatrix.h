@@ -83,6 +83,7 @@ public:
 
     void SetValue(const size_t row, const size_t col, ElemType val);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
     size_t BufferSize() const
     {

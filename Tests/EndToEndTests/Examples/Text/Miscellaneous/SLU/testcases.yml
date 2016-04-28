@@ -1,0 +1,39 @@
+dataDir: ../../../../Text/SLU
+tags:
+    # the complete suite (2 flavours x 2 devices) takes around
+    # 20 minutes with the longest test (debug cpu)
+    # running for ca. 10 minutes
+    # In BVT, run Release GPU
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # running every Nightly job in 'E' (Examples) leg
+    - nightly-e (build_sku=='gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results (validation set):
+    patterns:
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Validation Set]"
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      
+  Epochs must be finished with expected results (training set):
+    patterns:
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Training Set]"
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - TotalSamplesSeen = {{integer}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch (with low train loss) training results must match:
+    patterns:
+      - Minibatch[{{integer}}-{{integer}}
+      - SamplesSeen = {{integer}}
+      - CrossEntropyWithSoftmax/Sample = {{float,tolerance=0.05}}
+      - Perplexity = {{float,tolerance=0.05}}

@@ -149,8 +149,15 @@ void File::Init(const wchar_t* filename, int fileOptions)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
 #ifdef _WIN32
+    // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
+    // TODO:
+    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it’s
+    // probably a good idea to do that anyway since I suspect that the '..' characters might
+    // confuse the other PathCch functions" [Larry Osterman]
+    // "Consider GetFullPathName both for canonicalization and last element finding." [Jay Krell]
+    path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\");
+
     HRESULT hr;
-    path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\"); // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     if (IsWindows8OrGreater()) // PathCchRemoveFileSpec() only available on Windows 8+
     {
         typedef HRESULT(*PathCchRemoveFileSpecProc)(_Inout_updates_(_Inexpressible_(cchPath)) PWSTR, _In_ size_t);

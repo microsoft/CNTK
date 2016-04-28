@@ -8,6 +8,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "TensorView.h"
 #include <memory> // for pair
 #include <limits> // for isnan() and numeric_limits  --TODO: is that the right header?
 
@@ -40,9 +41,9 @@ struct CriterionAccumulator
 {
     // constructor
     CriterionAccumulator(size_t numCriteria, DEVICEID_TYPE deviceId) :
-        m_aggregateCriterionValues(1, numCriteria, deviceId)
+        m_aggregateCriterionValues(make_shared<Matrix<ElemType>> (1, numCriteria, deviceId))
     {
-        m_aggregateCriterionValues.SetValue(0);
+        m_aggregateCriterionValues->SetValue(0);
         m_aggregateSampleCounts.assign(numCriteria, 0);
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
@@ -63,7 +64,7 @@ struct CriterionAccumulator
         if (m_aggregateSampleCounts[i] == 0)
             return EpochCriterion(0, 0); // avoid unnecessary GPU access
         else
-            return EpochCriterion(m_aggregateCriterionValues(0, i), m_aggregateSampleCounts[i]);
+            return EpochCriterion(m_aggregateCriterionValues->GetValue(0, i), m_aggregateSampleCounts[i]);
     }
 
 private:
@@ -73,23 +74,41 @@ private:
     const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
     {
         const auto& node = nodes[i]; // multiple nodes are managed by this struct
-        float beta = reset ? 0 : 1;
-        // Note: A future change will be that criterion nodes emit criteria per frame.
-        // In that case, we will do masking and an implicit reduction right here using TensorView.
+        size_t beta = reset ? 0 : 1;
         size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
+#if 1
+        // For criterion nodes that emit criteria per frame, we will at this point
+        // do masking and an implicit reduction.
+
+        // get a TensorView of the criterion values to aggregate
+        FrameRange fr(node->GetMBLayout());
+        node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
+        auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+
+        // get a TensorView of our aggregator
+        TensorShape shape{ m_aggregateCriterionValues->GetNumRows(), m_aggregateCriterionValues->GetNumCols() };
+        shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
+        auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
+
+        // accumulate
+        // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
+        criterionAccumulator.DoCopyOf((float) beta, criterionValue, 1);
+        m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
+#else
         // temp solution until we add TensorView reduction
         if (beta == 0)
         {
             Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                                     0, 0, m_aggregateCriterionValues, 0, i);
+                                                     0, 0, *m_aggregateCriterionValues, 0, i);
             m_aggregateSampleCounts[i] = numSamples;
         }
         else if (numSamples > 0) // avoid unnecessary GPU access
         {
             Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                                  0, 0, m_aggregateCriterionValues, 0, i);
+                                                  0, 0, *m_aggregateCriterionValues, 0, i);
             m_aggregateSampleCounts[i] += numSamples;
         }
+#endif
         return *this;
     }
     // get the number of samples
@@ -102,8 +121,8 @@ private:
     }
 
 private:
-    Matrix<ElemType> m_aggregateCriterionValues; // [1 x N]
-    vector<size_t> m_aggregateSampleCounts;      // [N]
+    shared_ptr<Matrix<ElemType>> m_aggregateCriterionValues; // [1 x N]
+    vector<size_t> m_aggregateSampleCounts;                  // [N]
 };
 
 }}}
