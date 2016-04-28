@@ -25,7 +25,7 @@ Train=[
         Layers = [
             EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
                 embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
-                lookup = GatherPacked(features, embedding)
+                lookup = embedding * input
             ].lookup
             # TODO: suggested change of parameter order: output dims first, inputDim=input.dim
             DenseLayer(input, inputSize, outputSize, activation) = [
@@ -50,7 +50,7 @@ Train=[
                 
         // set up features and labels
         t = DynamicAxis()
-        features = Input(1, dynamicAxis=t)   # Input has shape (1,t)
+        features = SparseInput(vocab, dynamicAxis=t)   # Input has shape (1,t)
         labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
         
         // load the pre-learned word embedding matrix
@@ -79,13 +79,13 @@ Train=[
     
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train.txt"            
+        file = "$DataDir$/Train_sparse.txt"            
         
         input = [            
             features=[
                 alias = "x"                
-                dim = 1               
-                format = "dense"
+                dim = 2000               
+                format = "sparse"
             ]
             labels=[
                 alias = "y"                
@@ -97,37 +97,3 @@ Train=[
    outputPath = "$OutputDir$/output.txt"        # dump the output as text?
 ]
 
-Write=[
-    action="test"
-    run=BrainScriptNetworkBuilder
-    
-    format = [
-      # %n = minibatch, %x = shape, %d = sequenceId
-      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
-      sampleSeparator=\n%d\t|w\s
-      elementSeparator=\s
-    ]
-    
-    modelFile = "$ModelDir$/seqcla.dnn"    
-    
-    reader = [
-        
-            readerType = "CNTKTextFormatReader"
-            file = "$DataDir$/Train.txt"            
-            
-            input = [            
-                features=[
-                    alias = "x"                
-                    dim = 1               
-                    format = "dense"
-                ]
-                labels=[
-                    alias = "y"                
-                    dim = 5           
-                    format = "dense"
-                ]
-            ]
-            
-   ]    
-   outputPath = "$OutputDir$/output.txt"        # dump the output as text?
-]
