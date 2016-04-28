@@ -383,6 +383,8 @@ public:
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false;
+		m_subsetNum = 0;
+		m_numSubsets = 1;
     }
 
     template <class ConfigRecordType>
