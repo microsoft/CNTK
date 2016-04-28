@@ -14,8 +14,8 @@ import sys
 
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
-    r'(?P<operator>\w+) ?\((?P<operands>.*?)\)\s*=\s*new ComputationNode \[\s*(?P<inputs>.*?inputs=.*?[;|\/])?')
-REGEX_ALIAS = re.compile(r'(?P<operator>[A-Z]\wP)\s*=\s*(?P<alias>\w+)\s*(//.*|)')
+    r'(?P<operator>\w+) ?\((?P<operands>.*?)\)\s*=\s*new\s*ComputationNode\s*\[\s*(?P<inputs>.*?inputs\s*=.*?[;|\/])?')
+REGEX_ALIAS = re.compile(r'(?P<operator>[A-Z]\w*)\s*=\s*(?P<alias>\w+)\s*(//.*|)')
 # ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix,
 # Reciprocal(anotherMatrix))
 REGEX_INSTANTIATION = re.compile(
@@ -73,7 +73,7 @@ SMOOTH_NAMING = {
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(%(parentclass)s):
-    def __init__(self, %(signature)sname='%(name)s', var_name=None):
+    def __init__(self, %(signature)sname='%(namespace)s%(name)s', var_name=None):
         super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name)
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
@@ -85,7 +85,8 @@ class %(name)s(%(parentclass)s):
             return SMOOTH_NAMING[name]
         return name
 
-    def __init__(self, comp_match):
+    def __init__(self, comp_match, namespace=''):
+        self.namespace = namespace
         self.name = comp_match.group('operator')
 
         if self.name in INPUT_NODES:
@@ -173,14 +174,14 @@ class AliasOperator(object):
 class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
-    def __init__(self, %(signature)s name='%(name)s', var_name=None):
+    def __init__(self, %(signature)s name='%(namespace)s%(name)s', var_name=None):
         super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name)
         self.params=[%(paramlist)s]
         self.params_with_defaults = [%(params_with_defaults)s]
 """
 
-    def __init__(self, match):
-        super(InstantiationOperator, self).__init__(match)
+    def __init__(self, match, namespace=''):
+        super(InstantiationOperator, self).__init__(match, namespace)
         self.inst_operator = match.group('inst_operator')
         raw_inst_operands = match.group('inst_operands').split(',')
         inst_operands = []
@@ -262,6 +263,15 @@ class Ceil(ComputationNode):
         self.inputs = ['x']
         self.params_with_defaults = []
 
+class If(ComputationNode):
+    def __init__(self, cond, thenVal, elseVal, name='BS.Boolean.If', var_name=None):
+        super(If, self).__init__(
+            params=['cond', 'thenVal', 'elseVal'], name=name, var_name=var_name)
+        self.cond = cond
+        self.thenVal = thenVal
+        self.elseVal = elseVal
+        self.params_with_defaults = []
+
 """
 
 CNTK2_MANUAL_PREFIX = """\
@@ -276,20 +286,22 @@ CNTK2_MANUAL_PREFIX = """\
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
 class Ceil(ComputationNode):
-    def __init__(self, _, name='Ceil', var_name=None):
-        super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
+    def __init__(self, _, name='CNTK2.Ceil', var_name=None):
+        super(Ceil, self).__init__(params=['_'], name=name, var_name=var_name)
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
 
 class ElementDivide(ComputationNode):
-    def __init__(self, _, y,  name='ElementDivide', var_name=None):
-        super(ElementDivide, self).__init__(params=['_', y], name=name, var_name=var_name)
+    def __init__(self, _, y,  name='CNTK2.ElementDivide', var_name=None):
+        super(ElementDivide, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+        self._ = _
+        self.y = y
         self.inputs = ['_', 'y']
         self.params_with_defaults = []
 
 class Round(ComputationNode):
-    def __init__(self, _,  name='Round', var_name=None):
+    def __init__(self, _, name='CNTK2.Round', var_name=None):
         super(Round, self).__init__(params=['_'], name=name, var_name=var_name)
         self._ = _
         self.inputs = ['_']
@@ -348,7 +360,8 @@ def convert_bs_to_python(bs_fn, out_dir):
             if part_of_file in [COMP_NODE_SECT, CNTK2_SECT]:
                 comp_match = REGEX_COMPNODE.match(line)
                 if comp_match:
-                    op = CompNodeOperator(comp_match)
+                    ns = 'CNTK2.' if part_of_file==CNTK2_SECT else ''
+                    op = CompNodeOperator(comp_match, ns)
                     if op.name in OPERATORS_TO_IGNORE and part_of_file==COMP_NODE_SECT:
                         continue
                     pyf.write(str(op) + '\n')
@@ -374,9 +387,10 @@ def convert_bs_to_python(bs_fn, out_dir):
                     continue
                 pyf.write(str(op) + '\n')
 
-        for inst_ops, pyf in [(inst_ops_cntk1, cntk1f), (inst_ops_cntk2, cntk2f)]:
+        for inst_ops, pyf, ns in [(inst_ops_cntk1, cntk1f, ns),
+                (inst_ops_cntk2, cntk2f, ns)]:
             for match in inst_ops:
-                op = InstantiationOperator(match)
+                op = InstantiationOperator(match, ns)
                 if op.name in OPERATORS_TO_IGNORE:
                     continue
                 pyf.write(str(op) + '\n')
