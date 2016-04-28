@@ -8,7 +8,7 @@
 Evaluation operations. For every operation we explain how the forward and backward
 passes are computed. For the backward pass we just explain the scalar case which is the building 
 block for computing tensor gradients using the chain rule. For tensors, the backward pass of a node 
-is computed as follows : for each element in the output tensor, its gradient with respect to the
+is computed as follows: for each element in the output tensor, its gradient with respect to the
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
