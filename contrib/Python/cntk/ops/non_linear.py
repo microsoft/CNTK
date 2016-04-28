@@ -180,5 +180,5 @@ def cond(flag, value_if_true, value_if_false, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    
+    from cntk.ops.cntk1 import If
     return If(flag, value_if_true, value_if_false, var_name = name)
