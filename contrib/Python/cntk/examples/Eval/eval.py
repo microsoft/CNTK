@@ -13,8 +13,9 @@ from cntk import *
 
 
 def test_eval_example():
+    TOLERANCE_ABSOLUTE = 1E-06
     result = eval_example()
-    assert np.allclose(result, np.asarray([[105., 107.5], [ 110., 112.5]]))
+    assert np.allclose(result, np.asarray([[105., 107.5], [ 110., 112.5]]), atol=TOLERANCE_ABSOLUTE)
 
 def eval_example():
     sample = [2, 3], [4, 5]

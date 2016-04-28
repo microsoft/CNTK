@@ -65,10 +65,11 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
 def test_logistic_regression():
     result = train_eval_logistic_regression('crit_node', 'eval_node')
 
+    TOLERANCE_ABSOLUTE = 1E-06
     assert result['SamplesSeen'] == 500
-    assert np.allclose(result['Perplexity'], 1.5584637)
-    assert np.allclose(result['crit_node'], 0.4437005)
-    assert np.allclose(result['eval_node'], 2.7779043)
+    assert np.allclose(result['Perplexity'], 1.5584637, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.4437005, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 2.7779043, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression())
