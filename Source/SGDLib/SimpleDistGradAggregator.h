@@ -221,11 +221,9 @@ private:
 
         if (headerCPU->numSamples == 0)
         {
-            assert(headerCPU->criterion == 0);
+            headerCPU->criterion = 0.0;
             for (int i = 0; i < headerCPU->numEvalNode; ++i)
-            {
-                assert(headerCPU->evalErrors[i].first == 0);
-            }
+                headerCPU->evalErrors[i] = { 0.0, 0 };
 
             // If the current node did not process any samples, the gradients should be zero'd
             for (size_t i = 0; i < numGradMatrices; ++i)
