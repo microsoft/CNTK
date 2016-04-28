@@ -47,6 +47,7 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(floor);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -194,6 +195,7 @@ DefUnaryOp(Copy, a);
 DefUnaryOp(Negate, -a);
 DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
+DefUnaryOp(Floor, floor_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
@@ -256,7 +258,8 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
     }
 
 DefTernaryOp(Cond, a ? b : c);
-DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
+DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
+DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 
 #pragma pop_macro("DefTernaryOp")

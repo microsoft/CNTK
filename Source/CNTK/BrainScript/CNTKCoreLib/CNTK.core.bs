@@ -15,10 +15,7 @@ Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
 Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] 
 Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Ceil(x) = -Floor(-x) 
-Round(x) = Floor(x+0.5)
 Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
 Min(a,b) = if a < b then a else b 
 Max(a,b) = if a > b then a else b 
@@ -95,7 +92,9 @@ Delay = PastValue
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
+Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
+Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 // TODO: ColumnElementTimes = ElementTimes
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -112,6 +111,7 @@ ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation =
 ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix), tag=tag)
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
+Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
@@ -140,6 +140,7 @@ ReduceLogSum (z, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
 #ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
+Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -234,7 +235,7 @@ Boolean = [
         state = Xor (PastValue (1, state, defaultHiddenActivation=initialValue), clk)
     ].state
 
-	# select a value
+    # select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
     If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) /*plus the function args*/ ]
     #If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
