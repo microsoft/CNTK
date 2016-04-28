@@ -1011,9 +1011,11 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 	GPUSparseMatrix<ElemType>::multimer += cuTime;
 	GPUSparseMatrix<ElemType>::mulcounter++;
 
-	if (GPUSparseMatrix<ElemType>::mulcounter % 10 == 0) {
+	if (GPUSparseMatrix<ElemType>::mulcounter % 2000 == 0) {
 		fprintf(stderr, "TotalGPUTime = %16.4f ms     MulCounter = %16ld\n",
 			GPUSparseMatrix<ElemType>::multimer, GPUSparseMatrix<ElemType>::mulcounter);
+		GPUSparseMatrix<ElemType>::multimer = 0.;
+		GPUSparseMatrix<ElemType>::mulcounter = 0L;
 	}
 }
 
