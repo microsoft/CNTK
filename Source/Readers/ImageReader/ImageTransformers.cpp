@@ -33,6 +33,10 @@ void ImageTransformerBase::Initialize(TransformerPtr next,
     ImageConfigHelper config(readerConfig);
     size_t featureStreamId = config.GetFeatureStreamId();
     m_appliedStreamIds.push_back(featureStreamId);
+    if (m_appliedStreamIds.size() != 1)
+    {
+        RuntimeError("Only a single feature stream is supported.");
+    }
 
     const auto &inputStreams = GetInputStreams();
     m_outputStreams.resize(inputStreams.size());
@@ -94,12 +98,6 @@ void CropTransformer::Initialize(TransformerPtr next,
 {
     ImageTransformerBase::Initialize(next, readerConfig);
     auto featureStreamIds = GetAppliedStreamIds();
-
-    if (featureStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
     InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
 }
 
@@ -135,7 +133,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
 
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curAspectRatioRadius = !m_aspectRatioRadius.empty() ? m_aspectRatioRadius[config.m_epochIndex] : 0;
+    m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
     if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
         InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
 
@@ -329,12 +327,6 @@ void ScaleTransformer::Initialize(TransformerPtr next,
     m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
 
     auto featureStreamIds = GetAppliedStreamIds();
-
-    if (featureStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
     const auto &feature = GetInputStreams()[featureStreamIds[0]];
     m_dataType = feature->m_elementType == ElementType::tfloat ? CV_32F : CV_64F;
 
@@ -397,12 +389,6 @@ void MeanTransformer::Initialize(TransformerPtr next,
     ImageTransformerBase::Initialize(next, readerConfig);
 
     auto featureStreamIds = GetAppliedStreamIds();
-
-    if (featureStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
     InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
 }
 
@@ -547,17 +533,12 @@ void IntensityTransformer::Initialize(TransformerPtr next,
     ImageTransformerBase::Initialize(next, readerConfig);
 
     auto featureStreamIds = GetAppliedStreamIds();
-
-    if (featureStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
     InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
 }
 
 void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
 {
+    m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
     std::wstring intFile = config(L"intensityFile", L"");
     if (intFile.empty())
     {
@@ -577,14 +558,12 @@ void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
         if (m_eigVec.rows != 3 || m_eigVec.cols != 3 || m_eigVec.channels() != 1)
             RuntimeError("Invalid EigVec data in file: %ls", intFile.c_str());
         fs.release();
-
-        m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
     }
 }
 
 void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curStdDev = !m_stdDev.empty() ? m_stdDev[config.m_epochIndex] : 0;
+    m_curStdDev = m_stdDev[config.m_epochIndex];
 
     ImageTransformerBase::StartEpoch(config);
 }
@@ -630,7 +609,8 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     {
         for (int c = 0; c < mat.channels(); c++)
         {
-            *pdst += shifts.at<float>(mat.channels() - c - 1);
+            float shift = shifts.at<float>(mat.channels() - c - 1);
+            *pdst = std::min(std::max(*pdst + shift, (ElemType)0), (ElemType)255);
             pdst++;
         }
     }
@@ -643,12 +623,6 @@ void ColorTransformer::Initialize(TransformerPtr next, const ConfigParameters &r
     ImageTransformerBase::Initialize(next, readerConfig);
 
     auto featureStreamIds = GetAppliedStreamIds();
-
-    if (featureStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
     InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
 }
 
@@ -661,15 +635,15 @@ void ColorTransformer::InitFromConfig(const ConfigParameters &config)
 
 void ColorTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curBrightnessRadius = !m_brightnessRadius.empty() ? m_brightnessRadius[config.m_epochIndex] : 0;
+    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
     if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
         InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
 
-    m_curContrastRadius = !m_contrastRadius.empty() ? m_contrastRadius[config.m_epochIndex] : 0;
+    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
     if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
         InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
 
-    m_curSaturationRadius = !m_saturationRadius.empty() ? m_saturationRadius[config.m_epochIndex] : 0;
+    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
     if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
         InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 
@@ -737,6 +711,8 @@ void ColorTransformer::Apply(cv::Mat &mat)
 
         auto hsv = m_hsvTemp.pop_or_create([]() { return std::make_unique<cv::Mat>(); });
 
+        // To change saturation, we need to convert the image to HSV format first,
+        // the change S channgel and convert the image back to BGR format.
         cv::cvtColor(mat, *hsv, CV_BGR2HSV);
         assert(hsv->rows == mat.rows && hsv->cols == mat.cols);
         size_t count = hsv->rows * hsv->cols * mat.channels();

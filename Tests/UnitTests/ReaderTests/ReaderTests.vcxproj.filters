@@ -240,6 +240,9 @@
     <Text Include="Control\ImageReaderGrayscale_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Control\ImageReaderIntensityTransform_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -295,5 +298,13 @@
     <None Include="Config\ImageReaderGrayscale_Config.cntk">
       <Filter>Config</Filter>
     </None>
+    <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Data\ImageNet1K_intensity.xml">
+      <Filter>Data</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

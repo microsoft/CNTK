@@ -150,6 +150,24 @@ BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderIntensityTransform)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderIntensityTransform_Config.cntk",
+        testDataPath() + "/Control/ImageReaderIntensityTransform_Control.txt",
+        testDataPath() + "/Control/ImageReaderIntensityTransform_Output.txt",
+        "IntensityTransform_Test",
+        "reader",
+        1,
+        1,
+        2,
+        1,
+        0,
+        0,
+        1);
+}
+
+
 BOOST_AUTO_TEST_CASE(ImageReaderColorTransform)
 {
     HelperRunReaderTest<float>(

@@ -176,7 +176,7 @@ private:
 // (http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
 // Currently uses precomputed values from 
 // https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
-// but should be replaced with pre-class values?
+// but should be replaced with per-class values?
 class IntensityTransformer : public ImageTransformerBase
 {
 public:
