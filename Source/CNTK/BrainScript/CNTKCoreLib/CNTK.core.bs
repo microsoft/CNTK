@@ -26,6 +26,86 @@ IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b)
 # ComputationNodes
 ##############################################################################
 
+##############################################################################
+# "Stable API" with the purpose of staying compatible towards 2.0. 
+# - Use only tensors as concept. Move away from matrices.
+# - Main input goes first
+# - Main input is called "_" (becomes either self, or is moved to the end, 
+#   depending on language binding)
+# - tensor shape is called "shape"
+# - output shape before input shape
+# Operator list is sorted alphabetically within the category.
+##############################################################################
+CNTK2 = [
+    # Currently restricted to operators introduced with Python API in CNTK 1.4.
+
+    // 1. Inputs
+    // Changes: dims -> shape
+    DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+    Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
+    
+    // 2. Variables and constants
+    // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
+    // Python API: 
+    // - constant(value, name=None) - value: the tensor constant passed as numpy array. Forwards to parameter() with learningRateMultiplier=0 and initFromLiteral
+    // - parameter: Like below, but can take an NDArray on the "init_from_literal" parameter, in which case it is serialized and turned into "initFromLiteral".
+    //              (TODO: should be the value parameter instead)
+    // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
+    // This needs to be fixed to follow the way the Constant() is exposed in Python
+    // Making this an internal node with "_" until we agree on the final interface:
+    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+
+    // 3. Shape operations
+    // Changes: NewReshape -> Reshape, input -> _, dims -> shape
+    Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 4. Tensor operations
+    // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
+    Times(x, y, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+
+    // 5. Elementwise operations.
+    // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
+    Abs(_, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = _ /*plus the function args*/ ]
+    Ceil(_, tag='') = Negate(Floor(Negate(_)), tag=tag)
+    Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
+    ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
+    ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
+    Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
+    Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
+    Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
+
+    // 6. Reductions
+    // None so far
+
+    // 7. Control flow (if, composite etc.)
+    // None so far
+
+    // 8. Boolean operations
+    // None so far
+
+    // 9. Recurrent operations
+    // Changes: input first; input -> _
+    FutureValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 10. NN-specific operations
+    // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
+    Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
+    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+
+    // 11. Criterion nodes
+    // No changes here - we said the default input would be the label sequence here, against which the 
+    // empirical sequence is compared to. Keeping this for now.
+    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
+    ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
+
+    // 12. Others
+    // None so far.
+]
+
 LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
 # TODO: make Parameter take tensor dims?
