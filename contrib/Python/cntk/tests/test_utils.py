@@ -11,12 +11,6 @@ Utils for unit tests
 import numpy as np
 import pytest
 
-# NumPy's allclose() has 1e-08 as the absolute tolerance, which is too strict for
-# functions like sigmoid.
-TOLERANCE_ABSOLUTE = 1E-06
-
-PRECISION_TO_TYPE = {'float': np.float32, 'double': np.float64}
-
 # NumPy's allclose() has 1e08 as the absolute tolerance, which is too strict for
 # functions like sigmoid.
 TOLERANCE_ABSOLUTE = 1E-06
