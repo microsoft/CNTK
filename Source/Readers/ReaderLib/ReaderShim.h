@@ -50,7 +50,7 @@ public:
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
-    virtual size_t GetNumParallelSequences() override;
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
 private:
     std::future<Minibatch> m_prefetchTask;

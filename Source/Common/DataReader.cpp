@@ -214,7 +214,7 @@ bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
         if (nbr > 0)
             m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr); // the first one determines the param of all others --TODO: This is flimsy.
         bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch(matrices);
-        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
+        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequencesForFixingBPTTMode();
         if (nbr == 0)
             nbr = thisNbr;
         else if (thisNbr != nbr)
@@ -247,15 +247,15 @@ bool DataReader::GetHmmData(msra::asr::simplesenonehmm* hmm)
     return bRet;
 }
 
-size_t DataReader::GetNumParallelSequences()
+size_t DataReader::GetNumParallelSequencesForFixingBPTTMode()
 {
     size_t nNbr = 0;
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         IDataReader* ptr = m_dataReaders[m_ioNames[i]];
         if (nNbr == 0)
-            nNbr = ptr->GetNumParallelSequences();
-        else if (nNbr != ptr->GetNumParallelSequences())
+            nNbr = ptr->GetNumParallelSequencesForFixingBPTTMode();
+        else if (nNbr != ptr->GetNumParallelSequencesForFixingBPTTMode())
             LogicError("GetNumParallelSequences: number of slices in each minibatch not consistent for these streams");
     }
     return nNbr;

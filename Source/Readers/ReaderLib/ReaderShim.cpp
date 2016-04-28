@@ -241,7 +241,7 @@ void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
 // TODO: We should return 0 here.
 // This forbids the use of learning-rate and momentum per MB if truncation is enabled.
 template <class ElemType>
-size_t ReaderShim<ElemType>::GetNumParallelSequences()
+size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
     // parallel sequences. Thus this property doesn't make sense anymore.

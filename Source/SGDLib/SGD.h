@@ -126,7 +126,14 @@ protected:
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
         if (m_truncated && specifiedMBSize > 1)      // currently only happens in this mode
+        {
+            if (numParallelSequences == 0)
+            {
+                RuntimeError("Learning rate and momentum are not supported per minibatch, please specify them per sample.");
+            }
+
             specifiedMBSize *= numParallelSequences; // assume 'specifiedMBSize' refers to truncation size
+        }
         // end bug post-fix
         // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
 
