@@ -178,6 +178,7 @@
     <ClCompile Include="ComputationNodeScripting.cpp" />
     <ClCompile Include="InputAndParamNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
+    <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
