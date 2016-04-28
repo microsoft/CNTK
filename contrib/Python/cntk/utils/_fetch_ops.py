@@ -14,12 +14,12 @@ import sys
 
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
-    r'(?P<operator>\w+) ?\((?P<operands>.*?)\) = new ComputationNode \[ (?P<inputs>.*?inputs = .*?[;|\/])?')
-REGEX_ALIAS = re.compile(r'(?P<operator>\w+) = (?P<alias>\w+)\s*(//.*|)')
+    r'(?P<operator>\w+) ?\((?P<operands>.*?)\)\s*=\s*new ComputationNode \[\s*(?P<inputs>.*?inputs=.*?[;|\/])?')
+REGEX_ALIAS = re.compile(r'(?P<operator>[A-Z]\wP)\s*=\s*(?P<alias>\w+)\s*(//.*|)')
 # ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix,
 # Reciprocal(anotherMatrix))
 REGEX_INSTANTIATION = re.compile(
-    r'(?P<operator>\w+)\((?P<operands>.*?)\) = (?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
+    r'(?P<operator>\w+)\((?P<operands>.*?)\)\s*=\s*(?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
 
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
