@@ -150,5 +150,39 @@ BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderColorTransform)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderColorTransform_Config.cntk",
+        testDataPath() + "/Control/ImageReaderColorTransform_Control.txt",
+        testDataPath() + "/Control/ImageReaderColorTransform_Output.txt",
+        "ColorTransform_Test",
+        "reader",
+        1,
+        1,
+        2,
+        1,
+        0,
+        0,
+        1);
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderGrayscale)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderGrayscale_Config.cntk",
+        testDataPath() + "/Control/ImageReaderGrayscale_Control.txt",
+        testDataPath() + "/Control/ImageReaderGrayscale_Output.txt",
+        "Grayscale_Test",
+        "reader",
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }

@@ -427,7 +427,7 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 
     cudaDeviceProp props = {0};
     // Note that cudaGetDeviceProperties also sets CUDA last error so need to check/clear both.
-    if (deviceId < 0 || cudaGetDeviceProperties(&props, deviceId) != cudaSuccess || cudaGetLastError() != cudaSuccess || props.major < 3)
+    if (deviceId < 0 || (cudaGetDeviceProperties(&props, deviceId) | cudaGetLastError()) != cudaSuccess || props.major < 3)
         return false;
 
     const auto& input = geometry->InputShape();

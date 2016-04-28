@@ -10,29 +10,8 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\Eval.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="UCIFastReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ReaderLibTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
   </ItemGroup>
@@ -252,6 +231,9 @@
     <Text Include="Control\ImageReaderMultiView_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Control\ImageReaderColorTransform_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -296,6 +278,9 @@
       <Filter>Config\CNTKTextFormatReader</Filter>
     </None>
     <None Include="Config\ImageReaderMultiView_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderColorTransform_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>
