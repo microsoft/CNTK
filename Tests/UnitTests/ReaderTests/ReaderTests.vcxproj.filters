@@ -234,6 +234,12 @@
     <Text Include="Control\ImageReaderColorTransform_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\ImageReaderGrayscale_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderGrayscale_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -249,6 +255,9 @@
       <Filter>Data\images</Filter>
     </Image>
     <Image Include="Data\images\multi.png">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\grayscale.png">
       <Filter>Data\images</Filter>
     </Image>
   </ItemGroup>
@@ -281,6 +290,9 @@
       <Filter>Config</Filter>
     </None>
     <None Include="Config\ImageReaderColorTransform_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderGrayscale_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

@@ -116,12 +116,12 @@ ResNetNode3AInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue
     y = RectifiedLinear(p)
 ]
 
-ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, projStride)
+ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, projStride, stride1x1, stride3x3)
 [
     # 1x1 reducing convolution.
-    c1 = Conv1x1ReLU(inp, convMap, inMap, projStride, projStride, wScale, bValue, scValue, bnTimeConst)
+    c1 = Conv1x1ReLU(inp, convMap, inMap, stride1x1, stride1x1, wScale, bValue, scValue, bnTimeConst)
     # 3x3 convolution.
-    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, bnTimeConst)
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, stride3x3, stride3x3, wScale, bValue, scValue, bnTimeConst)
     # 1x1 expanding convolution, no ReLU.
     c3 = Conv1x1(c2, outMap, convMap, 1, 1, wScale, bValue, scValue, bnTimeConst)
     # Input-to-output mapping convolution.

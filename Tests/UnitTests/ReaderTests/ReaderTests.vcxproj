@@ -166,6 +166,7 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
     <Text Include="Control\ImageReaderColorTransform_Control.txt" />
+    <Text Include="Control\ImageReaderGrayscale_Control.txt" />
     <Text Include="Control\ImageReaderMultiView_Control.txt" />
     <Text Include="Control\ImageReaderSimple_Control.txt" />
     <Text Include="Control\ImageReaderZip_Control.txt" />
@@ -178,6 +179,7 @@
     <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
+    <Text Include="Data\ImageReaderGrayscale_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
     <Text Include="Data\ImageReaderMultiView_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
@@ -188,6 +190,7 @@
   <ItemGroup>
     <Image Include="Data\images\black.jpg" />
     <Image Include="Data\images\blue.jpg" />
+    <Image Include="Data\images\grayscale.png" />
     <Image Include="Data\images\green.jpg" />
     <Image Include="Data\images\multi.png" />
     <Image Include="Data\images\red.jpg" />
@@ -198,6 +201,7 @@
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />
+    <None Include="Config\ImageReaderGrayscale_Config.cntk" />
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
     <None Include="Config\ImageReaderMultiView_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
