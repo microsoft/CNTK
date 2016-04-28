@@ -33,16 +33,16 @@ class SimpleEvaluator
 {
 public:
     SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-                    const size_t numSubminiBatches = 1)
-        : m_net(net), 
-          m_numMBsToShowResult(numMBsToShowResult), 
-          m_firstMBsToShowResult(firstMBsToShowResult),
-          m_traceLevel(traceLevel),
-          m_maxSamplesInRAM(maxSamplesInRAM), 
-          m_numSubminiBatches(numSubminiBatches), 
-          m_mpi(mpi), 
-          m_distGradAgg(nullptr),
-          m_gradHeader(nullptr)
+                    const size_t numSubminiBatches = 1) :
+        m_net(net), 
+        m_numMBsToShowResult(numMBsToShowResult), 
+        m_firstMBsToShowResult(firstMBsToShowResult),
+        m_traceLevel(traceLevel),
+        m_maxSamplesInRAM(maxSamplesInRAM), 
+        m_numSubminiBatches(numSubminiBatches), 
+        m_mpi(mpi), 
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr)
     {
     }
 
@@ -240,12 +240,15 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastLogged);
+        LOGPRINTF(stderr, "Minibatch[%lu-%lu]: ", startMBNum, endMBNum);
+        numSamplesLastLogged;// fprintf(stderr, "SamplesSeen = %lu    ", numSamplesLastLogged);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
-            double eresult = (evalResults[i] - evalResultsLastLogged[i]).Average(); // / numSamplesLastLogged;
-            fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+            EpochCriterion criterionSinceLastLogged = evalResults[i] - evalResultsLastLogged[i];
+            //double eresult = criterionSinceLastLogged.Average(); // / numSamplesLastLogged;
+            //fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+            criterionSinceLastLogged.LogCriterion(evalNodes[i]->NodeName(), /*addSemicolon=*/false);
 
             if (displayConvertedValue)
             {
@@ -254,8 +257,11 @@ protected:
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                    fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
+                    fprintf(stderr, "; ppl = %.8f; ", std::exp(criterionSinceLastLogged.Average()));
             }
+
+            if (i + 1 < evalResults.size())
+                fprintf(stderr, "; ");
         }
 
         fprintf(stderr, "\n");

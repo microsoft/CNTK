@@ -14,6 +14,27 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// helper for criterion pretty printing
+static inline string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value)
+{
+    char format[16];
+    char buffer[512];
+
+    sprintf(format, "%%.%dg", precision);
+    sprintf(buffer, format, value);
+
+    for (int i = 0; i < strlen(buffer); i++)
+    {
+        if (buffer[i] == 'e' || buffer[i] == 'E')
+        {
+            sprintf(format, "%%%d.%de", padSize, precision);
+            return format;
+        }
+    }
+    sprintf(format, "%%%d.%df", padSize, precision);
+    return format;
+}
+
 // helper class for passing accumulated epoch-level criteria around while retaining their sample counts
 // Criteria are represented as a tuple (aggregate criterion, sample count). The average criterion value is their ratio.
 struct EpochCriterion : public std::pair<double, size_t>
@@ -32,6 +53,23 @@ struct EpochCriterion : public std::pair<double, size_t>
 
     static EpochCriterion Infinity() { return EpochCriterion(std::numeric_limits<double>::infinity()); }
     bool IsInfinity() const { return first == std::numeric_limits<double>::infinity(); }
+
+    // log a criterion value in a form like 'av * count; '
+    void LogCriterion(const wstring& name, bool addSemicolon = true) const
+    {
+        double evalErrorSinceLastLogged = Average();
+        int evalSamplesSinceLastLogged  = (int)second;
+        fprintf(stderr, "%ls = ", name.c_str());
+        string format;
+        bool asPercentage = name.back() == 's'; // heuristic: plural forms are error counters
+        if (asPercentage)
+            fprintf(stderr, (GeneratePaddedFloatOrExpFormat(2, 3, 100*evalErrorSinceLastLogged) + "%%").c_str(), 100*evalErrorSinceLastLogged);
+        else
+            fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 8, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
+        fprintf(stderr, " * %d", evalSamplesSinceLastLogged);
+        if (addSemicolon) // if no more numbers follow, then use addSemicolon = false
+            fprintf(stderr, "; ");
+    }
 };
 
 // We accumulate criteria in this struct.

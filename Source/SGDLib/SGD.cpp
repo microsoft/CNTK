@@ -139,7 +139,6 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
 // -----------------------------------------------------------------------
 
 static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
-static void LogCriterion(const wstring& name, const EpochCriterion& crit, bool addSemicolon = true);
 
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
@@ -485,7 +484,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         //          "Finished Epoch[%2d of %d]: [Training] %ls = %.8f * %d; ",
         //          i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average(), (int)epochCriterion.second);
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
-        LogCriterion(criterionNodes[0]->NodeName(), epochCriterion);
+        epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 #else
         LOGPRINTF(stderr,
                   "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; TotalSamplesSeen = %d; ",
@@ -493,7 +492,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 #endif
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
         for (size_t j = 0; j < epochEvalErrors.size(); j++)
-            LogCriterion(evaluationNodes[j]->NodeName(), epochEvalErrors[j]);
+            epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
         fprintf(stderr, "learningRatePerSample = %.8g; epochTime=%.6gs\n", learnRatePerSample, epochTime);
 #if 0
         // TODO: This was only printed if >1 eval criterion. Why? Needed?
@@ -524,7 +523,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
-                LogCriterion(cvSetTrainAndEvalNodes[k], vScore[k], k + 1 < vScore.size());
+                vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
                 //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
             fprintf(stderr, "\n");
 
@@ -710,25 +709,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 // -----------------------------------------------------------------------
 // TrainOneEpoch() -- train one epoch
 // -----------------------------------------------------------------------
-
-static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value);
-
-// log a criterion value in a form like 'av * count; '
-static void LogCriterion(const wstring& name, const EpochCriterion& crit, bool addSemicolon /*= true*/)
-{
-    double evalErrorSinceLastLogged =      crit.Average();
-    int evalSamplesSinceLastLogged  = (int)crit.second;
-    fprintf(stderr, "%ls = ", name.c_str());
-    string format;
-    bool asPercentage = name.back() == 's'; // heuristic: plural forms are error counters
-    if (asPercentage)
-        fprintf(stderr, (GeneratePaddedFloatOrExpFormat(2, 3, 100*evalErrorSinceLastLogged) + "%%").c_str(), 100*evalErrorSinceLastLogged);
-    else
-        fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 8, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
-    fprintf(stderr, " * %d", evalSamplesSinceLastLogged);
-    if (addSemicolon) // if no more numbers follow, then use addSemicolon = false
-        fprintf(stderr, "; ");
-}
 
 template <class ElemType>
 size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
@@ -1128,11 +1108,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
                 fprintf(stderr, "]: ");
                 //fprintf(stderr, "SamplesSeen = %d; ", (int)trainSamplesSinceLastLogged);
-                LogCriterion(criterionNodes[0]->NodeName(), epochCriterionSinceLastLogged);
+                epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
                 //fprintf(stderr, ("%ls = " + GeneratePaddedFloatOrExpFormat(11, 8, trainLossSinceLastLogged) + " * %d").c_str(),
                 //        criterionNodes[0]->NodeName().c_str(), trainLossSinceLastLogged, trainSamplesSinceLastLogged);
                 for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    LogCriterion(evaluationNodes[i]->NodeName(), epochEvalErrors[i] - epochEvalErrorsLastLogged[i]);
+                    (epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(evaluationNodes[i]->NodeName());
 
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
@@ -1721,9 +1701,9 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   prefixMsg);
 
     LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: ");
-    LogCriterion(criterionNodes[0]->NodeName(), epochCriterion);
+    epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
     for (size_t j = 0; j < epochEvalErrors.size(); j++)
-        LogCriterion(evaluationNodes[j]->NodeName(), epochEvalErrors[j]);
+        epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
     fprintf(stderr, "learningRatePerSample = %.8g\n", learnRatePerSample);
 
     // go back to where we came from
@@ -1772,27 +1752,6 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
                                          dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),
                                          pMBLayout);
     }
-}
-
-// helper for pretty printing
-static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value)
-{
-    char format[16];
-    char buffer[512];
-
-    sprintf(format, "%%.%dg", precision);
-    sprintf(buffer, format, value);
-
-    for (int i = 0; i < strlen(buffer); i++)
-    {
-        if (buffer[i] == 'e' || buffer[i] == 'E')
-        {
-            sprintf(format, "%%%d.%de", padSize, precision);
-            return format;
-        }
-    }
-    sprintf(format, "%%%d.%df", padSize, precision);
-    return format;
 }
 
 #if 0
