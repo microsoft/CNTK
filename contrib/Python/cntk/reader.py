@@ -5,9 +5,10 @@
 # ==============================================================================
 
 from abc import ABCMeta, abstractmethod
+import collections
 import numpy as np
 
-from .utils import with_metaclass, serialize_input_data
+from .utils import with_metaclass, MODEL_INDENTATION, tensors_to_text_format
 from .graph import ComputationNode
 
 
@@ -126,42 +127,43 @@ class CNTKTextFormatReader(AbstractReader):
 
     def __init__(self, filename):
         self.filename = filename
-        self.inputs_def = []
-        self.lazy_inputs_def = []
 
-    def add_input(self, name_or_node, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
-        """Add an input to the reader
+    def map(self, node_or_name, **kw):
+        '''
+        Create a mapping from a `ComputationNode` or a node's name in the
+        configuration file to a parameter dictionary. Parameters:
 
         Args:
-            name_or_node (str or ComputationNode): either name of the input in the network definition or the node itself
-            input_start (int): the start column   
-            input_dim (int): the number of columns
-            num_of_classes (int): the number of classes
-            label_mapping_file (str): the mapping file path, it can be simply with all the possible classes, one per line
-        """
-        if not name_or_node or input_start is None or input_dim is None:
-            raise ValueError("one of the parameters of add_input is None")
-
-        self.inputs_def.append(
-            (name_or_node, input_start, input_dim, num_of_classes, label_mapping_file))
-
-    def add_lazy_input(self, lazy):
+            node_or_name (`ComputationNode` or str): node or its variable name
+            alias (str): the alias in the data file. If omitted, the node's variable
+        name will be taken.
+            dim (int): the dimension of the imput
         '''
-        Add a LazyInputReader instance. Lazy inputs will be ignore in case
-        normal readers are defined. Thereby, we make sure that we can train
-        using lazy inputs, and later infer using different test data.
 
-        Args:
-            lazy (LazyInputReader): contains data that will be merged later
-            with other inputs
-        '''
-        self.lazy_inputs_def.append(lazy)
+        return InputMap(self).map(node_or_name, **kw)
 
-    def generate_config(self):
+    def generate_config(self, input_map):
         '''
         Write the reader configuration. For this, all previously registered
         `LazyInputReader`s will be serialized into one common file.
+
+        Args:
+            input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
+
+        Returns:
+            string representation of the reader configuration
         '''
+
+        if input_map.is_empty():
+            return ''
+
+        if input_map.has_mapped() and input_map.has_unmapped():
+            raise ValueError('it is not supported to have a reader together' +
+                    ' with inputs that are initialized without a reader' +
+                    ' (e.g. NumPy).')
+
+        if input_map.reader is not None and self is not input_map.reader:
+            raise ValueError('reader mismatch')
 
         from cntk.context import get_context
         template = ''' 
@@ -171,48 +173,49 @@ class CNTKTextFormatReader(AbstractReader):
             file = "%(FileName)s"                
         ''' % {'FileName': self.filename}
 
-        if self.inputs_def or self.lazy_inputs_def:
-            template += '''
-                input = [
-            '''
+        template += '''
+            input = [
+        '''
 
-        if self.inputs_def:
-            for (name_or_node, input_alias, dim, format) in self.inputs_def:
-                if (isinstance(name_or_node, ComputationNode)):
-                    name = name_or_node.var_name
+        if input_map.has_unmapped():
+            input_map._serialize_unmapped_nodes(
+                input_map.unmapped_nodes, self.filename)
+
+
+        for node_or_name, param_dict in input_map.node_map.items():
+            if (isinstance(node_or_name, ComputationNode)):
+                name = node_or_name.var_name
+            else:
+                name = node_or_name
+
+            if not 'format' in param_dict:
+                param_dict['format'] = 'dense'
+            
+            if not 'dim' in param_dict:
+                if isinstance(node_or_name.reader, LazyInputReader):
+                    lazy = node_or_name.reader
+                    param_dict['dim'] = np.multiply.reduce(lazy.shape)
                 else:
-                    name = name_or_node
+                    raise ValueError('parameter "dim" not specified for node "%s"'%str(node_or_name))
 
-                if not input_alias:
-                    a = name
-                else:
-                    a = input_alias
 
-                template += '''
-                {0}=[
-                    alias = "{1}"                
-                    dim = {2}          
-                    format = "{3}"
-                ]'''.format(name, a, dim, format)
+            indent =5*MODEL_INDENTATION*' '
+            params = ['%s%s = %s'%(indent, k,v) for k,v in
+                    param_dict.items()]
 
-        if not self.inputs_def and self.lazy_inputs_def:
-            alias_lazy_map = serialize_input_data(
-                self.lazy_inputs_def, self.filename)
+            param_lines = '\n'.join(params)
 
-            for alias, lazy in alias_lazy_map.items():
+            if 'alias' in param_dict:
+                a = param_dict['alias']
+            else:
+                a = name
 
-                dim = np.multiply.reduce(lazy.shape)
-                format = 'dense'  # TODO: sparse
-
-                template += '''
-                {0}=[
-                    alias = "{1}"                
-                    dim = {2}          
-                    format = "{3}"
-                ]'''.format(lazy.node.var_name, alias, dim, format)
-
-        if self.inputs_def or self.lazy_inputs_def:
             template += '''
+            {0}=[
+                {1}
+            ]'''.format(name, param_lines)
+
+        template += '''
             ]
         ]
             '''
@@ -308,21 +311,21 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
         self["CustomDelimiter"] = custom_delimiter
         self.inputs_def = []
 
-    def add_input(self, name_or_node, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
+    def add_input(self, node_or_name, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
         """Add an input to the reader
 
         Args:
-            name_or_node (str or ComputationNode): either name of the input in the network definition or the node itself
+            node_or_name (str or ComputationNode): either name of the input in the network definition or the node itself
             input_start (int): the start column   
             input_dim (int): the number of columns
             num_of_classes (int): the number of classes
             label_mapping_file (str): the mapping file path, it can be simply with all the possible classes, one per line
         """
-        if not name_or_node or input_start is None or input_dim is None:
+        if not node_or_name or input_start is None or input_dim is None:
             raise ValueError("one of the parameters of add_input is None")
 
         self.inputs_def.append(
-            (name_or_node, input_start, input_dim, num_of_classes, label_mapping_file))
+            (node_or_name, input_start, input_dim, num_of_classes, label_mapping_file))
 
     def generate_config(self):
         """Generate the reader configuration block
@@ -342,11 +345,11 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
        '''
 
         if self.inputs_def is not None:
-            for (name_or_node, start, dim, num_of_classes, map_file) in self.inputs_def:
-                if (isinstance(name_or_node, ComputationNode)):
-                    name = name_or_node.var_name
+            for (node_or_name, start, dim, num_of_classes, map_file) in self.inputs_def:
+                if (isinstance(node_or_name, ComputationNode)):
+                    name = node_or_name.var_name
                 else:
-                    name = name_or_node
+                    name = node_or_name
 
                 template += '''
         {0} = [
@@ -372,3 +375,161 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
 '''
 
         return template % self
+
+class InputMap(object):
+    '''
+    An instance of `InputMap` is return by the readers' `.map()` function, and
+    binds input nodes to the aliases in a reader.
+
+    Args:
+        reader (descendent of `AbstractReader`)
+    Example:
+        
+        train_reader = CNTKTextFormatReader('file.txt')
+        with ctx.train(..., input_map=train_reader.map(X, shape='I').map(y, shape='L')):
+            ...
+    '''
+    def __init__(self, reader=None):
+        self.reader = reader
+        self.node_map = {}
+        self.unmapped_nodes = set()
+
+    def __contains__(self, node_or_name):
+        if node_or_name in self.node_map:
+            return True
+
+        if isinstance(node_or_name, ComputationNode):
+            if node_or_name.var_name and \
+                    node_or_name.var_name in self.node_map:
+                return True
+
+        return False
+
+
+    def map(self, node_or_name, **kw):
+        self.node_map[node_or_name] = kw
+        return self
+
+    def has_mapped(self):
+        return len(self.node_map)>0
+
+    def has_unmapped(self):
+        return len(self.unmapped_nodes)>0
+
+    def is_empty(self):
+        return not self.has_mapped() and not self.has_unmapped()
+
+    def generate_config(self):
+        if self.reader is None:
+            if not self.unmapped_nodes:
+                # No inputs in the graph
+                return ''
+
+            # We have found only inputs that were directly initialized.
+            # In this case, we need to serialize them into one file.
+
+            from .context import get_context
+            from .utils import get_temp_filename
+            filename = get_temp_filename(get_context().directory)
+
+            assert not self.node_map
+            self._serialize_unmapped_nodes(filename)
+            
+            r = CNTKTextFormatReader(filename)
+
+            return r.generate_config(self)
+
+        else:
+            return self.reader.generate_config(self)
+
+    def _add_unmapped(self, node):
+        '''
+        In case node had been initialized directly with a tensor, it is
+        accumulated. At the end, all of these nodes will be serialized into one
+        temporary file.
+        '''
+        self.unmapped_nodes.add(node)
+
+    def _serialize_unmapped_nodes(self, filename):
+        '''
+        Generates a file readable with `cntk.readers.CNTKTextFormatReader` that
+        can be connected to the inputs of the network and fills in missing
+        information in the lazy input defs (shape, alias).
+
+        Args:
+            filename (str): name of the file
+        '''
+
+        alias_counter = 0
+        sample_sizes = collections.defaultdict(list)
+        used_aliases = set()
+        for node in self.unmapped_nodes:
+            assert node.is_input()
+            assert isinstance(node.reader, LazyInputReader)
+            
+            l = node.reader
+
+            # make sure all inputs have valid unique aliases
+            if l.input_alias is None or l.input_alias.startswith('_'):
+                new_alias = '_I_%i' % alias_counter
+                alias_counter += 1
+                while new_alias in used_aliases:
+                    new_alias = '_I_%i' % alias_counter
+                    alias_counter += 1
+
+                l.input_alias = new_alias
+                used_aliases.add(new_alias)
+
+            # keep track of sample sizes
+            sample_sizes[len(l.batch)].append(l.input_alias)
+
+            shapes_in_tensor = set()
+
+            # make sure that modulo dynamic axis all tensors of one lazy input have
+            # the same shape
+            for tensor in l.batch:
+                if isinstance(tensor, list):
+                    tensor = np.asarray(tensor)
+
+                if l.has_dynamic_axis:
+                    # collecting the shapes ignoring the dynamic axis
+                    shapes_in_tensor.add(tensor.shape[1:])
+                else:
+                    shapes_in_tensor.add(tensor.shape)
+
+            # ignoring the dynamic axis, all shapes should be equal
+            if len(shapes_in_tensor) != 1:
+                raise ValueError('except for the sequence dimensions all shapes ' +
+                                 'should be the same - instead we %s' %
+                                 (", ".join(str(s) for s in shapes_in_tensor)))
+
+            # shapes_in_tensor now contains only one shape, which has the sequence
+            # dimension removed.
+            value_shape = shapes_in_tensor.pop()
+            l.shape = value_shape if value_shape else (1,)
+
+            assert node not in self.node_map
+            self.node_map[node] = {
+                    'alias': l.input_alias, 
+                    }
+
+        # make sure all inputs have same sample size
+        if len(sample_sizes) != 1:
+            raise ValueError(
+                'LazyInputReaders have different sizes: %s' % str(sample_sizes))
+
+        sample_size = list(sample_sizes)[0]
+
+        # ready to serialize
+        with open(filename, 'w') as f:
+            for idx in range(sample_size):
+                alias_tensor_map = {}
+                for node in self.unmapped_nodes:
+                    l = node.reader
+                    if l.has_dynamic_axis:
+                        alias_tensor_map[l.input_alias] = l.batch[idx]
+                    else:
+                        alias_tensor_map[l.input_alias] = [l.batch[idx]]
+                f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
+
+        self.unmapped_nodes.clear()

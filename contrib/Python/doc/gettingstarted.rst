@@ -64,8 +64,11 @@ First basic use
 
 Here is a simple example of using the CNTK Python API to learn a line of best fit::
 
+	import cntk
+	import cntk.ops
+
 	def main():
-		print("test")
+	    print("test")
 
 
 blah...
@@ -75,7 +78,11 @@ Sequence classification
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 One of the most exciting areas in deep learning is the powerful idea of recurrent 
-neural networks (RNNs). 
+neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the deep 
+learning world. They are networks with loops in them and they allow us to model the 
+current state given the result of a previous state. In other words, they allow information 
+to persist.
+
 
 
 

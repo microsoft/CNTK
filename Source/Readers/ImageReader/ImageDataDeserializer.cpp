@@ -215,8 +215,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
             description.m_chunkId = curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_major = description.m_id;
-            description.m_key.m_minor = 0;
+            description.m_key.m_sequence = description.m_id;
+            description.m_key.m_sample = 0;
 
             m_imageSequences.push_back(description);
             RegisterByteReader(description.m_id, description.m_path, knownReaders);
