@@ -335,6 +335,24 @@ $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# CompositeDataReader plugin
+########################################
+
+COMPOSITEDATAREADER_SRC =\
+	$(SOURCEDIR)/Readers/CompositeDataReader/CompositeDataReader.cpp \
+	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
+
+COMPOSITEDATAREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMPOSITEDATAREADER_SRC))
+
+COMPOSITEDATAREADER:=$(LIBDIR)/CompositeDataReader.so
+ALL+=$(COMPOSITEDATAREADER)
+SRC+=$(COMPOSITEDATAREADER_SRC)
+
+$(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
 # ExperimentalHTKMLFReader plugin
 ########################################
 
