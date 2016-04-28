@@ -7,12 +7,13 @@
 #include "ImageReader.h"
 #include "Config.h"
 #include "ImageConfigHelper.h"
-#include "ImageTransformers.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "ImageDataDeserializer.h"
 #include "FramePacker.h"
+#include "CompositeTransformer.h"
 #include <omp.h>
+#include "ImageSlimTransformers.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -53,29 +54,24 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
 
     randomizer->Initialize(nullptr, config);
 
-    auto cropper = std::make_shared<CropTransformer>();
-    cropper->Initialize(randomizer, config);
+    size_t featureStreamId = configHelper.GetFeatureStreamId();
+    ConfigParameters featureStream = config(m_streams[featureStreamId]->m_name);
 
-    auto scaler = std::make_shared<ScaleTransformer>();
-    scaler->Initialize(cropper, config);
+    // Create transformations.
+    std::vector<Transformation> transformations;
+    transformations.push_back(Transformation{ std::make_shared<SlimCropTransformer>(featureStream), featureStreamId });
+    transformations.push_back(Transformation{ std::make_shared<SlimScaleTransformer>(featureStream), featureStreamId });
+    transformations.push_back(Transformation{ std::make_shared<SlimColorTransformer>(featureStream), featureStreamId });
+    transformations.push_back(Transformation{ std::make_shared<SlimIntensityTransformer>(featureStream), featureStreamId });
+    transformations.push_back(Transformation{ std::make_shared<SlimMeanTransformer>(featureStream), featureStreamId });
 
-    auto color = std::make_shared<ColorTransformer>();
-    color->Initialize(scaler, config);
-
-    auto intensity = std::make_shared<IntensityTransformer>();
-    intensity->Initialize(color, config);
-
-    auto mean = std::make_shared<MeanTransformer>();
-    mean->Initialize(intensity, config);
-
-    TransformerPtr last = mean;
     if (configHelper.GetDataFormat() == CHW)
     {
-        last = std::make_shared<TransposeTransformer>();
-        last->Initialize(mean, config);
+        transformations.push_back(Transformation{ std::make_shared<SlimTransposeTransformer>(featureStream), featureStreamId });
     }
 
-    m_transformer = last;
+    m_transformer = std::make_shared<CompositeTransformer>(transformations);
+    m_transformer->Initialize(randomizer, config);
 
     m_packer = std::make_shared<FramePacker>(
         m_provider,

@@ -121,7 +121,7 @@ private:
 };
 
 // Transpose transformation from HWC to CHW.
-class SlimTransposeTransformer : public SlimTransformerPtr
+class SlimTransposeTransformer : public SlimTransformer
 {
 public:
     explicit SlimTransposeTransformer(const ConfigParameters& config);

@@ -34,7 +34,7 @@ public:
         m_chainOfStreamDescriptions.push_back(streams);
         for (auto& t : m_transformations)
         {
-            streams[t.m_streamId] = t.m_transfromer->Transform(*streams[t.m_streamId]);
+            streams[t.m_streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*streams[t.m_streamId]));
             m_chainOfStreamDescriptions.push_back(streams);
         }
     }
