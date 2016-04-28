@@ -392,7 +392,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType> slice, size_t startColumn, size_t numCols) const
+void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
