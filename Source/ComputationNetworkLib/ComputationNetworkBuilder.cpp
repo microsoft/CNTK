@@ -83,6 +83,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReduceElementsNode))                   return New<ReduceElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RNNNode))                              return New<RNNNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
@@ -135,7 +136,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PoolingNode))              return New<PoolingNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(RNNNode))                  return New<RNNNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
@@ -222,12 +222,6 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring& inputName, const TensorShape& imageLayout, const wstring& dynamicAxisName)
 {
     return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, dynamicAxisName));
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateRNNNode(const std::wstring& nodeName)
-{
-	return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName));
 }
 
 template <class ElemType>
