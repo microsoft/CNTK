@@ -298,13 +298,16 @@ class ComputationNode(object):
 
         return var_name, node_counter, desc, inputs, dep_inputs
 
-    def to_config(self):
+    def to_config(self, input_map=None):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
+
+        Args:
+            input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
         var_name, node_counter, desc, inputs, dep_inputs = \
-            self._to_config(input_map=None,
+            self._to_config(input_map=input_map,
                             description=[],
                             unrolled_nodes={},
                             inputs=set(),
