@@ -1,0 +1,1494 @@
+=== Running /home/alrezni/src/cntk_git/build/release/bin/cntk configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple/Speech_Simple.cntk currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu DeviceId=-1 timestamping=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 22 2016 10:15:37
+		Last modified date: Tue Apr  5 16:01:37 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: alrezni/examples_text
+		Build SHA1: 6a74de8e569af56e61a14d762716930c397b5c90
+		Built by alrezni on atleneu04
+		Build Path: /home/alrezni/src/cntk_git
+-------------------------------------------------------------------
+Changed current directory to /home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+04/22/2016 11:15:09: -------------------------------------------------------------------
+04/22/2016 11:15:09: Build info: 
+
+04/22/2016 11:15:09: 		Built time: Apr 22 2016 10:15:37
+04/22/2016 11:15:09: 		Last modified date: Tue Apr  5 16:01:37 2016
+04/22/2016 11:15:09: 		Build type: release
+04/22/2016 11:15:09: 		Build target: GPU
+04/22/2016 11:15:09: 		With 1bit-SGD: no
+04/22/2016 11:15:09: 		Math lib: acml
+04/22/2016 11:15:09: 		CUDA_PATH: /usr/local/cuda-7.0
+04/22/2016 11:15:09: 		CUB_PATH: /usr/local/cub-1.4.1
+04/22/2016 11:15:09: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/22/2016 11:15:09: 		Build Branch: alrezni/examples_text
+04/22/2016 11:15:09: 		Build SHA1: 6a74de8e569af56e61a14d762716930c397b5c90
+04/22/2016 11:15:09: 		Built by alrezni on atleneu04
+04/22/2016 11:15:09: 		Build Path: /home/alrezni/src/cntk_git
+04/22/2016 11:15:09: -------------------------------------------------------------------
+
+04/22/2016 11:15:09: Running on localhost at 2016/04/22 11:15:09
+04/22/2016 11:15:09: Command line: 
+/home/alrezni/src/cntk_git/build/release/bin/cntk  configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple/Speech_Simple.cntk  currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu  DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple  OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu  DeviceId=-1  timestamping=true
+
+
+
+04/22/2016 11:15:09: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/22/2016 11:15:09: command=Simple_Demo:Simple_Demo_Output
+DeviceNumber=-1
+precision=float
+modelPath=$RunDir$/models/simple.dnn
+deviceId=$DeviceNumber$
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=$RunDir$/SimpleOutput    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DeviceId=-1
+timestamping=true
+
+04/22/2016 11:15:09: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/22/2016 11:15:09: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/22/2016 11:15:09: command=Simple_Demo:Simple_Demo_Output
+DeviceNumber=-1
+precision=float
+modelPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+deviceId=-1
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DeviceId=-1
+timestamping=true
+
+04/22/2016 11:15:09: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/22/2016 11:15:09: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: Speech_Simple.cntk:command=Simple_Demo:Simple_Demo_Output
+configparameters: Speech_Simple.cntk:ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+configparameters: Speech_Simple.cntk:currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+configparameters: Speech_Simple.cntk:DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+configparameters: Speech_Simple.cntk:deviceId=-1
+configparameters: Speech_Simple.cntk:DeviceNumber=-1
+configparameters: Speech_Simple.cntk:modelPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+configparameters: Speech_Simple.cntk:OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+configparameters: Speech_Simple.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Speech_Simple.cntk:precision=float
+configparameters: Speech_Simple.cntk:RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+configparameters: Speech_Simple.cntk:Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+
+configparameters: Speech_Simple.cntk:Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput    
+]
+
+configparameters: Speech_Simple.cntk:timestamping=true
+configparameters: Speech_Simple.cntk:traceLevel=1
+04/22/2016 11:15:09: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/22/2016 11:15:09: Commands: Simple_Demo Simple_Demo_Output
+04/22/2016 11:15:09: Precision = "float"
+04/22/2016 11:15:09: CNTKModelPath: /tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+04/22/2016 11:15:09: CNTKCommandTrainInfo: Simple_Demo : 50
+04/22/2016 11:15:09: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 50
+
+04/22/2016 11:15:09: ##############################################################################
+04/22/2016 11:15:09: #                                                                            #
+04/22/2016 11:15:09: # Action "train"                                                             #
+04/22/2016 11:15:09: #                                                                            #
+04/22/2016 11:15:09: ##############################################################################
+
+04/22/2016 11:15:09: CNTKCommandTrainBegin: Simple_Demo
+SimpleNetworkBuilder Using CPU
+
+04/22/2016 11:15:09: Creating virgin network.
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *], [2], [2] -> [2 x *]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *] -> [50 x *]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *] -> [50 x 1 x *]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *] -> [2 x 1 x *]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *], [2 x 1] -> [2 x 1 x *]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *] -> [2 x 1 x *]
+Validating --> Prior = Mean (labels) : [2 x *] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *], [2] -> [2 x 1 x *]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/22/2016 11:15:09: Created model with 25 nodes on CPU.
+
+04/22/2016 11:15:09: Training criterion node(s):
+04/22/2016 11:15:09: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+04/22/2016 11:15:09: Evaluation criterion node(s):
+
+04/22/2016 11:15:09: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+04/22/2016 11:15:09: Precomputing --> 3 PreCompute nodes found.
+
+04/22/2016 11:15:09: 	MeanOfFeatures = Mean()
+04/22/2016 11:15:09: 	InvStdOfFeatures = InvStdDev()
+04/22/2016 11:15:09: 	Prior = Mean()
+
+04/22/2016 11:15:09: Precomputing --> Completed.
+
+
+04/22/2016 11:15:09: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:09: Starting minibatch loop.
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[   1-  10]: SamplesSeen = 1280; TrainLossPerSample =  0.73933568; EvalErr[0]PerSample = 0.49140625; TotalTime = 0.0340s; SamplesPerSecond = 37668.1
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  11-  20]: SamplesSeen = 1280; TrainLossPerSample =  0.77136855; EvalErr[0]PerSample = 0.48828125; TotalTime = 0.0431s; SamplesPerSecond = 29710.1
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  21-  30]: SamplesSeen = 1280; TrainLossPerSample =  0.70157547; EvalErr[0]PerSample = 0.49531250; TotalTime = 0.0912s; SamplesPerSecond = 14027.7
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  31-  40]: SamplesSeen = 1280; TrainLossPerSample =  0.69864731; EvalErr[0]PerSample = 0.49453125; TotalTime = 0.0292s; SamplesPerSecond = 43801.1
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  41-  50]: SamplesSeen = 1280; TrainLossPerSample =  0.71645107; EvalErr[0]PerSample = 0.51562500; TotalTime = 0.0575s; SamplesPerSecond = 22252.0
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  51-  60]: SamplesSeen = 1280; TrainLossPerSample =  0.62874565; EvalErr[0]PerSample = 0.41796875; TotalTime = 0.0659s; SamplesPerSecond = 19432.8
+04/22/2016 11:15:09:  Epoch[ 1 of 50]-Minibatch[  61-  70]: SamplesSeen = 1280; TrainLossPerSample =  0.27024155; EvalErr[0]PerSample = 0.11328125; TotalTime = 0.0639s; SamplesPerSecond = 20017.2
+04/22/2016 11:15:09: Finished Epoch[ 1 of 50]: [Training Set] TrainLossPerSample = 0.6024624; TotalSamplesSeen = 10000; EvalErrPerSample = 0.3959; AvgLearningRatePerSample = 0.1; EpochTime=0.44024
+04/22/2016 11:15:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.1'
+
+04/22/2016 11:15:09: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:09: Starting minibatch loop.
+04/22/2016 11:15:09:  Epoch[ 2 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.23306041; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0466s; SamplesPerSecond = 27458.4
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.24780278; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0621s; SamplesPerSecond = 20604.9
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.21934299; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0466s; SamplesPerSecond = 27464.9
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.20664606; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0595s; SamplesPerSecond = 21509.0
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17843256; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0529s; SamplesPerSecond = 24200.3
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.22236948; EvalErr[0]PerSample = 0.10312500; TotalTime = 0.0518s; SamplesPerSecond = 24703.3
+04/22/2016 11:15:10:  Epoch[ 2 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16909237; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0350s; SamplesPerSecond = 36555.8
+04/22/2016 11:15:10: Finished Epoch[ 2 of 50]: [Training Set] TrainLossPerSample = 0.20652898; TotalSamplesSeen = 20000; EvalErrPerSample = 0.0797; AvgLearningRatePerSample = 0.1; EpochTime=0.411757
+04/22/2016 11:15:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.2'
+
+04/22/2016 11:15:10: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:10: Starting minibatch loop.
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15952379; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0582s; SamplesPerSecond = 21984.4
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16969210; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.1103s; SamplesPerSecond = 11602.6
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17790325; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0451s; SamplesPerSecond = 28353.7
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.14991813; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0423s; SamplesPerSecond = 30269.3
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.19979506; EvalErr[0]PerSample = 0.10468750; TotalTime = 0.0326s; SamplesPerSecond = 39208.5
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15364418; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0506s; SamplesPerSecond = 25272.0
+04/22/2016 11:15:10:  Epoch[ 3 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15614729; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.0617s; SamplesPerSecond = 20738.8
+04/22/2016 11:15:10: Finished Epoch[ 3 of 50]: [Training Set] TrainLossPerSample = 0.16649578; TotalSamplesSeen = 30000; EvalErrPerSample = 0.0767; AvgLearningRatePerSample = 0.1; EpochTime=0.486622
+04/22/2016 11:15:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.3'
+
+04/22/2016 11:15:10: Starting Epoch 4: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:10: Starting minibatch loop.
+04/22/2016 11:15:10:  Epoch[ 4 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.19889326; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.0939s; SamplesPerSecond = 13634.9
+04/22/2016 11:15:10:  Epoch[ 4 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17116683; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0642s; SamplesPerSecond = 19927.1
+04/22/2016 11:15:11:  Epoch[ 4 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.14583776; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0882s; SamplesPerSecond = 14511.8
+04/22/2016 11:15:11:  Epoch[ 4 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16399374; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0798s; SamplesPerSecond = 16034.1
+04/22/2016 11:15:11:  Epoch[ 4 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15278130; EvalErr[0]PerSample = 0.06562500; TotalTime = 0.0481s; SamplesPerSecond = 26628.4
+04/22/2016 11:15:11:  Epoch[ 4 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.18967047; EvalErr[0]PerSample = 0.09140625; TotalTime = 0.0275s; SamplesPerSecond = 46499.8
+04/22/2016 11:15:11:  Epoch[ 4 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16619148; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0391s; SamplesPerSecond = 32777.6
+04/22/2016 11:15:11: Finished Epoch[ 4 of 50]: [Training Set] TrainLossPerSample = 0.16990095; TotalSamplesSeen = 40000; EvalErrPerSample = 0.076; AvgLearningRatePerSample = 0.1; EpochTime=0.498001
+04/22/2016 11:15:11: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.4'
+
+04/22/2016 11:15:11: Starting Epoch 5: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:11: Starting minibatch loop.
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.14866016; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0286s; SamplesPerSecond = 44742.7
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.19050193; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0805s; SamplesPerSecond = 15898.3
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.19228437; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0461s; SamplesPerSecond = 27739.3
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16222076; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0647s; SamplesPerSecond = 19781.8
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15045443; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.1154s; SamplesPerSecond = 11093.7
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17695618; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0492s; SamplesPerSecond = 26004.1
+04/22/2016 11:15:11:  Epoch[ 5 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18600874; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0679s; SamplesPerSecond = 18848.5
+04/22/2016 11:15:11: Finished Epoch[ 5 of 50]: [Training Set] TrainLossPerSample = 0.1687627; TotalSamplesSeen = 50000; EvalErrPerSample = 0.0763; AvgLearningRatePerSample = 0.1; EpochTime=0.511309
+04/22/2016 11:15:11: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.5'
+
+04/22/2016 11:15:11: Starting Epoch 6: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:11: Starting minibatch loop.
+04/22/2016 11:15:11:  Epoch[ 6 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16541500; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0834s; SamplesPerSecond = 15347.0
+04/22/2016 11:15:11:  Epoch[ 6 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15799203; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0368s; SamplesPerSecond = 34822.4
+04/22/2016 11:15:12:  Epoch[ 6 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15418158; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0956s; SamplesPerSecond = 13388.4
+04/22/2016 11:15:12:  Epoch[ 6 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17027073; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0490s; SamplesPerSecond = 26099.0
+04/22/2016 11:15:12:  Epoch[ 6 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16654887; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0295s; SamplesPerSecond = 43357.5
+04/22/2016 11:15:12:  Epoch[ 6 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16848326; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0784s; SamplesPerSecond = 16333.6
+04/22/2016 11:15:12:  Epoch[ 6 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15642786; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0320s; SamplesPerSecond = 40046.3
+04/22/2016 11:15:12: Finished Epoch[ 6 of 50]: [Training Set] TrainLossPerSample = 0.16224382; TotalSamplesSeen = 60000; EvalErrPerSample = 0.0764; AvgLearningRatePerSample = 0.1; EpochTime=0.477357
+04/22/2016 11:15:12: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.6'
+
+04/22/2016 11:15:12: Starting Epoch 7: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:12: Starting minibatch loop.
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17808090; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0584s; SamplesPerSecond = 21932.8
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.19384569; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0919s; SamplesPerSecond = 13928.3
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17011890; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.1443s; SamplesPerSecond = 8870.8
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16028075; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0584s; SamplesPerSecond = 21901.3
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14625754; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0437s; SamplesPerSecond = 29262.5
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17853184; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0555s; SamplesPerSecond = 23079.7
+04/22/2016 11:15:12:  Epoch[ 7 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15227604; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0523s; SamplesPerSecond = 24487.8
+04/22/2016 11:15:12: Finished Epoch[ 7 of 50]: [Training Set] TrainLossPerSample = 0.16922106; TotalSamplesSeen = 70000; EvalErrPerSample = 0.0778; AvgLearningRatePerSample = 0.1; EpochTime=0.605701
+04/22/2016 11:15:12: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.7'
+
+04/22/2016 11:15:12: Starting Epoch 8: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:12: Starting minibatch loop.
+04/22/2016 11:15:12:  Epoch[ 8 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.19132320; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0560s; SamplesPerSecond = 22866.1
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15938925; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0887s; SamplesPerSecond = 14433.9
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16188359; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0617s; SamplesPerSecond = 20741.5
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15345078; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0257s; SamplesPerSecond = 49718.4
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16822319; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0746s; SamplesPerSecond = 17158.9
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.18607416; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.0738s; SamplesPerSecond = 17346.8
+04/22/2016 11:15:13:  Epoch[ 8 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14823370; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0231s; SamplesPerSecond = 55449.7
+04/22/2016 11:15:13: Finished Epoch[ 8 of 50]: [Training Set] TrainLossPerSample = 0.16762668; TotalSamplesSeen = 80000; EvalErrPerSample = 0.0768; AvgLearningRatePerSample = 0.1; EpochTime=0.474866
+04/22/2016 11:15:13: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.8'
+
+04/22/2016 11:15:13: Starting Epoch 9: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:13: Starting minibatch loop.
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16914330; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0905s; SamplesPerSecond = 14148.8
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17302327; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0751s; SamplesPerSecond = 17052.8
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16006942; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0826s; SamplesPerSecond = 15502.4
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15442381; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0364s; SamplesPerSecond = 35152.3
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.13864594; EvalErr[0]PerSample = 0.05703125; TotalTime = 0.0610s; SamplesPerSecond = 20980.5
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17193165; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0306s; SamplesPerSecond = 41862.9
+04/22/2016 11:15:13:  Epoch[ 9 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14883986; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0324s; SamplesPerSecond = 39459.9
+04/22/2016 11:15:13: Finished Epoch[ 9 of 50]: [Training Set] TrainLossPerSample = 0.16019153; TotalSamplesSeen = 90000; EvalErrPerSample = 0.0747; AvgLearningRatePerSample = 0.1; EpochTime=0.529804
+04/22/2016 11:15:13: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.9'
+
+04/22/2016 11:15:13: Starting Epoch 10: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:13: Starting minibatch loop.
+04/22/2016 11:15:13:  Epoch[10 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15938261; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0413s; SamplesPerSecond = 30975.5
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16747584; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.1039s; SamplesPerSecond = 12314.2
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.14229605; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0333s; SamplesPerSecond = 38490.5
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17674637; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0191s; SamplesPerSecond = 66893.1
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16552539; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0654s; SamplesPerSecond = 19559.6
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16121101; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0472s; SamplesPerSecond = 27143.4
+04/22/2016 11:15:14:  Epoch[10 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14450760; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0879s; SamplesPerSecond = 14554.1
+04/22/2016 11:15:14: Finished Epoch[10 of 50]: [Training Set] TrainLossPerSample = 0.15833497; TotalSamplesSeen = 100000; EvalErrPerSample = 0.075; AvgLearningRatePerSample = 0.1; EpochTime=0.461558
+04/22/2016 11:15:14: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.10'
+
+04/22/2016 11:15:14: Starting Epoch 11: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:14: Starting minibatch loop.
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15803063; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0528s; SamplesPerSecond = 24237.8
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15592766; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0733s; SamplesPerSecond = 17463.0
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15867383; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0320s; SamplesPerSecond = 40051.3
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.18355403; EvalErr[0]PerSample = 0.09140625; TotalTime = 0.1004s; SamplesPerSecond = 12743.3
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16960368; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0742s; SamplesPerSecond = 17253.0
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16026030; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0726s; SamplesPerSecond = 17635.2
+04/22/2016 11:15:14:  Epoch[11 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15526876; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0713s; SamplesPerSecond = 17947.8
+04/22/2016 11:15:14: Finished Epoch[11 of 50]: [Training Set] TrainLossPerSample = 0.16184233; TotalSamplesSeen = 110000; EvalErrPerSample = 0.0763; AvgLearningRatePerSample = 0.1; EpochTime=0.557071
+04/22/2016 11:15:14: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.11'
+
+04/22/2016 11:15:14: Starting Epoch 12: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:14: Starting minibatch loop.
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.14852283; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0529s; SamplesPerSecond = 24198.4
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16825690; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0652s; SamplesPerSecond = 19635.2
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17481744; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0311s; SamplesPerSecond = 41193.3
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16886683; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0818s; SamplesPerSecond = 15646.8
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.19157715; EvalErr[0]PerSample = 0.08828125; TotalTime = 0.1068s; SamplesPerSecond = 11984.2
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14872885; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0525s; SamplesPerSecond = 24400.5
+04/22/2016 11:15:15:  Epoch[12 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16920624; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0623s; SamplesPerSecond = 20536.8
+04/22/2016 11:15:15: Finished Epoch[12 of 50]: [Training Set] TrainLossPerSample = 0.16686219; TotalSamplesSeen = 120000; EvalErrPerSample = 0.0771; AvgLearningRatePerSample = 0.1; EpochTime=0.543586
+04/22/2016 11:15:15: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.12'
+
+04/22/2016 11:15:15: Starting Epoch 13: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:15: Starting minibatch loop.
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15746654; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0312s; SamplesPerSecond = 41066.4
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15095068; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0670s; SamplesPerSecond = 19094.5
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16232100; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0854s; SamplesPerSecond = 14992.2
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16141195; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0333s; SamplesPerSecond = 38481.2
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.18838768; EvalErr[0]PerSample = 0.09218750; TotalTime = 0.0313s; SamplesPerSecond = 40929.9
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16033869; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0659s; SamplesPerSecond = 19426.9
+04/22/2016 11:15:15:  Epoch[13 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18104076; EvalErr[0]PerSample = 0.08828125; TotalTime = 0.0910s; SamplesPerSecond = 14065.9
+04/22/2016 11:15:15: Finished Epoch[13 of 50]: [Training Set] TrainLossPerSample = 0.16538596; TotalSamplesSeen = 130000; EvalErrPerSample = 0.0772; AvgLearningRatePerSample = 0.1; EpochTime=0.450966
+04/22/2016 11:15:15: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.13'
+
+04/22/2016 11:15:15: Starting Epoch 14: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:15: Starting minibatch loop.
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16673625; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0616s; SamplesPerSecond = 20793.7
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16026030; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0633s; SamplesPerSecond = 20210.3
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16508820; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0784s; SamplesPerSecond = 16325.1
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.14741759; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0479s; SamplesPerSecond = 26705.1
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15339551; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.1079s; SamplesPerSecond = 11862.8
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16566682; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0634s; SamplesPerSecond = 20176.9
+04/22/2016 11:15:16:  Epoch[14 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16757851; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0514s; SamplesPerSecond = 24898.4
+04/22/2016 11:15:16: Finished Epoch[14 of 50]: [Training Set] TrainLossPerSample = 0.16044897; TotalSamplesSeen = 140000; EvalErrPerSample = 0.0751; AvgLearningRatePerSample = 0.1; EpochTime=0.550148
+04/22/2016 11:15:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.14'
+
+04/22/2016 11:15:16: Starting Epoch 15: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:16: Starting minibatch loop.
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17496850; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0378s; SamplesPerSecond = 33858.0
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17374129; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0630s; SamplesPerSecond = 20333.3
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16181238; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0467s; SamplesPerSecond = 27390.8
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17213588; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0567s; SamplesPerSecond = 22574.2
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17390571; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0421s; SamplesPerSecond = 30435.6
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17115307; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0804s; SamplesPerSecond = 15918.2
+04/22/2016 11:15:16:  Epoch[15 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17045021; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0548s; SamplesPerSecond = 23350.8
+04/22/2016 11:15:16: Finished Epoch[15 of 50]: [Training Set] TrainLossPerSample = 0.17080643; TotalSamplesSeen = 150000; EvalErrPerSample = 0.0785; AvgLearningRatePerSample = 0.1; EpochTime=0.400973
+04/22/2016 11:15:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.15'
+
+04/22/2016 11:15:16: Starting Epoch 16: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:16: Starting minibatch loop.
+04/22/2016 11:15:16:  Epoch[16 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.14492917; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0328s; SamplesPerSecond = 39023.2
+04/22/2016 11:15:16:  Epoch[16 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17128217; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0573s; SamplesPerSecond = 22334.3
+04/22/2016 11:15:17:  Epoch[16 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16674979; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0537s; SamplesPerSecond = 23818.4
+04/22/2016 11:15:17:  Epoch[16 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.14410810; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0830s; SamplesPerSecond = 15418.9
+04/22/2016 11:15:17:  Epoch[16 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15073400; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0820s; SamplesPerSecond = 15609.6
+04/22/2016 11:15:17:  Epoch[16 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15495987; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0823s; SamplesPerSecond = 15558.0
+04/22/2016 11:15:17:  Epoch[16 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15633574; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0500s; SamplesPerSecond = 25617.9
+04/22/2016 11:15:17: Finished Epoch[16 of 50]: [Training Set] TrainLossPerSample = 0.15949219; TotalSamplesSeen = 160000; EvalErrPerSample = 0.0756; AvgLearningRatePerSample = 0.1; EpochTime=0.497563
+04/22/2016 11:15:17: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.16'
+
+04/22/2016 11:15:17: Starting Epoch 17: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:17: Starting minibatch loop.
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17188194; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0273s; SamplesPerSecond = 46819.6
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16207504; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0300s; SamplesPerSecond = 42716.5
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16776812; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0453s; SamplesPerSecond = 28235.5
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15647521; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.1321s; SamplesPerSecond = 9686.6
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15843949; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0337s; SamplesPerSecond = 37990.1
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14911509; EvalErr[0]PerSample = 0.06406250; TotalTime = 0.1176s; SamplesPerSecond = 10883.6
+04/22/2016 11:15:17:  Epoch[17 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15323792; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0254s; SamplesPerSecond = 50385.8
+04/22/2016 11:15:17: Finished Epoch[17 of 50]: [Training Set] TrainLossPerSample = 0.15964143; TotalSamplesSeen = 170000; EvalErrPerSample = 0.0737; AvgLearningRatePerSample = 0.1; EpochTime=0.468509
+04/22/2016 11:15:17: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.17'
+
+04/22/2016 11:15:17: Starting Epoch 18: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:17: Starting minibatch loop.
+04/22/2016 11:15:17:  Epoch[18 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15964607; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0553s; SamplesPerSecond = 23166.6
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15260020; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0893s; SamplesPerSecond = 14341.4
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17087312; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0664s; SamplesPerSecond = 19282.0
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15228090; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0921s; SamplesPerSecond = 13891.8
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.18577013; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0511s; SamplesPerSecond = 25068.5
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16892061; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0564s; SamplesPerSecond = 22694.2
+04/22/2016 11:15:18:  Epoch[18 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15040522; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.1080s; SamplesPerSecond = 11850.0
+04/22/2016 11:15:18: Finished Epoch[18 of 50]: [Training Set] TrainLossPerSample = 0.16220588; TotalSamplesSeen = 180000; EvalErrPerSample = 0.0751; AvgLearningRatePerSample = 0.1; EpochTime=0.548077
+04/22/2016 11:15:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.18'
+
+04/22/2016 11:15:18: Starting Epoch 19: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:18: Starting minibatch loop.
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.14636861; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0787s; SamplesPerSecond = 16262.0
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15948335; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0684s; SamplesPerSecond = 18715.4
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16777475; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0438s; SamplesPerSecond = 29218.4
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17910833; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0441s; SamplesPerSecond = 29038.8
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.18129120; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0787s; SamplesPerSecond = 16260.4
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.19801254; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0497s; SamplesPerSecond = 25765.9
+04/22/2016 11:15:18:  Epoch[19 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15825043; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.1300s; SamplesPerSecond = 9844.5
+04/22/2016 11:15:18: Finished Epoch[19 of 50]: [Training Set] TrainLossPerSample = 0.16814885; TotalSamplesSeen = 190000; EvalErrPerSample = 0.0781; AvgLearningRatePerSample = 0.1; EpochTime=0.52502
+04/22/2016 11:15:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.19'
+
+04/22/2016 11:15:18: Starting Epoch 20: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:18: Starting minibatch loop.
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16492796; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.1643s; SamplesPerSecond = 7791.4
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.18700213; EvalErr[0]PerSample = 0.09531250; TotalTime = 0.0908s; SamplesPerSecond = 14104.4
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17428069; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0643s; SamplesPerSecond = 19904.8
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15516224; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0625s; SamplesPerSecond = 20466.2
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16162634; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0745s; SamplesPerSecond = 17169.9
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.18605671; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.0847s; SamplesPerSecond = 15118.6
+04/22/2016 11:15:19:  Epoch[20 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16933002; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0836s; SamplesPerSecond = 15311.7
+04/22/2016 11:15:19: Finished Epoch[20 of 50]: [Training Set] TrainLossPerSample = 0.16857258; TotalSamplesSeen = 200000; EvalErrPerSample = 0.0785; AvgLearningRatePerSample = 0.1; EpochTime=0.701572
+04/22/2016 11:15:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.20'
+
+04/22/2016 11:15:19: Starting Epoch 21: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:19: Starting minibatch loop.
+04/22/2016 11:15:19:  Epoch[21 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16475261; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0757s; SamplesPerSecond = 16905.3
+04/22/2016 11:15:19:  Epoch[21 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15382959; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0350s; SamplesPerSecond = 36562.0
+04/22/2016 11:15:19:  Epoch[21 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15873981; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0541s; SamplesPerSecond = 23666.0
+04/22/2016 11:15:19:  Epoch[21 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16323705; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.0546s; SamplesPerSecond = 23463.9
+04/22/2016 11:15:19:  Epoch[21 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17472167; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.1282s; SamplesPerSecond = 9987.4
+04/22/2016 11:15:20:  Epoch[21 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15822458; EvalErr[0]PerSample = 0.06250000; TotalTime = 0.0356s; SamplesPerSecond = 35988.4
+04/22/2016 11:15:20:  Epoch[21 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18187151; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.0332s; SamplesPerSecond = 38562.3
+04/22/2016 11:15:20: Finished Epoch[21 of 50]: [Training Set] TrainLossPerSample = 0.16527876; TotalSamplesSeen = 210000; EvalErrPerSample = 0.0754; AvgLearningRatePerSample = 0.1; EpochTime=0.469142
+04/22/2016 11:15:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.21'
+
+04/22/2016 11:15:20: Starting Epoch 22: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:20: Starting minibatch loop.
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.20337043; EvalErr[0]PerSample = 0.09765625; TotalTime = 0.0366s; SamplesPerSecond = 35001.4
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17333019; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0989s; SamplesPerSecond = 12942.0
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16090853; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0567s; SamplesPerSecond = 22558.2
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15491724; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0490s; SamplesPerSecond = 26102.7
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16119027; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.1660s; SamplesPerSecond = 7709.7
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16201906; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.1313s; SamplesPerSecond = 9745.3
+04/22/2016 11:15:20:  Epoch[22 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17937288; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0184s; SamplesPerSecond = 69565.2
+04/22/2016 11:15:20: Finished Epoch[22 of 50]: [Training Set] TrainLossPerSample = 0.1665619; TotalSamplesSeen = 220000; EvalErrPerSample = 0.0776; AvgLearningRatePerSample = 0.1; EpochTime=0.625403
+04/22/2016 11:15:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.22'
+
+04/22/2016 11:15:20: Starting Epoch 23: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:20: Starting minibatch loop.
+04/22/2016 11:15:20:  Epoch[23 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17149630; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0591s; SamplesPerSecond = 21668.5
+04/22/2016 11:15:20:  Epoch[23 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17126255; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0598s; SamplesPerSecond = 21393.9
+04/22/2016 11:15:20:  Epoch[23 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15208158; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0417s; SamplesPerSecond = 30685.9
+04/22/2016 11:15:20:  Epoch[23 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15624132; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0397s; SamplesPerSecond = 32215.8
+04/22/2016 11:15:20:  Epoch[23 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16128092; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0499s; SamplesPerSecond = 25631.3
+04/22/2016 11:15:21:  Epoch[23 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.13963528; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0678s; SamplesPerSecond = 18883.8
+04/22/2016 11:15:21:  Epoch[23 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16915150; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0700s; SamplesPerSecond = 18298.8
+04/22/2016 11:15:21: Finished Epoch[23 of 50]: [Training Set] TrainLossPerSample = 0.15939628; TotalSamplesSeen = 230000; EvalErrPerSample = 0.0748; AvgLearningRatePerSample = 0.1; EpochTime=0.435427
+04/22/2016 11:15:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.23'
+
+04/22/2016 11:15:21: Starting Epoch 24: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:21: Starting minibatch loop.
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17135578; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0710s; SamplesPerSecond = 18021.1
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15298198; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0675s; SamplesPerSecond = 18952.9
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16153102; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0354s; SamplesPerSecond = 36177.6
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16532121; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.1013s; SamplesPerSecond = 12631.5
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16722107; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.1669s; SamplesPerSecond = 7668.4
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17550240; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0598s; SamplesPerSecond = 21409.0
+04/22/2016 11:15:21:  Epoch[24 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16362991; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0408s; SamplesPerSecond = 31361.0
+04/22/2016 11:15:21: Finished Epoch[24 of 50]: [Training Set] TrainLossPerSample = 0.16683052; TotalSamplesSeen = 240000; EvalErrPerSample = 0.0772; AvgLearningRatePerSample = 0.1; EpochTime=0.648308
+04/22/2016 11:15:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.24'
+
+04/22/2016 11:15:21: Starting Epoch 25: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:21: Starting minibatch loop.
+04/22/2016 11:15:21:  Epoch[25 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.18008139; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0612s; SamplesPerSecond = 20924.6
+04/22/2016 11:15:21:  Epoch[25 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.18820145; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0424s; SamplesPerSecond = 30181.6
+04/22/2016 11:15:22:  Epoch[25 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16654954; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0944s; SamplesPerSecond = 13555.7
+04/22/2016 11:15:22:  Epoch[25 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17137508; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0621s; SamplesPerSecond = 20614.6
+04/22/2016 11:15:22:  Epoch[25 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15490351; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0506s; SamplesPerSecond = 25310.9
+04/22/2016 11:15:22:  Epoch[25 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14499702; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0414s; SamplesPerSecond = 30951.5
+04/22/2016 11:15:22:  Epoch[25 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16295910; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0307s; SamplesPerSecond = 41738.7
+04/22/2016 11:15:22: Finished Epoch[25 of 50]: [Training Set] TrainLossPerSample = 0.16751573; TotalSamplesSeen = 250000; EvalErrPerSample = 0.0778; AvgLearningRatePerSample = 0.1; EpochTime=0.466167
+04/22/2016 11:15:22: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.25'
+
+04/22/2016 11:15:22: Starting Epoch 26: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:22: Starting minibatch loop.
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16835834; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0474s; SamplesPerSecond = 27024.2
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15105823; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0655s; SamplesPerSecond = 19552.7
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15089970; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0475s; SamplesPerSecond = 26940.0
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15928082; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0834s; SamplesPerSecond = 15352.0
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17029176; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0439s; SamplesPerSecond = 29190.4
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14526401; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.1712s; SamplesPerSecond = 7478.6
+04/22/2016 11:15:22:  Epoch[26 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17606630; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0823s; SamplesPerSecond = 15560.8
+04/22/2016 11:15:22: Finished Epoch[26 of 50]: [Training Set] TrainLossPerSample = 0.15908251; TotalSamplesSeen = 260000; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.1; EpochTime=0.571949
+04/22/2016 11:15:22: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.26'
+
+04/22/2016 11:15:22: Starting Epoch 27: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:22: Starting minibatch loop.
+04/22/2016 11:15:22:  Epoch[27 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15696132; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0314s; SamplesPerSecond = 40807.2
+04/22/2016 11:15:22:  Epoch[27 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16518059; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0328s; SamplesPerSecond = 38993.5
+04/22/2016 11:15:23:  Epoch[27 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15267427; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.1007s; SamplesPerSecond = 12714.8
+04/22/2016 11:15:23:  Epoch[27 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16557865; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0418s; SamplesPerSecond = 30619.8
+04/22/2016 11:15:23:  Epoch[27 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15200953; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0736s; SamplesPerSecond = 17402.2
+04/22/2016 11:15:23:  Epoch[27 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15047340; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.0568s; SamplesPerSecond = 22526.9
+04/22/2016 11:15:23:  Epoch[27 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18083792; EvalErr[0]PerSample = 0.08906250; TotalTime = 0.0344s; SamplesPerSecond = 37173.6
+04/22/2016 11:15:23: Finished Epoch[27 of 50]: [Training Set] TrainLossPerSample = 0.15806141; TotalSamplesSeen = 270000; EvalErrPerSample = 0.0755; AvgLearningRatePerSample = 0.1; EpochTime=0.398811
+04/22/2016 11:15:23: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.27'
+
+04/22/2016 11:15:23: Starting Epoch 28: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:23: Starting minibatch loop.
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16852875; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0387s; SamplesPerSecond = 33104.9
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.14662158; EvalErr[0]PerSample = 0.06328125; TotalTime = 0.0399s; SamplesPerSecond = 32106.8
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.14875867; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0722s; SamplesPerSecond = 17726.1
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16199880; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0566s; SamplesPerSecond = 22626.4
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.18050470; EvalErr[0]PerSample = 0.08906250; TotalTime = 0.0452s; SamplesPerSecond = 28292.3
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15580540; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0425s; SamplesPerSecond = 30131.8
+04/22/2016 11:15:23:  Epoch[28 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16533012; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0388s; SamplesPerSecond = 33029.7
+04/22/2016 11:15:23: Finished Epoch[28 of 50]: [Training Set] TrainLossPerSample = 0.16206693; TotalSamplesSeen = 280000; EvalErrPerSample = 0.0759; AvgLearningRatePerSample = 0.1; EpochTime=0.379842
+04/22/2016 11:15:23: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.28'
+
+04/22/2016 11:15:23: Starting Epoch 29: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:23: Starting minibatch loop.
+04/22/2016 11:15:23:  Epoch[29 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16519991; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.1365s; SamplesPerSecond = 9380.3
+04/22/2016 11:15:23:  Epoch[29 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15904771; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0825s; SamplesPerSecond = 15515.9
+04/22/2016 11:15:23:  Epoch[29 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16316507; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0446s; SamplesPerSecond = 28731.1
+04/22/2016 11:15:23:  Epoch[29 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15609016; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0836s; SamplesPerSecond = 15311.2
+04/22/2016 11:15:24:  Epoch[29 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14817910; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.1184s; SamplesPerSecond = 10813.7
+04/22/2016 11:15:24:  Epoch[29 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15711107; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0919s; SamplesPerSecond = 13927.6
+04/22/2016 11:15:24:  Epoch[29 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15871382; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0810s; SamplesPerSecond = 15794.5
+04/22/2016 11:15:24: Finished Epoch[29 of 50]: [Training Set] TrainLossPerSample = 0.15744952; TotalSamplesSeen = 290000; EvalErrPerSample = 0.0734; AvgLearningRatePerSample = 0.1; EpochTime=0.731881
+04/22/2016 11:15:24: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.29'
+
+04/22/2016 11:15:24: Starting Epoch 30: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:24: Starting minibatch loop.
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.14856812; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0672s; SamplesPerSecond = 19059.5
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15614189; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0574s; SamplesPerSecond = 22303.9
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.18894196; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0315s; SamplesPerSecond = 40677.5
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.14171624; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0984s; SamplesPerSecond = 13009.8
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14764409; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0826s; SamplesPerSecond = 15499.0
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16566000; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0329s; SamplesPerSecond = 38954.3
+04/22/2016 11:15:24:  Epoch[30 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16000919; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0562s; SamplesPerSecond = 22787.2
+04/22/2016 11:15:24: Finished Epoch[30 of 50]: [Training Set] TrainLossPerSample = 0.15872234; TotalSamplesSeen = 300000; EvalErrPerSample = 0.0753; AvgLearningRatePerSample = 0.1; EpochTime=0.478945
+04/22/2016 11:15:24: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.30'
+
+04/22/2016 11:15:24: Starting Epoch 31: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:24: Starting minibatch loop.
+04/22/2016 11:15:24:  Epoch[31 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16231700; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0442s; SamplesPerSecond = 28937.7
+04/22/2016 11:15:24:  Epoch[31 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17015635; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0344s; SamplesPerSecond = 37185.5
+04/22/2016 11:15:25:  Epoch[31 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.14309299; EvalErr[0]PerSample = 0.06171875; TotalTime = 0.1055s; SamplesPerSecond = 12129.3
+04/22/2016 11:15:25:  Epoch[31 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15054049; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.0450s; SamplesPerSecond = 28436.2
+04/22/2016 11:15:25:  Epoch[31 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15275049; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0333s; SamplesPerSecond = 38468.5
+04/22/2016 11:15:25:  Epoch[31 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.13504782; EvalErr[0]PerSample = 0.06562500; TotalTime = 0.0543s; SamplesPerSecond = 23582.3
+04/22/2016 11:15:25:  Epoch[31 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17576618; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0461s; SamplesPerSecond = 27787.4
+04/22/2016 11:15:25: Finished Epoch[31 of 50]: [Training Set] TrainLossPerSample = 0.15947742; TotalSamplesSeen = 310000; EvalErrPerSample = 0.0734; AvgLearningRatePerSample = 0.1; EpochTime=0.428425
+04/22/2016 11:15:25: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.31'
+
+04/22/2016 11:15:25: Starting Epoch 32: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:25: Starting minibatch loop.
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16154064; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0298s; SamplesPerSecond = 42940.1
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16160508; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.1096s; SamplesPerSecond = 11676.4
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.13378720; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.1200s; SamplesPerSecond = 10664.4
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16373549; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0546s; SamplesPerSecond = 23446.7
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16839800; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0710s; SamplesPerSecond = 18028.9
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16848173; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0584s; SamplesPerSecond = 21905.4
+04/22/2016 11:15:25:  Epoch[32 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14901562; EvalErr[0]PerSample = 0.06250000; TotalTime = 0.0536s; SamplesPerSecond = 23867.2
+04/22/2016 11:15:25: Finished Epoch[32 of 50]: [Training Set] TrainLossPerSample = 0.1619754; TotalSamplesSeen = 320000; EvalErrPerSample = 0.0748; AvgLearningRatePerSample = 0.1; EpochTime=0.545105
+04/22/2016 11:15:25: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.32'
+
+04/22/2016 11:15:25: Starting Epoch 33: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:25: Starting minibatch loop.
+04/22/2016 11:15:25:  Epoch[33 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17129624; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0529s; SamplesPerSecond = 24212.2
+04/22/2016 11:15:25:  Epoch[33 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15054884; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.1073s; SamplesPerSecond = 11931.3
+04/22/2016 11:15:26:  Epoch[33 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.14387214; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0654s; SamplesPerSecond = 19569.5
+04/22/2016 11:15:26:  Epoch[33 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16222110; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0288s; SamplesPerSecond = 44427.5
+04/22/2016 11:15:26:  Epoch[33 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16773157; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0656s; SamplesPerSecond = 19498.8
+04/22/2016 11:15:26:  Epoch[33 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15197816; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0246s; SamplesPerSecond = 52013.5
+04/22/2016 11:15:26:  Epoch[33 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17714443; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0461s; SamplesPerSecond = 27760.3
+04/22/2016 11:15:26: Finished Epoch[33 of 50]: [Training Set] TrainLossPerSample = 0.16108009; TotalSamplesSeen = 330000; EvalErrPerSample = 0.0756; AvgLearningRatePerSample = 0.1; EpochTime=0.417838
+04/22/2016 11:15:26: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.33'
+
+04/22/2016 11:15:26: Starting Epoch 34: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:26: Starting minibatch loop.
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17145666; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0356s; SamplesPerSecond = 35927.8
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16205610; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0660s; SamplesPerSecond = 19380.1
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16336935; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0515s; SamplesPerSecond = 24873.7
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15191164; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0626s; SamplesPerSecond = 20443.0
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14747014; EvalErr[0]PerSample = 0.06562500; TotalTime = 0.0644s; SamplesPerSecond = 19867.8
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15344009; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0884s; SamplesPerSecond = 14478.0
+04/22/2016 11:15:26:  Epoch[34 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15842562; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0460s; SamplesPerSecond = 27850.9
+04/22/2016 11:15:26: Finished Epoch[34 of 50]: [Training Set] TrainLossPerSample = 0.15948164; TotalSamplesSeen = 340000; EvalErrPerSample = 0.075; AvgLearningRatePerSample = 0.1; EpochTime=0.457647
+04/22/2016 11:15:26: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.34'
+
+04/22/2016 11:15:26: Starting Epoch 35: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:26: Starting minibatch loop.
+04/22/2016 11:15:26:  Epoch[35 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16640431; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0341s; SamplesPerSecond = 37537.8
+04/22/2016 11:15:26:  Epoch[35 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15777582; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0855s; SamplesPerSecond = 14965.7
+04/22/2016 11:15:26:  Epoch[35 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16434126; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0593s; SamplesPerSecond = 21601.9
+04/22/2016 11:15:26:  Epoch[35 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15438242; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0667s; SamplesPerSecond = 19202.2
+04/22/2016 11:15:27:  Epoch[35 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14508672; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0594s; SamplesPerSecond = 21538.7
+04/22/2016 11:15:27:  Epoch[35 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14978852; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0686s; SamplesPerSecond = 18666.8
+04/22/2016 11:15:27:  Epoch[35 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18113050; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.1686s; SamplesPerSecond = 7591.8
+04/22/2016 11:15:27: Finished Epoch[35 of 50]: [Training Set] TrainLossPerSample = 0.15992622; TotalSamplesSeen = 350000; EvalErrPerSample = 0.0759; AvgLearningRatePerSample = 0.1; EpochTime=0.580407
+04/22/2016 11:15:27: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.35'
+
+04/22/2016 11:15:27: Starting Epoch 36: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:27: Starting minibatch loop.
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17041575; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0581s; SamplesPerSecond = 22048.1
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15814387; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0571s; SamplesPerSecond = 22406.6
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16349237; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0232s; SamplesPerSecond = 55236.7
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16010098; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0526s; SamplesPerSecond = 24345.7
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15182309; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0358s; SamplesPerSecond = 35735.2
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.15396500; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0522s; SamplesPerSecond = 24530.5
+04/22/2016 11:15:27:  Epoch[36 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18009357; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0306s; SamplesPerSecond = 41775.5
+04/22/2016 11:15:27: Finished Epoch[36 of 50]: [Training Set] TrainLossPerSample = 0.16226085; TotalSamplesSeen = 360000; EvalErrPerSample = 0.077; AvgLearningRatePerSample = 0.1; EpochTime=0.36043
+04/22/2016 11:15:27: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.36'
+
+04/22/2016 11:15:27: Starting Epoch 37: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:27: Starting minibatch loop.
+04/22/2016 11:15:27:  Epoch[37 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15044580; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0313s; SamplesPerSecond = 40873.7
+04/22/2016 11:15:27:  Epoch[37 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15727518; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0900s; SamplesPerSecond = 14217.0
+04/22/2016 11:15:27:  Epoch[37 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17658703; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.1062s; SamplesPerSecond = 12053.8
+04/22/2016 11:15:27:  Epoch[37 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15197978; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0577s; SamplesPerSecond = 22182.9
+04/22/2016 11:15:27:  Epoch[37 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15390072; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0333s; SamplesPerSecond = 38469.6
+04/22/2016 11:15:28:  Epoch[37 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14358778; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0322s; SamplesPerSecond = 39798.5
+04/22/2016 11:15:28:  Epoch[37 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16217842; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0192s; SamplesPerSecond = 66670.1
+04/22/2016 11:15:28: Finished Epoch[37 of 50]: [Training Set] TrainLossPerSample = 0.15740476; TotalSamplesSeen = 370000; EvalErrPerSample = 0.0751; AvgLearningRatePerSample = 0.1; EpochTime=0.418397
+04/22/2016 11:15:28: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.37'
+
+04/22/2016 11:15:28: Starting Epoch 38: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:28: Starting minibatch loop.
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16619614; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0692s; SamplesPerSecond = 18507.5
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15460263; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0521s; SamplesPerSecond = 24586.1
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15720549; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0515s; SamplesPerSecond = 24852.4
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17886009; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0765s; SamplesPerSecond = 16732.0
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16477385; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0558s; SamplesPerSecond = 22944.0
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16247454; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0617s; SamplesPerSecond = 20749.9
+04/22/2016 11:15:28:  Epoch[38 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14554281; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0793s; SamplesPerSecond = 16145.9
+04/22/2016 11:15:28: Finished Epoch[38 of 50]: [Training Set] TrainLossPerSample = 0.1628548; TotalSamplesSeen = 380000; EvalErrPerSample = 0.0776; AvgLearningRatePerSample = 0.1; EpochTime=0.476951
+04/22/2016 11:15:28: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.38'
+
+04/22/2016 11:15:28: Starting Epoch 39: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:28: Starting minibatch loop.
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15448343; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0433s; SamplesPerSecond = 29568.7
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17907647; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0736s; SamplesPerSecond = 17400.1
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16982002; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0810s; SamplesPerSecond = 15801.1
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.16798797; EvalErr[0]PerSample = 0.08203125; TotalTime = 0.0412s; SamplesPerSecond = 31046.9
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14459414; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0450s; SamplesPerSecond = 28447.0
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.13847246; EvalErr[0]PerSample = 0.06171875; TotalTime = 0.0252s; SamplesPerSecond = 50854.2
+04/22/2016 11:15:28:  Epoch[39 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15802555; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.0817s; SamplesPerSecond = 15662.9
+04/22/2016 11:15:28: Finished Epoch[39 of 50]: [Training Set] TrainLossPerSample = 0.16279224; TotalSamplesSeen = 390000; EvalErrPerSample = 0.0757; AvgLearningRatePerSample = 0.1; EpochTime=0.42553
+04/22/2016 11:15:28: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.39'
+
+04/22/2016 11:15:28: Starting Epoch 40: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:28: Starting minibatch loop.
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16840935; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0915s; SamplesPerSecond = 13989.2
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15842316; EvalErr[0]PerSample = 0.07500000; TotalTime = 0.0616s; SamplesPerSecond = 20789.7
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15689175; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0365s; SamplesPerSecond = 35025.3
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15319600; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0496s; SamplesPerSecond = 25808.0
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15504365; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0297s; SamplesPerSecond = 43090.4
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.16077409; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0773s; SamplesPerSecond = 16558.2
+04/22/2016 11:15:29:  Epoch[40 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18390646; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0404s; SamplesPerSecond = 31673.0
+04/22/2016 11:15:29: Finished Epoch[40 of 50]: [Training Set] TrainLossPerSample = 0.16319045; TotalSamplesSeen = 400000; EvalErrPerSample = 0.0758; AvgLearningRatePerSample = 0.1; EpochTime=0.455565
+04/22/2016 11:15:29: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.40'
+
+04/22/2016 11:15:29: Starting Epoch 41: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:29: Starting minibatch loop.
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17165157; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0331s; SamplesPerSecond = 38612.4
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15057636; EvalErr[0]PerSample = 0.07109375; TotalTime = 0.0990s; SamplesPerSecond = 12931.6
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16082604; EvalErr[0]PerSample = 0.07734375; TotalTime = 0.0591s; SamplesPerSecond = 21669.9
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15875053; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.1015s; SamplesPerSecond = 12612.3
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15556512; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0955s; SamplesPerSecond = 13408.6
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14324136; EvalErr[0]PerSample = 0.05859375; TotalTime = 0.0389s; SamplesPerSecond = 32917.6
+04/22/2016 11:15:29:  Epoch[41 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15218315; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.1067s; SamplesPerSecond = 12001.0
+04/22/2016 11:15:30: Finished Epoch[41 of 50]: [Training Set] TrainLossPerSample = 0.15675807; TotalSamplesSeen = 410000; EvalErrPerSample = 0.0728; AvgLearningRatePerSample = 0.1; EpochTime=0.586919
+04/22/2016 11:15:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.41'
+
+04/22/2016 11:15:30: Starting Epoch 42: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:30: Starting minibatch loop.
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17523918; EvalErr[0]PerSample = 0.08906250; TotalTime = 0.0504s; SamplesPerSecond = 25412.5
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15212476; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0645s; SamplesPerSecond = 19833.0
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15521286; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0240s; SamplesPerSecond = 53386.7
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15564127; EvalErr[0]PerSample = 0.07578125; TotalTime = 0.0854s; SamplesPerSecond = 14988.1
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.16578221; EvalErr[0]PerSample = 0.07812500; TotalTime = 0.0630s; SamplesPerSecond = 20322.0
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14213257; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.0377s; SamplesPerSecond = 33984.7
+04/22/2016 11:15:30:  Epoch[42 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15324869; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0627s; SamplesPerSecond = 20422.8
+04/22/2016 11:15:30: Finished Epoch[42 of 50]: [Training Set] TrainLossPerSample = 0.15690874; TotalSamplesSeen = 420000; EvalErrPerSample = 0.0757; AvgLearningRatePerSample = 0.1; EpochTime=0.439447
+04/22/2016 11:15:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.42'
+
+04/22/2016 11:15:30: Starting Epoch 43: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:30: Starting minibatch loop.
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.15386536; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0374s; SamplesPerSecond = 34259.4
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15090065; EvalErr[0]PerSample = 0.07656250; TotalTime = 0.0750s; SamplesPerSecond = 17061.4
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.13803685; EvalErr[0]PerSample = 0.06171875; TotalTime = 0.0394s; SamplesPerSecond = 32472.5
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15230093; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0469s; SamplesPerSecond = 27273.5
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.14417672; EvalErr[0]PerSample = 0.06640625; TotalTime = 0.0401s; SamplesPerSecond = 31908.3
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17858133; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0600s; SamplesPerSecond = 21318.4
+04/22/2016 11:15:30:  Epoch[43 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.17021179; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0658s; SamplesPerSecond = 19446.1
+04/22/2016 11:15:30: Finished Epoch[43 of 50]: [Training Set] TrainLossPerSample = 0.1558142; TotalSamplesSeen = 430000; EvalErrPerSample = 0.0742; AvgLearningRatePerSample = 0.1; EpochTime=0.385436
+04/22/2016 11:15:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.43'
+
+04/22/2016 11:15:30: Starting Epoch 44: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:30: Starting minibatch loop.
+04/22/2016 11:15:30:  Epoch[44 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.16945851; EvalErr[0]PerSample = 0.08906250; TotalTime = 0.0309s; SamplesPerSecond = 41369.1
+04/22/2016 11:15:30:  Epoch[44 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.13544407; EvalErr[0]PerSample = 0.06093750; TotalTime = 0.0862s; SamplesPerSecond = 14854.4
+04/22/2016 11:15:31:  Epoch[44 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16303718; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0675s; SamplesPerSecond = 18952.9
+04/22/2016 11:15:31:  Epoch[44 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.19170256; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0592s; SamplesPerSecond = 21632.2
+04/22/2016 11:15:31:  Epoch[44 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17427292; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0579s; SamplesPerSecond = 22091.1
+04/22/2016 11:15:31:  Epoch[44 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.21128750; EvalErr[0]PerSample = 0.09296875; TotalTime = 0.1047s; SamplesPerSecond = 12222.0
+04/22/2016 11:15:31:  Epoch[44 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18788481; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0530s; SamplesPerSecond = 24169.2
+04/22/2016 11:15:31: Finished Epoch[44 of 50]: [Training Set] TrainLossPerSample = 0.1776491; TotalSamplesSeen = 440000; EvalErrPerSample = 0.082; AvgLearningRatePerSample = 0.1; EpochTime=0.52615
+04/22/2016 11:15:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.44'
+
+04/22/2016 11:15:31: Starting Epoch 45: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:31: Starting minibatch loop.
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.19548538; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0711s; SamplesPerSecond = 17998.3
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15311916; EvalErr[0]PerSample = 0.07031250; TotalTime = 0.1216s; SamplesPerSecond = 10525.6
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15930481; EvalErr[0]PerSample = 0.06875000; TotalTime = 0.0588s; SamplesPerSecond = 21782.4
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17239943; EvalErr[0]PerSample = 0.08281250; TotalTime = 0.0608s; SamplesPerSecond = 21045.0
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.12789483; EvalErr[0]PerSample = 0.05703125; TotalTime = 0.0621s; SamplesPerSecond = 20610.3
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.18878489; EvalErr[0]PerSample = 0.09453125; TotalTime = 0.0794s; SamplesPerSecond = 16124.0
+04/22/2016 11:15:31:  Epoch[45 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.18304195; EvalErr[0]PerSample = 0.08750000; TotalTime = 0.0636s; SamplesPerSecond = 20118.5
+04/22/2016 11:15:31: Finished Epoch[45 of 50]: [Training Set] TrainLossPerSample = 0.16716312; TotalSamplesSeen = 450000; EvalErrPerSample = 0.0774; AvgLearningRatePerSample = 0.1; EpochTime=0.60543
+04/22/2016 11:15:31: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.45'
+
+04/22/2016 11:15:31: Starting Epoch 46: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:31: Starting minibatch loop.
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17278785; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0482s; SamplesPerSecond = 26567.6
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.15223330; EvalErr[0]PerSample = 0.07890625; TotalTime = 0.0366s; SamplesPerSecond = 34951.7
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16223395; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0448s; SamplesPerSecond = 28583.6
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17466259; EvalErr[0]PerSample = 0.07968750; TotalTime = 0.0632s; SamplesPerSecond = 20267.0
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.19236183; EvalErr[0]PerSample = 0.09062500; TotalTime = 0.0953s; SamplesPerSecond = 13431.1
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17003622; EvalErr[0]PerSample = 0.08437500; TotalTime = 0.0437s; SamplesPerSecond = 29302.7
+04/22/2016 11:15:32:  Epoch[46 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15896044; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0571s; SamplesPerSecond = 22398.4
+04/22/2016 11:15:32: Finished Epoch[46 of 50]: [Training Set] TrainLossPerSample = 0.16901636; TotalSamplesSeen = 460000; EvalErrPerSample = 0.0813; AvgLearningRatePerSample = 0.1; EpochTime=0.420753
+04/22/2016 11:15:32: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.46'
+
+04/22/2016 11:15:32: Starting Epoch 47: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:32: Starting minibatch loop.
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.19445357; EvalErr[0]PerSample = 0.09062500; TotalTime = 0.0763s; SamplesPerSecond = 16785.6
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.17532339; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0502s; SamplesPerSecond = 25476.2
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15982270; EvalErr[0]PerSample = 0.06718750; TotalTime = 0.1100s; SamplesPerSecond = 11638.5
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.17681465; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0973s; SamplesPerSecond = 13156.9
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17092190; EvalErr[0]PerSample = 0.07265625; TotalTime = 0.0484s; SamplesPerSecond = 26441.9
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14961472; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0839s; SamplesPerSecond = 15261.0
+04/22/2016 11:15:32:  Epoch[47 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14567881; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0543s; SamplesPerSecond = 23563.2
+04/22/2016 11:15:32: Finished Epoch[47 of 50]: [Training Set] TrainLossPerSample = 0.16721078; TotalSamplesSeen = 470000; EvalErrPerSample = 0.0769; AvgLearningRatePerSample = 0.1; EpochTime=0.585142
+04/22/2016 11:15:32: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.47'
+
+04/22/2016 11:15:32: Starting Epoch 48: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:32: Starting minibatch loop.
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.18766408; EvalErr[0]PerSample = 0.08828125; TotalTime = 0.0601s; SamplesPerSecond = 21314.9
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16356273; EvalErr[0]PerSample = 0.07187500; TotalTime = 0.0550s; SamplesPerSecond = 23285.9
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.16448784; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.1087s; SamplesPerSecond = 11773.3
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15259590; EvalErr[0]PerSample = 0.06328125; TotalTime = 0.0913s; SamplesPerSecond = 14013.4
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.13187275; EvalErr[0]PerSample = 0.05625000; TotalTime = 0.0999s; SamplesPerSecond = 12808.8
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.17249765; EvalErr[0]PerSample = 0.08906250; TotalTime = 0.0944s; SamplesPerSecond = 13560.3
+04/22/2016 11:15:33:  Epoch[48 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.15977755; EvalErr[0]PerSample = 0.08359375; TotalTime = 0.0817s; SamplesPerSecond = 15669.2
+04/22/2016 11:15:33: Finished Epoch[48 of 50]: [Training Set] TrainLossPerSample = 0.15953263; TotalSamplesSeen = 480000; EvalErrPerSample = 0.0761; AvgLearningRatePerSample = 0.1; EpochTime=0.637452
+04/22/2016 11:15:33: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.48'
+
+04/22/2016 11:15:33: Starting Epoch 49: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:33: Starting minibatch loop.
+04/22/2016 11:15:33:  Epoch[49 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17180775; EvalErr[0]PerSample = 0.08046875; TotalTime = 0.0384s; SamplesPerSecond = 33348.1
+04/22/2016 11:15:33:  Epoch[49 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16444918; EvalErr[0]PerSample = 0.08125000; TotalTime = 0.0606s; SamplesPerSecond = 21117.6
+04/22/2016 11:15:33:  Epoch[49 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.17033644; EvalErr[0]PerSample = 0.08828125; TotalTime = 0.1431s; SamplesPerSecond = 8947.8
+04/22/2016 11:15:33:  Epoch[49 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15292215; EvalErr[0]PerSample = 0.06484375; TotalTime = 0.0732s; SamplesPerSecond = 17492.1
+04/22/2016 11:15:33:  Epoch[49 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.17955451; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0591s; SamplesPerSecond = 21649.0
+04/22/2016 11:15:34:  Epoch[49 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14437199; EvalErr[0]PerSample = 0.06015625; TotalTime = 0.0276s; SamplesPerSecond = 46435.7
+04/22/2016 11:15:34:  Epoch[49 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.16817369; EvalErr[0]PerSample = 0.08671875; TotalTime = 0.0537s; SamplesPerSecond = 23825.0
+04/22/2016 11:15:34: Finished Epoch[49 of 50]: [Training Set] TrainLossPerSample = 0.16283057; TotalSamplesSeen = 490000; EvalErrPerSample = 0.0777; AvgLearningRatePerSample = 0.1; EpochTime=0.481596
+04/22/2016 11:15:34: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.49'
+
+04/22/2016 11:15:34: Starting Epoch 50: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:34: Starting minibatch loop.
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[   1-  10, 14.29%]: SamplesSeen = 1280; TrainLossPerSample =  0.17482439; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0418s; SamplesPerSecond = 30586.2
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  11-  20, 28.57%]: SamplesSeen = 1280; TrainLossPerSample =  0.16347297; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0480s; SamplesPerSecond = 26682.8
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  21-  30, 42.86%]: SamplesSeen = 1280; TrainLossPerSample =  0.15064664; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0331s; SamplesPerSecond = 38685.9
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  31-  40, 57.14%]: SamplesSeen = 1280; TrainLossPerSample =  0.15297379; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0310s; SamplesPerSecond = 41285.0
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  41-  50, 71.43%]: SamplesSeen = 1280; TrainLossPerSample =  0.15320015; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0535s; SamplesPerSecond = 23917.2
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  51-  60, 85.71%]: SamplesSeen = 1280; TrainLossPerSample =  0.14706469; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0644s; SamplesPerSecond = 19864.7
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  61-  70, 100.00%]: SamplesSeen = 1280; TrainLossPerSample =  0.14297619; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0600s; SamplesPerSecond = 21350.1
+04/22/2016 11:15:34: Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15772701; TotalSamplesSeen = 500000; EvalErrPerSample = 0.0749; AvgLearningRatePerSample = 0.1; EpochTime=0.382845
+04/22/2016 11:15:34: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn'
+04/22/2016 11:15:34: CNTKCommandTrainEnd: Simple_Demo
+
+04/22/2016 11:15:34: Action "train" complete.
+
+
+04/22/2016 11:15:34: ##############################################################################
+04/22/2016 11:15:34: #                                                                            #
+04/22/2016 11:15:34: # Action "write"                                                             #
+04/22/2016 11:15:34: #                                                                            #
+04/22/2016 11:15:34: ##############################################################################
+
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *1]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *1]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *1] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *1] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *1], [2], [2] -> [2 x *1]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *1] -> [50 x *1]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *1] -> [2 x 1 x *1]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *1], [2 x 1] -> [2 x 1 x *1]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *1] -> [2 x 1 x *1]
+Validating --> Prior = Mean (labels) : [2 x *1] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *1], [2] -> [2 x 1 x *1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+Minibatch[0]: ActualMBSize = 603
+Written to /tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput*
+Total Samples Evaluated = 603
+
+04/22/2016 11:15:34: Action "write" complete.
+
+04/22/2016 11:15:34: __COMPLETED__
+=== Deleting last epoch data
+==== Re-running from checkpoint
+=== Running /home/alrezni/src/cntk_git/build/release/bin/cntk configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple/Speech_Simple.cntk currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu DeviceId=-1 timestamping=true makeMode=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 22 2016 10:15:37
+		Last modified date: Tue Apr  5 16:01:37 2016
+		Build type: release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: alrezni/examples_text
+		Build SHA1: 6a74de8e569af56e61a14d762716930c397b5c90
+		Built by alrezni on atleneu04
+		Build Path: /home/alrezni/src/cntk_git
+-------------------------------------------------------------------
+Changed current directory to /home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+04/22/2016 11:15:34: -------------------------------------------------------------------
+04/22/2016 11:15:34: Build info: 
+
+04/22/2016 11:15:34: 		Built time: Apr 22 2016 10:15:37
+04/22/2016 11:15:34: 		Last modified date: Tue Apr  5 16:01:37 2016
+04/22/2016 11:15:34: 		Build type: release
+04/22/2016 11:15:34: 		Build target: GPU
+04/22/2016 11:15:34: 		With 1bit-SGD: no
+04/22/2016 11:15:34: 		Math lib: acml
+04/22/2016 11:15:34: 		CUDA_PATH: /usr/local/cuda-7.0
+04/22/2016 11:15:34: 		CUB_PATH: /usr/local/cub-1.4.1
+04/22/2016 11:15:34: 		CUDNN_PATH: /usr/local/cudnn-4.0
+04/22/2016 11:15:34: 		Build Branch: alrezni/examples_text
+04/22/2016 11:15:34: 		Build SHA1: 6a74de8e569af56e61a14d762716930c397b5c90
+04/22/2016 11:15:34: 		Built by alrezni on atleneu04
+04/22/2016 11:15:34: 		Build Path: /home/alrezni/src/cntk_git
+04/22/2016 11:15:34: -------------------------------------------------------------------
+
+04/22/2016 11:15:34: Running on localhost at 2016/04/22 11:15:34
+04/22/2016 11:15:34: Command line: 
+/home/alrezni/src/cntk_git/build/release/bin/cntk  configFile=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple/Speech_Simple.cntk  currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu  DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple  OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
+
+
+
+04/22/2016 11:15:34: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+04/22/2016 11:15:34: command=Simple_Demo:Simple_Demo_Output
+DeviceNumber=-1
+precision=float
+modelPath=$RunDir$/models/simple.dnn
+deviceId=$DeviceNumber$
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=$DataDir$/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=$RunDir$/SimpleOutput    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DeviceId=-1
+timestamping=true
+makeMode=true
+
+04/22/2016 11:15:34: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+04/22/2016 11:15:34: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+04/22/2016 11:15:34: command=Simple_Demo:Simple_Demo_Output
+DeviceNumber=-1
+precision=float
+modelPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+deviceId=-1
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput    
+]
+currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+DeviceId=-1
+timestamping=true
+makeMode=true
+
+04/22/2016 11:15:34: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+04/22/2016 11:15:34: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: Speech_Simple.cntk:command=Simple_Demo:Simple_Demo_Output
+configparameters: Speech_Simple.cntk:ConfigDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/CNTKTextFormatReader/Speech/Simple
+configparameters: Speech_Simple.cntk:currentDirectory=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+configparameters: Speech_Simple.cntk:DataDir=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data
+configparameters: Speech_Simple.cntk:deviceId=-1
+configparameters: Speech_Simple.cntk:DeviceNumber=-1
+configparameters: Speech_Simple.cntk:makeMode=true
+configparameters: Speech_Simple.cntk:modelPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+configparameters: Speech_Simple.cntk:OutputDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+configparameters: Speech_Simple.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Speech_Simple.cntk:precision=float
+configparameters: Speech_Simple.cntk:RunDir=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu
+configparameters: Speech_Simple.cntk:Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ErrorPrediction
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTrain_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+]
+
+configparameters: Speech_Simple.cntk:Simple_Demo_Output=[
+    action=write
+    reader=[
+      readerType=CNTKTextFormatReader
+      file=/home/alrezni/src/cntk_git/Tests/EndToEndTests/Speech/Data/SimpleDataTest_cntk_text.txt
+      input = [
+        features = [
+dim = 2 
+          format = "dense" 
+        ]
+        labels = [
+dim = 2 
+          format = "dense"
+        ]
+      ]
+    ]
+outputPath=/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput    
+]
+
+configparameters: Speech_Simple.cntk:timestamping=true
+configparameters: Speech_Simple.cntk:traceLevel=1
+04/22/2016 11:15:34: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+04/22/2016 11:15:34: Commands: Simple_Demo Simple_Demo_Output
+04/22/2016 11:15:34: Precision = "float"
+04/22/2016 11:15:34: CNTKModelPath: /tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn
+04/22/2016 11:15:34: CNTKCommandTrainInfo: Simple_Demo : 50
+04/22/2016 11:15:34: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 50
+
+04/22/2016 11:15:34: ##############################################################################
+04/22/2016 11:15:34: #                                                                            #
+04/22/2016 11:15:34: # Action "train"                                                             #
+04/22/2016 11:15:34: #                                                                            #
+04/22/2016 11:15:34: ##############################################################################
+
+04/22/2016 11:15:34: CNTKCommandTrainBegin: Simple_Demo
+SimpleNetworkBuilder Using CPU
+
+04/22/2016 11:15:34: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn.49'.
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *1]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *1]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *1] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *1] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *1], [2], [2] -> [2 x *1]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *1] -> [50 x *1]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *1] -> [2 x 1 x *1]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *1], [2 x 1] -> [2 x 1 x *1]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *1] -> [2 x 1 x *1]
+Validating --> Prior = Mean (labels) : [2 x *1] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *1], [2] -> [2 x 1 x *1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+04/22/2016 11:15:34: Loaded model with 25 nodes on CPU.
+
+04/22/2016 11:15:34: Training criterion node(s):
+04/22/2016 11:15:34: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+04/22/2016 11:15:34: Evaluation criterion node(s):
+
+04/22/2016 11:15:34: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+04/22/2016 11:15:34: No PreCompute nodes found, skipping PreCompute step.
+
+04/22/2016 11:15:34: Starting Epoch 50: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+04/22/2016 11:15:34: Starting minibatch loop.
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[   1-  10, 0.00000000000003%]: SamplesSeen = 1280; TrainLossPerSample =  0.17482439; EvalErr[0]PerSample = 0.08593750; TotalTime = 0.0506s; SamplesPerSecond = 25314.5
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  11-  20, 0.00000000000006%]: SamplesSeen = 1280; TrainLossPerSample =  0.16347297; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.0366s; SamplesPerSecond = 34984.1
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  21-  30, 0.00000000000008%]: SamplesSeen = 1280; TrainLossPerSample =  0.15064664; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0952s; SamplesPerSecond = 13439.2
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  31-  40, 0.00000000000011%]: SamplesSeen = 1280; TrainLossPerSample =  0.15297379; EvalErr[0]PerSample = 0.07343750; TotalTime = 0.0487s; SamplesPerSecond = 26276.9
+04/22/2016 11:15:34:  Epoch[50 of 50]-Minibatch[  41-  50, 0.00000000000014%]: SamplesSeen = 1280; TrainLossPerSample =  0.15320015; EvalErr[0]PerSample = 0.06796875; TotalTime = 0.0670s; SamplesPerSecond = 19111.6
+04/22/2016 11:15:35:  Epoch[50 of 50]-Minibatch[  51-  60, 0.00000000000017%]: SamplesSeen = 1280; TrainLossPerSample =  0.14706469; EvalErr[0]PerSample = 0.06953125; TotalTime = 0.0571s; SamplesPerSecond = 22421.9
+04/22/2016 11:15:35:  Epoch[50 of 50]-Minibatch[  61-  70, 0.00000000000019%]: SamplesSeen = 1280; TrainLossPerSample =  0.14297619; EvalErr[0]PerSample = 0.07421875; TotalTime = 0.1021s; SamplesPerSecond = 12538.2
+04/22/2016 11:15:35: Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15772701; TotalSamplesSeen = 500000; EvalErrPerSample = 0.0749; AvgLearningRatePerSample = 0.1; EpochTime=0.510182
+04/22/2016 11:15:35: SGD: Saving checkpoint model '/tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/models/simple.dnn'
+04/22/2016 11:15:35: CNTKCommandTrainEnd: Simple_Demo
+
+04/22/2016 11:15:35: Action "train" complete.
+
+
+04/22/2016 11:15:35: ##############################################################################
+04/22/2016 11:15:35: #                                                                            #
+04/22/2016 11:15:35: # Action "write"                                                             #
+04/22/2016 11:15:35: #                                                                            #
+04/22/2016 11:15:35: ##############################################################################
+
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *2]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *2]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *2] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *2] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *2], [2], [2] -> [2 x *2]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *2] -> [50 x *2]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *2] -> [2 x 1 x *2]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *2], [2 x 1] -> [2 x 1 x *2]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *2] -> [2 x 1 x *2]
+Validating --> Prior = Mean (labels) : [2 x *2] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *2], [2] -> [2 x 1 x *2]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+Minibatch[0]: ActualMBSize = 603
+Written to /tmp/cntk-test-20160422111509.401111/CNTKTextFormatReader/Speech_Simple@release_cpu/SimpleOutput*
+Total Samples Evaluated = 603
+
+04/22/2016 11:15:35: Action "write" complete.
+
+04/22/2016 11:15:35: __COMPLETED__

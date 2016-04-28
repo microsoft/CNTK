@@ -22,18 +22,20 @@ class MockChunk : public Chunk
 private:
     size_t m_chunkBegin;
     size_t m_chunkEnd;
-    std::vector<float>& m_data;
     TensorShapePtr m_sampleLayout;
+    size_t m_sequenceLength;
+    std::vector<std::vector<float>>& m_sequenceData;
 
 public:
-    MockChunk(size_t chunkBegin, size_t chunkEnd, std::vector<float>& data)
+    MockChunk(size_t chunkBegin, size_t chunkEnd, std::vector<std::vector<float>>& sequenceData, size_t sequenceLength)
         : m_chunkBegin(chunkBegin),
           m_chunkEnd(chunkEnd),
-          m_data(data),
-          m_sampleLayout(std::make_shared<TensorShape>(1))
+          m_sampleLayout(std::make_shared<TensorShape>(1)),
+          m_sequenceLength(sequenceLength),
+          m_sequenceData(sequenceData)
     {
         assert(chunkBegin <= chunkEnd);
-        assert(chunkEnd <= data.size());
+        assert(chunkEnd <= sequenceData.size());
     }
 
     void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
@@ -42,8 +44,8 @@ public:
         assert(sequenceId < m_chunkEnd);
 
         auto data = std::make_shared<DenseSequenceData>();
-        data->m_data = &m_data[sequenceId];
-        data->m_numberOfSamples = 1;
+        data->m_data = &m_sequenceData[sequenceId][0];
+        data->m_numberOfSamples = m_sequenceLength;
         data->m_sampleLayout = m_sampleLayout;
         result.push_back(data);
     }
@@ -54,22 +56,28 @@ public:
 class MockDeserializer : public IDataDeserializer
 {
 private:
-
+    size_t m_sequenceLength;
     size_t m_numChunks;
     size_t m_numSequencesPerChunk;
     std::vector<SequenceDescription> m_descriptions;
-    std::vector<float>& m_data;
     std::vector<StreamDescriptionPtr> m_streams;
     TensorShapePtr m_sampleLayout;
     std::vector<ChunkDescriptionPtr> m_chunkDescriptions;
+    std::vector<std::vector<float>> m_sequenceData;
 
 public:
-    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, std::vector<float>& data)
+    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, std::vector<float>& data, size_t sequenceLength = 1)
         : m_numChunks(numChunks),
           m_numSequencesPerChunk(numSequencesPerChunks),
           m_sampleLayout(std::make_shared<TensorShape>(1)),
-          m_data(data)
+          m_sequenceLength(sequenceLength)
     {
+        m_sequenceData.reserve(data.size());
+        for (float d : data)
+        {
+            m_sequenceData.push_back(std::vector<float>(m_sequenceLength, d));
+        }
+
         size_t numSequences = numChunks * numSequencesPerChunks;
         m_descriptions.reserve(numSequences);
         assert(data.size() == numSequences);
@@ -78,8 +86,8 @@ public:
         {
             m_descriptions.push_back(SequenceDescription {
                 i,
-                1,
-                i / numSequencesPerChunks,
+                m_sequenceLength,
+                i / m_numSequencesPerChunk,
                 true,
                 { 0, i }
             });
@@ -89,8 +97,8 @@ public:
         {
             m_chunkDescriptions.push_back(std::make_shared<ChunkDescription>(ChunkDescription {
                 i,
-                numSequencesPerChunks,
-                numSequencesPerChunks
+                m_numSequencesPerChunk * m_sequenceLength,
+                m_numSequencesPerChunk
             }));
         }
 
@@ -115,7 +123,7 @@ public:
         assert(chunkId < m_numChunks);
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
-        std::shared_ptr<Chunk> chunk = std::make_shared<MockChunk>(chunkBegin, chunkEnd, m_data);
+        std::shared_ptr<Chunk> chunk = std::make_shared<MockChunk>(chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
         return chunk;
     }
 
@@ -135,7 +143,7 @@ public:
         {
             descriptions.push_back(SequenceDescription{
                 i,
-                1,
+                m_sequenceLength,
                 chunkId,
                 true,
                 { 0, i }
@@ -266,6 +274,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
 
 BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
 {
+    const int sequenceLength = 3;
     const int seed = 42;
     const int numChunks = 100;
     const int numSequencesPerChunk = 10;
@@ -275,7 +284,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
     std::mt19937 rng(seed);
     std::uniform_int_distribution<int> distr(1, 10);
 
-    auto mockDeserializer = std::make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data);
+    auto mockDeserializer = std::make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
     auto randomizer = std::make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
 
@@ -299,6 +308,20 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
         {
             samplesToGet = distr(rng);
             Sequences sequences = randomizer->GetNextSequences(samplesToGet);
+
+            // In case end of epoch/decimation/single sequence -> skip the mbSize check.
+            if (sequences.m_endOfEpoch || sequences.m_data.empty() || sequences.m_data.front().size() < 2)
+            {
+                continue;
+            }
+
+            // Check that we do not exceed the minibatch size.
+            size_t count = 0;
+            for (const auto& sequence : sequences.m_data.front())
+            {
+                count += sequence->m_numberOfSamples;
+            }
+            BOOST_CHECK_LE(count, samplesToGet);
         }
     }
 }
