@@ -80,23 +80,22 @@ def sparse_input(shape, name=None):
     return SparseInput(shape, var_name=name)
 
 
-def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform',
-              init_value_scale=1, value=0, init_from_file_path='', init_from_literal=None,
-              random_seed=-1):
+def parameter(shape=None, value=0, learning_rate_multiplier=1.0, init='uniform',
+              init_value_scale=1, init_from_file_path='', init_from_literal=None,
+              random_seed=-1, name=None):
     """
     It creates a parameter tensor. 
 
     Args:
-        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not 
-        needed as it will be inferred from the literal.
-        name (str, optional): the name of the node in the network
+        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not needed as it will be inferred from the literal.
+        value: a scalar initial value that would be replicated for every element in the tensor
         learning_rate_multiplier (float): 
         init (str): 'uniform', 'fromFile' or 'fromLiteral' 
         init_value_scale (float): a scaling factor for the initial value
-        value: a scalar initial value that would be replicated for every element in the tensor
         init_from_file_path (str): the file that contains the initial tensor value
         init_from_literal (ndarray): the numpy array used to initialize the tensor parameter
         random_seed (float): the seed used for initialization
+        name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
