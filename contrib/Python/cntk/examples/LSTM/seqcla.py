@@ -143,7 +143,7 @@ def seqcla():
                   labels, alias='y', dim=num_labels, format='Dense'))
                   
         # do some manual accuracy testing
-        test_accuracy(training_filename, ctx.output_filename_base)
+        calc_accuracy(training_filename, ctx.output_filename_base)
 
 """
 Test the accuracy of the trained model.
