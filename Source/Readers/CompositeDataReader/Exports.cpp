@@ -16,11 +16,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class TElement>
-class CompositeReaderShim : ReaderShim<TElement>
+template<class ElemType>
+class CompositeReaderShim : public ReaderShim<ElemType>
 {
 public:
-    explicit CompositeReaderShim(ReaderFactory f) : ReaderShim(f) {}
+    explicit CompositeReaderShim(ReaderFactory f) : ReaderShim<ElemType>(f) {}
 
     // Returning 0 for composite configs.
     // This forbids the use of learning-rate and momentum per MB if truncation is enabled.
