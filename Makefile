@@ -340,7 +340,7 @@ $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 
 COMPOSITEDATAREADER_SRC =\
 	$(SOURCEDIR)/Readers/CompositeDataReader/CompositeDataReader.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CompositeDataReader/Exports.cpp \
 
 COMPOSITEDATAREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMPOSITEDATAREADER_SRC))
 
