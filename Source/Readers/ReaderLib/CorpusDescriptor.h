@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CorpusDescriptor
 {
     bool m_includeAll;
-    set<size_t> m_sequenceIds;
+    std::set<size_t> m_sequenceIds;
 
 public:
     CorpusDescriptor(const std::wstring& file) : m_includeAll(false)
