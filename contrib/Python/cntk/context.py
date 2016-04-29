@@ -47,7 +47,7 @@ _CONTEXT = {}
 def get_context(handle='default'):
     # TODO: we need more sanity in the model handling here
     if handle not in _CONTEXT:
-        _CONTEXT[handle] = Context(handle)
+        _CONTEXT[handle] = LocalExecutionContext(handle)
 
     return _CONTEXT[handle]
 
@@ -348,7 +348,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         }
         return tmpl % tmpl_dict
 
-class Context(AbstractContext):
+class LocalExecutionContext(AbstractContext):
 
     '''
     This is a sub-class of AbstractContext, use it to run CNTK locally.
@@ -360,7 +360,7 @@ class Context(AbstractContext):
                  clean_up=True):
         
         '''        
-        This is the constructor of Context       
+        This is the constructor of LocalExecutionContext       
         
         Args:
             name: context name
@@ -431,12 +431,12 @@ class Context(AbstractContext):
         '''
         var_shape = {}
         for line in output.split('\n'):
-            mo = Context._VAR_SHAPE_REGEX.match(line)
+            mo = LocalExecutionContext._VAR_SHAPE_REGEX.match(line)
             if not mo:
                 continue
             var_name, shape = mo.group('var_name'), mo.group('shape')
             # In Debug mode, an additional stride information is printed
-            shape = Context._SHAPE_STRIDE_REGEX.sub('', shape)
+            shape = LocalExecutionContext._SHAPE_STRIDE_REGEX.sub('', shape)
 
             shape_list = []
             for x in shape.split('x'):
@@ -532,7 +532,7 @@ class Context(AbstractContext):
 
                 if tensor_seq:
                     list_of_tensors.append(
-                        Context._sanitized_asarray(tensor_seq))
+                        LocalExecutionContext._sanitized_asarray(tensor_seq))
                     tensor_seq = []
 
                 last_seq_idx = seq_idx
@@ -541,7 +541,7 @@ class Context(AbstractContext):
 
                 continue
             else:
-                data = Context._sanitized_asarray(
+                data = LocalExecutionContext._sanitized_asarray(
                     data).reshape(shape, order='F')
 
             tensor_seq.append(data)
@@ -579,12 +579,12 @@ class Context(AbstractContext):
 
             line = line[:perplexity_idx]
 
-            mo = Context._TEST_RESULT_REGEX.match(line)
+            mo = LocalExecutionContext._TEST_RESULT_REGEX.match(line)
             while mo:
                 result[mo.group('name').strip()] = float(
                     mo.group('number').strip())
                 line = line[mo.span()[1]:]
-                mo = Context._TEST_RESULT_REGEX.match(line)
+                mo = LocalExecutionContext._TEST_RESULT_REGEX.match(line)
 
         return result
 
@@ -680,7 +680,7 @@ class Context(AbstractContext):
         config_content = self._generate_test_config(input_map)
         output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
 
-        return Context._parse_test_result(output)
+        return LocalExecutionContext._parse_test_result(output)
 
     def write(self, input_map=None):
         '''
@@ -738,11 +738,11 @@ class Context(AbstractContext):
             out_name += node.var_name
 
         result_content = open(out_name).read()
-        data = Context._parse_result_output(result_content)
+        data = LocalExecutionContext._parse_result_output(result_content)
 
         return data
 
-class DeferredExecContext(AbstractContext):
+class DeferredExecutionContext(AbstractContext):
 
     '''
     This is a sub-class of AbstractContext, use it to generate CNTK configuration,
@@ -756,7 +756,7 @@ class DeferredExecContext(AbstractContext):
                  clean_up=True):
         
         '''        
-        This is the constructor of Context       
+        This is the constructor of DeferredExecutionContext       
         
         Args:
             name: context name

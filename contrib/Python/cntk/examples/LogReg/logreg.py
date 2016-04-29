@@ -50,7 +50,7 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     my_sgd = SGDParams(
         epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)
 
-    with Context('demo') as ctx:
+    with LocalExecutionContext('demo') as ctx:
 
         ctx.train(
             root_nodes=[ce, eval], 
