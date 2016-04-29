@@ -49,7 +49,7 @@ def test_op_reshape(inputShape, outputShape, device_id, precision):
 
     a = I([inputTensor], has_dynamic_axis=False)
     b = C(output_shape)
-    result = reshape(a,b)
+    result = reshape(a,tuple(output_shape))
 
-    unittest_helper(result, None, expected, device_id=device_id, 
-                precision=precision, clean_up=True, backward_pass=False)
+    unittest_helper(result, None, expectedTensor, device_id=device_id, 
+                precision=precision, clean_up=False, backward_pass=False)
