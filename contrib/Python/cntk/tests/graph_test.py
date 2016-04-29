@@ -6,7 +6,7 @@
 
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
-from ..ops.cntk1 import Abs, Plus, Minus, ElementTimes, Times
+from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes, Times
 from ..ops import constant, input_reader, plus, times
 
 import pytest
@@ -61,8 +61,9 @@ def test_graph_with_same_node_twice():
     root_node = ops.plus(v0, v0)
     description, has_inputs = root_node.to_config()
     expected = ["v0 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='1.0000", "', initOnCPUOnly=true, randomSeed=-1)",
-                'v1 = Plus(v0, v0)']
-    assert _to_list(description) == expected
+                'v1 = CNTK2.Plus(v0, v0)']
+    result = _to_list(description) 
+    assert result == expected
 
 
 if False:

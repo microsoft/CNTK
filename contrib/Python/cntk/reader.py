@@ -251,7 +251,7 @@ class LazyInputReader(object):
     '''
 
     def __init__(self, batch, node, input_alias=None, has_dynamic_axis=True):
-        if not batch:
+        if batch is None:
             raise ValueError(
                 'you initalized LazyInputReader without valid batch data')
 
@@ -264,9 +264,9 @@ class LazyInputReader(object):
         sample = batch[0]
         if has_dynamic_axis:
             # collecting the shapes ignoring the dynamic axis
-            self.node.dims = np.asarray(sample).shape[1:]
+            self.node.shape = np.asarray(sample).shape[1:]
         else:
-            self.node.dims = np.asarray(sample).shape
+            self.node.shape = np.asarray(sample).shape
 
         self.input_alias = input_alias
         self.has_dynamic_axis = has_dynamic_axis
@@ -529,7 +529,7 @@ class InputMap(object):
                     if l.has_dynamic_axis:
                         alias_tensor_map[l.input_alias] = l.batch[idx]
                     else:
-                        alias_tensor_map[l.input_alias] = [l.batch[idx]]
+                        alias_tensor_map[l.input_alias] = np.asarray([l.batch[idx]])
                 f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
 
         self.unmapped_nodes.clear()

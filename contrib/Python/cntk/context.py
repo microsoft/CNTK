@@ -198,24 +198,19 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         inputs = set()
         unrolled_nodes = {}
         node_counter = 0
-        dep_inputs = tuple()
-        reconciled_cache = {}
 
         if not isinstance(root_nodes, list):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
-            var_name, node_counter, _desc, _inputs, _dep_inputs = \
+            var_name, node_counter, _desc, _inputs = \
                 root_node._to_config(input_map,
                                      desc,
                                      unrolled_nodes,
                                      inputs,
-                                     dep_inputs,
-                                     node_counter,
-                                     reconciled_cache)
+                                     node_counter)
 
             inputs |= _inputs
-            dep_inputs += _dep_inputs
 
         description = "\n".join(desc)
 
