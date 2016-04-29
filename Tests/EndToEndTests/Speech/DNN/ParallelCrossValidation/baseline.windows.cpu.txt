@@ -578,7 +578,7 @@ MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.63%]: * 640; CrossEntropyWit
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.15885172; EvalErrorPrediction = 0.58281250; TotalTime = 2.0545s; SamplesPerSecond = 311.5
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.22712855; EvalErrorPrediction = 0.59218750; TotalTime = 2.0151s; SamplesPerSecond = 317.6
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.25604782; EvalErrorPrediction = 0.60625000; TotalTime = 1.9242s; SamplesPerSecond = 332.6
-MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0070483; EvalErrorPrediction = 0.72827148; learningRatePerSample = 0.015625; EpochTime=65.6342
+MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.00704835; EvalErrorPrediction = 0.72827148; learningRatePerSample = 0.015625; EpochTime=65.6342
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -1185,7 +1185,7 @@ MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.63%]: * 640; CrossEntropyWit
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.15885172; EvalErrorPrediction = 0.58281250; TotalTime = 2.0554s; SamplesPerSecond = 311.4
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.22712855; EvalErrorPrediction = 0.59218750; TotalTime = 2.0182s; SamplesPerSecond = 317.1
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.25604782; EvalErrorPrediction = 0.60625000; TotalTime = 1.9190s; SamplesPerSecond = 333.5
-MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0070483; EvalErrorPrediction = 0.72827148; learningRatePerSample = 0.015625; EpochTime=65.6342
+MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.00704835; EvalErrorPrediction = 0.72827148; learningRatePerSample = 0.015625; EpochTime=65.6342
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
