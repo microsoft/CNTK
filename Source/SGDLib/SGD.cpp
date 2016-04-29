@@ -149,8 +149,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       IDataReader* trainSetDataReader,
                                       IDataReader* validationSetDataReader)
 {
-    let& featureNodes = net->FeatureNodes();
-    let& labelNodes = net->LabelNodes();
     let& criterionNodes = GetTrainCriterionNodes(net);
 
     fprintf(stderr, "\n");
@@ -203,6 +201,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
     StreamMinibatchInputs* inputMatrices = new StreamMinibatchInputs();
     // TODO: ^^ change to shared_ptr or unique_ptr
+    let& featureNodes = net->FeatureNodes();
+    let& labelNodes = net->LabelNodes();
+    // BUGBUG: ^^ should not get all feature/label nodes, but only the ones referenced in a criterion
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;

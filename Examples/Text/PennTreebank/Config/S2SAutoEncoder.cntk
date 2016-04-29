@@ -18,18 +18,19 @@ DataDir    = "$RunRootDir$/Data"
 CacheDir   = "$DataDir$/cache"   # (not used currently)
 ExpRootDir = "$RunRootDir$"
 
+command = train:test:write
 #command = writeWordAndClassInfo:train:test:write
-command = write
+#command = write
 #command = dump
 
 # experiment id
 
-decodeModel = 8
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 5
-#ExpId = 26-$deviceId$-g2p
-ExpId = 26-4-g2p # for decoding a different model
+deviceId = 0
+ExpId = 27-$deviceId$-g2p
+#ExpId = 22-3-g2p # for decoding a different model
+decodeModel = 21
 #ExpId = 41-$deviceId$-s2sae    # TASK
 
 hiddenDim = 512  #420 # 1024 # 200
@@ -75,21 +76,21 @@ confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
 
-trainFile = "g014b2b.train-dev-20-21.bsf.joint"
-#trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
-validFile = "g014b2b.train-dev-1-21.bsf.joint"
-testFile  = "g014b2b.test.bsf.joint"
-#testFile  = "g014b2b.test.bsf.joint.masked"
-startSymbol = "<s>"
-useCNTKTextFormatReader = false
-
-#trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
-##trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
-#validFile = "g014b2b.train-dev-1-21.bsf.ctf"
-#testFile  = "g014b2b.test.bsf.ctf"
-##testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+#trainFile = "g014b2b.train-dev-20-21.bsf.joint"
+##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.joint"
+#testFile  = "g014b2b.test.bsf.joint"
+##testFile  = "g014b2b.test.bsf.joint.masked"
 #startSymbol = "<s>"
-#useCNTKTextFormatReader = true
+#useCNTKTextFormatReader = false
+
+trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+#trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+testFile  = "g014b2b.test.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+startSymbol = "<s>"
+useCNTKTextFormatReader = true
 
 #######################################
 #  network definition                 #
@@ -132,7 +133,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
 
     # inputs
-    input = Input(vocabDim, tag='feature');
+    # Inputs must be defined on top-scope level in order to get a clean name.
+    useCNTKTextFormatReader = $useCNTKTextFormatReader$
+    #input = if !useCNTKTextFormatReader then Input (vocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
+
+    inputAxis = DynamicAxis()
+    labelsAxis = DynamicAxis()
+    src = /*Sparse*/Input (29, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
+    tgt = /*Sparse*/Input (40, dynamicAxis=labelsAxis)
 
     # get out input and label data
     # This will go away once we can switch to CNTKTextFormatReader.
@@ -143,13 +151,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             # for an auto-encoder, both are the same
             input  = rawInput
             labels = rawInput
+            inputDim = vocabDim
+            labelDim = vocabDim
         ]
-        else if $useCNTKTextFormatReader$ then [
-            src = SparseInput (29, dynamicAxis=DynamicAxis())
-            tgt = SparseInput (40, dynamicAxis=DynamicAxis())
+        else if useCNTKTextFormatReader then [
             input  = Pass (src)
             labels = Pass (tgt)
-            # BUGBUG: Sparse/dense conversion
+            inputDim = 29
+            labelDim = 40
         ]
         else [
             # we encode input and label as a single input; this splits it into two
@@ -160,6 +169,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             inLabels = Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
             input  = Sequences.Gather (inInput,  rawInput)                                            # use flags to split raw input into input and labels
             labels = Sequences.Gather (inLabels, rawInput)                                            # (both have different lengths)
+            inputDim = vocabDim
+            labelDim = vocabDim
         ]
     ].out
 
@@ -173,12 +184,18 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # ^^ use Pass() to make these easily accessible for model editing, e.g. for decoding
     isFirstLabel = Loop.IsFirst (labelSequence)
 
+    inputSequenceDim = streams.inputDim
+    labelSequenceDim = streams.labelDim
+
     # embeddings  --as long as we cannot read multiple sequences, we got one embedding
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
 
+    # Note: The way this is written is that input and labels share an embedding if their dimensions match. TODO: Make a flag.
     E = Parameters.WeightParam (vocabDim, embeddingDim) # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
-    EmbedInput (x)  = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
-    EmbedLabels (x) = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
+    Einput = Parameters.WeightParam (inputSequenceDim, embeddingDim)
+    Elabels = Parameters.WeightParam (labelSequenceDim, embeddingDim)
+    EmbedInput (x)  = if inputSequenceDim == embeddingDim then x else if inputSequenceDim == vocabDim then TransposeTimes (E, x) else TransposeTimes (Einput, x)
+    EmbedLabels (x) = if labelSequenceDim == embeddingDim then x else if labelSequenceDim == vocabDim then TransposeTimes (E, x) else TransposeTimes (Elabels, x)
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
@@ -291,8 +308,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # and add a softmax layer on top
 
-    W = Parameters.WeightParam (vocabDim, decoderDim)
-    B = Parameters.BiasParam (vocabDim)
+    W = Parameters.WeightParam (labelSequenceDim, decoderDim)
+    B = Parameters.BiasParam (labelSequenceDim)
 
     z = W * S(decoderOutput) + B;  // top-level input to Softmax
 
@@ -313,7 +330,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 # shared reader definition            #
 #######################################
 
-cntkreader = [
+reader = [
     readerType = "CNTKTextFormatReader" 
     file = "$DataDir$/$trainFile$"
     randomize="auto"
@@ -335,7 +352,29 @@ cntkreader = [
     ]
 ]
 
-reader = [
+cvReader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$validFile$"
+    randomize="none"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = 29     # 26 letters plus start, end, apostrophe
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = 40     # 39 phonemes (~AX missing), end symbol (in index 0)
+            format = "sparse"
+        ]
+    ]
+]
+
+lmreader = [
     file = "$DataDir$/$trainFile$"
     #randomize = "auto" # gets ignored
 
@@ -402,7 +441,7 @@ reader = [
     ]
 ]
 
-cvReader = [
+lmcvReader = [
     file = "$DataDir$/$validFile$"
     #randomize = "none" # gets ignored
 
@@ -650,12 +689,13 @@ write = [
     action = "write"
 
     # these two lines select the decoder
-    BrainScriptNetworkBuilder = (BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$")))
-    #BrainScriptNetworkBuilder = (BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), beamDepth))
+    BrainScriptNetworkBuilder = (if $beamDepth$ == 1
+                                 then BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"))
+                                 else BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), $beamDepth$))
 
-    # (old version, ignore:)
-    # last trained model
-    # We need to make a change:
+    # --- BEGIN IGNORE ---
+
+    # (old version, needed for some old setups; please ignore)
     xBrainScriptNetworkBuilder = ([
 
         enableTracing = true
@@ -688,7 +728,7 @@ write = [
             top1 = TraceSparse (top1b, 'logP') # TODO: get the accumulated logP out, it's a little more involved
 
             topN = 10
-            topPaths = GetTopNTensor (topN, logP) # [V x 1] -> [V x 1 x topN]
+            topPaths = BS.Seq2Seq.GetTopNTensor (topN, logP) # [V x 1] -> [V x 1 x topN]
             topPathScores = topPaths .* logP   # [V x 1 x topN]
             # reduce back to a single column
             topHyps = TraceSparse (topPathScores * OnesTensor (1 : topN), 'topHyps')
@@ -716,16 +756,16 @@ write = [
         labelSentenceStart = modelAsTrained.labelSentenceStart_out # _ is a hack
         labelsToUse             = if hasEmbeddings then modelAsTrained.labelsEmbedded             else modelAsTrained.labelSequence
         labelSentenceStartToUse = if hasEmbeddings then modelAsTrained.labelSentenceStartEmbedded else labelSentenceStart
-        old_labelSentenceStartEmbeddedScattered = TraceDense (BS.Sequences.Scatter (IsFirst (labelsToUse), labelSentenceStartToUse), 'sest')
+        labelSentenceStartEmbeddedScattered = TraceDense (BS.Sequences.Scatter (IsFirst (labelsToUse), labelSentenceStartToUse), 'sest')
 
         # new model structure
-        labelSentenceStartEmbeddedScattered = modelAsTrained.labelSentenceStartEmbeddedScattered
+        #labelSentenceStartEmbeddedScattered = modelAsTrained.labelSentenceStartEmbeddedScattered
 
         delayedDecoderFeedback = TraceDense (/*Loop.*/PreviousOrDefault1 (defaultValue=labelSentenceStartEmbeddedScattered, TraceDense (decoderFeedback, 'lemb'))   , 'prev lemb')
 
         greedyDecodingModel = BS.Network.Edit (modelAsTrained,
-                                               #BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback),
-                                               BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, modelAsTrained.decoderHistoryFromOutput),
+                                               BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback),
+                                               #BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, modelAsTrained.decoderHistoryFromOutput),
                                                modelAsTrained.z/*dummy for now since cannot pass empty set*/)
 
         # beam search of width 'beamDepth'
@@ -796,26 +836,26 @@ write = [
 
             propagationEdits[i:0..14] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
                 # non-NYU:
-                if      i ==  0 then (node => if node.name == '#decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  1 then (node => if node.name == '#decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                if      i ==  0 then (node => if node.name == 'decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  1 then (node => if node.name == 'decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # NYU:
-                else if i ==  2 then (node => if node.name == '#decoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  3 then (node => if node.name == '#decoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  2 then (node => if node.name == 'decoder[0].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  3 then (node => if node.name == 'decoder[0].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # all:
-                else if i ==  4 then (node => if node.name == '#decoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  5 then (node => if node.name == '#decoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
-                else if i ==  6 then (node => if node.name == '#decoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
-                else if i ==  7 then (node => if node.name == '#decoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  4 then (node => if node.name == 'decoder[1].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  5 then (node => if node.name == 'decoder[1].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
+                else if i ==  6 then (node => if node.name == 'decoder[2].prevState.h' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
+                else if i ==  7 then (node => if node.name == 'decoder[2].prevState.c' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
                 # attention:
-                else if i ==  8 then (node => if node.name != '#decoder[0].tanHOut.z'                then node else InjectDepth (node.PlusArgs[0])          +              node.PlusArgs[1])
-                else if i ==  9 then (node => if node.name != '#decoder[0].uValid'                   then node else              node.PlusArgs[0]           + InjectDepth (node.PlusArgs[1]))
-                else if i == 10 then (node => if node.name != '#decoder[0].weightedAttentionWindow'  then node else InjectDepth (node.ElementTimesArgs[0]) .*              node.ElementTimesArgs[1])
-                else if i == 11 then (node => if node.name != '#decoder[0].weightedAttentionAverage' then node else Times (node.TimesArgs[0], node.TimesArgs[1], outputRank=2))
-                else if i == 12 then (node => if node.name != '#decoder[0].attentionWeights'         then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
+                else if i ==  8 then (node => if node.name != 'decoder[0].tanHOut.z'                then node else InjectDepth (node.PlusArgs[0])          +              node.PlusArgs[1])
+                else if i ==  9 then (node => if node.name != 'decoder[0].uValid'                   then node else              node.PlusArgs[0]           + InjectDepth (node.PlusArgs[1]))
+                else if i == 10 then (node => if node.name != 'decoder[0].weightedAttentionWindow'  then node else InjectDepth (node.ElementTimesArgs[0]) .*              node.ElementTimesArgs[1])
+                else if i == 11 then (node => if node.name != 'decoder[0].weightedAttentionAverage' then node else Times (node.TimesArgs[0], node.TimesArgs[1], outputRank=2))
+                else if i == 12 then (node => if node.name != 'decoder[0].attentionWeights'         then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
 
                 else if i == 13 then (node => if node.name != 'beamSearchReorderHook'               then node else tokens.from)
-                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, decoderFeedback)
-                #else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
+                #else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, decoderFeedback)
+                else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
 
             # decoderHistoryHook --> decoderFeedback
 
@@ -840,7 +880,7 @@ write = [
             expandedPathScores = logLLs + If (IsFirst (logLLs), initialPathScores, Previous (tokens.score)) # [V x Dprev] log (P(w|hist) * P(hist)) for all top D hypotheses
 
             # determine top D of expanded paths
-            topPaths      = TraceSparse (GetTopNTensor (beamDepth, expandedPathScores), 'topPaths') # [V x Dprev] -> [V x Dprev x Dnew]
+            topPaths      = TraceSparse (BS.Seq2Seq.GetTopNTensor (beamDepth, expandedPathScores), 'topPaths') # [V x Dprev] -> [V x Dprev x Dnew]
             topPathScores = TraceSparse (topPaths .* expandedPathScores, 'topPathScores')           #                [V x Dprev x Dnew]
 
             # form new decoding token, by reducing topPaths(Scores) along relevant dimensions
@@ -997,31 +1037,17 @@ write = [
 
         model = if beamDepth == 0 then top1DecodingModel (modelAsTrained)
            else if beamDepth == 1 then top1DecodingModel (greedyDecodingModel)
-           #else                        beamDecodingModel
-           else                        BS.Seq2Seq.BeamSearchSequenceDecoderFrom (modelAsTrained, beamDepth)
+           else                        beamDecodingModel
+           #else                        BS.Seq2Seq.BeamSearchSequenceDecoderFrom (modelAsTrained, beamDepth)
 
     ].model)
 
+    # --- END IGNORE ---
+
     outputPath = $decodeOutputPath$
     #outputPath = "-"                    # "-" will write to stdout; useful for debugging
-    #outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
-    #outputNodeNames = network.beamDecodingModel.z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
 
-    # greedy and predict:
-    #outputNodeNames = labelsOut:decodeOut    #:topNOut
-    # beam:
-    #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
-
-    # joint:
-    #outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
-
-    #outputNodeNames = labels1:network.beamDecodingModel.decode.out
-    #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
-    #outputNodeNames = network.beamDecodingModel.tokens.score:network.beamDecodingModel.traceback
-    #   network.beamDecodingModel.topPathScores
-    #   network.beamDecodingModel.tokens.score
-    #   network.beamDecodingModel.traceback
-    #   network.beamDecodingModel.expandedPathScores
+    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     format = [
         type = "category" #"sparse"
@@ -1031,12 +1057,7 @@ write = [
         #sequenceEpilogue = "\t// %s\n"
     ]
 
-    #traceNodeNamesReal = network.beamDecodingModel.tokens.score:network.beamDecodingModel.topPathScores:network.beamDecodingModel.expandedPathScores:network.beamDecodingModel.tokens.from
-    #traceNodeNamesCategory = network.beamDecodingModel.topPathScores
-    #traceNodeNamesSparse = network.beamDecodingModel.topPathScores:network.beamDecodingModel.tokens.from:decoderOutputEmbedded.x
-
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
-    # need to be small since models are updated for each minibatch
     traceLevel = 1
     epochSize = 0
 
