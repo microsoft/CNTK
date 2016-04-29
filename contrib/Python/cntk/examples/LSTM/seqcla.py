@@ -98,12 +98,12 @@ def seqcla():
     features = cntk1.SparseInput(vocab, dynamicAxis=t, var_name='features')    
     labels = input(num_labels, name='labels')
 
-    training_filename = "..\Train_sparse.txt"    
+    training_filename = "Train_sparse.txt"    
     train_reader = CNTKTextFormatReader(training_filename)    
 
     # setup embedding matrix
     embedding = parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                          init='fromFile', init_from_file_path='..\embeddingmatrix.txt')
+                          init='fromFile', init_from_file_path='embeddingmatrix.txt')
 
     # get the vector representing the word
     sequence = times(embedding, features, name='sequence')
@@ -125,18 +125,18 @@ def seqcla():
     ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
     ce.tag = "criterion"
     
-    my_sgd = SGDParams(epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=1)    
+    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
     
-    with Context('seqcla', clean_up=False) as ctx:
-        #ctx.eval(node = ce, 
-        #         input_map=train_reader.map(
-        #             features, alias='x', dim=vocab, format='Sparse').map(
-        #             labels, alias='y', dim=num_labels, format='Dense'))        
-    
+    with LocalExecutionContext('seqcla', clean_up=False) as ctx:
+        # train the model
         ctx.train(root_nodes=[ce], optimizer=my_sgd, input_map=train_reader.map(
                   features, alias='x', dim=vocab, format='Sparse').map(
                   labels, alias='y', dim=num_labels, format='Dense'))        
         
+        # and test... with the same data :)
+        ctx.test(input_map=train_reader.map(
+                  features, alias='x', dim=vocab, format='Sparse').map(
+                  labels, alias='y', dim=num_labels, format='Dense'))
 
 if (__name__ == "__main__"):
     seqcla()
