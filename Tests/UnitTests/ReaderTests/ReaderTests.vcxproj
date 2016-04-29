@@ -165,6 +165,9 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
+    <Text Include="Control\ImageReaderColorTransform_Control.txt" />
+    <Text Include="Control\ImageReaderGrayscale_Control.txt" />
+    <Text Include="Control\ImageReaderIntensityTransform_Control.txt" />
     <Text Include="Control\ImageReaderMultiView_Control.txt" />
     <Text Include="Control\ImageReaderSimple_Control.txt" />
     <Text Include="Control\ImageReaderZip_Control.txt" />
@@ -177,6 +180,7 @@
     <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
+    <Text Include="Data\ImageReaderGrayscale_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
     <Text Include="Data\ImageReaderMultiView_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
@@ -187,6 +191,7 @@
   <ItemGroup>
     <Image Include="Data\images\black.jpg" />
     <Image Include="Data\images\blue.jpg" />
+    <Image Include="Data\images\grayscale.png" />
     <Image Include="Data\images\green.jpg" />
     <Image Include="Data\images\multi.png" />
     <Image Include="Data\images\red.jpg" />
@@ -196,12 +201,18 @@
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
+    <None Include="Config\ImageReaderColorTransform_Config.cntk" />
+    <None Include="Config\ImageReaderGrayscale_Config.cntk" />
+    <None Include="Config\ImageReaderIntensityTransform_Config.cntk" />
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
     <None Include="Config\ImageReaderMultiView_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
     <None Include="Data\images\chunk0.zip" />
     <None Include="Data\images\chunk1.zip" />
     <None Include="Data\images\simple.zip" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Data\ImageNet1K_intensity.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />

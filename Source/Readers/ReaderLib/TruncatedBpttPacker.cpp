@@ -203,11 +203,8 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
 {
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
-    if (slot.AvailableNumberOfSamples() < m_truncationSize)
-    {
-        // There is some free space in the slot, fill it in if possible.
-        ReadSequencesToSlot(slotIndex);
-    }
+    // Fill free space in the slot.
+    ReadSequencesToSlot(slotIndex);
 
     // Let's see how much samples we need to read.
     size_t numberOfSamples = min(m_truncationSize, slot.AvailableNumberOfSamples());
@@ -302,7 +299,7 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
 void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
 {
     const auto& slot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
-    while (m_truncationSize > slot.AvailableNumberOfSamples())
+    while (m_truncationSize >= slot.AvailableNumberOfSamples())
     {
         // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
         // to be more efficient. In reality the truncation size usually is less the sequence size.
