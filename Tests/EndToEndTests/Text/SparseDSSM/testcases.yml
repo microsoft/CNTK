@@ -32,6 +32,6 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - "* {{integer}}; "
+      - " * {{integer}}; "
       - ce = {{float,tolerance=.1%}}
 

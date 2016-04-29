@@ -29,13 +29,13 @@ testCases:
     patterns:
       - "Finished Epoch[{{integer}} of {{integer}}]: [Training]"
       - ce = {{float,tolerance=.1%}}
-      - "* {{integer}}; "
+      - " * {{integer}}; "
       - err = {{float,tolerance=0.001%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch (with low train loss) training results must match:
     patterns:
       - Minibatch[{{integer}}-{{integer}}
-      - "* {{integer}}; "
+      - " * {{integer}}; "
       - ce = {{float,tolerance=0.05}}
       - perplexity = {{float,tolerance=0.05}}

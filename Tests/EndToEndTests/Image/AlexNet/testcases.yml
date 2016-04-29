@@ -26,6 +26,6 @@ testCases:
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - "* {{integer}}; "
+      - " * {{integer}}; "
       - ce = {{float,tolerance=2.0%}}
 
