@@ -152,7 +152,7 @@ class ComputationNode(object):
             p_value = "'%s'" % p_value
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
-            if p_name in ['dims', 'inputs', 'z']:
+            if p_name in ['shape', 'dims', 'inputs', 'z']:
                 p_value = _tuple_to_cntk_shape(p_value)
             else:
                 raise ValueError('Sequence initialization is only allowed for' +
@@ -178,12 +178,9 @@ class ComputationNode(object):
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
     def _to_config_recursively(self, input_map, desc, unrolled_nodes, inputs,
-                               dep_inputs, node_counter, reconciled_cache):
+                               node_counter):
 
         param_variable_names = []
-        # In case we have multiple unreconciled inputs, we will reconcile each
-        # of them to the layout of the first input.
-        first_unreconciled_input = None
         if self.params:
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
@@ -205,42 +202,13 @@ class ComputationNode(object):
                         if pv in unrolled_nodes:
                             # We have seen this node already, so just retrieve its
                             # name.
-                            child_var, child_dep_inputs = unrolled_nodes[pv]
+                            child_var = unrolled_nodes[pv]
                         else:
-                            child_var, node_counter, child_desc, child_dep_inputs = pv._to_config_recursively(
+                            child_var, node_counter, child_desc = pv._to_config_recursively(
                                 input_map, desc, unrolled_nodes, inputs, 
-                                dep_inputs, node_counter, reconciled_cache)
+                                node_counter)
 
-                            unrolled_nodes[pv] = child_var, dep_inputs
-
-                        # Whenever two unreconciled inputs meet, we need
-                        # reconcile them to have the same MB layout. This is a
-                        # temporary necessity that should go away with future
-                        # CNTK versions.
-                        if dep_inputs != child_dep_inputs:
-
-                            if first_unreconciled_input is None:
-                                first_unreconciled_input = pv
-
-                            else:
-                                if (pv, first_unreconciled_input) in reconciled_cache:
-                                    child_var, dep_inputs = reconciled_cache[
-                                        (pv, first_unreconciled_input)]
-                                else:
-                                    unrec_pv = pv
-                                    from .ops.cntk1 import ReconcileDynamicAxis
-                                    pv = ReconcileDynamicAxis(
-                                        unrec_pv, first_unreconciled_input)
-                                    child_var, node_counter, child_desc, dep_inputs = pv._to_config_recursively(
-                                        input_map, desc, unrolled_nodes, inputs, 
-                                        dep_inputs, node_counter,
-                                        reconciled_cache)
-                                    reconciled_cache[
-                                        (unrec_pv, first_unreconciled_input)] = pv.var_name, dep_inputs
-
-                                unrolled_nodes[pv] = child_var, dep_inputs
-
-                            dep_inputs = child_dep_inputs
+                            unrolled_nodes[pv] = child_var
 
                         input_nodes_vars.append(child_var)
 
@@ -277,26 +245,22 @@ class ComputationNode(object):
             if not self in input_map:
                 input_map._add_unmapped(self)
             inputs.add(self)
-            dep_inputs += (self.var_name,)
 
-        return self.var_name, node_counter, desc, dep_inputs
+        return self.var_name, node_counter, desc
 
-    def _to_config(self, input_map, description, unrolled_nodes, inputs, 
-                   dep_inputs, node_counter, reconciled_cache):
+    def _to_config(self, input_map, description, unrolled_nodes, inputs, node_counter):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
 
-        var_name, node_counter, desc, dep_inputs = self._to_config_recursively(
+        var_name, node_counter, desc = self._to_config_recursively(
             input_map,
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
-            dep_inputs=dep_inputs,
-            node_counter=node_counter,
-            reconciled_cache=reconciled_cache)
+            node_counter=node_counter)
 
-        return var_name, node_counter, desc, inputs, dep_inputs
+        return var_name, node_counter, desc, inputs
 
     def to_config(self, input_map=None):
         '''
@@ -306,14 +270,12 @@ class ComputationNode(object):
         Args:
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
-        var_name, node_counter, desc, inputs, dep_inputs = \
+        var_name, node_counter, desc, inputs = \
             self._to_config(input_map=input_map,
                             description=[],
                             unrolled_nodes={},
                             inputs=set(),
-                            dep_inputs=tuple(),
-                            node_counter=0,
-                            reconciled_cache={})
+                            node_counter=0)
 
         return "\n".join(desc), inputs
 
