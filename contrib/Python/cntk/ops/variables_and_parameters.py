@@ -157,3 +157,19 @@ def constant(value, name=None):
 
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)
+
+
+def dynamic_axis(name=None):
+    """
+    This function creates a dynamic axis object that can be connected to an input. 
+    For sequence-based inputs, this allows the sequences to be of arbitrary lengths 
+    and therefore allows networks to be setup without the need for padding.
+    
+    Args:
+        name: the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    
+    from cntk.ops.cntk2 import DynamicAxis
+    return DynamicAxis(var_name=name)
