@@ -158,3 +158,21 @@ def dynamic_axis(name=None):
     
     from cntk.ops.cntk2 import DynamicAxis
     return DynamicAxis(var_name=name)
+
+
+def reconcile_dynamic_axis(data_input, layout_input, name=None):
+    """
+    This function adapts the dynamic axis layout for `data_input` to match that 
+    of `layout_input`. It allows these two tensors to be properly compared using, e.g. 
+    a criterion node.
+    
+    Args:
+        data_input: the tensor to have its dynamic axis layout adapted
+        layout_input: the tensor layout to use for adapting `data_input`s layout
+        name: the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    
+    from cntk.ops.cntk1 import ReconcileDynamicAxis
+    return ReconcileDynamicAxis(data_input, layout_input, var_name=name)

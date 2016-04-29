@@ -18,9 +18,9 @@ from cntk.ops import cntk1
 # LSTM sequence classification
 # =====================================================================================
 
-# to be removed as they're added to the real API
+# this class is a temporary stop-gap to use a BS macro that hasn't been fully 
+# ported to the python API as of yet
 class Last(ComputationNode):
-
     def __init__(self, x, name='BS.Sequences.Last', var_name=None):
         super(Last, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
@@ -121,7 +121,10 @@ def seqcla():
     b = parameter((num_labels, 1))
     z = times(w, lst) + b
     
-    ce = cntk1.CrossEntropyWithSoftmax(labels, z)
+    # and reconcile the shared dynamic axis
+    pred = reconcile_dynamic_axis(z, labels)    
+    
+    ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
     ce.tag = "criterion"
     
     #my_sgd = SGDParams(epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)    
