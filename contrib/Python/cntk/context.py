@@ -104,9 +104,6 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
     def __exit__(self, exc_type, exc_value, exc_tb):
         del _CONTEXT[self.name]
 
-        if self.clean_up:
-            sh.rmtree(self.directory)
-
     def _save_file(self, config_file_name, config_content):
         '''
         Writes the content of a config file on disk.
@@ -372,6 +369,12 @@ class LocalExecutionContext(AbstractContext):
         self.model_dir = os.path.join(self.directory, 'Models')
         self.model_path = os.path.join(self.model_dir, self.name)
         self.output_filename_base = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        super(self.__class__, self).__exit__( exc_type, exc_value, exc_tb)
+        if self.clean_up:
+            sh.rmtree(self.directory)
+
         
     def _call_cntk(self, config_file_name, config_content):
         '''
