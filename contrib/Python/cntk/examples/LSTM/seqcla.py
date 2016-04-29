@@ -13,6 +13,10 @@ from cntk import *
 from cntk.ops import *
 from cntk.ops import cntk1
 
+cur_dir = os.path.dirname(__file__)
+
+train_file = os.path.join(cur_dir, "Train_sparse.txt")
+embedding_file = os.path.join(cur_dir, "embeddingmatrix.txt")
 
 # =====================================================================================
 # LSTM sequence classification
@@ -100,13 +104,12 @@ def seqcla():
     # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
     features = cntk1.SparseInput(vocab, dynamicAxis=t, var_name='features')    
     labels = input(num_labels, name='labels')
-
-    training_filename = "Train_sparse.txt"    
-    train_reader = CNTKTextFormatReader(training_filename)    
+   
+    train_reader = CNTKTextFormatReader(train_file)
 
     # setup embedding matrix
     embedding = parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                          init='fromFile', init_from_file_path='embeddingmatrix.txt')
+                          init='fromFile', init_from_file_path=embedding_file)
 
     # get the vector representing the word
     sequence = times(embedding, features, name='sequence')
@@ -129,7 +132,7 @@ def seqcla():
     ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
     ce.tag = "criterion"
     
-    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=10)    
+    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
     
     with LocalExecutionContext('seqcla', clean_up=False) as ctx:
         # train the model
@@ -143,7 +146,11 @@ def seqcla():
                   labels, alias='y', dim=num_labels, format='Dense'))
                   
         # do some manual accuracy testing
-        calc_accuracy(training_filename, ctx.output_filename_base)
+        acc = calc_accuracy(train_file, ctx.output_filename_base)
+        
+        # and test for the same number...
+        TOLERANCE_ABSOLUTE = 1E-06    
+        assert np.allclose(acc, 0.5982357658380112, atol=TOLERANCE_ABSOLUTE)
 
 """
 Test the accuracy of the trained model.
@@ -170,7 +177,13 @@ def calc_accuracy(test_file, output_filename_base):
         if labels[i] == predicted[i]:
             correct += 1
     
-    print(float(correct) / float(len(labels)))
+    return float(correct) / float(len(labels))
+
+"""
+Test function so the test suite picks this up and runs it
+"""
+def test_lstm_sequence_classification():
+    seqcla()
 
 if (__name__ == "__main__"):
     seqcla()
