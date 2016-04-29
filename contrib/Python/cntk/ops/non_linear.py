@@ -12,7 +12,7 @@ is computed as follows : for each element in the output tensor, its gradient wit
 given input tensor is computed, then, the resulting tensors are added up.
 """
 
-def clip(min_value, max_value, x, name=None):
+def clip(x, min_value, max_value, name=None):
     """
     Clip operation. Computes a tensor with all of its values clipped to fall
     between `min_value` and `max_value`, i.e.
@@ -31,20 +31,20 @@ def clip(min_value, max_value, x, name=None):
         #[-5, -4., 0., 4., 9.]
     
     Args:        
+        x: tensor to be clipped
         min_value: the minimum value to clip element values to
         max_value: the maximum value to clip element values to
-        x: tensor to be clipped
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk.ops.cntk1 import Clip
-    return Clip(min_value, max_value, x, var_name = name)
+    from cntk.ops.cntk2 import Clip
+    return Clip(x, min_value, max_value, var_name = name)
 
 
-def rectified_linear(x, name=None):
+def relu(x, name=None):
     """
-    RectifiedLinear operation. Computes the element-wise rectified linear
+    Rectified linear operation. Computes the element-wise rectified linear
     of `x`: ``max(x, 0)``
 
     The output tensor has the same shape as `x`.
@@ -59,8 +59,8 @@ def rectified_linear(x, name=None):
         >>> cntk.eval(cntk.ops.rectified_linear([[-1, -0.5, 0, 1, 2]]))
         [[[0, 0, 0, 1, 2]]]
     """
-    from cntk.ops.cntk1 import RectifiedLinear
-    return RectifiedLinear(x, var_name=name)
+    from cntk.ops.cntk2 import Relu
+    return Relu(x, var_name=name)
 
 
 def sigmoid(x, name=None):
@@ -77,7 +77,7 @@ def sigmoid(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Sigmoid
+    from cntk.ops.cntk2 import Sigmoid
     return Sigmoid(x, var_name=name)
 
 
@@ -95,7 +95,7 @@ def tanh(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Tanh
+    from cntk.ops.cntk2 import Tanh
     return Tanh(x, var_name=name)
 
 
@@ -121,7 +121,7 @@ def softmax(x, name=None):
         >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
         [[[0.5, 0.5]]]
     """
-    from cntk.ops.cntk1 import Softmax
+    from cntk.ops.cntk2 import Softmax
     return Softmax(x)
 
 
@@ -157,7 +157,7 @@ def abs(x, name=None):
         >>> cntk.eval(cntk.ops.abs([-1, 1, -2, 3]))
         [[1, 1, 2, 3]]
     """
-    from cntk.ops.cntk1 import Abs
+    from cntk.ops.cntk2 import Abs
     return Abs(x, var_name=name)
 
 
