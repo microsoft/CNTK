@@ -3,7 +3,7 @@
 . $TEST_ROOT_DIR/run-test-common
 
 # TODO not yet: OriginalTestDir=../../../LSTM/FullUtterance
-ConfigDir=$TEST_DIR/../../../ExperimentalHTKMLFReader/LSTM/FullUtterance
+ConfigDir=$TEST_DIR/../../../ExperimentalHtkmlfReader/LSTM/FullUtterance
 
 # TODO not yet:
 #(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
