@@ -28,7 +28,8 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     value is returned which is 0.1 by default.
     
     Example:
-        >>> 
+        >>> future_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
+        # [[3, 4], [5, 6], [0.5, 0.5]]
     
     Args:        
         dims: dimensions of the input `x`
@@ -52,7 +53,8 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     value is returned which is 0.1 by default.
     
     Example:
-        >>> 
+        >>> past_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
+        # [[0.5, 0.5], [1, 2], [3, 4]]
     
     Args:        
         dims: dimensions of the input `x`

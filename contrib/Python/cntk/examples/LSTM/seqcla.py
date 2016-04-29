@@ -81,6 +81,9 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
     # return cell value and hidden state
     return ct, ht
 
+"""
+Train an LSTM-based sequence classification model.
+"""
 def seqcla():
 
     # LSTM params
@@ -118,6 +121,7 @@ def seqcla():
     w = parameter((num_labels, output_dim), name='w')
     b = parameter((num_labels), name='b')
     z = plus(times(w, lst), b, name='z')
+    z.tag = "output"
     
     # and reconcile the shared dynamic axis
     pred = reconcile_dynamic_axis(z, labels, name='pred')    
@@ -133,10 +137,32 @@ def seqcla():
                   features, alias='x', dim=vocab, format='Sparse').map(
                   labels, alias='y', dim=num_labels, format='Dense'))        
         
-        # and test... with the same data :)
-        ctx.test(input_map=train_reader.map(
+        # write out the predictions
+        ctx.write(input_map=train_reader.map(
                   features, alias='x', dim=vocab, format='Sparse').map(
                   labels, alias='y', dim=num_labels, format='Dense'))
+                  
+        # do some manual accuracy testing
+        test_accuracy(training_filename, ctx.output_filename_base)
+
+"""
+Test the accuracy of the trained model.
+"""
+def test_accuracy(test_file, output_filename_base):
+    
+    # load correct answers
+    correct=[]
+    with open(test_file, 'r', encoding='utf8') as f_in:
+        i=0        
+        for l in f_in:
+            dd = l.split('|')
+            if len(dd) > 2:
+                x = dd[2].strip().split(' ')[1:]
+                correct.append(np.argmax(x))
+                
+    # load predicted answers
+    predicted=[]
+    
 
 if (__name__ == "__main__"):
     seqcla()
