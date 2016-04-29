@@ -23,7 +23,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// RNNNode
+// RNNNode (data, weights)
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -52,8 +52,24 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_transposedInput, matrixPool);
         RequestMatrixFromPool(m_transposedOutput, matrixPool);
+    }
+
+    // request matrices needed to do node derivative value evaluation
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_transposedDInput, matrixPool);
         RequestMatrixFromPool(m_transposedDOutput, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_transposedInput, matrixPool);
+        ReleaseMatrixToPool(m_transposedOutput, matrixPool);
+        ReleaseMatrixToPool(m_transposedDInput, matrixPool);
+        ReleaseMatrixToPool(m_transposedDOutput, matrixPool);
     }
 
     // Is the output value of the computation node needed for computing
@@ -63,7 +79,7 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return false; }
 
 protected:
-    bool BackwardDataCalledYet;
+    bool m_BackwardDataCalledYet;
     TensorShape shapeXT;
     TensorShape shapeYT;
     shared_ptr<Matrix<ElemType>> m_transposedInput;

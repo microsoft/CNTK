@@ -38,7 +38,7 @@ RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name)
 template<class ElemType>
 RNNNode<ElemType>::RNNNode(const ScriptableObjects::IConfigRecordPtr configp)
     : Base(configp->Get(L"deviceId"), L"<placeholder>"), m_numHidden(configp->Get(L"numHidden")), m_numLayers(configp->Get(L"numLayers")),
-    BackwardDataCalledYet(false)
+    m_BackwardDataCalledYet(false)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
 }
@@ -88,36 +88,54 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 
     TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
+    // For windowed LSTM, CNTK is providing data with the second dimension being time-like and the third dimension
+    // being minibatch index. CuDnn expects the second dimension to be minibatch index, and the third dimension
+    // to be time-like. This sequence of operations creates a transposed copy of the data in m_transposedInput
+    // and shapeXT
 
     m_transposedInput->Resize(Input(0)->Value());
     TransposeHelper(Input(0)->ValuePtr(), Input(0)->GetTensorSliceFor(SIZE_MAX, fr), m_transposedInput, shapeXT);
 
+    // Similarly, we will eventually need to transpose the output. Generate the necessary shape here, and do
+    // the transposition after RNNForward() returns.
+
+    // ensure enough storage.
     m_transposedOutput->Resize(this->Value());
+
+    // create the necessary shape.
     shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
+    // this swap results in a shape with swapped dimensions, but also swapped strides
     shapeYT.SwapDimsInPlace(1, 2);
+    // this copy is necessary so that the strides are dense.
     shapeYT = TensorShape(shapeYT.GetDims());
 
     m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_numLayers, m_numHidden);
 
+    // No one uses shapeY, but it is necessary
     TensorShape shapeY;
     TransposeHelper(m_transposedOutput, TensorShape(shapeYT.GetDims()), this->ValuePtr(), shapeY);
-    BackwardDataCalledYet = false;
+    m_BackwardDataCalledYet = false;
 }
 
 template<class ElemType>
 void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr)
 {
-    // ensure BackwardData is the first method called
-    if (!BackwardDataCalledYet)
+    // ensure BackwardData is the first method called, as required by CuDnn API
+    if (!m_BackwardDataCalledYet)
     {
         Matrix<ElemType>& paramW = Input(1)->Value();
 
+        // To obey the data layout constraints of CuDnn, we take the derivative we're given,
+        // and transpose it before feeding to the interface.
         m_transposedDOutput->Resize(this->Gradient());
         TransposeHelper(this->GradientPtr(), this->GetTensorSliceFor(SIZE_MAX, fr), m_transposedDOutput, shapeYT);
 
+        // Ensure enough space for the result
         m_transposedDInput->Resize(Input(1)->Gradient());
+
+        // Do the work
         m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT);
-        BackwardDataCalledYet = true;
+        m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
@@ -126,6 +144,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
     }
     else if (inputIndex == 0) // data
     {
+        // all of the work was done above, where RNNBackwardData is called. Now, just place a transposed result.
         TensorShape tmp;
         TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
     }
@@ -139,27 +158,23 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
     InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
     // get tensor shapes
-    auto dimsA = Input(1)->GetSampleLayout().GetDims();
-    auto dimsB = Input(0)->GetSampleLayout().GetDims();
-    string dimsAstring = string(Input(1)->GetSampleLayout()); // for error messages
-    string dimsBstring = string(Input(0)->GetSampleLayout());
+    auto dimsA = Input(1)->GetSampleLayout().GetDims(); // data
+    auto dimsB = Input(0)->GetSampleLayout().GetDims(); // parameters
 
     // validate and infer
     if (isFinalValidationPass || (dimsA.size() > 0 && dimsB.size() > 0)) // only if we got at least some input dimensions to work with or need to wrap up
     {
         // now determine result dimensions
-        // bugbug - could want to squash output dims, need to reduce?
         auto dimsC = dimsB;
-        //dimsC.resize(m_outputRank);    // output dims
+        // output dims - bugbug: this is hard-coded for bidirectional models
         dimsC[0] = 2 * m_numHidden;
 
-        /// N.B. - this is the magical call, the reason for the function
-        /// dimensions would be outputRank * numSamples * minibatch * time
+        // N.B. - this is the magical call, the reason for the function
+        // dimensions would be outputRank * numSamples * minibatch * time.
+        // This call establishes outputRank * numSamples, the rest will be filled in
+        // dynamically though the MBLayout.
         SetDims(TensorShape(dimsC), HasMBLayout());
 
-        // update dimensions of A
-        // update if LearnableParameter
-        // Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
     }
 };
 

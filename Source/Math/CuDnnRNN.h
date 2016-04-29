@@ -113,23 +113,30 @@ public:
     CuDnnFilter(const CuDnnRNN<ElemType>& rnn, const cudnnTensorDescriptor_t *xDesc) :
         m_cudnn(CuDnn::Instance()), m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
-
         CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filterDesc));
+        try
+        {
+            size_t filterSize;
+            CUDNN_CALL(cudnnGetRNNParamsSize(*m_cudnn, rnn, xDesc, &filterSize));
 
-        size_t filterSize;
-        CUDNN_CALL(cudnnGetRNNParamsSize(*m_cudnn, rnn, xDesc, &filterSize));
+            size_t dataSize = 2; // CUDNN_DATA_HALF
 
-        size_t dataSize = 2; // CUDNN_DATA_HALF
+            if (m_dataType == cudnnDataType_t::CUDNN_DATA_DOUBLE)
+                dataSize = 8;
+            else if (m_dataType == cudnnDataType_t::CUDNN_DATA_FLOAT)
+                dataSize = 4;
 
-        if (m_dataType == cudnnDataType_t::CUDNN_DATA_DOUBLE)
-            dataSize = 8;
-        else if (m_dataType == cudnnDataType_t::CUDNN_DATA_FLOAT)
-            dataSize = 4;
-
-        // convert from bytes to items
-        m_filterSize = (filterSize + dataSize - 1) / dataSize;
-        int dimW[3] = { (int)m_filterSize, 1, 1 };
-        CUDNN_CALL(cudnnSetFilterNdDescriptor(m_filterDesc, m_dataType, CUDNN_TENSOR_NCHW, 3, dimW));
+            // convert from bytes to items
+            m_filterSize = (filterSize + dataSize - 1) / dataSize;
+            int dimW[3] = { (int)m_filterSize, 1, 1 };
+            CUDNN_CALL(cudnnSetFilterNdDescriptor(m_filterDesc, m_dataType, CUDNN_TENSOR_NCHW, 3, dimW));
+        }
+        catch (exception e)
+        {
+            cudnnDestroyFilterDescriptor(m_filterDesc);
+            m_filterDesc = nullptr;
+            throw e;
+        }
     }
     ~CuDnnFilter()
     {
@@ -162,7 +169,7 @@ public:
         m_cudnn(CuDnn::Instance()),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
         workspace(0), reserve(0),
-        BackwardDataCalledYet(false)
+        m_BackwardDataCalledYet(false)
     {
         m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(numRows, numHidden);
     }
@@ -190,14 +197,10 @@ private:
     }
 
 private:
-    /*
-    CuDnnTensor m_inT;
-    CuDnnTensor m_outT;
-    */
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;
     Mat workspace;
     Mat reserve;
-    bool BackwardDataCalledYet;
+    bool m_BackwardDataCalledYet;
 };
 
 } } }

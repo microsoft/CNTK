@@ -141,8 +141,8 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
     mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
-    struct rnnwrapper;
-    mutable std::unique_ptr<struct rnnwrapper> m_rnnwrapper;
+    struct RNNWrapper;
+    mutable std::unique_ptr<struct RNNWrapper> m_RNNWrapper;
 #pragma warning(pop)
 
 private:

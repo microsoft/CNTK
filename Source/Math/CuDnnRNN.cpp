@@ -26,12 +26,11 @@ template<class ElemType>
 class CuDnnTensorDescriptor
 {
 private:
-    cudnnDataType_t m_dataType;
     cudnnTensorDescriptor_t m_tensorDesc;
 public:
-    CuDnnTensorDescriptor(size_t hiddenSize, size_t miniBatch, size_t numLayers) :
-        m_dataType(CuDnnTensor::GetDataType<ElemType>())
+    CuDnnTensorDescriptor(size_t hiddenSize, size_t miniBatch, size_t numLayers)
     {
+        cudnnDataType_t m_dataType = CuDnnTensor::GetDataType<ElemType>();
         int dimA[3] = { (int)hiddenSize, (int)miniBatch, (int)numLayers };
         int strideA[3] = { 1, dimA[0], dimA[0] * dimA[1] };
         CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensorDesc));
@@ -60,8 +59,8 @@ size_t CuDnnRNNExecutor<ElemType>::GetWSize(cudnnTensorDescriptor_t *xDesc)
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::ForwardCore(
-    const GPUMatrix<ElemType> &weightsW,
-    const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, GPUMatrix<ElemType> &outputY, const TensorShape shapeY
+    const GPUMatrix<ElemType>& weightsW,
+    const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY
     )
 {
     // get input data layout
@@ -97,7 +96,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 
     size_t outputSize = shapeY.GetDim(0);
     if (outputSize != 2 * m_rnnT->GetNumHidden())
-        RuntimeError("CuDnn ForwardCore: Output learing dimension must be twice hidden size for bidirectional networks");
+       InvalidArgument("CuDnn ForwardCore: Output leading dimension must be twice hidden size for bidirectional networks");
     if (shapeY.GetDim(1) != miniBatch)
         RuntimeError("CuDnn ForwardCore: Output minibatch size doesn't match input minibatch size");
     if (shapeY.GetDim(2) != seqLength)
@@ -131,9 +130,9 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     reserve.Resize(reserveSize, 1);
     workspace.Resize(workSize, 1);
 
-    wDesc = std::make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc.data());
+    wDesc = make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc.data());
     if (wDesc->GetSize() != weightsW.GetNumRows())
-        RuntimeError("RNN needs %d parameters, but %d were allocated", wDesc->GetSize(), weightsW.GetNumRows());
+        InvalidArgument("RNN needs %d parameters, but %d were allocated", wDesc->GetSize(), weightsW.GetNumRows());
 
     CUDNN_CALL(cudnnRNNForwardTraining(
         *m_cudnn, *m_rnnT,
@@ -146,7 +145,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
         0, 0,
         workspace.Data(), workspace.GetNumElements()*sizeof(ElemType),
         reserve.Data(), reserve.GetNumElements()*sizeof(ElemType)));
-    BackwardDataCalledYet = false;
+    m_BackwardDataCalledYet = false;
 }
 
 template <class ElemType>
@@ -154,7 +153,7 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
     const Mat& outputY, const Mat& outputDY, const Mat& weightsW, Mat& dx
     )
 {
-    if (!BackwardDataCalledYet)
+    if (!m_BackwardDataCalledYet)
     {
         CUDNN_CALL(cudnnRNNBackwardData(
             *m_cudnn, *m_rnnT,
@@ -171,14 +170,14 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
             workspace.Data(), workspace.GetNumElements()*sizeof(ElemType),
             reserve.Data(), reserve.GetNumElements()*sizeof(ElemType)));
     }
-    BackwardDataCalledYet = true;
+    m_BackwardDataCalledYet = true;
 }
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const Mat& inputX, const Mat& outputY, Mat& dw)
 {
-    if (!BackwardDataCalledYet)
-        RuntimeError("out of order calling you have been very bad");
+    if (!m_BackwardDataCalledYet)
+        LogicError("out of order calling you have been very bad");
     CUDNN_CALL(cudnnRNNBackwardWeights(
         *m_cudnn, *m_rnnT,
         xDesc.data(), inputX.Data(),

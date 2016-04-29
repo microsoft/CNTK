@@ -3142,7 +3142,7 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 #pragma region RNN Functions
 
 template<class ElemType>
-struct GPUMatrix<ElemType>::rnnwrapper
+struct GPUMatrix<ElemType>::RNNWrapper
 {
     std::unique_ptr<CuDnnRNNExecutor<ElemType>> m_jasha = nullptr;
 };
@@ -3151,23 +3151,23 @@ template <class ElemType>
 void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const size_t numLayers, const size_t hiddenSize)
 {
     // numLayers, hiddenSize are input parameters
-    if (!m_rnnwrapper)
-        m_rnnwrapper = std::make_unique<rnnwrapper>();
-    if (!m_rnnwrapper->m_jasha)
-        m_rnnwrapper->m_jasha = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, shapeY, numLayers, hiddenSize);
-    m_rnnwrapper->m_jasha->ForwardCore(paramW, inputX, shapeX, *this, shapeY);
+    if (!m_RNNWrapper)
+        m_RNNWrapper = std::make_unique<RNNWrapper>();
+    if (!m_RNNWrapper->m_jasha)
+        m_RNNWrapper->m_jasha = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, shapeY, numLayers, hiddenSize);
+    m_RNNWrapper->m_jasha->ForwardCore(paramW, inputX, shapeX, *this, shapeY);
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape /*shapeY*/, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape /*shapeDX*/)
 {
-    m_rnnwrapper->m_jasha->BackwardDataCore(*this, outputDY, paramW, outputDX);
+    m_RNNWrapper->m_jasha->BackwardDataCore(*this, outputDY, paramW, outputDX);
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape /*shapeX*/, const GPUMatrix<ElemType>& outputY, const TensorShape /*shapeY*/, GPUMatrix<ElemType>& dw)
 {
-    m_rnnwrapper->m_jasha->BackwardWeightsCore(inputX, outputY, dw);
+    m_RNNWrapper->m_jasha->BackwardWeightsCore(inputX, outputY, dw);
 }
 
 #pragma region Static BLAS Functions
