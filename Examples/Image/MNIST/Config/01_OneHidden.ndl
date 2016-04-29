@@ -25,7 +25,8 @@ DNN = [
     err = ErrorPrediction(labels, ol)
     
     # Special Nodes
-    errTop5 = ErrorPrediction(labels, ol, Const(1), tag="eval")
+    # errTop1 can be used to compute, for example, top-5 error by changing Const(1) to Const(5).
+    errTop1 = ErrorPrediction(labels, ol, Const(1), tag="eval")
     FeatureNodes = (features)
     LabelNodes = (labels)
     CriterionNodes = (ce)
