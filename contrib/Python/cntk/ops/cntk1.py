@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root
+# Licensed under the MIT license. See LICENSE.md file in the project root 
 # for full license information.
 # ==============================================================================
 
@@ -50,6 +50,15 @@ class Ceil(ComputationNode):
         super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
         self.x = x
         self.inputs = ['x']
+        self.params_with_defaults = []
+
+class If(ComputationNode):
+    def __init__(self, cond, thenVal, elseVal, name='BS.Boolean.If', var_name=None):
+        super(If, self).__init__(
+            params=['cond', 'thenVal', 'elseVal'], name=name, var_name=var_name)
+        self.cond = cond
+        self.thenVal = thenVal
+        self.elseVal = elseVal
         self.params_with_defaults = []
 
 class Sign(ComputationNode):
@@ -377,15 +386,13 @@ class ClassBasedCrossEntropyWithSoftmax(ComputationNode):
         self.inputs = ['labelClassDescriptorVectorSequence', 'mainInputInfo', 'mainWeight', 'classLogProbsBeforeSoftmax']
 
 class Clip(ComputationNode):
-
     def __init__(self, minValue, maxValue, x, name='Clip', var_name=None):
-        super(Clip, self).__init__(
-            params=['minValue', 'maxValue', 'x'], name=name, var_name=var_name)        
+        super(Clip, self).__init__(params=['minValue', 'maxValue', 'x'], name=name, var_name=var_name)
         self.minValue = minValue
         self.maxValue = maxValue
         self.x = x
         self.params_with_defaults = []
-
+        self.inputs = ['minValue', 'maxValue', 'x']
 
 class ColumnElementTimes(ComputationNode):
     def __init__(self, aVectorSequence, anotherVectorSequence, name='ColumnElementTimes', var_name=None):
@@ -498,15 +505,6 @@ class GMMLogLikelihood(ComputationNode):
         self.dataVectorSequence = dataVectorSequence
         self.params_with_defaults = []
         self.inputs = ['unnormalizedPriorVector', 'meansAsRows', 'logStdDevAsRows', 'dataVectorSequence']
-
-class If(ComputationNode):
-    def __init__(self, cond, thenVal, elseVal, name='BS.Boolean.If', var_name=None):
-        super(If, self).__init__(
-            params=['cond', 'thenVal', 'elseVal'], name=name, var_name=var_name)
-        self.cond = cond
-        self.thenVal = thenVal
-        self.elseVal = elseVal
-        self.params_with_defaults = []
 
 class InvStdDev(ComputationNode):
     def __init__(self, dataVectorSequence, name='InvStdDev', var_name=None):
@@ -634,6 +632,14 @@ class RectifiedLinear(ComputationNode):
         super(RectifiedLinear, self).__init__(params=['z'], name=name, var_name=var_name)
         self.z = z
         self.params_with_defaults = []
+        self.inputs = ['z']
+
+class ReducePlus(ComputationNode):
+    def __init__(self, z, axis=0, name='ReducePlus', var_name=None):
+        super(ReducePlus, self).__init__(params=['z', 'axis'], name=name, var_name=var_name)
+        self.z = z
+        self.axis = axis
+        self.params_with_defaults = ['axis']
         self.inputs = ['z']
 
 class Scale(ComputationNode):

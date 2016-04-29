@@ -25,7 +25,7 @@ def plus(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Plus
+    from cntk.ops.cntk2 import Plus
     return Plus(left, right, var_name=name)
 
 
@@ -43,7 +43,7 @@ def minus(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
 
-    from cntk.ops.cntk1 import Minus
+    from cntk.ops.cntk2 import Minus
     return Minus(left, right, var_name=name)
 
 
@@ -60,7 +60,7 @@ def element_times(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import ElementTimes
+    from cntk.ops.cntk2 import ElementTimes
     return ElementTimes(left, right, var_name=name)
 
 
@@ -79,7 +79,7 @@ def element_divide(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import ElementDivide
+    from cntk.ops.cntk2 import ElementDivide
     return ElementDivide(left, right, var_name=name)
 
 

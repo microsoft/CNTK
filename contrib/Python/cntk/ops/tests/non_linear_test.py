@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..non_linear import clip, cond, exp, rectified_linear, sigmoid, softmax, tanh
+from ..non_linear import clip, cond, exp, relu, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -47,11 +47,11 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     # Compare to numpy's implementation of np.clip(x, min, max)
     expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
     
+    op_node = I([x], has_dynamic_axis=False)
     a = C(min_value)    
     b = C(max_value)
-    c = I([x], has_dynamic_axis=False)
     
-    result = clip(a, b, c)
+    result = clip(op_node, a, b)
     unittest_helper(result, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=False)
     
@@ -62,7 +62,8 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
 
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True, input_node=c)
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=op_node)
 
 TENSORS = [
     ([[0, -0.1]]),
@@ -232,7 +233,7 @@ def test_op_tanh(tensor, device_id, precision):
 
 
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_rectified_linear(tensor, device_id, precision):
+def test_op_relu(tensor, device_id, precision):
 
     def numpy_op(x):
         npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
@@ -248,7 +249,7 @@ def test_op_rectified_linear(tensor, device_id, precision):
     expected = [[numpy_op(tensor)]]
 
     input_node = I([tensor], has_dynamic_axis=False)
-    op_node = rectified_linear(input_node)
+    op_node = relu(input_node)
 
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
