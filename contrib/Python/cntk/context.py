@@ -63,21 +63,16 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either 'float' or 'double' 
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float"):
-        
-        '''        
-        This is the constructor of AbstractContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double
-        '''        
-        
         if isinstance(name, str):
             tmpdir = name
         else:
@@ -342,23 +337,18 @@ class LocalExecutionContext(AbstractContext):
 
     '''
     This is a sub-class of AbstractContext, use it to run CNTK locally.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either 'float' or 'double' 
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float",
                  clean_up=True):
-        
-        '''        
-        This is the constructor of LocalExecutionContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double
-            clean_up: whether the temporary directory should be removed when the context is left        
-        '''        
-        
         super(self.__class__,self).__init__(name, device_id, precision)
         self.clean_up = clean_up
         self.model_dir = os.path.join(self.directory, 'Models')
@@ -745,21 +735,18 @@ class DeferredExecutionContext(AbstractContext):
     This is a sub-class of AbstractContext, use it to generate CNTK configuration,
     that would be executed on different enviroment (e.g., on a cluster) rather than 
     the machine that generated them.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either float or double            
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
     
     def __init__(self, name,
                  device_id=-1,
                  precision="float",
                  clean_up=True):
-        
-        '''        
-        This is the constructor of DeferredExecutionContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double            
-        '''        
         
         super(self.__class__,self).__init__(name, device_id, precision)        
         self.model_path = os.path.join("$ModelDir$", self.name)
