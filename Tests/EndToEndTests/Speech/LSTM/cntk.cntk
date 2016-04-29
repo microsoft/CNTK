@@ -93,8 +93,8 @@ speechTrain = [
         useExplicitCriterion = true
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
         crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        cr = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        Err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
+        ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 

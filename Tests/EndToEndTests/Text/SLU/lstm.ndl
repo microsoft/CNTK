@@ -195,11 +195,10 @@ ndlCreateNetwork=[
     LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, init="uniform", initValueScale=6);
     W1 = Parameter(labelDim, hiddenDim, init="uniform", initValueScale=6);
 
-    # TODO: This tag does not exist, does it?
     LSTMoutputW1 = Times(W1, LSTMoutput, tag="output");
 
-    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
-    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="evaluation");
+    ce = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
+    err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="evaluation");
     
 #    logPrior = LogPrior(labels)	 
 
