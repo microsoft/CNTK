@@ -33,7 +33,7 @@ CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
 CNTK_WRITE_CONFIG_FILENAME = "write.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
-CNTK_OUTPUT_FILENAME = "out.txt"
+CNTK_OUTPUT_FILENAME = "out"
 
 # TODO: add validate method
 # TODO: overload action methods to support numpy matrices as inputs
@@ -294,14 +294,12 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             input_map = InputMap()
 
         tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
-        output_filename_base = os.path.join(
-            self.directory, 'Outputs', self.name)
 
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelPath': self.model_path,
-            'PredictOutputFile': output_filename_base,
+            'OutputFile': self.output_filename_base,
             'Reader': input_map.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -337,12 +335,12 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
-        output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
+        
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'NodeUnitTest': node_unit_test,
-            'OutputFile': output_filename,
+            'OutputFile': self.output_filename_base,
             'ModelDescription': description,
             'Reader': input_map.generate_config(),
         }
@@ -373,6 +371,7 @@ class LocalExecutionContext(AbstractContext):
         self.clean_up = clean_up
         self.model_dir = os.path.join(self.directory, 'Models')
         self.model_path = os.path.join(self.model_dir, self.name)
+        self.output_filename_base = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
         
     def _call_cntk(self, config_file_name, config_content):
         '''
@@ -766,7 +765,8 @@ class DeferredExecutionContext(AbstractContext):
         
         super(self.__class__,self).__init__(name, device_id, precision)        
         self.model_path = os.path.join("$ModelDir$", self.name)
-        
+        self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
+
     def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
         '''
         Prepare the training configuration to be run on a different environment 
