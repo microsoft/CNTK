@@ -24,7 +24,7 @@ def eval_example():
     X = input_reader(batch)
     out = 2.5 * X + 100
 
-    with Context('demo', clean_up=False) as ctx:
+    with LocalExecutionContext('demo', clean_up=True) as ctx:
         result = ctx.eval(out)
         return result
 
