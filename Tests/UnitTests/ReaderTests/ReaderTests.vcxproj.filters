@@ -14,6 +14,12 @@
     <ClCompile Include="ReaderLibTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -39,6 +45,9 @@
     </Filter>
     <Filter Include="Config\CNTKTextFormatReader">
       <UniqueIdentifier>{c5c622b9-b6c3-4209-bf37-294862c64a06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Linked Source">
+      <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -231,6 +240,45 @@
     <Text Include="Control\ImageReaderMultiView_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader\missing_trailing_newline.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\missing_trailing_newline.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\contains_blank_lines.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\space_separated.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\space_separated.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\blank_lines.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\duplicate_inputs.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\empty_samples.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\empty_samples.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\ref_data_with_escape_sequences.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\ref_data_with_escape_sequences.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\invalid_input.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\invalid_input_Control.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
     <Text Include="Control\ImageReaderColorTransform_Control.txt">
       <Filter>Control</Filter>
     </Text>
@@ -291,6 +339,9 @@
     </None>
     <None Include="Config\ImageReaderMultiView_Config.cntk">
       <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKTextFormatReader\edge_cases.cntk">
+      <Filter>Config\CNTKTextFormatReader</Filter>
     </None>
     <None Include="Config\ImageReaderColorTransform_Config.cntk">
       <Filter>Config</Filter>

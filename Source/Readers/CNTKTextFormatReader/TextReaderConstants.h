@@ -13,7 +13,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     const char INDEX_DELIMITER = ':';
     const char ROW_DELIMITER = '\n';
     const char CARRIAGE_RETURN = '\r';
+    const char ESCAPE_SYMBOL = '#';
 
     const auto BUFFER_SIZE = 256 * 1024;
-
 }}}
