@@ -37,12 +37,12 @@ auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new ReaderShim<float>(factory);
+    *preader = new CompositeReaderShim<float>(factory);
 }
 
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
-    *preader = new ReaderShim<double>(factory);
+    *preader = new CompositeReaderShim<double>(factory);
 }
 
 }}}
