@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 
 BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
 {
-    FILE* test = fopen("test", "w");
+    FILE* test = fopen("test", "w+");
     fwrite("1\n", sizeof(char), 2, test);
     fwrite("2\n", sizeof(char), 2, test);
     fwrite("4\n", sizeof(char), 2, test);
