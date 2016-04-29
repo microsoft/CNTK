@@ -27,7 +27,10 @@ command = train:test:write
 
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
-deviceId = 0
+# 27-2: some refactoring, went back to 26-4 from LMSequenceReader
+# 27-1: fixed slicing
+# 27-0: incorrect slicing, dropped first input
+deviceId = 2
 ExpId = 27-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
 decodeModel = 21
@@ -58,6 +61,8 @@ dumpModelPath = "$modelPath$.2" # model to dump if needed
 
 #confVocabSize = 10000
 #confClassSize = 50
+#inputVocabSize = $confVocabSize$
+#labelVocabSize = $confVocabSize$
 #maxLength = 84
 #isAutoEncoder=true
 #
@@ -71,11 +76,12 @@ dumpModelPath = "$modelPath$.2" # model to dump if needed
 #startSymbol = "</s>"
 #useCNTKTextFormatReader = false
 
-confVocabSize = 69
 confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
 
+#inputVocabSize = 69
+#labelVocabSize = 69
 #trainFile = "g014b2b.train-dev-20-21.bsf.joint"
 ##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
 #validFile = "g014b2b.train-dev-1-21.bsf.joint"
@@ -84,6 +90,8 @@ isAutoEncoder=false
 #startSymbol = "<s>"
 #useCNTKTextFormatReader = false
 
+inputVocabSize = 29
+labelVocabSize = 40
 trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
 #trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
 validFile = "g014b2b.train-dev-1-21.bsf.ctf"
@@ -105,8 +113,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     include "S2SLib.bs"
 
     # import general config options from outside config values
-    vocabDim = $confVocabSize$
-    nbrClass = $confClassSize$
+    inputVocabDim = $inputVocabSize$
+    labelVocabDim = $labelVocabSize$
+    nbrClass = $confClassSize$          # for labels only; not functional currently
 
     isAutoencoder = $isAutoEncoder$     # input is only one sequence, meant to reproduce itself
     attentionSpan = $maxLength$         # 0 to disable. We only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
@@ -124,7 +133,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     Boolean    = BS.Boolean
 
     # dimensions
-    embeddingDim = $confVocabSize$ # 300
+    inputEmbeddingDim = $inputVocabSize$ # 300
+    labelEmbeddingDim = $labelVocabSize$ # 300
     hiddenDim    = $hiddenDim$
     attentionDim = 128 # dim of attention  projection
     maxLayer = $maxLayer$
@@ -151,14 +161,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             # for an auto-encoder, both are the same
             input  = rawInput
             labels = rawInput
-            inputDim = vocabDim
-            labelDim = vocabDim
         ]
         else if useCNTKTextFormatReader then [
-            input  = Pass (src)
-            labels = Pass (tgt)
-            inputDim = 29
-            labelDim = 40
+            input  = Pass (TraceSparse (src, 'inp'))
+            labels = Pass (TraceSparse (tgt, 'lbl'))
         ]
         else [
             # we encode input and label as a single input; this splits it into two
@@ -169,8 +175,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             inLabels = Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
             input  = Sequences.Gather (inInput,  rawInput)                                            # use flags to split raw input into input and labels
             labels = Sequences.Gather (inLabels, rawInput)                                            # (both have different lengths)
-            inputDim = vocabDim
-            labelDim = vocabDim
         ]
     ].out
 
@@ -180,22 +184,23 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # strip separators
     inputSequence  = Pass (              streams.input            )  # e.g. <s> A   B   C    </s>
-    labelSequence  = Pass (Slice (1,  0, streams.labels,  axis=-1))  # e.g. A   B   C   </s>
+    labelSequence  = Pass (              streams.labels           )  # e.g. A   B   C   </s>
+    #labelSequence  = Pass (Slice (1,  0, streams.labels,  axis=-1))  # e.g. A   B   C   </s>
     # ^^ use Pass() to make these easily accessible for model editing, e.g. for decoding
     isFirstLabel = Loop.IsFirst (labelSequence)
 
-    inputSequenceDim = streams.inputDim
-    labelSequenceDim = streams.labelDim
+    inputSequenceDim = inputVocabDim # TODO: they are the same
+    labelSequenceDim = labelVocabDim
 
     # embeddings  --as long as we cannot read multiple sequences, we got one embedding
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
 
     # Note: The way this is written is that input and labels share an embedding if their dimensions match. TODO: Make a flag.
-    E = Parameters.WeightParam (vocabDim, embeddingDim) # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
-    Einput = Parameters.WeightParam (inputSequenceDim, embeddingDim)
-    Elabels = Parameters.WeightParam (labelSequenceDim, embeddingDim)
-    EmbedInput (x)  = if inputSequenceDim == embeddingDim then x else if inputSequenceDim == vocabDim then TransposeTimes (E, x) else TransposeTimes (Einput, x)
-    EmbedLabels (x) = if labelSequenceDim == embeddingDim then x else if labelSequenceDim == vocabDim then TransposeTimes (E, x) else TransposeTimes (Elabels, x)
+    #E = Parameters.WeightParam (inputSequenceDim, inputEmbeddingDim) # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
+    Einput  = Parameters.WeightParam (inputSequenceDim, inputEmbeddingDim) # note: may share in some cases
+    Elabels = Parameters.WeightParam (labelSequenceDim, labelEmbeddingDim)
+    EmbedInput (x)  = if inputSequenceDim == inputEmbeddingDim then x else TransposeTimes (Einput, x)
+    EmbedLabels (x) = if labelSequenceDim == labelEmbeddingDim then x else TransposeTimes (Elabels, x)
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
@@ -210,8 +215,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # encoder (processes inputEmbedded)
     #############################################################
 
+    # TODO: do not revert our inputs; instead, if needed, use a backwards-running loop here
     encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
-    encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=embeddingDim, enableSelfStabilization=useStabilizer)
+    encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim, enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[Length (encoderDims)-1]
 
     # that last frame should be fed as an additional input to every decoder step
@@ -276,7 +282,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
 
     decoderInput    = Pass (Boolean.If (isFirstLabel/*Loop.IsFirst (labelSentenceStartEmbeddedScattered)*/, labelSentenceStartEmbeddedScattered, Loop.Previous (decoderHistoryHook)))
-    decoderInputDim = embeddingDim #labelsEmbedded.dim
+    decoderInputDim = labelEmbeddingDim #labelsEmbedded.dim
 
     decoderDynamicAxis = labelsEmbedded
     FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
@@ -321,6 +327,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
     ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
     errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+    cors = ReduceSum (labelSequence .* Hardmax (z), tag='evaluation')
 
     # score output for decoding
     scoreSequence = Pass (z)
@@ -414,7 +421,7 @@ lmreader = [
 
         # vocabulary size
         labelType = "category"
-        labelDim = "$confVocabSize$"
+        labelDim = "$inputVocabSize$"
         labelMappingFile = "$ModelDir$/vocab.wl"
         beginSequence = "$startSymbol$" # "</s>"
         endSequence   = "</s>"
@@ -482,7 +489,7 @@ lmcvReader = [
 
         # vocabulary size
         labelType = "category"
-        labelDim = "$confVocabSize$"
+        labelDim = "$inputVocabSize$"
         labelMappingFile = "$ModelDir$/vocab.wl"
         beginSequence = "</s>"
         endSequence   = "</s>"
@@ -522,7 +529,7 @@ writeWordAndClassInfo = [
     outputVocabFile = "$ModelDir$/vocab.txt"
     outputWord2Cls  = "$ModelDir$/word2cls.txt"
     outputCls2Index = "$ModelDir$/cls2idx.txt"
-    vocabSize = "$confVocabSize$"
+    vocabSize = "$inputVocabSize$"
     nbrClass = "$confClassSize$"
     cutoff = 0
     printValues = true
@@ -640,7 +647,7 @@ test = [
     
             # vocabulary size
             labelType = "category"
-            labelDim = "$confVocabSize$"
+            labelDim = "$inputVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
             beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"
@@ -1102,7 +1109,7 @@ write = [
 
             # vocabulary size
             labelType = "category"
-            labelDim = "$confVocabSize$"
+            labelDim = "$inputVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
             beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"
