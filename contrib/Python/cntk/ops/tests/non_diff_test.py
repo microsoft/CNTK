@@ -15,7 +15,7 @@ from .ops_test_utils import unittest_helper, C, AA, I, precision
 from ...graph import *
 from ...reader import *
 import numpy as np
-from ..non_diff import ceil, floor, round
+from .. import ceil, floor, round
 
 # Testing inputs
 @pytest.mark.parametrize("arg", [([12.3, -12.3]), ([10.2, -10.2]), ([0.5, -0.5]), ([0.01, -0.01]), ([0.499, -0.499]), ([5.0, -5.0]), ([0.0]), ([[2.1, 9.9], [4.7, 5.3]])])

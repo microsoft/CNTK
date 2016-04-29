@@ -14,7 +14,6 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..evaluation import cross_entropy_with_softmax
 
 TARGET_OUT_PAIRS = [
     ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
@@ -26,6 +25,8 @@ TARGET_OUT_PAIRS = [
 @pytest.mark.parametrize("target_values, feature_values", TARGET_OUT_PAIRS)
 def test_op_crossentropywithsoftmax(target_values, feature_values, device_id, precision):
     
+    from .. import cross_entropy_with_softmax
+
     def numpy_softmax(x):
         x = AA(x, dtype=PRECISION_TO_TYPE[precision])
         ox = x - x.max()  # subtract max to avoid overflow

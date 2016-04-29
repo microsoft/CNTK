@@ -8,7 +8,7 @@ import numpy
 import pytest
 
 from cntk.tests.test_utils import unittest_helper, precision, PRECISION_TO_TYPE
-from cntk.ops.variables_and_parameters import *
+from cntk.ops import *
 from cntk.utils import *
 
 # Keeping things short
