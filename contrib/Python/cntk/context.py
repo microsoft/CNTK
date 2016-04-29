@@ -238,29 +238,18 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             configuration string
         '''
 
-        model_dir = os.path.join(self.directory, 'Models')
-        if os.path.exists(model_dir):
-            if override_existing:
-                print("Overriding the existing models")
-                sh.rmtree(model_dir)
-            else:
-                raise Exception("Directory '%s' already exists, set the " +
-                                "flag override_existing to true if you want to "
-                                "override it" % self.directory)
-
         if input_map is None:
             input_map = InputMap()
 
         description, inputs = self._generate_config(root_nodes, input_map)
 
-        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(model_dir, self.name)
+        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelDescription': description,
-            'ModelPath': model_filename,
+            'ModelPath': self.model_path,
             'Reader': input_map.generate_config(),
             'SGD': optimizer.generate_config(),
         }
@@ -280,13 +269,12 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         if input_map is None:
             input_map = InputMap()
 
-        tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(self.directory, 'Models', self.name)
+        tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
-            'ModelPath': model_filename,
+            'ModelPath': self.model_path,
             'Reader': input_map.generate_config(),
         }
         return tmpl % tmpl_dict
@@ -306,14 +294,13 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             input_map = InputMap()
 
         tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(self.directory, 'Models', self.name)
         output_filename_base = os.path.join(
             self.directory, 'Outputs', self.name)
 
         tmpl_dict = {
             'DevideId': self.device_id,
             'Precision': self.precision,
-            'ModelPath': model_filename,
+            'ModelPath': self.model_path,
             'PredictOutputFile': output_filename_base,
             'Reader': input_map.generate_config(),
         }
@@ -384,8 +371,9 @@ class Context(AbstractContext):
         
         super(self.__class__,self).__init__(name, device_id, precision)
         self.clean_up = clean_up
-
-
+        self.model_dir = os.path.join(self.directory, 'Models')
+        self.model_path = os.path.join(self.model_dir, self.name)
+        
     def _call_cntk(self, config_file_name, config_content):
         '''
         Calls the CNTK executable on the `config_content`.
@@ -663,8 +651,14 @@ class Context(AbstractContext):
             output of the CNTK executable training run
         '''
 
-        if input_map is None:
-            input_map = InputMap()
+        if os.path.exists(self.model_dir):
+            if override_existing:
+                print("Overriding the existing models")
+                sh.rmtree(self.model_dir)
+            else:
+                raise Exception("Directory '%s' already exists, set the " +
+                                "flag override_existing to true if you want to "
+                                "override it" % self.directory)
 
         config_content = self._generate_train_config(
             root_nodes, optimizer, input_map, override_existing)
@@ -682,8 +676,6 @@ class Context(AbstractContext):
             dictionary containing 'SamplesSeen', 'Perplexity', and values for
             objective and evaluation error indexed by their node names
         '''
-        if input_map is None:
-            input_map = InputMap()
 
         config_content = self._generate_test_config(input_map)
         output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
@@ -731,9 +723,6 @@ class Context(AbstractContext):
         orig_node_tag = node.tag if hasattr(node, 'tag') else None
         node.tag = 'output'
 
-        if input_map is None:
-            input_map = InputMap()
-
         config_content = self._generate_eval_config(
             node, input_map, backward_pass)
         self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
@@ -760,7 +749,24 @@ class DeferredExecContext(AbstractContext):
     that would be executed on different enviroment (e.g., on a cluster) rather than 
     the machine that generated them.
     '''
-      
+    
+    def __init__(self, name,
+                 device_id=-1,
+                 precision="float",
+                 clean_up=True):
+        
+        '''        
+        This is the constructor of Context       
+        
+        Args:
+            name: context name
+            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+            precision: either float or double            
+        '''        
+        
+        super(self.__class__,self).__init__(name, device_id, precision)        
+        self.model_path = os.path.join("$ModelDir$", self.name)
+        
     def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
         '''
         Prepare the training configuration to be run on a different environment 
@@ -775,9 +781,6 @@ class DeferredExecContext(AbstractContext):
         Returns:
             training configuration
         '''
-
-        if input_map is None:
-            input_map = InputMap()
 
         config_content = self._generate_train_config(
             root_nodes, optimizer, input_map, override_existing)
@@ -794,8 +797,6 @@ class DeferredExecContext(AbstractContext):
         Returns:
             testing configuration
         '''
-        if input_map is None:
-            input_map = InputMap()
 
         config_content = self._generate_test_config(input_map)
         self._save_file(CNTK_TEST_CONFIG_FILENAME, config_content)
@@ -837,9 +838,6 @@ class DeferredExecContext(AbstractContext):
                 'an input name is required when backward pass is enabled')
 
         node.tag = 'output'
-
-        if input_map is None:
-            input_map = InputMap()
 
         config_content = self._generate_eval_config(
             node, input_map, backward_pass)
