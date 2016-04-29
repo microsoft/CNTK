@@ -21,15 +21,15 @@ testCases:
   Epochs (with low train loss) must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = 0.0
-      - TrainLossPerSample = {{float,tolerance=0.05}}
-      - EvalErrPerSample = {{float,tolerance=0.005}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.1%}}
+      - CrossEntropyWithSoftmax = 0.0
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.05}}
+      - EvalErrorPrediction = {{float,tolerance=0.005}}
+      - learningRatePerSample = {{float,tolerance=0.1%}}
 
   Per-minibatch (with low train loss) training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample =  0.0
-      - TrainLossPerSample = {{float,tolerance=0.05}}
-      - EvalErr[0]PerSample = {{float,tolerance=0.005}}
+      - "* = {{integer}}"
+      - CrossEntropyWithSoftmax =  0.0
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.05}}
+      - EvalErrorPrediction = {{float,tolerance=0.005}}

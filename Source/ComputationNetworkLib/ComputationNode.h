@@ -649,9 +649,9 @@ protected:
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
-    void ValidateInferNaryInputDims(size_t nInputs);
+    void ValidateInferNaryInputDims(size_t numInputs);    
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
-    void ValidateBinaryReduce(bool isFinalValidationPass);
+    void ValidateBinaryReduce(bool isFinalValidationPass);    
     void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
@@ -1422,6 +1422,16 @@ public:
     // memory sharing
     // -----------------------------------------------------------------------
 
+    //this function is for displaying memeory sharing information
+    //TODO: customize this function for all nodes that uses temp internal matrices.
+    virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
+    {
+        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
+        matrixInfo.insert(make_pair(&Value(),    NodeName() + L" Value"    + msra::strfun::utf16(ShapeDescription())));
+        matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
+        return matrixInfo;
+    }
+
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
@@ -1946,7 +1956,7 @@ protected:                                                                      
     using Base::NodeDescription;                                                                                                                         \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
-    using Base::FormatOperationPrototype;                                                                                                                \
+    using Base::FormatOperationPrototype;                                                                                                               \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
     using Base::ReleaseMatrixToPool;                                                                                                                     \

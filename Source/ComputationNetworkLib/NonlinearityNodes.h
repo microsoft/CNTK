@@ -29,9 +29,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum GradientOperationType 
 {
-    UnaryGradient,
-    BinaryWithInputGradient,
-    BinaryWithOutputGradient
+    noGradient,
+    unaryGradient,
+    binaryWithInputGradient,
+    binaryWithOutputGradient
 };
 
 template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, GradientOperationType opType>
@@ -63,11 +64,13 @@ public:
         auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
         auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
-        // we expect a constant conditional expression here -- suppress the warning that leads to an error
-        // TODO: alternative: assign to a non-const variable and test that.
-#pragma warning( push )
-#pragma warning( disable : 4127 )
-        if (opType == UnaryGradient) 
+        GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
+
+        if (opTypeHolder == noGradient)
+        {
+            // Do nothing
+        }
+        else if (opTypeHolder == unaryGradient)
         {
             sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward, opSum);
         }
@@ -75,11 +78,10 @@ public:
         {
             // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
             // Not possible for Cos().
-            auto sliceValue = (opType == BinaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
+            auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 Input(0)->ValueTensorFor(rank, fr);
             sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
-#pragma warning( pop )
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -89,11 +91,11 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
-        return opType == BinaryWithOutputGradient;
+        return opType == binaryWithOutputGradient;
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
-        return opType == BinaryWithInputGradient;
+        return opType == binaryWithInputGradient;
     }
 };
 
@@ -106,6 +108,7 @@ public:
 // RectifiedLinearNode (input)
 // LogNode (input)
 // ExpNode (input)
+// FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
 // Abs(input)
@@ -136,18 +139,19 @@ public:
     }
 
 //                                    Name             Forward and      Backward opcodes                                           Gradient optype
-DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      UnaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       BinaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       BinaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       BinaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    UnaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      BinaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                BinaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Floor,           Floor,           None,                                                      noGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            binaryWithOutputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
@@ -460,7 +464,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
+        auto result =           ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -469,6 +473,9 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        if (inputIndex == 0) // derivative of the first input (the flag) is always 0 => no action.
+            return;
+
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
         auto input0        = Input(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
@@ -494,5 +501,65 @@ public:
 
 template class IfNode<float>;
 template class IfNode<double>;
+
+// -----------------------------------------------------------------------
+// ClipNode (minValue, maxValue, tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class ClipNode : public ComputationNode<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNode<ElemType> Base;    
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName()
+    {
+        return L"Clip";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ClipNode);
+    ClipNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result =           ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+        result.AssignClipOf(input0, input1, input2);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // there is only a gradient for the input tensor that is to be clipped
+        if (inputIndex == 2)
+        {
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient =                         GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto input =         Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output =                           ValueTensorFor(rank, fr.AllowBroadcast());
+
+            inputGradient.AddCopyIfEqualOf(input, output, gradient);
+        }        
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
+    }
+};
+
+template class ClipNode<float>;
+template class ClipNode<double>;
 
 }}}

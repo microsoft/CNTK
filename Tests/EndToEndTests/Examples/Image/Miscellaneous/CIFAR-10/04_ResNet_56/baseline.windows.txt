@@ -1780,7 +1780,7 @@ Allocating matrices for forward and/or backward propagation.
 04/15/2016 09:09:45: Starting Epoch 1: learning rate per sample = 0.006250  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 04/15/2016 09:09:45: Starting minibatch loop.
-04/15/2016 09:09:46: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 0; TotalSamplesSeen = 128; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0062500001; EpochTime=1.5828
+04/15/2016 09:09:46: Finished Epoch[ 1 of 1]: [Training Set] CrossEntropyWithSoftmax = 0; TotalSamplesSeen = 128; EvalErrorPrediction = 0; learningRatePerSample = 0.0062500001; EpochTime=1.5828
 04/15/2016 09:09:46: SGD: Saving checkpoint model 'E:\Tools\cygwin64\tmp\cntk-test-20160415100936.198807\Examples\Image\Miscellaneous\CIFAR-10_04_ResNet_56@release_gpu/Models/04_ResNet_56'
 04/15/2016 09:09:47: CNTKCommandTrainEnd: Train
 
@@ -3214,11 +3214,11 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
-Minibatch[1-200]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
-Minibatch[201-400]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
-Minibatch[401-600]: SamplesSeen = 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
-Minibatch[601-625]: SamplesSeen = 400    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    Perplexity = 1    
+Minibatch[1-200]: * 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[201-400]: * 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[401-600]: * 3200    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Minibatch[601-625]: * 400    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    
+Final Results: Minibatch[1-625]: * 10000    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0    Perplexity = 1    
 
 04/15/2016 09:09:51: Action "test" complete.
 

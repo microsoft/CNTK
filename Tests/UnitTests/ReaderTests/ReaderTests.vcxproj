@@ -79,7 +79,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>htkmlfreader.lib;experimentalhtkmlfreader.lib;Math.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;experimentalhtkmlfreader.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -113,13 +113,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\Common\Config.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\Eval.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\File.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
