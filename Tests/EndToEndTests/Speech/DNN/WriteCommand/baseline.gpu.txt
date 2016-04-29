@@ -453,7 +453,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: SamplesSeen = 640; TrainLossPerSample =  2.17750854; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.0551s; SamplesPerSecond = 11608.7
  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: SamplesSeen = 640; TrainLossPerSample =  2.26263428; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.0552s; SamplesPerSecond = 11599.2
  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: SamplesSeen = 640; TrainLossPerSample =  2.15072632; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.0536s; SamplesPerSecond = 11938.7
-Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799573; TotalSamplesSeen = 20480; EvalErrPerSample = 0.72216797; AvgLearningRatePerSample = 0.015625; EpochTime=1.82021
+Finished Epoch[ 1 of 3]: [Training] TrainLossPerSample = 2.9799573; TotalSamplesSeen = 20480; EvalErrPerSample = 0.72216797; AvgLearningRatePerSample = 0.015625; EpochTime=1.82021
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001122.438616/Speech/DNN_WriteCommand@debug_gpu/models/cntkSpeech.dnn.1'
 
 Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
@@ -468,7 +468,7 @@ Starting minibatch loop.
  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.97115860; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.0866s; SamplesPerSecond = 29560.5
  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: SamplesSeen = 2560; TrainLossPerSample =  1.89518127; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.0871s; SamplesPerSecond = 29394.9
  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.90450439; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.0806s; SamplesPerSecond = 31764.9
-Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.949242; TotalSamplesSeen = 40960; EvalErrPerSample = 0.53417969; AvgLearningRatePerSample = 0.001953125; EpochTime=0.700466
+Finished Epoch[ 2 of 3]: [Training] TrainLossPerSample = 1.949242; TotalSamplesSeen = 40960; EvalErrPerSample = 0.53417969; AvgLearningRatePerSample = 0.001953125; EpochTime=0.700466
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001122.438616/Speech/DNN_WriteCommand@debug_gpu/models/cntkSpeech.dnn.2'
 
 Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
@@ -477,7 +477,7 @@ minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 4096
 Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87359848; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.2379s; SamplesPerSecond = 43045.1
  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.2068s; SamplesPerSecond = 49528.4
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; TotalSamplesSeen = 61440; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=0.476436
+Finished Epoch[ 3 of 3]: [Training] TrainLossPerSample = 1.8700806; TotalSamplesSeen = 61440; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=0.476436
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001122.438616/Speech/DNN_WriteCommand@debug_gpu/models/cntkSpeech.dnn'
 CNTKCommandTrainEnd: speechTrain
 

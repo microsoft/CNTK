@@ -531,7 +531,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750854; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.05574s; TotalTimePerSample = 0.08709ms; SamplesPerSecond = 11482
  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26263428; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.05555s; TotalTimePerSample = 0.08679ms; SamplesPerSecond = 11521
  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15072632; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.05427s; TotalTimePerSample = 0.08479ms; SamplesPerSecond = 11793
-Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799573; EvalErrPerSample = 0.72216797; AvgLearningRatePerSample = 0.015625; EpochTime=1.785537
+Finished Epoch[ 1 of 3]: [Training] TrainLossPerSample = 2.9799573; EvalErrPerSample = 0.72216797; AvgLearningRatePerSample = 0.015625; EpochTime=1.785537
 Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
@@ -544,14 +544,14 @@ Starting minibatch loop.
  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115784; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.09085s; TotalTimePerSample = 0.03549ms; SamplesPerSecond = 28179
  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518127; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.09092s; TotalTimePerSample = 0.03552ms; SamplesPerSecond = 28155
  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450592; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.08529s; TotalTimePerSample = 0.03332ms; SamplesPerSecond = 30014
-Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; AvgLearningRatePerSample = 0.001953125; EpochTime=0.732528
+Finished Epoch[ 2 of 3]: [Training] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; AvgLearningRatePerSample = 0.001953125; EpochTime=0.732528
 Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359848; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.24564s; TotalTimePerSample = 0.02399ms; SamplesPerSecond = 41687
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21814s; TotalTimePerSample = 0.02130ms; SamplesPerSecond = 46943
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.493964
+Finished Epoch[ 3 of 3]: [Training] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.493964
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__
 === Deleting last epoch data
@@ -1329,6 +1329,6 @@ Starting minibatch loop.
 EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359848; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.32305s; TotalTimePerSample = 0.03155ms; SamplesPerSecond = 31698
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21717s; TotalTimePerSample = 0.02121ms; SamplesPerSecond = 47152
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=1.439589
+Finished Epoch[ 3 of 3]: [Training] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=1.439589
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__

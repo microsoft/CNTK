@@ -378,7 +378,7 @@ MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: * 250; CrossEntropyWithSoftmax
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: * 250; CrossEntropyWithSoftmax =  0.58202897; EvalErrorPrediction = 0.26400000; TotalTime = 0.11023s; TotalTimePerSample = 0.44091ms; SamplesPerSecond = 2268
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: * 250; CrossEntropyWithSoftmax =  0.52372775; EvalErrorPrediction = 0.12400000; TotalTime = 0.11400s; TotalTimePerSample = 0.45600ms; SamplesPerSecond = 2193
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: * 250; CrossEntropyWithSoftmax =  0.42024396; EvalErrorPrediction = 0.08000000; TotalTime = 0.09990s; TotalTimePerSample = 0.39959ms; SamplesPerSecond = 2502
-MPI Rank 0: Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466933
+MPI Rank 0: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466933
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -424,7 +424,7 @@ MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16641132; EvalErrorPrediction = 0.09200000; TotalTime = 0.09116s; TotalTimePerSample = 0.36463ms; SamplesPerSecond = 2742
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20390250; EvalErrorPrediction = 0.11600000; TotalTime = 0.08700s; TotalTimePerSample = 0.34802ms; SamplesPerSecond = 2873
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14610650; EvalErrorPrediction = 0.06800000; TotalTime = 0.25517s; TotalTimePerSample = 1.02066ms; SamplesPerSecond = 979
-MPI Rank 0: Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.142891
+MPI Rank 0: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.142891
 MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -470,7 +470,7 @@ MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16647750; EvalErrorPrediction = 0.09200000; TotalTime = 0.09813s; TotalTimePerSample = 0.39251ms; SamplesPerSecond = 2547
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20592959; EvalErrorPrediction = 0.11200000; TotalTime = 0.07667s; TotalTimePerSample = 0.30668ms; SamplesPerSecond = 3260
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14622605; EvalErrorPrediction = 0.06800000; TotalTime = 0.08880s; TotalTimePerSample = 0.35520ms; SamplesPerSecond = 2815
-MPI Rank 0: Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.301922
+MPI Rank 0: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.301922
 MPI Rank 0: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -516,7 +516,7 @@ MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16644425; EvalErrorPrediction = 0.09600000; TotalTime = 0.10310s; TotalTimePerSample = 0.41239ms; SamplesPerSecond = 2424
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20619428; EvalErrorPrediction = 0.11200000; TotalTime = 0.09224s; TotalTimePerSample = 0.36895ms; SamplesPerSecond = 2710
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14624377; EvalErrorPrediction = 0.06800000; TotalTime = 0.09126s; TotalTimePerSample = 0.36503ms; SamplesPerSecond = 2739
-MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.243167
+MPI Rank 0: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.243167
 MPI Rank 0: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
@@ -863,7 +863,7 @@ MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: * 250; CrossEntropyWithSoftmax
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: * 250; CrossEntropyWithSoftmax =  0.58202897; EvalErrorPrediction = 0.26400000; TotalTime = 0.11030s; TotalTimePerSample = 0.44121ms; SamplesPerSecond = 2266
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: * 250; CrossEntropyWithSoftmax =  0.52372775; EvalErrorPrediction = 0.12400000; TotalTime = 0.11404s; TotalTimePerSample = 0.45614ms; SamplesPerSecond = 2192
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: * 250; CrossEntropyWithSoftmax =  0.42024396; EvalErrorPrediction = 0.08000000; TotalTime = 0.10405s; TotalTimePerSample = 0.41619ms; SamplesPerSecond = 2402
-MPI Rank 1: Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.472182
+MPI Rank 1: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.472182
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -909,7 +909,7 @@ MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16641132; EvalErrorPrediction = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36470ms; SamplesPerSecond = 2742
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20390250; EvalErrorPrediction = 0.11600000; TotalTime = 0.08701s; TotalTimePerSample = 0.34804ms; SamplesPerSecond = 2873
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14610650; EvalErrorPrediction = 0.06800000; TotalTime = 0.25977s; TotalTimePerSample = 1.03907ms; SamplesPerSecond = 962
-MPI Rank 1: Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.147493
+MPI Rank 1: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.147493
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -955,7 +955,7 @@ MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16647750; EvalErrorPrediction = 0.09200000; TotalTime = 0.09816s; TotalTimePerSample = 0.39263ms; SamplesPerSecond = 2546
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20592959; EvalErrorPrediction = 0.11200000; TotalTime = 0.07674s; TotalTimePerSample = 0.30697ms; SamplesPerSecond = 3257
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14622605; EvalErrorPrediction = 0.06800000; TotalTime = 0.08724s; TotalTimePerSample = 0.34894ms; SamplesPerSecond = 2865
-MPI Rank 1: Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.301544
+MPI Rank 1: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.301544
 MPI Rank 1: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -1001,7 +1001,7 @@ MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16644425; EvalErrorPrediction = 0.09600000; TotalTime = 0.10183s; TotalTimePerSample = 0.40732ms; SamplesPerSecond = 2455
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20619428; EvalErrorPrediction = 0.11200000; TotalTime = 0.09462s; TotalTimePerSample = 0.37850ms; SamplesPerSecond = 2642
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14624377; EvalErrorPrediction = 0.06800000; TotalTime = 0.09356s; TotalTimePerSample = 0.37426ms; SamplesPerSecond = 2671
-MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.24663
+MPI Rank 1: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.24663
 MPI Rank 1: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
@@ -1348,7 +1348,7 @@ MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: * 250; CrossEntropyWithSoftmax
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: * 250; CrossEntropyWithSoftmax =  0.58202897; EvalErrorPrediction = 0.26400000; TotalTime = 0.11022s; TotalTimePerSample = 0.44088ms; SamplesPerSecond = 2268
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: * 250; CrossEntropyWithSoftmax =  0.52372775; EvalErrorPrediction = 0.12400000; TotalTime = 0.11394s; TotalTimePerSample = 0.45574ms; SamplesPerSecond = 2194
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: * 250; CrossEntropyWithSoftmax =  0.42024396; EvalErrorPrediction = 0.08000000; TotalTime = 0.09991s; TotalTimePerSample = 0.39966ms; SamplesPerSecond = 2502
-MPI Rank 2: Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466963
+MPI Rank 2: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466963
 MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1394,7 +1394,7 @@ MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16641132; EvalErrorPrediction = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36468ms; SamplesPerSecond = 2742
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20390250; EvalErrorPrediction = 0.11600000; TotalTime = 0.08576s; TotalTimePerSample = 0.34302ms; SamplesPerSecond = 2915
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14610650; EvalErrorPrediction = 0.06800000; TotalTime = 0.26557s; TotalTimePerSample = 1.06228ms; SamplesPerSecond = 941
-MPI Rank 2: Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.152123
+MPI Rank 2: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.152123
 MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1440,7 +1440,7 @@ MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16647750; EvalErrorPrediction = 0.09200000; TotalTime = 0.09811s; TotalTimePerSample = 0.39244ms; SamplesPerSecond = 2548
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20592959; EvalErrorPrediction = 0.11200000; TotalTime = 0.07790s; TotalTimePerSample = 0.31159ms; SamplesPerSecond = 3209
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14622605; EvalErrorPrediction = 0.06800000; TotalTime = 0.08358s; TotalTimePerSample = 0.33432ms; SamplesPerSecond = 2991
-MPI Rank 2: Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.297952
+MPI Rank 2: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.297952
 MPI Rank 2: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1486,7 +1486,7 @@ MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16644425; EvalErrorPrediction = 0.09600000; TotalTime = 0.10182s; TotalTimePerSample = 0.40730ms; SamplesPerSecond = 2455
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20619428; EvalErrorPrediction = 0.11200000; TotalTime = 0.09462s; TotalTimePerSample = 0.37849ms; SamplesPerSecond = 2642
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14624377; EvalErrorPrediction = 0.06800000; TotalTime = 0.09356s; TotalTimePerSample = 0.37426ms; SamplesPerSecond = 2671
-MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.246647
+MPI Rank 2: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.246647
 MPI Rank 2: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
@@ -1833,7 +1833,7 @@ MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: * 250; CrossEntropyWithSoftmax
 MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: * 250; CrossEntropyWithSoftmax =  0.58202897; EvalErrorPrediction = 0.26400000; TotalTime = 0.11024s; TotalTimePerSample = 0.44096ms; SamplesPerSecond = 2267
 MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: * 250; CrossEntropyWithSoftmax =  0.52372775; EvalErrorPrediction = 0.12400000; TotalTime = 0.11390s; TotalTimePerSample = 0.45558ms; SamplesPerSecond = 2194
 MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: * 250; CrossEntropyWithSoftmax =  0.42024396; EvalErrorPrediction = 0.08000000; TotalTime = 0.09992s; TotalTimePerSample = 0.39967ms; SamplesPerSecond = 2502
-MPI Rank 3: Finished Epoch[ 1 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466934
+MPI Rank 3: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 0.69029201; EvalErrorPrediction = 0.4593; learningRatePerSample = 0.01999999955; EpochTime=4.466934
 MPI Rank 3: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1879,7 +1879,7 @@ MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16641132; EvalErrorPrediction = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36470ms; SamplesPerSecond = 2742
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20390250; EvalErrorPrediction = 0.11600000; TotalTime = 0.08575s; TotalTimePerSample = 0.34301ms; SamplesPerSecond = 2915
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14610650; EvalErrorPrediction = 0.06800000; TotalTime = 0.25633s; TotalTimePerSample = 1.02534ms; SamplesPerSecond = 975
-MPI Rank 3: Finished Epoch[ 2 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.142867
+MPI Rank 3: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 0.18345717; EvalErrorPrediction = 0.0781; learningRatePerSample = 0.00800000038; EpochTime=5.142867
 MPI Rank 3: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1925,7 +1925,7 @@ MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16647750; EvalErrorPrediction = 0.09200000; TotalTime = 0.09809s; TotalTimePerSample = 0.39237ms; SamplesPerSecond = 2548
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20592959; EvalErrorPrediction = 0.11200000; TotalTime = 0.07669s; TotalTimePerSample = 0.30674ms; SamplesPerSecond = 3260
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14622605; EvalErrorPrediction = 0.06800000; TotalTime = 0.08477s; TotalTimePerSample = 0.33909ms; SamplesPerSecond = 2949
-MPI Rank 3: Finished Epoch[ 3 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.297901
+MPI Rank 3: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 0.15935929; EvalErrorPrediction = 0.077; learningRatePerSample = 0.00800000038; EpochTime=4.297901
 MPI Rank 3: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1971,7 +1971,7 @@ MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: * 250; CrossEntropyWith
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: * 250; CrossEntropyWithSoftmax =  0.16644425; EvalErrorPrediction = 0.09600000; TotalTime = 0.10185s; TotalTimePerSample = 0.40740ms; SamplesPerSecond = 2454
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: * 250; CrossEntropyWithSoftmax =  0.20619428; EvalErrorPrediction = 0.11200000; TotalTime = 0.09337s; TotalTimePerSample = 0.37346ms; SamplesPerSecond = 2677
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: * 250; CrossEntropyWithSoftmax =  0.14624377; EvalErrorPrediction = 0.06800000; TotalTime = 0.09126s; TotalTimePerSample = 0.36503ms; SamplesPerSecond = 2739
-MPI Rank 3: Finished Epoch[ 4 of 4]: [Training Set] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.243121
+MPI Rank 3: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 0.159072; EvalErrorPrediction = 0.0774; learningRatePerSample = 0.00800000038; EpochTime=4.243121
 MPI Rank 3: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 3: __COMPLETED__
 MPI Rank 3: ~MPIWrapper

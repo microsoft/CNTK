@@ -31,4 +31,4 @@ testCases:
       - Minibatch[{{integer}}-{{integer}}
       - "* {{integer}}; "
       - CrossEntropyWithSoftmax/Sample = {{float,tolerance=0.05}}
-      - Perplexity = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.05}}

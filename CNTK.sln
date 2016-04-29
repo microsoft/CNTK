@@ -894,6 +894,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{8656B71D-E24C-4AC2-8BE4-C07B415A3E15}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceClassification", "SequenceClassification", "{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.cpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.gpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.cpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.gpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\run-test = Tests\EndToEndTests\Text\SequenceClassification\run-test
+		Tests\EndToEndTests\Text\SequenceClassification\testcases.yml = Tests\EndToEndTests\Text\SequenceClassification\testcases.yml
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{8629430A-821E-43BA-AEC5-8B2CF31A2A7A}"
 EndProject

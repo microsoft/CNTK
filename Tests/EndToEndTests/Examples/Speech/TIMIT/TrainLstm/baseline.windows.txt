@@ -1585,11 +1585,11 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/07/2016 16:24:34:  Epoch[ 1 of 3]-Minibatch[11231-11240]: SamplesSeen = 851; TrainLossPerSample =  3.82549941; EvalErr[0]PerSample = 0.80141011; TotalTime = 0.2111s; SamplesPerSecond = 4030.8
 04/07/2016 16:24:35:  Epoch[ 1 of 3]-Minibatch[11241-11250]: SamplesSeen = 676; TrainLossPerSample =  3.81656805; EvalErr[0]PerSample = 0.81804734; TotalTime = 0.2314s; SamplesPerSecond = 2921.1
 04/07/2016 16:24:35:  Epoch[ 1 of 3]-Minibatch[11251-11260]: SamplesSeen = 243; TrainLossPerSample =  2.89506173; EvalErr[0]PerSample = 0.59259259; TotalTime = 0.2011s; SamplesPerSecond = 1208.3
-04/07/2016 16:24:35: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 4.501421; TotalSamplesSeen = 1124823; EvalErrPerSample = 0.87382191; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=222.712
+04/07/2016 16:24:35: Finished Epoch[ 1 of 3]: [Training] TrainLossPerSample = 4.501421; TotalSamplesSeen = 1124823; EvalErrPerSample = 0.87382191; AvgLearningRatePerSample = 9.9999997e-005; EpochTime=222.712
 minibatchiterator: epoch 0: frames [0..122487] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 72-dimensional 'FBANK_D_A_Z' with frame shift 10.0 ms
-Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 3.8464859    Perplexity = 46.828215    Err: ErrorPrediction/Sample = 0.8197523    
-04/07/2016 16:26:06: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 3.8464859; EvalErrPerSample = 0.8197523
+Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 3.8464859    perplexity = 46.828215    Err: ErrorPrediction/Sample = 0.8197523    
+04/07/2016 16:26:06: Finished Epoch[ 1 of 3]: [Validate] TrainLossPerSample = 3.8464859; EvalErrPerSample = 0.8197523
 04/07/2016 16:26:06: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160407172044.94807\Examples\Speech\TIMIT_TrainLstm@release_gpu/exp\TrainLSTM\model\cntkSpeech.dnn.1'
 
 04/07/2016 16:26:06: Starting Epoch 2: learning rate per sample = 0.001000  effective momentum = 0.900000  momentum as time constant = 949.1 samples
@@ -2722,10 +2722,10 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/07/2016 16:29:50:  Epoch[ 2 of 3]-Minibatch[11221-11230, 41.04%]: SamplesSeen = 984; TrainLossPerSample =  1.62830285; EvalErr[0]PerSample = 0.50101626; TotalTime = 0.2128s; SamplesPerSecond = 4623.5
 04/07/2016 16:29:51:  Epoch[ 2 of 3]-Minibatch[11231-11240, 41.08%]: SamplesSeen = 900; TrainLossPerSample =  1.93416667; EvalErr[0]PerSample = 0.54777778; TotalTime = 0.2227s; SamplesPerSecond = 4041.7
 04/07/2016 16:29:51:  Epoch[ 2 of 3]-Minibatch[11241-11250, 41.12%]: SamplesSeen = 729; TrainLossPerSample =  1.46227709; EvalErr[0]PerSample = 0.47736626; TotalTime = 0.2184s; SamplesPerSecond = 3337.9
-04/07/2016 16:29:51: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 2.160404; TotalSamplesSeen = 2249646; EvalErrPerSample = 0.58734393; AvgLearningRatePerSample = 0.001; EpochTime=224.614
+04/07/2016 16:29:51: Finished Epoch[ 2 of 3]: [Training] TrainLossPerSample = 2.160404; TotalSamplesSeen = 2249646; EvalErrPerSample = 0.58734393; AvgLearningRatePerSample = 0.001; EpochTime=224.614
 minibatchiterator: epoch 0: frames [0..122487] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 1.681348    Perplexity = 5.3727938    Err: ErrorPrediction/Sample = 0.50709871    
-04/07/2016 16:31:22: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 1.681348; EvalErrPerSample = 0.50709871
+Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 1.681348    perplexity = 5.3727938    Err: ErrorPrediction/Sample = 0.50709871    
+04/07/2016 16:31:22: Finished Epoch[ 2 of 3]: [Validate] TrainLossPerSample = 1.681348; EvalErrPerSample = 0.50709871
 04/07/2016 16:31:22: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160407172044.94807\Examples\Speech\TIMIT_TrainLstm@release_gpu/exp\TrainLSTM\model\cntkSpeech.dnn.2'
 
 04/07/2016 16:31:23: Starting Epoch 3: learning rate per sample = 0.001000  effective momentum = 0.900000  momentum as time constant = 949.1 samples
@@ -3859,10 +3859,10 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/07/2016 16:35:07:  Epoch[ 3 of 3]-Minibatch[11231-11240, 41.08%]: SamplesSeen = 829; TrainLossPerSample =  1.22858866; EvalErr[0]PerSample = 0.37515078; TotalTime = 0.2068s; SamplesPerSecond = 4008.7
 04/07/2016 16:35:07:  Epoch[ 3 of 3]-Minibatch[11241-11250, 41.12%]: SamplesSeen = 557; TrainLossPerSample =  1.19569120; EvalErr[0]PerSample = 0.36624776; TotalTime = 0.2130s; SamplesPerSecond = 2614.7
 04/07/2016 16:35:07:  Epoch[ 3 of 3]-Minibatch[11251-11260, 41.15%]: SamplesSeen = 390; TrainLossPerSample =  1.11282051; EvalErr[0]PerSample = 0.35384615; TotalTime = 0.2073s; SamplesPerSecond = 1881.1
-04/07/2016 16:35:07: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.503022; TotalSamplesSeen = 3374469; EvalErrPerSample = 0.45742306; AvgLearningRatePerSample = 0.001; EpochTime=224.564
+04/07/2016 16:35:07: Finished Epoch[ 3 of 3]: [Training] TrainLossPerSample = 1.503022; TotalSamplesSeen = 3374469; EvalErrPerSample = 0.45742306; AvgLearningRatePerSample = 0.001; EpochTime=224.564
 minibatchiterator: epoch 0: frames [0..122487] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 1.4817891    Perplexity = 4.4008123    Err: ErrorPrediction/Sample = 0.45466049    
-04/07/2016 16:36:38: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 1.4817891; EvalErrPerSample = 0.45466049
+Final Results: Minibatch[1-12249]: SamplesSeen = 122487    cr: CrossEntropyWithSoftmax/Sample = 1.4817891    perplexity = 4.4008123    Err: ErrorPrediction/Sample = 0.45466049    
+04/07/2016 16:36:38: Finished Epoch[ 3 of 3]: [Validate] TrainLossPerSample = 1.4817891; EvalErrPerSample = 0.45466049
 04/07/2016 16:36:39: SGD: Saving checkpoint model 'F:\cygwin64\tmp\cntk-test-20160407172044.94807\Examples\Speech\TIMIT_TrainLstm@release_gpu/exp\TrainLSTM\model\cntkSpeech.dnn'
 04/07/2016 16:36:39: CNTKCommandTrainEnd: TIMIT_TrainLSTM
 

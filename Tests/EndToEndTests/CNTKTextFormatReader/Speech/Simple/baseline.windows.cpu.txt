@@ -352,7 +352,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:19:  Epoch[ 1 of 50]-Minibatch[  41-  50]: * 1280; CrossEntropyWithSoftmax =  0.72255840; EvalErrorPrediction = 0.48046875; TotalTime = 0.1102s; SamplesPerSecond = 11612.4
 04/22/2016 11:13:19:  Epoch[ 1 of 50]-Minibatch[  51-  60]: * 1280; CrossEntropyWithSoftmax =  0.60346832; EvalErrorPrediction = 0.39921875; TotalTime = 0.1267s; SamplesPerSecond = 10106.0
 04/22/2016 11:13:19:  Epoch[ 1 of 50]-Minibatch[  61-  70]: * 1280; CrossEntropyWithSoftmax =  0.28063736; EvalErrorPrediction = 0.10156250; TotalTime = 0.1061s; SamplesPerSecond = 12063.2
-04/22/2016 11:13:19: Finished Epoch[ 1 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.60884888; TotalSamplesSeen = 10000; EvalErrorPrediction = 0.3871; learningRatePerSample = 0.1; EpochTime=0.970518
+04/22/2016 11:13:19: Finished Epoch[ 1 of 50]: [Training] CrossEntropyWithSoftmax = 0.60884888; TotalSamplesSeen = 10000; EvalErrorPrediction = 0.3871; learningRatePerSample = 0.1; EpochTime=0.970518
 04/22/2016 11:13:19: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.1'
 
 04/22/2016 11:13:19: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -365,7 +365,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:20:  Epoch[ 2 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17314749; EvalErrorPrediction = 0.07890625; TotalTime = 0.1056s; SamplesPerSecond = 12125.8
 04/22/2016 11:13:20:  Epoch[ 2 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.18103724; EvalErrorPrediction = 0.08750000; TotalTime = 0.1079s; SamplesPerSecond = 11859.6
 04/22/2016 11:13:20:  Epoch[ 2 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.18745871; EvalErrorPrediction = 0.07812500; TotalTime = 0.1518s; SamplesPerSecond = 8432.0
-04/22/2016 11:13:20: Finished Epoch[ 2 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.20537046; TotalSamplesSeen = 20000; EvalErrorPrediction = 0.0816; learningRatePerSample = 0.1; EpochTime=0.929988
+04/22/2016 11:13:20: Finished Epoch[ 2 of 50]: [Training] CrossEntropyWithSoftmax = 0.20537046; TotalSamplesSeen = 20000; EvalErrorPrediction = 0.0816; learningRatePerSample = 0.1; EpochTime=0.929988
 04/22/2016 11:13:20: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.2'
 
 04/22/2016 11:13:20: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -378,7 +378,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:20:  Epoch[ 3 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.18420415; EvalErrorPrediction = 0.08359375; TotalTime = 0.0498s; SamplesPerSecond = 25706.4
 04/22/2016 11:13:21:  Epoch[ 3 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.18768644; EvalErrorPrediction = 0.08203125; TotalTime = 0.0507s; SamplesPerSecond = 25262.5
 04/22/2016 11:13:21:  Epoch[ 3 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17461548; EvalErrorPrediction = 0.07656250; TotalTime = 0.1502s; SamplesPerSecond = 8524.6
-04/22/2016 11:13:21: Finished Epoch[ 3 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.18497592; TotalSamplesSeen = 30000; EvalErrorPrediction = 0.0814; learningRatePerSample = 0.1; EpochTime=0.760502
+04/22/2016 11:13:21: Finished Epoch[ 3 of 50]: [Training] CrossEntropyWithSoftmax = 0.18497592; TotalSamplesSeen = 30000; EvalErrorPrediction = 0.0814; learningRatePerSample = 0.1; EpochTime=0.760502
 04/22/2016 11:13:21: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.3'
 
 04/22/2016 11:13:21: Starting Epoch 4: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -391,7 +391,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:21:  Epoch[ 4 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17760444; EvalErrorPrediction = 0.07968750; TotalTime = 0.0878s; SamplesPerSecond = 14578.9
 04/22/2016 11:13:21:  Epoch[ 4 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.18695354; EvalErrorPrediction = 0.08984375; TotalTime = 0.0756s; SamplesPerSecond = 16927.2
 04/22/2016 11:13:21:  Epoch[ 4 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15497780; EvalErrorPrediction = 0.06953125; TotalTime = 0.0926s; SamplesPerSecond = 13828.1
-04/22/2016 11:13:21: Finished Epoch[ 4 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.18170868; TotalSamplesSeen = 40000; EvalErrorPrediction = 0.0805; learningRatePerSample = 0.1; EpochTime=0.557574
+04/22/2016 11:13:21: Finished Epoch[ 4 of 50]: [Training] CrossEntropyWithSoftmax = 0.18170868; TotalSamplesSeen = 40000; EvalErrorPrediction = 0.0805; learningRatePerSample = 0.1; EpochTime=0.557574
 04/22/2016 11:13:21: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.4'
 
 04/22/2016 11:13:21: Starting Epoch 5: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -404,7 +404,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:22:  Epoch[ 5 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16733747; EvalErrorPrediction = 0.07031250; TotalTime = 0.0506s; SamplesPerSecond = 25279.0
 04/22/2016 11:13:22:  Epoch[ 5 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17198248; EvalErrorPrediction = 0.08125000; TotalTime = 0.0513s; SamplesPerSecond = 24953.7
 04/22/2016 11:13:22:  Epoch[ 5 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15520964; EvalErrorPrediction = 0.07734375; TotalTime = 0.0523s; SamplesPerSecond = 24470.9
-04/22/2016 11:13:22: Finished Epoch[ 5 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16172703; TotalSamplesSeen = 50000; EvalErrorPrediction = 0.0768; learningRatePerSample = 0.1; EpochTime=0.654475
+04/22/2016 11:13:22: Finished Epoch[ 5 of 50]: [Training] CrossEntropyWithSoftmax = 0.16172703; TotalSamplesSeen = 50000; EvalErrorPrediction = 0.0768; learningRatePerSample = 0.1; EpochTime=0.654475
 04/22/2016 11:13:22: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.5'
 
 04/22/2016 11:13:22: Starting Epoch 6: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -417,7 +417,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:22:  Epoch[ 6 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16281800; EvalErrorPrediction = 0.08046875; TotalTime = 0.0528s; SamplesPerSecond = 24255.3
 04/22/2016 11:13:22:  Epoch[ 6 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17920189; EvalErrorPrediction = 0.08281250; TotalTime = 0.0526s; SamplesPerSecond = 24346.2
 04/22/2016 11:13:22:  Epoch[ 6 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16924057; EvalErrorPrediction = 0.07734375; TotalTime = 0.0702s; SamplesPerSecond = 18241.4
-04/22/2016 11:13:22: Finished Epoch[ 6 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16214033; TotalSamplesSeen = 60000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.492301
+04/22/2016 11:13:22: Finished Epoch[ 6 of 50]: [Training] CrossEntropyWithSoftmax = 0.16214033; TotalSamplesSeen = 60000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.492301
 04/22/2016 11:13:22: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.6'
 
 04/22/2016 11:13:22: Starting Epoch 7: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -430,7 +430,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:23:  Epoch[ 7 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14997697; EvalErrorPrediction = 0.07265625; TotalTime = 0.0530s; SamplesPerSecond = 24140.5
 04/22/2016 11:13:23:  Epoch[ 7 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14873610; EvalErrorPrediction = 0.07109375; TotalTime = 0.0525s; SamplesPerSecond = 24398.6
 04/22/2016 11:13:23:  Epoch[ 7 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15337992; EvalErrorPrediction = 0.06718750; TotalTime = 0.0505s; SamplesPerSecond = 25328.0
-04/22/2016 11:13:23: Finished Epoch[ 7 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16427148; TotalSamplesSeen = 70000; EvalErrorPrediction = 0.0746; learningRatePerSample = 0.1; EpochTime=0.560333
+04/22/2016 11:13:23: Finished Epoch[ 7 of 50]: [Training] CrossEntropyWithSoftmax = 0.16427148; TotalSamplesSeen = 70000; EvalErrorPrediction = 0.0746; learningRatePerSample = 0.1; EpochTime=0.560333
 04/22/2016 11:13:23: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.7'
 
 04/22/2016 11:13:23: Starting Epoch 8: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -443,7 +443,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:23:  Epoch[ 8 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15896478; EvalErrorPrediction = 0.07187500; TotalTime = 0.0517s; SamplesPerSecond = 24773.6
 04/22/2016 11:13:23:  Epoch[ 8 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17115736; EvalErrorPrediction = 0.07812500; TotalTime = 0.1394s; SamplesPerSecond = 9184.7
 04/22/2016 11:13:24:  Epoch[ 8 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17013464; EvalErrorPrediction = 0.07265625; TotalTime = 0.0530s; SamplesPerSecond = 24151.4
-04/22/2016 11:13:24: Finished Epoch[ 8 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16759005; TotalSamplesSeen = 80000; EvalErrorPrediction = 0.0767; learningRatePerSample = 0.1; EpochTime=0.501415
+04/22/2016 11:13:24: Finished Epoch[ 8 of 50]: [Training] CrossEntropyWithSoftmax = 0.16759005; TotalSamplesSeen = 80000; EvalErrorPrediction = 0.0767; learningRatePerSample = 0.1; EpochTime=0.501415
 04/22/2016 11:13:24: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.8'
 
 04/22/2016 11:13:24: Starting Epoch 9: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -456,7 +456,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:24:  Epoch[ 9 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16915498; EvalErrorPrediction = 0.08125000; TotalTime = 0.0983s; SamplesPerSecond = 13018.3
 04/22/2016 11:13:24:  Epoch[ 9 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17293506; EvalErrorPrediction = 0.08125000; TotalTime = 0.0789s; SamplesPerSecond = 16221.6
 04/22/2016 11:13:24:  Epoch[ 9 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15506458; EvalErrorPrediction = 0.06875000; TotalTime = 0.1002s; SamplesPerSecond = 12768.5
-04/22/2016 11:13:24: Finished Epoch[ 9 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15931384; TotalSamplesSeen = 90000; EvalErrorPrediction = 0.0738; learningRatePerSample = 0.1; EpochTime=0.601585
+04/22/2016 11:13:24: Finished Epoch[ 9 of 50]: [Training] CrossEntropyWithSoftmax = 0.15931384; TotalSamplesSeen = 90000; EvalErrorPrediction = 0.0738; learningRatePerSample = 0.1; EpochTime=0.601585
 04/22/2016 11:13:24: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.9'
 
 04/22/2016 11:13:24: Starting Epoch 10: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -469,7 +469,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:25:  Epoch[10 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14307494; EvalErrorPrediction = 0.07031250; TotalTime = 0.1102s; SamplesPerSecond = 11610.4
 04/22/2016 11:13:25:  Epoch[10 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15314703; EvalErrorPrediction = 0.06953125; TotalTime = 0.0712s; SamplesPerSecond = 17970.0
 04/22/2016 11:13:25:  Epoch[10 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16701956; EvalErrorPrediction = 0.08281250; TotalTime = 0.0661s; SamplesPerSecond = 19369.3
-04/22/2016 11:13:25: Finished Epoch[10 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16330491; TotalSamplesSeen = 100000; EvalErrorPrediction = 0.0773; learningRatePerSample = 0.1; EpochTime=0.564329
+04/22/2016 11:13:25: Finished Epoch[10 of 50]: [Training] CrossEntropyWithSoftmax = 0.16330491; TotalSamplesSeen = 100000; EvalErrorPrediction = 0.0773; learningRatePerSample = 0.1; EpochTime=0.564329
 04/22/2016 11:13:25: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.10'
 
 04/22/2016 11:13:25: Starting Epoch 11: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -482,7 +482,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:25:  Epoch[11 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.13462362; EvalErrorPrediction = 0.05703125; TotalTime = 0.0497s; SamplesPerSecond = 25734.3
 04/22/2016 11:13:25:  Epoch[11 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16262283; EvalErrorPrediction = 0.08046875; TotalTime = 0.0550s; SamplesPerSecond = 23264.7
 04/22/2016 11:13:25:  Epoch[11 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16357203; EvalErrorPrediction = 0.06640625; TotalTime = 0.0521s; SamplesPerSecond = 24554.0
-04/22/2016 11:13:25: Finished Epoch[11 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16459014; TotalSamplesSeen = 110000; EvalErrorPrediction = 0.0758; learningRatePerSample = 0.1; EpochTime=0.485293
+04/22/2016 11:13:25: Finished Epoch[11 of 50]: [Training] CrossEntropyWithSoftmax = 0.16459014; TotalSamplesSeen = 110000; EvalErrorPrediction = 0.0758; learningRatePerSample = 0.1; EpochTime=0.485293
 04/22/2016 11:13:25: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.11'
 
 04/22/2016 11:13:25: Starting Epoch 12: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -495,7 +495,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:26:  Epoch[12 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17229991; EvalErrorPrediction = 0.07656250; TotalTime = 0.0541s; SamplesPerSecond = 23661.2
 04/22/2016 11:13:26:  Epoch[12 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15508261; EvalErrorPrediction = 0.06796875; TotalTime = 0.0497s; SamplesPerSecond = 25744.7
 04/22/2016 11:13:26:  Epoch[12 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16498766; EvalErrorPrediction = 0.07578125; TotalTime = 0.0761s; SamplesPerSecond = 16824.2
-04/22/2016 11:13:26: Finished Epoch[12 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.17811724; TotalSamplesSeen = 120000; EvalErrorPrediction = 0.0784; learningRatePerSample = 0.1; EpochTime=0.596694
+04/22/2016 11:13:26: Finished Epoch[12 of 50]: [Training] CrossEntropyWithSoftmax = 0.17811724; TotalSamplesSeen = 120000; EvalErrorPrediction = 0.0784; learningRatePerSample = 0.1; EpochTime=0.596694
 04/22/2016 11:13:26: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.12'
 
 04/22/2016 11:13:26: Starting Epoch 13: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -508,7 +508,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:26:  Epoch[13 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16506510; EvalErrorPrediction = 0.08125000; TotalTime = 0.0515s; SamplesPerSecond = 24860.2
 04/22/2016 11:13:26:  Epoch[13 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16242933; EvalErrorPrediction = 0.07578125; TotalTime = 0.0504s; SamplesPerSecond = 25374.2
 04/22/2016 11:13:26:  Epoch[13 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16958532; EvalErrorPrediction = 0.08359375; TotalTime = 0.0511s; SamplesPerSecond = 25067.6
-04/22/2016 11:13:26: Finished Epoch[13 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16643586; TotalSamplesSeen = 130000; EvalErrorPrediction = 0.0767; learningRatePerSample = 0.1; EpochTime=0.474172
+04/22/2016 11:13:26: Finished Epoch[13 of 50]: [Training] CrossEntropyWithSoftmax = 0.16643586; TotalSamplesSeen = 130000; EvalErrorPrediction = 0.0767; learningRatePerSample = 0.1; EpochTime=0.474172
 04/22/2016 11:13:26: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.13'
 
 04/22/2016 11:13:26: Starting Epoch 14: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -521,7 +521,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:27:  Epoch[14 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15063100; EvalErrorPrediction = 0.06718750; TotalTime = 0.0983s; SamplesPerSecond = 13027.6
 04/22/2016 11:13:27:  Epoch[14 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15653648; EvalErrorPrediction = 0.07421875; TotalTime = 0.0941s; SamplesPerSecond = 13609.6
 04/22/2016 11:13:27:  Epoch[14 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16588535; EvalErrorPrediction = 0.07421875; TotalTime = 0.1840s; SamplesPerSecond = 6958.2
-04/22/2016 11:13:27: Finished Epoch[14 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16619144; TotalSamplesSeen = 140000; EvalErrorPrediction = 0.0771; learningRatePerSample = 0.1; EpochTime=0.977418
+04/22/2016 11:13:27: Finished Epoch[14 of 50]: [Training] CrossEntropyWithSoftmax = 0.16619144; TotalSamplesSeen = 140000; EvalErrorPrediction = 0.0771; learningRatePerSample = 0.1; EpochTime=0.977418
 04/22/2016 11:13:27: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.14'
 
 04/22/2016 11:13:27: Starting Epoch 15: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -534,7 +534,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:28:  Epoch[15 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16122518; EvalErrorPrediction = 0.07343750; TotalTime = 0.1121s; SamplesPerSecond = 11420.9
 04/22/2016 11:13:28:  Epoch[15 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17361937; EvalErrorPrediction = 0.07421875; TotalTime = 0.1075s; SamplesPerSecond = 11907.4
 04/22/2016 11:13:28:  Epoch[15 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15524387; EvalErrorPrediction = 0.06640625; TotalTime = 0.1271s; SamplesPerSecond = 10068.2
-04/22/2016 11:13:28: Finished Epoch[15 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.17955688; TotalSamplesSeen = 150000; EvalErrorPrediction = 0.0763; learningRatePerSample = 0.1; EpochTime=0.936298
+04/22/2016 11:13:28: Finished Epoch[15 of 50]: [Training] CrossEntropyWithSoftmax = 0.17955688; TotalSamplesSeen = 150000; EvalErrorPrediction = 0.0763; learningRatePerSample = 0.1; EpochTime=0.936298
 04/22/2016 11:13:28: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.15'
 
 04/22/2016 11:13:28: Starting Epoch 16: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -547,7 +547,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:29:  Epoch[16 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15198622; EvalErrorPrediction = 0.06953125; TotalTime = 0.0544s; SamplesPerSecond = 23514.3
 04/22/2016 11:13:29:  Epoch[16 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16112475; EvalErrorPrediction = 0.06953125; TotalTime = 0.0703s; SamplesPerSecond = 18206.4
 04/22/2016 11:13:29:  Epoch[16 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17293167; EvalErrorPrediction = 0.08437500; TotalTime = 0.0512s; SamplesPerSecond = 24992.2
-04/22/2016 11:13:29: Finished Epoch[16 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16020183; TotalSamplesSeen = 160000; EvalErrorPrediction = 0.0741; learningRatePerSample = 0.1; EpochTime=0.558839
+04/22/2016 11:13:29: Finished Epoch[16 of 50]: [Training] CrossEntropyWithSoftmax = 0.16020183; TotalSamplesSeen = 160000; EvalErrorPrediction = 0.0741; learningRatePerSample = 0.1; EpochTime=0.558839
 04/22/2016 11:13:29: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.16'
 
 04/22/2016 11:13:29: Starting Epoch 17: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -560,7 +560,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:29:  Epoch[17 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17726035; EvalErrorPrediction = 0.08359375; TotalTime = 0.0501s; SamplesPerSecond = 25563.7
 04/22/2016 11:13:29:  Epoch[17 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17526207; EvalErrorPrediction = 0.07734375; TotalTime = 0.0506s; SamplesPerSecond = 25302.9
 04/22/2016 11:13:29:  Epoch[17 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17336807; EvalErrorPrediction = 0.07890625; TotalTime = 0.0502s; SamplesPerSecond = 25498.5
-04/22/2016 11:13:29: Finished Epoch[17 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16736167; TotalSamplesSeen = 170000; EvalErrorPrediction = 0.0779; learningRatePerSample = 0.1; EpochTime=0.404265
+04/22/2016 11:13:29: Finished Epoch[17 of 50]: [Training] CrossEntropyWithSoftmax = 0.16736167; TotalSamplesSeen = 170000; EvalErrorPrediction = 0.0779; learningRatePerSample = 0.1; EpochTime=0.404265
 04/22/2016 11:13:29: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.17'
 
 04/22/2016 11:13:29: Starting Epoch 18: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -573,7 +573,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:30:  Epoch[18 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14880643; EvalErrorPrediction = 0.06640625; TotalTime = 0.0606s; SamplesPerSecond = 21116.5
 04/22/2016 11:13:30:  Epoch[18 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15056181; EvalErrorPrediction = 0.06015625; TotalTime = 0.0537s; SamplesPerSecond = 23846.8
 04/22/2016 11:13:30:  Epoch[18 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.18099127; EvalErrorPrediction = 0.08437500; TotalTime = 0.0535s; SamplesPerSecond = 23920.3
-04/22/2016 11:13:30: Finished Epoch[18 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16469805; TotalSamplesSeen = 180000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.625315
+04/22/2016 11:13:30: Finished Epoch[18 of 50]: [Training] CrossEntropyWithSoftmax = 0.16469805; TotalSamplesSeen = 180000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.625315
 04/22/2016 11:13:30: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.18'
 
 04/22/2016 11:13:30: Starting Epoch 19: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -586,7 +586,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:30:  Epoch[19 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14461050; EvalErrorPrediction = 0.06640625; TotalTime = 0.0524s; SamplesPerSecond = 24444.7
 04/22/2016 11:13:30:  Epoch[19 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.18452682; EvalErrorPrediction = 0.08906250; TotalTime = 0.0496s; SamplesPerSecond = 25791.4
 04/22/2016 11:13:30:  Epoch[19 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17267265; EvalErrorPrediction = 0.08046875; TotalTime = 0.0507s; SamplesPerSecond = 25229.6
-04/22/2016 11:13:30: Finished Epoch[19 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16178866; TotalSamplesSeen = 190000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.401873
+04/22/2016 11:13:30: Finished Epoch[19 of 50]: [Training] CrossEntropyWithSoftmax = 0.16178866; TotalSamplesSeen = 190000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.401873
 04/22/2016 11:13:30: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.19'
 
 04/22/2016 11:13:30: Starting Epoch 20: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -599,7 +599,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:31:  Epoch[20 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16388106; EvalErrorPrediction = 0.07734375; TotalTime = 0.0565s; SamplesPerSecond = 22635.6
 04/22/2016 11:13:31:  Epoch[20 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17457790; EvalErrorPrediction = 0.08203125; TotalTime = 0.1228s; SamplesPerSecond = 10421.5
 04/22/2016 11:13:31:  Epoch[20 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17699947; EvalErrorPrediction = 0.08515625; TotalTime = 0.1010s; SamplesPerSecond = 12674.5
-04/22/2016 11:13:31: Finished Epoch[20 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16061274; TotalSamplesSeen = 200000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=0.712193
+04/22/2016 11:13:31: Finished Epoch[20 of 50]: [Training] CrossEntropyWithSoftmax = 0.16061274; TotalSamplesSeen = 200000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=0.712193
 04/22/2016 11:13:31: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.20'
 
 04/22/2016 11:13:31: Starting Epoch 21: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -612,7 +612,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:31:  Epoch[21 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16346831; EvalErrorPrediction = 0.07421875; TotalTime = 0.0496s; SamplesPerSecond = 25807.0
 04/22/2016 11:13:31:  Epoch[21 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15387497; EvalErrorPrediction = 0.06953125; TotalTime = 0.0519s; SamplesPerSecond = 24662.8
 04/22/2016 11:13:31:  Epoch[21 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15881405; EvalErrorPrediction = 0.07890625; TotalTime = 0.1086s; SamplesPerSecond = 11790.1
-04/22/2016 11:13:32: Finished Epoch[21 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15990674; TotalSamplesSeen = 210000; EvalErrorPrediction = 0.074; learningRatePerSample = 0.1; EpochTime=0.486149
+04/22/2016 11:13:32: Finished Epoch[21 of 50]: [Training] CrossEntropyWithSoftmax = 0.15990674; TotalSamplesSeen = 210000; EvalErrorPrediction = 0.074; learningRatePerSample = 0.1; EpochTime=0.486149
 04/22/2016 11:13:32: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.21'
 
 04/22/2016 11:13:32: Starting Epoch 22: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -625,7 +625,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:32:  Epoch[22 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16633983; EvalErrorPrediction = 0.07578125; TotalTime = 0.0502s; SamplesPerSecond = 25504.6
 04/22/2016 11:13:32:  Epoch[22 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16044869; EvalErrorPrediction = 0.07109375; TotalTime = 0.0501s; SamplesPerSecond = 25527.0
 04/22/2016 11:13:32:  Epoch[22 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.19604635; EvalErrorPrediction = 0.08906250; TotalTime = 0.0504s; SamplesPerSecond = 25415.5
-04/22/2016 11:13:32: Finished Epoch[22 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16143629; TotalSamplesSeen = 220000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.405781
+04/22/2016 11:13:32: Finished Epoch[22 of 50]: [Training] CrossEntropyWithSoftmax = 0.16143629; TotalSamplesSeen = 220000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.405781
 04/22/2016 11:13:32: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.22'
 
 04/22/2016 11:13:32: Starting Epoch 23: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -638,7 +638,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:32:  Epoch[23 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16218376; EvalErrorPrediction = 0.06562500; TotalTime = 0.1003s; SamplesPerSecond = 12758.7
 04/22/2016 11:13:32:  Epoch[23 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17625351; EvalErrorPrediction = 0.08750000; TotalTime = 0.1486s; SamplesPerSecond = 8616.5
 04/22/2016 11:13:32:  Epoch[23 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16335430; EvalErrorPrediction = 0.08046875; TotalTime = 0.0606s; SamplesPerSecond = 21131.9
-04/22/2016 11:13:33: Finished Epoch[23 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.17107429; TotalSamplesSeen = 230000; EvalErrorPrediction = 0.0777; learningRatePerSample = 0.1; EpochTime=0.61114
+04/22/2016 11:13:33: Finished Epoch[23 of 50]: [Training] CrossEntropyWithSoftmax = 0.17107429; TotalSamplesSeen = 230000; EvalErrorPrediction = 0.0777; learningRatePerSample = 0.1; EpochTime=0.61114
 04/22/2016 11:13:33: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.23'
 
 04/22/2016 11:13:33: Starting Epoch 24: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -651,7 +651,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:33:  Epoch[24 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15973740; EvalErrorPrediction = 0.07343750; TotalTime = 0.0516s; SamplesPerSecond = 24812.0
 04/22/2016 11:13:33:  Epoch[24 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17249680; EvalErrorPrediction = 0.09140625; TotalTime = 0.0508s; SamplesPerSecond = 25202.3
 04/22/2016 11:13:33:  Epoch[24 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14780130; EvalErrorPrediction = 0.06953125; TotalTime = 0.0495s; SamplesPerSecond = 25879.5
-04/22/2016 11:13:33: Finished Epoch[24 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.1615223; TotalSamplesSeen = 240000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.418288
+04/22/2016 11:13:33: Finished Epoch[24 of 50]: [Training] CrossEntropyWithSoftmax = 0.1615223; TotalSamplesSeen = 240000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.418288
 04/22/2016 11:13:33: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.24'
 
 04/22/2016 11:13:33: Starting Epoch 25: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -664,7 +664,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:33:  Epoch[25 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15537601; EvalErrorPrediction = 0.07187500; TotalTime = 0.0551s; SamplesPerSecond = 23213.2
 04/22/2016 11:13:33:  Epoch[25 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14606786; EvalErrorPrediction = 0.06796875; TotalTime = 0.0536s; SamplesPerSecond = 23884.6
 04/22/2016 11:13:33:  Epoch[25 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16131563; EvalErrorPrediction = 0.08203125; TotalTime = 0.1023s; SamplesPerSecond = 12512.8
-04/22/2016 11:13:34: Finished Epoch[25 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15718754; TotalSamplesSeen = 250000; EvalErrorPrediction = 0.0751; learningRatePerSample = 0.1; EpochTime=0.559333
+04/22/2016 11:13:34: Finished Epoch[25 of 50]: [Training] CrossEntropyWithSoftmax = 0.15718754; TotalSamplesSeen = 250000; EvalErrorPrediction = 0.0751; learningRatePerSample = 0.1; EpochTime=0.559333
 04/22/2016 11:13:34: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.25'
 
 04/22/2016 11:13:34: Starting Epoch 26: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -677,7 +677,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:34:  Epoch[26 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15749536; EvalErrorPrediction = 0.07656250; TotalTime = 0.0521s; SamplesPerSecond = 24575.7
 04/22/2016 11:13:34:  Epoch[26 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15394635; EvalErrorPrediction = 0.06484375; TotalTime = 0.0544s; SamplesPerSecond = 23514.3
 04/22/2016 11:13:34:  Epoch[26 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15662699; EvalErrorPrediction = 0.07500000; TotalTime = 0.0521s; SamplesPerSecond = 24573.8
-04/22/2016 11:13:34: Finished Epoch[26 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15990753; TotalSamplesSeen = 260000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.54517
+04/22/2016 11:13:34: Finished Epoch[26 of 50]: [Training] CrossEntropyWithSoftmax = 0.15990753; TotalSamplesSeen = 260000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.54517
 04/22/2016 11:13:34: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.26'
 
 04/22/2016 11:13:34: Starting Epoch 27: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -690,7 +690,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:35:  Epoch[27 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16284828; EvalErrorPrediction = 0.07187500; TotalTime = 0.1299s; SamplesPerSecond = 9851.8
 04/22/2016 11:13:35:  Epoch[27 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.19325085; EvalErrorPrediction = 0.09062500; TotalTime = 0.0816s; SamplesPerSecond = 15692.6
 04/22/2016 11:13:35:  Epoch[27 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16514435; EvalErrorPrediction = 0.07500000; TotalTime = 0.1101s; SamplesPerSecond = 11627.6
-04/22/2016 11:13:35: Finished Epoch[27 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16354395; TotalSamplesSeen = 270000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.743447
+04/22/2016 11:13:35: Finished Epoch[27 of 50]: [Training] CrossEntropyWithSoftmax = 0.16354395; TotalSamplesSeen = 270000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.743447
 04/22/2016 11:13:35: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.27'
 
 04/22/2016 11:13:35: Starting Epoch 28: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -703,7 +703,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:36:  Epoch[28 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.13527870; EvalErrorPrediction = 0.06015625; TotalTime = 0.1146s; SamplesPerSecond = 11172.1
 04/22/2016 11:13:36:  Epoch[28 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15502567; EvalErrorPrediction = 0.07500000; TotalTime = 0.1061s; SamplesPerSecond = 12060.9
 04/22/2016 11:13:36:  Epoch[28 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17108698; EvalErrorPrediction = 0.08515625; TotalTime = 0.1148s; SamplesPerSecond = 11149.2
-04/22/2016 11:13:36: Finished Epoch[28 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15766367; TotalSamplesSeen = 280000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=1.061
+04/22/2016 11:13:36: Finished Epoch[28 of 50]: [Training] CrossEntropyWithSoftmax = 0.15766367; TotalSamplesSeen = 280000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=1.061
 04/22/2016 11:13:36: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.28'
 
 04/22/2016 11:13:36: Starting Epoch 29: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -716,7 +716,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:36:  Epoch[29 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16567492; EvalErrorPrediction = 0.07890625; TotalTime = 0.1597s; SamplesPerSecond = 8015.8
 04/22/2016 11:13:37:  Epoch[29 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15234833; EvalErrorPrediction = 0.07343750; TotalTime = 0.1157s; SamplesPerSecond = 11059.8
 04/22/2016 11:13:37:  Epoch[29 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15832376; EvalErrorPrediction = 0.07109375; TotalTime = 0.0627s; SamplesPerSecond = 20415.6
-04/22/2016 11:13:37: Finished Epoch[29 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16024634; TotalSamplesSeen = 290000; EvalErrorPrediction = 0.0764; learningRatePerSample = 0.1; EpochTime=0.784941
+04/22/2016 11:13:37: Finished Epoch[29 of 50]: [Training] CrossEntropyWithSoftmax = 0.16024634; TotalSamplesSeen = 290000; EvalErrorPrediction = 0.0764; learningRatePerSample = 0.1; EpochTime=0.784941
 04/22/2016 11:13:37: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.29'
 
 04/22/2016 11:13:37: Starting Epoch 30: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -729,7 +729,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:37:  Epoch[30 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15995955; EvalErrorPrediction = 0.07109375; TotalTime = 0.0497s; SamplesPerSecond = 25765.4
 04/22/2016 11:13:37:  Epoch[30 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17257719; EvalErrorPrediction = 0.07890625; TotalTime = 0.0554s; SamplesPerSecond = 23089.7
 04/22/2016 11:13:37:  Epoch[30 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15350113; EvalErrorPrediction = 0.07109375; TotalTime = 0.0499s; SamplesPerSecond = 25668.8
-04/22/2016 11:13:37: Finished Epoch[30 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16108269; TotalSamplesSeen = 300000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.412139
+04/22/2016 11:13:37: Finished Epoch[30 of 50]: [Training] CrossEntropyWithSoftmax = 0.16108269; TotalSamplesSeen = 300000; EvalErrorPrediction = 0.0747; learningRatePerSample = 0.1; EpochTime=0.412139
 04/22/2016 11:13:37: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.30'
 
 04/22/2016 11:13:37: Starting Epoch 31: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -742,7 +742,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:38:  Epoch[31 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14706306; EvalErrorPrediction = 0.06406250; TotalTime = 0.0503s; SamplesPerSecond = 25424.6
 04/22/2016 11:13:38:  Epoch[31 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15134182; EvalErrorPrediction = 0.07187500; TotalTime = 0.0509s; SamplesPerSecond = 25127.1
 04/22/2016 11:13:38:  Epoch[31 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17137251; EvalErrorPrediction = 0.08593750; TotalTime = 0.0539s; SamplesPerSecond = 23732.3
-04/22/2016 11:13:38: Finished Epoch[31 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15736824; TotalSamplesSeen = 310000; EvalErrorPrediction = 0.0739; learningRatePerSample = 0.1; EpochTime=0.57177
+04/22/2016 11:13:38: Finished Epoch[31 of 50]: [Training] CrossEntropyWithSoftmax = 0.15736824; TotalSamplesSeen = 310000; EvalErrorPrediction = 0.0739; learningRatePerSample = 0.1; EpochTime=0.57177
 04/22/2016 11:13:38: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.31'
 
 04/22/2016 11:13:38: Starting Epoch 32: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -755,7 +755,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:38:  Epoch[32 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16567731; EvalErrorPrediction = 0.07812500; TotalTime = 0.0539s; SamplesPerSecond = 23744.2
 04/22/2016 11:13:38:  Epoch[32 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14497013; EvalErrorPrediction = 0.07421875; TotalTime = 0.0519s; SamplesPerSecond = 24660.0
 04/22/2016 11:13:38:  Epoch[32 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15376711; EvalErrorPrediction = 0.07265625; TotalTime = 0.0697s; SamplesPerSecond = 18372.1
-04/22/2016 11:13:38: Finished Epoch[32 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16248489; TotalSamplesSeen = 320000; EvalErrorPrediction = 0.0763; learningRatePerSample = 0.1; EpochTime=0.709032
+04/22/2016 11:13:38: Finished Epoch[32 of 50]: [Training] CrossEntropyWithSoftmax = 0.16248489; TotalSamplesSeen = 320000; EvalErrorPrediction = 0.0763; learningRatePerSample = 0.1; EpochTime=0.709032
 04/22/2016 11:13:38: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.32'
 
 04/22/2016 11:13:38: Starting Epoch 33: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -768,7 +768,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:39:  Epoch[33 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15541019; EvalErrorPrediction = 0.07578125; TotalTime = 0.0547s; SamplesPerSecond = 23414.9
 04/22/2016 11:13:39:  Epoch[33 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16226420; EvalErrorPrediction = 0.07734375; TotalTime = 0.0498s; SamplesPerSecond = 25714.2
 04/22/2016 11:13:39:  Epoch[33 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14442911; EvalErrorPrediction = 0.06406250; TotalTime = 0.0512s; SamplesPerSecond = 25022.0
-04/22/2016 11:13:39: Finished Epoch[33 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15691282; TotalSamplesSeen = 330000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.408716
+04/22/2016 11:13:39: Finished Epoch[33 of 50]: [Training] CrossEntropyWithSoftmax = 0.15691282; TotalSamplesSeen = 330000; EvalErrorPrediction = 0.0748; learningRatePerSample = 0.1; EpochTime=0.408716
 04/22/2016 11:13:39: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.33'
 
 04/22/2016 11:13:39: Starting Epoch 34: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -781,7 +781,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:39:  Epoch[34 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14822750; EvalErrorPrediction = 0.06562500; TotalTime = 0.1585s; SamplesPerSecond = 8075.9
 04/22/2016 11:13:39:  Epoch[34 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15052710; EvalErrorPrediction = 0.06953125; TotalTime = 0.1497s; SamplesPerSecond = 8552.4
 04/22/2016 11:13:40:  Epoch[34 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15564251; EvalErrorPrediction = 0.07890625; TotalTime = 0.1044s; SamplesPerSecond = 12264.5
-04/22/2016 11:13:40: Finished Epoch[34 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16209944; TotalSamplesSeen = 340000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.7561
+04/22/2016 11:13:40: Finished Epoch[34 of 50]: [Training] CrossEntropyWithSoftmax = 0.16209944; TotalSamplesSeen = 340000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.7561
 04/22/2016 11:13:40: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.34'
 
 04/22/2016 11:13:40: Starting Epoch 35: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -794,7 +794,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:40:  Epoch[35 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.19759736; EvalErrorPrediction = 0.09609375; TotalTime = 0.0535s; SamplesPerSecond = 23930.6
 04/22/2016 11:13:40:  Epoch[35 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.21950512; EvalErrorPrediction = 0.09140625; TotalTime = 0.0512s; SamplesPerSecond = 25011.7
 04/22/2016 11:13:40:  Epoch[35 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.18655958; EvalErrorPrediction = 0.08828125; TotalTime = 0.0508s; SamplesPerSecond = 25180.5
-04/22/2016 11:13:40: Finished Epoch[35 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.17944308; TotalSamplesSeen = 350000; EvalErrorPrediction = 0.0821; learningRatePerSample = 0.1; EpochTime=0.417805
+04/22/2016 11:13:40: Finished Epoch[35 of 50]: [Training] CrossEntropyWithSoftmax = 0.17944308; TotalSamplesSeen = 350000; EvalErrorPrediction = 0.0821; learningRatePerSample = 0.1; EpochTime=0.417805
 04/22/2016 11:13:40: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.35'
 
 04/22/2016 11:13:40: Starting Epoch 36: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -807,7 +807,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:40:  Epoch[36 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17878351; EvalErrorPrediction = 0.08046875; TotalTime = 0.1081s; SamplesPerSecond = 11839.2
 04/22/2016 11:13:41:  Epoch[36 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14215250; EvalErrorPrediction = 0.06093750; TotalTime = 0.0930s; SamplesPerSecond = 13758.9
 04/22/2016 11:13:41:  Epoch[36 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15307131; EvalErrorPrediction = 0.07421875; TotalTime = 0.0952s; SamplesPerSecond = 13449.3
-04/22/2016 11:13:41: Finished Epoch[36 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16211178; TotalSamplesSeen = 360000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.632336
+04/22/2016 11:13:41: Finished Epoch[36 of 50]: [Training] CrossEntropyWithSoftmax = 0.16211178; TotalSamplesSeen = 360000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.632336
 04/22/2016 11:13:41: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.36'
 
 04/22/2016 11:13:41: Starting Epoch 37: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -820,7 +820,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:41:  Epoch[37 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15415950; EvalErrorPrediction = 0.06484375; TotalTime = 0.0509s; SamplesPerSecond = 25126.6
 04/22/2016 11:13:41:  Epoch[37 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14868073; EvalErrorPrediction = 0.06953125; TotalTime = 0.0499s; SamplesPerSecond = 25653.4
 04/22/2016 11:13:41:  Epoch[37 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15062923; EvalErrorPrediction = 0.07656250; TotalTime = 0.0500s; SamplesPerSecond = 25585.7
-04/22/2016 11:13:41: Finished Epoch[37 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15656753; TotalSamplesSeen = 370000; EvalErrorPrediction = 0.0751; learningRatePerSample = 0.1; EpochTime=0.435588
+04/22/2016 11:13:41: Finished Epoch[37 of 50]: [Training] CrossEntropyWithSoftmax = 0.15656753; TotalSamplesSeen = 370000; EvalErrorPrediction = 0.0751; learningRatePerSample = 0.1; EpochTime=0.435588
 04/22/2016 11:13:41: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.37'
 
 04/22/2016 11:13:41: Starting Epoch 38: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -833,7 +833,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:42:  Epoch[38 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.13860159; EvalErrorPrediction = 0.06718750; TotalTime = 0.0529s; SamplesPerSecond = 24204.4
 04/22/2016 11:13:42:  Epoch[38 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17696228; EvalErrorPrediction = 0.08984375; TotalTime = 0.0501s; SamplesPerSecond = 25569.8
 04/22/2016 11:13:42:  Epoch[38 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15650635; EvalErrorPrediction = 0.07265625; TotalTime = 0.0506s; SamplesPerSecond = 25284.5
-04/22/2016 11:13:42: Finished Epoch[38 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15648503; TotalSamplesSeen = 380000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.513186
+04/22/2016 11:13:42: Finished Epoch[38 of 50]: [Training] CrossEntropyWithSoftmax = 0.15648503; TotalSamplesSeen = 380000; EvalErrorPrediction = 0.0761; learningRatePerSample = 0.1; EpochTime=0.513186
 04/22/2016 11:13:42: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.38'
 
 04/22/2016 11:13:42: Starting Epoch 39: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -846,7 +846,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:42:  Epoch[39 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16414399; EvalErrorPrediction = 0.08828125; TotalTime = 0.0909s; SamplesPerSecond = 14082.0
 04/22/2016 11:13:42:  Epoch[39 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.13911610; EvalErrorPrediction = 0.06640625; TotalTime = 0.0687s; SamplesPerSecond = 18636.9
 04/22/2016 11:13:42:  Epoch[39 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17872276; EvalErrorPrediction = 0.08750000; TotalTime = 0.0970s; SamplesPerSecond = 13201.7
-04/22/2016 11:13:42: Finished Epoch[39 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.16482509; TotalSamplesSeen = 390000; EvalErrorPrediction = 0.0791; learningRatePerSample = 0.1; EpochTime=0.572684
+04/22/2016 11:13:42: Finished Epoch[39 of 50]: [Training] CrossEntropyWithSoftmax = 0.16482509; TotalSamplesSeen = 390000; EvalErrorPrediction = 0.0791; learningRatePerSample = 0.1; EpochTime=0.572684
 04/22/2016 11:13:42: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.39'
 
 04/22/2016 11:13:42: Starting Epoch 40: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -859,7 +859,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:43:  Epoch[40 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.17159219; EvalErrorPrediction = 0.07812500; TotalTime = 0.0907s; SamplesPerSecond = 14105.0
 04/22/2016 11:13:43:  Epoch[40 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15918446; EvalErrorPrediction = 0.07890625; TotalTime = 0.1232s; SamplesPerSecond = 10387.8
 04/22/2016 11:13:43:  Epoch[40 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17683640; EvalErrorPrediction = 0.08593750; TotalTime = 0.1185s; SamplesPerSecond = 10799.6
-04/22/2016 11:13:43: Finished Epoch[40 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.1648334; TotalSamplesSeen = 400000; EvalErrorPrediction = 0.0798; learningRatePerSample = 0.1; EpochTime=0.839613
+04/22/2016 11:13:43: Finished Epoch[40 of 50]: [Training] CrossEntropyWithSoftmax = 0.1648334; TotalSamplesSeen = 400000; EvalErrorPrediction = 0.0798; learningRatePerSample = 0.1; EpochTime=0.839613
 04/22/2016 11:13:43: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.40'
 
 04/22/2016 11:13:43: Starting Epoch 41: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -872,7 +872,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:44:  Epoch[41 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14150887; EvalErrorPrediction = 0.06484375; TotalTime = 0.0950s; SamplesPerSecond = 13479.9
 04/22/2016 11:13:44:  Epoch[41 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16662998; EvalErrorPrediction = 0.08046875; TotalTime = 0.1092s; SamplesPerSecond = 11724.5
 04/22/2016 11:13:44:  Epoch[41 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14293785; EvalErrorPrediction = 0.06562500; TotalTime = 0.1220s; SamplesPerSecond = 10492.4
-04/22/2016 11:13:44: Finished Epoch[41 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15923181; TotalSamplesSeen = 410000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=0.940982
+04/22/2016 11:13:44: Finished Epoch[41 of 50]: [Training] CrossEntropyWithSoftmax = 0.15923181; TotalSamplesSeen = 410000; EvalErrorPrediction = 0.0759; learningRatePerSample = 0.1; EpochTime=0.940982
 04/22/2016 11:13:44: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.41'
 
 04/22/2016 11:13:44: Starting Epoch 42: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -885,7 +885,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:45:  Epoch[42 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15241370; EvalErrorPrediction = 0.06953125; TotalTime = 0.0496s; SamplesPerSecond = 25792.4
 04/22/2016 11:13:45:  Epoch[42 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14737477; EvalErrorPrediction = 0.07734375; TotalTime = 0.0602s; SamplesPerSecond = 21273.8
 04/22/2016 11:13:45:  Epoch[42 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.13798819; EvalErrorPrediction = 0.06328125; TotalTime = 0.0923s; SamplesPerSecond = 13870.1
-04/22/2016 11:13:45: Finished Epoch[42 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15416298; TotalSamplesSeen = 420000; EvalErrorPrediction = 0.074; learningRatePerSample = 0.1; EpochTime=0.746411
+04/22/2016 11:13:45: Finished Epoch[42 of 50]: [Training] CrossEntropyWithSoftmax = 0.15416298; TotalSamplesSeen = 420000; EvalErrorPrediction = 0.074; learningRatePerSample = 0.1; EpochTime=0.746411
 04/22/2016 11:13:45: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.42'
 
 04/22/2016 11:13:45: Starting Epoch 43: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -898,7 +898,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:45:  Epoch[43 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16087327; EvalErrorPrediction = 0.07968750; TotalTime = 0.0572s; SamplesPerSecond = 22391.7
 04/22/2016 11:13:45:  Epoch[43 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14101052; EvalErrorPrediction = 0.07031250; TotalTime = 0.0529s; SamplesPerSecond = 24214.9
 04/22/2016 11:13:45:  Epoch[43 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14974689; EvalErrorPrediction = 0.07031250; TotalTime = 0.0784s; SamplesPerSecond = 16323.2
-04/22/2016 11:13:45: Finished Epoch[43 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15562566; TotalSamplesSeen = 430000; EvalErrorPrediction = 0.0752; learningRatePerSample = 0.1; EpochTime=0.505028
+04/22/2016 11:13:45: Finished Epoch[43 of 50]: [Training] CrossEntropyWithSoftmax = 0.15562566; TotalSamplesSeen = 430000; EvalErrorPrediction = 0.0752; learningRatePerSample = 0.1; EpochTime=0.505028
 04/22/2016 11:13:45: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.43'
 
 04/22/2016 11:13:45: Starting Epoch 44: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -911,7 +911,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:46:  Epoch[44 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14407172; EvalErrorPrediction = 0.06718750; TotalTime = 0.0504s; SamplesPerSecond = 25407.9
 04/22/2016 11:13:46:  Epoch[44 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16345730; EvalErrorPrediction = 0.08750000; TotalTime = 0.0500s; SamplesPerSecond = 25602.0
 04/22/2016 11:13:46:  Epoch[44 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15924301; EvalErrorPrediction = 0.07656250; TotalTime = 0.0495s; SamplesPerSecond = 25854.9
-04/22/2016 11:13:46: Finished Epoch[44 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15365021; TotalSamplesSeen = 440000; EvalErrorPrediction = 0.0743; learningRatePerSample = 0.1; EpochTime=0.55397
+04/22/2016 11:13:46: Finished Epoch[44 of 50]: [Training] CrossEntropyWithSoftmax = 0.15365021; TotalSamplesSeen = 440000; EvalErrorPrediction = 0.0743; learningRatePerSample = 0.1; EpochTime=0.55397
 04/22/2016 11:13:46: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.44'
 
 04/22/2016 11:13:46: Starting Epoch 45: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -924,7 +924,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:46:  Epoch[45 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15133510; EvalErrorPrediction = 0.07500000; TotalTime = 0.1587s; SamplesPerSecond = 8063.3
 04/22/2016 11:13:46:  Epoch[45 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16009884; EvalErrorPrediction = 0.08437500; TotalTime = 0.1178s; SamplesPerSecond = 10862.8
 04/22/2016 11:13:47:  Epoch[45 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.16060934; EvalErrorPrediction = 0.08359375; TotalTime = 0.0512s; SamplesPerSecond = 24987.3
-04/22/2016 11:13:47: Finished Epoch[45 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15942914; TotalSamplesSeen = 450000; EvalErrorPrediction = 0.0787; learningRatePerSample = 0.1; EpochTime=0.680347
+04/22/2016 11:13:47: Finished Epoch[45 of 50]: [Training] CrossEntropyWithSoftmax = 0.15942914; TotalSamplesSeen = 450000; EvalErrorPrediction = 0.0787; learningRatePerSample = 0.1; EpochTime=0.680347
 04/22/2016 11:13:47: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.45'
 
 04/22/2016 11:13:47: Starting Epoch 46: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -937,7 +937,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:47:  Epoch[46 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14723239; EvalErrorPrediction = 0.06796875; TotalTime = 0.0511s; SamplesPerSecond = 25047.0
 04/22/2016 11:13:47:  Epoch[46 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.15953364; EvalErrorPrediction = 0.07734375; TotalTime = 0.0502s; SamplesPerSecond = 25517.3
 04/22/2016 11:13:47:  Epoch[46 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.15588732; EvalErrorPrediction = 0.07031250; TotalTime = 0.0511s; SamplesPerSecond = 25069.0
-04/22/2016 11:13:47: Finished Epoch[46 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15945635; TotalSamplesSeen = 460000; EvalErrorPrediction = 0.0757; learningRatePerSample = 0.1; EpochTime=0.404548
+04/22/2016 11:13:47: Finished Epoch[46 of 50]: [Training] CrossEntropyWithSoftmax = 0.15945635; TotalSamplesSeen = 460000; EvalErrorPrediction = 0.0757; learningRatePerSample = 0.1; EpochTime=0.404548
 04/22/2016 11:13:47: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.46'
 
 04/22/2016 11:13:47: Starting Epoch 47: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -950,7 +950,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:47:  Epoch[47 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.14805112; EvalErrorPrediction = 0.07656250; TotalTime = 0.0678s; SamplesPerSecond = 18880.2
 04/22/2016 11:13:47:  Epoch[47 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.17377362; EvalErrorPrediction = 0.08437500; TotalTime = 0.0521s; SamplesPerSecond = 24578.5
 04/22/2016 11:13:47:  Epoch[47 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14311152; EvalErrorPrediction = 0.06328125; TotalTime = 0.1361s; SamplesPerSecond = 9408.3
-04/22/2016 11:13:48: Finished Epoch[47 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15917433; TotalSamplesSeen = 470000; EvalErrorPrediction = 0.078; learningRatePerSample = 0.1; EpochTime=0.52488
+04/22/2016 11:13:48: Finished Epoch[47 of 50]: [Training] CrossEntropyWithSoftmax = 0.15917433; TotalSamplesSeen = 470000; EvalErrorPrediction = 0.078; learningRatePerSample = 0.1; EpochTime=0.52488
 04/22/2016 11:13:48: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.47'
 
 04/22/2016 11:13:48: Starting Epoch 48: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -963,7 +963,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:48:  Epoch[48 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16271095; EvalErrorPrediction = 0.07812500; TotalTime = 0.0536s; SamplesPerSecond = 23881.5
 04/22/2016 11:13:48:  Epoch[48 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.16002464; EvalErrorPrediction = 0.07734375; TotalTime = 0.0524s; SamplesPerSecond = 24408.8
 04/22/2016 11:13:48:  Epoch[48 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17468157; EvalErrorPrediction = 0.08593750; TotalTime = 0.0535s; SamplesPerSecond = 23932.4
-04/22/2016 11:13:48: Finished Epoch[48 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15473657; TotalSamplesSeen = 480000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.547503
+04/22/2016 11:13:48: Finished Epoch[48 of 50]: [Training] CrossEntropyWithSoftmax = 0.15473657; TotalSamplesSeen = 480000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.547503
 04/22/2016 11:13:48: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.48'
 
 04/22/2016 11:13:48: Starting Epoch 49: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -976,7 +976,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:48:  Epoch[49 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.15308733; EvalErrorPrediction = 0.07109375; TotalTime = 0.0897s; SamplesPerSecond = 14269.2
 04/22/2016 11:13:48:  Epoch[49 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14773545; EvalErrorPrediction = 0.07265625; TotalTime = 0.1082s; SamplesPerSecond = 11829.0
 04/22/2016 11:13:49:  Epoch[49 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.17239637; EvalErrorPrediction = 0.08750000; TotalTime = 0.0969s; SamplesPerSecond = 13212.6
-04/22/2016 11:13:49: Finished Epoch[49 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15859116; TotalSamplesSeen = 490000; EvalErrorPrediction = 0.078; learningRatePerSample = 0.1; EpochTime=0.55657
+04/22/2016 11:13:49: Finished Epoch[49 of 50]: [Training] CrossEntropyWithSoftmax = 0.15859116; TotalSamplesSeen = 490000; EvalErrorPrediction = 0.078; learningRatePerSample = 0.1; EpochTime=0.55657
 04/22/2016 11:13:49: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn.49'
 
 04/22/2016 11:13:49: Starting Epoch 50: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
@@ -989,7 +989,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:49:  Epoch[50 of 50]-Minibatch[  41-  50, 71.43%]: * 1280; CrossEntropyWithSoftmax =  0.16037850; EvalErrorPrediction = 0.08046875; TotalTime = 0.1243s; SamplesPerSecond = 10298.4
 04/22/2016 11:13:49:  Epoch[50 of 50]-Minibatch[  51-  60, 85.71%]: * 1280; CrossEntropyWithSoftmax =  0.14711046; EvalErrorPrediction = 0.07578125; TotalTime = 0.0924s; SamplesPerSecond = 13853.0
 04/22/2016 11:13:49:  Epoch[50 of 50]-Minibatch[  61-  70, 100.00%]: * 1280; CrossEntropyWithSoftmax =  0.14397364; EvalErrorPrediction = 0.07421875; TotalTime = 0.0796s; SamplesPerSecond = 16089.3
-04/22/2016 11:13:49: Finished Epoch[50 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15362317; TotalSamplesSeen = 500000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.597638
+04/22/2016 11:13:49: Finished Epoch[50 of 50]: [Training] CrossEntropyWithSoftmax = 0.15362317; TotalSamplesSeen = 500000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.597638
 04/22/2016 11:13:49: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn'
 04/22/2016 11:13:49: CNTKCommandTrainEnd: Simple_Demo
 
@@ -1414,7 +1414,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 11:13:50:  Epoch[50 of 50]-Minibatch[  41-  50, 0.00000000000014%]: * 1280; CrossEntropyWithSoftmax =  0.16037850; EvalErrorPrediction = 0.08046875; TotalTime = 0.0827s; SamplesPerSecond = 15471.5
 04/22/2016 11:13:50:  Epoch[50 of 50]-Minibatch[  51-  60, 0.00000000000017%]: * 1280; CrossEntropyWithSoftmax =  0.14711046; EvalErrorPrediction = 0.07578125; TotalTime = 0.1105s; SamplesPerSecond = 11584.9
 04/22/2016 11:13:51:  Epoch[50 of 50]-Minibatch[  61-  70, 0.00000000000019%]: * 1280; CrossEntropyWithSoftmax =  0.14397364; EvalErrorPrediction = 0.07421875; TotalTime = 0.2152s; SamplesPerSecond = 5947.6
-04/22/2016 11:13:51: Finished Epoch[50 of 50]: [Training Set] CrossEntropyWithSoftmax = 0.15362317; TotalSamplesSeen = 500000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.835279
+04/22/2016 11:13:51: Finished Epoch[50 of 50]: [Training] CrossEntropyWithSoftmax = 0.15362317; TotalSamplesSeen = 500000; EvalErrorPrediction = 0.0755; learningRatePerSample = 0.1; EpochTime=0.835279
 04/22/2016 11:13:51: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160422121317.584122\CNTKTextFormatReader\Speech_Simple@release_cpu/models/simple.dnn'
 04/22/2016 11:13:51: CNTKCommandTrainEnd: Simple_Demo
 

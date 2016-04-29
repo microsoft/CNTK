@@ -742,7 +742,7 @@ minibatchiterator: epoch 0: frames [0..1124823] (first utterance at frame 0), da
 04/12/2016 10:06:03:  Epoch[ 1 of 25]-Minibatch[4361-4370]: SamplesSeen = 2560; TrainLossPerSample = 135.23750000; TotalTime = 0.0246s; SamplesPerSecond = 104230.3
 04/12/2016 10:06:03:  Epoch[ 1 of 25]-Minibatch[4371-4380]: SamplesSeen = 2560; TrainLossPerSample = 133.06250000; TotalTime = 0.0245s; SamplesPerSecond = 104336.5
 04/12/2016 10:06:03:  Epoch[ 1 of 25]-Minibatch[4381-4390]: SamplesSeen = 2560; TrainLossPerSample = 133.30000000; TotalTime = 0.0245s; SamplesPerSecond = 104511.1
-04/12/2016 10:06:03: Finished Epoch[ 1 of 25]: [Training Set] TrainLossPerSample = 470.54199; TotalSamplesSeen = 1124823; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.8257
+04/12/2016 10:06:03: Finished Epoch[ 1 of 25]: [Training] TrainLossPerSample = 470.54199; TotalSamplesSeen = 1124823; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.8257
 04/12/2016 10:06:03: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.1'
 
 04/12/2016 10:06:03: Starting Epoch 2: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -1188,7 +1188,7 @@ minibatchiterator: epoch 1: frames [1124823..2249646] (first utterance at frame 
 04/12/2016 10:06:14:  Epoch[ 2 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 91.88750000; TotalTime = 0.0245s; SamplesPerSecond = 104502.6
 04/12/2016 10:06:14:  Epoch[ 2 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 93.05000000; TotalTime = 0.0244s; SamplesPerSecond = 104724.9
 04/12/2016 10:06:14:  Epoch[ 2 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 96.60000000; TotalTime = 0.0245s; SamplesPerSecond = 104630.7
-04/12/2016 10:06:14: Finished Epoch[ 2 of 25]: [Training Set] TrainLossPerSample = 109.48733; TotalSamplesSeen = 2249646; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.101
+04/12/2016 10:06:14: Finished Epoch[ 2 of 25]: [Training] TrainLossPerSample = 109.48733; TotalSamplesSeen = 2249646; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.101
 04/12/2016 10:06:14: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.2'
 
 04/12/2016 10:06:14: Starting Epoch 3: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -1634,7 +1634,7 @@ minibatchiterator: epoch 2: frames [2249646..3374469] (first utterance at frame 
 04/12/2016 10:06:25:  Epoch[ 3 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 80.69687500; TotalTime = 0.0246s; SamplesPerSecond = 104230.3
 04/12/2016 10:06:25:  Epoch[ 3 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 77.26250000; TotalTime = 0.0245s; SamplesPerSecond = 104328.0
 04/12/2016 10:06:25:  Epoch[ 3 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 76.67812500; TotalTime = 0.0245s; SamplesPerSecond = 104281.2
-04/12/2016 10:06:25: Finished Epoch[ 3 of 25]: [Training Set] TrainLossPerSample = 85.828743; TotalSamplesSeen = 3374469; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9582
+04/12/2016 10:06:25: Finished Epoch[ 3 of 25]: [Training] TrainLossPerSample = 85.828743; TotalSamplesSeen = 3374469; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9582
 04/12/2016 10:06:25: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.3'
 
 04/12/2016 10:06:25: Starting Epoch 4: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -2080,7 +2080,7 @@ minibatchiterator: epoch 3: frames [3374469..4499292] (first utterance at frame 
 04/12/2016 10:06:36:  Epoch[ 4 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 65.73750000; TotalTime = 0.0245s; SamplesPerSecond = 104408.8
 04/12/2016 10:06:36:  Epoch[ 4 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 64.01250000; TotalTime = 0.0245s; SamplesPerSecond = 104374.8
 04/12/2016 10:06:36:  Epoch[ 4 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 64.86562500; TotalTime = 0.0245s; SamplesPerSecond = 104588.0
-04/12/2016 10:06:36: Finished Epoch[ 4 of 25]: [Training Set] TrainLossPerSample = 70.182213; TotalSamplesSeen = 4499292; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9958
+04/12/2016 10:06:36: Finished Epoch[ 4 of 25]: [Training] TrainLossPerSample = 70.182213; TotalSamplesSeen = 4499292; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9958
 04/12/2016 10:06:36: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.4'
 
 04/12/2016 10:06:36: Starting Epoch 5: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -2526,7 +2526,7 @@ minibatchiterator: epoch 4: frames [4499292..5624115] (first utterance at frame 
 04/12/2016 10:06:47:  Epoch[ 5 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 56.56250000; TotalTime = 0.0246s; SamplesPerSecond = 104204.8
 04/12/2016 10:06:47:  Epoch[ 5 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 55.83750000; TotalTime = 0.0245s; SamplesPerSecond = 104596.5
 04/12/2016 10:06:47:  Epoch[ 5 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 56.25000000; TotalTime = 0.0245s; SamplesPerSecond = 104635.0
-04/12/2016 10:06:47: Finished Epoch[ 5 of 25]: [Training Set] TrainLossPerSample = 61.07478; TotalSamplesSeen = 5624115; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0079
+04/12/2016 10:06:47: Finished Epoch[ 5 of 25]: [Training] TrainLossPerSample = 61.07478; TotalSamplesSeen = 5624115; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0079
 04/12/2016 10:06:47: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.5'
 
 04/12/2016 10:06:47: Starting Epoch 6: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -2972,7 +2972,7 @@ minibatchiterator: epoch 5: frames [5624115..6748938] (first utterance at frame 
 04/12/2016 10:06:58:  Epoch[ 6 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 53.99531250; TotalTime = 0.0245s; SamplesPerSecond = 104362.0
 04/12/2016 10:06:58:  Epoch[ 6 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 53.17031250; TotalTime = 0.0245s; SamplesPerSecond = 104430.1
 04/12/2016 10:06:58:  Epoch[ 6 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 51.63906250; TotalTime = 0.0245s; SamplesPerSecond = 104438.6
-04/12/2016 10:06:58: Finished Epoch[ 6 of 25]: [Training Set] TrainLossPerSample = 55.261589; TotalSamplesSeen = 6748938; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9686
+04/12/2016 10:06:58: Finished Epoch[ 6 of 25]: [Training] TrainLossPerSample = 55.261589; TotalSamplesSeen = 6748938; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9686
 04/12/2016 10:06:58: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.6'
 
 04/12/2016 10:06:58: Starting Epoch 7: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -3418,7 +3418,7 @@ minibatchiterator: epoch 6: frames [6748938..7873761] (first utterance at frame 
 04/12/2016 10:07:09:  Epoch[ 7 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 51.20000000; TotalTime = 0.0245s; SamplesPerSecond = 104464.2
 04/12/2016 10:07:09:  Epoch[ 7 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 51.16250000; TotalTime = 0.0244s; SamplesPerSecond = 104776.3
 04/12/2016 10:07:09:  Epoch[ 7 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 51.80937500; TotalTime = 0.0245s; SamplesPerSecond = 104532.5
-04/12/2016 10:07:09: Finished Epoch[ 7 of 25]: [Training Set] TrainLossPerSample = 52.141441; TotalSamplesSeen = 7873761; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9594
+04/12/2016 10:07:09: Finished Epoch[ 7 of 25]: [Training] TrainLossPerSample = 52.141441; TotalSamplesSeen = 7873761; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9594
 04/12/2016 10:07:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.7'
 
 04/12/2016 10:07:09: Starting Epoch 8: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -3864,7 +3864,7 @@ minibatchiterator: epoch 7: frames [7873761..8998584] (first utterance at frame 
 04/12/2016 10:07:20:  Epoch[ 8 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 48.03437500; TotalTime = 0.0251s; SamplesPerSecond = 101959.5
 04/12/2016 10:07:20:  Epoch[ 8 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 46.94843750; TotalTime = 0.0245s; SamplesPerSecond = 104669.2
 04/12/2016 10:07:20:  Epoch[ 8 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 47.02656250; TotalTime = 0.0245s; SamplesPerSecond = 104699.2
-04/12/2016 10:07:20: Finished Epoch[ 8 of 25]: [Training Set] TrainLossPerSample = 49.701458; TotalSamplesSeen = 8998584; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0147
+04/12/2016 10:07:20: Finished Epoch[ 8 of 25]: [Training] TrainLossPerSample = 49.701458; TotalSamplesSeen = 8998584; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0147
 04/12/2016 10:07:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.8'
 
 04/12/2016 10:07:20: Starting Epoch 9: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -4310,7 +4310,7 @@ minibatchiterator: epoch 8: frames [8998584..10123407] (first utterance at frame
 04/12/2016 10:07:31:  Epoch[ 9 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 48.31718750; TotalTime = 0.0245s; SamplesPerSecond = 104566.6
 04/12/2016 10:07:31:  Epoch[ 9 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 47.62031250; TotalTime = 0.0245s; SamplesPerSecond = 104460.0
 04/12/2016 10:07:31:  Epoch[ 9 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 45.88281250; TotalTime = 0.0245s; SamplesPerSecond = 104349.2
-04/12/2016 10:07:31: Finished Epoch[ 9 of 25]: [Training Set] TrainLossPerSample = 47.682198; TotalSamplesSeen = 10123407; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9715
+04/12/2016 10:07:31: Finished Epoch[ 9 of 25]: [Training] TrainLossPerSample = 47.682198; TotalSamplesSeen = 10123407; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9715
 04/12/2016 10:07:32: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.9'
 
 04/12/2016 10:07:32: Starting Epoch 10: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -4756,7 +4756,7 @@ minibatchiterator: epoch 9: frames [10123407..11248230] (first utterance at fram
 04/12/2016 10:07:42:  Epoch[10 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 44.77812500; TotalTime = 0.0247s; SamplesPerSecond = 103786.6
 04/12/2016 10:07:42:  Epoch[10 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 43.74531250; TotalTime = 0.0246s; SamplesPerSecond = 104005.9
 04/12/2016 10:07:43:  Epoch[10 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 43.31718750; TotalTime = 0.0246s; SamplesPerSecond = 104200.6
-04/12/2016 10:07:43: Finished Epoch[10 of 25]: [Training Set] TrainLossPerSample = 45.931068; TotalSamplesSeen = 11248230; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0011
+04/12/2016 10:07:43: Finished Epoch[10 of 25]: [Training] TrainLossPerSample = 45.931068; TotalSamplesSeen = 11248230; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0011
 04/12/2016 10:07:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.10'
 
 04/12/2016 10:07:43: Starting Epoch 11: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -5202,7 +5202,7 @@ minibatchiterator: epoch 10: frames [11248230..12373053] (first utterance at fra
 04/12/2016 10:07:54:  Epoch[11 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 42.88281250; TotalTime = 0.0247s; SamplesPerSecond = 103488.7
 04/12/2016 10:07:54:  Epoch[11 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 43.05937500; TotalTime = 0.0247s; SamplesPerSecond = 103488.7
 04/12/2016 10:07:54:  Epoch[11 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 43.61093750; TotalTime = 0.0247s; SamplesPerSecond = 103824.5
-04/12/2016 10:07:54: Finished Epoch[11 of 25]: [Training Set] TrainLossPerSample = 44.394909; TotalSamplesSeen = 12373053; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0004
+04/12/2016 10:07:54: Finished Epoch[11 of 25]: [Training] TrainLossPerSample = 44.394909; TotalSamplesSeen = 12373053; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0004
 04/12/2016 10:07:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.11'
 
 04/12/2016 10:07:54: Starting Epoch 12: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -5648,7 +5648,7 @@ minibatchiterator: epoch 11: frames [12373053..13497876] (first utterance at fra
 04/12/2016 10:08:05:  Epoch[12 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 41.33437500; TotalTime = 0.0244s; SamplesPerSecond = 104767.8
 04/12/2016 10:08:05:  Epoch[12 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 41.89375000; TotalTime = 0.0245s; SamplesPerSecond = 104511.1
 04/12/2016 10:08:05:  Epoch[12 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 41.95468750; TotalTime = 0.0245s; SamplesPerSecond = 104511.1
-04/12/2016 10:08:05: Finished Epoch[12 of 25]: [Training Set] TrainLossPerSample = 42.820053; TotalSamplesSeen = 13497876; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9865
+04/12/2016 10:08:05: Finished Epoch[12 of 25]: [Training] TrainLossPerSample = 42.820053; TotalSamplesSeen = 13497876; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9865
 04/12/2016 10:08:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.12'
 
 04/12/2016 10:08:05: Starting Epoch 13: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -6094,7 +6094,7 @@ minibatchiterator: epoch 12: frames [13497876..14622699] (first utterance at fra
 04/12/2016 10:08:16:  Epoch[13 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 40.59687500; TotalTime = 0.0245s; SamplesPerSecond = 104682.1
 04/12/2016 10:08:16:  Epoch[13 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 41.02187500; TotalTime = 0.0245s; SamplesPerSecond = 104523.9
 04/12/2016 10:08:16:  Epoch[13 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 41.62031250; TotalTime = 0.0245s; SamplesPerSecond = 104664.9
-04/12/2016 10:08:16: Finished Epoch[13 of 25]: [Training Set] TrainLossPerSample = 42.06451; TotalSamplesSeen = 14622699; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9544
+04/12/2016 10:08:16: Finished Epoch[13 of 25]: [Training] TrainLossPerSample = 42.06451; TotalSamplesSeen = 14622699; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9544
 04/12/2016 10:08:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.13'
 
 04/12/2016 10:08:16: Starting Epoch 14: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -6540,7 +6540,7 @@ minibatchiterator: epoch 13: frames [14622699..15747522] (first utterance at fra
 04/12/2016 10:08:27:  Epoch[14 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 40.77187500; TotalTime = 0.0245s; SamplesPerSecond = 104460.0
 04/12/2016 10:08:27:  Epoch[14 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 40.59531250; TotalTime = 0.0245s; SamplesPerSecond = 104553.8
 04/12/2016 10:08:27:  Epoch[14 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 41.09218750; TotalTime = 0.0245s; SamplesPerSecond = 104694.9
-04/12/2016 10:08:27: Finished Epoch[14 of 25]: [Training Set] TrainLossPerSample = 40.899925; TotalSamplesSeen = 15747522; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9962
+04/12/2016 10:08:27: Finished Epoch[14 of 25]: [Training] TrainLossPerSample = 40.899925; TotalSamplesSeen = 15747522; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9962
 04/12/2016 10:08:27: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.14'
 
 04/12/2016 10:08:27: Starting Epoch 15: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -6986,7 +6986,7 @@ minibatchiterator: epoch 14: frames [15747522..16872345] (first utterance at fra
 04/12/2016 10:08:38:  Epoch[15 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 38.91250000; TotalTime = 0.0245s; SamplesPerSecond = 104477.0
 04/12/2016 10:08:38:  Epoch[15 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 38.97656250; TotalTime = 0.0245s; SamplesPerSecond = 104686.3
 04/12/2016 10:08:38:  Epoch[15 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 39.54687500; TotalTime = 0.0245s; SamplesPerSecond = 104635.0
-04/12/2016 10:08:38: Finished Epoch[15 of 25]: [Training Set] TrainLossPerSample = 39.400837; TotalSamplesSeen = 16872345; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9679
+04/12/2016 10:08:38: Finished Epoch[15 of 25]: [Training] TrainLossPerSample = 39.400837; TotalSamplesSeen = 16872345; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9679
 04/12/2016 10:08:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.15'
 
 04/12/2016 10:08:38: Starting Epoch 16: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -7432,7 +7432,7 @@ minibatchiterator: epoch 15: frames [16872345..17997168] (first utterance at fra
 04/12/2016 10:08:49:  Epoch[16 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 38.84687500; TotalTime = 0.0244s; SamplesPerSecond = 104780.6
 04/12/2016 10:08:49:  Epoch[16 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 38.26718750; TotalTime = 0.0245s; SamplesPerSecond = 104600.8
 04/12/2016 10:08:49:  Epoch[16 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 38.35781250; TotalTime = 0.0245s; SamplesPerSecond = 104528.2
-04/12/2016 10:08:49: Finished Epoch[16 of 25]: [Training Set] TrainLossPerSample = 38.784008; TotalSamplesSeen = 17997168; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9531
+04/12/2016 10:08:49: Finished Epoch[16 of 25]: [Training] TrainLossPerSample = 38.784008; TotalSamplesSeen = 17997168; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9531
 04/12/2016 10:08:49: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.16'
 
 04/12/2016 10:08:49: Starting Epoch 17: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -7878,7 +7878,7 @@ minibatchiterator: epoch 16: frames [17997168..19121991] (first utterance at fra
 04/12/2016 10:09:00:  Epoch[17 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 36.74375000; TotalTime = 0.0245s; SamplesPerSecond = 104541.0
 04/12/2016 10:09:00:  Epoch[17 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 38.15312500; TotalTime = 0.0244s; SamplesPerSecond = 104772.0
 04/12/2016 10:09:00:  Epoch[17 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 38.26562500; TotalTime = 0.0244s; SamplesPerSecond = 104883.6
-04/12/2016 10:09:00: Finished Epoch[17 of 25]: [Training Set] TrainLossPerSample = 38.045116; TotalSamplesSeen = 19121991; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9484
+04/12/2016 10:09:00: Finished Epoch[17 of 25]: [Training] TrainLossPerSample = 38.045116; TotalSamplesSeen = 19121991; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9484
 04/12/2016 10:09:00: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.17'
 
 04/12/2016 10:09:00: Starting Epoch 18: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -8324,7 +8324,7 @@ minibatchiterator: epoch 17: frames [19121991..20246814] (first utterance at fra
 04/12/2016 10:09:11:  Epoch[18 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 37.21406250; TotalTime = 0.0245s; SamplesPerSecond = 104404.6
 04/12/2016 10:09:11:  Epoch[18 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 36.22812500; TotalTime = 0.0245s; SamplesPerSecond = 104600.8
 04/12/2016 10:09:11:  Epoch[18 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 37.58593750; TotalTime = 0.0245s; SamplesPerSecond = 104425.9
-04/12/2016 10:09:11: Finished Epoch[18 of 25]: [Training Set] TrainLossPerSample = 37.390465; TotalSamplesSeen = 20246814; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9483
+04/12/2016 10:09:11: Finished Epoch[18 of 25]: [Training] TrainLossPerSample = 37.390465; TotalSamplesSeen = 20246814; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9483
 04/12/2016 10:09:11: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.18'
 
 04/12/2016 10:09:11: Starting Epoch 19: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -8770,7 +8770,7 @@ minibatchiterator: epoch 18: frames [20246814..21371637] (first utterance at fra
 04/12/2016 10:09:22:  Epoch[19 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 36.09375000; TotalTime = 0.0245s; SamplesPerSecond = 104622.2
 04/12/2016 10:09:22:  Epoch[19 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 36.07031250; TotalTime = 0.0245s; SamplesPerSecond = 104639.3
 04/12/2016 10:09:22:  Epoch[19 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 37.01093750; TotalTime = 0.0245s; SamplesPerSecond = 104541.0
-04/12/2016 10:09:22: Finished Epoch[19 of 25]: [Training Set] TrainLossPerSample = 37.063263; TotalSamplesSeen = 21371637; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9454
+04/12/2016 10:09:22: Finished Epoch[19 of 25]: [Training] TrainLossPerSample = 37.063263; TotalSamplesSeen = 21371637; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9454
 04/12/2016 10:09:22: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.19'
 
 04/12/2016 10:09:22: Starting Epoch 20: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -9216,7 +9216,7 @@ minibatchiterator: epoch 19: frames [21371637..22496460] (first utterance at fra
 04/12/2016 10:09:33:  Epoch[20 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 37.64843750; TotalTime = 0.0245s; SamplesPerSecond = 104626.5
 04/12/2016 10:09:33:  Epoch[20 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 36.44687500; TotalTime = 0.0244s; SamplesPerSecond = 104862.2
 04/12/2016 10:09:33:  Epoch[20 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 36.37656250; TotalTime = 0.0244s; SamplesPerSecond = 104789.2
-04/12/2016 10:09:33: Finished Epoch[20 of 25]: [Training Set] TrainLossPerSample = 36.318031; TotalSamplesSeen = 22496460; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9897
+04/12/2016 10:09:33: Finished Epoch[20 of 25]: [Training] TrainLossPerSample = 36.318031; TotalSamplesSeen = 22496460; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9897
 04/12/2016 10:09:33: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.20'
 
 04/12/2016 10:09:33: Starting Epoch 21: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -9662,7 +9662,7 @@ minibatchiterator: epoch 20: frames [22496460..23621283] (first utterance at fra
 04/12/2016 10:09:44:  Epoch[21 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 34.25468750; TotalTime = 0.0245s; SamplesPerSecond = 104532.5
 04/12/2016 10:09:44:  Epoch[21 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 35.61250000; TotalTime = 0.0245s; SamplesPerSecond = 104570.9
 04/12/2016 10:09:44:  Epoch[21 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 35.32031250; TotalTime = 0.0244s; SamplesPerSecond = 104806.4
-04/12/2016 10:09:44: Finished Epoch[21 of 25]: [Training Set] TrainLossPerSample = 35.769287; TotalSamplesSeen = 23621283; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9401
+04/12/2016 10:09:44: Finished Epoch[21 of 25]: [Training] TrainLossPerSample = 35.769287; TotalSamplesSeen = 23621283; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9401
 04/12/2016 10:09:44: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.21'
 
 04/12/2016 10:09:44: Starting Epoch 22: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -10108,7 +10108,7 @@ minibatchiterator: epoch 21: frames [23621283..24746106] (first utterance at fra
 04/12/2016 10:09:55:  Epoch[22 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 34.68906250; TotalTime = 0.0246s; SamplesPerSecond = 104243.0
 04/12/2016 10:09:55:  Epoch[22 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 35.34843750; TotalTime = 0.0245s; SamplesPerSecond = 104545.3
 04/12/2016 10:09:55:  Epoch[22 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 34.96093750; TotalTime = 0.0245s; SamplesPerSecond = 104447.2
-04/12/2016 10:09:55: Finished Epoch[22 of 25]: [Training Set] TrainLossPerSample = 35.119236; TotalSamplesSeen = 24746106; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9408
+04/12/2016 10:09:55: Finished Epoch[22 of 25]: [Training] TrainLossPerSample = 35.119236; TotalSamplesSeen = 24746106; AvgLearningRatePerSample = 0.00039062501; EpochTime=10.9408
 04/12/2016 10:09:55: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.22'
 
 04/12/2016 10:09:55: Starting Epoch 23: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -10554,7 +10554,7 @@ minibatchiterator: epoch 22: frames [24746106..25870929] (first utterance at fra
 04/12/2016 10:10:06:  Epoch[23 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 34.98750000; TotalTime = 0.0244s; SamplesPerSecond = 104930.9
 04/12/2016 10:10:06:  Epoch[23 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 34.30625000; TotalTime = 0.0245s; SamplesPerSecond = 104664.9
 04/12/2016 10:10:06:  Epoch[23 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 34.41718750; TotalTime = 0.0341s; SamplesPerSecond = 74981.0
-04/12/2016 10:10:06: Finished Epoch[23 of 25]: [Training Set] TrainLossPerSample = 34.777367; TotalSamplesSeen = 25870929; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.1857
+04/12/2016 10:10:06: Finished Epoch[23 of 25]: [Training] TrainLossPerSample = 34.777367; TotalSamplesSeen = 25870929; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.1857
 04/12/2016 10:10:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.23'
 
 04/12/2016 10:10:06: Starting Epoch 24: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -11000,7 +11000,7 @@ minibatchiterator: epoch 23: frames [25870929..26995752] (first utterance at fra
 04/12/2016 10:10:17:  Epoch[24 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 34.44062500; TotalTime = 0.0248s; SamplesPerSecond = 103263.3
 04/12/2016 10:10:17:  Epoch[24 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 34.05156250; TotalTime = 0.0247s; SamplesPerSecond = 103543.1
 04/12/2016 10:10:17:  Epoch[24 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 34.24218750; TotalTime = 0.0247s; SamplesPerSecond = 103505.4
-04/12/2016 10:10:17: Finished Epoch[24 of 25]: [Training Set] TrainLossPerSample = 34.548069; TotalSamplesSeen = 26995752; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0198
+04/12/2016 10:10:17: Finished Epoch[24 of 25]: [Training] TrainLossPerSample = 34.548069; TotalSamplesSeen = 26995752; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0198
 04/12/2016 10:10:17: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn.24'
 
 04/12/2016 10:10:17: Starting Epoch 25: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -11446,7 +11446,7 @@ minibatchiterator: epoch 24: frames [26995752..28120575] (first utterance at fra
 04/12/2016 10:10:28:  Epoch[25 of 25]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample = 33.47187500; TotalTime = 0.0245s; SamplesPerSecond = 104600.8
 04/12/2016 10:10:28:  Epoch[25 of 25]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample = 33.42968750; TotalTime = 0.0244s; SamplesPerSecond = 104948.1
 04/12/2016 10:10:28:  Epoch[25 of 25]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample = 33.64843750; TotalTime = 0.0244s; SamplesPerSecond = 104750.6
-04/12/2016 10:10:28: Finished Epoch[25 of 25]: [Training Set] TrainLossPerSample = 34.213436; TotalSamplesSeen = 28120575; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0013
+04/12/2016 10:10:28: Finished Epoch[25 of 25]: [Training] TrainLossPerSample = 34.213436; TotalSamplesSeen = 28120575; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.0013
 04/12/2016 10:10:28: SGD: Saving checkpoint model '/tmp/cntk-test-20160412100546.71833/Examples/Speech/TIMIT_WriteBottleneck@release_gpu/exp/TrainAutoEncoder/model/cntkSpeech.dnn'
 04/12/2016 10:10:28: CNTKCommandTrainEnd: TIMIT_TrainAutoEncoder
 

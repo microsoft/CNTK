@@ -922,14 +922,14 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 16:26:36: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 4.7228739; TotalSamplesSeen = 81; EvalErrorPrediction = 4.7228739; learningRatePerSample = 0.1; EpochTime=0.093608
+04/11/2016 16:26:36: Finished Epoch[ 1 of 3]: [Training] ce = 4.7228739; TotalSamplesSeen = 81; err = 4.7228739; learningRatePerSample = 0.1; EpochTime=0.093608
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 4.3767167    Perplexity = 79.576334    Err: CrossEntropyWithSoftmax/Sample = 4.3767167    Perplexity = 79.576334    
-04/11/2016 16:26:36: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 4.3767167; EvalErrorPrediction = 4.3767167
+Final Results: Minibatch[1-51]: * 81    ce = 4.3767167    perplexity = 79.576334    err = 4.3767167    perplexity = 79.576334    
+04/11/2016 16:26:36: Finished Epoch[ 1 of 3]: [Validate] ce = 4.3767167; err = 4.3767167
 04/11/2016 16:26:36: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_cpu/cntkdebug.dnn.1'
 
 04/11/2016 16:26:36: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
@@ -940,14 +940,14 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 16:26:36: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 3.9687744; TotalSamplesSeen = 162; EvalErrorPrediction = 3.9687744; learningRatePerSample = 0.1; EpochTime=0.082232
+04/11/2016 16:26:36: Finished Epoch[ 2 of 3]: [Training] ce = 3.9687744; TotalSamplesSeen = 162; err = 3.9687744; learningRatePerSample = 0.1; EpochTime=0.082232
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 3.1104245    Perplexity = 22.430563    Err: CrossEntropyWithSoftmax/Sample = 3.1104245    Perplexity = 22.430563    
-04/11/2016 16:26:36: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 3.1104245; EvalErrorPrediction = 3.1104245
+Final Results: Minibatch[1-51]: * 81    ce = 3.1104245    perplexity = 22.430563    err = 3.1104245    perplexity = 22.430563    
+04/11/2016 16:26:36: Finished Epoch[ 2 of 3]: [Validate] ce = 3.1104245; err = 3.1104245
 04/11/2016 16:26:36: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_cpu/cntkdebug.dnn.2'
 
 04/11/2016 16:26:36: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
@@ -958,14 +958,14 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 16:26:36: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 2.6066075; TotalSamplesSeen = 243; EvalErrorPrediction = 2.6066075; learningRatePerSample = 0.1; EpochTime=0.075353
+04/11/2016 16:26:36: Finished Epoch[ 3 of 3]: [Training] ce = 2.6066075; TotalSamplesSeen = 243; err = 2.6066075; learningRatePerSample = 0.1; EpochTime=0.075353
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    cr: CrossEntropyWithSoftmax/Sample = 2.2607044    Perplexity = 9.5898421    Err: CrossEntropyWithSoftmax/Sample = 2.2607044    Perplexity = 9.5898421    
-04/11/2016 16:26:36: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.2607044; EvalErrorPrediction = 2.2607044
+Final Results: Minibatch[1-51]: * 81    ce = 2.2607044    perplexity = 9.5898421    err = 2.2607044    perplexity = 9.5898421    
+04/11/2016 16:26:36: Finished Epoch[ 3 of 3]: [Validate] ce = 2.2607044; err = 2.2607044
 04/11/2016 16:26:36: SGD: Saving checkpoint model '/tmp/cntk-test-20160411162614.927351/Text_SLU@release_cpu/cntkdebug.dnn'
 04/11/2016 16:26:36: CNTKCommandTrainEnd: LSTM
 

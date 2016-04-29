@@ -393,31 +393,31 @@ MPI Rank 0:
 MPI Rank 0: 04/22/2016 07:22:15: Starting Epoch 1: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:22:15: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 0: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  3.44191360; TotalTime = 5.2138s; SamplesPerSecond = 1964.0
-MPI Rank 0: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  2.68707848; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
-MPI Rank 0: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0937
-MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    Perplexity = 8.4828544    
-MPI Rank 0: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.138047
+MPI Rank 0: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  3.44191360; TotalTime = 5.2138s; SamplesPerSecond = 1964.0
+MPI Rank 0: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  2.68707848; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
+MPI Rank 0: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training] ce = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0937
+MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    perplexity = 8.4828544    
+MPI Rank 0: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validate] ce = 2.138047
 MPI Rank 0: 04/22/2016 07:22:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SparseDSSM@release_cpu/Models/dssm.net.1'
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:22:39: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:22:39: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 0: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.99931793; TotalTime = 4.6884s; SamplesPerSecond = 2184.1
-MPI Rank 0: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.89505386; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
-MPI Rank 0: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
-MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    Perplexity = 6.1447003    
-MPI Rank 0: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.81559
+MPI Rank 0: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.99931793; TotalTime = 4.6884s; SamplesPerSecond = 2184.1
+MPI Rank 0: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.89505386; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
+MPI Rank 0: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training] ce = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
+MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    perplexity = 6.1447003    
+MPI Rank 0: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validate] ce = 1.81559
 MPI Rank 0: 04/22/2016 07:23:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SparseDSSM@release_cpu/Models/dssm.net.2'
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:23:02: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:23:02: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 0: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.75707302; TotalTime = 4.6549s; SamplesPerSecond = 2199.8
-MPI Rank 0: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.74772396; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
-MPI Rank 0: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
-MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    Perplexity = 5.4690235    
-MPI Rank 0: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.6991001
+MPI Rank 0: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.75707302; TotalTime = 4.6549s; SamplesPerSecond = 2199.8
+MPI Rank 0: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.74772396; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
+MPI Rank 0: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training] ce = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
+MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    perplexity = 5.4690235    
+MPI Rank 0: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validate] ce = 1.6991001
 MPI Rank 0: 04/22/2016 07:23:25: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SparseDSSM@release_cpu/Models/dssm.net'
 MPI Rank 0: 04/22/2016 07:23:26: CNTKCommandTrainEnd: train
 MPI Rank 0: 
@@ -707,29 +707,29 @@ MPI Rank 1:
 MPI Rank 1: 04/22/2016 07:22:15: Starting Epoch 1: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:22:15: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 1: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  3.47101059; TotalTime = 5.2145s; SamplesPerSecond = 1963.7
-MPI Rank 1: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  2.69970703; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
-MPI Rank 1: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0936
-MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    Perplexity = 8.4828544    
-MPI Rank 1: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.138047
+MPI Rank 1: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  3.47101059; TotalTime = 5.2145s; SamplesPerSecond = 1963.7
+MPI Rank 1: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  2.69970703; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
+MPI Rank 1: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training] ce = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0936
+MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    perplexity = 8.4828544    
+MPI Rank 1: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validate] ce = 2.138047
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:22:39: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:22:39: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 1: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  2.02775860; TotalTime = 4.7035s; SamplesPerSecond = 2177.1
-MPI Rank 1: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.90990696; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
-MPI Rank 1: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
-MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    Perplexity = 6.1447003    
-MPI Rank 1: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.81559
+MPI Rank 1: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  2.02775860; TotalTime = 4.7035s; SamplesPerSecond = 2177.1
+MPI Rank 1: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.90990696; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
+MPI Rank 1: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training] ce = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
+MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    perplexity = 6.1447003    
+MPI Rank 1: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validate] ce = 1.81559
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:23:02: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:23:02: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 1: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.77812557; TotalTime = 4.6705s; SamplesPerSecond = 2192.5
-MPI Rank 1: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.74922504; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
-MPI Rank 1: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
-MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    Perplexity = 5.4690235    
-MPI Rank 1: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.6991001
+MPI Rank 1: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.77812557; TotalTime = 4.6705s; SamplesPerSecond = 2192.5
+MPI Rank 1: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.74922504; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
+MPI Rank 1: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training] ce = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
+MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    perplexity = 5.4690235    
+MPI Rank 1: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validate] ce = 1.6991001
 MPI Rank 1: 04/22/2016 07:23:26: CNTKCommandTrainEnd: train
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:23:26: Action "train" complete.
@@ -1018,29 +1018,29 @@ MPI Rank 2:
 MPI Rank 2: 04/22/2016 07:22:15: Starting Epoch 1: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:22:15: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 2: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  3.44945602; TotalTime = 5.2140s; SamplesPerSecond = 1963.9
-MPI Rank 2: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  2.72469749; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
-MPI Rank 2: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0937
-MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    Perplexity = 8.4828544    
-MPI Rank 2: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.138047
+MPI Rank 2: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  3.44945602; TotalTime = 5.2140s; SamplesPerSecond = 1963.9
+MPI Rank 2: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  2.72469749; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
+MPI Rank 2: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training] ce = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0937
+MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    perplexity = 8.4828544    
+MPI Rank 2: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validate] ce = 2.138047
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:22:39: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:22:39: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 2: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  2.05766125; TotalTime = 4.6885s; SamplesPerSecond = 2184.1
-MPI Rank 2: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.92501583; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
-MPI Rank 2: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
-MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    Perplexity = 6.1447003    
-MPI Rank 2: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.81559
+MPI Rank 2: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  2.05766125; TotalTime = 4.6885s; SamplesPerSecond = 2184.1
+MPI Rank 2: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.92501583; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
+MPI Rank 2: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training] ce = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
+MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    perplexity = 6.1447003    
+MPI Rank 2: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validate] ce = 1.81559
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:23:02: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:23:02: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 2: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.82333508; TotalTime = 4.6565s; SamplesPerSecond = 2199.1
-MPI Rank 2: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.76784000; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
-MPI Rank 2: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
-MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    Perplexity = 5.4690235    
-MPI Rank 2: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.6991001
+MPI Rank 2: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.82333508; TotalTime = 4.6565s; SamplesPerSecond = 2199.1
+MPI Rank 2: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.76784000; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
+MPI Rank 2: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training] ce = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
+MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    perplexity = 5.4690235    
+MPI Rank 2: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validate] ce = 1.6991001
 MPI Rank 2: 04/22/2016 07:23:26: CNTKCommandTrainEnd: train
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:23:26: Action "train" complete.
@@ -1329,29 +1329,29 @@ MPI Rank 3:
 MPI Rank 3: 04/22/2016 07:22:15: Starting Epoch 1: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:22:15: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 3: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  3.44398956; TotalTime = 5.2232s; SamplesPerSecond = 1960.5
-MPI Rank 3: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  2.71102791; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
-MPI Rank 3: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training Set] CrossEntropyWithSoftmax = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0936
-MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    Perplexity = 8.4828544    
-MPI Rank 3: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validation Set] CrossEntropyWithSoftmax = 2.138047
+MPI Rank 3: 04/22/2016 07:22:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  3.44398956; TotalTime = 5.2232s; SamplesPerSecond = 1960.5
+MPI Rank 3: 04/22/2016 07:22:25:  Epoch[ 1 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  2.71102791; TotalTime = 4.5556s; SamplesPerSecond = 2247.8
+MPI Rank 3: 04/22/2016 07:22:27: Finished Epoch[ 1 of 3]: [Training] ce = 2.9191892; TotalSamplesSeen = 102399; learningRatePerSample = 9.9999997e-05; EpochTime=12.0936
+MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 2.138047    perplexity = 8.4828544    
+MPI Rank 3: 04/22/2016 07:22:37: Finished Epoch[ 1 of 3]: [Validate] ce = 2.138047
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:22:39: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:22:39: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 3: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  2.00262756; TotalTime = 4.6995s; SamplesPerSecond = 2179.0
-MPI Rank 3: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.90484047; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
-MPI Rank 3: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
-MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    Perplexity = 6.1447003    
-MPI Rank 3: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.81559
+MPI Rank 3: 04/22/2016 07:22:44:  Epoch[ 2 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  2.00262756; TotalTime = 4.6995s; SamplesPerSecond = 2179.0
+MPI Rank 3: 04/22/2016 07:22:48:  Epoch[ 2 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.90484047; TotalTime = 4.6310s; SamplesPerSecond = 2211.2
+MPI Rank 3: 04/22/2016 07:22:51: Finished Epoch[ 2 of 3]: [Training] ce = 1.9437952; TotalSamplesSeen = 204798; learningRatePerSample = 9.9999997e-05; EpochTime=11.7187
+MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.81559    perplexity = 6.1447003    
+MPI Rank 3: 04/22/2016 07:23:00: Finished Epoch[ 2 of 3]: [Validate] ce = 1.81559
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:23:02: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:23:02: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 3: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.75186119; TotalTime = 4.6715s; SamplesPerSecond = 2192.0
-MPI Rank 3: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.73868065; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
-MPI Rank 3: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
-MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    Perplexity = 5.4690235    
-MPI Rank 3: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.6991001
+MPI Rank 3: 04/22/2016 07:23:07:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.75186119; TotalTime = 4.6715s; SamplesPerSecond = 2192.0
+MPI Rank 3: 04/22/2016 07:23:12:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.73868065; TotalTime = 4.6771s; SamplesPerSecond = 2189.4
+MPI Rank 3: 04/22/2016 07:23:14: Finished Epoch[ 3 of 3]: [Training] ce = 1.7563989; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=11.7636
+MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.6991001    perplexity = 5.4690235    
+MPI Rank 3: 04/22/2016 07:23:24: Finished Epoch[ 3 of 3]: [Validate] ce = 1.6991001
 MPI Rank 3: 04/22/2016 07:23:26: CNTKCommandTrainEnd: train
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:23:26: Action "train" complete.
@@ -1755,11 +1755,11 @@ MPI Rank 0:
 MPI Rank 0: 04/22/2016 07:23:30: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 0: 
 MPI Rank 0: 04/22/2016 07:23:30: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 0: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.73774796; TotalTime = 5.2942s; SamplesPerSecond = 1934.2
-MPI Rank 0: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.68121185; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
-MPI Rank 0: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
-MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    Perplexity = 5.5196448    
-MPI Rank 0: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.7083135
+MPI Rank 0: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.73774796; TotalTime = 5.2942s; SamplesPerSecond = 1934.2
+MPI Rank 0: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.68121185; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
+MPI Rank 0: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training] ce = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
+MPI Rank 0: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    perplexity = 5.5196448    
+MPI Rank 0: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validate] ce = 1.7083135
 MPI Rank 0: 04/22/2016 07:23:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SparseDSSM@release_cpu/Models/dssm.net'
 MPI Rank 0: 04/22/2016 07:23:54: CNTKCommandTrainEnd: train
 MPI Rank 0: 
@@ -2049,11 +2049,11 @@ MPI Rank 1:
 MPI Rank 1: 04/22/2016 07:23:30: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:23:30: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 1: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.78650436; TotalTime = 5.2953s; SamplesPerSecond = 1933.8
-MPI Rank 1: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.77671204; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
-MPI Rank 1: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
-MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    Perplexity = 5.5196448    
-MPI Rank 1: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.7083135
+MPI Rank 1: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.78650436; TotalTime = 5.2953s; SamplesPerSecond = 1933.8
+MPI Rank 1: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.77671204; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
+MPI Rank 1: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training] ce = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
+MPI Rank 1: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    perplexity = 5.5196448    
+MPI Rank 1: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validate] ce = 1.7083135
 MPI Rank 1: 04/22/2016 07:23:54: CNTKCommandTrainEnd: train
 MPI Rank 1: 
 MPI Rank 1: 04/22/2016 07:23:54: Action "train" complete.
@@ -2342,11 +2342,11 @@ MPI Rank 2:
 MPI Rank 2: 04/22/2016 07:23:30: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:23:30: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 2: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.83119640; TotalTime = 5.2942s; SamplesPerSecond = 1934.2
-MPI Rank 2: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.79677334; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
-MPI Rank 2: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3892
-MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    Perplexity = 5.5196448    
-MPI Rank 2: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.7083135
+MPI Rank 2: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.83119640; TotalTime = 5.2942s; SamplesPerSecond = 1934.2
+MPI Rank 2: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.79677334; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
+MPI Rank 2: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training] ce = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3892
+MPI Rank 2: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    perplexity = 5.5196448    
+MPI Rank 2: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validate] ce = 1.7083135
 MPI Rank 2: 04/22/2016 07:23:54: CNTKCommandTrainEnd: train
 MPI Rank 2: 
 MPI Rank 2: 04/22/2016 07:23:54: Action "train" complete.
@@ -2635,11 +2635,11 @@ MPI Rank 3:
 MPI Rank 3: 04/22/2016 07:23:30: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 38876.0 samples
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:23:30: Starting minibatch loop, distributed reading is ENABLED.
-MPI Rank 3: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; CrossEntropyWithSoftmax =  1.75967293; TotalTime = 5.3042s; SamplesPerSecond = 1930.5
-MPI Rank 3: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; CrossEntropyWithSoftmax =  1.76906281; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
-MPI Rank 3: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training Set] CrossEntropyWithSoftmax = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
-MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    Perplexity = 5.5196448    
-MPI Rank 3: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validation Set] CrossEntropyWithSoftmax = 1.7083135
+MPI Rank 3: 04/22/2016 07:23:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 40.00%]: * 10240; ce =  1.75967293; TotalTime = 5.3042s; SamplesPerSecond = 1930.5
+MPI Rank 3: 04/22/2016 07:23:40:  Epoch[ 3 of 3]-Minibatch[  11-  20, 80.00%]: * 10240; ce =  1.76906281; TotalTime = 4.6157s; SamplesPerSecond = 2218.5
+MPI Rank 3: 04/22/2016 07:23:42: Finished Epoch[ 3 of 3]: [Training] ce = 1.7604745; TotalSamplesSeen = 307197; learningRatePerSample = 9.9999997e-05; EpochTime=12.3891
+MPI Rank 3: Final Results: Minibatch[1-25]: * 409596    CE: CrossEntropyWithSoftmax/Sample = 1.7083135    perplexity = 5.5196448    
+MPI Rank 3: 04/22/2016 07:23:52: Finished Epoch[ 3 of 3]: [Validate] ce = 1.7083135
 MPI Rank 3: 04/22/2016 07:23:54: CNTKCommandTrainEnd: train
 MPI Rank 3: 
 MPI Rank 3: 04/22/2016 07:23:54: Action "train" complete.
