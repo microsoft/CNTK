@@ -129,7 +129,7 @@ def seqcla():
     ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
     ce.tag = "criterion"
     
-    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
+    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=10)    
     
     with LocalExecutionContext('seqcla', clean_up=False) as ctx:
         # train the model
@@ -148,21 +148,29 @@ def seqcla():
 """
 Test the accuracy of the trained model.
 """
-def test_accuracy(test_file, output_filename_base):
+def calc_accuracy(test_file, output_filename_base):
     
-    # load correct answers
-    correct=[]
-    with open(test_file, 'r', encoding='utf8') as f_in:
-        i=0        
+    # load labels
+    labels=[]
+    with open(test_file, 'r', encoding='utf8') as f_in:      
         for l in f_in:
             dd = l.split('|')
             if len(dd) > 2:
                 x = dd[2].strip().split(' ')[1:]
-                correct.append(np.argmax(x))
+                labels.append(np.argmax(x))
                 
     # load predicted answers
     predicted=[]
+    with open(output_filename_base + ".z", 'r', encoding='utf8') as f_in:      
+        for l in f_in:
+            predicted.append(np.argmax(l.strip().split(' ')))
+            
+    correct = 0
+    for i in range(len(labels)):
+        if labels[i] == predicted[i]:
+            correct += 1
     
+    print(float(correct) / float(len(labels)))
 
 if (__name__ == "__main__"):
     seqcla()
