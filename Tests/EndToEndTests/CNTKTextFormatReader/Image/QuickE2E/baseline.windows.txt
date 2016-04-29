@@ -483,36 +483,36 @@ Allocating matrices for forward and/or backward propagation.
 04/20/2016 13:14:17: Starting Epoch 1: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:17: Starting minibatch loop.
-04/20/2016 13:14:18:  Epoch[ 1 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.34056128; EvalErrorPrediction = 0.90000000; TotalTime = 0.4467s; SamplesPerSecond = 2238.6
-04/20/2016 13:14:18: Finished Epoch[ 1 of 5]: [Training] CrossEntropyWithSoftmax = 2.3405613; TotalSamplesSeen = 1000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.44768
+04/20/2016 13:14:18:  Epoch[ 1 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.34056128; err = 0.90000000; TotalTime = 0.4467s; SamplesPerSecond = 2238.6
+04/20/2016 13:14:18: Finished Epoch[ 1 of 5]: [Training] ce = 2.3405613; TotalSamplesSeen = 1000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.44768
 04/20/2016 13:14:18: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn.1'
 
 04/20/2016 13:14:18: Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:18: Starting minibatch loop.
-04/20/2016 13:14:18:  Epoch[ 2 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.33912402; EvalErrorPrediction = 0.90000000; TotalTime = 0.1282s; SamplesPerSecond = 7800.9
-04/20/2016 13:14:18: Finished Epoch[ 2 of 5]: [Training] CrossEntropyWithSoftmax = 2.339124; TotalSamplesSeen = 2000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.128467
+04/20/2016 13:14:18:  Epoch[ 2 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.33912402; err = 0.90000000; TotalTime = 0.1282s; SamplesPerSecond = 7800.9
+04/20/2016 13:14:18: Finished Epoch[ 2 of 5]: [Training] ce = 2.339124; TotalSamplesSeen = 2000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.128467
 04/20/2016 13:14:18: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn.2'
 
 04/20/2016 13:14:18: Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:18: Starting minibatch loop.
-04/20/2016 13:14:18:  Epoch[ 3 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.33697266; EvalErrorPrediction = 0.90000000; TotalTime = 0.1223s; SamplesPerSecond = 8174.1
-04/20/2016 13:14:18: Finished Epoch[ 3 of 5]: [Training] CrossEntropyWithSoftmax = 2.3369727; TotalSamplesSeen = 3000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.122613
+04/20/2016 13:14:18:  Epoch[ 3 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.33697266; err = 0.90000000; TotalTime = 0.1223s; SamplesPerSecond = 8174.1
+04/20/2016 13:14:18: Finished Epoch[ 3 of 5]: [Training] ce = 2.3369727; TotalSamplesSeen = 3000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.122613
 04/20/2016 13:14:18: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn.3'
 
 04/20/2016 13:14:18: Starting Epoch 4: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:18: Starting minibatch loop.
-04/20/2016 13:14:18:  Epoch[ 4 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.33485522; EvalErrorPrediction = 0.90000000; TotalTime = 0.1195s; SamplesPerSecond = 8371.4
-04/20/2016 13:14:18: Finished Epoch[ 4 of 5]: [Training] CrossEntropyWithSoftmax = 2.3348552; TotalSamplesSeen = 4000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.119694
+04/20/2016 13:14:18:  Epoch[ 4 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.33485522; err = 0.90000000; TotalTime = 0.1195s; SamplesPerSecond = 8371.4
+04/20/2016 13:14:18: Finished Epoch[ 4 of 5]: [Training] ce = 2.3348552; TotalSamplesSeen = 4000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.119694
 04/20/2016 13:14:18: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn.4'
 
 04/20/2016 13:14:18: Starting Epoch 5: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:18: Starting minibatch loop.
-04/20/2016 13:14:19:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.33271533; EvalErrorPrediction = 0.90000000; TotalTime = 0.1198s; SamplesPerSecond = 8350.2
-04/20/2016 13:14:19: Finished Epoch[ 5 of 5]: [Training] CrossEntropyWithSoftmax = 2.3327153; TotalSamplesSeen = 5000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.119986
+04/20/2016 13:14:19:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.33271533; err = 0.90000000; TotalTime = 0.1198s; SamplesPerSecond = 8350.2
+04/20/2016 13:14:19: Finished Epoch[ 5 of 5]: [Training] ce = 2.3327153; TotalSamplesSeen = 5000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.119986
 04/20/2016 13:14:19: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn'
 04/20/2016 13:14:19: CNTKCommandTrainEnd: train
 
@@ -1081,8 +1081,8 @@ Allocating matrices for forward and/or backward propagation.
 04/20/2016 13:14:20: Starting Epoch 5: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 13:14:20: Starting minibatch loop.
-04/20/2016 13:14:21:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; CrossEntropyWithSoftmax =  2.33337842; EvalErrorPrediction = 0.90000000; TotalTime = 0.4450s; SamplesPerSecond = 2247.2
-04/20/2016 13:14:21: Finished Epoch[ 5 of 5]: [Training] CrossEntropyWithSoftmax = 2.3333784; TotalSamplesSeen = 1000; EvalErrorPrediction = 0.9; learningRatePerSample = 2e-006; EpochTime=0.446553
+04/20/2016 13:14:21:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.33337842; err = 0.90000000; TotalTime = 0.4450s; SamplesPerSecond = 2247.2
+04/20/2016 13:14:21: Finished Epoch[ 5 of 5]: [Training] ce = 2.3333784; TotalSamplesSeen = 1000; err = 0.9; learningRatePerSample = 2e-006; EpochTime=0.446553
 04/20/2016 13:14:21: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160420141416.493608\CNTKTextFormatReader\Image_QuickE2E@release_gpu/models/cntk.dnn'
 04/20/2016 13:14:21: CNTKCommandTrainEnd: train
 

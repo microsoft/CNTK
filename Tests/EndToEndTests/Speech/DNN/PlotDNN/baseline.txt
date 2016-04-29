@@ -430,8 +430,8 @@ requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 1
 minibatchiterator: epoch 0: frames [0..4096] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
 04/18/2016 12:15:42: Starting minibatch loop.
-04/18/2016 12:15:42:  Epoch[ 1 of 1]-Minibatch[   1-  10, 62.50%]: SamplesSeen = 2560; TrainLossPerSample =  4.31999168; EvalErr[0]PerSample = 0.90117187; TotalTime = 0.3796s; SamplesPerSecond = 6744.2
-04/18/2016 12:15:43: Finished Epoch[ 1 of 1]: [Training] TrainLossPerSample = 4.2283239; TotalSamplesSeen = 4096; EvalErrPerSample = 0.89477539; AvgLearningRatePerSample = 0.00390625; EpochTime=0.591265
+04/18/2016 12:15:42:  Epoch[ 1 of 1]-Minibatch[   1-  10, 62.50%]: * 2560; CrossEntropyWithSoftmax =  4.31999168; EvalErrorPrediction = 0.90117187; TotalTime = 0.3796s; SamplesPerSecond = 6744.2
+04/18/2016 12:15:43: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 4.2283239; TotalSamplesSeen = 4096; EvalErrorPrediction = 0.89477539; learningRatePerSample = 0.00390625; EpochTime=0.591265
 04/18/2016 12:15:43: SGD: Saving checkpoint model 'C:\Users\erw\AppData\Local\Temp\cntk-test-20160418121457.523360\Speech\DNN_PlotDNN@debug_gpu/models/cntkSpeech.dnn'
 04/18/2016 12:15:43: CNTKCommandTrainEnd: speechTrain
 

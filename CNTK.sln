@@ -1056,6 +1056,61 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{C30742B5-4
 		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\Data\SimpleDataTrain.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\Data\SimpleDataTrain.txt
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WriteCommand", "WriteCommand", "{3E9BD61F-1F0A-4966-BE17-803AEFD1DFA4}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.cpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.cpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.gpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.gpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.cpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.cpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.gpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.gpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\cntk.cntk = tests\endtoendtests\Speech\DNN\WriteCommand\cntk.cntk
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.cpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.cpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.gpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.gpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.cpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.cpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.gpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.gpu
+		Tests\endtoendtests\Speech\DNN\WriteCommand\run-test = Tests\endtoendtests\Speech\DNN\WriteCommand\run-test
+		tests\endtoendtests\Speech\DNN\WriteCommand\testcases.yml = tests\endtoendtests\Speech\DNN\WriteCommand\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelBufferedAsyncGradientAggregation", "ParallelBufferedAsyncGradientAggregation", "{5560DDD4-1E6E-4F41-B9BD-F52A19DF0B31}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.gpu.txt
+		Tests\endtoendtests\Speech\DNN\ParallelBufferedAsyncGradientAggregation\run-test = Tests\endtoendtests\Speech\DNN\ParallelBufferedAsyncGradientAggregation\run-test
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelCrossValidation", "ParallelCrossValidation", "{9834E864-A8CD-4D28-A3C9-F79FE0F421AE}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\cntkcv.cntk = tests\endtoendtests\speech\dnn\ParallelCrossValidation\cntkcv.cntk
+		Tests\endtoendtests\Speech\DNN\ParallelCrossValidation\run-test = Tests\endtoendtests\Speech\DNN\ParallelCrossValidation\run-test
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelCrossValidation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelNoQuantizationBufferedAsyncGradientAggregation", "ParallelNoQuantizationBufferedAsyncGradientAggregation", "{40F65441-A7B7-4425-8E75-CD74AB262F3F}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.gpu.txt
+		Tests\endtoendtests\Speech\DNN\ParallelNoQuantizationBufferedAsyncGradientAggregation\run-test = Tests\endtoendtests\Speech\DNN\ParallelNoQuantizationBufferedAsyncGradientAggregation\run-test
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PlotDNN", "PlotDNN", "{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\endtoendtests\Speech\DNN\PlotDNN\baseline.txt = Tests\endtoendtests\Speech\DNN\PlotDNN\baseline.txt
+		tests\endtoendtests\speech\dnn\PlotDNN\cntkSpeech.dnn.dot = tests\endtoendtests\speech\dnn\PlotDNN\cntkSpeech.dnn.dot
+		tests\endtoendtests\speech\dnn\PlotDNN\plot.cntk = tests\endtoendtests\speech\dnn\PlotDNN\plot.cntk
+		Tests\endtoendtests\Speech\DNN\PlotDNN\run-test = Tests\endtoendtests\Speech\DNN\PlotDNN\run-test
+		tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml = tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1429,5 +1484,10 @@ Global
 		{59980D6E-1732-4809-B17C-6EF4B4F5CF8B} = {B1110F99-A307-4745-B464-7FD75951645A}
 		{6FB9C411-C19A-403A-94C2-F7DF393F7612} = {59980D6E-1732-4809-B17C-6EF4B4F5CF8B}
 		{C30742B5-4DBE-4D80-B429-901856E4043D} = {369656B8-DDFD-412E-901B-DFEBCC31ABE0}
+		{3E9BD61F-1F0A-4966-BE17-803AEFD1DFA4} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{5560DDD4-1E6E-4F41-B9BD-F52A19DF0B31} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{9834E864-A8CD-4D28-A3C9-F79FE0F421AE} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{40F65441-A7B7-4425-8E75-CD74AB262F3F} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 	EndGlobalSection
 EndGlobal

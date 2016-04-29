@@ -458,63 +458,63 @@ Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.90
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 1 of 3]-Minibatch[   1-  10, 3.13%]: SamplesSeen = 640; TrainLossPerSample =  4.46944885; EvalErr[0]PerSample = 0.90781250; TotalTime = 8.0863s; SamplesPerSecond = 79.1
- Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: SamplesSeen = 640; TrainLossPerSample =  4.22300034; EvalErr[0]PerSample = 0.90156250; TotalTime = 8.3533s; SamplesPerSecond = 76.6
- Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: SamplesSeen = 640; TrainLossPerSample =  3.93971329; EvalErr[0]PerSample = 0.84687500; TotalTime = 7.7989s; SamplesPerSecond = 82.1
- Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: SamplesSeen = 640; TrainLossPerSample =  3.92341614; EvalErr[0]PerSample = 0.90468750; TotalTime = 7.4403s; SamplesPerSecond = 86.0
- Epoch[ 1 of 3]-Minibatch[  41-  50, 15.63%]: SamplesSeen = 640; TrainLossPerSample =  3.84074249; EvalErr[0]PerSample = 0.91093750; TotalTime = 8.4981s; SamplesPerSecond = 75.3
- Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: SamplesSeen = 640; TrainLossPerSample =  3.71251984; EvalErr[0]PerSample = 0.88437500; TotalTime = 8.1020s; SamplesPerSecond = 79.0
- Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: SamplesSeen = 640; TrainLossPerSample =  3.51563110; EvalErr[0]PerSample = 0.82500000; TotalTime = 7.5585s; SamplesPerSecond = 84.7
- Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: SamplesSeen = 640; TrainLossPerSample =  3.49348755; EvalErr[0]PerSample = 0.81093750; TotalTime = 7.4555s; SamplesPerSecond = 85.8
- Epoch[ 1 of 3]-Minibatch[  81-  90, 28.13%]: SamplesSeen = 640; TrainLossPerSample =  3.34739685; EvalErr[0]PerSample = 0.76562500; TotalTime = 7.8433s; SamplesPerSecond = 81.6
- Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: SamplesSeen = 640; TrainLossPerSample =  3.51961060; EvalErr[0]PerSample = 0.79843750; TotalTime = 8.2672s; SamplesPerSecond = 77.4
- Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: SamplesSeen = 640; TrainLossPerSample =  3.24656067; EvalErr[0]PerSample = 0.80312500; TotalTime = 7.4795s; SamplesPerSecond = 85.6
- Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: SamplesSeen = 640; TrainLossPerSample =  3.33397217; EvalErr[0]PerSample = 0.80000000; TotalTime = 7.7651s; SamplesPerSecond = 82.4
- Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.63%]: SamplesSeen = 640; TrainLossPerSample =  3.17780457; EvalErr[0]PerSample = 0.77031250; TotalTime = 7.8670s; SamplesPerSecond = 81.4
- Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: SamplesSeen = 640; TrainLossPerSample =  3.09845886; EvalErr[0]PerSample = 0.76875000; TotalTime = 7.8823s; SamplesPerSecond = 81.2
- Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: SamplesSeen = 640; TrainLossPerSample =  3.06457214; EvalErr[0]PerSample = 0.72968750; TotalTime = 8.7182s; SamplesPerSecond = 73.4
- Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: SamplesSeen = 640; TrainLossPerSample =  2.91632080; EvalErr[0]PerSample = 0.69531250; TotalTime = 7.7545s; SamplesPerSecond = 82.5
- Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.13%]: SamplesSeen = 640; TrainLossPerSample =  2.90608521; EvalErr[0]PerSample = 0.73281250; TotalTime = 7.9192s; SamplesPerSecond = 80.8
- Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: SamplesSeen = 640; TrainLossPerSample =  2.74095459; EvalErr[0]PerSample = 0.65937500; TotalTime = 7.6856s; SamplesPerSecond = 83.3
- Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: SamplesSeen = 640; TrainLossPerSample =  2.67088013; EvalErr[0]PerSample = 0.67343750; TotalTime = 7.9971s; SamplesPerSecond = 80.0
- Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: SamplesSeen = 640; TrainLossPerSample =  2.67608643; EvalErr[0]PerSample = 0.66406250; TotalTime = 8.2668s; SamplesPerSecond = 77.4
- Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.63%]: SamplesSeen = 640; TrainLossPerSample =  2.54733276; EvalErr[0]PerSample = 0.62968750; TotalTime = 7.6795s; SamplesPerSecond = 83.3
- Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: SamplesSeen = 640; TrainLossPerSample =  2.61925659; EvalErr[0]PerSample = 0.67343750; TotalTime = 8.1318s; SamplesPerSecond = 78.7
- Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: SamplesSeen = 640; TrainLossPerSample =  2.52387695; EvalErr[0]PerSample = 0.65781250; TotalTime = 8.0287s; SamplesPerSecond = 79.7
- Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: SamplesSeen = 640; TrainLossPerSample =  2.47543945; EvalErr[0]PerSample = 0.63437500; TotalTime = 8.1587s; SamplesPerSecond = 78.4
- Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.13%]: SamplesSeen = 640; TrainLossPerSample =  2.43265381; EvalErr[0]PerSample = 0.61406250; TotalTime = 7.5755s; SamplesPerSecond = 84.5
- Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: SamplesSeen = 640; TrainLossPerSample =  2.41727905; EvalErr[0]PerSample = 0.63125000; TotalTime = 7.7612s; SamplesPerSecond = 82.5
- Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: SamplesSeen = 640; TrainLossPerSample =  2.17673950; EvalErr[0]PerSample = 0.57812500; TotalTime = 7.9344s; SamplesPerSecond = 80.7
- Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: SamplesSeen = 640; TrainLossPerSample =  2.31020508; EvalErr[0]PerSample = 0.64062500; TotalTime = 7.7126s; SamplesPerSecond = 83.0
- Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.63%]: SamplesSeen = 640; TrainLossPerSample =  2.26400757; EvalErr[0]PerSample = 0.61093750; TotalTime = 7.5957s; SamplesPerSecond = 84.3
- Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: SamplesSeen = 640; TrainLossPerSample =  2.15885010; EvalErr[0]PerSample = 0.58281250; TotalTime = 7.7268s; SamplesPerSecond = 82.8
- Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: SamplesSeen = 640; TrainLossPerSample =  2.22711792; EvalErr[0]PerSample = 0.59218750; TotalTime = 8.4360s; SamplesPerSecond = 75.9
- Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: SamplesSeen = 640; TrainLossPerSample =  2.25604858; EvalErr[0]PerSample = 0.60625000; TotalTime = 8.2430s; SamplesPerSecond = 77.6
-Finished Epoch[ 1 of 3]: [Training] TrainLossPerSample = 3.007046; TotalSamplesSeen = 20480; EvalErrPerSample = 0.72827148; AvgLearningRatePerSample = 0.015625; EpochTime=253.747
+ Epoch[ 1 of 3]-Minibatch[   1-  10, 3.13%]: * 640; CrossEntropyWithSoftmax =  4.46944885; EvalErrorPrediction = 0.90781250; TotalTime = 8.0863s; SamplesPerSecond = 79.1
+ Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: * 640; CrossEntropyWithSoftmax =  4.22300034; EvalErrorPrediction = 0.90156250; TotalTime = 8.3533s; SamplesPerSecond = 76.6
+ Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: * 640; CrossEntropyWithSoftmax =  3.93971329; EvalErrorPrediction = 0.84687500; TotalTime = 7.7989s; SamplesPerSecond = 82.1
+ Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: * 640; CrossEntropyWithSoftmax =  3.92341614; EvalErrorPrediction = 0.90468750; TotalTime = 7.4403s; SamplesPerSecond = 86.0
+ Epoch[ 1 of 3]-Minibatch[  41-  50, 15.63%]: * 640; CrossEntropyWithSoftmax =  3.84074249; EvalErrorPrediction = 0.91093750; TotalTime = 8.4981s; SamplesPerSecond = 75.3
+ Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: * 640; CrossEntropyWithSoftmax =  3.71251984; EvalErrorPrediction = 0.88437500; TotalTime = 8.1020s; SamplesPerSecond = 79.0
+ Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: * 640; CrossEntropyWithSoftmax =  3.51563110; EvalErrorPrediction = 0.82500000; TotalTime = 7.5585s; SamplesPerSecond = 84.7
+ Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: * 640; CrossEntropyWithSoftmax =  3.49348755; EvalErrorPrediction = 0.81093750; TotalTime = 7.4555s; SamplesPerSecond = 85.8
+ Epoch[ 1 of 3]-Minibatch[  81-  90, 28.13%]: * 640; CrossEntropyWithSoftmax =  3.34739685; EvalErrorPrediction = 0.76562500; TotalTime = 7.8433s; SamplesPerSecond = 81.6
+ Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: * 640; CrossEntropyWithSoftmax =  3.51961060; EvalErrorPrediction = 0.79843750; TotalTime = 8.2672s; SamplesPerSecond = 77.4
+ Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: * 640; CrossEntropyWithSoftmax =  3.24656067; EvalErrorPrediction = 0.80312500; TotalTime = 7.4795s; SamplesPerSecond = 85.6
+ Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: * 640; CrossEntropyWithSoftmax =  3.33397217; EvalErrorPrediction = 0.80000000; TotalTime = 7.7651s; SamplesPerSecond = 82.4
+ Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.63%]: * 640; CrossEntropyWithSoftmax =  3.17780457; EvalErrorPrediction = 0.77031250; TotalTime = 7.8670s; SamplesPerSecond = 81.4
+ Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: * 640; CrossEntropyWithSoftmax =  3.09845886; EvalErrorPrediction = 0.76875000; TotalTime = 7.8823s; SamplesPerSecond = 81.2
+ Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: * 640; CrossEntropyWithSoftmax =  3.06457214; EvalErrorPrediction = 0.72968750; TotalTime = 8.7182s; SamplesPerSecond = 73.4
+ Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: * 640; CrossEntropyWithSoftmax =  2.91632080; EvalErrorPrediction = 0.69531250; TotalTime = 7.7545s; SamplesPerSecond = 82.5
+ Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.13%]: * 640; CrossEntropyWithSoftmax =  2.90608521; EvalErrorPrediction = 0.73281250; TotalTime = 7.9192s; SamplesPerSecond = 80.8
+ Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: * 640; CrossEntropyWithSoftmax =  2.74095459; EvalErrorPrediction = 0.65937500; TotalTime = 7.6856s; SamplesPerSecond = 83.3
+ Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: * 640; CrossEntropyWithSoftmax =  2.67088013; EvalErrorPrediction = 0.67343750; TotalTime = 7.9971s; SamplesPerSecond = 80.0
+ Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: * 640; CrossEntropyWithSoftmax =  2.67608643; EvalErrorPrediction = 0.66406250; TotalTime = 8.2668s; SamplesPerSecond = 77.4
+ Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.63%]: * 640; CrossEntropyWithSoftmax =  2.54733276; EvalErrorPrediction = 0.62968750; TotalTime = 7.6795s; SamplesPerSecond = 83.3
+ Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: * 640; CrossEntropyWithSoftmax =  2.61925659; EvalErrorPrediction = 0.67343750; TotalTime = 8.1318s; SamplesPerSecond = 78.7
+ Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: * 640; CrossEntropyWithSoftmax =  2.52387695; EvalErrorPrediction = 0.65781250; TotalTime = 8.0287s; SamplesPerSecond = 79.7
+ Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: * 640; CrossEntropyWithSoftmax =  2.47543945; EvalErrorPrediction = 0.63437500; TotalTime = 8.1587s; SamplesPerSecond = 78.4
+ Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.13%]: * 640; CrossEntropyWithSoftmax =  2.43265381; EvalErrorPrediction = 0.61406250; TotalTime = 7.5755s; SamplesPerSecond = 84.5
+ Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: * 640; CrossEntropyWithSoftmax =  2.41727905; EvalErrorPrediction = 0.63125000; TotalTime = 7.7612s; SamplesPerSecond = 82.5
+ Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: * 640; CrossEntropyWithSoftmax =  2.17673950; EvalErrorPrediction = 0.57812500; TotalTime = 7.9344s; SamplesPerSecond = 80.7
+ Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: * 640; CrossEntropyWithSoftmax =  2.31020508; EvalErrorPrediction = 0.64062500; TotalTime = 7.7126s; SamplesPerSecond = 83.0
+ Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.63%]: * 640; CrossEntropyWithSoftmax =  2.26400757; EvalErrorPrediction = 0.61093750; TotalTime = 7.5957s; SamplesPerSecond = 84.3
+ Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.15885010; EvalErrorPrediction = 0.58281250; TotalTime = 7.7268s; SamplesPerSecond = 82.8
+ Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.22711792; EvalErrorPrediction = 0.59218750; TotalTime = 8.4360s; SamplesPerSecond = 75.9
+ Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.25604858; EvalErrorPrediction = 0.60625000; TotalTime = 8.2430s; SamplesPerSecond = 77.6
+Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.007046; TotalSamplesSeen = 20480; EvalErrorPrediction = 0.72827148; learningRatePerSample = 0.015625; EpochTime=253.747
 SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160317224207.69144\Speech\DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn.1'
 
 Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: SamplesSeen = 2560; TrainLossPerSample =  2.10257511; EvalErr[0]PerSample = 0.56484375; TotalTime = 14.7861s; SamplesPerSecond = 173.1
- Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: SamplesSeen = 2560; TrainLossPerSample =  2.00548573; EvalErr[0]PerSample = 0.54843750; TotalTime = 15.4207s; SamplesPerSecond = 166.0
- Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: SamplesSeen = 2560; TrainLossPerSample =  2.00766983; EvalErr[0]PerSample = 0.54960937; TotalTime = 14.6152s; SamplesPerSecond = 175.2
- Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.92049370; EvalErr[0]PerSample = 0.53281250; TotalTime = 16.0739s; SamplesPerSecond = 159.3
- Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: SamplesSeen = 2560; TrainLossPerSample =  1.90178452; EvalErr[0]PerSample = 0.52265625; TotalTime = 15.4519s; SamplesPerSecond = 165.7
- Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.91359482; EvalErr[0]PerSample = 0.53984375; TotalTime = 15.0020s; SamplesPerSecond = 170.6
- Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: SamplesSeen = 2560; TrainLossPerSample =  1.91765289; EvalErr[0]PerSample = 0.53125000; TotalTime = 14.9498s; SamplesPerSecond = 171.2
- Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.87682800; EvalErr[0]PerSample = 0.52890625; TotalTime = 14.7959s; SamplesPerSecond = 173.0
-Finished Epoch[ 2 of 3]: [Training] TrainLossPerSample = 1.9557606; TotalSamplesSeen = 40960; EvalErrPerSample = 0.53979492; AvgLearningRatePerSample = 0.001953125; EpochTime=121.124
+ Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: * 2560; CrossEntropyWithSoftmax =  2.10257511; EvalErrorPrediction = 0.56484375; TotalTime = 14.7861s; SamplesPerSecond = 173.1
+ Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: * 2560; CrossEntropyWithSoftmax =  2.00548573; EvalErrorPrediction = 0.54843750; TotalTime = 15.4207s; SamplesPerSecond = 166.0
+ Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: * 2560; CrossEntropyWithSoftmax =  2.00766983; EvalErrorPrediction = 0.54960937; TotalTime = 14.6152s; SamplesPerSecond = 175.2
+ Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: * 2560; CrossEntropyWithSoftmax =  1.92049370; EvalErrorPrediction = 0.53281250; TotalTime = 16.0739s; SamplesPerSecond = 159.3
+ Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: * 2560; CrossEntropyWithSoftmax =  1.90178452; EvalErrorPrediction = 0.52265625; TotalTime = 15.4519s; SamplesPerSecond = 165.7
+ Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  1.91359482; EvalErrorPrediction = 0.53984375; TotalTime = 15.0020s; SamplesPerSecond = 170.6
+ Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.91765289; EvalErrorPrediction = 0.53125000; TotalTime = 14.9498s; SamplesPerSecond = 171.2
+ Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.87682800; EvalErrorPrediction = 0.52890625; TotalTime = 14.7959s; SamplesPerSecond = 173.0
+Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9557606; TotalSamplesSeen = 40960; EvalErrorPrediction = 0.53979492; learningRatePerSample = 0.001953125; EpochTime=121.124
 SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160317224207.69144\Speech\DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn.2'
 
 Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.88593941; EvalErr[0]PerSample = 0.52529297; TotalTime = 42.7797s; SamplesPerSecond = 239.4
- Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.89384575; EvalErr[0]PerSample = 0.51816406; TotalTime = 45.3675s; SamplesPerSecond = 225.7
-Finished Epoch[ 3 of 3]: [Training] TrainLossPerSample = 1.8898926; TotalSamplesSeen = 61440; EvalErrPerSample = 0.52172852; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=88.2535
+ Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: * 10240; CrossEntropyWithSoftmax =  1.88593941; EvalErrorPrediction = 0.52529297; TotalTime = 42.7797s; SamplesPerSecond = 239.4
+ Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: * 10240; CrossEntropyWithSoftmax =  1.89384575; EvalErrorPrediction = 0.51816406; TotalTime = 45.3675s; SamplesPerSecond = 225.7
+Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.8898926; TotalSamplesSeen = 61440; EvalErrorPrediction = 0.52172852; learningRatePerSample = 9.7656251e-005; EpochTime=88.2535
 SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160317224207.69144\Speech\DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn'
 CNTKCommandTrainEnd: speechTrain
 

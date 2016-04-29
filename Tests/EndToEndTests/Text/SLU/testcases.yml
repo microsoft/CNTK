@@ -29,7 +29,7 @@ testCases:
     patterns:
       - "Finished Epoch[{{integer}} of {{integer}}]: [Training]"
       - ce = {{float,tolerance=.1%}}
-      - TotalSamplesSeen = {{integer}}
+      - "* {{integer}}; "
       - err = {{float,tolerance=0.001%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
