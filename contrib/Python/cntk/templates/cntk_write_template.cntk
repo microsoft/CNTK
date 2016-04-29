@@ -12,7 +12,7 @@ Predict=[
 	
 %(Reader)s
 	
-	outputPath = "%(PredictOutputFile)s"		# dump the output as text
+	outputPath = "%(OutputFile)s"		# dump the output as text
 ]
 
 

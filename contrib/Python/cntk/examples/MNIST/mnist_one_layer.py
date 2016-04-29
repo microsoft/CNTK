@@ -71,7 +71,7 @@ if (__name__ == "__main__"):
                        learning_ratesPerMB=0.1, max_epochs=5, momentum_per_mb=0)
 
     # Create a context or re-use if already there
-    with Context('mnist_one_layer', clean_up=False) as ctx:
+    with LocalExecutionContext('mnist_one_layer', clean_up=True) as ctx:
         # CNTK actions
         ctx.train(ec, my_sgd, {features: f_reader, labels: l_reader})
         ctx.write({features: f_reader_t, labels: l_reader_t})

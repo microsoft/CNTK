@@ -15,7 +15,7 @@ from ..reader import CNTKTextFormatReader
 from .. import utils
 
 
-def input_reader(value, alias=None, has_dynamic_axis=True):
+def input_reader(value, alias=None, has_dynamic_axis=True, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -30,14 +30,14 @@ def input_reader(value, alias=None, has_dynamic_axis=True):
         :class:`cntk.graph.ComputationNode`
     '''
     if utils.is_tensor_list(value) or utils.is_tensor(value):
+        value = np.asarray(value)
         if has_dynamic_axis:
-            cntk_shape = value[0][1:]
+            cntk_shape = value[0].shape[1:]
         else:
-            cntk_shape = value[0]
+            cntk_shape = value[0].shape
 
-        from ..ops import cntk1
+        node = input(cntk_shape)
         from ..reader import LazyInputReader
-        node = cntk1.Input(cntk_shape)
         node.reader = LazyInputReader(
             value,
             input_alias=alias,
@@ -49,7 +49,7 @@ def input_reader(value, alias=None, has_dynamic_axis=True):
         raise ValueError('value type is not supported: %s' % type(value))
 
 
-def input(shape, name=None):
+def input(shape, dynamic_axis='', name=None):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
@@ -60,43 +60,27 @@ def input(shape, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+
     from cntk.ops.cntk1 import Input
-    return Input(shape, var_name=name)
-    
-
-def sparse_input(shape, name=None):
-    """
-    It creates an sparse input node. The graph requires a separate reader that will be
-    fed to this input.
-
-    Args:
-        shape: the shape of the input tensor
-        name: the name of the node in the network
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """
-
-    from cntk.ops.cntk1 import SparseInput
-    return SparseInput(shape, var_name=name)
+    return Input(shape, dynamicAxis=dynamic_axis, var_name=name)
 
 
-def parameter(shape=None, name=None, learning_rate_multiplier=1.0, init='uniform',
-              init_value_scale=1, value=0, init_from_file_path='', init_from_literal=None,
-              random_seed=-1):
+def parameter(shape=None, value=0, learning_rate_multiplier=1.0, init='uniform',
+              init_value_scale=1, init_from_file_path='', init_from_literal=None,
+              random_seed=-1, name=None):
     """
     It creates a parameter tensor. 
 
     Args:
-        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not 
-        needed as it will be inferred from the literal.
-        name (str, optional): the name of the node in the network
+        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not needed as it will be inferred from the literal.
+        value: a scalar initial value that would be replicated for every element in the tensor
         learning_rate_multiplier (float): 
         init (str): 'uniform', 'fromFile' or 'fromLiteral' 
         init_value_scale (float): a scaling factor for the initial value
-        value: a scalar initial value that would be replicated for every element in the tensor
         init_from_file_path (str): the file that contains the initial tensor value
         init_from_literal (ndarray): the numpy array used to initialize the tensor parameter
         random_seed (float): the seed used for initialization
+        name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -158,3 +142,19 @@ def constant(value, name=None):
 
     return parameter(name=name, init='fromLiteral', init_from_literal=value,
                      learning_rate_multiplier=0.0)
+
+
+def dynamic_axis(name=None):
+    """
+    This function creates a dynamic axis object that can be connected to an input. 
+    For sequence-based inputs, this allows the sequences to be of arbitrary lengths 
+    and therefore allows networks to be setup without the need for padding.
+    
+    Args:
+        name: the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    
+    from cntk.ops.cntk2 import DynamicAxis
+    return DynamicAxis(var_name=name)

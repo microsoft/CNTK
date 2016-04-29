@@ -33,7 +33,7 @@ def floor(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Floor
+    from cntk.ops.cntk2 import Floor
     return Floor(arg, var_name = name)
 
 def ceil(arg, name=None):
@@ -61,7 +61,7 @@ def ceil(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Ceil
+    from cntk.ops.cntk2 import Ceil
     return Ceil(arg, var_name = name)
 
 def round(arg, name=None):
@@ -92,6 +92,6 @@ def round(arg, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Round
+    from cntk.ops.cntk2 import Round
     return Round(arg, var_name = name)
 
