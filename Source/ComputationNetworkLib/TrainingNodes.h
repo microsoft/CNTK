@@ -443,6 +443,258 @@ template class MatrixL1RegNode<float>;
 template class MatrixL1RegNode<double>;
 
 // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// OrderedCrossEntropyWithSoftmaxNode (labels, prediction)
+// TO DO: calculates: -sum(left_i * log(softmax_i(right)))
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class OrderedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+	typedef ComputationNodeNonLooping<ElemType> Base;
+	UsingComputationNodeMembersBoilerplate;
+	static const std::wstring TypeName()
+	{
+		return L"OrderedCrossEntropyWithSoftmax";
+	}
+
+public:
+	DeclareConstructorFromConfigWithNumInputs(OrderedCrossEntropyWithSoftmaxNode);
+	OrderedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+		: Base(deviceId, name), m_sigma(1.0)
+	{
+	}
+
+	virtual void BackpropToNonLooping(size_t inputIndex) override
+	{
+		FrameRange fr(Input(0)->GetMBLayout());
+		if (inputIndex == 1) // right derivative
+		{
+			auto gradient = Input(1)->GradientFor(fr);
+			//gradient.Print("gradient", 0, 0, 0, 20);
+
+			// 1/(1+exp(sigma*(si-sj)))
+			*m_rightGradientAll = (*m_logexptermInv + 1);
+
+			//m_logexptermInv->Print("m_logexptermInv", 0, 0, 0, 20);
+
+			//m_rightGradientAll->Print("m_rightGradientAll10", 0, 0, 0, 20);
+			m_rightGradientAll->AssignElementInverseOf(*m_rightGradientAll);
+			//m_rightGradientAll->Print("m_rightGradientAll1", 0, 0, 0, 20);
+
+			//m_pairwiseOneMinusLabels->Print("m_pairwiseOneMinusLabels", 0, 0, 0, 20);
+
+			m_rightGradientAll->AddWithScaleOf(-0.5, *m_pairwiseOneMinusLabels);
+			//m_rightGradientAll->Print("m_rightGradientAll2", 0, 0, 0, 20);
+			*m_rightGradientAll *= -m_sigma;
+			//m_rightGradientAll->Print("m_rightGradientAll3", 0, 0, 0, 20);
+
+			// sum and get the gradient, and add to gradient
+			const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+			Matrix<ElemType> grdLocal = Input(1)->GradientFor(fr).DeepClone();
+			const Matrix<ElemType>& grdAllLocal = *m_rightGradientAll;
+			//grdAllLocal.Print("grdAllLocal1", 0, 0, 0, 20);
+
+			size_t nCols = Input(0)->ValueFor(fr).GetNumCols();
+			size_t pairCounts = 0;
+			for (size_t i = 0; i < nCols; i++)
+			{
+				size_t K = (size_t)pairIndeces(0, i);
+				if (K == 0) continue;
+				size_t k0 = i + 1;
+				size_t k1 = i + K;
+				for (size_t j = k0; j <= k1; j++)
+				{
+					//gradient(0, i) += *m_rightGradientAll(0, pairCounts++);
+					ElemType g = grdAllLocal(0, pairCounts++);
+					grdLocal(0, i) += g;
+					grdLocal(0, j) -= g;
+				}
+			}
+
+
+			//grdLocal.Print("grdLocal1", 0, 0, 0, 20);
+			gradient.AssignDifferenceOf(grdLocal, 0.0);
+
+		}
+	}
+
+	virtual bool OutputUsedInComputingInputNodesGradients() const override
+	{
+		return false;
+	}
+
+	virtual void UpdateFunctionMBSize() override
+	{
+		// TODO: need to get the dimension right
+		FrameRange fr(Input(0)->GetMBLayout());
+		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+		m_pairCounts = (size_t) pairIndeces.SumOfElements();
+
+		m_pairwiseLabels->Resize(1, m_pairCounts);
+		m_pairwiseOneMinusLabels->Resize(1, m_pairCounts);
+		m_pairwiseDifferences->Resize(1, m_pairCounts);
+		m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
+		m_sigmaPairwiseNegDiff->Resize(1, m_pairCounts);
+		m_logexpterm->Resize(1, m_pairCounts);
+		m_logexptermInv->Resize(1, m_pairCounts);
+		m_everythingForward->Resize(1, m_pairCounts);
+		m_rightGradientAll->Resize(1, m_pairCounts);
+		m_leftGradientAll->Resize(1, m_pairCounts);
+
+	}
+
+	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
+	{
+		// TODO: to make it a config?
+		// Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
+		FrameRange fr(Input(0)->GetMBLayout());
+		// construct matrices for further computation
+		// iterate through all samples
+		const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
+		const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
+		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+		size_t nCols = singleLabels.GetNumCols();
+		//size_t nCols1 = nCols - 1;
+		size_t pairCounts = 0;
+		ElemType bad = -1.0, good = 1.0, fair = 0.0;
+		for (size_t i = 0; i < nCols; i++)
+		{
+			size_t K = (size_t)pairIndeces(0, i);
+			if (K == 0) continue;
+			size_t k0 = i + 1;
+			size_t k1 = i + K;
+			//k0 = k0 <= nCols1 ? k0 : nCols1;
+			//k1 = k1 <= nCols1 ? k1 : nCols1;
+			int l1 = (size_t) singleLabels(0, i);
+			for (size_t j = k0; j <= k1; j++)
+			{
+				int l2 = (size_t) singleLabels(0, j);
+				// i>j (1), i<j (-1), i=j (0)
+				ElemType& pl = (*m_pairwiseLabels)(0, pairCounts);
+				pl = l1 <= l2 ? bad : good;
+				pl = l1 == l2 ? fair : pl;
+				(*m_pairwiseDifferences)(0, pairCounts) = scores(0, i) - scores(0, j);
+				pairCounts++;
+			}
+		}
+
+		if (m_pairCounts != pairCounts)
+		{
+			InvalidArgument("Pair count mis-match in %ls %ls operation.", NodeName().c_str(), OperationName().c_str());
+		}
+
+		// log(1+exp(-sigma*(si - sj)))
+		// -sigma*(si - sj)
+		m_sigmaPairwiseNegDiff->AssignProductOf(-m_sigma, *m_pairwiseDifferences);
+		// exp(-sigma*(si - sj))
+		m_logexpterm->AssignExpOf(*m_sigmaPairwiseNegDiff);
+		m_logexptermInv->AssignElementInverseOf(*m_logexpterm);
+		// 1+exp(-sigma*(si - sj))
+		*m_logexpterm += 1;
+		// log(1+exp(-sigma*(si - sj)))
+		m_logexpterm->InplaceLog();
+
+		// 1/2(1-lij)*sigma*(si-sj)
+		// 1-lij
+		m_pairwiseOneMinusLabels->AssignDifferenceOf(1, *m_pairwiseLabels);
+		// -(1-lij)*sigma*(si-sj)
+		m_everythingForward->AssignElementProductOf(*m_pairwiseOneMinusLabels, *m_sigmaPairwiseNegDiff);
+		// -1/2*(1-lij)*-sigma*(si-sj) + log(1+exp(-sigma*(si - sj)))
+		m_logexpterm->AddWithScaleOf(-0.5, *m_everythingForward);
+
+		// sum of all elements
+		Value().SetValue(m_logexpterm->SumOfElements());
+	}
+
+	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+	{
+		if (m_inputs.size() != 3)
+			InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
+
+		if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
+			InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
+
+		ValidateBinaryReduce(isFinalValidationPass);
+	}
+
+	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<OrderedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
+			node->m_pairwiseLabels->SetValue(*m_pairwiseLabels);
+			node->m_pairwiseOneMinusLabels->SetValue(*m_pairwiseOneMinusLabels);
+			node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+			node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
+			node->m_sigmaPairwiseNegDiff->SetValue(*m_pairwiseLabels);
+			node->m_logexpterm->SetValue(*m_pairwiseLabels);
+			node->m_logexptermInv->SetValue(*m_pairwiseLabels);
+			node->m_everythingForward->SetValue(*m_pairwiseLabels);
+			node->m_rightGradientAll->SetValue(*m_pairwiseLabels);
+			node->m_leftGradientAll->SetValue(*m_pairwiseLabels);
+		}
+	}
+
+	// request matrices needed to do node function value evaluation
+	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+	{
+		Base::RequestMatricesBeforeForwardProp(matrixPool);
+		RequestMatrixFromPool(m_pairwiseLabels, matrixPool);
+		RequestMatrixFromPool(m_pairwiseOneMinusLabels, matrixPool);
+		RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+		RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
+		RequestMatrixFromPool(m_sigmaPairwiseNegDiff, matrixPool);
+		RequestMatrixFromPool(m_logexpterm, matrixPool);
+		RequestMatrixFromPool(m_logexptermInv, matrixPool);
+		RequestMatrixFromPool(m_everythingForward, matrixPool);
+		RequestMatrixFromPool(m_rightGradientAll, matrixPool);
+		RequestMatrixFromPool(m_leftGradientAll, matrixPool);
+	}
+
+	// release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+	virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+	{
+		Base::ReleaseMatricesAfterBackprop(matrixPool);
+		ReleaseMatrixToPool(m_pairwiseLabels, matrixPool);
+		ReleaseMatrixToPool(m_pairwiseOneMinusLabels, matrixPool);
+		ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+		ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
+		ReleaseMatrixToPool(m_sigmaPairwiseNegDiff, matrixPool);
+		ReleaseMatrixToPool(m_logexpterm, matrixPool);
+		ReleaseMatrixToPool(m_logexptermInv, matrixPool);
+		ReleaseMatrixToPool(m_everythingForward, matrixPool);
+		ReleaseMatrixToPool(m_rightGradientAll, matrixPool);
+		ReleaseMatrixToPool(m_leftGradientAll, matrixPool);
+	}
+
+protected:
+
+	size_t m_pairCounts;
+	ElemType m_sigma;
+	shared_ptr<Matrix<ElemType>> m_pairwiseLabels;
+	shared_ptr<Matrix<ElemType>> m_pairwiseOneMinusLabels;
+	shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+	// -sigma(si-sj)
+	shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
+	shared_ptr<Matrix<ElemType>> m_sigmaPairwiseNegDiff;
+	// log(1+exp(-sigma(si-sj)))
+	shared_ptr<Matrix<ElemType>> m_logexpterm;
+	shared_ptr<Matrix<ElemType>> m_logexptermInv;
+	// everything forward
+	shared_ptr<Matrix<ElemType>> m_everythingForward;
+	// right gradient all
+	shared_ptr<Matrix<ElemType>> m_rightGradientAll;
+	// left gradient all
+	shared_ptr<Matrix<ElemType>> m_leftGradientAll;
+};
+
+template class OrderedCrossEntropyWithSoftmaxNode<float>;
+template class OrderedCrossEntropyWithSoftmaxNode<double>;
+
+
+// -----------------------------------------------------------------------
 // MatrixL2RegNode (input)
 // TODO: share most code with MatrixL1RegNode
 // -----------------------------------------------------------------------
