@@ -444,8 +444,6 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/)  const override { return true; }
-
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
         Base::BeginForwardProp();
@@ -490,6 +488,8 @@ public:
         }
     }
 
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
+    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return false; }
 };
 
 template class IfNode<float>;
