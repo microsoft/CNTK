@@ -487,7 +487,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 #else
         LOGPRINTF(stderr,
-                  "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; TotalSamplesSeen = %d; ",
+                  "Finished Epoch[%2d of %d]: [Training Set] CrossEntropyWithSoftmax = %.8g; TotalSamplesSeen = %d; ",
                   i + 1, (int)m_maxEpochs, epochCriterion.Average(), (int)totalTrainingSamplesSeen);
 #endif
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
