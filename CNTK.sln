@@ -976,6 +976,78 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{181664AC-4C9
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Source\Common\Common.vcxproj", "{86883653-8A61-4038-81A0-2379FAE4200A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTKTextFormatReader", "CNTKTextFormatReader", "{B1110F99-A307-4745-B464-7FD75951645A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{369656B8-DDFD-412E-901B-DFEBCC31ABE0}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\SimpleMultiGPU.cntk = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\SimpleMultiGPU.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{CCEFD1F9-E843-43E0-B127-EF73EF90582D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NoQuantization", "NoQuantization", "{751BEA27-2187-4BE5-82E7-A3668CFCE7A9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePrecision", "{4084DC9D-0A53-4029-9C86-92AF243C2E09}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\run-test
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePrecision", "{ACB91DED-FB23-4FF0-A1A1-EBE56B783EFC}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\run-test
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{BCA65A0C-D93B-4F90-81B1-73048DE04DF1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.linux.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.linux.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.linux.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.linux.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.windows.cpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.windows.cpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.windows.gpu.txt = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\baseline.windows.gpu.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\README.txt = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\README.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\run-test = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\run-test
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\Speech_Simple.cntk = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\Speech_Simple.cntk
+		Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\testcases.yml = Tests\EndToEndTests\CNTKTextFormatReader\Speech\Simple\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SparseDSSM", "SparseDSSM", "{1FB54750-B668-4AC3-966F-ED504020AC06}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.cpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.cpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.gpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.gpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.cpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.gpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\dssm.cntk = Tests\EndToEndTests\Text\SparseDSSM\dssm.cntk
+		Tests\EndToEndTests\Text\SparseDSSM\dssm.ndl = Tests\EndToEndTests\Text\SparseDSSM\dssm.ndl
+		Tests\EndToEndTests\Text\SparseDSSM\run-test = Tests\EndToEndTests\Text\SparseDSSM\run-test
+		Tests\EndToEndTests\Text\SparseDSSM\testcases.yml = Tests\EndToEndTests\Text\SparseDSSM\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{59980D6E-1732-4809-B17C-6EF4B4F5CF8B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{6FB9C411-C19A-403A-94C2-F7DF393F7612}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\baseline.linux.txt = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\baseline.linux.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\baseline.windows.txt = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\baseline.windows.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\Image_QuickE2E.cntk = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\Image_QuickE2E.cntk
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\README.txt = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\README.txt
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\run-test = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\run-test
+		Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\testcases.yml = Tests\EndToEndTests\CNTKTextFormatReader\Image\QuickE2E\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{C30742B5-4DBE-4D80-B429-901856E4043D}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\Data\SimpleDataTrain.txt = Tests\EndToEndTests\CNTKTextFormatReader\ParallelTraining\Data\SimpleDataTrain.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1338,5 +1410,16 @@ Global
 		{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{181664AC-4C95-4798-A923-09B879215B33} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{B1110F99-A307-4745-B464-7FD75951645A} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{369656B8-DDFD-412E-901B-DFEBCC31ABE0} = {B1110F99-A307-4745-B464-7FD75951645A}
+		{CCEFD1F9-E843-43E0-B127-EF73EF90582D} = {B1110F99-A307-4745-B464-7FD75951645A}
+		{751BEA27-2187-4BE5-82E7-A3668CFCE7A9} = {369656B8-DDFD-412E-901B-DFEBCC31ABE0}
+		{4084DC9D-0A53-4029-9C86-92AF243C2E09} = {751BEA27-2187-4BE5-82E7-A3668CFCE7A9}
+		{ACB91DED-FB23-4FF0-A1A1-EBE56B783EFC} = {751BEA27-2187-4BE5-82E7-A3668CFCE7A9}
+		{BCA65A0C-D93B-4F90-81B1-73048DE04DF1} = {CCEFD1F9-E843-43E0-B127-EF73EF90582D}
+		{1FB54750-B668-4AC3-966F-ED504020AC06} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
+		{59980D6E-1732-4809-B17C-6EF4B4F5CF8B} = {B1110F99-A307-4745-B464-7FD75951645A}
+		{6FB9C411-C19A-403A-94C2-F7DF393F7612} = {59980D6E-1732-4809-B17C-6EF4B4F5CF8B}
+		{C30742B5-4DBE-4D80-B429-901856E4043D} = {369656B8-DDFD-412E-901B-DFEBCC31ABE0}
 	EndGlobalSection
 EndGlobal
