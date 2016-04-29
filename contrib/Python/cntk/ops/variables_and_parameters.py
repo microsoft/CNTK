@@ -30,10 +30,11 @@ def input_reader(value, alias=None, has_dynamic_axis=True, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     if utils.is_tensor_list(value) or utils.is_tensor(value):
+        value = np.asarray(value)
         if has_dynamic_axis:
-            cntk_shape = value[0][1:]
+            cntk_shape = value[0].shape[1:]
         else:
-            cntk_shape = value[0]
+            cntk_shape = value[0].shape
 
         node = input(cntk_shape)
         from ..reader import LazyInputReader
@@ -48,7 +49,7 @@ def input_reader(value, alias=None, has_dynamic_axis=True, name=None):
         raise ValueError('value type is not supported: %s' % type(value))
 
 
-def input(shape, name=None):
+def input(shape, dynamic_axis='', name=None):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
@@ -61,7 +62,7 @@ def input(shape, name=None):
     """
 
     from cntk.ops.cntk1 import Input
-    return Input(shape, var_name=name)
+    return Input(shape, dynamicAxis=dynamic_axis, var_name=name)
     
 
 def sparse_input(shape, name=None):
