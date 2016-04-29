@@ -24,7 +24,7 @@ public:
 
     // Returning 0 for composite configs.
     // This forbids the use of learning-rate and momentum per MB if truncation is enabled.
-    size_t GetNumParallelSequences() override
+    size_t GetNumParallelSequencesForFixingBPTTMode() override
     {
         return 0;
     }
