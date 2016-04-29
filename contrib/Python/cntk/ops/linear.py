@@ -97,5 +97,5 @@ def times(left, right, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Times
+    from cntk.ops.cntk2 import Times
     return Times(left, right, var_name=name)

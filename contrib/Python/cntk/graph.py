@@ -155,8 +155,8 @@ class ComputationNode(object):
             if p_name in ['shape', 'dims', 'inputs', 'z']:
                 p_value = _tuple_to_cntk_shape(p_value)
             else:
-                raise ValueError('Sequence initialization is only allowed for' +
-                                 ' parameters dims and not "%s"' % p_name)
+                raise ValueError('tuple or list initialization is only allowed for' +
+                                 ' parameters shape, dims, inputs, and z, but not "%s"' % p_name)
         else:
             p_value = str(p_value)
 
