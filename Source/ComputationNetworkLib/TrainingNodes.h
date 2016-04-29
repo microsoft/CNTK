@@ -471,29 +471,19 @@ public:
 		if (inputIndex == 1) // right derivative
 		{
 			auto gradient = Input(1)->GradientFor(fr);
-			//gradient.Print("gradient", 0, 0, 0, 20);
 
 			// 1/(1+exp(sigma*(si-sj)))
 			*m_rightGradientAll = (*m_logexptermInv + 1);
-
-			//m_logexptermInv->Print("m_logexptermInv", 0, 0, 0, 20);
-
-			//m_rightGradientAll->Print("m_rightGradientAll10", 0, 0, 0, 20);
 			m_rightGradientAll->AssignElementInverseOf(*m_rightGradientAll);
-			//m_rightGradientAll->Print("m_rightGradientAll1", 0, 0, 0, 20);
-
-			//m_pairwiseOneMinusLabels->Print("m_pairwiseOneMinusLabels", 0, 0, 0, 20);
-
 			m_rightGradientAll->AddWithScaleOf(-0.5, *m_pairwiseOneMinusLabels);
-			//m_rightGradientAll->Print("m_rightGradientAll2", 0, 0, 0, 20);
 			*m_rightGradientAll *= -m_sigma;
-			//m_rightGradientAll->Print("m_rightGradientAll3", 0, 0, 0, 20);
 
 			// sum and get the gradient, and add to gradient
 			const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-			Matrix<ElemType> grdLocal = Input(1)->GradientFor(fr).DeepClone();
+			// Matrix<ElemType> grdLocal = Input(1)->GradientFor(fr).DeepClone();
+			Matrix<ElemType> grdLocal = gradient.DeepClone();
+
 			const Matrix<ElemType>& grdAllLocal = *m_rightGradientAll;
-			//grdAllLocal.Print("grdAllLocal1", 0, 0, 0, 20);
 
 			size_t nCols = Input(0)->ValueFor(fr).GetNumCols();
 			size_t pairCounts = 0;
@@ -512,8 +502,6 @@ public:
 				}
 			}
 
-
-			//grdLocal.Print("grdLocal1", 0, 0, 0, 20);
 			gradient.AssignDifferenceOf(grdLocal, 0.0);
 
 		}
