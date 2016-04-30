@@ -380,7 +380,7 @@ already there from last epoch
 04/07/2016 14:05:11:  Epoch[ 1 of 2]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.18024605; EvalErr[0]PerSample = 0.05475000; TotalTime = 1.3570s; SamplesPerSecond = 11790.6
 04/07/2016 14:05:12:  Epoch[ 1 of 2]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07408237; EvalErr[0]PerSample = 0.02306250; TotalTime = 1.1839s; SamplesPerSecond = 13515.0
 04/07/2016 14:05:13:  Epoch[ 1 of 2]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07168071; EvalErr[0]PerSample = 0.02187500; TotalTime = 1.1835s; SamplesPerSecond = 13519.7
-04/07/2016 14:05:14: Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 0.09788157; TotalSamplesSeen = 60000; EvalErrPerSample = 0.029816667; AvgLearningRatePerSample = 0.015625; EpochTime=5.13037
+04/07/2016 14:05:14: Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 0.09788157 * 60000; EvalErrPerSample = 0.029816667; AvgLearningRatePerSample = 0.015625; EpochTime=5.13037
 04/07/2016 14:05:14: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
 Setting batch normalization blend time constant to inf.
 
@@ -392,7 +392,7 @@ already there from last epoch
 04/07/2016 14:05:15:  Epoch[ 2 of 2]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.02897029; EvalErr[0]PerSample = 0.00837500; TotalTime = 1.1826s; SamplesPerSecond = 13530.0
 04/07/2016 14:05:16:  Epoch[ 2 of 2]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.02011888; EvalErr[0]PerSample = 0.00631250; TotalTime = 1.1831s; SamplesPerSecond = 13523.8
 04/07/2016 14:05:18:  Epoch[ 2 of 2]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.02228251; EvalErr[0]PerSample = 0.00625000; TotalTime = 1.1831s; SamplesPerSecond = 13523.5
-04/07/2016 14:05:18: Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 0.021928078; TotalSamplesSeen = 120000; EvalErrPerSample = 0.0064333333; AvgLearningRatePerSample = 0.003125; EpochTime=4.43763
+04/07/2016 14:05:18: Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 0.021928078 * 120000; EvalErrPerSample = 0.0064333333; AvgLearningRatePerSample = 0.003125; EpochTime=4.43763
 04/07/2016 14:05:18: SGD: Saving checkpoint model '/tmp/cntk-test-20160407140437.931634/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
 04/07/2016 14:05:18: CNTKCommandTrainEnd: train
 

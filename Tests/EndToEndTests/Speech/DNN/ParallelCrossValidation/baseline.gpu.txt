@@ -636,7 +636,7 @@ MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: * 640; CrossEntropyWit
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.19592881; EvalErrorPrediction = 0.61718750; TotalTime = 0.6005s; SamplesPerSecond = 1065.7
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.28411654; EvalErrorPrediction = 0.60000000; TotalTime = 0.6034s; SamplesPerSecond = 1060.6
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.18307184; EvalErrorPrediction = 0.55781250; TotalTime = 0.4843s; SamplesPerSecond = 1321.5
-MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.9972357; TotalSamplesSeen = 20480; EvalErrorPrediction = 0.72426758; learningRatePerSample = 0.015625; EpochTime=17.6027
+MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.9972357 * 20480; EvalErrorPrediction = 0.72426758; learningRatePerSample = 0.015625; EpochTime=17.6027
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -658,7 +658,7 @@ MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: * 2560; CrossEntropyWi
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  1.99300635; EvalErrorPrediction = 0.53671875; TotalTime = 0.6736s; SamplesPerSecond = 3800.5
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.92264042; EvalErrorPrediction = 0.52304688; TotalTime = 0.7287s; SamplesPerSecond = 3513.0
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.92843715; EvalErrorPrediction = 0.53554687; TotalTime = 0.6584s; SamplesPerSecond = 3888.4
-MPI Rank 0: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9740283; TotalSamplesSeen = 40960; EvalErrorPrediction = 0.53813477; learningRatePerSample = 0.001953125; EpochTime=5.45193
+MPI Rank 0: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9740283 * 40960; EvalErrorPrediction = 0.53813477; learningRatePerSample = 0.001953125; EpochTime=5.45193
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -673,7 +673,7 @@ MPI Rank 0:
 MPI Rank 0: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
 MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: * 10240; CrossEntropyWithSoftmax =  1.89842932; EvalErrorPrediction = 0.52373047; TotalTime = 1.2198s; SamplesPerSecond = 8394.9
 MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: * 10240; CrossEntropyWithSoftmax =  1.89204376; EvalErrorPrediction = 0.52128906; TotalTime = 1.1216s; SamplesPerSecond = 9129.8
-MPI Rank 0: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.8952365; TotalSamplesSeen = 61440; EvalErrorPrediction = 0.52250977; learningRatePerSample = 9.7656251e-05; EpochTime=2.41398
+MPI Rank 0: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.8952365 * 61440; EvalErrorPrediction = 0.52250977; learningRatePerSample = 9.7656251e-05; EpochTime=2.41398
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -1257,7 +1257,7 @@ MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: * 640; CrossEntropyWit
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.19592881; EvalErrorPrediction = 0.61718750; TotalTime = 0.5991s; SamplesPerSecond = 1068.2
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.28411654; EvalErrorPrediction = 0.60000000; TotalTime = 0.6028s; SamplesPerSecond = 1061.6
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.18307184; EvalErrorPrediction = 0.55781250; TotalTime = 0.4905s; SamplesPerSecond = 1304.7
-MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.9972357; TotalSamplesSeen = 20480; EvalErrorPrediction = 0.72426758; learningRatePerSample = 0.015625; EpochTime=17.6022
+MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.9972357 * 20480; EvalErrorPrediction = 0.72426758; learningRatePerSample = 0.015625; EpochTime=17.6022
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
@@ -1278,7 +1278,7 @@ MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: * 2560; CrossEntropyWi
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  1.99300635; EvalErrorPrediction = 0.53671875; TotalTime = 0.6607s; SamplesPerSecond = 3874.7
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.92264042; EvalErrorPrediction = 0.52304688; TotalTime = 0.7512s; SamplesPerSecond = 3407.8
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.92843715; EvalErrorPrediction = 0.53554687; TotalTime = 0.6351s; SamplesPerSecond = 4030.6
-MPI Rank 1: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9740283; TotalSamplesSeen = 40960; EvalErrorPrediction = 0.53813477; learningRatePerSample = 0.001953125; EpochTime=5.44531
+MPI Rank 1: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9740283 * 40960; EvalErrorPrediction = 0.53813477; learningRatePerSample = 0.001953125; EpochTime=5.44531
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
@@ -1292,7 +1292,7 @@ MPI Rank 1:
 MPI Rank 1: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: * 10240; CrossEntropyWithSoftmax =  1.89842932; EvalErrorPrediction = 0.52373047; TotalTime = 1.2510s; SamplesPerSecond = 8185.7
 MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: * 10240; CrossEntropyWithSoftmax =  1.89204376; EvalErrorPrediction = 0.52128906; TotalTime = 1.1043s; SamplesPerSecond = 9272.9
-MPI Rank 1: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.8952365; TotalSamplesSeen = 61440; EvalErrorPrediction = 0.52250977; learningRatePerSample = 9.7656251e-05; EpochTime=2.41353
+MPI Rank 1: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.8952365 * 61440; EvalErrorPrediction = 0.52250977; learningRatePerSample = 9.7656251e-05; EpochTime=2.41353
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.

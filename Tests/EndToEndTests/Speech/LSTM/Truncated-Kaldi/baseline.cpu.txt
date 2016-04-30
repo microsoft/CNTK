@@ -2925,7 +2925,7 @@ Starting minibatch loop.
  Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.59893982; EvalErr[0]PerSample = 0.85390625; TotalTime = 24.2725s; SamplesPerSecond = 263.7
  Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5738; TrainLossPerSample =  5.52913962; EvalErr[0]PerSample = 0.88654583; TotalTime = 21.3501s; SamplesPerSecond = 268.8
  Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 1840; TrainLossPerSample =  4.56729365; EvalErr[0]PerSample = 0.88369565; TotalTime = 18.5261s; SamplesPerSecond = 99.3
-Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 4.9174905; TotalSamplesSeen = 20546; EvalErrPerSample = 0.88022; AvgLearningRatePerSample = 0.00078125001; EpochTime=98.2087
+Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 4.9174905 * 20546; EvalErrPerSample = 0.88022; AvgLearningRatePerSample = 0.00078125001; EpochTime=98.2087
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.1'
 
 Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
@@ -2937,7 +2937,7 @@ Starting minibatch loop.
  Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 4782; TrainLossPerSample =  4.39425923; EvalErr[0]PerSample = 0.91447093; TotalTime = 20.8955s; SamplesPerSecond = 228.9
  Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 2238; TrainLossPerSample =  4.41530524; EvalErr[0]PerSample = 0.93610366; TotalTime = 20.5999s; SamplesPerSecond = 108.6
  Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: SamplesSeen = 608; TrainLossPerSample =  4.45681281; EvalErr[0]PerSample = 0.92927632; TotalTime = 18.8459s; SamplesPerSecond = 32.3
-Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 4.421762; TotalSamplesSeen = 40980; EvalErrPerSample = 0.90310264; AvgLearningRatePerSample = 0.00078125001; EpochTime=100.965
+Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 4.421762 * 40980; EvalErrPerSample = 0.90310264; AvgLearningRatePerSample = 0.00078125001; EpochTime=100.965
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.2'
 
 Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
@@ -2948,7 +2948,7 @@ Starting minibatch loop.
  Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.17684998; EvalErr[0]PerSample = 0.86468750; TotalTime = 19.7434s; SamplesPerSecond = 324.2
  Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5330; TrainLossPerSample =  4.23903612; EvalErr[0]PerSample = 0.89530957; TotalTime = 16.5860s; SamplesPerSecond = 321.4
  Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 2390; TrainLossPerSample =  4.41369312; EvalErr[0]PerSample = 0.94016736; TotalTime = 19.7592s; SamplesPerSecond = 121.0
-Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 4.206933; TotalSamplesSeen = 61662; EvalErrPerSample = 0.87264287; AvgLearningRatePerSample = 0.00078125001; EpochTime=83.3559
+Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 4.206933 * 61662; EvalErrPerSample = 0.87264287; AvgLearningRatePerSample = 0.00078125001; EpochTime=83.3559
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.3'
 
 Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
@@ -2959,7 +2959,7 @@ Starting minibatch loop.
  Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.12552429; EvalErr[0]PerSample = 0.87437500; TotalTime = 20.8843s; SamplesPerSecond = 306.4
  Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5796; TrainLossPerSample =  4.13897448; EvalErr[0]PerSample = 0.87370600; TotalTime = 24.5826s; SamplesPerSecond = 235.8
  Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 1630; TrainLossPerSample =  4.05378643; EvalErr[0]PerSample = 0.89018405; TotalTime = 20.8214s; SamplesPerSecond = 78.3
-Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 4.097261; TotalSamplesSeen = 82028; EvalErrPerSample = 0.86727881; AvgLearningRatePerSample = 0.00078125001; EpochTime=101.463
+Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 4.097261 * 82028; EvalErrPerSample = 0.86727881; AvgLearningRatePerSample = 0.00078125001; EpochTime=101.463
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn'
 CNTKCommandTrainEnd: speechTrain
 

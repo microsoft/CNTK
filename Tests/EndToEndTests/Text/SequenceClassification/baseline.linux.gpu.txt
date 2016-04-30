@@ -536,31 +536,31 @@ Allocating matrices for forward and/or backward propagation.
 
 04/22/2016 07:22:09: Starting minibatch loop.
 WARNING: The same matrix with dim [1, 44] has been transferred between different devices for 20 times.
-04/22/2016 07:22:09: Finished Epoch[ 1 of 5]: [Training] ce = 1.5806145; TotalSamplesSeen = 1247; err = 0.49799519; learningRatePerSample = 0.00050000002; EpochTime=0.445512
+04/22/2016 07:22:09: Finished Epoch[ 1 of 5]: [Training] ce = 1.5806145 * 1247; err = 0.49799519; learningRatePerSample = 0.00050000002; EpochTime=0.445512
 04/22/2016 07:22:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn.1'
 
 04/22/2016 07:22:09: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:09: Starting minibatch loop.
-04/22/2016 07:22:10: Finished Epoch[ 2 of 5]: [Training] ce = 1.4946844; TotalSamplesSeen = 2494; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.362502
+04/22/2016 07:22:10: Finished Epoch[ 2 of 5]: [Training] ce = 1.4946844 * 2494; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.362502
 04/22/2016 07:22:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn.2'
 
 04/22/2016 07:22:10: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:10: Starting minibatch loop.
-04/22/2016 07:22:10: Finished Epoch[ 3 of 5]: [Training] ce = 1.4235656; TotalSamplesSeen = 3741; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.332527
+04/22/2016 07:22:10: Finished Epoch[ 3 of 5]: [Training] ce = 1.4235656 * 3741; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.332527
 04/22/2016 07:22:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn.3'
 
 04/22/2016 07:22:10: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:10: Starting minibatch loop.
-04/22/2016 07:22:10: Finished Epoch[ 4 of 5]: [Training] ce = 1.3709035; TotalSamplesSeen = 4988; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.360896
+04/22/2016 07:22:10: Finished Epoch[ 4 of 5]: [Training] ce = 1.3709035 * 4988; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.360896
 04/22/2016 07:22:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn.4'
 
 04/22/2016 07:22:10: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:10: Starting minibatch loop.
-04/22/2016 07:22:11: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328529; TotalSamplesSeen = 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.345408
+04/22/2016 07:22:11: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328529 * 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.345408
 04/22/2016 07:22:11: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn'
 04/22/2016 07:22:11: CNTKCommandTrainEnd: Train
 
@@ -1110,7 +1110,7 @@ Allocating matrices for forward and/or backward propagation.
 
 04/22/2016 07:22:11: Starting minibatch loop.
 WARNING: The same matrix with dim [1, 51] has been transferred between different devices for 20 times.
-04/22/2016 07:22:12: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328529; TotalSamplesSeen = 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.48824
+04/22/2016 07:22:12: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328529 * 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.48824
 04/22/2016 07:22:12: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_gpu/Models/seqcla.dnn'
 04/22/2016 07:22:12: CNTKCommandTrainEnd: Train
 

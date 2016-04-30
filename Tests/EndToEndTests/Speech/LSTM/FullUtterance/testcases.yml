@@ -19,14 +19,14 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - ce = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=.1%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - ce = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=.1%}}
 

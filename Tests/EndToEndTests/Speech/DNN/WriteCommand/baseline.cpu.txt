@@ -451,7 +451,7 @@ Starting minibatch loop.
  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.21607666; EvalErrorPrediction = 0.62812500; TotalTime = 0.7470s; SamplesPerSecond = 856.8
  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.29110107; EvalErrorPrediction = 0.60625000; TotalTime = 0.7473s; SamplesPerSecond = 856.5
  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.20535278; EvalErrorPrediction = 0.57500000; TotalTime = 0.7460s; SamplesPerSecond = 857.9
-Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0173738; TotalSamplesSeen = 20480; EvalErrorPrediction = 0.73061526; learningRatePerSample = 0.015625; EpochTime=24.0016
+Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0173738 * 20480; EvalErrorPrediction = 0.73061526; learningRatePerSample = 0.015625; EpochTime=24.0016
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001444.203634/Speech/DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn.1'
 
 Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
@@ -466,7 +466,7 @@ Starting minibatch loop.
  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  2.01561737; EvalErrorPrediction = 0.54414063; TotalTime = 1.1998s; SamplesPerSecond = 2133.7
  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.94069977; EvalErrorPrediction = 0.52500000; TotalTime = 1.2000s; SamplesPerSecond = 2133.4
  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.94857330; EvalErrorPrediction = 0.54023438; TotalTime = 1.1906s; SamplesPerSecond = 2150.2
-Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9919976; TotalSamplesSeen = 40960; EvalErrorPrediction = 0.54179686; learningRatePerSample = 0.001953125; EpochTime=9.6075
+Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.9919976 * 40960; EvalErrorPrediction = 0.54179686; learningRatePerSample = 0.001953125; EpochTime=9.6075
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001444.203634/Speech/DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn.2'
 
 Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
@@ -475,7 +475,7 @@ minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 4096
 Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: * 10240; CrossEntropyWithSoftmax =  1.91946163; EvalErrorPrediction = 0.52890625; TotalTime = 2.9811s; SamplesPerSecond = 3435.0
  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: * 10240; CrossEntropyWithSoftmax =  1.91066799; EvalErrorPrediction = 0.52783203; TotalTime = 2.9332s; SamplesPerSecond = 3491.1
-Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.9150648; TotalSamplesSeen = 61440; EvalErrorPrediction = 0.52836913; learningRatePerSample = 9.7656251e-05; EpochTime=5.96187
+Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.9150648 * 61440; EvalErrorPrediction = 0.52836913; learningRatePerSample = 9.7656251e-05; EpochTime=5.96187
 SGD: Saving checkpoint model '/tmp/cntk-test-20160318001444.203634/Speech/DNN_WriteCommand@debug_cpu/models/cntkSpeech.dnn'
 CNTKCommandTrainEnd: speechTrain
 

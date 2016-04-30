@@ -486,35 +486,35 @@ Allocating matrices for forward and/or backward propagation.
 
 04/20/2016 17:30:08: Starting minibatch loop.
 04/20/2016 17:30:08:  Epoch[ 1 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32771924; err = 0.90000000; TotalTime = 0.2610s; SamplesPerSecond = 3830.7
-04/20/2016 17:30:08: Finished Epoch[ 1 of 5]: [Training] ce = 2.3277192; TotalSamplesSeen = 1000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.261912
+04/20/2016 17:30:08: Finished Epoch[ 1 of 5]: [Training] ce = 2.3277192 * 1000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.261912
 04/20/2016 17:30:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.1'
 
 04/20/2016 17:30:08: Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 17:30:08: Starting minibatch loop.
 04/20/2016 17:30:08:  Epoch[ 2 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32675269; err = 0.90000000; TotalTime = 0.0371s; SamplesPerSecond = 26955.6
-04/20/2016 17:30:08: Finished Epoch[ 2 of 5]: [Training] ce = 2.3267527; TotalSamplesSeen = 2000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.037909
+04/20/2016 17:30:08: Finished Epoch[ 2 of 5]: [Training] ce = 2.3267527 * 2000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.037909
 04/20/2016 17:30:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.2'
 
 04/20/2016 17:30:08: Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 17:30:08: Starting minibatch loop.
 04/20/2016 17:30:08:  Epoch[ 3 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32544702; err = 0.90000000; TotalTime = 0.0415s; SamplesPerSecond = 24087.7
-04/20/2016 17:30:08: Finished Epoch[ 3 of 5]: [Training] ce = 2.325447; TotalSamplesSeen = 3000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.042617
+04/20/2016 17:30:08: Finished Epoch[ 3 of 5]: [Training] ce = 2.325447 * 3000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.042617
 04/20/2016 17:30:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.3'
 
 04/20/2016 17:30:08: Starting Epoch 4: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 17:30:08: Starting minibatch loop.
 04/20/2016 17:30:08:  Epoch[ 4 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32398853; err = 0.90000000; TotalTime = 0.0422s; SamplesPerSecond = 23670.3
-04/20/2016 17:30:08: Finished Epoch[ 4 of 5]: [Training] ce = 2.3239885; TotalSamplesSeen = 4000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.04285
+04/20/2016 17:30:08: Finished Epoch[ 4 of 5]: [Training] ce = 2.3239885 * 4000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.04285
 04/20/2016 17:30:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn.4'
 
 04/20/2016 17:30:08: Starting Epoch 5: learning rate per sample = 0.000002  effective momentum = 0.904837  momentum as time constant = 1000.0 samples
 
 04/20/2016 17:30:08: Starting minibatch loop.
 04/20/2016 17:30:08:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32253198; err = 0.90000000; TotalTime = 0.0382s; SamplesPerSecond = 26208.9
-04/20/2016 17:30:08: Finished Epoch[ 5 of 5]: [Training] ce = 2.322532; TotalSamplesSeen = 5000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.038556
+04/20/2016 17:30:08: Finished Epoch[ 5 of 5]: [Training] ce = 2.322532 * 5000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.038556
 04/20/2016 17:30:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn'
 04/20/2016 17:30:08: CNTKCommandTrainEnd: train
 
@@ -1086,7 +1086,7 @@ Allocating matrices for forward and/or backward propagation.
 
 04/20/2016 17:30:10: Starting minibatch loop.
 04/20/2016 17:30:10:  Epoch[ 5 of 5]-Minibatch[   1-  10, 100.00%]: * 1000; ce =  2.32298169; err = 0.90000000; TotalTime = 0.2368s; SamplesPerSecond = 4223.0
-04/20/2016 17:30:10: Finished Epoch[ 5 of 5]: [Training] ce = 2.3229817; TotalSamplesSeen = 1000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.237469
+04/20/2016 17:30:10: Finished Epoch[ 5 of 5]: [Training] ce = 2.3229817 * 1000; err = 0.9; learningRatePerSample = 2e-06; EpochTime=0.237469
 04/20/2016 17:30:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160420173007.539064/CNTKTextFormatReader/Image_QuickE2E@release_gpu/models/cntk.dnn'
 04/20/2016 17:30:10: CNTKCommandTrainEnd: train
 

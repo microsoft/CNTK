@@ -1162,7 +1162,7 @@ Allocating matrices for forward and/or backward propagation.
 
 04/15/2016 13:29:30: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:29:31: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 6.8341322; TotalSamplesSeen = 2087; learningRatePerSample = 0.1; EpochTime=0.987317
+04/15/2016 13:29:31: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 6.8341322 * 2087; learningRatePerSample = 0.1; EpochTime=0.987317
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-704]: * 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.5294469    perplexity = 685.01921    
@@ -1173,7 +1173,7 @@ Final Results: Minibatch[1-704]: * 73760    TrainNodeClassBasedCrossEntropy: Cla
 
 04/15/2016 13:29:42: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:29:43: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 6.5753689; TotalSamplesSeen = 4186; learningRatePerSample = 0.1; EpochTime=0.767515
+04/15/2016 13:29:43: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 6.5753689 * 4186; learningRatePerSample = 0.1; EpochTime=0.767515
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-353]: * 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.4597963    perplexity = 638.93091    
@@ -1184,7 +1184,7 @@ Final Results: Minibatch[1-353]: * 73760    TrainNodeClassBasedCrossEntropy: Cla
 
 04/15/2016 13:29:52: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:29:53: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 7.2637696; TotalSamplesSeen = 6462; learningRatePerSample = 0.1; EpochTime=0.700816
+04/15/2016 13:29:53: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 7.2637696 * 6462; learningRatePerSample = 0.1; EpochTime=0.700816
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
 Final Results: Minibatch[1-193]: * 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 9.5554591    perplexity = 14121.575    

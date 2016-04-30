@@ -403,7 +403,7 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 04/13/2016 15:42:32: Starting minibatch loop.
-04/13/2016 15:42:32: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 2.271538; TotalSamplesSeen = 128; EvalErrorPrediction = 0.8671875; learningRatePerSample = 0.00046874999; EpochTime=2.69695
+04/13/2016 15:42:32: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 2.271538 * 128; EvalErrorPrediction = 0.8671875; learningRatePerSample = 0.00046874999; EpochTime=2.69695
 04/13/2016 15:42:32: SGD: Saving checkpoint model '/tmp/cntk-test-20160413154229.901562/Examples/Image/Miscellaneous/CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv'
 04/13/2016 15:42:32: CNTKCommandTrainEnd: Train
 

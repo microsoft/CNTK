@@ -330,7 +330,7 @@ already there from last epoch
 04/07/2016 14:48:59:  Epoch[ 1 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  1.28930847; EvalErr[0]PerSample = 0.37568750; EvalErr[1]PerSample = 0.37568750; TotalTime = 0.8859s; SamplesPerSecond = 18061.6
 04/07/2016 14:48:59:  Epoch[ 1 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.50096338; EvalErr[0]PerSample = 0.13118750; EvalErr[1]PerSample = 0.13118750; TotalTime = 0.7452s; SamplesPerSecond = 21472.0
 04/07/2016 14:49:00:  Epoch[ 1 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.39348669; EvalErr[0]PerSample = 0.11293750; EvalErr[1]PerSample = 0.11293750; TotalTime = 0.6847s; SamplesPerSecond = 23367.7
-04/07/2016 14:49:01: Finished Epoch[ 1 of 30]: [Training] TrainLossPerSample = 0.64864165; TotalSamplesSeen = 60000; EvalErrPerSample [0]=0.18426667; [1]=0.18426667; AvgLearningRatePerSample = 0.003125; EpochTime=3.40798
+04/07/2016 14:49:01: Finished Epoch[ 1 of 30]: [Training] TrainLossPerSample = 0.64864165 * 60000; err = 0.18426667; [1]=0.18426667; AvgLearningRatePerSample = 0.003125; EpochTime=3.40798
 04/07/2016 14:49:01: Finished Epoch[ 1 of 30]:     Criterion Node [ce] Per Sample = 0.64864165
 04/07/2016 14:49:01: Finished Epoch[ 1 of 30]:     Evaluation Node [errTop5] Per Sample = 0.18426667
 04/07/2016 14:49:01: Finished Epoch[ 1 of 30]:     Evaluation Node [err] Per Sample = 0.18426667
@@ -344,7 +344,7 @@ already there from last epoch
 04/07/2016 14:49:01:  Epoch[ 2 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.33642883; EvalErr[0]PerSample = 0.09581250; EvalErr[1]PerSample = 0.09581250; TotalTime = 0.4110s; SamplesPerSecond = 38925.4
 04/07/2016 14:49:01:  Epoch[ 2 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.31968060; EvalErr[0]PerSample = 0.09237500; EvalErr[1]PerSample = 0.09237500; TotalTime = 0.3961s; SamplesPerSecond = 40392.4
 04/07/2016 14:49:02:  Epoch[ 2 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.30829694; EvalErr[0]PerSample = 0.09081250; EvalErr[1]PerSample = 0.09081250; TotalTime = 0.4017s; SamplesPerSecond = 39828.9
-04/07/2016 14:49:02: Finished Epoch[ 2 of 30]: [Training] TrainLossPerSample = 0.31219226; TotalSamplesSeen = 120000; EvalErrPerSample [0]=0.090116665; [1]=0.090116665; AvgLearningRatePerSample = 0.003125; EpochTime=1.50626
+04/07/2016 14:49:02: Finished Epoch[ 2 of 30]: [Training] TrainLossPerSample = 0.31219226 * 120000; err = 0.090116665; [1]=0.090116665; AvgLearningRatePerSample = 0.003125; EpochTime=1.50626
 04/07/2016 14:49:02: Finished Epoch[ 2 of 30]:     Criterion Node [ce] Per Sample = 0.31219226
 04/07/2016 14:49:02: Finished Epoch[ 2 of 30]:     Evaluation Node [errTop5] Per Sample = 0.090116665
 04/07/2016 14:49:02: Finished Epoch[ 2 of 30]:     Evaluation Node [err] Per Sample = 0.090116665
@@ -358,7 +358,7 @@ already there from last epoch
 04/07/2016 14:49:02:  Epoch[ 3 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.28846320; EvalErr[0]PerSample = 0.08293750; EvalErr[1]PerSample = 0.08293750; TotalTime = 0.3928s; SamplesPerSecond = 40736.8
 04/07/2016 14:49:03:  Epoch[ 3 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.27885980; EvalErr[0]PerSample = 0.07968750; EvalErr[1]PerSample = 0.07968750; TotalTime = 0.4249s; SamplesPerSecond = 37659.1
 04/07/2016 14:49:03:  Epoch[ 3 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.27336786; EvalErr[0]PerSample = 0.08018750; EvalErr[1]PerSample = 0.08018750; TotalTime = 0.4066s; SamplesPerSecond = 39353.7
-04/07/2016 14:49:04: Finished Epoch[ 3 of 30]: [Training] TrainLossPerSample = 0.27297238; TotalSamplesSeen = 180000; EvalErrPerSample [0]=0.078716666; [1]=0.078716666; AvgLearningRatePerSample = 0.003125; EpochTime=1.52499
+04/07/2016 14:49:04: Finished Epoch[ 3 of 30]: [Training] TrainLossPerSample = 0.27297238 * 180000; err = 0.078716666; [1]=0.078716666; AvgLearningRatePerSample = 0.003125; EpochTime=1.52499
 04/07/2016 14:49:04: Finished Epoch[ 3 of 30]:     Criterion Node [ce] Per Sample = 0.27297238
 04/07/2016 14:49:04: Finished Epoch[ 3 of 30]:     Evaluation Node [errTop5] Per Sample = 0.078716666
 04/07/2016 14:49:04: Finished Epoch[ 3 of 30]:     Evaluation Node [err] Per Sample = 0.078716666
@@ -372,7 +372,7 @@ already there from last epoch
 04/07/2016 14:49:04:  Epoch[ 4 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.25608041; EvalErr[0]PerSample = 0.07331250; EvalErr[1]PerSample = 0.07331250; TotalTime = 0.4032s; SamplesPerSecond = 39686.1
 04/07/2016 14:49:04:  Epoch[ 4 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.24877383; EvalErr[0]PerSample = 0.07125000; EvalErr[1]PerSample = 0.07125000; TotalTime = 0.4093s; SamplesPerSecond = 39093.1
 04/07/2016 14:49:05:  Epoch[ 4 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.24436157; EvalErr[0]PerSample = 0.07162500; EvalErr[1]PerSample = 0.07162500; TotalTime = 0.4462s; SamplesPerSecond = 35858.4
-04/07/2016 14:49:05: Finished Epoch[ 4 of 30]: [Training] TrainLossPerSample = 0.24334691; TotalSamplesSeen = 240000; EvalErrPerSample [0]=0.069933333; [1]=0.069933333; AvgLearningRatePerSample = 0.003125; EpochTime=1.59941
+04/07/2016 14:49:05: Finished Epoch[ 4 of 30]: [Training] TrainLossPerSample = 0.24334691 * 240000; err = 0.069933333; [1]=0.069933333; AvgLearningRatePerSample = 0.003125; EpochTime=1.59941
 04/07/2016 14:49:05: Finished Epoch[ 4 of 30]:     Criterion Node [ce] Per Sample = 0.24334691
 04/07/2016 14:49:05: Finished Epoch[ 4 of 30]:     Evaluation Node [errTop5] Per Sample = 0.069933333
 04/07/2016 14:49:05: Finished Epoch[ 4 of 30]:     Evaluation Node [err] Per Sample = 0.069933333
@@ -386,7 +386,7 @@ already there from last epoch
 04/07/2016 14:49:06:  Epoch[ 5 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.22827538; EvalErr[0]PerSample = 0.06593750; EvalErr[1]PerSample = 0.06593750; TotalTime = 0.4427s; SamplesPerSecond = 36145.2
 04/07/2016 14:49:06:  Epoch[ 5 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.22302122; EvalErr[0]PerSample = 0.06368750; EvalErr[1]PerSample = 0.06368750; TotalTime = 0.4201s; SamplesPerSecond = 38090.3
 04/07/2016 14:49:07:  Epoch[ 5 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.21961777; EvalErr[0]PerSample = 0.06381250; EvalErr[1]PerSample = 0.06381250; TotalTime = 0.4232s; SamplesPerSecond = 37806.1
-04/07/2016 14:49:07: Finished Epoch[ 5 of 30]: [Training] TrainLossPerSample = 0.2180291; TotalSamplesSeen = 300000; EvalErrPerSample [0]=0.0623; [1]=0.0623; AvgLearningRatePerSample = 0.003125; EpochTime=1.63154
+04/07/2016 14:49:07: Finished Epoch[ 5 of 30]: [Training] TrainLossPerSample = 0.2180291 * 300000; err = 0.0623; [1]=0.0623; AvgLearningRatePerSample = 0.003125; EpochTime=1.63154
 04/07/2016 14:49:07: Finished Epoch[ 5 of 30]:     Criterion Node [ce] Per Sample = 0.2180291
 04/07/2016 14:49:07: Finished Epoch[ 5 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0623
 04/07/2016 14:49:07: Finished Epoch[ 5 of 30]:     Evaluation Node [err] Per Sample = 0.0623
@@ -400,7 +400,7 @@ already there from last epoch
 04/07/2016 14:49:07:  Epoch[ 6 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.20467020; EvalErr[0]PerSample = 0.05868750; EvalErr[1]PerSample = 0.05868750; TotalTime = 0.4071s; SamplesPerSecond = 39298.3
 04/07/2016 14:49:08:  Epoch[ 6 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.20118964; EvalErr[0]PerSample = 0.05825000; EvalErr[1]PerSample = 0.05825000; TotalTime = 0.4105s; SamplesPerSecond = 38974.6
 04/07/2016 14:49:08:  Epoch[ 6 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.19883932; EvalErr[0]PerSample = 0.05775000; EvalErr[1]PerSample = 0.05775000; TotalTime = 0.4028s; SamplesPerSecond = 39719.1
-04/07/2016 14:49:08: Finished Epoch[ 6 of 30]: [Training] TrainLossPerSample = 0.19664152; TotalSamplesSeen = 360000; EvalErrPerSample [0]=0.05635; [1]=0.05635; AvgLearningRatePerSample = 0.003125; EpochTime=1.54017
+04/07/2016 14:49:08: Finished Epoch[ 6 of 30]: [Training] TrainLossPerSample = 0.19664152 * 360000; err = 0.05635; [1]=0.05635; AvgLearningRatePerSample = 0.003125; EpochTime=1.54017
 04/07/2016 14:49:08: Finished Epoch[ 6 of 30]:     Criterion Node [ce] Per Sample = 0.19664152
 04/07/2016 14:49:08: Finished Epoch[ 6 of 30]:     Evaluation Node [errTop5] Per Sample = 0.05635
 04/07/2016 14:49:08: Finished Epoch[ 6 of 30]:     Evaluation Node [err] Per Sample = 0.05635
@@ -414,7 +414,7 @@ already there from last epoch
 04/07/2016 14:49:09:  Epoch[ 7 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.18476917; EvalErr[0]PerSample = 0.05306250; EvalErr[1]PerSample = 0.05306250; TotalTime = 0.4088s; SamplesPerSecond = 39141.9
 04/07/2016 14:49:09:  Epoch[ 7 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.18272620; EvalErr[0]PerSample = 0.05325000; EvalErr[1]PerSample = 0.05325000; TotalTime = 0.3998s; SamplesPerSecond = 40015.8
 04/07/2016 14:49:10:  Epoch[ 7 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.18130524; EvalErr[0]PerSample = 0.05287500; EvalErr[1]PerSample = 0.05287500; TotalTime = 0.4255s; SamplesPerSecond = 37601.1
-04/07/2016 14:49:10: Finished Epoch[ 7 of 30]: [Training] TrainLossPerSample = 0.17858277; TotalSamplesSeen = 420000; EvalErrPerSample [0]=0.051366668; [1]=0.051366668; AvgLearningRatePerSample = 0.003125; EpochTime=1.55222
+04/07/2016 14:49:10: Finished Epoch[ 7 of 30]: [Training] TrainLossPerSample = 0.17858277 * 420000; err = 0.051366668; [1]=0.051366668; AvgLearningRatePerSample = 0.003125; EpochTime=1.55222
 04/07/2016 14:49:10: Finished Epoch[ 7 of 30]:     Criterion Node [ce] Per Sample = 0.17858277
 04/07/2016 14:49:10: Finished Epoch[ 7 of 30]:     Evaluation Node [errTop5] Per Sample = 0.051366668
 04/07/2016 14:49:10: Finished Epoch[ 7 of 30]:     Evaluation Node [err] Per Sample = 0.051366668
@@ -428,7 +428,7 @@ already there from last epoch
 04/07/2016 14:49:11:  Epoch[ 8 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.16791026; EvalErr[0]PerSample = 0.04856250; EvalErr[1]PerSample = 0.04856250; TotalTime = 0.4023s; SamplesPerSecond = 39773.9
 04/07/2016 14:49:11:  Epoch[ 8 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.16702440; EvalErr[0]PerSample = 0.04756250; EvalErr[1]PerSample = 0.04756250; TotalTime = 0.4014s; SamplesPerSecond = 39855.8
 04/07/2016 14:49:11:  Epoch[ 8 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.16637323; EvalErr[0]PerSample = 0.04706250; EvalErr[1]PerSample = 0.04706250; TotalTime = 0.4006s; SamplesPerSecond = 39935.7
-04/07/2016 14:49:12: Finished Epoch[ 8 of 30]: [Training] TrainLossPerSample = 0.16323005; TotalSamplesSeen = 480000; EvalErrPerSample [0]=0.046350002; [1]=0.046350002; AvgLearningRatePerSample = 0.003125; EpochTime=1.50533
+04/07/2016 14:49:12: Finished Epoch[ 8 of 30]: [Training] TrainLossPerSample = 0.16323005 * 480000; err = 0.046350002; [1]=0.046350002; AvgLearningRatePerSample = 0.003125; EpochTime=1.50533
 04/07/2016 14:49:12: Finished Epoch[ 8 of 30]:     Criterion Node [ce] Per Sample = 0.16323005
 04/07/2016 14:49:12: Finished Epoch[ 8 of 30]:     Evaluation Node [errTop5] Per Sample = 0.046350002
 04/07/2016 14:49:12: Finished Epoch[ 8 of 30]:     Evaluation Node [err] Per Sample = 0.046350002
@@ -442,7 +442,7 @@ already there from last epoch
 04/07/2016 14:49:12:  Epoch[ 9 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.15350847; EvalErr[0]PerSample = 0.04406250; EvalErr[1]PerSample = 0.04406250; TotalTime = 0.4002s; SamplesPerSecond = 39978.2
 04/07/2016 14:49:12:  Epoch[ 9 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.15356984; EvalErr[0]PerSample = 0.04381250; EvalErr[1]PerSample = 0.04381250; TotalTime = 0.4039s; SamplesPerSecond = 39612.3
 04/07/2016 14:49:13:  Epoch[ 9 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.15354349; EvalErr[0]PerSample = 0.04325000; EvalErr[1]PerSample = 0.04325000; TotalTime = 0.4011s; SamplesPerSecond = 39890.7
-04/07/2016 14:49:13: Finished Epoch[ 9 of 30]: [Training] TrainLossPerSample = 0.15006728; TotalSamplesSeen = 540000; EvalErrPerSample [0]=0.042533334; [1]=0.042533334; AvgLearningRatePerSample = 0.003125; EpochTime=1.50807
+04/07/2016 14:49:13: Finished Epoch[ 9 of 30]: [Training] TrainLossPerSample = 0.15006728 * 540000; err = 0.042533334; [1]=0.042533334; AvgLearningRatePerSample = 0.003125; EpochTime=1.50807
 04/07/2016 14:49:13: Finished Epoch[ 9 of 30]:     Criterion Node [ce] Per Sample = 0.15006728
 04/07/2016 14:49:13: Finished Epoch[ 9 of 30]:     Evaluation Node [errTop5] Per Sample = 0.042533334
 04/07/2016 14:49:13: Finished Epoch[ 9 of 30]:     Evaluation Node [err] Per Sample = 0.042533334
@@ -456,7 +456,7 @@ already there from last epoch
 04/07/2016 14:49:14:  Epoch[10 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.14108638; EvalErr[0]PerSample = 0.04043750; EvalErr[1]PerSample = 0.04043750; TotalTime = 0.4020s; SamplesPerSecond = 39805.4
 04/07/2016 14:49:14:  Epoch[10 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.14194075; EvalErr[0]PerSample = 0.04112500; EvalErr[1]PerSample = 0.04112500; TotalTime = 0.3985s; SamplesPerSecond = 40155.4
 04/07/2016 14:49:14:  Epoch[10 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.14241907; EvalErr[0]PerSample = 0.04043750; EvalErr[1]PerSample = 0.04043750; TotalTime = 0.3966s; SamplesPerSecond = 40343.1
-04/07/2016 14:49:15: Finished Epoch[10 of 30]: [Training] TrainLossPerSample = 0.13867831; TotalSamplesSeen = 600000; EvalErrPerSample [0]=0.039433334; [1]=0.039433334; AvgLearningRatePerSample = 0.003125; EpochTime=1.49635
+04/07/2016 14:49:15: Finished Epoch[10 of 30]: [Training] TrainLossPerSample = 0.13867831 * 600000; err = 0.039433334; [1]=0.039433334; AvgLearningRatePerSample = 0.003125; EpochTime=1.49635
 04/07/2016 14:49:15: Finished Epoch[10 of 30]:     Criterion Node [ce] Per Sample = 0.13867831
 04/07/2016 14:49:15: Finished Epoch[10 of 30]:     Evaluation Node [errTop5] Per Sample = 0.039433334
 04/07/2016 14:49:15: Finished Epoch[10 of 30]:     Evaluation Node [err] Per Sample = 0.039433334
@@ -470,7 +470,7 @@ already there from last epoch
 04/07/2016 14:49:15:  Epoch[11 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.13026932; EvalErr[0]PerSample = 0.03768750; EvalErr[1]PerSample = 0.03768750; TotalTime = 0.4008s; SamplesPerSecond = 39923.9
 04/07/2016 14:49:16:  Epoch[11 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.13180487; EvalErr[0]PerSample = 0.03762500; EvalErr[1]PerSample = 0.03762500; TotalTime = 0.4001s; SamplesPerSecond = 39991.1
 04/07/2016 14:49:16:  Epoch[11 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.13268649; EvalErr[0]PerSample = 0.03768750; EvalErr[1]PerSample = 0.03768750; TotalTime = 0.4010s; SamplesPerSecond = 39898.8
-04/07/2016 14:49:16: Finished Epoch[11 of 30]: [Training] TrainLossPerSample = 0.1287349; TotalSamplesSeen = 660000; EvalErrPerSample [0]=0.036533333; [1]=0.036533333; AvgLearningRatePerSample = 0.003125; EpochTime=1.50423
+04/07/2016 14:49:16: Finished Epoch[11 of 30]: [Training] TrainLossPerSample = 0.1287349 * 660000; err = 0.036533333; [1]=0.036533333; AvgLearningRatePerSample = 0.003125; EpochTime=1.50423
 04/07/2016 14:49:16: Finished Epoch[11 of 30]:     Criterion Node [ce] Per Sample = 0.1287349
 04/07/2016 14:49:16: Finished Epoch[11 of 30]:     Evaluation Node [errTop5] Per Sample = 0.036533333
 04/07/2016 14:49:16: Finished Epoch[11 of 30]:     Evaluation Node [err] Per Sample = 0.036533333
@@ -484,7 +484,7 @@ already there from last epoch
 04/07/2016 14:49:17:  Epoch[12 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.12077362; EvalErr[0]PerSample = 0.03375000; EvalErr[1]PerSample = 0.03375000; TotalTime = 0.3991s; SamplesPerSecond = 40094.1
 04/07/2016 14:49:17:  Epoch[12 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.12290393; EvalErr[0]PerSample = 0.03518750; EvalErr[1]PerSample = 0.03518750; TotalTime = 0.4015s; SamplesPerSecond = 39850.5
 04/07/2016 14:49:17:  Epoch[12 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.12410324; EvalErr[0]PerSample = 0.03525000; EvalErr[1]PerSample = 0.03525000; TotalTime = 0.4013s; SamplesPerSecond = 39872.8
-04/07/2016 14:49:18: Finished Epoch[12 of 30]: [Training] TrainLossPerSample = 0.11998519; TotalSamplesSeen = 720000; EvalErrPerSample [0]=0.033800002; [1]=0.033800002; AvgLearningRatePerSample = 0.003125; EpochTime=1.50444
+04/07/2016 14:49:18: Finished Epoch[12 of 30]: [Training] TrainLossPerSample = 0.11998519 * 720000; err = 0.033800002; [1]=0.033800002; AvgLearningRatePerSample = 0.003125; EpochTime=1.50444
 04/07/2016 14:49:18: Finished Epoch[12 of 30]:     Criterion Node [ce] Per Sample = 0.11998519
 04/07/2016 14:49:18: Finished Epoch[12 of 30]:     Evaluation Node [errTop5] Per Sample = 0.033800002
 04/07/2016 14:49:18: Finished Epoch[12 of 30]:     Evaluation Node [err] Per Sample = 0.033800002
@@ -498,7 +498,7 @@ already there from last epoch
 04/07/2016 14:49:18:  Epoch[13 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.11238457; EvalErr[0]PerSample = 0.03125000; EvalErr[1]PerSample = 0.03125000; TotalTime = 0.4007s; SamplesPerSecond = 39930.7
 04/07/2016 14:49:19:  Epoch[13 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.11503398; EvalErr[0]PerSample = 0.03281250; EvalErr[1]PerSample = 0.03281250; TotalTime = 0.4017s; SamplesPerSecond = 39835.7
 04/07/2016 14:49:19:  Epoch[13 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.11648001; EvalErr[0]PerSample = 0.03312500; EvalErr[1]PerSample = 0.03312500; TotalTime = 0.3994s; SamplesPerSecond = 40064.2
-04/07/2016 14:49:19: Finished Epoch[13 of 30]: [Training] TrainLossPerSample = 0.11223369; TotalSamplesSeen = 780000; EvalErrPerSample [0]=0.031550001; [1]=0.031550001; AvgLearningRatePerSample = 0.003125; EpochTime=1.50349
+04/07/2016 14:49:19: Finished Epoch[13 of 30]: [Training] TrainLossPerSample = 0.11223369 * 780000; err = 0.031550001; [1]=0.031550001; AvgLearningRatePerSample = 0.003125; EpochTime=1.50349
 04/07/2016 14:49:19: Finished Epoch[13 of 30]:     Criterion Node [ce] Per Sample = 0.11223369
 04/07/2016 14:49:19: Finished Epoch[13 of 30]:     Evaluation Node [errTop5] Per Sample = 0.031550001
 04/07/2016 14:49:19: Finished Epoch[13 of 30]:     Evaluation Node [err] Per Sample = 0.031550001
@@ -512,7 +512,7 @@ already there from last epoch
 04/07/2016 14:49:20:  Epoch[14 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.10493344; EvalErr[0]PerSample = 0.02881250; EvalErr[1]PerSample = 0.02881250; TotalTime = 0.4009s; SamplesPerSecond = 39908.0
 04/07/2016 14:49:20:  Epoch[14 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10803001; EvalErr[0]PerSample = 0.03037500; EvalErr[1]PerSample = 0.03037500; TotalTime = 0.4019s; SamplesPerSecond = 39812.9
 04/07/2016 14:49:21:  Epoch[14 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10966496; EvalErr[0]PerSample = 0.03131250; EvalErr[1]PerSample = 0.03131250; TotalTime = 0.3999s; SamplesPerSecond = 40009.5
-04/07/2016 14:49:21: Finished Epoch[14 of 30]: [Training] TrainLossPerSample = 0.10532398; TotalSamplesSeen = 840000; EvalErrPerSample [0]=0.029366666; [1]=0.029366666; AvgLearningRatePerSample = 0.003125; EpochTime=1.50479
+04/07/2016 14:49:21: Finished Epoch[14 of 30]: [Training] TrainLossPerSample = 0.10532398 * 840000; err = 0.029366666; [1]=0.029366666; AvgLearningRatePerSample = 0.003125; EpochTime=1.50479
 04/07/2016 14:49:21: Finished Epoch[14 of 30]:     Criterion Node [ce] Per Sample = 0.10532398
 04/07/2016 14:49:21: Finished Epoch[14 of 30]:     Evaluation Node [errTop5] Per Sample = 0.029366666
 04/07/2016 14:49:21: Finished Epoch[14 of 30]:     Evaluation Node [err] Per Sample = 0.029366666
@@ -526,7 +526,7 @@ already there from last epoch
 04/07/2016 14:49:21:  Epoch[15 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09828265; EvalErr[0]PerSample = 0.02781250; EvalErr[1]PerSample = 0.02781250; TotalTime = 0.4005s; SamplesPerSecond = 39951.0
 04/07/2016 14:49:22:  Epoch[15 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10175670; EvalErr[0]PerSample = 0.02887500; EvalErr[1]PerSample = 0.02887500; TotalTime = 0.3984s; SamplesPerSecond = 40164.4
 04/07/2016 14:49:22:  Epoch[15 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10353468; EvalErr[0]PerSample = 0.02975000; EvalErr[1]PerSample = 0.02975000; TotalTime = 0.3979s; SamplesPerSecond = 40211.4
-04/07/2016 14:49:22: Finished Epoch[15 of 30]: [Training] TrainLossPerSample = 0.099128082; TotalSamplesSeen = 900000; EvalErrPerSample [0]=0.027900001; [1]=0.027900001; AvgLearningRatePerSample = 0.003125; EpochTime=1.4965
+04/07/2016 14:49:22: Finished Epoch[15 of 30]: [Training] TrainLossPerSample = 0.099128082 * 900000; err = 0.027900001; [1]=0.027900001; AvgLearningRatePerSample = 0.003125; EpochTime=1.4965
 04/07/2016 14:49:22: Finished Epoch[15 of 30]:     Criterion Node [ce] Per Sample = 0.099128082
 04/07/2016 14:49:22: Finished Epoch[15 of 30]:     Evaluation Node [errTop5] Per Sample = 0.027900001
 04/07/2016 14:49:22: Finished Epoch[15 of 30]:     Evaluation Node [err] Per Sample = 0.027900001
@@ -540,7 +540,7 @@ already there from last epoch
 04/07/2016 14:49:23:  Epoch[16 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09231853; EvalErr[0]PerSample = 0.02643750; EvalErr[1]PerSample = 0.02643750; TotalTime = 0.4014s; SamplesPerSecond = 39863.1
 04/07/2016 14:49:23:  Epoch[16 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09610316; EvalErr[0]PerSample = 0.02700000; EvalErr[1]PerSample = 0.02700000; TotalTime = 0.4001s; SamplesPerSecond = 39993.7
 04/07/2016 14:49:24:  Epoch[16 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09798691; EvalErr[0]PerSample = 0.02768750; EvalErr[1]PerSample = 0.02768750; TotalTime = 0.4012s; SamplesPerSecond = 39878.7
-04/07/2016 14:49:24: Finished Epoch[16 of 30]: [Training] TrainLossPerSample = 0.09354043; TotalSamplesSeen = 960000; EvalErrPerSample [0]=0.0262; [1]=0.0262; AvgLearningRatePerSample = 0.003125; EpochTime=1.50569
+04/07/2016 14:49:24: Finished Epoch[16 of 30]: [Training] TrainLossPerSample = 0.09354043 * 960000; err = 0.0262; [1]=0.0262; AvgLearningRatePerSample = 0.003125; EpochTime=1.50569
 04/07/2016 14:49:24: Finished Epoch[16 of 30]:     Criterion Node [ce] Per Sample = 0.09354043
 04/07/2016 14:49:24: Finished Epoch[16 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0262
 04/07/2016 14:49:24: Finished Epoch[16 of 30]:     Evaluation Node [err] Per Sample = 0.0262
@@ -554,7 +554,7 @@ already there from last epoch
 04/07/2016 14:49:24:  Epoch[17 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08694670; EvalErr[0]PerSample = 0.02512500; EvalErr[1]PerSample = 0.02512500; TotalTime = 0.4001s; SamplesPerSecond = 39986.7
 04/07/2016 14:49:25:  Epoch[17 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09097736; EvalErr[0]PerSample = 0.02537500; EvalErr[1]PerSample = 0.02537500; TotalTime = 0.4006s; SamplesPerSecond = 39935.5
 04/07/2016 14:49:25:  Epoch[17 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09293706; EvalErr[0]PerSample = 0.02662500; EvalErr[1]PerSample = 0.02662500; TotalTime = 0.4002s; SamplesPerSecond = 39975.6
-04/07/2016 14:49:25: Finished Epoch[17 of 30]: [Training] TrainLossPerSample = 0.088473409; TotalSamplesSeen = 1020000; EvalErrPerSample [0]=0.024916667; [1]=0.024916667; AvgLearningRatePerSample = 0.003125; EpochTime=1.50249
+04/07/2016 14:49:25: Finished Epoch[17 of 30]: [Training] TrainLossPerSample = 0.088473409 * 1020000; err = 0.024916667; [1]=0.024916667; AvgLearningRatePerSample = 0.003125; EpochTime=1.50249
 04/07/2016 14:49:25: Finished Epoch[17 of 30]:     Criterion Node [ce] Per Sample = 0.088473409
 04/07/2016 14:49:25: Finished Epoch[17 of 30]:     Evaluation Node [errTop5] Per Sample = 0.024916667
 04/07/2016 14:49:25: Finished Epoch[17 of 30]:     Evaluation Node [err] Per Sample = 0.024916667
@@ -568,7 +568,7 @@ already there from last epoch
 04/07/2016 14:49:26:  Epoch[18 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08208772; EvalErr[0]PerSample = 0.02268750; EvalErr[1]PerSample = 0.02268750; TotalTime = 0.4007s; SamplesPerSecond = 39931.9
 04/07/2016 14:49:26:  Epoch[18 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08630401; EvalErr[0]PerSample = 0.02412500; EvalErr[1]PerSample = 0.02412500; TotalTime = 0.4005s; SamplesPerSecond = 39951.7
 04/07/2016 14:49:27:  Epoch[18 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08831522; EvalErr[0]PerSample = 0.02512500; EvalErr[1]PerSample = 0.02512500; TotalTime = 0.4077s; SamplesPerSecond = 39240.1
-04/07/2016 14:49:27: Finished Epoch[18 of 30]: [Training] TrainLossPerSample = 0.083854452; TotalSamplesSeen = 1080000; EvalErrPerSample [0]=0.023250001; [1]=0.023250001; AvgLearningRatePerSample = 0.003125; EpochTime=1.52544
+04/07/2016 14:49:27: Finished Epoch[18 of 30]: [Training] TrainLossPerSample = 0.083854452 * 1080000; err = 0.023250001; [1]=0.023250001; AvgLearningRatePerSample = 0.003125; EpochTime=1.52544
 04/07/2016 14:49:27: Finished Epoch[18 of 30]:     Criterion Node [ce] Per Sample = 0.083854452
 04/07/2016 14:49:27: Finished Epoch[18 of 30]:     Evaluation Node [errTop5] Per Sample = 0.023250001
 04/07/2016 14:49:27: Finished Epoch[18 of 30]:     Evaluation Node [err] Per Sample = 0.023250001
@@ -582,7 +582,7 @@ already there from last epoch
 04/07/2016 14:49:27:  Epoch[19 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07767484; EvalErr[0]PerSample = 0.02112500; EvalErr[1]PerSample = 0.02112500; TotalTime = 0.4860s; SamplesPerSecond = 32919.6
 04/07/2016 14:49:28:  Epoch[19 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08202056; EvalErr[0]PerSample = 0.02268750; EvalErr[1]PerSample = 0.02268750; TotalTime = 0.4952s; SamplesPerSecond = 32309.7
 04/07/2016 14:49:28:  Epoch[19 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08406421; EvalErr[0]PerSample = 0.02356250; EvalErr[1]PerSample = 0.02356250; TotalTime = 0.4924s; SamplesPerSecond = 32494.2
-04/07/2016 14:49:29: Finished Epoch[19 of 30]: [Training] TrainLossPerSample = 0.079624176; TotalSamplesSeen = 1140000; EvalErrPerSample [0]=0.021883333; [1]=0.021883333; AvgLearningRatePerSample = 0.003125; EpochTime=1.82496
+04/07/2016 14:49:29: Finished Epoch[19 of 30]: [Training] TrainLossPerSample = 0.079624176 * 1140000; err = 0.021883333; [1]=0.021883333; AvgLearningRatePerSample = 0.003125; EpochTime=1.82496
 04/07/2016 14:49:29: Finished Epoch[19 of 30]:     Criterion Node [ce] Per Sample = 0.079624176
 04/07/2016 14:49:29: Finished Epoch[19 of 30]:     Evaluation Node [errTop5] Per Sample = 0.021883333
 04/07/2016 14:49:29: Finished Epoch[19 of 30]:     Evaluation Node [err] Per Sample = 0.021883333
@@ -596,7 +596,7 @@ already there from last epoch
 04/07/2016 14:49:29:  Epoch[20 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07365132; EvalErr[0]PerSample = 0.01987500; EvalErr[1]PerSample = 0.01987500; TotalTime = 0.4603s; SamplesPerSecond = 34759.9
 04/07/2016 14:49:30:  Epoch[20 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07807613; EvalErr[0]PerSample = 0.02200000; EvalErr[1]PerSample = 0.02200000; TotalTime = 0.4763s; SamplesPerSecond = 33593.6
 04/07/2016 14:49:30:  Epoch[20 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08013644; EvalErr[0]PerSample = 0.02243750; EvalErr[1]PerSample = 0.02243750; TotalTime = 0.4585s; SamplesPerSecond = 34893.4
-04/07/2016 14:49:31: Finished Epoch[20 of 30]: [Training] TrainLossPerSample = 0.075732835; TotalSamplesSeen = 1200000; EvalErrPerSample [0]=0.020933334; [1]=0.020933334; AvgLearningRatePerSample = 0.003125; EpochTime=1.7424
+04/07/2016 14:49:31: Finished Epoch[20 of 30]: [Training] TrainLossPerSample = 0.075732835 * 1200000; err = 0.020933334; [1]=0.020933334; AvgLearningRatePerSample = 0.003125; EpochTime=1.7424
 04/07/2016 14:49:31: Finished Epoch[20 of 30]:     Criterion Node [ce] Per Sample = 0.075732835
 04/07/2016 14:49:31: Finished Epoch[20 of 30]:     Evaluation Node [errTop5] Per Sample = 0.020933334
 04/07/2016 14:49:31: Finished Epoch[20 of 30]:     Evaluation Node [err] Per Sample = 0.020933334
@@ -610,7 +610,7 @@ already there from last epoch
 04/07/2016 14:49:31:  Epoch[21 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06996849; EvalErr[0]PerSample = 0.01900000; EvalErr[1]PerSample = 0.01900000; TotalTime = 0.4846s; SamplesPerSecond = 33014.6
 04/07/2016 14:49:32:  Epoch[21 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07442801; EvalErr[0]PerSample = 0.02100000; EvalErr[1]PerSample = 0.02100000; TotalTime = 0.4574s; SamplesPerSecond = 34981.2
 04/07/2016 14:49:32:  Epoch[21 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07649426; EvalErr[0]PerSample = 0.02143750; EvalErr[1]PerSample = 0.02143750; TotalTime = 0.4427s; SamplesPerSecond = 36140.6
-04/07/2016 14:49:32: Finished Epoch[21 of 30]: [Training] TrainLossPerSample = 0.072139725; TotalSamplesSeen = 1260000; EvalErrPerSample [0]=0.019916667; [1]=0.019916667; AvgLearningRatePerSample = 0.003125; EpochTime=1.71984
+04/07/2016 14:49:32: Finished Epoch[21 of 30]: [Training] TrainLossPerSample = 0.072139725 * 1260000; err = 0.019916667; [1]=0.019916667; AvgLearningRatePerSample = 0.003125; EpochTime=1.71984
 04/07/2016 14:49:32: Finished Epoch[21 of 30]:     Criterion Node [ce] Per Sample = 0.072139725
 04/07/2016 14:49:32: Finished Epoch[21 of 30]:     Evaluation Node [errTop5] Per Sample = 0.019916667
 04/07/2016 14:49:32: Finished Epoch[21 of 30]:     Evaluation Node [err] Per Sample = 0.019916667
@@ -624,7 +624,7 @@ already there from last epoch
 04/07/2016 14:49:33:  Epoch[22 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06658476; EvalErr[0]PerSample = 0.01781250; EvalErr[1]PerSample = 0.01781250; TotalTime = 0.4218s; SamplesPerSecond = 37928.7
 04/07/2016 14:49:33:  Epoch[22 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07104192; EvalErr[0]PerSample = 0.01968750; EvalErr[1]PerSample = 0.01968750; TotalTime = 0.4471s; SamplesPerSecond = 35785.3
 04/07/2016 14:49:34:  Epoch[22 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07310529; EvalErr[0]PerSample = 0.02025000; EvalErr[1]PerSample = 0.02025000; TotalTime = 0.4293s; SamplesPerSecond = 37272.8
-04/07/2016 14:49:34: Finished Epoch[22 of 30]: [Training] TrainLossPerSample = 0.068810955; TotalSamplesSeen = 1320000; EvalErrPerSample [0]=0.0188; [1]=0.0188; AvgLearningRatePerSample = 0.003125; EpochTime=1.61324
+04/07/2016 14:49:34: Finished Epoch[22 of 30]: [Training] TrainLossPerSample = 0.068810955 * 1320000; err = 0.0188; [1]=0.0188; AvgLearningRatePerSample = 0.003125; EpochTime=1.61324
 04/07/2016 14:49:34: Finished Epoch[22 of 30]:     Criterion Node [ce] Per Sample = 0.068810955
 04/07/2016 14:49:34: Finished Epoch[22 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0188
 04/07/2016 14:49:34: Finished Epoch[22 of 30]:     Evaluation Node [err] Per Sample = 0.0188
@@ -638,7 +638,7 @@ already there from last epoch
 04/07/2016 14:49:34:  Epoch[23 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06346445; EvalErr[0]PerSample = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.4318s; SamplesPerSecond = 37052.0
 04/07/2016 14:49:35:  Epoch[23 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06788847; EvalErr[0]PerSample = 0.01906250; EvalErr[1]PerSample = 0.01906250; TotalTime = 0.4527s; SamplesPerSecond = 35346.5
 04/07/2016 14:49:35:  Epoch[23 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06994334; EvalErr[0]PerSample = 0.01962500; EvalErr[1]PerSample = 0.01962500; TotalTime = 0.4259s; SamplesPerSecond = 37570.6
-04/07/2016 14:49:36: Finished Epoch[23 of 30]: [Training] TrainLossPerSample = 0.065717839; TotalSamplesSeen = 1380000; EvalErrPerSample [0]=0.018066667; [1]=0.018066667; AvgLearningRatePerSample = 0.003125; EpochTime=1.62343
+04/07/2016 14:49:36: Finished Epoch[23 of 30]: [Training] TrainLossPerSample = 0.065717839 * 1380000; err = 0.018066667; [1]=0.018066667; AvgLearningRatePerSample = 0.003125; EpochTime=1.62343
 04/07/2016 14:49:36: Finished Epoch[23 of 30]:     Criterion Node [ce] Per Sample = 0.065717839
 04/07/2016 14:49:36: Finished Epoch[23 of 30]:     Evaluation Node [errTop5] Per Sample = 0.018066667
 04/07/2016 14:49:36: Finished Epoch[23 of 30]:     Evaluation Node [err] Per Sample = 0.018066667
@@ -652,7 +652,7 @@ already there from last epoch
 04/07/2016 14:49:36:  Epoch[24 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06057711; EvalErr[0]PerSample = 0.01612500; EvalErr[1]PerSample = 0.01612500; TotalTime = 0.4343s; SamplesPerSecond = 36837.6
 04/07/2016 14:49:37:  Epoch[24 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06494395; EvalErr[0]PerSample = 0.01787500; EvalErr[1]PerSample = 0.01787500; TotalTime = 0.4401s; SamplesPerSecond = 36357.6
 04/07/2016 14:49:37:  Epoch[24 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06698516; EvalErr[0]PerSample = 0.01881250; EvalErr[1]PerSample = 0.01881250; TotalTime = 0.4206s; SamplesPerSecond = 38040.4
-04/07/2016 14:49:37: Finished Epoch[24 of 30]: [Training] TrainLossPerSample = 0.062835939; TotalSamplesSeen = 1440000; EvalErrPerSample [0]=0.017183334; [1]=0.017183334; AvgLearningRatePerSample = 0.003125; EpochTime=1.63118
+04/07/2016 14:49:37: Finished Epoch[24 of 30]: [Training] TrainLossPerSample = 0.062835939 * 1440000; err = 0.017183334; [1]=0.017183334; AvgLearningRatePerSample = 0.003125; EpochTime=1.63118
 04/07/2016 14:49:37: Finished Epoch[24 of 30]:     Criterion Node [ce] Per Sample = 0.062835939
 04/07/2016 14:49:37: Finished Epoch[24 of 30]:     Evaluation Node [errTop5] Per Sample = 0.017183334
 04/07/2016 14:49:37: Finished Epoch[24 of 30]:     Evaluation Node [err] Per Sample = 0.017183334
@@ -666,7 +666,7 @@ already there from last epoch
 04/07/2016 14:49:38:  Epoch[25 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05789647; EvalErr[0]PerSample = 0.01525000; EvalErr[1]PerSample = 0.01525000; TotalTime = 0.4240s; SamplesPerSecond = 37739.9
 04/07/2016 14:49:38:  Epoch[25 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06218763; EvalErr[0]PerSample = 0.01693750; EvalErr[1]PerSample = 0.01693750; TotalTime = 0.4049s; SamplesPerSecond = 39519.1
 04/07/2016 14:49:39:  Epoch[25 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06421169; EvalErr[0]PerSample = 0.01775000; EvalErr[1]PerSample = 0.01775000; TotalTime = 0.3995s; SamplesPerSecond = 40050.9
-04/07/2016 14:49:39: Finished Epoch[25 of 30]: [Training] TrainLossPerSample = 0.060144316; TotalSamplesSeen = 1500000; EvalErrPerSample [0]=0.016216667; [1]=0.016216667; AvgLearningRatePerSample = 0.003125; EpochTime=1.55418
+04/07/2016 14:49:39: Finished Epoch[25 of 30]: [Training] TrainLossPerSample = 0.060144316 * 1500000; err = 0.016216667; [1]=0.016216667; AvgLearningRatePerSample = 0.003125; EpochTime=1.55418
 04/07/2016 14:49:39: Finished Epoch[25 of 30]:     Criterion Node [ce] Per Sample = 0.060144316
 04/07/2016 14:49:39: Finished Epoch[25 of 30]:     Evaluation Node [errTop5] Per Sample = 0.016216667
 04/07/2016 14:49:39: Finished Epoch[25 of 30]:     Evaluation Node [err] Per Sample = 0.016216667
@@ -680,7 +680,7 @@ already there from last epoch
 04/07/2016 14:49:39:  Epoch[26 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05540020; EvalErr[0]PerSample = 0.01456250; EvalErr[1]PerSample = 0.01456250; TotalTime = 0.4228s; SamplesPerSecond = 37840.8
 04/07/2016 14:49:40:  Epoch[26 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05960179; EvalErr[0]PerSample = 0.01625000; EvalErr[1]PerSample = 0.01625000; TotalTime = 0.4376s; SamplesPerSecond = 36564.9
 04/07/2016 14:49:40:  Epoch[26 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06160596; EvalErr[0]PerSample = 0.01693750; EvalErr[1]PerSample = 0.01693750; TotalTime = 0.4307s; SamplesPerSecond = 37152.7
-04/07/2016 14:49:41: Finished Epoch[26 of 30]: [Training] TrainLossPerSample = 0.05762472; TotalSamplesSeen = 1560000; EvalErrPerSample [0]=0.015433334; [1]=0.015433334; AvgLearningRatePerSample = 0.003125; EpochTime=1.61449
+04/07/2016 14:49:41: Finished Epoch[26 of 30]: [Training] TrainLossPerSample = 0.05762472 * 1560000; err = 0.015433334; [1]=0.015433334; AvgLearningRatePerSample = 0.003125; EpochTime=1.61449
 04/07/2016 14:49:41: Finished Epoch[26 of 30]:     Criterion Node [ce] Per Sample = 0.05762472
 04/07/2016 14:49:41: Finished Epoch[26 of 30]:     Evaluation Node [errTop5] Per Sample = 0.015433334
 04/07/2016 14:49:41: Finished Epoch[26 of 30]:     Evaluation Node [err] Per Sample = 0.015433334
@@ -694,7 +694,7 @@ already there from last epoch
 04/07/2016 14:49:41:  Epoch[27 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05306902; EvalErr[0]PerSample = 0.01381250; EvalErr[1]PerSample = 0.01381250; TotalTime = 0.4103s; SamplesPerSecond = 38991.7
 04/07/2016 14:49:41:  Epoch[27 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05717074; EvalErr[0]PerSample = 0.01531250; EvalErr[1]PerSample = 0.01531250; TotalTime = 0.4080s; SamplesPerSecond = 39212.8
 04/07/2016 14:49:42:  Epoch[27 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05915296; EvalErr[0]PerSample = 0.01600000; EvalErr[1]PerSample = 0.01600000; TotalTime = 0.4068s; SamplesPerSecond = 39331.4
-04/07/2016 14:49:42: Finished Epoch[27 of 30]: [Training] TrainLossPerSample = 0.05526093; TotalSamplesSeen = 1620000; EvalErrPerSample [0]=0.0146; [1]=0.0146; AvgLearningRatePerSample = 0.003125; EpochTime=1.53385
+04/07/2016 14:49:42: Finished Epoch[27 of 30]: [Training] TrainLossPerSample = 0.05526093 * 1620000; err = 0.0146; [1]=0.0146; AvgLearningRatePerSample = 0.003125; EpochTime=1.53385
 04/07/2016 14:49:42: Finished Epoch[27 of 30]:     Criterion Node [ce] Per Sample = 0.05526093
 04/07/2016 14:49:42: Finished Epoch[27 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0146
 04/07/2016 14:49:42: Finished Epoch[27 of 30]:     Evaluation Node [err] Per Sample = 0.0146
@@ -708,7 +708,7 @@ already there from last epoch
 04/07/2016 14:49:43:  Epoch[28 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05088624; EvalErr[0]PerSample = 0.01306250; EvalErr[1]PerSample = 0.01306250; TotalTime = 0.4000s; SamplesPerSecond = 39995.6
 04/07/2016 14:49:43:  Epoch[28 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05488034; EvalErr[0]PerSample = 0.01493750; EvalErr[1]PerSample = 0.01493750; TotalTime = 0.4062s; SamplesPerSecond = 39388.1
 04/07/2016 14:49:43:  Epoch[28 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05683998; EvalErr[0]PerSample = 0.01481250; EvalErr[1]PerSample = 0.01481250; TotalTime = 0.4049s; SamplesPerSecond = 39512.5
-04/07/2016 14:49:44: Finished Epoch[28 of 30]: [Training] TrainLossPerSample = 0.053038687; TotalSamplesSeen = 1680000; EvalErrPerSample [0]=0.013816667; [1]=0.013816667; AvgLearningRatePerSample = 0.003125; EpochTime=1.51778
+04/07/2016 14:49:44: Finished Epoch[28 of 30]: [Training] TrainLossPerSample = 0.053038687 * 1680000; err = 0.013816667; [1]=0.013816667; AvgLearningRatePerSample = 0.003125; EpochTime=1.51778
 04/07/2016 14:49:44: Finished Epoch[28 of 30]:     Criterion Node [ce] Per Sample = 0.053038687
 04/07/2016 14:49:44: Finished Epoch[28 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013816667
 04/07/2016 14:49:44: Finished Epoch[28 of 30]:     Evaluation Node [err] Per Sample = 0.013816667
@@ -722,7 +722,7 @@ already there from last epoch
 04/07/2016 14:49:44:  Epoch[29 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04883759; EvalErr[0]PerSample = 0.01231250; EvalErr[1]PerSample = 0.01231250; TotalTime = 0.4081s; SamplesPerSecond = 39202.2
 04/07/2016 14:49:45:  Epoch[29 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05271794; EvalErr[0]PerSample = 0.01462500; EvalErr[1]PerSample = 0.01462500; TotalTime = 0.4544s; SamplesPerSecond = 35210.6
 04/07/2016 14:49:45:  Epoch[29 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05465497; EvalErr[0]PerSample = 0.01431250; EvalErr[1]PerSample = 0.01431250; TotalTime = 0.4455s; SamplesPerSecond = 35918.0
-04/07/2016 14:49:45: Finished Epoch[29 of 30]: [Training] TrainLossPerSample = 0.050945017; TotalSamplesSeen = 1740000; EvalErrPerSample [0]=0.013233334; [1]=0.013233334; AvgLearningRatePerSample = 0.003125; EpochTime=1.64353
+04/07/2016 14:49:45: Finished Epoch[29 of 30]: [Training] TrainLossPerSample = 0.050945017 * 1740000; err = 0.013233334; [1]=0.013233334; AvgLearningRatePerSample = 0.003125; EpochTime=1.64353
 04/07/2016 14:49:45: Finished Epoch[29 of 30]:     Criterion Node [ce] Per Sample = 0.050945017
 04/07/2016 14:49:45: Finished Epoch[29 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013233334
 04/07/2016 14:49:45: Finished Epoch[29 of 30]:     Evaluation Node [err] Per Sample = 0.013233334
@@ -736,7 +736,7 @@ already there from last epoch
 04/07/2016 14:49:46:  Epoch[30 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04691060; EvalErr[0]PerSample = 0.01168750; EvalErr[1]PerSample = 0.01168750; TotalTime = 0.4178s; SamplesPerSecond = 38293.3
 04/07/2016 14:49:46:  Epoch[30 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05067239; EvalErr[0]PerSample = 0.01362500; EvalErr[1]PerSample = 0.01362500; TotalTime = 0.4200s; SamplesPerSecond = 38092.6
 04/07/2016 14:49:47:  Epoch[30 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05258816; EvalErr[0]PerSample = 0.01350000; EvalErr[1]PerSample = 0.01350000; TotalTime = 0.4476s; SamplesPerSecond = 35746.8
-04/07/2016 14:49:47: Finished Epoch[30 of 30]: [Training] TrainLossPerSample = 0.048968919; TotalSamplesSeen = 1800000; EvalErrPerSample [0]=0.01245; [1]=0.01245; AvgLearningRatePerSample = 0.003125; EpochTime=1.60951
+04/07/2016 14:49:47: Finished Epoch[30 of 30]: [Training] TrainLossPerSample = 0.048968919 * 1800000; err = 0.01245; [1]=0.01245; AvgLearningRatePerSample = 0.003125; EpochTime=1.60951
 04/07/2016 14:49:47: Finished Epoch[30 of 30]:     Criterion Node [ce] Per Sample = 0.048968919
 04/07/2016 14:49:47: Finished Epoch[30 of 30]:     Evaluation Node [errTop5] Per Sample = 0.01245
 04/07/2016 14:49:47: Finished Epoch[30 of 30]:     Evaluation Node [err] Per Sample = 0.01245

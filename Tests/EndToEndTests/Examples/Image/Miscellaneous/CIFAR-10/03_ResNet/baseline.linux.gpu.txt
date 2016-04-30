@@ -658,7 +658,7 @@ Allocating matrices for forward and/or backward propagation.
 04/13/2016 17:04:01: Starting Epoch 1: learning rate per sample = 0.062500  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 04/13/2016 17:04:01: Starting minibatch loop.
-04/13/2016 17:04:03: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 2.5755653; TotalSamplesSeen = 128; EvalErrorPrediction = 0.9609375; learningRatePerSample = 0.0625; EpochTime=1.38668
+04/13/2016 17:04:03: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 2.5755653 * 128; EvalErrorPrediction = 0.9609375; learningRatePerSample = 0.0625; EpochTime=1.38668
 04/13/2016 17:04:03: SGD: Saving checkpoint model '/tmp/cntk-test-20160413170400.3888/Examples/Image/Miscellaneous/CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet'
 04/13/2016 17:04:03: CNTKCommandTrainEnd: Train
 
