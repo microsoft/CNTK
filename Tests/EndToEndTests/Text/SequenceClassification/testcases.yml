@@ -28,6 +28,6 @@ testCases:
 #  Per-minibatch training results must match:
 #    patterns:
 #      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-#      - SamplesSeen = {{integer}}
+#      - " * {{integer}}; "
 #      - ce = {{float,tolerance=.5%}}
-#      - EvalErr[0]PerSample = {{float,tolerance=.5%}}
+#      - EvalErrorPrediction = {{float,tolerance=.5%}}
