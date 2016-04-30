@@ -928,7 +928,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    ce = 4.4589574    perplexity = 86.397381    err = 4.4589574    perplexity = 86.397381    
+Final Results: Minibatch[1-51]: * 81;    ce = 4.4589574    perplexity = 86.397381    err = 4.4589574    perplexity = 86.397381    
 04/11/2016 14:20:27: Finished Epoch[ 1 of 3]: [Validate] ce = 4.4589574; err = 4.4589574
 04/11/2016 14:20:27: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn.1'
 
@@ -946,7 +946,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    ce = 3.4404076    perplexity = 31.199672    err = 3.4404076    perplexity = 31.199672    
+Final Results: Minibatch[1-51]: * 81;    ce = 3.4404076    perplexity = 31.199672    err = 3.4404076    perplexity = 31.199672    
 04/11/2016 14:20:27: Finished Epoch[ 2 of 3]: [Validate] ce = 3.4404076; err = 3.4404076
 04/11/2016 14:20:27: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn.2'
 
@@ -964,7 +964,7 @@ BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: * 81    ce = 2.2055314    perplexity = 9.0750731    err = 2.2055314    perplexity = 9.0750731    
+Final Results: Minibatch[1-51]: * 81;    ce = 2.2055314    perplexity = 9.0750731    err = 2.2055314    perplexity = 9.0750731    
 04/11/2016 14:20:28: Finished Epoch[ 3 of 3]: [Validate] ce = 2.2055314; err = 2.2055314
 04/11/2016 14:20:28: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn'
 04/11/2016 14:20:28: CNTKCommandTrainEnd: LSTM
