@@ -34,6 +34,6 @@ testCases:
   Per-minibatch (with low train loss) training results must match:
     patterns:
       - Minibatch[{{integer}}-{{integer}}
-      - " * ?; totalSamplesSeen = {{integer}}; "
+      - " * {{integer}}; "
       - CrossEntropyWithSoftmax = {{float,tolerance=0.05}}
       - perplexity = {{float,tolerance=0.05}}
