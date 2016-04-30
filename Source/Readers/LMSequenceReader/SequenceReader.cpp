@@ -1056,7 +1056,7 @@ void SequenceReader<ElemType>::GetInputProb(StreamMinibatchInputs& matrices)
 
     int oldDeviceId = idx2prob.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2prob.AssignDeepClone_OrValues_Of(*m_id2Prob);
+    idx2prob.SetValue(*m_id2Prob);
     idx2prob.TransferFromDeviceToDevice(idx2prob.GetDeviceId(), oldDeviceId, true);
 
     m_idx2probRead = true;
@@ -1090,7 +1090,7 @@ void SequenceReader<ElemType>::GetInputToClass(StreamMinibatchInputs& matrices)
 
     int oldDeviceId = idx2cls.GetDeviceId();
     // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
-    idx2cls.AssignDeepClone_OrValues_Of(*m_id2classLocal);
+    idx2cls.SetValue(*m_id2classLocal);
     idx2cls.TransferFromDeviceToDevice(idx2cls.GetDeviceId(), oldDeviceId, true);
 
     m_idx2clsRead = true;
