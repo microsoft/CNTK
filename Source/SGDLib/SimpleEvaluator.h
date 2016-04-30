@@ -250,8 +250,7 @@ public:
         for (int i = 0; i < evalResultsLastLogged.size(); i++)
             evalResultsLastLogged[i] = EpochCriterion(0); // clear this since statistics display will subtract the previous value
 
-        fprintf(stderr, "Final Results: ");
-        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true);
+        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true, /*isFinal=*/true);
 
         return evalResults;
     }
@@ -265,16 +264,13 @@ protected:
     }
 
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
-                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false)
+                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false, bool isFinal = false)
     {
-        LOGPRINTF(stderr, "Minibatch[%lu-%lu]: ", startMBNum, endMBNum);
-        numSamplesLastLogged;// fprintf(stderr, "SamplesSeen = %lu    ", numSamplesLastLogged);
+        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", startMBNum, endMBNum);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
             EpochCriterion criterionSinceLastLogged = evalResults[i] - evalResultsLastLogged[i];
-            //double eresult = criterionSinceLastLogged.Average(); // / numSamplesLastLogged;
-            //fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
             criterionSinceLastLogged.LogCriterion(evalNodes[i]->NodeName(), /*addSemicolon=*/false);
 
             if (displayConvertedValue)
@@ -284,7 +280,7 @@ protected:
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                    fprintf(stderr, "; ppl = %.8f; ", std::exp(criterionSinceLastLogged.Average()));
+                    fprintf(stderr, "; ppl = %.8f", std::exp(criterionSinceLastLogged.Average()));
             }
 
             if (i + 1 < evalResults.size())
