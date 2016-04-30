@@ -114,6 +114,7 @@ private:
         const auto& node = nodes[i]; // multiple nodes are managed by this struct
         size_t beta = reset ? 0 : 1;
         size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
+
 #if 1
         // For criterion nodes that emit criteria per frame, we will at this point
         // do masking and an implicit reduction.
@@ -122,16 +123,19 @@ private:
         // TODO: Verify that node->GetSampleLayout().GetNumElements() == 1. Require explicit summation to declare intent that this is a criterion.
         FrameRange fr(node->GetMBLayout());
         node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
-        auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
-
         // get a TensorView of our aggregator
         TensorShape shape{ m_aggregateCriterionValues->GetNumRows(), m_aggregateCriterionValues->GetNumCols() };
         shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
         auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
 
-        // accumulate
-        // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
-        criterionAccumulator.DoCopyOf((float) beta, criterionValue, 1);
+        if (numSamples > 0) // (if MB is empty, matrix may not have the correct row dmension)
+        {
+            auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+            // accumulate
+            // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
+            // If count is zero, we lazily consider the numerator as zero as well.
+            criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
+        }
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
 #else
         // temp solution until we add TensorView reduction
