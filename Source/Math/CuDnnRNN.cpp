@@ -150,7 +150,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
-    const Mat& outputY, const Mat& outputDY, const Mat& weightsW, Mat& dx
+    const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& weightsW, GPUMatrix<ElemType>& dx
     )
 {
     if (!m_BackwardDataCalledYet)
@@ -174,7 +174,7 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
 }
 
 template <class ElemType>
-void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const Mat& inputX, const Mat& outputY, Mat& dw)
+void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw)
 {
     if (!m_BackwardDataCalledYet)
         LogicError("out of order calling you have been very bad");

@@ -140,11 +140,8 @@ public:
     }
     ~CuDnnFilter()
     {
-        if (m_filterDesc != nullptr)
-        {
-            cudnnDestroyFilterDescriptor(m_filterDesc);
-            m_filterDesc = nullptr;
-        }
+        assert(m_filterDesc != nullptr);
+        cudnnDestroyFilterDescriptor(m_filterDesc);
     }
     size_t GetSize() { return m_filterSize; }
     operator cudnnFilterDescriptor_t() const
@@ -163,7 +160,6 @@ class CuDnnRNNExecutor
 {
     CuDnn::ptr_t m_cudnn;
     cudnnDataType_t m_dataType;
-    using Mat = GPUMatrix<ElemType>;
 public:
     CuDnnRNNExecutor(const TensorShape &/*inputShape*/, const TensorShape &/*outputShape*/, const size_t numRows, const size_t numHidden) :
         m_cudnn(CuDnn::Instance()),
@@ -176,9 +172,9 @@ public:
 
     size_t GetWSize(cudnnTensorDescriptor_t *xDesc);
 
-    void ForwardCore(const Mat& weightsW, const Mat& inputX, const TensorShape shapeX, Mat& outputY, const TensorShape shapeY);
-    void BackwardWeightsCore(const Mat& inputX, const Mat& outputY, Mat& dw);
-    void BackwardDataCore(const Mat& outputY, const Mat& outputDY, const Mat& w, Mat &dx);
+    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY);
+    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw);
+    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx);
 
 protected:
     std::unique_ptr<CuDnnFilter<ElemType>> wDesc;
@@ -187,19 +183,19 @@ protected:
 
 
 private:
-    static ElemType* ptr(Mat& src)
+    static ElemType* ptr(GPUMatrix<ElemType>& src)
     {
         return src.Data();
     }
-    static const ElemType* ptr(const Mat& src)
+    static const ElemType* ptr(const GPUMatrix<ElemType>& src)
     {
         return src.Data();
     }
 
 private:
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;
-    Mat workspace;
-    Mat reserve;
+    GPUMatrix<ElemType> workspace;
+    GPUMatrix<ElemType> reserve;
     bool m_BackwardDataCalledYet;
 };
 
