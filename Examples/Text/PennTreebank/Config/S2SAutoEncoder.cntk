@@ -18,8 +18,8 @@ DataDir    = "$RunRootDir$/Data"
 CacheDir   = "$DataDir$/cache"   # (not used currently)
 ExpRootDir = "$RunRootDir$"
 
-#command = train:test:write
-command = writeWordAndClassInfo:train:test:write
+command = train:test:write
+#command = writeWordAndClassInfo:train:test:write
 #command = write
 #command = dump
 
@@ -27,12 +27,13 @@ command = writeWordAndClassInfo:train:test:write
 
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
+# 27-5: trying CNTK reader again after Ryan's bug fix
 # 27-4: back to LMSequenceReader (regression test)
 # 27-3: used </s> for sent end
 # 27-2: some refactoring, went back to 26-4 from LMSequenceReader
 # 27-1: fixed slicing
 # 27-0: incorrect slicing, dropped first input
-deviceId = 4
+deviceId = 5
 ExpId = 27-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
 decodeModel = 21
@@ -49,7 +50,7 @@ isBidirectional=false
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log2
+stderr = $ExpDir$/S2SAutoEncoder.log1
 
 precision  = "float"
 traceLevel = 1
@@ -83,27 +84,27 @@ confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
 
-inputVocabSize = 69
-labelVocabSize = 69
-trainFile = "g014b2b.train-dev-20-21.bsf.joint"
-#trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
-validFile = "g014b2b.train-dev-1-21.bsf.joint"
-testFile  = "g014b2b.test.bsf.joint"
-#testFile  = "g014b2b.test.bsf.joint.masked"
-startSymbol = "<s>"
-useCNTKTextFormatReader = false
-shareEmbeddings = true
-
-#inputVocabSize = 29
-#labelVocabSize = 40
-#trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
-##trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
-#validFile = "g014b2b.train-dev-1-21.bsf.ctf"
-#testFile  = "g014b2b.test.bsf.ctf"
-##testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+#inputVocabSize = 69
+#labelVocabSize = 69
+#trainFile = "g014b2b.train-dev-20-21.bsf.joint"
+##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.joint"
+#testFile  = "g014b2b.test.bsf.joint"
+##testFile  = "g014b2b.test.bsf.joint.masked"
 #startSymbol = "<s>"
-#useCNTKTextFormatReader = true
-#shareEmbeddings = false
+#useCNTKTextFormatReader = false
+#shareEmbeddings = true
+
+inputVocabSize = 29
+labelVocabSize = 40
+trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+#trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+testFile  = "g014b2b.test.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+startSymbol = "<s>"
+useCNTKTextFormatReader = true
+shareEmbeddings = false
 
 #######################################
 #  network definition                 #
@@ -151,12 +152,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # inputs
     # Inputs must be defined on top-scope level in order to get a clean name.
     useCNTKTextFormatReader = $useCNTKTextFormatReader$
-    input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
+    #input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
 
     inputAxis = DynamicAxis()
     labelsAxis = DynamicAxis()
-    #src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
-    #tgt = /*Sparse*/Input (labelVocabDim, dynamicAxis=labelsAxis)
+    src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
+    tgt = /*Sparse*/Input (labelVocabDim, dynamicAxis=labelsAxis)
 
     # get out input and label data
     # This will go away once we can switch to CNTKTextFormatReader.
@@ -345,13 +346,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 # shared reader definition            #
 #######################################
 
-cntkreader = [
+reader = [
     readerType = "CNTKTextFormatReader" 
     file = "$DataDir$/$trainFile$"
-    randomize="auto"
+    randomize="none"
     skipSequenceIds = "false"
     maxErrors = 100
     traceLevel = 2
+    chunkSizeInBytes = 30000000 # large enough for entire data set
  
     input = [
         src  = [
@@ -367,7 +369,7 @@ cntkreader = [
     ]
 ]
 
-cntkcvReader = [
+cvReader = [
     readerType = "CNTKTextFormatReader" 
     file = "$DataDir$/$validFile$"
     randomize="none"
@@ -389,7 +391,7 @@ cntkcvReader = [
     ]
 ]
 
-reader = [
+lmreader = [
     file = "$DataDir$/$trainFile$"
     #randomize = "auto" # gets ignored
 
@@ -456,7 +458,7 @@ reader = [
     ]
 ]
 
-cvReader = [
+lmcvReader = [
     file = "$DataDir$/$validFile$"
     #randomize = "none" # gets ignored
 
