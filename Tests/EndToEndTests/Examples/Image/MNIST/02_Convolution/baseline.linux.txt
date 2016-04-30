@@ -360,7 +360,7 @@ already there from last epoch
 04/07/2016 14:16:58:  Epoch[ 1 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.98526776; err = 0.32500000; TotalTime = 1.3030s; SamplesPerSecond = 12279.5
 04/07/2016 14:16:59:  Epoch[ 1 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.15344269; err = 0.04256250; TotalTime = 1.1170s; SamplesPerSecond = 14324.7
 04/07/2016 14:17:00:  Epoch[ 1 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.11083789; err = 0.03312500; TotalTime = 1.1154s; SamplesPerSecond = 14344.5
-04/07/2016 14:17:01: Finished Epoch[ 1 of 15]: [Training] ce = 0.35035855 * 60000; EvalErrorPrediction = 0.11196667; learningRatePerSample  = 0.003125; EpochTime=4.88531
+04/07/2016 14:17:01: Finished Epoch[ 1 of 15]: [Training] ce = 0.35035855 * 60000; err = 0.11196667; learningRatePerSample = 0.003125; EpochTime=4.88531
 04/07/2016 14:17:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.1'
 
 04/07/2016 14:17:01: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -371,7 +371,7 @@ already there from last epoch
 04/07/2016 14:17:02:  Epoch[ 2 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.07656574; err = 0.02256250; TotalTime = 1.1022s; SamplesPerSecond = 14516.7
 04/07/2016 14:17:03:  Epoch[ 2 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.06332232; err = 0.01906250; TotalTime = 1.0978s; SamplesPerSecond = 14574.4
 04/07/2016 14:17:04:  Epoch[ 2 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06096477; err = 0.01843750; TotalTime = 1.1001s; SamplesPerSecond = 14544.3
-04/07/2016 14:17:05: Finished Epoch[ 2 of 15]: [Training] ce = 0.063830577 * 120000; EvalErrorPrediction = 0.019066667; learningRatePerSample  = 0.003125; EpochTime=4.13708
+04/07/2016 14:17:05: Finished Epoch[ 2 of 15]: [Training] ce = 0.063830577 * 120000; err = 0.019066667; learningRatePerSample = 0.003125; EpochTime=4.13708
 04/07/2016 14:17:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.2'
 
 04/07/2016 14:17:05: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -382,7 +382,7 @@ already there from last epoch
 04/07/2016 14:17:06:  Epoch[ 3 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.04828593; err = 0.01356250; TotalTime = 1.0697s; SamplesPerSecond = 14957.2
 04/07/2016 14:17:07:  Epoch[ 3 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.04083206; err = 0.01162500; TotalTime = 1.0691s; SamplesPerSecond = 14966.1
 04/07/2016 14:17:08:  Epoch[ 3 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.04202024; err = 0.01231250; TotalTime = 1.0707s; SamplesPerSecond = 14943.5
-04/07/2016 14:17:09: Finished Epoch[ 3 of 15]: [Training] ce = 0.042137712 * 180000; EvalErrorPrediction = 0.01205; learningRatePerSample  = 0.003125; EpochTime=4.0138
+04/07/2016 14:17:09: Finished Epoch[ 3 of 15]: [Training] ce = 0.042137712 * 180000; err = 0.01205; learningRatePerSample = 0.003125; EpochTime=4.0138
 04/07/2016 14:17:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.3'
 
 04/07/2016 14:17:09: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -393,7 +393,7 @@ already there from last epoch
 04/07/2016 14:17:10:  Epoch[ 4 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.03436259; err = 0.00925000; TotalTime = 1.0653s; SamplesPerSecond = 15019.7
 04/07/2016 14:17:11:  Epoch[ 4 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.02914092; err = 0.00862500; TotalTime = 1.0646s; SamplesPerSecond = 15029.5
 04/07/2016 14:17:12:  Epoch[ 4 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.03001163; err = 0.00825000; TotalTime = 1.0670s; SamplesPerSecond = 14995.9
-04/07/2016 14:17:13: Finished Epoch[ 4 of 15]: [Training] ce = 0.030067476 * 240000; EvalErrorPrediction = 0.0083999997; learningRatePerSample  = 0.003125; EpochTime=3.99878
+04/07/2016 14:17:13: Finished Epoch[ 4 of 15]: [Training] ce = 0.030067476 * 240000; err = 0.0083999997; learningRatePerSample = 0.003125; EpochTime=3.99878
 04/07/2016 14:17:13: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.4'
 
 04/07/2016 14:17:13: Starting Epoch 5: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -404,7 +404,7 @@ already there from last epoch
 04/07/2016 14:17:14:  Epoch[ 5 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.02486609; err = 0.00643750; TotalTime = 1.0664s; SamplesPerSecond = 15003.8
 04/07/2016 14:17:15:  Epoch[ 5 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.02056633; err = 0.00468750; TotalTime = 1.0666s; SamplesPerSecond = 15000.6
 04/07/2016 14:17:16:  Epoch[ 5 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.02225651; err = 0.00568750; TotalTime = 1.0919s; SamplesPerSecond = 14653.7
-04/07/2016 14:17:17: Finished Epoch[ 5 of 15]: [Training] ce = 0.021797771 * 300000; EvalErrorPrediction = 0.0053333333; learningRatePerSample  = 0.003125; EpochTime=4.07281
+04/07/2016 14:17:17: Finished Epoch[ 5 of 15]: [Training] ce = 0.021797771 * 300000; err = 0.0053333333; learningRatePerSample = 0.003125; EpochTime=4.07281
 04/07/2016 14:17:17: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.5'
 
 04/07/2016 14:17:17: Starting Epoch 6: learning rate per sample = 0.009375  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -415,7 +415,7 @@ already there from last epoch
 04/07/2016 14:17:18:  Epoch[ 6 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.05357927; err = 0.01725000; TotalTime = 1.0933s; SamplesPerSecond = 14634.1
 04/07/2016 14:17:19:  Epoch[ 6 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.04825898; err = 0.01512500; TotalTime = 1.0932s; SamplesPerSecond = 14636.5
 04/07/2016 14:17:21:  Epoch[ 6 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.05669657; err = 0.01856250; TotalTime = 1.1126s; SamplesPerSecond = 14380.9
-04/07/2016 14:17:21: Finished Epoch[ 6 of 15]: [Training] ce = 0.051842291 * 360000; EvalErrorPrediction = 0.01675; learningRatePerSample  = 0.0093750004; EpochTime=4.13201
+04/07/2016 14:17:21: Finished Epoch[ 6 of 15]: [Training] ce = 0.051842291 * 360000; err = 0.01675; learningRatePerSample = 0.0093750004; EpochTime=4.13201
 04/07/2016 14:17:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.6'
 
 04/07/2016 14:17:21: Starting Epoch 7: learning rate per sample = 0.009375  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -426,7 +426,7 @@ already there from last epoch
 04/07/2016 14:17:23:  Epoch[ 7 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.03755896; err = 0.01231250; TotalTime = 1.0725s; SamplesPerSecond = 14919.0
 04/07/2016 14:17:24:  Epoch[ 7 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.03454590; err = 0.01106250; TotalTime = 1.0694s; SamplesPerSecond = 14961.5
 04/07/2016 14:17:25:  Epoch[ 7 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.03838315; err = 0.01231250; TotalTime = 1.0800s; SamplesPerSecond = 14815.0
-04/07/2016 14:17:25: Finished Epoch[ 7 of 15]: [Training] ce = 0.036162037 * 420000; EvalErrorPrediction = 0.01165; learningRatePerSample  = 0.0093750004; EpochTime=4.04887
+04/07/2016 14:17:25: Finished Epoch[ 7 of 15]: [Training] ce = 0.036162037 * 420000; err = 0.01165; learningRatePerSample = 0.0093750004; EpochTime=4.04887
 04/07/2016 14:17:25: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.7'
 
 04/07/2016 14:17:26: Starting Epoch 8: learning rate per sample = 0.009375  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -437,7 +437,7 @@ already there from last epoch
 04/07/2016 14:17:27:  Epoch[ 8 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.02838500; err = 0.00900000; TotalTime = 1.0700s; SamplesPerSecond = 14953.3
 04/07/2016 14:17:28:  Epoch[ 8 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.02249695; err = 0.00693750; TotalTime = 1.0673s; SamplesPerSecond = 14991.7
 04/07/2016 14:17:29:  Epoch[ 8 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.02647878; err = 0.00787500; TotalTime = 1.0675s; SamplesPerSecond = 14987.6
-04/07/2016 14:17:30: Finished Epoch[ 8 of 15]: [Training] ce = 0.025751172 * 480000; EvalErrorPrediction = 0.0080000004; learningRatePerSample  = 0.0093750004; EpochTime=4.00719
+04/07/2016 14:17:30: Finished Epoch[ 8 of 15]: [Training] ce = 0.025751172 * 480000; err = 0.0080000004; learningRatePerSample = 0.0093750004; EpochTime=4.00719
 04/07/2016 14:17:30: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.8'
 
 04/07/2016 14:17:30: Starting Epoch 9: learning rate per sample = 0.009375  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -448,7 +448,7 @@ already there from last epoch
 04/07/2016 14:17:31:  Epoch[ 9 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.01875125; err = 0.00568750; TotalTime = 1.0679s; SamplesPerSecond = 14983.3
 04/07/2016 14:17:32:  Epoch[ 9 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.01544093; err = 0.00493750; TotalTime = 1.1085s; SamplesPerSecond = 14433.3
 04/07/2016 14:17:33:  Epoch[ 9 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.02129173; err = 0.00618750; TotalTime = 1.1186s; SamplesPerSecond = 14303.5
-04/07/2016 14:17:34: Finished Epoch[ 9 of 15]: [Training] ce = 0.018342821 * 540000; EvalErrorPrediction = 0.0054833335; learningRatePerSample  = 0.0093750004; EpochTime=4.13339
+04/07/2016 14:17:34: Finished Epoch[ 9 of 15]: [Training] ce = 0.018342821 * 540000; err = 0.0054833335; learningRatePerSample = 0.0093750004; EpochTime=4.13339
 04/07/2016 14:17:34: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.9'
 
 04/07/2016 14:17:34: Starting Epoch 10: learning rate per sample = 0.009375  effective momentum = 0.000000  momentum as time constant = 0.0 samples
@@ -459,7 +459,7 @@ already there from last epoch
 04/07/2016 14:17:35:  Epoch[10 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.01390128; err = 0.00431250; TotalTime = 1.0825s; SamplesPerSecond = 14780.8
 04/07/2016 14:17:36:  Epoch[10 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.01073189; err = 0.00318750; TotalTime = 1.0816s; SamplesPerSecond = 14792.4
 04/07/2016 14:17:37:  Epoch[10 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.01273914; err = 0.00350000; TotalTime = 1.0743s; SamplesPerSecond = 14893.1
-04/07/2016 14:17:38: Finished Epoch[10 of 15]: [Training] ce = 0.011971561 * 600000; EvalErrorPrediction = 0.0033500001; learningRatePerSample  = 0.0093750004; EpochTime=4.04162
+04/07/2016 14:17:38: Finished Epoch[10 of 15]: [Training] ce = 0.011971561 * 600000; err = 0.0033500001; learningRatePerSample = 0.0093750004; EpochTime=4.04162
 04/07/2016 14:17:38: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.10'
 
 04/07/2016 14:17:38: Starting Epoch 11: learning rate per sample = 0.009375  effective momentum = 0.700000  momentum as time constant = 89.7 samples
@@ -470,7 +470,7 @@ already there from last epoch
 04/07/2016 14:17:39:  Epoch[11 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.00943945; err = 0.00268750; TotalTime = 1.0811s; SamplesPerSecond = 14800.1
 04/07/2016 14:17:40:  Epoch[11 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.00678514; err = 0.00150000; TotalTime = 1.1282s; SamplesPerSecond = 14181.4
 04/07/2016 14:17:41:  Epoch[11 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.00904479; err = 0.00287500; TotalTime = 1.1270s; SamplesPerSecond = 14197.6
-04/07/2016 14:17:42: Finished Epoch[11 of 15]: [Training] ce = 0.0083944919 * 660000; EvalErrorPrediction = 0.0022333334; learningRatePerSample  = 0.0093750004; EpochTime=4.16931
+04/07/2016 14:17:42: Finished Epoch[11 of 15]: [Training] ce = 0.0083944919 * 660000; err = 0.0022333334; learningRatePerSample = 0.0093750004; EpochTime=4.16931
 04/07/2016 14:17:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.11'
 
 04/07/2016 14:17:42: Starting Epoch 12: learning rate per sample = 0.009375  effective momentum = 0.700000  momentum as time constant = 89.7 samples
@@ -481,7 +481,7 @@ already there from last epoch
 04/07/2016 14:17:43:  Epoch[12 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.00509959; err = 0.00100000; TotalTime = 1.1282s; SamplesPerSecond = 14182.0
 04/07/2016 14:17:44:  Epoch[12 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.00453443; err = 0.00106250; TotalTime = 1.1145s; SamplesPerSecond = 14356.5
 04/07/2016 14:17:45:  Epoch[12 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.00516278; err = 0.00137500; TotalTime = 1.1098s; SamplesPerSecond = 14417.2
-04/07/2016 14:17:46: Finished Epoch[12 of 15]: [Training] ce = 0.0050358889 * 720000; EvalErrorPrediction = 0.0011; learningRatePerSample  = 0.0093750004; EpochTime=4.18719
+04/07/2016 14:17:46: Finished Epoch[12 of 15]: [Training] ce = 0.0050358889 * 720000; err = 0.0011; learningRatePerSample = 0.0093750004; EpochTime=4.18719
 04/07/2016 14:17:46: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.12'
 
 04/07/2016 14:17:46: Starting Epoch 13: learning rate per sample = 0.009375  effective momentum = 0.700000  momentum as time constant = 89.7 samples
@@ -492,7 +492,7 @@ already there from last epoch
 04/07/2016 14:17:47:  Epoch[13 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.00354859; err = 0.00075000; TotalTime = 1.0754s; SamplesPerSecond = 14878.3
 04/07/2016 14:17:48:  Epoch[13 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.00238765; err = 0.00018750; TotalTime = 1.1305s; SamplesPerSecond = 14153.6
 04/07/2016 14:17:49:  Epoch[13 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.00274582; err = 0.00043750; TotalTime = 1.1121s; SamplesPerSecond = 14387.6
-04/07/2016 14:17:50: Finished Epoch[13 of 15]: [Training] ce = 0.0030327758 * 780000; EvalErrorPrediction = 0.00044999999; learningRatePerSample  = 0.0093750004; EpochTime=4.1546
+04/07/2016 14:17:50: Finished Epoch[13 of 15]: [Training] ce = 0.0030327758 * 780000; err = 0.00044999999; learningRatePerSample = 0.0093750004; EpochTime=4.1546
 04/07/2016 14:17:50: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.13'
 
 04/07/2016 14:17:50: Starting Epoch 14: learning rate per sample = 0.009375  effective momentum = 0.700000  momentum as time constant = 89.7 samples
@@ -503,7 +503,7 @@ already there from last epoch
 04/07/2016 14:17:51:  Epoch[14 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.00180821; err = 6.25000000e-05; TotalTime = 1.0882s; SamplesPerSecond = 14703.4
 04/07/2016 14:17:53:  Epoch[14 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.00134340; err = 0.00000000; TotalTime = 1.0883s; SamplesPerSecond = 14702.0
 04/07/2016 14:17:54:  Epoch[14 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.00173738; err = 0.00012500; TotalTime = 1.0890s; SamplesPerSecond = 14692.6
-04/07/2016 14:17:54: Finished Epoch[14 of 15]: [Training] ce = 0.0018632461 * 840000; EvalErrorPrediction = 0.00013333333; learningRatePerSample  = 0.0093750004; EpochTime=4.08432
+04/07/2016 14:17:54: Finished Epoch[14 of 15]: [Training] ce = 0.0018632461 * 840000; err = 0.00013333333; learningRatePerSample = 0.0093750004; EpochTime=4.08432
 04/07/2016 14:17:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.14'
 
 04/07/2016 14:17:54: Starting Epoch 15: learning rate per sample = 0.009375  effective momentum = 0.700000  momentum as time constant = 89.7 samples
@@ -514,7 +514,7 @@ already there from last epoch
 04/07/2016 14:17:56:  Epoch[15 of 15]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.00128256; err = 6.25000000e-05; TotalTime = 1.0746s; SamplesPerSecond = 14889.1
 04/07/2016 14:17:57:  Epoch[15 of 15]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.00096656; err = 0.00000000; TotalTime = 1.0755s; SamplesPerSecond = 14876.4
 04/07/2016 14:17:58:  Epoch[15 of 15]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.00122244; err = 6.25000000e-05; TotalTime = 1.0757s; SamplesPerSecond = 14873.7
-04/07/2016 14:17:58: Finished Epoch[15 of 15]: [Training] ce = 0.0013114499 * 900000; EvalErrorPrediction = 6.6666667e-05; learningRatePerSample  = 0.0093750004; EpochTime=4.03499
+04/07/2016 14:17:58: Finished Epoch[15 of 15]: [Training] ce = 0.0013114499 * 900000; err = 6.6666667e-05; learningRatePerSample = 0.0093750004; EpochTime=4.03499
 04/07/2016 14:17:59: SGD: Saving checkpoint model '/tmp/cntk-test-20160407141655.895430/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution'
 04/07/2016 14:17:59: CNTKCommandTrainEnd: train
 
