@@ -1245,6 +1245,8 @@ template <class ElemType>
 void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                               const size_t nz, const size_t numRows, const size_t numCols)
 {
+    // Note: The current implementation uses the xPUSparseMatrix as temporary space. This allows for memory sharing between calls. If
+    // xPUSparseMatrix is a view, this code will cause an error during runtime stating that the view is not writable nor resizable.
     DISPATCH_MATRIX_ON_FLAG(this, this,
     {
         if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);

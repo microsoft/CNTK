@@ -32,7 +32,7 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
                     const size_t numSubminiBatches = 1) :
         m_net(net), 
         m_numMBsToShowResult(numMBsToShowResult), 
@@ -42,7 +42,8 @@ public:
         m_numSubminiBatches(numSubminiBatches), 
         m_mpi(mpi), 
         m_distGradAgg(nullptr),
-        m_gradHeader(nullptr)
+        m_gradHeader(nullptr),
+        m_enableDistributedMBReading(enableDistributedMBReading)
     {
     }
 
@@ -101,14 +102,18 @@ public:
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
         size_t numMBsRun = 0;
-        size_t actualMBSize = 0;
         size_t numSamplesLastLogged = 0;
         size_t numMBsRunLastLogged = 0; // MBs run before this display
 
         std::vector<EpochCriterion> evalResultsLastLogged(evalResults.size(), EpochCriterion(0));
 
-        //TODO: we should add support for distributed reading
+        bool useParallelTrain = (m_mpi != nullptr);
+        bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
+        if (useDistributedMBReading)
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+        else
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
@@ -125,8 +130,24 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, dataReader->SupportsDistributedMBRead(), m_mpi != nullptr, inputMatrices, actualMBSize, m_mpi))
+        bool noMoreSamplesToProcess = false;
+        for (;;)
         {
+            size_t actualMBSize = 0;
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            // in case of distributed reading, we do a few more loops until all ranks have completed
+            // end of epoch
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
+                break;
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+            if (!wasDataRead)
+                actualMBSize = 0; // (undefined if !wasDataRead)
+
+            if (actualMBSize > 0)
+        {
+
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
@@ -147,11 +168,12 @@ public:
 
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
+            } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
-            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
+            size_t numSamplesWithLabel = wasDataRead ? m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
-            if (m_mpi != nullptr)
+            if (useParallelTrain)
             {
                 if (m_gradHeader == nullptr)
                 {
@@ -177,15 +199,20 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                noMoreSamplesToProcess = !samplesProcessed;
+
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 for (size_t i = 0; i < evalResults.size(); i++)
                     evalResults[i] += m_gradHeader->evalErrors[i];
             }
             else
             {
+                if (actualMBSize != 0)
+                {
                 for (int i = 0; i < evalNodes.size(); i++)
                     evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                }
             }
 
             totalEpochSamples += aggregateNumSamplesWithLabel;
@@ -274,6 +301,7 @@ protected:
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
     MPIWrapperPtr m_mpi;
+    bool m_enableDistributedMBReading;
 
     shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
