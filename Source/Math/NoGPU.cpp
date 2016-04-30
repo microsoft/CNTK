@@ -78,6 +78,16 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& denseMatrix)
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& denseMatrix)
+{
+}
+
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 {
 }
@@ -985,7 +995,19 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
 {
 }
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
+void GPUMatrix<ElemType>::SetValue(CPUMatrix<ElemType> const&);
+{
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(GPUMatrix<ElemType> const&);
+{
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(CPUSparseMatrix<ElemType> const&);
+{
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&);
 {
 }
 
