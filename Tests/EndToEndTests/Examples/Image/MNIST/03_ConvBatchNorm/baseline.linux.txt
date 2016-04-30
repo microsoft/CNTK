@@ -488,8 +488,8 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 2036 retries for 10000 elements (20.4%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 2009, 1524, ...
-Minibatch[1-313]: SamplesSeen = 10000    err: ErrorPrediction/Sample = 0.009    ce: CrossEntropyWithSoftmax/Sample = 0.026436486    
-Final Results: Minibatch[1-313]: SamplesSeen = 10000    err: ErrorPrediction/Sample = 0.009    ce: CrossEntropyWithSoftmax/Sample = 0.026436486    perplexity = 1.026789    
+Minibatch[1-313]: SamplesSeen = 10000    err = 0.009    ce = 0.026436486    
+Final Results: Minibatch[1-313]: SamplesSeen = 10000    err = 0.009    ce = 0.026436486    perplexity = 1.026789    
 
 04/07/2016 14:05:19: Action "test" complete.
 

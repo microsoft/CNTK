@@ -932,7 +932,7 @@ MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; Trai
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.25377s; TotalTimePerSample = 0.39651ms; SamplesPerSecond = 2522
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.24911s; TotalTimePerSample = 0.38924ms; SamplesPerSecond = 2569
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.24472s; TotalTimePerSample = 0.38238ms; SamplesPerSecond = 2615
-MPI Rank 0: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.01922
+MPI Rank 0: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.01922
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
@@ -1869,7 +1869,7 @@ MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; Trai
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.25395s; TotalTimePerSample = 0.39680ms; SamplesPerSecond = 2520
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.24918s; TotalTimePerSample = 0.38935ms; SamplesPerSecond = 2568
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.24573s; TotalTimePerSample = 0.38396ms; SamplesPerSecond = 2604
-MPI Rank 1: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.019283
+MPI Rank 1: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.019283
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
@@ -2806,7 +2806,7 @@ MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; Trai
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.25295s; TotalTimePerSample = 0.39523ms; SamplesPerSecond = 2530
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.20091s; TotalTimePerSample = 0.31393ms; SamplesPerSecond = 3185
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.18020s; TotalTimePerSample = 0.28156ms; SamplesPerSecond = 3551
-MPI Rank 2: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.412645
+MPI Rank 2: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=8.412645
 MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
