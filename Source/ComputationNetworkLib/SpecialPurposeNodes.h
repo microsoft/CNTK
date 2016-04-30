@@ -540,7 +540,7 @@ public:
         }
         // softmax
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
-        m_softmaxOfRight->AssignDeepCloneOf(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
@@ -590,9 +590,9 @@ public:
         {
             auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-            node->m_logSoftmaxOfRight->AssignDeepCloneOf(*m_logSoftmaxOfRight);
-            node->m_softmaxOfRight->AssignDeepCloneOf(*m_softmaxOfRight);
-            node->m_gammaFromLattice->AssignDeepCloneOf(*m_gammaFromLattice);
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
             node->m_fsSmoothingWeight = m_fsSmoothingWeight;
             node->m_frameDropThreshold = m_frameDropThreshold;
             node->m_doReferenceAlignment = m_doReferenceAlignment;
