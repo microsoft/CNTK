@@ -1446,15 +1446,15 @@ void Matrix<ElemType>::NormalGrad(Matrix<ElemType>& gradients,
             },
             { 
                 ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                functionValues -= *this 
+                functionValues -= *this;
             },
             { 
                 if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues) 
+                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
             },
             { 
                 if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues) 
+                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
             });
     }
     else
