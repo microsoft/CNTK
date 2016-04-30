@@ -662,7 +662,7 @@ Starting minibatch loop.
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21442871; EvalErr[0]PerSample = 0.36445312; TotalTime = 2.28764s; TotalTimePerSample = 0.89361ms; SamplesPerSecond = 1119
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23150024; EvalErr[0]PerSample = 0.37578125; TotalTime = 2.29486s; TotalTimePerSample = 0.89643ms; SamplesPerSecond = 1115
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.25499268; EvalErr[0]PerSample = 0.37656250; TotalTime = 2.14378s; TotalTimePerSample = 0.83741ms; SamplesPerSecond = 1194
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.6395972; EvalErrPerSample = 0.46284181; AvgLearningRatePerSample = 0.003125000047; EpochTime=69.649363
+Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 1.6395972; EvalErrPerSample = 0.46284181; AvgLearningRatePerSample = 0.003125000047; EpochTime=69.649363
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -699,7 +699,7 @@ Starting minibatch loop.
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10054626; EvalErr[0]PerSample = 0.33750000; TotalTime = 2.02138s; TotalTimePerSample = 0.78960ms; SamplesPerSecond = 1266
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.09098816; EvalErr[0]PerSample = 0.34375000; TotalTime = 2.19745s; TotalTimePerSample = 0.85838ms; SamplesPerSecond = 1164
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.05595398; EvalErr[0]PerSample = 0.33671875; TotalTime = 2.11208s; TotalTimePerSample = 0.82503ms; SamplesPerSecond = 1212
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.165754; EvalErrPerSample = 0.35567626; AvgLearningRatePerSample = 0.003125000047; EpochTime=68.751932
+Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.165754; EvalErrPerSample = 0.35567626; AvgLearningRatePerSample = 0.003125000047; EpochTime=68.751932
 CNTKCommandTrainEnd: DPT_Pre1
 
 
@@ -1816,7 +1816,7 @@ Starting minibatch loop.
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18268433; EvalErr[0]PerSample = 0.35820313; TotalTime = 3.23501s; TotalTimePerSample = 1.26368ms; SamplesPerSecond = 791
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.16473083; EvalErr[0]PerSample = 0.35195312; TotalTime = 3.21572s; TotalTimePerSample = 1.25614ms; SamplesPerSecond = 796
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17591248; EvalErr[0]PerSample = 0.35195312; TotalTime = 3.07276s; TotalTimePerSample = 1.20030ms; SamplesPerSecond = 833
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.491325; EvalErrPerSample = 0.42381594; AvgLearningRatePerSample = 0.003125000047; EpochTime=106.67356
+Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 1.491325; EvalErrPerSample = 0.42381594; AvgLearningRatePerSample = 0.003125000047; EpochTime=106.67356
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -1853,7 +1853,7 @@ Starting minibatch loop.
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.08736572; EvalErr[0]PerSample = 0.33984375; TotalTime = 3.50527s; TotalTimePerSample = 1.36924ms; SamplesPerSecond = 730
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06789551; EvalErr[0]PerSample = 0.32890625; TotalTime = 3.27224s; TotalTimePerSample = 1.27822ms; SamplesPerSecond = 782
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.05290527; EvalErr[0]PerSample = 0.33398438; TotalTime = 3.47792s; TotalTimePerSample = 1.35856ms; SamplesPerSecond = 736
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.114005; EvalErrPerSample = 0.3416504; AvgLearningRatePerSample = 0.003125000047; EpochTime=104.51539
+Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.114005; EvalErrPerSample = 0.3416504; AvgLearningRatePerSample = 0.003125000047; EpochTime=104.51539
 CNTKCommandTrainEnd: DPT_Pre2
 
 
@@ -3200,7 +3200,7 @@ Starting minibatch loop.
  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14627686; EvalErr[0]PerSample = 0.34882812; TotalTime = 1.09796s; TotalTimePerSample = 0.42889ms; SamplesPerSecond = 2331
  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12782593; EvalErr[0]PerSample = 0.34296875; TotalTime = 1.11678s; TotalTimePerSample = 0.43624ms; SamplesPerSecond = 2292
  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12669983; EvalErr[0]PerSample = 0.34453125; TotalTime = 1.08905s; TotalTimePerSample = 0.42541ms; SamplesPerSecond = 2350
-Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 1.4077845; EvalErrPerSample = 0.40218505; AvgLearningRatePerSample = 0.003125000047; EpochTime=39.654781
+Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 1.4077845; EvalErrPerSample = 0.40218505; AvgLearningRatePerSample = 0.003125000047; EpochTime=39.654781
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -3221,7 +3221,7 @@ Starting minibatch loop.
  Epoch[ 2 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.10662994; EvalErr[0]PerSample = 0.33437500; TotalTime = 1.79551s; TotalTimePerSample = 0.35069ms; SamplesPerSecond = 2851
  Epoch[ 2 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05814362; EvalErr[0]PerSample = 0.33378906; TotalTime = 1.79585s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
  Epoch[ 2 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05615540; EvalErr[0]PerSample = 0.32558594; TotalTime = 1.78428s; TotalTimePerSample = 0.34849ms; SamplesPerSecond = 2869
-Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 1.14627; EvalErrPerSample = 0.35026857; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.798577
+Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 1.14627; EvalErrPerSample = 0.35026857; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.798577
 Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
 
@@ -3242,7 +3242,7 @@ Starting minibatch loop.
  Epoch[ 3 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02886810; EvalErr[0]PerSample = 0.32363281; TotalTime = 1.80412s; TotalTimePerSample = 0.35237ms; SamplesPerSecond = 2837
  Epoch[ 3 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.03884735; EvalErr[0]PerSample = 0.32656250; TotalTime = 1.79584s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
  Epoch[ 3 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02478790; EvalErr[0]PerSample = 0.31718750; TotalTime = 1.78394s; TotalTimePerSample = 0.34843ms; SamplesPerSecond = 2870
-Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.0715507; EvalErrPerSample = 0.33092043; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.836488
+Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 1.0715507; EvalErrPerSample = 0.33092043; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.836488
 Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
 
@@ -3263,6 +3263,6 @@ Starting minibatch loop.
  Epoch[ 4 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97142334; EvalErr[0]PerSample = 0.30546875; TotalTime = 1.79446s; TotalTimePerSample = 0.35048ms; SamplesPerSecond = 2853
  Epoch[ 4 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.98984375; EvalErr[0]PerSample = 0.31269531; TotalTime = 1.79283s; TotalTimePerSample = 0.35016ms; SamplesPerSecond = 2855
  Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97683563; EvalErr[0]PerSample = 0.30175781; TotalTime = 1.78603s; TotalTimePerSample = 0.34883ms; SamplesPerSecond = 2866
-Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.0043954; EvalErrPerSample = 0.31276855; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.984064
+Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 1.0043954; EvalErrPerSample = 0.31276855; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.984064
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__

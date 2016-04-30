@@ -1,7 +1,7 @@
 m1 = LoadModel("$currModel$", format="cntk")
 SetDefaultModel(m1)
-SetProperty(cr, "criterion", false)
-Remove(cr)
+SetProperty(ce, "criterion", false)
+Remove(ce)
 
 seWithSoftmax = SequenceWithSoftmax(labels, OL.z, scaledLogLikelihood) 
 SetProperty(seWithSoftmax, criterion, true)

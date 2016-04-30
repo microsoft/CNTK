@@ -860,7 +860,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:27:24:  Epoch[ 1 of 2]-Minibatch[4361-4370]: SamplesSeen = 2560; TrainLossPerSample =  1.96816406; EvalErr[0]PerSample = 0.54843750; TotalTime = 0.0202s; SamplesPerSecond = 127015.6
 04/15/2016 04:27:24:  Epoch[ 1 of 2]-Minibatch[4371-4380]: SamplesSeen = 2560; TrainLossPerSample =  1.99882813; EvalErr[0]PerSample = 0.55429688; TotalTime = 0.0199s; SamplesPerSecond = 128378.7
 04/15/2016 04:27:24:  Epoch[ 1 of 2]-Minibatch[4381-4390]: SamplesSeen = 2560; TrainLossPerSample =  1.97822266; EvalErr[0]PerSample = 0.53671875; TotalTime = 0.0200s; SamplesPerSecond = 128185.9
-04/15/2016 04:27:24: Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 2.4293582; TotalSamplesSeen = 1124823; EvalErrPerSample = 0.62147909; AvgLearningRatePerSample = 0.00039062501; EpochTime=8.97093
+04/15/2016 04:27:24: Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 2.4293582 * 1124823; EvalErrPerSample = 0.62147909; AvgLearningRatePerSample = 0.00039062501; EpochTime=8.97093
 04/15/2016 04:27:24: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/dptmodel1/cntkSpeech.dnn.1'
 
 04/15/2016 04:27:24: Starting Epoch 2: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -1307,7 +1307,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:27:33:  Epoch[ 2 of 2]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample =  1.81357422; EvalErr[0]PerSample = 0.53671875; TotalTime = 0.0209s; SamplesPerSecond = 122242.4
 04/15/2016 04:27:34:  Epoch[ 2 of 2]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample =  1.71962891; EvalErr[0]PerSample = 0.49531250; TotalTime = 0.0211s; SamplesPerSecond = 121396.1
 04/15/2016 04:27:34:  Epoch[ 2 of 2]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.78359375; EvalErr[0]PerSample = 0.50664062; TotalTime = 0.0209s; SamplesPerSecond = 122687.6
-04/15/2016 04:27:34: Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.8787675; TotalSamplesSeen = 2249646; EvalErrPerSample = 0.52606589; AvgLearningRatePerSample = 0.00039062501; EpochTime=9.53711
+04/15/2016 04:27:34: Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.8787675 * 2249646; EvalErrPerSample = 0.52606589; AvgLearningRatePerSample = 0.00039062501; EpochTime=9.53711
 04/15/2016 04:27:34: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/dptmodel1/cntkSpeech.dnn'
 04/15/2016 04:27:34: CNTKCommandTrainEnd: TIMIT_DiscrimPreTrain1
 
@@ -1940,7 +1940,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:27:48:  Epoch[ 1 of 2]-Minibatch[4361-4370]: SamplesSeen = 2560; TrainLossPerSample =  1.84677734; EvalErr[0]PerSample = 0.52500000; TotalTime = 0.0252s; SamplesPerSecond = 101563.1
 04/15/2016 04:27:48:  Epoch[ 1 of 2]-Minibatch[4371-4380]: SamplesSeen = 2560; TrainLossPerSample =  1.87910156; EvalErr[0]PerSample = 0.53320313; TotalTime = 0.0255s; SamplesPerSecond = 100518.3
 04/15/2016 04:27:48:  Epoch[ 1 of 2]-Minibatch[4381-4390]: SamplesSeen = 2560; TrainLossPerSample =  1.86171875; EvalErr[0]PerSample = 0.52890625; TotalTime = 0.0253s; SamplesPerSecond = 101362.1
-04/15/2016 04:27:48: Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 2.0801892; TotalSamplesSeen = 1124823; EvalErrPerSample = 0.56726432; AvgLearningRatePerSample = 0.00039062501; EpochTime=12.4922
+04/15/2016 04:27:48: Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 2.0801892 * 1124823; EvalErrPerSample = 0.56726432; AvgLearningRatePerSample = 0.00039062501; EpochTime=12.4922
 04/15/2016 04:27:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/dptmodel2/cntkSpeech.dnn.1'
 
 04/15/2016 04:27:48: Starting Epoch 2: learning rate per sample = 0.000391  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -2387,7 +2387,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:27:59:  Epoch[ 2 of 2]-Minibatch[4361-4370, 99.54%]: SamplesSeen = 2560; TrainLossPerSample =  1.77617188; EvalErr[0]PerSample = 0.52968750; TotalTime = 0.0254s; SamplesPerSecond = 100625.0
 04/15/2016 04:27:59:  Epoch[ 2 of 2]-Minibatch[4371-4380, 99.77%]: SamplesSeen = 2560; TrainLossPerSample =  1.68579102; EvalErr[0]PerSample = 0.49140625; TotalTime = 0.0254s; SamplesPerSecond = 100930.5
 04/15/2016 04:27:59:  Epoch[ 2 of 2]-Minibatch[4381-4390, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  1.74726563; EvalErr[0]PerSample = 0.49570313; TotalTime = 0.0254s; SamplesPerSecond = 100986.2
-04/15/2016 04:27:59: Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.8076534; TotalSamplesSeen = 2249646; EvalErrPerSample = 0.51672482; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.4657
+04/15/2016 04:27:59: Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.8076534 * 2249646; EvalErrPerSample = 0.51672482; AvgLearningRatePerSample = 0.00039062501; EpochTime=11.4657
 04/15/2016 04:27:59: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/dptmodel2/cntkSpeech.dnn'
 04/15/2016 04:27:59: CNTKCommandTrainEnd: TIMIT_DiscrimPreTrain2
 
@@ -3035,7 +3035,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:15:  Epoch[ 1 of 25]-Minibatch[4361-4370]: SamplesSeen = 2560; TrainLossPerSample =  1.60209961; EvalErr[0]PerSample = 0.47539063; TotalTime = 0.0285s; SamplesPerSecond = 89683.0
 04/15/2016 04:28:15:  Epoch[ 1 of 25]-Minibatch[4371-4380]: SamplesSeen = 2560; TrainLossPerSample =  1.60390625; EvalErr[0]PerSample = 0.48164062; TotalTime = 0.0286s; SamplesPerSecond = 89472.9
 04/15/2016 04:28:15:  Epoch[ 1 of 25]-Minibatch[4381-4390]: SamplesSeen = 2560; TrainLossPerSample =  1.59873047; EvalErr[0]PerSample = 0.47890625; TotalTime = 0.0286s; SamplesPerSecond = 89476.1
-04/15/2016 04:28:15: Finished Epoch[ 1 of 25]: [Training Set] TrainLossPerSample = 1.7638298; TotalSamplesSeen = 1124823; EvalErrPerSample = 0.51404798; AvgLearningRatePerSample = 0.003125; EpochTime=14.1371
+04/15/2016 04:28:15: Finished Epoch[ 1 of 25]: [Training] TrainLossPerSample = 1.7638298 * 1124823; EvalErrPerSample = 0.51404798; AvgLearningRatePerSample = 0.003125; EpochTime=14.1371
 04/15/2016 04:28:15: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.1'
 
 04/15/2016 04:28:15: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3152,7 +3152,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:22:  Epoch[ 2 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.46286621; EvalErr[0]PerSample = 0.44541016; TotalTime = 0.0609s; SamplesPerSecond = 168155.5
 04/15/2016 04:28:22:  Epoch[ 2 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.47861328; EvalErr[0]PerSample = 0.45605469; TotalTime = 0.0607s; SamplesPerSecond = 168645.7
 04/15/2016 04:28:22:  Epoch[ 2 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.46049805; EvalErr[0]PerSample = 0.44531250; TotalTime = 0.0606s; SamplesPerSecond = 168901.6
-04/15/2016 04:28:22: Finished Epoch[ 2 of 25]: [Training Set] TrainLossPerSample = 1.5214871; TotalSamplesSeen = 2249646; EvalErrPerSample = 0.46106097; AvgLearningRatePerSample = 0.003125; EpochTime=7.01579
+04/15/2016 04:28:22: Finished Epoch[ 2 of 25]: [Training] TrainLossPerSample = 1.5214871 * 2249646; EvalErrPerSample = 0.46106097; AvgLearningRatePerSample = 0.003125; EpochTime=7.01579
 04/15/2016 04:28:22: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.2'
 
 04/15/2016 04:28:22: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3269,7 +3269,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:29:  Epoch[ 3 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.37030029; EvalErr[0]PerSample = 0.42216797; TotalTime = 0.0611s; SamplesPerSecond = 167662.7
 04/15/2016 04:28:29:  Epoch[ 3 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.38177490; EvalErr[0]PerSample = 0.42695312; TotalTime = 0.0612s; SamplesPerSecond = 167279.3
 04/15/2016 04:28:29:  Epoch[ 3 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.35955811; EvalErr[0]PerSample = 0.42236328; TotalTime = 0.0613s; SamplesPerSecond = 166960.2
-04/15/2016 04:28:29: Finished Epoch[ 3 of 25]: [Training Set] TrainLossPerSample = 1.4133486; TotalSamplesSeen = 3374469; EvalErrPerSample = 0.43513334; AvgLearningRatePerSample = 0.003125; EpochTime=7.04151
+04/15/2016 04:28:29: Finished Epoch[ 3 of 25]: [Training] TrainLossPerSample = 1.4133486 * 3374469; EvalErrPerSample = 0.43513334; AvgLearningRatePerSample = 0.003125; EpochTime=7.04151
 04/15/2016 04:28:29: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.3'
 
 04/15/2016 04:28:29: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3386,7 +3386,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:36:  Epoch[ 4 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.30301514; EvalErr[0]PerSample = 0.40722656; TotalTime = 0.0611s; SamplesPerSecond = 167563.9
 04/15/2016 04:28:36:  Epoch[ 4 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.32067871; EvalErr[0]PerSample = 0.40576172; TotalTime = 0.0612s; SamplesPerSecond = 167416.0
 04/15/2016 04:28:36:  Epoch[ 4 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.32604980; EvalErr[0]PerSample = 0.41279297; TotalTime = 0.0609s; SamplesPerSecond = 168009.3
-04/15/2016 04:28:36: Finished Epoch[ 4 of 25]: [Training Set] TrainLossPerSample = 1.3401006; TotalSamplesSeen = 4499292; EvalErrPerSample = 0.41709316; AvgLearningRatePerSample = 0.003125; EpochTime=7.02957
+04/15/2016 04:28:36: Finished Epoch[ 4 of 25]: [Training] TrainLossPerSample = 1.3401006 * 4499292; EvalErrPerSample = 0.41709316; AvgLearningRatePerSample = 0.003125; EpochTime=7.02957
 04/15/2016 04:28:37: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.4'
 
 04/15/2016 04:28:37: Starting Epoch 5: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3503,7 +3503,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:43:  Epoch[ 5 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.27585449; EvalErr[0]PerSample = 0.40146484; TotalTime = 0.0611s; SamplesPerSecond = 167539.3
 04/15/2016 04:28:43:  Epoch[ 5 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.26087646; EvalErr[0]PerSample = 0.39687500; TotalTime = 0.0608s; SamplesPerSecond = 168313.1
 04/15/2016 04:28:44:  Epoch[ 5 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.25471191; EvalErr[0]PerSample = 0.39472656; TotalTime = 0.0600s; SamplesPerSecond = 170723.6
-04/15/2016 04:28:44: Finished Epoch[ 5 of 25]: [Training Set] TrainLossPerSample = 1.2866478; TotalSamplesSeen = 5624115; EvalErrPerSample = 0.40370351; AvgLearningRatePerSample = 0.003125; EpochTime=7.02985
+04/15/2016 04:28:44: Finished Epoch[ 5 of 25]: [Training] TrainLossPerSample = 1.2866478 * 5624115; EvalErrPerSample = 0.40370351; AvgLearningRatePerSample = 0.003125; EpochTime=7.02985
 04/15/2016 04:28:44: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.5'
 
 04/15/2016 04:28:44: Starting Epoch 6: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3620,7 +3620,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:51:  Epoch[ 6 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.25145264; EvalErr[0]PerSample = 0.39531250; TotalTime = 0.0609s; SamplesPerSecond = 168097.6
 04/15/2016 04:28:51:  Epoch[ 6 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.23690186; EvalErr[0]PerSample = 0.39667969; TotalTime = 0.0609s; SamplesPerSecond = 168089.3
 04/15/2016 04:28:51:  Epoch[ 6 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.22612305; EvalErr[0]PerSample = 0.38779297; TotalTime = 0.0610s; SamplesPerSecond = 167915.6
-04/15/2016 04:28:51: Finished Epoch[ 6 of 25]: [Training Set] TrainLossPerSample = 1.2414525; TotalSamplesSeen = 6748938; EvalErrPerSample = 0.39228216; AvgLearningRatePerSample = 0.003125; EpochTime=6.97781
+04/15/2016 04:28:51: Finished Epoch[ 6 of 25]: [Training] TrainLossPerSample = 1.2414525 * 6748938; EvalErrPerSample = 0.39228216; AvgLearningRatePerSample = 0.003125; EpochTime=6.97781
 04/15/2016 04:28:51: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.6'
 
 04/15/2016 04:28:51: Starting Epoch 7: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3737,7 +3737,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:28:58:  Epoch[ 7 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.21008301; EvalErr[0]PerSample = 0.38632813; TotalTime = 0.0611s; SamplesPerSecond = 167638.0
 04/15/2016 04:28:58:  Epoch[ 7 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.21849365; EvalErr[0]PerSample = 0.38701172; TotalTime = 0.0612s; SamplesPerSecond = 167342.1
 04/15/2016 04:28:58:  Epoch[ 7 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.19951172; EvalErr[0]PerSample = 0.38525391; TotalTime = 0.0613s; SamplesPerSecond = 167107.3
-04/15/2016 04:28:58: Finished Epoch[ 7 of 25]: [Training Set] TrainLossPerSample = 1.2041476; TotalSamplesSeen = 7873761; EvalErrPerSample = 0.3830567; AvgLearningRatePerSample = 0.003125; EpochTime=7.045
+04/15/2016 04:28:58: Finished Epoch[ 7 of 25]: [Training] TrainLossPerSample = 1.2041476 * 7873761; EvalErrPerSample = 0.3830567; AvgLearningRatePerSample = 0.003125; EpochTime=7.045
 04/15/2016 04:28:58: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.7'
 
 04/15/2016 04:28:58: Starting Epoch 8: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3854,7 +3854,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:05:  Epoch[ 8 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.15924072; EvalErr[0]PerSample = 0.37558594; TotalTime = 0.0613s; SamplesPerSecond = 167088.2
 04/15/2016 04:29:05:  Epoch[ 8 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.17407227; EvalErr[0]PerSample = 0.37353516; TotalTime = 0.0611s; SamplesPerSecond = 167517.3
 04/15/2016 04:29:05:  Epoch[ 8 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.16751709; EvalErr[0]PerSample = 0.37978516; TotalTime = 0.0609s; SamplesPerSecond = 168183.2
-04/15/2016 04:29:05: Finished Epoch[ 8 of 25]: [Training Set] TrainLossPerSample = 1.1707473; TotalSamplesSeen = 8998584; EvalErrPerSample = 0.37360543; AvgLearningRatePerSample = 0.003125; EpochTime=7.02764
+04/15/2016 04:29:05: Finished Epoch[ 8 of 25]: [Training] TrainLossPerSample = 1.1707473 * 8998584; EvalErrPerSample = 0.37360543; AvgLearningRatePerSample = 0.003125; EpochTime=7.02764
 04/15/2016 04:29:05: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.8'
 
 04/15/2016 04:29:05: Starting Epoch 9: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -3971,7 +3971,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:12:  Epoch[ 9 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.13856201; EvalErr[0]PerSample = 0.36445312; TotalTime = 0.0613s; SamplesPerSecond = 167080.0
 04/15/2016 04:29:12:  Epoch[ 9 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.11813965; EvalErr[0]PerSample = 0.35966797; TotalTime = 0.0612s; SamplesPerSecond = 167342.1
 04/15/2016 04:29:12:  Epoch[ 9 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.16669922; EvalErr[0]PerSample = 0.37753906; TotalTime = 0.0612s; SamplesPerSecond = 167339.4
-04/15/2016 04:29:12: Finished Epoch[ 9 of 25]: [Training Set] TrainLossPerSample = 1.1406049; TotalSamplesSeen = 10123407; EvalErrPerSample = 0.36568508; AvgLearningRatePerSample = 0.003125; EpochTime=7.04577
+04/15/2016 04:29:12: Finished Epoch[ 9 of 25]: [Training] TrainLossPerSample = 1.1406049 * 10123407; EvalErrPerSample = 0.36568508; AvgLearningRatePerSample = 0.003125; EpochTime=7.04577
 04/15/2016 04:29:12: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.9'
 
 04/15/2016 04:29:12: Starting Epoch 10: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4088,7 +4088,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:19:  Epoch[10 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.09659424; EvalErr[0]PerSample = 0.35341797; TotalTime = 0.0613s; SamplesPerSecond = 167069.1
 04/15/2016 04:29:19:  Epoch[10 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.10314941; EvalErr[0]PerSample = 0.35839844; TotalTime = 0.0614s; SamplesPerSecond = 166870.4
 04/15/2016 04:29:19:  Epoch[10 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.12454834; EvalErr[0]PerSample = 0.35996094; TotalTime = 0.0609s; SamplesPerSecond = 168034.1
-04/15/2016 04:29:19: Finished Epoch[10 of 25]: [Training Set] TrainLossPerSample = 1.1137595; TotalSamplesSeen = 11248230; EvalErrPerSample = 0.35865465; AvgLearningRatePerSample = 0.003125; EpochTime=7.03508
+04/15/2016 04:29:19: Finished Epoch[10 of 25]: [Training] TrainLossPerSample = 1.1137595 * 11248230; EvalErrPerSample = 0.35865465; AvgLearningRatePerSample = 0.003125; EpochTime=7.03508
 04/15/2016 04:29:19: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.10'
 
 04/15/2016 04:29:19: Starting Epoch 11: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4205,7 +4205,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:26:  Epoch[11 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.10018311; EvalErr[0]PerSample = 0.35371094; TotalTime = 0.0610s; SamplesPerSecond = 167866.1
 04/15/2016 04:29:26:  Epoch[11 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.10726318; EvalErr[0]PerSample = 0.35849609; TotalTime = 0.0609s; SamplesPerSecond = 168103.1
 04/15/2016 04:29:26:  Epoch[11 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.05889893; EvalErr[0]PerSample = 0.34384766; TotalTime = 0.0612s; SamplesPerSecond = 167333.9
-04/15/2016 04:29:27: Finished Epoch[11 of 25]: [Training Set] TrainLossPerSample = 1.0891497; TotalSamplesSeen = 12373053; EvalErrPerSample = 0.35169533; AvgLearningRatePerSample = 0.003125; EpochTime=7.02497
+04/15/2016 04:29:27: Finished Epoch[11 of 25]: [Training] TrainLossPerSample = 1.0891497 * 12373053; EvalErrPerSample = 0.35169533; AvgLearningRatePerSample = 0.003125; EpochTime=7.02497
 04/15/2016 04:29:27: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.11'
 
 04/15/2016 04:29:27: Starting Epoch 12: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4322,7 +4322,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:33:  Epoch[12 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.05134277; EvalErr[0]PerSample = 0.33945313; TotalTime = 0.0609s; SamplesPerSecond = 168150.0
 04/15/2016 04:29:34:  Epoch[12 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.05512695; EvalErr[0]PerSample = 0.34404297; TotalTime = 0.0609s; SamplesPerSecond = 168202.5
 04/15/2016 04:29:34:  Epoch[12 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.09241943; EvalErr[0]PerSample = 0.35400391; TotalTime = 0.0610s; SamplesPerSecond = 167929.4
-04/15/2016 04:29:34: Finished Epoch[12 of 25]: [Training Set] TrainLossPerSample = 1.0659965; TotalSamplesSeen = 13497876; EvalErrPerSample = 0.34534678; AvgLearningRatePerSample = 0.003125; EpochTime=7.03112
+04/15/2016 04:29:34: Finished Epoch[12 of 25]: [Training] TrainLossPerSample = 1.0659965 * 13497876; EvalErrPerSample = 0.34534678; AvgLearningRatePerSample = 0.003125; EpochTime=7.03112
 04/15/2016 04:29:34: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.12'
 
 04/15/2016 04:29:34: Starting Epoch 13: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4439,7 +4439,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:41:  Epoch[13 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.04204102; EvalErr[0]PerSample = 0.33417969; TotalTime = 0.0609s; SamplesPerSecond = 168263.3
 04/15/2016 04:29:41:  Epoch[13 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.06213379; EvalErr[0]PerSample = 0.34628906; TotalTime = 0.0609s; SamplesPerSecond = 168064.5
 04/15/2016 04:29:41:  Epoch[13 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.04107666; EvalErr[0]PerSample = 0.34433594; TotalTime = 0.0608s; SamplesPerSecond = 168315.9
-04/15/2016 04:29:41: Finished Epoch[13 of 25]: [Training Set] TrainLossPerSample = 1.0448557; TotalSamplesSeen = 14622699; EvalErrPerSample = 0.3394196; AvgLearningRatePerSample = 0.003125; EpochTime=7.02187
+04/15/2016 04:29:41: Finished Epoch[13 of 25]: [Training] TrainLossPerSample = 1.0448557 * 14622699; EvalErrPerSample = 0.3394196; AvgLearningRatePerSample = 0.003125; EpochTime=7.02187
 04/15/2016 04:29:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.13'
 
 04/15/2016 04:29:41: Starting Epoch 14: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4556,7 +4556,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:48:  Epoch[14 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.03917236; EvalErr[0]PerSample = 0.34169922; TotalTime = 0.0611s; SamplesPerSecond = 167585.9
 04/15/2016 04:29:48:  Epoch[14 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.02209473; EvalErr[0]PerSample = 0.34091797; TotalTime = 0.0608s; SamplesPerSecond = 168495.9
 04/15/2016 04:29:48:  Epoch[14 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.05332031; EvalErr[0]PerSample = 0.34179688; TotalTime = 0.0609s; SamplesPerSecond = 168183.2
-04/15/2016 04:29:48: Finished Epoch[14 of 25]: [Training Set] TrainLossPerSample = 1.0253115; TotalSamplesSeen = 15747522; EvalErrPerSample = 0.33426058; AvgLearningRatePerSample = 0.003125; EpochTime=7.02309
+04/15/2016 04:29:48: Finished Epoch[14 of 25]: [Training] TrainLossPerSample = 1.0253115 * 15747522; EvalErrPerSample = 0.33426058; AvgLearningRatePerSample = 0.003125; EpochTime=7.02309
 04/15/2016 04:29:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.14'
 
 04/15/2016 04:29:48: Starting Epoch 15: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4673,7 +4673,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:29:55:  Epoch[15 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  1.01983643; EvalErr[0]PerSample = 0.33173828; TotalTime = 0.0609s; SamplesPerSecond = 168056.2
 04/15/2016 04:29:55:  Epoch[15 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  1.03101807; EvalErr[0]PerSample = 0.33564453; TotalTime = 0.0610s; SamplesPerSecond = 167745.1
 04/15/2016 04:29:55:  Epoch[15 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  1.00676270; EvalErr[0]PerSample = 0.33183594; TotalTime = 0.0609s; SamplesPerSecond = 168070.0
-04/15/2016 04:29:55: Finished Epoch[15 of 25]: [Training Set] TrainLossPerSample = 1.0040501; TotalSamplesSeen = 16872345; EvalErrPerSample = 0.32796982; AvgLearningRatePerSample = 0.003125; EpochTime=6.96708
+04/15/2016 04:29:55: Finished Epoch[15 of 25]: [Training] TrainLossPerSample = 1.0040501 * 16872345; EvalErrPerSample = 0.32796982; AvgLearningRatePerSample = 0.003125; EpochTime=6.96708
 04/15/2016 04:29:55: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.15'
 
 04/15/2016 04:29:55: Starting Epoch 16: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4790,7 +4790,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:02:  Epoch[16 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.88762817; EvalErr[0]PerSample = 0.28847656; TotalTime = 0.0611s; SamplesPerSecond = 167676.4
 04/15/2016 04:30:02:  Epoch[16 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.91903076; EvalErr[0]PerSample = 0.29316406; TotalTime = 0.0611s; SamplesPerSecond = 167624.3
 04/15/2016 04:30:02:  Epoch[16 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.89779663; EvalErr[0]PerSample = 0.29736328; TotalTime = 0.0609s; SamplesPerSecond = 168111.4
-04/15/2016 04:30:02: Finished Epoch[16 of 25]: [Training Set] TrainLossPerSample = 0.92551273; TotalSamplesSeen = 17997168; EvalErrPerSample = 0.30181459; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.02602
+04/15/2016 04:30:02: Finished Epoch[16 of 25]: [Training] TrainLossPerSample = 0.92551273 * 17997168; EvalErrPerSample = 0.30181459; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.02602
 04/15/2016 04:30:02: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.16'
 
 04/15/2016 04:30:02: Starting Epoch 17: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -4907,7 +4907,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:09:  Epoch[17 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.91392822; EvalErr[0]PerSample = 0.29550781; TotalTime = 0.0608s; SamplesPerSecond = 168468.2
 04/15/2016 04:30:09:  Epoch[17 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.89958496; EvalErr[0]PerSample = 0.29248047; TotalTime = 0.0610s; SamplesPerSecond = 167910.1
 04/15/2016 04:30:09:  Epoch[17 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.89014893; EvalErr[0]PerSample = 0.29335937; TotalTime = 0.0607s; SamplesPerSecond = 168631.8
-04/15/2016 04:30:09: Finished Epoch[17 of 25]: [Training Set] TrainLossPerSample = 0.89670122; TotalSamplesSeen = 19121991; EvalErrPerSample = 0.29206461; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.00905
+04/15/2016 04:30:09: Finished Epoch[17 of 25]: [Training] TrainLossPerSample = 0.89670122 * 19121991; EvalErrPerSample = 0.29206461; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.00905
 04/15/2016 04:30:09: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.17'
 
 04/15/2016 04:30:09: Starting Epoch 18: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5024,7 +5024,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:16:  Epoch[18 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.87857056; EvalErr[0]PerSample = 0.28408203; TotalTime = 0.0610s; SamplesPerSecond = 167866.1
 04/15/2016 04:30:16:  Epoch[18 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.90921631; EvalErr[0]PerSample = 0.29365234; TotalTime = 0.0609s; SamplesPerSecond = 168252.2
 04/15/2016 04:30:16:  Epoch[18 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.89841309; EvalErr[0]PerSample = 0.29394531; TotalTime = 0.0610s; SamplesPerSecond = 167783.6
-04/15/2016 04:30:16: Finished Epoch[18 of 25]: [Training Set] TrainLossPerSample = 0.89095747; TotalSamplesSeen = 20246814; EvalErrPerSample = 0.2901763; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01713
+04/15/2016 04:30:16: Finished Epoch[18 of 25]: [Training] TrainLossPerSample = 0.89095747 * 20246814; EvalErrPerSample = 0.2901763; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01713
 04/15/2016 04:30:17: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.18'
 
 04/15/2016 04:30:17: Starting Epoch 19: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5141,7 +5141,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:23:  Epoch[19 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.88502808; EvalErr[0]PerSample = 0.29082031; TotalTime = 0.0609s; SamplesPerSecond = 168274.4
 04/15/2016 04:30:24:  Epoch[19 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.90054932; EvalErr[0]PerSample = 0.29306641; TotalTime = 0.0607s; SamplesPerSecond = 168790.3
 04/15/2016 04:30:24:  Epoch[19 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.86950684; EvalErr[0]PerSample = 0.28505859; TotalTime = 0.0612s; SamplesPerSecond = 167369.5
-04/15/2016 04:30:24: Finished Epoch[19 of 25]: [Training Set] TrainLossPerSample = 0.88769621; TotalSamplesSeen = 21371637; EvalErrPerSample = 0.28926682; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01265
+04/15/2016 04:30:24: Finished Epoch[19 of 25]: [Training] TrainLossPerSample = 0.88769621 * 21371637; EvalErrPerSample = 0.28926682; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01265
 04/15/2016 04:30:24: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.19'
 
 04/15/2016 04:30:24: Starting Epoch 20: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5258,7 +5258,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:31:  Epoch[20 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.88425903; EvalErr[0]PerSample = 0.28759766; TotalTime = 0.0609s; SamplesPerSecond = 168081.0
 04/15/2016 04:30:31:  Epoch[20 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.86517334; EvalErr[0]PerSample = 0.28144531; TotalTime = 0.0608s; SamplesPerSecond = 168482.0
 04/15/2016 04:30:31:  Epoch[20 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.87861938; EvalErr[0]PerSample = 0.28701172; TotalTime = 0.0608s; SamplesPerSecond = 168307.6
-04/15/2016 04:30:31: Finished Epoch[20 of 25]: [Training Set] TrainLossPerSample = 0.88539082; TotalSamplesSeen = 22496460; EvalErrPerSample = 0.28860718; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01499
+04/15/2016 04:30:31: Finished Epoch[20 of 25]: [Training] TrainLossPerSample = 0.88539082 * 22496460; EvalErrPerSample = 0.28860718; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01499
 04/15/2016 04:30:31: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.20'
 
 04/15/2016 04:30:31: Starting Epoch 21: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5375,7 +5375,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:38:  Epoch[21 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.87719727; EvalErr[0]PerSample = 0.28398438; TotalTime = 0.0609s; SamplesPerSecond = 168152.8
 04/15/2016 04:30:38:  Epoch[21 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.88584595; EvalErr[0]PerSample = 0.29062500; TotalTime = 0.0610s; SamplesPerSecond = 167841.3
 04/15/2016 04:30:38:  Epoch[21 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.90423584; EvalErr[0]PerSample = 0.29785156; TotalTime = 0.0610s; SamplesPerSecond = 167904.6
-04/15/2016 04:30:38: Finished Epoch[21 of 25]: [Training Set] TrainLossPerSample = 0.88354504; TotalSamplesSeen = 23621283; EvalErrPerSample = 0.28785416; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.02095
+04/15/2016 04:30:38: Finished Epoch[21 of 25]: [Training] TrainLossPerSample = 0.88354504 * 23621283; EvalErrPerSample = 0.28785416; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.02095
 04/15/2016 04:30:38: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.21'
 
 04/15/2016 04:30:38: Starting Epoch 22: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5492,7 +5492,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:45:  Epoch[22 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.87280884; EvalErr[0]PerSample = 0.28447266; TotalTime = 0.0609s; SamplesPerSecond = 168075.5
 04/15/2016 04:30:45:  Epoch[22 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.87042847; EvalErr[0]PerSample = 0.28242187; TotalTime = 0.0609s; SamplesPerSecond = 168235.7
 04/15/2016 04:30:45:  Epoch[22 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.90169678; EvalErr[0]PerSample = 0.29970703; TotalTime = 0.0611s; SamplesPerSecond = 167646.2
-04/15/2016 04:30:45: Finished Epoch[22 of 25]: [Training Set] TrainLossPerSample = 0.88202858; TotalSamplesSeen = 24746106; EvalErrPerSample = 0.28735897; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01573
+04/15/2016 04:30:45: Finished Epoch[22 of 25]: [Training] TrainLossPerSample = 0.88202858 * 24746106; EvalErrPerSample = 0.28735897; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01573
 04/15/2016 04:30:45: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.22'
 
 04/15/2016 04:30:45: Starting Epoch 23: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5609,7 +5609,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:52:  Epoch[23 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.88156738; EvalErr[0]PerSample = 0.28759766; TotalTime = 0.0608s; SamplesPerSecond = 168398.9
 04/15/2016 04:30:52:  Epoch[23 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.88331909; EvalErr[0]PerSample = 0.28271484; TotalTime = 0.0609s; SamplesPerSecond = 168053.4
 04/15/2016 04:30:52:  Epoch[23 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.88496704; EvalErr[0]PerSample = 0.28916016; TotalTime = 0.0610s; SamplesPerSecond = 167990.0
-04/15/2016 04:30:52: Finished Epoch[23 of 25]: [Training Set] TrainLossPerSample = 0.88064092; TotalSamplesSeen = 25870929; EvalErrPerSample = 0.28698203; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.00571
+04/15/2016 04:30:52: Finished Epoch[23 of 25]: [Training] TrainLossPerSample = 0.88064092 * 25870929; EvalErrPerSample = 0.28698203; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.00571
 04/15/2016 04:30:52: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.23'
 
 04/15/2016 04:30:52: Starting Epoch 24: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5726,7 +5726,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:30:59:  Epoch[24 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.88711548; EvalErr[0]PerSample = 0.28300781; TotalTime = 0.0607s; SamplesPerSecond = 168631.8
 04/15/2016 04:30:59:  Epoch[24 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.89208984; EvalErr[0]PerSample = 0.29208984; TotalTime = 0.0608s; SamplesPerSecond = 168415.5
 04/15/2016 04:30:59:  Epoch[24 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.84436646; EvalErr[0]PerSample = 0.27617188; TotalTime = 0.0608s; SamplesPerSecond = 168335.2
-04/15/2016 04:30:59: Finished Epoch[24 of 25]: [Training Set] TrainLossPerSample = 0.87944603; TotalSamplesSeen = 26995752; EvalErrPerSample = 0.28651974; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=6.94329
+04/15/2016 04:30:59: Finished Epoch[24 of 25]: [Training] TrainLossPerSample = 0.87944603 * 26995752; EvalErrPerSample = 0.28651974; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=6.94329
 04/15/2016 04:30:59: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn.24'
 
 04/15/2016 04:30:59: Starting Epoch 25: learning rate per sample = 0.000078  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
@@ -5843,7 +5843,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
 04/15/2016 04:31:06:  Epoch[25 of 25]-Minibatch[1061-1070, 97.49%]: SamplesSeen = 10240; TrainLossPerSample =  0.89849854; EvalErr[0]PerSample = 0.29248047; TotalTime = 0.0609s; SamplesPerSecond = 168025.9
 04/15/2016 04:31:06:  Epoch[25 of 25]-Minibatch[1071-1080, 98.41%]: SamplesSeen = 10240; TrainLossPerSample =  0.86646729; EvalErr[0]PerSample = 0.27900391; TotalTime = 0.0607s; SamplesPerSecond = 168654.1
 04/15/2016 04:31:06:  Epoch[25 of 25]-Minibatch[1081-1090, 99.32%]: SamplesSeen = 10240; TrainLossPerSample =  0.87339478; EvalErr[0]PerSample = 0.28818359; TotalTime = 0.0609s; SamplesPerSecond = 168260.5
-04/15/2016 04:31:06: Finished Epoch[25 of 25]: [Training Set] TrainLossPerSample = 0.87825817; TotalSamplesSeen = 28120575; EvalErrPerSample = 0.28625304; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01702
+04/15/2016 04:31:06: Finished Epoch[25 of 25]: [Training] TrainLossPerSample = 0.87825817 * 28120575; EvalErrPerSample = 0.28625304; AvgLearningRatePerSample = 7.8124998e-005; EpochTime=7.01702
 04/15/2016 04:31:07: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160415034459.304390\Examples\Speech\TIMIT_TrainWithPreTrain@release_gpu/exp/TrainWithPreTrain/model/cntkSpeech.dnn'
 04/15/2016 04:31:07: CNTKCommandTrainEnd: TIMIT_Train3
 

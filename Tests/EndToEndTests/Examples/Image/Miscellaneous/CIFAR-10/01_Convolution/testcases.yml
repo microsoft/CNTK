@@ -30,5 +30,5 @@ Epochs must be finished with expected results:
 Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - "* = {{integer}}"
+      - " * {{integer}}; "
       - CrossEntropyWithSoftmax = {{float,tolerance=2.0%}}

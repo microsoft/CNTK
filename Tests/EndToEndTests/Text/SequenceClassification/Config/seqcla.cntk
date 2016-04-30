@@ -64,7 +64,7 @@ Train=[
         
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     
     SGD = [	

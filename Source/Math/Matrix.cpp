@@ -1198,14 +1198,14 @@ void Matrix<ElemType>::SetColumn(const Matrix<ElemType>& colMat, size_t colInd)
 }
 
 template <class ElemType>
-void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
+void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
 
     m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
     DecideAndMoveToRightDevice(deepCopyFrom, *this);
-    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
+    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), deepCopyFrom.GetFormat(), false);
 
     DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
                             this,
@@ -1213,6 +1213,48 @@ void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom, const Matr
                             m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
                             m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
                             m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
+{
+    if (this == &deepCopyFrom)
+        return;
+    
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { 
+            // Set CPUMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+        },
+        { 
+            // Set GPUMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                { m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+        },
+        { 
+            // Set CPUSparseMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+        },
+        { 
+            // Set GPUSparseMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+        });
+
 }
 
 template <class ElemType>
@@ -1245,19 +1287,21 @@ template <class ElemType>
 void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                               const size_t nz, const size_t numRows, const size_t numCols)
 {
+    // Note: The current implementation uses the xPUSparseMatrix as temporary space. This allows for memory sharing between calls. If
+    // xPUSparseMatrix is a view, this code will cause an error during runtime stating that the view is not writable nor resizable.
     DISPATCH_MATRIX_ON_FLAG(this, this,
-    {
-        if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
-        m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
-        m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, numCols);
-    },
-    {
-        if (!m_GPUSparseMatrix) m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
-        m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
-        m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
-    },
-    { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
-    { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); });
+        {
+            if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
+            m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+            m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, numCols);
+        },
+        {
+            if (!m_GPUSparseMatrix) m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
+            m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+            m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
+        },
+        { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
+        { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); });
 }
 
 template <class ElemType>
@@ -1395,52 +1439,58 @@ void Matrix<ElemType>::NormalGrad(Matrix<ElemType>& gradients,
 
     if (!useNesterovMomentum)
     {
-        DISPATCH_MATRIX_ON_FLAG(&gradients,
-                                nullptr,
-                                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                                functionValues -= *this,
-                                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                                functionValues -= *this,
-                                if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                                ScaleAndAdd(-learnRatePerSample, gradients, functionValues),
-                                if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                                ScaleAndAdd(-learnRatePerSample, gradients, functionValues));
+        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+            { 
+                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
+                functionValues -= *this;
+            },
+            { 
+                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
+                functionValues -= *this;
+            },
+            { 
+                if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
+                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
+            },
+            { 
+                if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
+                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
+            });
     }
     else
     {
-        DISPATCH_MATRIX_ON_FLAG(&gradients,
-                                nullptr,
-                                { /* CPU dense */
-                                  ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                                  ScaleAndAdd(-momentum, *this, functionValues);
-                                  ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-                                  // w_t = w_{t-1} - momentum * v_ {t-1} - (1-momentum)*learnRatePerSampele*gardient,
-                                },
-                                { /* GPU dense */
-                                  ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                                  ScaleAndAdd(-momentum, *this, functionValues);
-                                  ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-                                },
-                                { /* CPU sparse */
-                                  if (momentum != 0)
-                                  {
-                                      Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                                      gradientCache.SetValue(gradients);
-                                      gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                                      ScaleAndAdd(-momentum, *this, functionValues);
-                                      ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                                  }
-                                },
-                                { /* GPU sparse */
-                                  if (momentum != 0)
-                                  {
-                                      Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                                      gradientCache.SetValue(gradients);
-                                      gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                                      ScaleAndAdd(-momentum, *this, functionValues);
-                                      ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                                  }
-                                });
+        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+            { /* CPU dense */
+                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
+                ScaleAndAdd(-momentum, *this, functionValues);
+                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
+                // w_t = w_{t-1} - momentum * v_ {t-1} - (1-momentum)*learnRatePerSampele*gardient,
+            },
+            { /* GPU dense */
+                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
+                ScaleAndAdd(-momentum, *this, functionValues);
+                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
+            },
+            { /* CPU sparse */
+                if (momentum != 0)
+                {
+                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                    gradientCache.AssignValuesOf(gradients);
+                    gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
+                    ScaleAndAdd(-momentum, *this, functionValues);
+                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
+                }
+            },
+            { /* GPU sparse */
+                if (momentum != 0)
+                {
+                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                    gradientCache.AssignValuesOf(gradients);
+                    gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
+                    ScaleAndAdd(-momentum, *this, functionValues);
+                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
+                }
+            });
     }
 }
 
@@ -1541,7 +1591,7 @@ Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const 
     Matrix<ElemType> c(nRows, newCols, frmMat.GetDeviceId());
     for (size_t i = 0; i < colRatio; i++)
     {
-        c.ColumnSlice(i * nCols, nCols).SetValue(frmMat);
+        c.ColumnSlice(i * nCols, nCols).AssignValuesOf(frmMat);
     }
 
     return c;
@@ -5005,9 +5055,9 @@ Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
     long n = (long) GetNumCols();
 
     if (shift >= 0 && shift < n)
-        us.ColumnSlice(shift, n - shift).SetValue(a.ColumnSlice(0, n - shift));
+        us.ColumnSlice(shift, n - shift).AssignValuesOf(a.ColumnSlice(0, n - shift));
     if (shift < 0 && shift > -n)
-        us.ColumnSlice(0, n + shift).SetValue(a.ColumnSlice(-shift, n + shift));
+        us.ColumnSlice(0, n + shift).AssignValuesOf(a.ColumnSlice(-shift, n + shift));
     return *this;
 }
 
@@ -5326,7 +5376,9 @@ template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
 template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
-template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
+//template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
+template void Matrix<char>::SetValue(const Matrix<char>&);
+template void Matrix<char>::AssignValuesOf   (const Matrix<char>&);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 

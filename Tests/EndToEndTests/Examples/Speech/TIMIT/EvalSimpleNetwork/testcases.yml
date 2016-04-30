@@ -36,7 +36,7 @@ testCases:
       - SamplesSeen = {{integer}}
       - ErrorPrediction/Sample = {{float,tolerance=.1%}}
       - CrossEntropyWithSoftmax/Sample = {{float,tolerance=.1%}}
-      - Perplexity = {{float,tolerance=.1%}}
+      - perplexity = {{float,tolerance=.1%}}
 
   Eval must be completed:
     patterns:

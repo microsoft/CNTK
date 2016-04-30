@@ -731,7 +731,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20861511; EvalErr[0]PerSample = 0.35976562; TotalTime = 0.31200s; TotalTimePerSample = 0.12187ms; SamplesPerSecond = 8205
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23675232; EvalErr[0]PerSample = 0.36757812; TotalTime = 0.29517s; TotalTimePerSample = 0.11530ms; SamplesPerSecond = 8672
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22960205; EvalErr[0]PerSample = 0.37460938; TotalTime = 0.24842s; TotalTimePerSample = 0.09704ms; SamplesPerSecond = 10305
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.6517237; EvalErrPerSample = 0.46774903; AvgLearningRatePerSample = 0.003125000047; EpochTime=14.544218
+Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 1.6517237; EvalErrPerSample = 0.46774903; AvgLearningRatePerSample = 0.003125000047; EpochTime=14.544218
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -769,7 +769,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14634094; EvalErr[0]PerSample = 0.35351563; TotalTime = 0.29330s; TotalTimePerSample = 0.11457ms; SamplesPerSecond = 8728
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10476990; EvalErr[0]PerSample = 0.34335938; TotalTime = 0.27493s; TotalTimePerSample = 0.10740ms; SamplesPerSecond = 9311
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.07355957; EvalErr[0]PerSample = 0.32695313; TotalTime = 0.23165s; TotalTimePerSample = 0.09049ms; SamplesPerSecond = 11051
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.1603298; EvalErrPerSample = 0.35574952; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.225137
+Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.1603298; EvalErrPerSample = 0.35574952; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.225137
 CNTKCommandTrainEnd: DPT_Pre1
 
 
@@ -2129,7 +2129,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14337463; EvalErr[0]PerSample = 0.34375000; TotalTime = 0.34387s; TotalTimePerSample = 0.13432ms; SamplesPerSecond = 7444
  Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17227478; EvalErr[0]PerSample = 0.34882812; TotalTime = 0.34417s; TotalTimePerSample = 0.13444ms; SamplesPerSecond = 7438
  Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18431091; EvalErr[0]PerSample = 0.36835937; TotalTime = 0.30969s; TotalTimePerSample = 0.12097ms; SamplesPerSecond = 8266
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.5125258; EvalErrPerSample = 0.42452392; AvgLearningRatePerSample = 0.003125000047; EpochTime=14.904725
+Finished Epoch[ 1 of 2]: [Training] TrainLossPerSample = 1.5125258; EvalErrPerSample = 0.42452392; AvgLearningRatePerSample = 0.003125000047; EpochTime=14.904725
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -2167,7 +2167,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10880737; EvalErr[0]PerSample = 0.34296875; TotalTime = 0.34820s; TotalTimePerSample = 0.13601ms; SamplesPerSecond = 7352
  Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.08513489; EvalErr[0]PerSample = 0.33476563; TotalTime = 0.29751s; TotalTimePerSample = 0.11622ms; SamplesPerSecond = 8604
  Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.04244080; EvalErr[0]PerSample = 0.31757812; TotalTime = 0.24686s; TotalTimePerSample = 0.09643ms; SamplesPerSecond = 10370
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.1148411; EvalErrPerSample = 0.34190676; AvgLearningRatePerSample = 0.003125000047; EpochTime=10.343029
+Finished Epoch[ 2 of 2]: [Training] TrainLossPerSample = 1.1148411; EvalErrPerSample = 0.34190676; AvgLearningRatePerSample = 0.003125000047; EpochTime=10.343029
 CNTKCommandTrainEnd: DPT_Pre2
 
 
@@ -3812,7 +3812,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.11155701; EvalErr[0]PerSample = 0.34179688; TotalTime = 0.38982s; TotalTimePerSample = 0.15227ms; SamplesPerSecond = 6567
  Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13423157; EvalErr[0]PerSample = 0.34101562; TotalTime = 0.38594s; TotalTimePerSample = 0.15076ms; SamplesPerSecond = 6633
  Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12716675; EvalErr[0]PerSample = 0.34414062; TotalTime = 0.33494s; TotalTimePerSample = 0.13084ms; SamplesPerSecond = 7643
-Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 1.4082143; EvalErrPerSample = 0.4008545; AvgLearningRatePerSample = 0.003125000047; EpochTime=16.150435
+Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 1.4082143; EvalErrPerSample = 0.4008545; AvgLearningRatePerSample = 0.003125000047; EpochTime=16.150435
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
@@ -3834,7 +3834,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02721252; EvalErr[0]PerSample = 0.32246094; TotalTime = 0.61121s; TotalTimePerSample = 0.11938ms; SamplesPerSecond = 8376
  Epoch[ 2 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08386230; EvalErr[0]PerSample = 0.33144531; TotalTime = 0.58963s; TotalTimePerSample = 0.11516ms; SamplesPerSecond = 8683
  Epoch[ 2 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.06164856; EvalErr[0]PerSample = 0.32558594; TotalTime = 0.52979s; TotalTimePerSample = 0.10347ms; SamplesPerSecond = 9664
-Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 1.1157421; EvalErrPerSample = 0.34266359; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.420168
+Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 1.1157421; EvalErrPerSample = 0.34266359; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.420168
 Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
 
@@ -3856,7 +3856,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 3 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05827026; EvalErr[0]PerSample = 0.32636719; TotalTime = 0.61738s; TotalTimePerSample = 0.12058ms; SamplesPerSecond = 8293
  Epoch[ 3 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05841064; EvalErr[0]PerSample = 0.33574219; TotalTime = 0.62912s; TotalTimePerSample = 0.12287ms; SamplesPerSecond = 8138
  Epoch[ 3 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.04437714; EvalErr[0]PerSample = 0.32773438; TotalTime = 0.53966s; TotalTimePerSample = 0.10540ms; SamplesPerSecond = 9487
-Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.0714306; EvalErrPerSample = 0.33178711; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.000243
+Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 1.0714306; EvalErrPerSample = 0.33178711; AvgLearningRatePerSample = 0.003125000047; EpochTime=9.000243
 Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
 
@@ -3878,6 +3878,6 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 4 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97942047; EvalErr[0]PerSample = 0.31171875; TotalTime = 0.60621s; TotalTimePerSample = 0.11840ms; SamplesPerSecond = 8445
  Epoch[ 4 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.94226837; EvalErr[0]PerSample = 0.30136719; TotalTime = 0.60218s; TotalTimePerSample = 0.11761ms; SamplesPerSecond = 8502
  Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.96711578; EvalErr[0]PerSample = 0.30175781; TotalTime = 0.49045s; TotalTimePerSample = 0.09579ms; SamplesPerSecond = 10439
-Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.99611807; EvalErrPerSample = 0.31303713; AvgLearningRatePerSample = 0.003125000047; EpochTime=10.396508
+Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 0.99611807; EvalErrPerSample = 0.31303713; AvgLearningRatePerSample = 0.003125000047; EpochTime=10.396508
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__

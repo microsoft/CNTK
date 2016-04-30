@@ -264,6 +264,32 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
         memcpy(RowLocation(), v.RowLocation(), v.RowSize());
         memcpy(ColLocation(), v.ColLocation(), v.ColSize());
     }
+    if (v.m_sliceViewOffset > 0)
+    {
+        CPUSPARSE_INDEX_TYPE* loc = (GetFormat() == matrixFormatSparseCSC) ? ColLocation() : RowLocation();
+        size_t len = (GetFormat() == matrixFormatSparseCSC) ? ColSize() : RowSize();
+        CPUSPARSE_INDEX_TYPE offset = loc[0];
+        for (size_t c = 0; c < len; c++)
+            loc[c] -= offset;
+    }
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
@@ -403,6 +429,7 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
     // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
     slice.RequireSize(m_numRows, numCols);
 
+    memset(slice.Data(), 0, sizeof(ElemType) * slice.GetNumElements());
 #pragma omp parallel for
     for (long j = 0; j < numCols; j++)
     {
@@ -1348,7 +1375,10 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const&);
 template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
+template void CPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
+template void CPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
+template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
 template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
@@ -1357,6 +1387,7 @@ template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const 
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);

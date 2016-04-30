@@ -481,9 +481,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             lrControlCriterion = epochCriterion.Average();
 
 #if 1
-        //LOGPRINTF(stderr,
-        //          "Finished Epoch[%2d of %d]: [Training] %ls = %.8f * %d; ",
-        //          i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average(), (int)epochCriterion.second);
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
         epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 #else
@@ -494,7 +491,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
         for (size_t j = 0; j < epochEvalErrors.size(); j++)
             epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
-        fprintf(stderr, "learningRatePerSample = %.8g; epochTime=%.6gs\n", learnRatePerSample, epochTime);
+        fprintf(stderr, "totalSamplesSeen = %d; learningRatePerSample = %.8g; epochTime=%.6gs\n", (int)totalTrainingSamplesSeen, learnRatePerSample, epochTime);
 #if 0
         // TODO: This was only printed if >1 eval criterion. Why? Needed?
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
@@ -509,7 +506,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi);
+            SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi, m_enableDistributedMBReading);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {

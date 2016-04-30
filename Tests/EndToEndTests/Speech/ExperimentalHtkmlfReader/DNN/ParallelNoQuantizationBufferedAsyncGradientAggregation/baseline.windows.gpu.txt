@@ -800,7 +800,7 @@ MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: SamplesSeen = 640; Tra
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.2279s; SamplesPerSecond = 2808.9
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.2171s; SamplesPerSecond = 2947.5
 MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.2119s; SamplesPerSecond = 3020.2
-MPI Rank 0: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=7.8074
+MPI Rank 0: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=7.8074
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
@@ -846,7 +846,7 @@ MPI Rank 0: Actual gradient aggregation time: 0.012957
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  2.06152980; EvalErr[0]PerSample = 0.57421875; TotalTime = 0.3428s; SamplesPerSecond = 7468.1
 MPI Rank 0: Async gradient aggregation wait time: 4e-006
 MPI Rank 0: Actual gradient aggregation time: 0.015975
-MPI Rank 0: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.10154
+MPI Rank 0: Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.10154
 MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
@@ -861,7 +861,7 @@ MPI Rank 0: Actual gradient aggregation time: 0.03872
 MPI Rank 0: Async gradient aggregation wait time: 6e-006
 MPI Rank 0: Actual gradient aggregation time: 0.063409
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.94481165; EvalErr[0]PerSample = 0.52617187; TotalTime = 0.9289s; SamplesPerSecond = 11023.7
-MPI Rank 0: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33439
+MPI Rank 0: Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33439
 MPI Rank 0: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
@@ -877,7 +877,7 @@ MPI Rank 0: Async gradient aggregation wait time: 0.03888
 MPI Rank 0: Actual gradient aggregation time: 0.101905
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87529986; EvalErr[0]PerSample = 0.51201172; TotalTime = 0.9989s; SamplesPerSecond = 10251.4
 MPI Rank 0: Async gradient aggregation wait time: 0.002651
-MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10527
+MPI Rank 0: Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10527
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: __COMPLETED__
 MPI Rank 0: ~MPIWrapper
@@ -1650,7 +1650,7 @@ MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: SamplesSeen = 640; Tra
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.2162s; SamplesPerSecond = 2959.9
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.2194s; SamplesPerSecond = 2916.6
 MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.2053s; SamplesPerSecond = 3118.1
-MPI Rank 1: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=7.82425
+MPI Rank 1: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=7.82425
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
@@ -1696,7 +1696,7 @@ MPI Rank 1: Actual gradient aggregation time: 0.021455
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  2.06152980; EvalErr[0]PerSample = 0.57421875; TotalTime = 0.3386s; SamplesPerSecond = 7560.4
 MPI Rank 1: Async gradient aggregation wait time: 0.004031
 MPI Rank 1: Actual gradient aggregation time: 0.01598
-MPI Rank 1: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.10134
+MPI Rank 1: Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.10134
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
@@ -1711,7 +1711,7 @@ MPI Rank 1: Actual gradient aggregation time: 0.013468
 MPI Rank 1: Async gradient aggregation wait time: 6e-006
 MPI Rank 1: Actual gradient aggregation time: 0.028821
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.94481165; EvalErr[0]PerSample = 0.52617187; TotalTime = 0.9604s; SamplesPerSecond = 10662.5
-MPI Rank 1: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33419
+MPI Rank 1: Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33419
 MPI Rank 1: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
@@ -1727,7 +1727,7 @@ MPI Rank 1: Async gradient aggregation wait time: 1e-005
 MPI Rank 1: Actual gradient aggregation time: 0.023981
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87529986; EvalErr[0]PerSample = 0.51201172; TotalTime = 0.9491s; SamplesPerSecond = 10789.0
 MPI Rank 1: Async gradient aggregation wait time: 0.003634
-MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10546
+MPI Rank 1: Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10546
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: __COMPLETED__
 MPI Rank 1: ~MPIWrapper
@@ -2505,7 +2505,7 @@ MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: SamplesSeen = 640; Tra
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: SamplesSeen = 640; TrainLossPerSample =  2.15763314; EvalErr[0]PerSample = 0.57968750; TotalTime = 0.2264s; SamplesPerSecond = 2827.1
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: SamplesSeen = 640; TrainLossPerSample =  2.23496000; EvalErr[0]PerSample = 0.59531250; TotalTime = 0.2196s; SamplesPerSecond = 2914.1
 MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: SamplesSeen = 640; TrainLossPerSample =  2.25712791; EvalErr[0]PerSample = 0.61406250; TotalTime = 0.2030s; SamplesPerSecond = 3152.8
-MPI Rank 2: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 3.000912; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=9.16456
+MPI Rank 2: Finished Epoch[ 1 of 4]: [Training] TrainLossPerSample = 3.00091203; EvalErrPerSample = 0.72744141; AvgLearningRatePerSample = 0.015625; EpochTime=9.16456
 MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
@@ -2551,7 +2551,7 @@ MPI Rank 2: Actual gradient aggregation time: 0.039431
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: SamplesSeen = 2560; TrainLossPerSample =  2.06152980; EvalErr[0]PerSample = 0.57421875; TotalTime = 0.3633s; SamplesPerSecond = 7047.0
 MPI Rank 2: Async gradient aggregation wait time: 0.004283
 MPI Rank 2: Actual gradient aggregation time: 0.015956
-MPI Rank 2: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.1014
+MPI Rank 2: Finished Epoch[ 2 of 4]: [Training] TrainLossPerSample = 2.0973868; EvalErrPerSample = 0.57431641; AvgLearningRatePerSample = 0.001953125; EpochTime=3.1014
 MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
@@ -2566,7 +2566,7 @@ MPI Rank 2: Actual gradient aggregation time: 0.112617
 MPI Rank 2: Async gradient aggregation wait time: 0.0112
 MPI Rank 2: Actual gradient aggregation time: 0.07914
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.94481165; EvalErr[0]PerSample = 0.52617187; TotalTime = 1.0329s; SamplesPerSecond = 9913.7
-MPI Rank 2: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33399
+MPI Rank 2: Finished Epoch[ 3 of 4]: [Training] TrainLossPerSample = 1.9896808; EvalErrPerSample = 0.53188477; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.33399
 MPI Rank 2: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
@@ -2582,7 +2582,7 @@ MPI Rank 2: Async gradient aggregation wait time: 0.026844
 MPI Rank 2: Actual gradient aggregation time: 0.101172
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: SamplesSeen = 10240; TrainLossPerSample =  1.87529986; EvalErr[0]PerSample = 0.51201172; TotalTime = 1.0257s; SamplesPerSecond = 9983.6
 MPI Rank 2: Async gradient aggregation wait time: 0.001318
-MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10527
+MPI Rank 2: Finished Epoch[ 4 of 4]: [Training] TrainLossPerSample = 1.882856; EvalErrPerSample = 0.51445312; AvgLearningRatePerSample = 9.7656251e-005; EpochTime=2.10527
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
 MPI Rank 2: __COMPLETED__
 MPI Rank 2: ~MPIWrapper
