@@ -260,22 +260,22 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
     {
         if (sizeof(ElemType) == sizeof(float))
         {
-            CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Data(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
+            CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Buffer(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Data(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
+            CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Buffer(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
         }
     }
     else if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
         if (sizeof(ElemType) == sizeof(float))
         {
-            CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Data(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
+            CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Buffer(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Data(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
+            CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Buffer(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
         }
     }
     else
@@ -412,6 +412,12 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     }
 
     SetComputeDeviceId(PrepareDevice(to_id));
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*denseMatrix*/)
+{
+    NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
@@ -2656,6 +2662,7 @@ template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
 template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
+template void GPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char>&) const;
 template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>&) const;
 template void GPUSparseMatrix<char>::ChangeDeviceTo(int);

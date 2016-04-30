@@ -938,7 +938,7 @@ public:
             if (m_value)
             {
                 node->CreateValueMatrixIfNull();
-            node->m_value->SetValue(*m_value);
+                node->m_value->SetValue(*m_value);
             }
             else
                 node->m_value = nullptr;
@@ -1549,6 +1549,7 @@ public:
 
     void Trace()
     {
+        //DebugLogMinibatch();
 #if 0
         static const std::set<std::wstring> toLog{
             L"labelSentenceStartEmbedded",

@@ -312,7 +312,7 @@ protected:
             if (in.GetMatrixType() == MatrixType::DENSE || m_gpuSparse1D)
                 inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
             else
-                inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
+                inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize));
 
             if (m_gpuSparseOpt)
             {

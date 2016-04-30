@@ -320,6 +320,7 @@ public:
         {
             // currently we only support one combination when the input is sparse
             // If input data is sparse, then gradient is block sparse.
+            // BUGBUG: This does not accumulate into the Input(0)->Gradient, which might cause problems elsewhere.
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
             auto input0Gradient = OneSampleTensorFor(0, /*gradient=*/true,   fr.AllowBroadcast());
@@ -433,9 +434,11 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
             // update if LearnableParameter
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
+#if 0 // Removed this, because the check is just wrong.
             // and verify once again
             if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
                 InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
+#endif
         }
     }
 
@@ -575,7 +578,7 @@ public:
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        sliceOutputValue.SetValue(sliceInput1Value);
+        sliceOutputValue.AssignValuesOf(sliceInput1Value);
         sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
     }
 
