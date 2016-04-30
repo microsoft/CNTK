@@ -995,19 +995,19 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
 {
 }
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(CPUMatrix<ElemType> const&);
+void GPUMatrix<ElemType>::SetValue(CPUMatrix<ElemType> const&)
 {
 }
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(GPUMatrix<ElemType> const&);
+void GPUMatrix<ElemType>::SetValue(GPUMatrix<ElemType> const&)
 {
 }
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(CPUSparseMatrix<ElemType> const&);
+void GPUMatrix<ElemType>::SetValue(CPUSparseMatrix<ElemType> const&)
 {
 }
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&);
+void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&)
 {
 }
 
