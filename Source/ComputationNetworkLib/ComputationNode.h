@@ -1549,7 +1549,7 @@ public:
 
     void Trace()
     {
-        DebugLogMinibatch();
+        //DebugLogMinibatch();
 #if 0
         static const std::set<std::wstring> toLog{
             L"labelSentenceStartEmbedded",
