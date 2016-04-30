@@ -130,11 +130,13 @@ private:
 
         if (numSamples > 0) // (if MB is empty, matrix may not have the correct row dmension)
         {
+node->As<ComputationNode<ElemType>>()->Value().Print(msra::strfun::strprintf("crit[%d] m_value", (int)i).c_str());
             auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
             // accumulate
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
+m_aggregateCriterionValues->Print(msra::strfun::strprintf("crit[%d] m_aggregateCriterionValues", (int)i).c_str());
         }
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
 #else
