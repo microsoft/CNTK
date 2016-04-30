@@ -101,9 +101,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
-            node->m_maxIndexes0->AssignDeepCloneOf(*m_maxIndexes0);
-            node->m_maxIndexes1->AssignDeepCloneOf(*m_maxIndexes1);
-            node->m_maxValues->AssignDeepCloneOf(*m_maxValues);
+            node->m_maxIndexes0->SetValue(*m_maxIndexes0);
+            node->m_maxIndexes1->SetValue(*m_maxIndexes1);
+            node->m_maxValues->SetValue(*m_maxValues);
         }
     }
     // request matrices needed to do node function value evaluation

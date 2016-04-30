@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto k : mb)
         {
             const auto& name = k.first;
-            mb.GetInputMatrix<ElemType>(name).AssignDeepCloneOf(decimatedMB.GetInputMatrix<ElemType>(name)); // deep-copy our local one to the output location
+            mb.GetInputMatrix<ElemType>(name).SetValue(decimatedMB.GetInputMatrix<ElemType>(name)); // deep-copy our local one to the output location
         }
         pMBLayout->MoveFrom(pDecimatedMBLayout);
         return selected;
@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_inputMatricesCache.find(name) == m_inputMatricesCache.end())
                     m_inputMatricesCache.AddInput(name, make_shared<Matrix<ElemType>>(M, M.GetDeviceId()), input.pMBLayout, input.sampleLayout); // deep copy from M
                 else
-                    m_inputMatricesCache.GetInputMatrix<ElemType>(name).AssignDeepCloneOf(M);
+                    m_inputMatricesCache.GetInputMatrix<ElemType>(name).SetValue(M);
             }
             // 2. MBlayout
             m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtrOfNetwork());
@@ -515,7 +515,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto& x : decimatedMatrices)
             {
                 const wstring& name = x.first;
-                m_netInputMatrixPtr.GetInputMatrix<ElemType>(name).AssignDeepCloneOf(decimatedMatrices.GetInputMatrix<ElemType>(name));
+                m_netInputMatrixPtr.GetInputMatrix<ElemType>(name).SetValue(decimatedMatrices.GetInputMatrix<ElemType>(name));
             }
 
             m_netMBLayoutPtr->CopyFrom(decimatedLayout);
@@ -576,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (m_LearnableNodePtr.find(name) == m_LearnableNodePtr.end())
                     LogicError("DoneWithCurrentSubMinibatch: Node '%ls' not found in LearnableNode set.", name.c_str());
-                m_LearnableNodePtr[name]->Gradient().AssignDeepCloneOf(accumulategrad);
+                m_LearnableNodePtr[name]->Gradient().SetValue(accumulategrad);
                 accumulategrad.SetValue(0);
             }
             // also revert net.m_MBLayoutPtr

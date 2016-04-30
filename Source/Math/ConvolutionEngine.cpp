@@ -312,7 +312,7 @@ protected:
             if (in.GetMatrixType() == MatrixType::DENSE || m_gpuSparse1D)
                 inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
             else
-                inputSubBatch.AssignDeepCloneOf(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
+                inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize));
 
             if (m_gpuSparseOpt)
             {
@@ -427,7 +427,7 @@ protected:
                 if (m_gpuSparseOpt)
                 {
                     Matrix<ElemType> inputSubBatch(in.GetDeviceId());
-                    inputSubBatch.AssignDeepCloneOf(in.ColumnSlice(startSampleID, smallBatchSize));
+                    inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
                     inputSubBatch.Reshape(m_inT.c(), smallBatchSize * m_inT.w() * m_inT.h());
                     Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, m_inT.w(), 1, smallBatchSize * m_inT.h(), m_inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);

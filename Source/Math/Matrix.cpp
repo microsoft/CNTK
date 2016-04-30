@@ -1198,14 +1198,14 @@ void Matrix<ElemType>::SetColumn(const Matrix<ElemType>& colMat, size_t colInd)
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AssignDeepClone_OrValues_Of(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
+void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
 
     m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
     DecideAndMoveToRightDevice(deepCopyFrom, *this);
-    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
+    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), deepCopyFrom.GetFormat(), false);
 
     DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
                             this,
@@ -1216,39 +1216,45 @@ void Matrix<ElemType>::AssignDeepClone_OrValues_Of(const Matrix<ElemType>& deepC
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AssignDeepCloneOf(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
+void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
+    
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { 
+            // Set CPUMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+                m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+                m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
+                m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+        },
+        { 
+            // Set GPUMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+                m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+                m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
+                m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+        },
+        { 
+            // Set CPUSparseMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+                m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+                m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
+                m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+        },
+        { 
+            // Set GPUSparseMatrix from:
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+                m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+                m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+                m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
+                m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+        });
 
-    m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
-    DecideAndMoveToRightDevice(deepCopyFrom, *this);
-    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
-
-    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
-                            this,
-                            m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
-                            m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
-                            m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
-                            m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
-}
-
-template <class ElemType>
-void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
-{
-    if (this == &deepCopyFrom)
-        return;
-
-    m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
-    DecideAndMoveToRightDevice(deepCopyFrom, *this);
-    SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
-
-    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
-                            this,
-                            m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
-                            m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
-                            m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
-                            m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
 }
 
 template <class ElemType>
@@ -1728,12 +1734,12 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSumOf(const Matrix<ElemType>& a, const
 {
     if (a.GetNumElements() == 1)
     {
-        AssignDeepCloneOf(b);
+        SetValue(b);
         (*this) += a;
     }
     else
     {
-        AssignDeepCloneOf(a);
+        SetValue(a);
         (*this) += b;
     }
     return *this;
@@ -1995,7 +2001,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const Matrix<ElemType>& a
         return *this;
     }
     if (this != &a)
-        AssignDeepCloneOf(a);
+        SetValue(a);
     (*this) -= b;
     return *this;
 }
@@ -2031,7 +2037,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignProductOf(const Matrix<ElemType>& a, c
         if (transposeB)
             AssignTransposeOf(b);
         else
-            this->AssignDeepCloneOf(b);
+            this->SetValue(b);
 
         DISPATCH_MATRIX_ON_FLAG(this,
                                 nullptr,
@@ -2045,7 +2051,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignProductOf(const Matrix<ElemType>& a, c
         if (transposeA)
             AssignTransposeOf(a);
         else
-            this->AssignDeepCloneOf(a);
+            this->SetValue(a);
 
         DISPATCH_MATRIX_ON_FLAG(this,
                                 nullptr,
@@ -2906,7 +2912,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     {
         if (!isfinite((float) threshold))
         {
-            this->AssignDeepCloneOf(a);
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2914,7 +2920,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     {
         if (!isfinite(threshold))
         {
-            this->AssignDeepCloneOf(a);
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2970,7 +2976,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     {
         if (!isfinite((float) threshold))
         {
-            this->AssignDeepCloneOf(a);
+            this->SetValue(a);
             return *this;
         }
     }
@@ -2978,7 +2984,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     {
         if (!isfinite(threshold))
         {
-            this->AssignDeepCloneOf(a);
+            this->SetValue(a);
             return *this;
         }
     }
@@ -5365,8 +5371,8 @@ template size_t Matrix<char>::GetNumCols() const;
 template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
 //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
-template void Matrix<char>::AssignDeepCloneOf(const Matrix<char>&, const MatrixFormat);
-template void Matrix<char>::AssignValuesOf   (const Matrix<char>&, const MatrixFormat);
+template void Matrix<char>::SetValue(const Matrix<char>&);
+template void Matrix<char>::AssignValuesOf   (const Matrix<char>&);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 

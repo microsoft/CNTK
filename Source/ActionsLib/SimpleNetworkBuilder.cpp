@@ -1525,10 +1525,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
 
         w = builder.CreateLearnableParameter(nameOfW, wts.GetNumRows(), wts.GetNumCols());
-        w->Value().AssignDeepCloneOf(wts);
+        w->Value().SetValue(wts);
 
         b = builder.CreateLearnableParameter(nameOfB, bias.GetNumRows(), 1);
-        b->Value().AssignDeepCloneOf(bias);
+        b->Value().SetValue(bias);
 
         if (layerType == "perceptron")
         {
@@ -1598,7 +1598,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
             Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
             prior = builder.Mean(label, L"Prior");
             static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->MarkComputed(false);
-            prior->Value().AssignDeepCloneOf(zeros);
+            prior->Value().SetValue(zeros);
         }
     }
 

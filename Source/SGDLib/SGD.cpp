@@ -1897,7 +1897,7 @@ template <class ElemType>
     if (noiseStd > 0)
     {
         // get the gradient structure since gradient is sparse
-        sgdUpdateNoise.AssignDeepCloneOf(gradientValues);
+        sgdUpdateNoise.SetValue(gradientValues);
 
         // reset its value to random
         sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType) noiseStd);

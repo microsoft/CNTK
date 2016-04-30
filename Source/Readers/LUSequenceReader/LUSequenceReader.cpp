@@ -895,7 +895,7 @@ bool BatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& mat
 
         locObs.SetPreferredDeviceId(features.GetDeviceId()); // needed, otherwise SetValue() below will inherit CPUDEVICE a as target
         // Note: This is not efficient, as it first moves locObs to GPU, and then copies it. What is the correct way of doing this?
-        features.AssignDeepCloneOf(locObs);
+        features.SetValue(locObs);
 
         // fill in the label matrix
         GetLabelOutput(matrices, m_labelInfo[labelInfoOut], actualmbsize);
@@ -1100,7 +1100,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, 
             }
         }
 
-        features.AssignDeepCloneOf(locObs);
+        features.SetValue(locObs);
     }
     else
     {
@@ -1108,7 +1108,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, 
         {
             assert(mMatrices[p->first]->GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices.GetInputMatrix<ElemType>(p->first).AssignDeepCloneOf(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
+                matrices.GetInputMatrix<ElemType>(p->first).SetValue(mMatrices[p->first]->ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1125,12 +1125,12 @@ void BatchLUSequenceReader<ElemType>::InitProposals(StreamMinibatchInputs& pMat)
     {
         // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
-            mMatrices[m_labelsName[labelInfoOut]]->AssignDeepCloneOf(pMat.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]));
+            mMatrices[m_labelsName[labelInfoOut]]->SetValue(pMat.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]));
     }
     else
     {
         if (pMat.find(m_featuresName) != pMat.end())
-            mMatrices[m_featuresName]->AssignDeepCloneOf(pMat.GetInputMatrix<ElemType>(m_featuresName));
+            mMatrices[m_featuresName]->SetValue(pMat.GetInputMatrix<ElemType>(m_featuresName));
     }
 }
 

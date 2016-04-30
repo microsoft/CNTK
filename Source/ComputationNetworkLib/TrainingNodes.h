@@ -74,7 +74,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-            node->m_leftMinusRight->AssignDeepCloneOf(*m_leftMinusRight);
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
         }
     }
 
@@ -178,7 +178,7 @@ public:
         // Note that we need both log and non-log for gradient computation.
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
         // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
-        m_softmaxOfRight->AssignDeepCloneOf(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Input(1)->GetMBLayout(), fr);
@@ -204,8 +204,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-            node->m_logSoftmaxOfRight->AssignDeepCloneOf(*m_logSoftmaxOfRight);
-            node->m_softmaxOfRight->AssignDeepCloneOf(*m_softmaxOfRight);
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
         }
     }
 
@@ -294,7 +294,7 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        m_logOfRight->AssignDeepCloneOf(Input(1)->ValueFor(fr));
+        m_logOfRight->SetValue(Input(1)->ValueFor(fr));
         m_logOfRight->InplaceLog();
         MaskMissingColumnsToZero(*m_logOfRight, Input(1)->GetMBLayout(), fr);
         Value().AssignInnerProductOfMatrices(Input(0)->MaskedValueFor(fr), *m_logOfRight);
@@ -315,8 +315,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-            node->m_logOfRight->AssignDeepCloneOf(*m_logOfRight);
-            node->m_leftDivRight->AssignDeepCloneOf(*m_leftDivRight);
+            node->m_logOfRight->SetValue(*m_logOfRight);
+            node->m_leftDivRight->SetValue(*m_leftDivRight);
         }
     }
 
@@ -416,7 +416,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-            node->m_gradientOfL1Norm->AssignDeepCloneOf(*m_gradientOfL1Norm);
+            node->m_gradientOfL1Norm->SetValue(*m_gradientOfL1Norm);
         }
     }
 
@@ -837,7 +837,7 @@ public:
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax.AssignDeepCloneOf(Input(CLASSPROBINDATA)->Value());
+        m_clsLogSoftmax.SetValue(Input(CLASSPROBINDATA)->Value());
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
@@ -879,7 +879,7 @@ public:
             logSoftMax_t.InplaceLogSoftmax(false);
 
             // and non-log version
-            softMax_t.AssignDeepCloneOf(logSoftMax_t);
+            softMax_t.SetValue(logSoftMax_t);
             softMax_t.InplaceExp();
             // we now have a column vector of class-conditional probabilities over the class members
 
@@ -1386,9 +1386,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LogisticNode<ElemType>>(nodeP);
-            node->m_classZeroLabels->AssignDeepCloneOf(*m_classZeroLabels);
-            node->m_result->AssignDeepCloneOf(*m_result);
-            node->m_temp->AssignDeepCloneOf(*m_temp);
+            node->m_classZeroLabels->SetValue(*m_classZeroLabels);
+            node->m_result->SetValue(*m_result);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
@@ -1769,7 +1769,7 @@ public:
                                       sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
             m_mbCount++;
-        }
+            }
 
     void Validate(bool isFinalValidationPass) override
     {

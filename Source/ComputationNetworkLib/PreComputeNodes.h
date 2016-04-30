@@ -109,7 +109,7 @@ public:
     {
         if (value.GetNumCols() != 1)
             InvalidArgument("SideLoadFromMatrix: Side-loading is only supported for column vectors.");
-        m_value->AssignDeepCloneOf(value);
+        m_value->SetValue(value);
         m_hasComputed = true;
         SetDims(TensorShape(value.GetNumRows()), false);
     }
@@ -309,7 +309,7 @@ public:
             m_var->InplaceTruncateBottom(sqrtFloor); // prevent too small variance (and negative square roots due to numeric inaccuracy)
             m_var->InplaceSqrt();
             m_var->ElementInverse();
-            Value().AssignDeepCloneOf(*m_var);
+            Value().SetValue(*m_var);
         }
     }
 
@@ -361,9 +361,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-            node->m_mean->AssignDeepCloneOf(*m_mean);
-            node->m_var ->AssignDeepCloneOf(*m_var);
-            node->m_temp->AssignDeepCloneOf(*m_temp);
+            node->m_mean->SetValue(*m_mean);
+            node->m_var ->SetValue(*m_var);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
