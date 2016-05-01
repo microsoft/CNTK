@@ -20,7 +20,6 @@ testCases:
   Epochs (with low train loss) must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - ce = 0.0
       - ce = {{float,tolerance=0.05}}
       - err = {{float,tolerance=0.005}}
       - learningRatePerSample = {{float,tolerance=0.1%}}
@@ -31,6 +30,5 @@ testCases:
       - 01-
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - ce = 0.0
       - ce = {{float,tolerance=0.05}}
       - err = {{float,tolerance=0.005}}
