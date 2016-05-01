@@ -128,8 +128,8 @@ private:
         shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
         auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
 
-fprintf(stderr, "Accumulating %ls, legNumSamp = %d, numSamp = %d\n", nodes[i]->NodeName().c_str(), (int)legacyNumSamples, (int)numSamples);
-node->As<ComputationNode<ElemType>>()->Value().Print(msra::strfun::strprintf("crit[%d] m_value", (int)i).c_str());
+//fprintf(stderr, "Accumulating %ls, legNumSamp = %d, numSamp = %d\n", nodes[i]->NodeName().c_str(), (int)legacyNumSamples, (int)numSamples);
+//node->As<ComputationNode<ElemType>>()->Value().Print(msra::strfun::strprintf("crit[%d] m_value", (int)i).c_str());
         if (numSamples > 0) // (if MB is empty, matrix may not have the correct row dmension)
         {
             auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
@@ -138,7 +138,7 @@ node->As<ComputationNode<ElemType>>()->Value().Print(msra::strfun::strprintf("cr
             // If count is zero, we lazily consider the numerator as zero as well.
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
         }
-m_aggregateCriterionValues->Print(msra::strfun::strprintf("crit[%d] m_aggregateCriterionValues", (int)i).c_str());
+//m_aggregateCriterionValues->Print(msra::strfun::strprintf("crit[%d] m_aggregateCriterionValues", (int)i).c_str());
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
 #else
         // temp solution until we add TensorView reduction
