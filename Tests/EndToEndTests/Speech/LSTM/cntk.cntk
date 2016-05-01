@@ -51,11 +51,6 @@ speechTrain = [
     # define network using BrainScript
     BrainScriptNetworkBuilder = [
 
-        # import some namespaces
-        # TODO: allow to say import BS.RNNs LSTMP or import BS.RNNs to import all (literally creates new dict members mirroring those)
-        RecurrentLSTMP2 = BS.RNNs.RecurrentLSTMP2
-        Parameters = BS.Parameters
-
         useSelfStabilization = true
 
         // define basic I/O
@@ -77,15 +72,15 @@ speechTrain = [
         featNorm = MeanVarNorm(feashift)
 
         // define the stack of hidden LSTM layers
-        S(x) = Parameters.Stabilize (x, enabled=useSelfStabilization)
+        S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, S(featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
-            else RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, S(LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+            then BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, S(featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, S(LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
-        W = Parameters.WeightParam (labelDim, hiddenDim)
-        B = Parameters.BiasParam   (labelDim)
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
 
         z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
