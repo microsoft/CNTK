@@ -1165,7 +1165,7 @@ LMSequenceReader: Reading epoch data... 42068 sequences read.
 04/15/2016 13:29:31: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.8341322 * 2087; learningRatePerSample = 0.1; EpochTime=0.987317
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-704]: * 73760    TrainNodeClassBasedCrossEntropy = 6.5294469    perplexity = 685.01921    
+Final Results: Minibatch[1-704]: * 73760;    TrainNodeClassBasedCrossEntropy = 6.5294469    perplexity = 685.01921    
 04/15/2016 13:29:42: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.5294469
 04/15/2016 13:29:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160415132601.536518/Examples/Text/PennTreebank_RNN@release_cpu/Models/rnn.dnn.1'
 
@@ -1176,7 +1176,7 @@ LMSequenceReader: Reading epoch data... 42068 sequences read.
 04/15/2016 13:29:43: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.5753689 * 4186; learningRatePerSample = 0.1; EpochTime=0.767515
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-353]: * 73760    TrainNodeClassBasedCrossEntropy = 6.4597963    perplexity = 638.93091    
+Final Results: Minibatch[1-353]: * 73760;    TrainNodeClassBasedCrossEntropy = 6.4597963    perplexity = 638.93091    
 04/15/2016 13:29:52: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.4597963
 04/15/2016 13:29:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160415132601.536518/Examples/Text/PennTreebank_RNN@release_cpu/Models/rnn.dnn.2'
 
@@ -1187,7 +1187,7 @@ LMSequenceReader: Reading epoch data... 42068 sequences read.
 04/15/2016 13:29:53: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 7.2637696 * 6462; learningRatePerSample = 0.1; EpochTime=0.700816
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-193]: * 73760    TrainNodeClassBasedCrossEntropy = 9.5554591    perplexity = 14121.575    
+Final Results: Minibatch[1-193]: * 73760;    TrainNodeClassBasedCrossEntropy = 9.5554591    perplexity = 14121.575    
 04/15/2016 13:30:02: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 9.5554591
 04/15/2016 13:30:02: Loading previous model with best training-criterion value: /tmp/cntk-test-20160415132601.536518/Examples/Text/PennTreebank_RNN@release_cpu/Models/rnn.dnn.2.
 04/15/2016 13:30:02: learnRatePerSample reduced to 0.050000001
@@ -1313,8 +1313,8 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 Allocating matrices for forward and/or backward propagation.
 LMSequenceReader: Reading epoch data... 3760 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Minibatch[1-60]: * 82402    TrainNodeClassBasedCrossEntropy = 6.4090419    
-Final Results: Minibatch[1-60]: * 82402    TrainNodeClassBasedCrossEntropy = 6.4090419    perplexity = 607.31155    
+Minibatch[1-60]: * 82402;    TrainNodeClassBasedCrossEntropy = 6.4090419    
+Final Results: Minibatch[1-60]: * 82402;    TrainNodeClassBasedCrossEntropy = 6.4090419    perplexity = 607.31155    
 
 04/15/2016 13:30:11: Action "eval" complete.
 
