@@ -90,10 +90,17 @@ speechTrain = [
         z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
         // training
-        useExplicitCriterion = true
-        crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        # TODO: the following fails with useExplicitCriterion = true:
+        # --> 'err' gets overwritten by crExplicit
+        # and with useExplicitCriterion = fals:
+        # --> 'err' comes out equal to 'ce'
+        #useExplicitCriterion = false
+        #crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
+        #crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
+        #ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        # so do it this way for now:
+        ce = Negate (ReduceSum (labels .* LogSoftmax (z)), tag='criterion') // manually-defined per-sample objective
+
         err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
 
         // decoding

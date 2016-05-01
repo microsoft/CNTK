@@ -280,7 +280,7 @@ protected:
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                    fprintf(stderr, "; ppl = %.8f", std::exp(criterionSinceLastLogged.Average()));
+                    fprintf(stderr, "; perplexity = %.8f", std::exp(criterionSinceLastLogged.Average()));
             }
 
             if (i + 1 < evalResults.size())

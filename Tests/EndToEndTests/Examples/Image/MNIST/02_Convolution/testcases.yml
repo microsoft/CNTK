@@ -31,6 +31,6 @@ testCases:
       - 01-
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - ce =  0.0
+      - ce = 0.0
       - ce = {{float,tolerance=0.05}}
       - err = {{float,tolerance=0.005}}

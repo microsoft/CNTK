@@ -635,14 +635,14 @@ MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: * 640; CrossEntropyWit
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.21143816; EvalErrorPrediction = 0.61406250; TotalTime = 0.5394s; SamplesPerSecond = 1186.6
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.29118500; EvalErrorPrediction = 0.60156250; TotalTime = 0.7031s; SamplesPerSecond = 910.2
 MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.19155470; EvalErrorPrediction = 0.56406250; TotalTime = 0.7620s; SamplesPerSecond = 839.9
-MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0129278 * 20480; EvalErrorPrediction = 0.7277832; learningRatePerSample = 0.015625; EpochTime=21.0933
+MPI Rank 0: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.01292779 * 20480; EvalErrorPrediction = 0.7277832; learningRatePerSample = 0.015625; EpochTime=21.0933
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-MPI Rank 0: Final Results: Minibatch[1-1298]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.1824241    perplexity = 8.8677763    EvalErrorPrediction: ErrorPrediction/Sample = 0.58616496    
-MPI Rank 0: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.1824241; EvalErrorPrediction = 0.58616496
+MPI Rank 0: Final Results: Minibatch[1-1298]: * 83050    CrossEntropyWithSoftmax = 2.1824241    perplexity = 8.8677763    EvalErrorPrediction = 0.58616496    
+MPI Rank 0: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.18242407; EvalErrorPrediction = 0.58616496
 MPI Rank 0: SGD: Saving checkpoint model '/tmp/cntk-test-20160303172706.796822/Speech/DNN_ParallelCrossValidation@release_cpu/models/cntkSpeech.dnn.1'
 MPI Rank 0: 
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
@@ -657,13 +657,13 @@ MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: * 2560; CrossEntropyWi
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  2.00412188; EvalErrorPrediction = 0.54335937; TotalTime = 1.4520s; SamplesPerSecond = 1763.1
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.93180079; EvalErrorPrediction = 0.52343750; TotalTime = 1.3162s; SamplesPerSecond = 1945.0
 MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.94186507; EvalErrorPrediction = 0.54257813; TotalTime = 1.3149s; SamplesPerSecond = 1947.0
-MPI Rank 0: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.984191 * 40960; EvalErrorPrediction = 0.54169922; learningRatePerSample = 0.001953125; EpochTime=10.7924
+MPI Rank 0: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.98419097 * 40960; EvalErrorPrediction = 0.54169922; learningRatePerSample = 0.001953125; EpochTime=10.7924
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 0: Final Results: Minibatch[1-325]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8974794    perplexity = 6.6690634    EvalErrorPrediction: ErrorPrediction/Sample = 0.52758579    
-MPI Rank 0: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.8974794; EvalErrorPrediction = 0.52758579
+MPI Rank 0: Final Results: Minibatch[1-325]: * 83050    CrossEntropyWithSoftmax = 1.8974794    perplexity = 6.6690634    EvalErrorPrediction = 0.52758579    
+MPI Rank 0: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.89747943; EvalErrorPrediction = 0.52758579
 MPI Rank 0: SGD: Saving checkpoint model '/tmp/cntk-test-20160303172706.796822/Speech/DNN_ParallelCrossValidation@release_cpu/models/cntkSpeech.dnn.2'
 MPI Rank 0: 
 MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
@@ -677,8 +677,8 @@ MPI Rank 0:
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 0: Final Results: Minibatch[1-82]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8771737    perplexity = 6.5350089    EvalErrorPrediction: ErrorPrediction/Sample = 0.51938591    
-MPI Rank 0: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.8771737; EvalErrorPrediction = 0.51938591
+MPI Rank 0: Final Results: Minibatch[1-82]: * 83050    CrossEntropyWithSoftmax = 1.8771737    perplexity = 6.5350089    EvalErrorPrediction = 0.51938591    
+MPI Rank 0: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.87717371; EvalErrorPrediction = 0.51938591
 MPI Rank 0: SGD: Saving checkpoint model '/tmp/cntk-test-20160303172706.796822/Speech/DNN_ParallelCrossValidation@release_cpu/models/cntkSpeech.dnn'
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: 
@@ -1255,14 +1255,14 @@ MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: * 640; CrossEntropyWit
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: * 640; CrossEntropyWithSoftmax =  2.21143816; EvalErrorPrediction = 0.61406250; TotalTime = 0.5291s; SamplesPerSecond = 1209.5
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: * 640; CrossEntropyWithSoftmax =  2.29118500; EvalErrorPrediction = 0.60156250; TotalTime = 0.7085s; SamplesPerSecond = 903.3
 MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: * 640; CrossEntropyWithSoftmax =  2.19155470; EvalErrorPrediction = 0.56406250; TotalTime = 0.7657s; SamplesPerSecond = 835.8
-MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.0129278 * 20480; EvalErrorPrediction = 0.7277832; learningRatePerSample = 0.015625; EpochTime=21.0877
+MPI Rank 1: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.01292779 * 20480; EvalErrorPrediction = 0.7277832; learningRatePerSample = 0.015625; EpochTime=21.0877
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-MPI Rank 1: Final Results: Minibatch[1-1298]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 2.1824241    perplexity = 8.8677763    EvalErrorPrediction: ErrorPrediction/Sample = 0.58616496    
-MPI Rank 1: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.1824241; EvalErrorPrediction = 0.58616496
+MPI Rank 1: Final Results: Minibatch[1-1298]: * 83050    CrossEntropyWithSoftmax = 2.1824241    perplexity = 8.8677763    EvalErrorPrediction = 0.58616496    
+MPI Rank 1: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.18242407; EvalErrorPrediction = 0.58616496
 MPI Rank 1: 
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 2, with 1 datapasses
@@ -1276,13 +1276,13 @@ MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: * 2560; CrossEntropyWi
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: * 2560; CrossEntropyWithSoftmax =  2.00412188; EvalErrorPrediction = 0.54335937; TotalTime = 1.4540s; SamplesPerSecond = 1760.7
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: * 2560; CrossEntropyWithSoftmax =  1.93180079; EvalErrorPrediction = 0.52343750; TotalTime = 1.3134s; SamplesPerSecond = 1949.2
 MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: * 2560; CrossEntropyWithSoftmax =  1.94186507; EvalErrorPrediction = 0.54257813; TotalTime = 1.3101s; SamplesPerSecond = 1954.1
-MPI Rank 1: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.984191 * 40960; EvalErrorPrediction = 0.54169922; learningRatePerSample = 0.001953125; EpochTime=10.7924
+MPI Rank 1: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.98419097 * 40960; EvalErrorPrediction = 0.54169922; learningRatePerSample = 0.001953125; EpochTime=10.7924
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 1: Final Results: Minibatch[1-325]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8974794    perplexity = 6.6690634    EvalErrorPrediction: ErrorPrediction/Sample = 0.52758579    
-MPI Rank 1: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.8974794; EvalErrorPrediction = 0.52758579
+MPI Rank 1: Final Results: Minibatch[1-325]: * 83050    CrossEntropyWithSoftmax = 1.8974794    perplexity = 6.6690634    EvalErrorPrediction = 0.52758579    
+MPI Rank 1: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.89747943; EvalErrorPrediction = 0.52758579
 MPI Rank 1: 
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 2, with 1 datapasses
@@ -1295,8 +1295,8 @@ MPI Rank 1:
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 1: Final Results: Minibatch[1-82]: * 83050    CrossEntropyWithSoftmax: CrossEntropyWithSoftmax/Sample = 1.8771737    perplexity = 6.5350089    EvalErrorPrediction: ErrorPrediction/Sample = 0.51938591    
-MPI Rank 1: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.8771737; EvalErrorPrediction = 0.51938591
+MPI Rank 1: Final Results: Minibatch[1-82]: * 83050    CrossEntropyWithSoftmax = 1.8771737    perplexity = 6.5350089    EvalErrorPrediction = 0.51938591    
+MPI Rank 1: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.87717371; EvalErrorPrediction = 0.51938591
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: 
 MPI Rank 1: Action "train" complete.
