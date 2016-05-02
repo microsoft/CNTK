@@ -62,10 +62,11 @@ with an LSTM (long short term memory network).
 First basic use
 ~~~~~~~~~~~~~~~
 
-Here is a simple example of using the CNTK Python API to learn a line of best fit::
+Here is a simple example of using the CNTK Python API to learn to separate data into 
+two classes using logistic regression::
 
-	import cntk
-	import cntk.ops
+	import cntk as C
+	from cntk.ops import cntk1
 
 	def main():
 	    print("test")
@@ -83,6 +84,35 @@ learning world. They are networks with loops in them and they allow us to model 
 current state given the result of a previous state. In other words, they allow information 
 to persist.
 
+A particular type of RNN -- the Long Short Term Memory (LSTM) network -- is exceedingly 
+useful and in practice is what we commonly use when implementing an RNN. For more on why 
+LSTMs are so powerful, see, e.g. http://colah.github.io/posts/2015-08-Understanding-LSTMs/. 
+For our purposes, we will concentrate on the central feature of the LSTM model: the `memory 
+cell`. 
+
+.. image:: images/lstm_cell.png
+    :width: 400px
+    :alt: LSTM cell
+
+The ...
+
+In this example we can think of the LSTM as a layer being added to the network::
+
+	def lstm_layer(output_dim, cell_dim, x, input_dim):    
+    
+		# use the CNTK operator `past_value` to get the previous state of the LSTM
+		prev_state_h = past_value(0, 'lstm_state_h')
+		prev_state_c = past_value(0, 'lstm_state_c')
+        
+		lstm_state_c, lstm_state_h = lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c)
+		lstm_state_c.name = 'lstm_state_c'
+		lstm_state_h.name = 'lstm_state_h'
+
+		# return the hidden state
+		return lstm_state_h
+
+
+...
 
 
 Operators
