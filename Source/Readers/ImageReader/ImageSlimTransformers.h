@@ -11,6 +11,7 @@
 
 #include "Transformer.h"
 #include "ConcStack.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,6 +23,8 @@ class SlimImageTransformerBase : public SlimTransformer
 {
 public:
     explicit SlimImageTransformerBase(const ConfigParameters& config);
+
+    void StartEpoch(const EpochConfiguration&) override {}
 
     // Transformation of the stream.
     StreamDescription Transform(const StreamDescription& inputStream) override;
@@ -126,12 +129,13 @@ class SlimTransposeTransformer : public SlimTransformer
 public:
     explicit SlimTransposeTransformer(const ConfigParameters& config);
 
+    void StartEpoch(const EpochConfiguration&) override {}
+
     // Transformation of the stream.
-    StreamDescription Transform(const StreamDescription& inputStream);
+    StreamDescription Transform(const StreamDescription& inputStream) override;
 
     // Transformation of the sequence.
-    SequenceDataPtr Transform(SequenceDataPtr sequence);
-
+    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 private:
     template <class TElement>
@@ -140,5 +144,56 @@ private:
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
 };
+
+// Intensity jittering based on PCA transform as described in original AlexNet paper
+// (http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+// Currently uses precomputed values from 
+// https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
+// but should be replaced with per-class values?
+class SlimIntensityTransformer : public SlimImageTransformerBase
+{
+public:
+    explicit SlimIntensityTransformer(const ConfigParameters& config);
+
+    void StartEpoch(const EpochConfiguration &config) override;
+    void Apply(size_t id, cv::Mat &mat) override;
+
+private:
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    doubleargvector m_stdDev;
+    double m_curStdDev;
+
+    cv::Mat m_eigVal;
+    cv::Mat m_eigVec;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+};
+
+// Color jittering transform based on the paper: http://arxiv.org/abs/1312.5402
+// In short, the transform randomly changes contrast, brightness and color of the image.
+class SlimColorTransformer : public SlimImageTransformerBase
+{
+public:
+    explicit SlimColorTransformer(const ConfigParameters& config);
+    void StartEpoch(const EpochConfiguration &config) override;
+    void Apply(size_t id, cv::Mat &mat) override;
+
+private:
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    doubleargvector m_brightnessRadius;
+    double m_curBrightnessRadius;
+    doubleargvector m_contrastRadius;
+    double m_curContrastRadius;
+    doubleargvector m_saturationRadius;
+    double m_curSaturationRadius;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
+};
+
 
 }}}

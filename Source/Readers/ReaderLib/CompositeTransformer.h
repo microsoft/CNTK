@@ -43,6 +43,10 @@ public:
     virtual void StartEpoch(const EpochConfiguration &config) override
     {
         assert(m_next != nullptr);
+        for (auto& t : m_transformations)
+        {
+            t.m_transfromer->StartEpoch(config);
+        }
         m_next->StartEpoch(config);
     }
 

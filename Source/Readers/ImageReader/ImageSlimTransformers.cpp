@@ -454,4 +454,189 @@ SequenceDataPtr SlimTransposeTransformer::TypedTransform(SequenceDataPtr sequenc
     return result;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+SlimIntensityTransformer::SlimIntensityTransformer(const ConfigParameters &config) : SlimImageTransformerBase(config)
+{
+    m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    std::wstring intFile = config(L"intensityFile", L"");
+    if (intFile.empty())
+    {
+        m_eigVal.release();
+        m_eigVec.release();
+    }
+    else
+    {
+        cv::FileStorage fs;
+        fs.open(msra::strfun::utf8(intFile).c_str(), cv::FileStorage::READ);
+        if (!fs.isOpened())
+            RuntimeError("Could not open file: %ls", intFile.c_str());
+        fs["EigVal"] >> m_eigVal;
+        if (m_eigVal.rows != 1 || m_eigVal.cols != 3 || m_eigVal.channels() != 1)
+            RuntimeError("Invalid EigVal data in file: %ls", intFile.c_str());
+        fs["EigVec"] >> m_eigVec;
+        if (m_eigVec.rows != 3 || m_eigVec.cols != 3 || m_eigVec.channels() != 1)
+            RuntimeError("Invalid EigVec data in file: %ls", intFile.c_str());
+        fs.release();
+    }
+}
+
+void SlimIntensityTransformer::StartEpoch(const EpochConfiguration &config)
+{
+    m_curStdDev = m_stdDev[config.m_epochIndex];
+}
+
+void SlimIntensityTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+
+    if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
+        return;
+
+    if (mat.type() == CV_64FC(mat.channels()))
+        Apply<double>(mat);
+    else if (mat.type() == CV_32FC(mat.channels()))
+        Apply<float>(mat);
+    else
+        RuntimeError("Unsupported type");
+}
+
+template <typename ElemType>
+void SlimIntensityTransformer::Apply(cv::Mat &mat)
+{
+    auto seed = GetSeed();
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+
+    // Using single precision as EigVal and EigVec matrices are single precision.
+    std::normal_distribution<float> d(0, (float)m_curStdDev);
+    cv::Mat alphas(1, 3, CV_32FC1);
+    assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
+    alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
+    alphas.at<float>(1) = d(*rng) * m_eigVal.at<float>(1);
+    alphas.at<float>(2) = d(*rng) * m_eigVal.at<float>(2);
+    m_rngs.push(std::move(rng));
+
+    assert(m_eigVec.rows == 3 && m_eigVec.cols == 3);
+
+    cv::Mat shifts = m_eigVec * alphas.t();
+
+    // For multi-channel images data is in BGR format.
+    size_t cdst = mat.rows * mat.cols * mat.channels();
+    ElemType* pdstBase = reinterpret_cast<ElemType*>(mat.data);
+    for (ElemType* pdst = pdstBase; pdst < pdstBase + cdst;)
+    {
+        for (int c = 0; c < mat.channels(); c++)
+        {
+            float shift = shifts.at<float>(mat.channels() - c - 1);
+            *pdst = std::min(std::max(*pdst + shift, (ElemType)0), (ElemType)255);
+            pdst++;
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+SlimColorTransformer::SlimColorTransformer(const ConfigParameters &config) : SlimImageTransformerBase(config)
+{
+    m_brightnessRadius = config(L"brightnessRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_contrastRadius = config(L"contrastRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_saturationRadius = config(L"saturationRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+}
+
+void SlimColorTransformer::StartEpoch(const EpochConfiguration &config)
+{
+    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
+    if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
+        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
+
+    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
+    if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
+        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
+
+    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
+    if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
+        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
+}
+
+void SlimColorTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+
+    if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
+        return;
+
+    if (mat.type() == CV_64FC(mat.channels()))
+        Apply<double>(mat);
+    else if (mat.type() == CV_32FC(mat.channels()))
+        Apply<float>(mat);
+    else
+        RuntimeError("Unsupported type");
+}
+
+template <typename ElemType>
+void SlimColorTransformer::Apply(cv::Mat &mat)
+{
+    auto seed = GetSeed();
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+
+    if (m_curBrightnessRadius > 0 || m_curContrastRadius > 0)
+    {
+        // To change brightness and/or contrast the following standard transformation is used:
+        // Xij = alpha * Xij + beta, where
+        // alpha is a contrast adjustment and beta - brightness adjustment.
+        ElemType beta = 0;
+        if (m_curBrightnessRadius > 0)
+        {
+            UniRealT d(-m_curBrightnessRadius, m_curBrightnessRadius);
+            // Compute mean value of the image.
+            cv::Scalar imgMean = cv::sum(cv::sum(mat));
+            // Compute beta as a fraction of the mean.
+            beta = (ElemType)(d(*rng) * imgMean[0] / (mat.rows * mat.cols * mat.channels()));
+        }
+
+        ElemType alpha = 1;
+        if (m_curContrastRadius > 0)
+        {
+            UniRealT d(-m_curContrastRadius, m_curContrastRadius);
+            alpha = (ElemType)(1 + d(*rng));
+        }
+
+        // Could potentially use mat.convertTo(mat, -1, alpha, beta) 
+        // but it does not do range checking for single/double precision matrix. saturate_cast won't work either.
+        size_t count = mat.rows * mat.cols * mat.channels();
+        ElemType* pbase = reinterpret_cast<ElemType*>(mat.data);
+        for (ElemType* p = pbase; p < pbase + count; p++)
+        {
+            *p = std::min(std::max(*p * alpha + beta, (ElemType)0), (ElemType)255);
+        }
+    }
+
+    if (m_curSaturationRadius > 0 && mat.channels() == 3)
+    {
+        UniRealT d(-m_curSaturationRadius, m_curSaturationRadius);
+        double ratio = 1.0 + d(*rng);
+        assert(0 <= ratio && ratio <= 2);
+
+        auto hsv = m_hsvTemp.pop_or_create([]() { return std::make_unique<cv::Mat>(); });
+
+        // To change saturation, we need to convert the image to HSV format first,
+        // the change S channgel and convert the image back to BGR format.
+        cv::cvtColor(mat, *hsv, CV_BGR2HSV);
+        assert(hsv->rows == mat.rows && hsv->cols == mat.cols);
+        size_t count = hsv->rows * hsv->cols * mat.channels();
+        ElemType* phsvBase = reinterpret_cast<ElemType*>(hsv->data);
+        for (ElemType* phsv = phsvBase; phsv < phsvBase + count; phsv += 3)
+        {
+            const int HsvIndex = 1;
+            phsv[HsvIndex] = std::min((ElemType)(phsv[HsvIndex] * ratio), (ElemType)1);
+        }
+        cv::cvtColor(*hsv, mat, CV_HSV2BGR);
+
+        m_hsvTemp.push(std::move(hsv));
+    }
+
+    m_rngs.push(std::move(rng));
+}
+
+
 }}}

@@ -61,6 +61,9 @@ public:
 class SlimTransformer
 {
 public:
+    // Starts a new epoch.
+    virtual void StartEpoch(const EpochConfiguration &config) = 0;
+
     // Transformation of the stream.
     virtual StreamDescription Transform(const StreamDescription& inputStream) = 0;
 
