@@ -31,7 +31,7 @@ class AbstractReader(with_metaclass(ABCMeta)):
 class UCIFastReader(AbstractReader):
 
     """`Deprecated` - A UCIFastReader for one input node. Please switch to
-    :class:`CNTKTextFormatReader`.
+    :class:`cntk.reader.CNTKTextFormatReader`.
 
     Note that the dimensions are not inferred from the input node's shape,
     because in case of a label node the dimension does not match the shape
@@ -70,12 +70,19 @@ class UCIFastReader(AbstractReader):
 
 class CNTKTextFormatReader(AbstractReader):
 
-    """A CNTKTextFormatReader for one input node that supports sequences. 
+    """A CNTKTextFormatReader for one input node that supports sequences. For a
+    full format definition please see
+    https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader.
 
     Args:
         filename (str): the name of the file where the data is stored
-        input_alias (str): a short name for the input, it is how inputs are referenced in the data files        
-        format (str): 'dense' or 'sparse'
+        filename (str): path to the input file to read from
+        randomize (str): whether the input should be randomized. Valid values: 'auto' or 'none'
+        skip_sequence_ids (bool): whether the sequence ID should be ignored 
+        max_errors (int): number of errors to accept before throwing an exception
+        trace_level (int): verbosity of output (0=only errors .. 2=all output)
+        chunk_size_in_bytes (int): smallest reading unit in bytes (default 32MB)
+        num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
 
     Example:
        The following example encodes two samples, one has a sequence of one
@@ -89,8 +96,12 @@ class CNTKTextFormatReader(AbstractReader):
        input node. Let's say the above data is stored in ``data.txt``, you would
        set up the reader as follows::
 
-           r = CNTKTextFormatReader('data.txt', 'I')
+           r = CNTKTextFormatReader('data.txt')
 
+       and then later use ``r`` to map the alias ``I`` to the input node. Let's say
+       the input node is called ``in_node`` in your code, you would say::
+           
+           ctx.train(..., input_map=r.map(in_node, alias='I', dim=1, format='dense'))
 
        The alias is required, because using this format you can set up
        multiple inputs per sample::
@@ -106,38 +117,56 @@ class CNTKTextFormatReader(AbstractReader):
        with a label.
 
        The normal matrix based format, for which you would have used
-       :class:`UCIFastReader` in the past can be simply converted by prepending
+       :class:`cntk.reader.UCIFastReader` in the past can be simply converted by prepending
        every line by the line number and a bar (``|``). Of course it only works
        for sequences of length 1, since in matrix format you cannot go beyond
        that:
 
-       :class:`UCIFastReader` format::
+       :class:`cntk.reader.UCIFastReader` format::
 
            0 1
            10 11
            20 21
 
-       can be easily converted to the :class:`CNTKTextFormatReader` format
-       (using alias `I`)::
+       can be easily converted to the :class:`cntk.reader.CNTKTextFormatReader` format
+       (using alias ``I``)::
 
            0\t|I 0 1
            1\t|I 10 21
            2\t|I 20 21
     """
 
-    def __init__(self, filename):
+    def __init__(self, 
+            filename, 
+            randomize='auto', 
+            skip_sequence_ids=False,
+            max_errors=0,
+            trace_level=0,
+            chunk_size_in_bytes=32*1024**2,
+            num_chunks_to_cache=32      
+            ):
+        self.reader_type = 'CNTKTextFormatReader'
         self.filename = filename
+        self.randomize = randomize.lower()
+        assert self.randomize in ['auto', 'none']
+        self.skip_sequence_ids = bool(skip_sequence_ids)
+        self.max_errors = int(max_errors)
+        assert self.max_errors >= 0
+        self.trace_level = int(trace_level)
+        assert self.trace_level in [0,1,2]
+        self.chunk_size_in_bytes = int(chunk_size_in_bytes)
+        assert self.chunk_size_in_bytes > 0
+        self.num_chunks_to_cache = int(num_chunks_to_cache)
+        assert self.chunk_size_in_bytes >= 0
 
     def map(self, node_or_name, **kw):
         '''
-        Create a mapping from a `ComputationNode` or a node's name in the
-        configuration file to a parameter dictionary. Parameters:
+        Create a mapping from a :class:`cntk.graph.ComputationNode` or a node's name in the
+        configuration file to a parameter dictionary. 
 
         Args:
-            node_or_name (`ComputationNode` or str): node or its variable name
-            alias (str): the alias in the data file. If omitted, the node's variable
-        name will be taken.
-            dim (int): the dimension of the imput
+            node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
+            kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
         '''
 
         return InputMap(self).map(node_or_name, **kw)
@@ -145,7 +174,7 @@ class CNTKTextFormatReader(AbstractReader):
     def generate_config(self, input_map):
         '''
         Write the reader configuration. For this, all previously registered
-        `LazyInputReader`s will be serialized into one common file.
+        :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
 
         Args:
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
@@ -166,12 +195,28 @@ class CNTKTextFormatReader(AbstractReader):
             raise ValueError('reader mismatch')
 
         from cntk.context import get_context
+        configuration = {
+                'readerType': self.reader_type,
+                'file': self.filename,
+                'randomize': self.randomize,
+                'skipSequenceIds': str(self.skip_sequence_ids).lower(),
+                'maxErrors': self.max_errors,
+                'traceLevel': self.trace_level,
+                'chunkSizeInBytes': self.chunk_size_in_bytes,
+                'numChunksToCache': self.num_chunks_to_cache
+                }
+
         template = ''' 
         reader = [
-            traceLevel = 2
-            readerType = CNTKTextFormatReader
-            file = "%(FileName)s"                
-        ''' % {'FileName': self.filename}
+            readerType = %(readerType)s
+            file = "%(file)s"                
+            randomize = %(randomize)s
+            skipSequenceIds = %(skipSequenceIds)s
+            maxErrors = %(maxErrors)s
+            traceLevel = %(traceLevel)i
+            chunkSizeInBytes = %(chunkSizeInBytes)i
+            numChunksToCache = %(numChunksToCache)i
+        ''' % configuration
 
         template += '''
             input = [

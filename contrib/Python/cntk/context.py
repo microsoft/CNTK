@@ -63,16 +63,21 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
-
-    Args:
-        name (str): context name
-        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-        precision (str): either 'float' or 'double' 
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float"):
+        
+        '''        
+        This is the constructor of AbstractContext       
+        
+        Args:
+            name: context name
+            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+            precision: either float or double
+        '''        
+        
         if isinstance(name, str):
             tmpdir = name
         else:
@@ -99,13 +104,14 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
     def __exit__(self, exc_type, exc_value, exc_tb):
         del _CONTEXT[self.name]
 
-    def _save_file(self, config_file_name, config_content):
+    def _save_file(self, config_file_name, config_content, action_name):
         '''
         Writes the content of a config file on disk.
 
         Args:
             config_file_name (str): the name of the configuration file
             config_content (str): a string containing the configuration
+            action_name (string): the name of the action in cntk configuration file
             
         Returns:
             the full path of the saved file
@@ -116,6 +122,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         with open(filename, 'w') as out:
             out.write(config_content)
+            out.write("command=%s" %action_name)
 
         return filename
         
@@ -212,7 +219,8 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return description, inputs
 
-    def _generate_train_config(self, root_nodes, optimizer, input_map, override_existing):
+    def _generate_train_config(self, root_nodes, optimizer, input_map, 
+                               override_existing, action_name=None):
         '''
         Generates the configuration file for the train action.
 
@@ -221,6 +229,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             optimizer (instance of `cntk.optimizer.SGDParams'): the SGD optimizer to use for training
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
+            action_name (string): the name of the action in cntk configuration file
 
         Returns: 
             configuration string
@@ -234,6 +243,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
+            'ActionName': action_name,
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelDescription': description,
@@ -244,13 +254,15 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return tmpl % tmpl_dict
 
-    def _generate_test_config(self, root_nodes, input_map=None):
+
+    def _generate_test_config(self, root_nodes, input_map=None, action_name=None):
         '''
         Generates the configuration file for the test action.
 
         Args:
             root_nodes (list): the list of root nodes of the model
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
+            action_name (string): the name of the action in cntk configuration file
 
         Returns:
             configuration string
@@ -264,6 +276,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
+            'ActionName': action_name,
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelPath': self.model_path,
@@ -271,13 +284,14 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         }
         return tmpl % tmpl_dict
 
-    def _generate_write_config(self, input_map):
+    def _generate_write_config(self, input_map, action_name=None):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
 
         Args:
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
+            action_name (string): the name of the action in cntk configuration file
 
         Returns:
             configuration string
@@ -288,6 +302,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
 
         tmpl_dict = {
+            'ActionName': action_name,
             'DevideId': self.device_id,
             'Precision': self.precision,
             'ModelPath': self.model_path,
@@ -296,7 +311,8 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         }
         return tmpl % tmpl_dict
 
-    def _generate_eval_config(self, root_nodes, input_map=None, node_unit_test=False):
+    def _generate_eval_config(self, root_nodes, input_map=None, 
+                              node_unit_test=False, action_name=None):
         '''
         Generates the configuration file for write action.
 
@@ -305,6 +321,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
             node_unit_test (bool): set to True if you want to output the gradient of a node (backward pass)
+            action_name (string): the name of the action in cntk configuration file
 
         Returns: 
             configuration string
@@ -329,6 +346,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         
         tmpl_dict = {
+            'ActionName': action_name,
             'DevideId': self.device_id,
             'Precision': self.precision,
             'NodeUnitTest': node_unit_test,
@@ -342,18 +360,23 @@ class LocalExecutionContext(AbstractContext):
 
     '''
     This is a sub-class of AbstractContext, use it to run CNTK locally.
-
-    Args:
-        name (str): context name
-        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-        precision (str): either 'float' or 'double' 
-        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float",
                  clean_up=True):
+        
+        '''        
+        This is the constructor of LocalExecutionContext       
+        
+        Args:
+            name: context name
+            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+            precision: either float or double
+            clean_up: whether the temporary directory should be removed when the context is left        
+        '''        
+        
         super(self.__class__,self).__init__(name, device_id, precision)
         self.clean_up = clean_up
         self.model_dir = os.path.join(self.directory, 'Models')
@@ -366,19 +389,20 @@ class LocalExecutionContext(AbstractContext):
             sh.rmtree(self.directory)
 
         
-    def _call_cntk(self, config_file_name, config_content):
+    def _call_cntk(self, config_file_name, config_content, action_name):
         '''
         Calls the CNTK executable on the `config_content`.
 
         Args:
             config_file_name (str): the name of the configuration file
             config_content (str): a string containing the configuration
+            action_name (string): the name of the action in cntk configuration file
 
         Returns:
             the output generated by the CNTK executable, which is used to retrieve the node shapes.
         '''
         
-        filename = self._save_file(config_file_name, config_content)
+        filename = self._save_file(config_file_name, config_content, action_name)
 
         try:
             output_bytes = subprocess.check_output(
@@ -642,7 +666,7 @@ class LocalExecutionContext(AbstractContext):
         Returns:
             output of the CNTK executable training run
         '''
-
+        action_name = "Train"
         if os.path.exists(self.model_dir):
             if override_existing:
                 print("Overriding the existing models")
@@ -653,9 +677,10 @@ class LocalExecutionContext(AbstractContext):
                                 "override it" % self.directory)
 
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_map, override_existing)
+            root_nodes, optimizer, input_map, override_existing, action_name = action_name)
 
-        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
+        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content,
+                               action_name = action_name)
 
     def test(self, root_nodes=None, input_map=None):
         '''
@@ -669,9 +694,11 @@ class LocalExecutionContext(AbstractContext):
             dictionary containing 'SamplesSeen', 'Perplexity', and values for
             objective and evaluation error indexed by their node names
         '''
-
-        config_content = self._generate_test_config(root_nodes, input_map)
-        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+        action_name = "Test"
+        config_content = self._generate_test_config(input_map, root_nodes, 
+                                                    action_name = action_name)
+        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content,
+                                 action_name = action_name)
 
         return LocalExecutionContext._parse_test_result(output)
 
@@ -686,8 +713,10 @@ class LocalExecutionContext(AbstractContext):
         Returns: 
             output generated by `node`
         '''
-        config_content = self._generate_write_config(input_map)
-        return self._call_cntk(CNTK_WRITE_CONFIG_FILENAME, config_content)
+        action_name = "Write"
+        config_content = self._generate_write_config(input_map, action_name = action_name)
+        return self._call_cntk(CNTK_WRITE_CONFIG_FILENAME, config_content,
+                               action_name = action_name)
 
     def eval(self, node, input_map=None, backward_pass=False, input_name=None):
         '''
@@ -704,6 +733,7 @@ class LocalExecutionContext(AbstractContext):
         Returns: 
             output generated by `node`
         '''
+        action_name = "Eval"
         if not isinstance(node, ComputationNode):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
@@ -717,8 +747,9 @@ class LocalExecutionContext(AbstractContext):
         node.tag = 'output'
 
         config_content = self._generate_eval_config(
-            node, input_map, backward_pass)
-        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
+            node, input_map, backward_pass, action_name = action_name)
+        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content,
+                        action_name = action_name)
 
         node.tag = orig_node_tag
 
@@ -741,12 +772,6 @@ class DeferredExecutionContext(AbstractContext):
     This is a sub-class of AbstractContext, use it to generate CNTK configuration,
     that would be executed on different enviroment (e.g., on a cluster) rather than 
     the machine that generated them.
-
-    Args:
-        name (str): context name
-        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-        precision (str): either float or double            
-        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
     
     def __init__(self, name,
@@ -754,9 +779,33 @@ class DeferredExecutionContext(AbstractContext):
                  precision="float",
                  clean_up=True):
         
+        '''        
+        This is the constructor of DeferredExecutionContext       
+        
+        Args:
+            name: context name
+            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+            precision: either float or double            
+        '''        
+        
         super(self.__class__,self).__init__(name, device_id, precision)        
         self.model_path = os.path.join("$ModelDir$", self.name)
         self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
+        self.config = []
+        self.actions = []
+        
+    def _append_config(self, action_name, config_content):
+        '''
+        Append the config to the existing one
+
+        Args:            
+            config_content (str): a string containing the configuration
+            action_name (str): the name of the action in cntk configuration file
+            
+        '''
+                        
+        self.config.append(config_content)
+        self.actions.append(action_name)
 
     def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
         '''
@@ -772,11 +821,15 @@ class DeferredExecutionContext(AbstractContext):
         Returns:
             training configuration
         '''
-
+        #TODO: for this action and others as well, use a counter with the 
+        # action name to avoid name collision in case we generate a config 
+        #file with more than one action type 
+        
+        action_name = "Train"
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_map, override_existing)
+            root_nodes, optimizer, input_map, override_existing, action_name)
+        self._append_config(action_name, config_content)        
 
-        return self._save_file(CNTK_TRAIN_CONFIG_FILENAME, config_content)
 
     def test(self, root_nodes=None, input_map=None):
         '''
@@ -792,8 +845,10 @@ class DeferredExecutionContext(AbstractContext):
         if root_nodes is None and input_map is None:
             raise ValueError('If input_map is None, you have to specify root_nodes.')
 
-        config_content = self._generate_test_config(root_nodes, input_map)
-        self._save_file(CNTK_TEST_CONFIG_FILENAME, config_content)
+        action_name = "Test"
+        config_content = self._generate_test_config(root_nodes, input_map, action_name)
+        self._append_config(action_name, config_content)        
+
 
     def write(self, input_map=None):
         '''
@@ -806,8 +861,9 @@ class DeferredExecutionContext(AbstractContext):
         Returns: 
            write configuration
         '''
-        config_content = self._generate_write_config(input_map)
-        self._save_file(CNTK_WRITE_CONFIG_FILENAME, config_content)
+        action_name = "Write"
+        config_content = self._generate_write_config(input_map, action_name)
+        self._append_config(action_name, config_content)        
 
     def eval(self, node, input_map=None, backward_pass=False, input_name=None):
         '''
@@ -823,6 +879,7 @@ class DeferredExecutionContext(AbstractContext):
         Returns: 
             eval configuration
         '''
+        action_name = "Eval"
         if not isinstance(node, ComputationNode):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
@@ -834,6 +891,20 @@ class DeferredExecutionContext(AbstractContext):
         node.tag = 'output'
 
         config_content = self._generate_eval_config(
-            node, input_map, backward_pass)
-        self._save_file(CNTK_EVAL_CONFIG_FILENAME, config_content)
-        
+            node, input_map, backward_pass, action_name)
+        self._append_config(action_name, config_content)        
+    
+    def export(self):
+        '''
+        Exports the requested actions (via function calls like train()) to 
+        a signle cntk configuration file that will be executed on the cluster
+        '''                
+        filename = '%s.cntk' %self.name
+        filename = os.path.join(self.directory,  filename)    
+        filename = os.path.relpath(filename)
+
+        with open(filename, 'w') as out:            
+            out.write('\n'.join(self.config))
+            out.write("command=%s" % ":".join(self.actions))
+                    
+        return filename
