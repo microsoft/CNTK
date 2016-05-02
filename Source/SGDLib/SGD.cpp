@@ -2306,6 +2306,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
 template <class ElemType>
 void SGD<ElemType>::InitializeAndCheckBlockMomentumSGDParameters()
 {
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT 
     // if user has not specified the time constant
     if (m_blockMomentumAsTimeConstant <= 0.0)
     {
@@ -2319,6 +2320,11 @@ void SGD<ElemType>::InitializeAndCheckBlockMomentumSGDParameters()
     {
         fprintf(stderr, "WARNING: (1-blockMomentumPerSync)*blockLearningRate is larger than 2*numWorkers; it is possible to overshoot.");
     }
+#else
+    // don't need do anything here 
+    m_blockMomentumAsTimeConstant = 0.0; 
+    m_blockLearningRate= 1.0; 
+#endif 
 }
 
 template class SGD<float>;
