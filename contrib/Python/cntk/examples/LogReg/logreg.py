@@ -55,7 +55,9 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
             optimizer=my_sgd,
             input_map=train_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
 
-        result = ctx.test(input_map=test_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
+        result = ctx.test(
+                root_nodes=[ce, eval], 
+                input_map=test_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
 
         return result
 
