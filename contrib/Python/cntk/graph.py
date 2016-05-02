@@ -343,7 +343,7 @@ def eval(node):
                     setattr(node, p, ir)
                     first = False
                 else:
-                    setattr(node, p, constant(getattr(node, p), op_name=p))
+                    setattr(node, p, constant(getattr(node, p), name=p))
 
     return ctx.eval(node)
 
