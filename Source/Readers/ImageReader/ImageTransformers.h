@@ -12,6 +12,7 @@
 #include "Transformer.h"
 #include "ConcStack.h"
 #include "TransformerBase.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -23,16 +24,15 @@ class ImageTransformerBase : public TransformerBase
 {
 public:
     // Initializes the transformer.
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual const std::vector<StreamId> &GetAppliedStreamIds() const override
+    const std::vector<StreamId> &GetAppliedStreamIds() const override
     {
         return m_appliedStreamIds;
     }
 
-    virtual const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
+    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
     {
         return m_outputStreams;
     }
@@ -66,11 +66,10 @@ private:
 class CropTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
-protected:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+private:
+    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class CropType
@@ -88,10 +87,12 @@ private:
     };
 
     void InitFromConfig(const ConfigParameters &config);
+
+    void StartEpoch(const EpochConfiguration &config) override;
+
     CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
-                         std::mt19937 &rng);
+    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     CropType m_cropType;
@@ -99,6 +100,8 @@ private:
     double m_cropRatioMax;
     RatioJitterType m_jitterType;
     bool m_hFlip;
+    doubleargvector m_aspectRatioRadius;
+    double m_curAspectRatioRadius;
 };
 
 // Scale transformation of the image.
@@ -106,12 +109,12 @@ private:
 class ScaleTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 private:
     void InitFromConfig(const ConfigParameters &config);
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
@@ -128,30 +131,29 @@ private:
 class MeanTransformer : public ImageTransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
+    void Initialize(TransformerPtr next,
                             const ConfigParameters &readerConfig) override;
 
 private:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
     void InitFromConfig(const ConfigParameters &config);
 
     cv::Mat m_meanImg;
 };
 
-// Transpose transformation from HWC to CHW.
+// Transpose transformation from HWC to CHW (note: row-major notation).
 class TransposeTransformer : public TransformerBase
 {
 public:
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
 
 protected:
-    virtual const std::vector<StreamId>& GetAppliedStreamIds() const override
+    const std::vector<StreamId>& GetAppliedStreamIds() const override
     {
         return m_appliedStreamIds;
     }
 
-    virtual const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
+    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
     {
         return m_outputStreams;
     }
@@ -168,6 +170,61 @@ private:
 
     std::vector<StreamDescriptionPtr> m_outputStreams;
     std::vector<StreamId> m_appliedStreamIds;
+};
+
+// Intensity jittering based on PCA transform as described in original AlexNet paper
+// (http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+// Currently uses precomputed values from 
+// https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
+// but should be replaced with per-class values?
+class IntensityTransformer : public ImageTransformerBase
+{
+public:
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+
+private:
+    void InitFromConfig(const ConfigParameters &config);
+
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    doubleargvector m_stdDev;
+    double m_curStdDev;
+
+    cv::Mat m_eigVal;
+    cv::Mat m_eigVec;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+};
+
+// Color jittering transform based on the paper: http://arxiv.org/abs/1312.5402
+// In short, the transform randomly changes contrast, brightness and color of the image.
+class ColorTransformer : public ImageTransformerBase
+{
+public:
+    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+
+private:
+    void InitFromConfig(const ConfigParameters &config);
+
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
+    template <typename ElemType>
+    void Apply(cv::Mat &mat);
+
+    doubleargvector m_brightnessRadius;
+    double m_curBrightnessRadius;
+    doubleargvector m_contrastRadius;
+    double m_curContrastRadius;
+    doubleargvector m_saturationRadius;
+    double m_curSaturationRadius;
+
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
 };
 
 }}}

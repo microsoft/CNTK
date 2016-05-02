@@ -15,10 +15,7 @@ Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
 Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] 
 Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Ceil(x) = -Floor(-x) 
-Round(x) = Floor(x+0.5)
 Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
 Min(a,b) = if a < b then a else b 
 Max(a,b) = if a > b then a else b 
@@ -28,6 +25,86 @@ IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b)
 ##############################################################################
 # ComputationNodes
 ##############################################################################
+
+##############################################################################
+# "Stable API" with the purpose of staying compatible towards 2.0. 
+# - Use only tensors as concept. Move away from matrices.
+# - Main input goes first
+# - Main input is called "_" (becomes either self, or is moved to the end, 
+#   depending on language binding)
+# - tensor shape is called "shape"
+# - output shape before input shape
+# Operator list is sorted alphabetically within the category.
+##############################################################################
+CNTK2 = [
+    # Currently restricted to operators introduced with Python API in CNTK 1.4.
+
+    // 1. Inputs
+    // Changes: dims -> shape
+    DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+    Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
+    
+    // 2. Variables and constants
+    // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
+    // Python API: 
+    // - constant(value, name=None) - value: the tensor constant passed as numpy array. Forwards to parameter() with learningRateMultiplier=0 and initFromLiteral
+    // - parameter: Like below, but can take an NDArray on the "init_from_literal" parameter, in which case it is serialized and turned into "initFromLiteral".
+    //              (TODO: should be the value parameter instead)
+    // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
+    // This needs to be fixed to follow the way the Constant() is exposed in Python
+    // Making this an internal node with "_" until we agree on the final interface:
+    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+
+    // 3. Shape operations
+    // Changes: NewReshape -> Reshape, input -> _, dims -> shape
+    Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 4. Tensor operations
+    // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
+    Times(x, y, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+
+    // 5. Elementwise operations.
+    // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
+    Abs(_, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = _ /*plus the function args*/ ]
+    Ceil(_, tag='') = Negate(Floor(Negate(_)), tag=tag)
+    Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
+    ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
+    ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
+    Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
+    Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
+    Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
+
+    // 6. Reductions
+    // None so far
+
+    // 7. Control flow (if, composite etc.)
+    // None so far
+
+    // 8. Boolean operations
+    // None so far
+
+    // 9. Recurrent operations
+    // Changes: input first; input -> _
+    FutureValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 10. NN-specific operations
+    // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
+    Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
+    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+
+    // 11. Criterion nodes
+    // No changes here - we said the default input would be the label sequence here, against which the 
+    // empirical sequence is compared to. Keeping this for now.
+    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
+    ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
+
+    // 12. Others
+    // None so far.
+]
 
 LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
@@ -95,7 +172,9 @@ Delay = PastValue
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
+Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
+Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 // TODO: ColumnElementTimes = ElementTimes
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -110,6 +189,7 @@ ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation =
 ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix), tag=tag)
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
+Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
@@ -134,6 +214,7 @@ ReducePlus (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceEl
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
 #ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
+Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -218,7 +299,7 @@ Boolean = [
 
     # select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
+    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) /*plus the function args*/ ]
 ]
 
 ##############################################################################

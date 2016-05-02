@@ -95,7 +95,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         if (!stringRegistry.TryGet(l.first, id))
             continue;
 
-        description.m_key.m_major = id;
+        description.m_key.m_sequence = id;
 
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();
@@ -131,18 +131,18 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         description.m_numberOfSamples = numberOfFrames;
         totalFrames += numberOfFrames;
         m_utteranceIndex.push_back(m_frames.size());
-        m_keyToSequence[description.m_key.m_major] = m_utteranceIndex.size() - 1;
+        m_keyToSequence[description.m_key.m_sequence] = m_utteranceIndex.size() - 1;
 
         // TODO: Should be created by chunks only.
         MLFFrame f;
         f.m_chunkId = 0;
         f.m_numberOfSamples = 1;
-        f.m_key.m_major = description.m_key.m_major;
+        f.m_key.m_sequence = description.m_key.m_sequence;
         f.m_isValid = description.m_isValid;
         for (size_t k = 0; k < description.m_numberOfSamples; ++k)
         {
             f.m_id = m_frames.size();
-            f.m_key.m_minor = k;
+            f.m_key.m_sample = k;
             f.m_index = description.m_sequenceStart + k;
             m_frames.push_back(f);
         }
@@ -209,8 +209,8 @@ void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescr
         for (size_t i = 0; i < m_frames.size(); ++i)
         {
             SequenceDescription f;
-            f.m_key.m_major = m_frames[i].m_key.m_major;
-            f.m_key.m_minor = m_frames[i].m_key.m_minor;
+            f.m_key.m_sequence = m_frames[i].m_key.m_sequence;
+            f.m_key.m_sample = m_frames[i].m_key.m_sample;
             f.m_id = m_frames[i].m_id;
             f.m_chunkId = m_frames[i].m_chunkId;
             f.m_numberOfSamples = 1;
@@ -224,8 +224,8 @@ void MLFDataDeserializer::GetSequencesForChunk(size_t, std::vector<SequenceDescr
         for (size_t i = 0; i < m_utteranceIndex.size() - 1; ++i)
         {
             SequenceDescription f;
-            f.m_key.m_major = m_frames[m_utteranceIndex[i]].m_key.m_major;
-            f.m_key.m_minor = 0;
+            f.m_key.m_sequence = m_frames[m_utteranceIndex[i]].m_key.m_sequence;
+            f.m_key.m_sample = 0;
             f.m_id = i;
             f.m_chunkId = m_frames[m_utteranceIndex[i]].m_chunkId;
             f.m_numberOfSamples = m_utteranceIndex[i + 1] - m_utteranceIndex[i];
@@ -306,7 +306,7 @@ static SequenceDescription s_InvalidSequence { 0, 0, 0, false };
 
 void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
-    auto sequenceId = m_keyToSequence.find(key.m_major);
+    auto sequenceId = m_keyToSequence.find(key.m_sequence);
     if (sequenceId == m_keyToSequence.end())
     {
         result = s_InvalidSequence;
@@ -315,13 +315,13 @@ void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
 
     if (m_frameMode)
     {
-        size_t index = m_utteranceIndex[sequenceId->second] + key.m_minor;
+        size_t index = m_utteranceIndex[sequenceId->second] + key.m_sample;
         result = m_frames[index];
     }
     else
     {
-        result.m_key.m_major = key.m_major;
-        result.m_key.m_minor = 0;
+        result.m_key.m_sequence = key.m_sequence;
+        result.m_key.m_sample = 0;
         result.m_id = sequenceId->second;
         result.m_chunkId = m_frames[m_utteranceIndex[sequenceId->second]].m_chunkId;
         result.m_numberOfSamples = m_utteranceIndex[sequenceId->second + 1] - m_utteranceIndex[sequenceId->second];

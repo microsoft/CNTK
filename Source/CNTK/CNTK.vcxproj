@@ -75,7 +75,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; Common.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; Common.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
@@ -183,21 +183,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Common\Config.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\DataReader.cpp" />
-    <ClCompile Include="..\Common\DataWriter.cpp" />
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <PrecompiledHeader Condition="$(DebugBuild)">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\Common\Include\ConcStack.h" />
-    <ClCompile Include="..\Common\TimerUtility.cpp" />
-    <ClCompile Include="..\Common\MPIWrapper.cpp" />
     <ClCompile Include="BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="BrainScript\BrainScriptTest.cpp" />

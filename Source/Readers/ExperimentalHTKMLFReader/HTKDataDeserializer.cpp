@@ -210,7 +210,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {
         auto utterance = chunk.GetUtterance(i);
-        size_t major = utterance->GetId();
+        // Currently we do not support common prefix, so simply assign the minor to the key.
+        size_t sequence = utterance->GetId();
 
         if (m_frameMode)
         {
@@ -219,8 +220,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             {
                 SequenceDescription f;
                 f.m_chunkId = chunkId;
-                f.m_key.m_major = major;
-                f.m_key.m_minor = k;
+                f.m_key.m_sequence = sequence;
+                f.m_key.m_sample = k;
                 f.m_id = offsetInChunk++;
                 f.m_isValid = true;
                 f.m_numberOfSamples = 1;
@@ -232,8 +233,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             // Creating sequence description per utterance.
             SequenceDescription f;
             f.m_chunkId = chunkId;
-            f.m_key.m_major = major;
-            f.m_key.m_minor = 0;
+            f.m_key.m_sequence = sequence;
+            f.m_key.m_sample = 0;
             f.m_id = offsetInChunk++;
             f.m_isValid = true;
             f.m_numberOfSamples = utterance->GetNumberOfFrames();
@@ -432,7 +433,7 @@ static SequenceDescription s_InvalidSequence{0, 0, 0, false};
 void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
 {
     assert(!m_primary);
-    auto iter = m_keyToChunkLocation.find(key.m_major);
+    auto iter = m_keyToChunkLocation.find(key.m_sequence);
     if (iter == m_keyToChunkLocation.end())
     {
         // Unknown sequence. Return invalid.
@@ -443,7 +444,7 @@ void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
         const auto& chunk = m_chunks[iter->second.first];
         const auto& sequence = chunk.GetUtterance(iter->second.second);
         d.m_chunkId = sequence->GetChunkId();
-        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_minor : sequence->GetIndexInsideChunk();
+        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
         d.m_isValid = true;
         d.m_numberOfSamples = m_frameMode ? 1 : sequence->GetNumberOfFrames();
     }

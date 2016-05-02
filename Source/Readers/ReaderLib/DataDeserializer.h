@@ -10,11 +10,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Sequence key, used for correlations between sequences between different deserializers.
+// Sequence key, used for correlations of sequences between different deserializers.
+// TODO: In many cases sequence keys share the same prefix. Splitting the sequence key on
+// sequence prefix and suffix will allow us to store keys more efficiently.
+
+// The sample identifies a particular sample inside the sequence. In the future it will be hidden, so that deserializers won't know about
+// sequence or sample mode, exposing only sequences.
 struct KeyType
 {
-    size_t m_major;
-    size_t m_minor;
+    // Possible sequence common prefix.
+    // size_t m_prefix;
+
+    // Identifies sequence between different deserializers.
+    size_t m_sequence;
+
+    // Sample id.
+    size_t m_sample;
 };
 
 class Chunk;

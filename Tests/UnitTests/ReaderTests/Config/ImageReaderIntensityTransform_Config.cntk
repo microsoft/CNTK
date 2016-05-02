@@ -1,0 +1,41 @@
+RootDir = .
+ModelDir = "models"
+command = "MultiView_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderIntensityTransform_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+
+IntensityTransform_Test = [
+    # Parameter values for the reader
+    reader = [
+        # reader to use
+        readerType = "ImageReader"
+        file = "$RootDir$/ImageReaderMultiView_map.txt"
+
+        randomize = "none"
+        verbosity = 1
+
+        numCPUThreads = 1
+        features=[
+            width=4
+            height=4
+            channels=3
+            cropType=center
+            cropRatio=1
+            jitterType=UniRatio
+            interpolations=Linear
+            intensityFile="$RootDir$/ImageNet1K_intensity.xml"
+            intensityStdDev=0:0.1
+        ]
+        labels=[
+            labelDim=4
+        ]
+    ]
+]

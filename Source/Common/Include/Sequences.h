@@ -487,7 +487,7 @@ private:
     void CheckIsValid() const
     {
         if (m_numFramesDeclared != GetNumCols())
-            LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
+            LogicError("MBLayout: Attempting to read out flags, but only %d out of %d frames have been defined.",
                        (int) m_numFramesDeclared, (int) (m_numTimeSteps * m_numParallelSequences));
     }
 
