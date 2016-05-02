@@ -497,8 +497,8 @@ def reshape(x, shape, beginAxis=0, endAxis=0, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk.ops.cntk2 import Reshape
-    return Reshape(x, shape, beginAxis, endAxis, var_name = name)
+    from cntk.ops.cntk1 import NewReshape
+    return NewReshape(x, shape, beginAxis, endAxis, name = name)
 
 ################################################################################
 # training ops

@@ -8,14 +8,16 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
-from ..variables_and_parameters import *
 from ...reader import *
-from ..reshaping import reshape
+from .. import reshape
 
 
 RESHAPE_TEST_CASES = [
     #(inputShape, outputShape)
-    ([2, 3], [3,2]),
+    ([2, 3], [3, 2]),
+#    ([2, 3], [6, 1]),
+#    ([2, 3], [1, 6]),
+#    ([6, 1], [2, 3]),
 ]
 
 #@pytest.mark.parametrize("inputShape, beginAxis, endAxis", RESHAPE_TEST_CASES)
@@ -27,29 +29,40 @@ def test_op_reshape(inputShape, outputShape, device_id, precision):
     # we need two surrounding brackets
     # the first for sequences (length=1, since we have has_dynamic_axis=False)
     # the second for batch of one sample
+                        
+    num_tensor_elements = np.multiply.reduce(inputShape)
+    input_tensor = np.arange(num_tensor_elements).reshape(inputShape)
+        
+    expected_tensor = input_tensor.reshape(outputShape, order='F')
 
-    def make_tensor_with_shape(shape):
+    a = I([input_tensor], has_dynamic_axis=False)
 
-        def size_for_shape(shape):
-            s = 1
-            for dim in shape:
-                s *= dim
-            return s
+    # reshape into output shape
+    reshaped_input = reshape(a, outputShape)
 
-        num_elements = size_for_shape(shape)
-        data = [ x for x in range(0, num_elements)]
-        tensor = np.array(data)
-        tensor = tensor.reshape(shape)
-        return tensor
+    unittest_helper(reshaped_input, None, [[expected_tensor]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
 
-    inputTensor    = make_tensor_with_shape(AA(inputShape))
+    # Backward pass test
+    # ==================
+    # Reshaping is just mapping moving the input values to different to a different index in the out value.
+    # 
+    # For testing the gradients we want to have different gradients for each input value otherwise we can't
+    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with some weight tensor. 
+    # For convienience choose '100 * expected_tensor' as weight.
+    # The expected gradient is identical to this weight tensor reshaped according the input shape.
 
-    output_shape   = AA(outputShape);
-    expectedTensor = inputTensor.reshape(output_shape)
+    a = I([input_tensor], has_dynamic_axis=False)
 
-    a = I([inputTensor], has_dynamic_axis=False)
-    b = C(output_shape)
-    result = reshape(a,tuple(output_shape))
+    # reshape into output shape
+    reshaped_input = reshape(a, outputShape)
 
-    unittest_helper(result, None, expectedTensor, device_id=device_id, 
-                precision=precision, clean_up=False, backward_pass=False)
+    some_factor = 100
+    weight =  some_factor * expected_tensor
+    output = reshaped_input * weight
+
+    expected_gradient = input_tensor * some_factor 
+    
+    unittest_helper(output, None, [[expected_gradient]], device_id = device_id,
+                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+
