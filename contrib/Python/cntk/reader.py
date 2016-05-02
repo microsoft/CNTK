@@ -151,9 +151,13 @@ class CNTKTextFormatReader(AbstractReader):
         assert self.randomize in ['auto', 'none']
         self.skip_sequence_ids = bool(skip_sequence_ids)
         self.max_errors = int(max_errors)
+        assert self.max_errors >= 0
         self.trace_level = int(trace_level)
+        assert self.trace_level in [0,1,2]
         self.chunk_size_in_bytes = int(chunk_size_in_bytes)
+        assert self.chunk_size_in_bytes > 0
         self.num_chunks_to_cache = int(num_chunks_to_cache)
+        assert self.chunk_size_in_bytes >= 0
 
     def map(self, node_or_name, **kw):
         '''
