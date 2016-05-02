@@ -15,9 +15,10 @@ from .. import reshape
 RESHAPE_TEST_CASES = [
     #(inputShape, outputShape)
     ([2, 3], [3, 2]),
-#    ([2, 3], [6, 1]),
-#    ([2, 3], [1, 6]),
-#    ([6, 1], [2, 3]),
+    ([2, 3], [6, 1]),
+    ([2, 3], [1, 6]),
+    ([6, 1], [2, 3]),
+    ([2, 3, 5], [5, 6]),
 ]
 
 #@pytest.mark.parametrize("inputShape, beginAxis, endAxis", RESHAPE_TEST_CASES)
