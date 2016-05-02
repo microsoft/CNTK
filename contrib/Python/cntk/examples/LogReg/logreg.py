@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 from cntk import *
 from cntk.ops import *
+from cntk.ops import cntk1
 
 
 def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None):
