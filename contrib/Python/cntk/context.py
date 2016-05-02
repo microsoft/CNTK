@@ -450,7 +450,7 @@ class LocalExecutionContext(AbstractContext):
             mo = LocalExecutionContext._VAR_SHAPE_REGEX.match(line)
             if not mo:
                 continue
-            var_name, shape = mo.group('name'), mo.group('shape')
+            name, shape = mo.group('name'), mo.group('shape')
             # In Debug mode, an additional stride information is printed
             shape = LocalExecutionContext._SHAPE_STRIDE_REGEX.sub('', shape)
 
