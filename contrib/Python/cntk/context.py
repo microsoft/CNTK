@@ -695,7 +695,7 @@ class LocalExecutionContext(AbstractContext):
             objective and evaluation error indexed by their node names
         '''
         action_name = "Test"
-        config_content = self._generate_test_config(input_map, root_nodes, 
+        config_content = self._generate_test_config(root_nodes, input_map, 
                                                     action_name = action_name)
         output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content,
                                  action_name = action_name)
