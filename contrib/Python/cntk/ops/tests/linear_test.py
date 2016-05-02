@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision
 from ...graph import *
-from ..variables_and_parameters import *
+from .. import *
 from ...reader import *
 import numpy as np
 

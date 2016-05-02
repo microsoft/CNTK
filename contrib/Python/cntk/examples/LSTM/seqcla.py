@@ -13,16 +13,20 @@ from cntk import *
 from cntk.ops import *
 from cntk.ops import cntk1
 
+cur_dir = os.path.dirname(__file__)
+
+train_file = os.path.join(cur_dir, "Train_sparse.txt")
+embedding_file = os.path.join(cur_dir, "embeddingmatrix.txt")
 
 # =====================================================================================
 # LSTM sequence classification
 # =====================================================================================
 
-# to be removed as they're added to the real API
+# this class is a temporary stop-gap to use a BS macro that hasn't been fully 
+# ported to the python API as of yet
 class Last(ComputationNode):
-
-    def __init__(self, x, name='BS.Sequences.Last', var_name=None):
-        super(Last, self).__init__(params=['x'], name=name, var_name=var_name)
+    def __init__(self, x, op_name='BS.Sequences.Last', name=None):
+        super(Last, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
         self.params_with_defaults = []
 
@@ -33,8 +37,8 @@ def lstm_layer(output_dim, cell_dim, x, input_dim):
     prev_state_c = past_value(0, 'lstm_state_c')
         
     lstm_state_c, lstm_state_h = lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c)
-    lstm_state_c.var_name = 'lstm_state_c'
-    lstm_state_h.var_name = 'lstm_state_h'
+    lstm_state_c.name = 'lstm_state_c'
+    lstm_state_h.name = 'lstm_state_h'
 
     # return the hidden state
     return lstm_state_h
@@ -44,23 +48,23 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
         
     # input gate (t)
     it_w = times(parameter((cell_dim, input_dim)), x)
-    it_b = parameter((cell_dim, 1))
+    it_b = parameter((cell_dim))
     it_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    it_c = parameter((cell_dim, 1)) * prev_state_c        
-    it = sigmoid(it_w + it_b + it_h + it_c)
+    it_c = parameter((cell_dim)) * prev_state_c        
+    it = sigmoid((it_w + it_b + it_h + it_c), name='it')
 
     # applied to tanh of input    
     bit_w = times(parameter((cell_dim, input_dim)), x)
     bit_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    bit_b = parameter((cell_dim, 1))
+    bit_b = parameter((cell_dim))
     bit = it * tanh(bit_w + (bit_h + bit_b))
         
     # forget-me-not gate (t)
     ft_w = times(parameter((cell_dim, input_dim)), x)
-    ft_b = parameter((cell_dim, 1))
+    ft_b = parameter((cell_dim))
     ft_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    ft_c = parameter((cell_dim, 1)) * prev_state_c        
-    ft = sigmoid(ft_w + ft_b + ft_h + ft_c)
+    ft_c = parameter((cell_dim)) * prev_state_c        
+    ft = sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
 
     # applied to cell(t-1)
     bft = ft * prev_state_c
@@ -70,10 +74,10 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
         
     # output gate
     ot_w = times(parameter((cell_dim, input_dim)), x)
-    ot_b = parameter((cell_dim, 1))
+    ot_b = parameter((cell_dim))
     ot_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    ot_c = parameter((cell_dim, 1)) * prev_state_c        
-    ot = sigmoid(ot_w + ot_b + ot_h + ot_c)
+    ot_c = parameter((cell_dim)) * prev_state_c        
+    ot = sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
        
     # applied to tanh(cell(t))
     ht = ot * tanh(ct)
@@ -81,60 +85,105 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
     # return cell value and hidden state
     return ct, ht
 
+"""
+Train an LSTM-based sequence classification model.
+"""
 def seqcla():
 
     # LSTM params
-    input_dim = 100
+    input_dim = 50
     output_dim = 128
     cell_dim = 128
     
     # model
     num_labels = 5
-    vocab = 400001
-    embed_dim = 100
+    vocab = 2000
+    embed_dim = 50    
 
-    training_filename = "G:\BLIS\seqcla\sparse\Train_CoarseType.tsv.s"
-    test_filename = "G:\BLIS\seqcla\sparse\Test_CoarseType.tsv.s"
-
-    t = dynamic_axis()
-    features = cntk1.SparseInput(vocab, dynamicAxis=t, var_name='features')    
+    t = dynamic_axis(name='t')
+    # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
+    features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
     labels = input(num_labels, name='labels')
-    
-    #train_reader = CNTKTextFormatReader(training_filename)
-    train_reader = CNTKTextFormatReader(test_filename)
+   
+    train_reader = CNTKTextFormatReader(train_file)
 
     # setup embedding matrix
     embedding = parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                          init='fromFile', init_from_file_path='G:\BLIS\seqcla\sparse\glove.6B.100D.txt.s')
+                          init='fromFile', init_from_file_path=embedding_file)
 
     # get the vector representing the word
-    sequence = times(embedding, features)
+    sequence = times(embedding, features, name='sequence')
     
     # add an LSTM layer
     L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
     
     # get only the last hidden state
-    lst = Last(L)
+    lst = Last(L, name='lst')
     
     # add a softmax layer on top
-    w = parameter((num_labels, output_dim))
-    b = parameter((num_labels, 1))
-    z = times(w, lst) + b
+    w = parameter((num_labels, output_dim), name='w')
+    b = parameter((num_labels), name='b')
+    z = plus(times(w, lst), b, name='z')
+    z.tag = "output"
     
-    ce = cntk1.CrossEntropyWithSoftmax(labels, z)
+    # and reconcile the shared dynamic axis
+    pred = reconcile_dynamic_axis(z, labels, name='pred')    
+    
+    ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
     ce.tag = "criterion"
     
-    #my_sgd = SGDParams(epoch_size=0, minibatch_size=25, learning_ratesPerMB=0.1, max_epochs=3)    
+    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
     
-    with Context('seqcla', clean_up=False) as ctx:
-        ctx.eval(node = ce, 
-                 input_map=train_reader.map(
-                     features, alias='x', dim=vocab, format='Sparse').map(
-                     labels, alias='y', dim=num_labels, format='Dense'))        
-    
-        #ctx.train(root_nodes=[ce,ev], optimizer=my_sgd, input_reader = {features:f_reader, labels:l_reader})                
-        #result = ctx.test(input_reader = {features:f_reader, labels:l_reader})
+    with LocalExecutionContext('seqcla', clean_up=False) as ctx:
+        # train the model
+        ctx.train(root_nodes=[ce], optimizer=my_sgd, input_map=train_reader.map(
+                  features, alias='x', dim=vocab, format='Sparse').map(
+                  labels, alias='y', dim=num_labels, format='Dense'))        
         
+        # write out the predictions
+        ctx.write(input_map=train_reader.map(
+                  features, alias='x', dim=vocab, format='Sparse').map(
+                  labels, alias='y', dim=num_labels, format='Dense'))
+                  
+        # do some manual accuracy testing
+        acc = calc_accuracy(train_file, ctx.output_filename_base)
+        
+        # and test for the same number...
+        TOLERANCE_ABSOLUTE = 1E-06    
+        assert np.allclose(acc, 0.5982357658380112, atol=TOLERANCE_ABSOLUTE)
+
+"""
+Test the accuracy of the trained model.
+"""
+def calc_accuracy(test_file, output_filename_base):
+    
+    # load labels
+    labels=[]
+    with open(test_file, 'r', encoding='utf8') as f_in:      
+        for l in f_in:
+            dd = l.split('|')
+            if len(dd) > 2:
+                x = dd[2].strip().split(' ')[1:]
+                labels.append(np.argmax(x))
+                
+    # load predicted answers
+    predicted=[]
+    with open(output_filename_base + ".z", 'r', encoding='utf8') as f_in:      
+        for l in f_in:
+            predicted.append(np.argmax(l.strip().split(' ')))
+            
+    correct = 0
+    for i in range(len(labels)):
+        if labels[i] == predicted[i]:
+            correct += 1
+    
+    return float(correct) / float(len(labels))
+
+"""
+Test function so the test suite picks this up and runs it
+"""
+def test_lstm_sequence_classification():
+    seqcla()
 
 if (__name__ == "__main__"):
     seqcla()

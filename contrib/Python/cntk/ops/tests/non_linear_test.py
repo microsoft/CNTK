@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from ..non_linear import clip, cond, exp, relu, sigmoid, softmax, tanh
+from .. import clip, cond, exp, relu, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]

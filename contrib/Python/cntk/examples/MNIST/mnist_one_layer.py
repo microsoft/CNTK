@@ -42,14 +42,14 @@ if (__name__ == "__main__"):
     test_filename = os.path.join("Data", "Test-28x28.txt")
 
     features = Input(feat_dim)
-    features.var_name = 'features'
+    features.name = 'features'
 
     feat_scale = Constant(0.00390625)
     feats_scaled = Scale(feat_scale, features)
 
     labels = Input(label_dim)
     labels.tag = 'label'
-    labels.var_name = 'labels'
+    labels.name = 'labels'
 
     f_reader = UCIFastReader(training_filename, 1, feat_dim)
     l_reader = UCIFastReader(training_filename, 0, 1, label_dim,

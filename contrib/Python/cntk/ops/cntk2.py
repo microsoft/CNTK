@@ -9,37 +9,37 @@
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
 class Ceil(ComputationNode):
-    def __init__(self, _, name='CNTK2.Ceil', var_name=None):
-        super(Ceil, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Ceil', name=None):
+        super(Ceil, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
 
 class ElementDivide(ComputationNode):
-    def __init__(self, _, y,  name='CNTK2.ElementDivide', var_name=None):
-        super(ElementDivide, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+    def __init__(self, _, y,  op_name='CNTK2.ElementDivide', name=None):
+        super(ElementDivide, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
         self._ = _
         self.y = y
         self.inputs = ['_', 'y']
         self.params_with_defaults = []
 
 class Round(ComputationNode):
-    def __init__(self, _, name='CNTK2.Round', var_name=None):
-        super(Round, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Round', name=None):
+        super(Round, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
 
 class DynamicAxis(ComputationNode):
-    def __init__(self, name='CNTK2.DynamicAxis', var_name=None):
-        super(DynamicAxis, self).__init__(params=[], name=name, var_name=var_name)
+    def __init__(self, op_name='CNTK2.DynamicAxis', name=None):
+        super(DynamicAxis, self).__init__(params=[], op_name=op_name, name=name)
 
         self.params_with_defaults = []
         self.inputs = []
 
 class Input(InputComputationNodeBase):
-    def __init__(self, shape, dynamicAxis='', tag='feature', name='CNTK2.Input', var_name=None):
-        super(Input, self).__init__(params=['shape', 'dynamicAxis', 'tag'], name=name, var_name=var_name)
+    def __init__(self, shape, dynamicAxis='', tag='feature', op_name='CNTK2.Input', name=None):
+        super(Input, self).__init__(params=['shape', 'dynamicAxis', 'tag'], op_name=op_name, name=name)
         self.shape = shape
         self.dynamicAxis = dynamicAxis
         self.tag = tag
@@ -47,8 +47,8 @@ class Input(InputComputationNodeBase):
         self.inputs = []
 
 class _Parameter(ComputationNode):
-    def __init__(self, shape, value=0, learningRateMultiplier=1.0, init='uniform', initValueScale=1, initFromFilePath='', initFromLiteral='', initOnCPUOnly=True, randomSeed=-1, name='CNTK2._Parameter', var_name=None):
-        super(_Parameter, self).__init__(params=['shape', 'value', 'learningRateMultiplier', 'init', 'initValueScale', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed'], name=name, var_name=var_name)
+    def __init__(self, shape, value=0, learningRateMultiplier=1.0, init='uniform', initValueScale=1, initFromFilePath='', initFromLiteral='', initOnCPUOnly=True, randomSeed=-1, op_name='CNTK2._Parameter', name=None):
+        super(_Parameter, self).__init__(params=['shape', 'value', 'learningRateMultiplier', 'init', 'initValueScale', 'initFromFilePath', 'initFromLiteral', 'initOnCPUOnly', 'randomSeed'], op_name=op_name, name=name)
         self.shape = shape
         self.value = value
         self.learningRateMultiplier = learningRateMultiplier
@@ -62,8 +62,8 @@ class _Parameter(ComputationNode):
         self.inputs = []
 
 class Reshape(ComputationNode):
-    def __init__(self, _, shape, beginAxis=0, endAxis=0, name='CNTK2.Reshape', var_name=None):
-        super(Reshape, self).__init__(params=['_', 'shape', 'beginAxis', 'endAxis'], name=name, var_name=var_name)
+    def __init__(self, _, shape, beginAxis=0, endAxis=0, op_name='CNTK2.Reshape', name=None):
+        super(Reshape, self).__init__(params=['_', 'shape', 'beginAxis', 'endAxis'], op_name=op_name, name=name)
         self._ = _
         self.shape = shape
         self.beginAxis = beginAxis
@@ -72,8 +72,8 @@ class Reshape(ComputationNode):
         self.inputs = ['_']
 
 class Times(ComputationNode):
-    def __init__(self, x, y, outputRank=1, name='CNTK2.Times', var_name=None):
-        super(Times, self).__init__(params=['x', 'y', 'outputRank'], name=name, var_name=var_name)
+    def __init__(self, x, y, outputRank=1, op_name='CNTK2.Times', name=None):
+        super(Times, self).__init__(params=['x', 'y', 'outputRank'], op_name=op_name, name=name)
         self.x = x
         self.y = y
         self.outputRank = outputRank
@@ -81,15 +81,15 @@ class Times(ComputationNode):
         self.inputs = ['x', 'y']
 
 class Abs(ComputationNode):
-    def __init__(self, _, name='CNTK2.Abs', var_name=None):
-        super(Abs, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Abs', name=None):
+        super(Abs, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class Clip(ComputationNode):
-    def __init__(self, _, minValue, maxValue, name='CNTK2.Clip', var_name=None):
-        super(Clip, self).__init__(params=['_', 'minValue', 'maxValue'], name=name, var_name=var_name)
+    def __init__(self, _, minValue, maxValue, op_name='CNTK2.Clip', name=None):
+        super(Clip, self).__init__(params=['_', 'minValue', 'maxValue'], op_name=op_name, name=name)
         self._ = _
         self.minValue = minValue
         self.maxValue = maxValue
@@ -97,46 +97,46 @@ class Clip(ComputationNode):
         self.inputs = ['minValue', 'maxValue', '_']
 
 class ElementTimes(ComputationNode):
-    def __init__(self, _, y, name='CNTK2.ElementTimes', var_name=None):
-        super(ElementTimes, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+    def __init__(self, _, y, op_name='CNTK2.ElementTimes', name=None):
+        super(ElementTimes, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
         self._ = _
         self.y = y
         self.params_with_defaults = []
         self.inputs = ['_', 'y']
 
 class Floor(ComputationNode):
-    def __init__(self, _, name='CNTK2.Floor', var_name=None):
-        super(Floor, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Floor', name=None):
+        super(Floor, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class Minus(ComputationNode):
-    def __init__(self, _, y, name='CNTK2.Minus', var_name=None):
-        super(Minus, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+    def __init__(self, _, y, op_name='CNTK2.Minus', name=None):
+        super(Minus, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
         self._ = _
         self.y = y
         self.params_with_defaults = []
         self.inputs = ['_', 'y']
 
 class Plus(ComputationNode):
-    def __init__(self, _, y, name='CNTK2.Plus', var_name=None):
-        super(Plus, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+    def __init__(self, _, y, op_name='CNTK2.Plus', name=None):
+        super(Plus, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
         self._ = _
         self.y = y
         self.params_with_defaults = []
         self.inputs = ['_', 'y']
 
 class Tanh(ComputationNode):
-    def __init__(self, _, name='CNTK2.Tanh', var_name=None):
-        super(Tanh, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Tanh', name=None):
+        super(Tanh, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class FutureValue(ComputationNode):
-    def __init__(self, _, shape, timeStep=1, defaultHiddenActivation=0.1, name='CNTK2.FutureValue', var_name=None):
-        super(FutureValue, self).__init__(params=['_', 'shape', 'timeStep', 'defaultHiddenActivation'], name=name, var_name=var_name)
+    def __init__(self, _, shape, timeStep=1, defaultHiddenActivation=0.1, op_name='CNTK2.FutureValue', name=None):
+        super(FutureValue, self).__init__(params=['_', 'shape', 'timeStep', 'defaultHiddenActivation'], op_name=op_name, name=name)
         self._ = _
         self.shape = shape
         self.timeStep = timeStep
@@ -145,8 +145,8 @@ class FutureValue(ComputationNode):
         self.inputs = ['_']
 
 class PastValue(ComputationNode):
-    def __init__(self, _, shape, timeStep=1, defaultHiddenActivation=0.1, name='CNTK2.PastValue', var_name=None):
-        super(PastValue, self).__init__(params=['_', 'shape', 'timeStep', 'defaultHiddenActivation'], name=name, var_name=var_name)
+    def __init__(self, _, shape, timeStep=1, defaultHiddenActivation=0.1, op_name='CNTK2.PastValue', name=None):
+        super(PastValue, self).__init__(params=['_', 'shape', 'timeStep', 'defaultHiddenActivation'], op_name=op_name, name=name)
         self._ = _
         self.shape = shape
         self.timeStep = timeStep
@@ -155,37 +155,37 @@ class PastValue(ComputationNode):
         self.inputs = ['_']
 
 class Relu(ComputationNode):
-    def __init__(self, _, name='CNTK2.Relu', var_name=None):
-        super(Relu, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Relu', name=None):
+        super(Relu, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class Sigmoid(ComputationNode):
-    def __init__(self, _, name='CNTK2.Sigmoid', var_name=None):
-        super(Sigmoid, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Sigmoid', name=None):
+        super(Sigmoid, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class Softmax(ComputationNode):
-    def __init__(self, _, name='CNTK2.Softmax', var_name=None):
-        super(Softmax, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Softmax', name=None):
+        super(Softmax, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']
 
 class CrossEntropyWithSoftmax(ComputationNode):
-    def __init__(self, _, outProbVectorSequence, name='CNTK2.CrossEntropyWithSoftmax', var_name=None):
-        super(CrossEntropyWithSoftmax, self).__init__(params=['_', 'outProbVectorSequence'], name=name, var_name=var_name)
+    def __init__(self, _, outProbVectorSequence, op_name='CNTK2.CrossEntropyWithSoftmax', name=None):
+        super(CrossEntropyWithSoftmax, self).__init__(params=['_', 'outProbVectorSequence'], op_name=op_name, name=name)
         self._ = _
         self.outProbVectorSequence = outProbVectorSequence
         self.params_with_defaults = []
         self.inputs = ['_', 'outProbVectorSequence']
 
 class ErrorPrediction(ComputationNode):
-    def __init__(self, _, outVectorSequence, name='CNTK2.ErrorPrediction', var_name=None):
-        super(ErrorPrediction, self).__init__(params=['_', 'outVectorSequence'], name=name, var_name=var_name)
+    def __init__(self, _, outVectorSequence, op_name='CNTK2.ErrorPrediction', name=None):
+        super(ErrorPrediction, self).__init__(params=['_', 'outVectorSequence'], op_name=op_name, name=name)
         self._ = _
         self.outVectorSequence = outVectorSequence
         self.params_with_defaults = []

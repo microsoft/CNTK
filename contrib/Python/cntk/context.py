@@ -63,21 +63,16 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either 'float' or 'double' 
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float"):
-        
-        '''        
-        This is the constructor of AbstractContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double
-        '''        
-        
         if isinstance(name, str):
             tmpdir = name
         else:
@@ -203,7 +198,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
-            var_name, node_counter, _desc, _inputs = \
+            name, node_counter, _desc, _inputs = \
                 root_node._to_config(input_map,
                                      desc,
                                      unrolled_nodes,
@@ -320,7 +315,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             #import ipdb;ipdb.set_trace()
             from cntk.ops import input_reader
             dummy_input = input_reader([[[1]]])
-            dummy_input.var_name='_dummy_input'
+            dummy_input.name='_dummy_input'
             input_map._add_unmapped(dummy_input)
             desc, _inputs = dummy_input.to_config(input_map)
             description += '\n\n' + desc
@@ -342,23 +337,18 @@ class LocalExecutionContext(AbstractContext):
 
     '''
     This is a sub-class of AbstractContext, use it to run CNTK locally.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either 'float' or 'double' 
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
 
     def __init__(self, name,
                  device_id=-1,
                  precision="float",
                  clean_up=True):
-        
-        '''        
-        This is the constructor of LocalExecutionContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double
-            clean_up: whether the temporary directory should be removed when the context is left        
-        '''        
-        
         super(self.__class__,self).__init__(name, device_id, precision)
         self.clean_up = clean_up
         self.model_dir = os.path.join(self.directory, 'Models')
@@ -411,14 +401,14 @@ class LocalExecutionContext(AbstractContext):
     CNTK's output
     '''
     _VAR_SHAPE_REGEX = re.compile(
-        '^Validating --> (?P<var_name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
+        '^Validating --> (?P<name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
     _SHAPE_STRIDE_REGEX = re.compile('\{.*?\}')
 
     @staticmethod
     def _parse_shapes_from_output(output):
         '''
         Parse CNTK's output and look for shape information that is then passed
-        as a dictionary {var_name -> shape tuple}
+        as a dictionary {name -> shape tuple}
 
         Args:
             output (str): output from CNTK
@@ -431,7 +421,7 @@ class LocalExecutionContext(AbstractContext):
             mo = LocalExecutionContext._VAR_SHAPE_REGEX.match(line)
             if not mo:
                 continue
-            var_name, shape = mo.group('var_name'), mo.group('shape')
+            name, shape = mo.group('name'), mo.group('shape')
             # In Debug mode, an additional stride information is printed
             shape = LocalExecutionContext._SHAPE_STRIDE_REGEX.sub('', shape)
 
@@ -443,7 +433,7 @@ class LocalExecutionContext(AbstractContext):
                 else:
                     shape_list.append(int(x))
 
-            var_shape[var_name] = tuple(shape_list)
+            var_shape[name] = tuple(shape_list)
 
         return var_shape
 
@@ -601,12 +591,12 @@ class LocalExecutionContext(AbstractContext):
 
         # We need to reshape it based on CNTK's shape output.
 
-        expected_shape = np.asarray(shapes[node.var_name])
+        expected_shape = np.asarray(shapes[node.name])
 
         if sum(np.isnan(expected_shape)) > 1:
             raise ValueError("for node '%s' we received shape '%s', but " +
                              "at most one dimension can be left unspecified." %
-                             (node.var_name, expected_shape))
+                             (node.name, expected_shape))
 
         expected_size = np.multiply.reduce(
             expected_shape[~np.isnan(expected_shape)])
@@ -726,13 +716,13 @@ class LocalExecutionContext(AbstractContext):
 
         node.tag = orig_node_tag
 
-        n = input_name.var_name if isinstance(
+        n = input_name.name if isinstance(
             input_name, ComputationNode) else input_name
         out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.')
         if backward_pass:
             out_name += n + '.grad'
         else:
-            out_name += node.var_name
+            out_name += node.name
 
         result_content = open(out_name).read()
         data = LocalExecutionContext._parse_result_output(result_content)
@@ -745,21 +735,18 @@ class DeferredExecutionContext(AbstractContext):
     This is a sub-class of AbstractContext, use it to generate CNTK configuration,
     that would be executed on different enviroment (e.g., on a cluster) rather than 
     the machine that generated them.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
+        precision (str): either float or double            
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
     
     def __init__(self, name,
                  device_id=-1,
                  precision="float",
                  clean_up=True):
-        
-        '''        
-        This is the constructor of DeferredExecutionContext       
-        
-        Args:
-            name: context name
-            device_id: whether to use CPU (-1) or GPU if `device_id>=0', in which case it denotes the GPU index
-            precision: either float or double            
-        '''        
         
         super(self.__class__,self).__init__(name, device_id, precision)        
         self.model_path = os.path.join("$ModelDir$", self.name)
