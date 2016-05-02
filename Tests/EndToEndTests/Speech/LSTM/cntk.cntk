@@ -51,6 +51,11 @@ speechTrain = [
     # define network using BrainScript
     BrainScriptNetworkBuilder = [
 
+        # import some namespaces
+        # TODO: allow to say import BS.RNNs LSTMP or import BS.RNNs to import all (literally creates new dict members mirroring those)
+        RecurrentLSTMP2 = BS.RNNs.RecurrentLSTMP2
+        Parameters = BS.Parameters
+
         useSelfStabilization = true
 
         // define basic I/O
@@ -72,32 +77,23 @@ speechTrain = [
         featNorm = MeanVarNorm(feashift)
 
         // define the stack of hidden LSTM layers
-        S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, S(featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
-            else BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, S(LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+            then RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, featNorm,        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, LSTMoutput[k-1], inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
-        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
-        B = BS.Parameters.BiasParam   (labelDim)
+        W(x) = Parameters.WeightParam (labelDim, hiddenDim) * Parameters.Stabilize (x, enabled=useSelfStabilization)
+        B = Parameters.BiasParam (labelDim)
 
-        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        z = W(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
         // training
-        # TODO: the following fails with useExplicitCriterion = true in FullUtterance mode:
-        # --> 'err' gets overwritten by crExplicit
-        # and with useExplicitCriterion = fals:
-        # --> 'err' comes out equal to 'ce'
-        # and the crExplicit value also comes out inaccurate (while it is totally fine with Truncated LSTM)
-        #useExplicitCriterion = false
-        #crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        #crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        #ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        # so do it this way for now:
-        ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
-
-        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
+        useExplicitCriterion = true
+        crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
+        crExplicit = -(ReducePlus (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
+        cr = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        Err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 
