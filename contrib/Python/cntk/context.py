@@ -792,17 +792,20 @@ class DeferredExecutionContext(AbstractContext):
         self.model_path = os.path.join("$ModelDir$", self.name)
         self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
         self.config = []
-
-    def _append_config(self, config_content):
+        self.actions = []
+        
+    def _append_config(self, action_name, config_content):
         '''
         Append the config to the existing one
 
         Args:            
             config_content (str): a string containing the configuration
+            action_name (str): the name of the action in cntk configuration file
             
         '''
                         
         self.config.append(config_content)
+        self.actions.append(action_name)
 
     def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
         '''
@@ -818,10 +821,14 @@ class DeferredExecutionContext(AbstractContext):
         Returns:
             training configuration
         '''
-
+        #TODO: for this action and others as well, use a counter with the 
+        # action name to avoid name collision in case we generate a config 
+        #file with more than one action type 
+        
+        action_name = "Train"
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_map, override_existing)
-        self._append_config(config_content)        
+            root_nodes, optimizer, input_map, override_existing, action_name)
+        self._append_config(action_name, config_content)        
 
 
     def test(self, root_nodes=None, input_map=None):
@@ -838,9 +845,9 @@ class DeferredExecutionContext(AbstractContext):
         if root_nodes is None and input_map is None:
             raise ValueError('If input_map is None, you have to specify root_nodes.')
 
-
-        config_content = self._generate_test_config(root_nodes, input_map)
-        self._append_config(config_content)
+        action_name = "Test"
+        config_content = self._generate_test_config(root_nodes, input_map, action_name)
+        self._append_config(action_name, config_content)        
 
 
     def write(self, input_map=None):
@@ -854,8 +861,9 @@ class DeferredExecutionContext(AbstractContext):
         Returns: 
            write configuration
         '''
-        config_content = self._generate_write_config(input_map)
-        self._append_config(config_content)
+        action_name = "Write"
+        config_content = self._generate_write_config(input_map, action_name)
+        self._append_config(action_name, config_content)        
 
     def eval(self, node, input_map=None, backward_pass=False, input_name=None):
         '''
@@ -871,6 +879,7 @@ class DeferredExecutionContext(AbstractContext):
         Returns: 
             eval configuration
         '''
+        action_name = "Eval"
         if not isinstance(node, ComputationNode):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
@@ -882,20 +891,20 @@ class DeferredExecutionContext(AbstractContext):
         node.tag = 'output'
 
         config_content = self._generate_eval_config(
-            node, input_map, backward_pass)
-        self._append_config(config_content)
+            node, input_map, backward_pass, action_name)
+        self._append_config(action_name, config_content)        
     
     def export(self):
-        print (CNTK_TEST_TEMPLATE_PATH)
-        filename = 'asdf.cntk'
-        filename = os.path.join(self.directory,  filename)
-        print (self.directory)
-        print (filename)
+        '''
+        Exports the requested actions (via function calls like train()) to 
+        a signle cntk configuration file that will be executed on the cluster
+        '''                
+        filename = '%s.cntk' %self.name
+        filename = os.path.join(self.directory,  filename)    
         filename = os.path.relpath(filename)
 
         with open(filename, 'w') as out:            
             out.write('\n'.join(self.config))
-            out.write("command=blablabla")
-            
-        print (filename)
+            out.write("command=%s" % ":".join(self.actions))
+                    
         return filename
