@@ -164,6 +164,17 @@ GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
 GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
 GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 
+# Should we relocate *.gcno and *.gcda files using -fprofile-dir option?
+# Use GCOV_PREFIX and GCOV_PREFIX_STRIP if relocating:
+# For example, if the object file /user/build/foo.o was built with -fprofile-arcs, the final executable will try to create the data file
+# /user/build/foo.gcda when running on the target system. This will fail if the corresponding directory does not exist and it is unable
+# to create it. This can be overcome by, for example, setting the environment as ‘GCOV_PREFIX=/target/run’ and ‘GCOV_PREFIX_STRIP=1’.
+# Such a setting will name the data file /target/run/build/foo.gcda
+ifdef CNTK_CODE_COVERAGE
+  CXXFLAGS += -fprofile-arcs -ftest-coverage
+  LDFLAGS += -lgcov --coverage
+endif
+
 ifeq ("$(BUILDTYPE)","debug")
   ifdef CNTK_CUDA_CODEGEN_DEBUG
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
@@ -331,6 +342,24 @@ ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# CompositeDataReader plugin
+########################################
+
+COMPOSITEDATAREADER_SRC =\
+	$(SOURCEDIR)/Readers/CompositeDataReader/CompositeDataReader.cpp \
+	$(SOURCEDIR)/Readers/CompositeDataReader/Exports.cpp \
+
+COMPOSITEDATAREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMPOSITEDATAREADER_SRC))
+
+COMPOSITEDATAREADER:=$(LIBDIR)/CompositeDataReader.so
+ALL+=$(COMPOSITEDATAREADER)
+SRC+=$(COMPOSITEDATAREADER_SRC)
+
+$(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 

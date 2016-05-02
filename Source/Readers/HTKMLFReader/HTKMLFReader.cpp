@@ -1947,7 +1947,7 @@ void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 }
 
 template <class ElemType>
-size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
+size_t HTKMLFReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     if (!m_frameMode)
         if (m_numSeqsPerMB != m_pMBLayout->GetNumParallelSequences())

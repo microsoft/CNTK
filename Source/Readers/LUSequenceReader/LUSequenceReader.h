@@ -322,7 +322,7 @@ public:
     bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     void SetNumParallelSequences(const size_t mz);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
@@ -417,7 +417,7 @@ public:
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
 
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);
