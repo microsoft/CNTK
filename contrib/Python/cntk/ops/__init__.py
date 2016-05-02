@@ -463,42 +463,29 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
 # reshaping ops
 ################################################################################
 
-"""
-Reshaping operations. For every operation we explain how the forward and backward
-passes are computed. For the backward pass we just explain the scalar case which is the building 
-block for computing tensor gradients using the chain rule. For tensors, the backward pass of a node 
-is computed as follows : for each element in the output tensor, its gradient with respect to the
-given input tensor is computed, then, the resulting tensors are added up.
-"""
 
-def reshape(x, shape, beginAxis=0, endAxis=0, name=None):
+def reshape(x, shape, name=None):
     """
     Reinterpret input samples as having different tensor dimensions
-    - just replaces metadata m_sampleLayout, does not change data values
-    - one dimension may be specified as 0 and will be inferred
-    - optional beginAxis/endAxis denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
+    One dimension may be specified as 0 and will be inferred
 
-    The output tensor has the same shape 'shape'.
+    The output tensor has the same shape as 'shape'.
     
     The backward pass propagates the received gradient for the output-shape to the input shape.
     
     Examples:
-        >>> clip(2., 4., [1., 2.1, 3.0, 4.1])
-        #[2.0, 2.1, 3.0, 4.0]
-        
-        >>> clip([-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.], [-10., -5., 0., 5., 10.])
-        #[-5, -4., 0., 4., 9.]
-    
+        >>> reshape([[0,1],[2,3],[4,5]], (2:3))
+        #[[0, 2, 4], [1, 3, 5]]
+            
     Args:        
-        min_value: the minimum value to clip element values to
-        max_value: the maximum value to clip element values to
-        x: tensor to be clipped
+        x: tensor to be reshaped
+        shape: a tuple defining the resulting shape
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import NewReshape
-    return NewReshape(x, shape, beginAxis, endAxis, name = name)
+    return NewReshape(x, shape, 0, 0, name = name)
 
 ################################################################################
 # training ops

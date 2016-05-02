@@ -13,19 +13,19 @@ from .. import reshape
 
 
 RESHAPE_TEST_CASES = [
-    #(inputShape, outputShape, beginAxis, endAxis expectedOutputShape)
-    ([2, 3], [3, 2], 0, 0, [3, 2]),
-    ([2, 3], [6, 1], 0, 0, [6, 1]),
-    ([2, 3], [6, 1], 0, 0, [6, 1]),
-    ([6, 1], [2, 3], 0, 0, [2, 3]),
-    ([2, 3, 5], [5, 6], 0, 0,  [5, 6]),
-    # now we test the feature that we can one dimension to 0 meaning that it's value is inferred
-    ([2, 3, 5], [0, 6], 0, 0, [5, 6]), 
-    ([2, 3, 5], [5, 0], 0, 0,  [5, 6]),
+    #(inputShape, outputShape, expectedOutputShape)
+    ([2, 3],    [3, 2], [3, 2]),
+    ([2, 3],    [6, 1], [6, 1]),
+    ([2, 3],    [6, 1], [6, 1]),
+    ([6, 1],    [2, 3], [2, 3]),
+    ([2, 3, 5], [5, 6], [5, 6]),
+    # now we test the feature that we can set one dimension of the outputShape to 0 meaning that it's value is inferred
+    ([2, 3, 5], [0, 6], [5, 6]), 
+    ([2, 3, 5], [5, 0], [5, 6]),
 ]
 
-@pytest.mark.parametrize("inputShape, outputShape, beginAxis, endAxis, expectedOutputShape", RESHAPE_TEST_CASES)
-def test_op_reshape(inputShape, outputShape, beginAxis, endAxis, expectedOutputShape, device_id, precision):
+@pytest.mark.parametrize("inputShape, outputShape, expectedOutputShape", RESHAPE_TEST_CASES)
+def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, precision):
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -41,7 +41,7 @@ def test_op_reshape(inputShape, outputShape, beginAxis, endAxis, expectedOutputS
     a = I([input_tensor], has_dynamic_axis=False)
 
     # reshape into output shape
-    reshaped_input = reshape(a, outputShape, beginAxis, endAxis)
+    reshaped_input = reshape(a, outputShape)
 
     unittest_helper(reshaped_input, None, [[expected_tensor]], device_id=device_id, 
                 precision=precision, clean_up=True, backward_pass=False)
