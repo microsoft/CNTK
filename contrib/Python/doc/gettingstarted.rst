@@ -62,17 +62,51 @@ with an LSTM (long short term memory network).
 First basic use
 ~~~~~~~~~~~~~~~
 
-Here is a simple example of using the CNTK Python API to learn to separate data into 
-two classes using logistic regression::
+The CNTK Python API allows users to easily define a computational network, define the data 
+that will pass through the network, setup how learning should be performed, and finally, train 
+and test the network. Here we will go through a simple example of using the CNTK Python API to 
+learn to separate data into two classes using a simple logistic regression variant::
 
 	import cntk as C
-	from cntk.ops import cntk1
 
 	def main():
-	    print("test")
+	    # 500 samples, 250-dimensional data
+	    N = 500
+	    d = 250
 
+	    # create synthetic data using numpy
+	    X = np.random.randn(N, d)
+	    Y = np.random.randint(size=(N, 1), low=0, high=2)
+	    Y = np.hstack((Y, 1-Y))
 
-blah...
+	    # set up the training data for CNTK
+	    x = C.input_reader(X, has_dynamic_axis=False)
+	    y = C.input_reader(Y, has_dynamic_axis=False)
+
+	    # define our network -- one weight tensor and a bias
+	    W = C.ops.parameter((2, d))
+	    b = C.ops.parameter((2, 1))
+	    out = C.ops.times(W, x) + b
+
+	    # and the criterion node using cross entropy with softmax
+	    ce = C.ops.cross_entropy_with_softmax(y, out)
+	    ce.tag = 'criterion'
+
+	    # define our SGD parameters and train!
+	    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
+	    with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
+	        result = ctx.train(root_nodes=[ce], optimizer=my_sgd)	        
+	        print(result)
+
+In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
+one-hot vector of either ``[0 1]`` or ``[1 0]``. We then begin describing the topology of our network 
+by setting up the data inputs. This is typically done using the `CNTKTextFormatReader` by reading data 
+in from a file, but for interactive experimentation and small examples we can use the `InputReader` to 
+access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
+the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
+set ``has_dynamic_axis`` to False.
+
+Next, 
 
 
 Sequence classification
