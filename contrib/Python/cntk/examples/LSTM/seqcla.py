@@ -25,8 +25,8 @@ embedding_file = os.path.join(cur_dir, "embeddingmatrix.txt")
 # this class is a temporary stop-gap to use a BS macro that hasn't been fully 
 # ported to the python API as of yet
 class Last(ComputationNode):
-    def __init__(self, x, name='BS.Sequences.Last', var_name=None):
-        super(Last, self).__init__(params=['x'], name=name, var_name=var_name)
+    def __init__(self, x, op_name='BS.Sequences.Last', name=None):
+        super(Last, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
         self.params_with_defaults = []
 
@@ -37,8 +37,8 @@ def lstm_layer(output_dim, cell_dim, x, input_dim):
     prev_state_c = past_value(0, 'lstm_state_c')
         
     lstm_state_c, lstm_state_h = lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c)
-    lstm_state_c.var_name = 'lstm_state_c'
-    lstm_state_h.var_name = 'lstm_state_h'
+    lstm_state_c.name = 'lstm_state_c'
+    lstm_state_h.name = 'lstm_state_h'
 
     # return the hidden state
     return lstm_state_h
@@ -102,7 +102,7 @@ def seqcla():
 
     t = dynamic_axis(name='t')
     # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
-    features = cntk1.SparseInput(vocab, dynamicAxis=t, var_name='features')    
+    features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
     labels = input(num_labels, name='labels')
    
     train_reader = CNTKTextFormatReader(train_file)
@@ -118,7 +118,7 @@ def seqcla():
     L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
     
     # get only the last hidden state
-    lst = Last(L, var_name='lst')
+    lst = Last(L, name='lst')
     
     # add a softmax layer on top
     w = parameter((num_labels, output_dim), name='w')

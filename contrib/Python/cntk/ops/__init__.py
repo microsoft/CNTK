@@ -35,7 +35,7 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
-    return CrossEntropyWithSoftmax(target_values, feature_values, var_name = name)
+    return CrossEntropyWithSoftmax(target_values, feature_values, name = name)
 
 ################################################################################
 # linear ops
@@ -55,7 +55,7 @@ def plus(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Plus
-    return Plus(left, right, var_name=name)
+    return Plus(left, right, name=name)
 
 
 def minus(left, right, name=None):
@@ -73,7 +73,7 @@ def minus(left, right, name=None):
     """
 
     from cntk.ops.cntk2 import Minus
-    return Minus(left, right, var_name=name)
+    return Minus(left, right, name=name)
 
 
 def element_times(left, right, name=None):
@@ -90,7 +90,7 @@ def element_times(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementTimes
-    return ElementTimes(left, right, var_name=name)
+    return ElementTimes(left, right, name=name)
 
 
 def element_divide(left, right, name=None):
@@ -109,7 +109,7 @@ def element_divide(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementDivide
-    return ElementDivide(left, right, var_name=name)
+    return ElementDivide(left, right, name=name)
 
 
 def times(left, right, name=None):
@@ -127,7 +127,7 @@ def times(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Times
-    return Times(left, right, var_name=name)
+    return Times(left, right, name=name)
 
 
 ################################################################################
@@ -161,7 +161,7 @@ def floor(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Floor
-    return Floor(arg, var_name = name)
+    return Floor(arg, name = name)
 
 def ceil(arg, name=None):
     """
@@ -189,7 +189,7 @@ def ceil(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Ceil
-    return Ceil(arg, var_name = name)
+    return Ceil(arg, name = name)
 
 def round(arg, name=None):
     """
@@ -220,7 +220,7 @@ def round(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Round
-    return Round(arg, var_name = name)
+    return Round(arg, name = name)
 
 
 ################################################################################
@@ -255,7 +255,7 @@ def clip(x, min_value, max_value, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import Clip
-    return Clip(x, min_value, max_value, var_name = name)
+    return Clip(x, min_value, max_value, name = name)
 
 
 def relu(x, name=None):
@@ -276,7 +276,7 @@ def relu(x, name=None):
         [[[0, 0, 0, 1, 2]]]
     """
     from cntk.ops.cntk2 import Relu
-    return Relu(x, var_name=name)
+    return Relu(x, name=name)
 
 
 def sigmoid(x, name=None):
@@ -294,7 +294,7 @@ def sigmoid(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Sigmoid
-    return Sigmoid(x, var_name=name)
+    return Sigmoid(x, name=name)
 
 
 def tanh(x, name=None):
@@ -312,7 +312,7 @@ def tanh(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Tanh
-    return Tanh(x, var_name=name)
+    return Tanh(x, name=name)
 
 
 def softmax(x, name=None):
@@ -354,7 +354,7 @@ def exp(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import Exp
-    return Exp(x, var_name=name)
+    return Exp(x, name=name)
 
 
 def abs(x, name=None):
@@ -374,7 +374,7 @@ def abs(x, name=None):
         [[1, 1, 2, 3]]
     """
     from cntk.ops.cntk2 import Abs
-    return Abs(x, var_name=name)
+    return Abs(x, name=name)
 
 
 def cond(flag, value_if_true, value_if_false, name=None):
@@ -396,7 +396,7 @@ def cond(flag, value_if_true, value_if_false, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import If
-    return If(flag, value_if_true, value_if_false, var_name = name)
+    return If(flag, value_if_true, value_if_false, name = name)
 
 
 ################################################################################
@@ -430,7 +430,7 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     """    
     
     from cntk.ops.cntk1 import FutureValue
-    return FutureValue(dims, x, time_step, default_hidden_activation, var_name = name)
+    return FutureValue(dims, x, time_step, default_hidden_activation, name = name)
     
 def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
@@ -456,7 +456,7 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """    
     
     from cntk.ops.cntk1 import PastValue
-    return PastValue(dims, x, time_step, default_hidden_activation, var_name = name)
+    return PastValue(dims, x, time_step, default_hidden_activation, name = name)
 
 
 ################################################################################
@@ -519,7 +519,7 @@ def input(shape, dynamic_axis='', name=None):
     """
 
     from cntk.ops.cntk1 import Input
-    return Input(shape, dynamicAxis=dynamic_axis, var_name=name)
+    return Input(shape, dynamicAxis=dynamic_axis, name=name)
 
 
 def parameter(shape=None, value=0, learning_rate_multiplier=1.0, init='uniform',
@@ -585,7 +585,7 @@ def parameter(shape=None, value=0, learning_rate_multiplier=1.0, init='uniform',
     else:
         return cntk1.ParameterTensor(shape, learning_rate_multiplier, init,
                                      init_value_scale, value, init_from_file_path,
-                                     randomSeed=random_seed, var_name=name)
+                                     randomSeed=random_seed, name=name)
 
 
 def constant(value, name=None):
@@ -616,7 +616,7 @@ def dynamic_axis(name=None):
     """
     
     from cntk.ops.cntk2 import DynamicAxis
-    return DynamicAxis(var_name=name)
+    return DynamicAxis(name=name)
 
 
 def reconcile_dynamic_axis(data_input, layout_input, name=None):
@@ -634,4 +634,4 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     """
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
-    return ReconcileDynamicAxis(data_input, layout_input, var_name=name)
+    return ReconcileDynamicAxis(data_input, layout_input, name=name)

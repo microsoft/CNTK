@@ -184,7 +184,7 @@ class CNTKTextFormatReader(AbstractReader):
 
         for node_or_name, param_dict in input_map.node_map.items():
             if (isinstance(node_or_name, ComputationNode)):
-                name = node_or_name.var_name
+                name = node_or_name.name
             else:
                 name = node_or_name
 
@@ -347,7 +347,7 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
         if self.inputs_def is not None:
             for (node_or_name, start, dim, num_of_classes, map_file) in self.inputs_def:
                 if (isinstance(node_or_name, ComputationNode)):
-                    name = node_or_name.var_name
+                    name = node_or_name.name
                 else:
                     name = node_or_name
 
@@ -399,8 +399,8 @@ class InputMap(object):
             return True
 
         if isinstance(node_or_name, ComputationNode):
-            if node_or_name.var_name and \
-                    node_or_name.var_name in self.node_map:
+            if node_or_name.name and \
+                    node_or_name.name in self.node_map:
                 return True
 
         return False

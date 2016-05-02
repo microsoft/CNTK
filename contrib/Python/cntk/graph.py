@@ -26,17 +26,18 @@ class ComputationNode(object):
     with operators that are converted to CNTK operators.
     '''
 
-    def __init__(self, name, params=None, var_name=None, reader=None):
-        if not isinstance(name, str):
+    def __init__(self, op_name, params=None, name=None, reader=None):
+        if not isinstance(op_name, str):
+            raise ValueError(
+                "Parameter 'op_name' has to be a string and not '%s'" %
+                type(op_name))
+        if name is not None and not isinstance(name, str):
             raise ValueError(
                 "Parameter 'name' has to be a string and not '%s'" % type(name))
-        if var_name is not None and not isinstance(var_name, str):
-            raise ValueError(
-                "Parameter 'var_name' has to be a string and not '%s'" % type(var_name))
 
-        self.name = name
+        self.op_name = op_name
         self.params = params
-        self.var_name = var_name
+        self.name = name
         self.consumers = []
         for p in self.params:
             if hasattr(p, 'consumers'):
@@ -143,7 +144,7 @@ class ComputationNode(object):
         return ", ".join(param_variable_names)
 
     def __str__(self):
-        return "%s / params=%s" % (self.name, self.params)
+        return "%s / params=%s" % (self.op_name, self.params)
 
     def _param_to_brainscript(self, p_name, p_value, is_node=False):
         if isinstance(p_value, bool):
@@ -174,7 +175,8 @@ class ComputationNode(object):
         This method is checking whether the particular name and value of this
         instance are actually one of those forward references.
         '''
-        is_loop_node = self.name in ('Delay', 'PastValue', 'FutureValue')
+        is_loop_node = self.op_name in ('Delay', 'PastValue', 'FutureValue', 
+                'CNTK2.Delay', 'CNTK2.PastValue', 'CNTK2.FutureValue')
         return is_loop_node and p_name == 'input' and isinstance(p_value, str)
 
     def _to_config_recursively(self, input_map, desc, unrolled_nodes, inputs,
@@ -217,7 +219,7 @@ class ComputationNode(object):
                 else:
                     if self._is_forward_ref(p_name, p_value):
                         # We have a forward reference to a node that will be
-                        # later on defined. p_value is the var_name of the
+                        # later on defined. p_value is the name of the
                         # later defined node.
                         param_variable_names.append(self._param_to_brainscript
                         (p_name, p_value, True))
@@ -228,17 +230,17 @@ class ComputationNode(object):
         if hasattr(self, 'tag') and 'tag' not in self.params:
             param_variable_names.append("tag='%s'" % self.tag)
 
-        has_var_name = False
-        if (self.var_name):
-            has_var_name = True
+        has_name = False
+        if (self.name):
+            has_name = True
 
-        self.var_name = self.var_name or "v%i" % node_counter
+        self.name = self.name or "v%i" % node_counter
         node_counter += 1
 
         params = self._get_cntk_param_string(param_variable_names)
 
         line = ' ' * MODEL_INDENTATION + \
-            "%s = %s(%s)" % (self.var_name, self.name, params)
+            "%s = %s(%s)" % (self.name, self.op_name, params)
         desc.append(line)
 
         if self.is_input():
@@ -246,21 +248,21 @@ class ComputationNode(object):
                 input_map._add_unmapped(self)
             inputs.add(self)
 
-        return self.var_name, node_counter, desc
+        return self.name, node_counter, desc
 
     def _to_config(self, input_map, description, unrolled_nodes, inputs, node_counter):
         '''
         Helper method to generate the CNTK configuration for this node.
         '''
 
-        var_name, node_counter, desc = self._to_config_recursively(
+        name, node_counter, desc = self._to_config_recursively(
             input_map,
             description,
             unrolled_nodes=unrolled_nodes,
             inputs=inputs,
             node_counter=node_counter)
 
-        return var_name, node_counter, desc, inputs
+        return name, node_counter, desc, inputs
 
     def to_config(self, input_map=None):
         '''
@@ -270,7 +272,7 @@ class ComputationNode(object):
         Args:
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
-        var_name, node_counter, desc, inputs = \
+        name, node_counter, desc, inputs = \
             self._to_config(input_map=input_map,
                             description=[],
                             unrolled_nodes={},
@@ -335,11 +337,13 @@ def eval(node):
                     if not isinstance(val, list):                
                         # inputs have the outmost dimension for sequences
                         val = [val]
-                    setattr(node, p, input_reader([val], alias=p,
-                        has_dynamic_axis=False, name=p))            
+
+                    ir = input_reader([val], alias=p,
+                                has_dynamic_axis=False, name=p)
+                    setattr(node, p, ir)
                     first = False
                 else:
-                    setattr(node, p, constant(getattr(node, p), name=p))
+                    setattr(node, p, constant(getattr(node, p), op_name=p))
 
     return ctx.eval(node)
 

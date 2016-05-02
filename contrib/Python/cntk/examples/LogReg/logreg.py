@@ -35,11 +35,11 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     out = times(W, X) + b
     out.tag = 'output'
     ce = cross_entropy_with_softmax(y, out)
-    ce.var_name = criterion_name
+    ce.name = criterion_name
     ce.tag = 'criterion'
     eval = cntk1.SquareError(y, out)
     eval.tag = 'eval'
-    eval.var_name = eval_name
+    eval.name = eval_name
 
     # training data readers
     train_reader = CNTKTextFormatReader(train_file)

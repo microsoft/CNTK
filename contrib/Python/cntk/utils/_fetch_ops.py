@@ -73,8 +73,8 @@ SMOOTH_NAMING = {
 class CompNodeOperator(object):
     COMP_NODE_TEMPLATE = """\
 class %(name)s(%(parentclass)s):
-    def __init__(self, %(signature)sname='%(namespace)s%(name)s', var_name=None):
-        super(%(name)s, self).__init__(params=[%(paramlist)s], name=name, var_name=var_name)
+    def __init__(self, %(signature)sop_name='%(namespace)s%(name)s', name=None):
+        super(%(name)s, self).__init__(params=[%(paramlist)s], op_name=op_name, name=name)
 %(initialization)s
         self.params_with_defaults = [%(params_with_defaults)s]
         self.inputs = [%(inputs_string)s]
@@ -174,8 +174,8 @@ class AliasOperator(object):
 class InstantiationOperator(CompNodeOperator):
     INST_NODE_TEMPLATE = """\
 class %(name)s(%(inst_operator)s):
-    def __init__(self, %(signature)s name='%(namespace)s%(name)s', var_name=None):
-        super(%(name)s, self).__init__(%(inst_operands)s, name=name, var_name=var_name)
+    def __init__(self, %(signature)s op_name='%(namespace)s%(name)s', name=None):
+        super(%(name)s, self).__init__(%(inst_operands)s, op_name=op_name, name=name)
         self.params=[%(paramlist)s]
         self.params_with_defaults = [%(params_with_defaults)s]
 """
@@ -220,9 +220,9 @@ CNTK1_MANUAL_PREFIX = """\
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
 class Slice(ComputationNode):
-    def __init__(self, beginIndex, endIndex, input, axis=1, name='Slice',
-            var_name=None):
-        super(Slice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
+    def __init__(self, beginIndex, endIndex, input, axis=1, op_name='Slice',
+            name=None):
+        super(Slice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], op_name=op_name, name=name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
@@ -231,9 +231,9 @@ class Slice(ComputationNode):
         self.params_with_defaults = []
 
 class Splice(ComputationNode):
-    def __init__(self, beginIndex, endIndex, input, axis=1, name='Splice',
-            var_name=None):
-        super(Splice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], name=name, var_name=var_name)
+    def __init__(self, beginIndex, endIndex, input, axis=1, op_name='Splice',
+            name=None):
+        super(Splice, self).__init__(params=['beginIndex', 'endIndex', 'input', 'axis'], op_name=op_name, name=name)
         self.beginIndex = beginIndex
         self.endIndex = endIndex
         self.input = input
@@ -242,31 +242,31 @@ class Splice(ComputationNode):
         self.params_with_defaults = []
     
 class ElementDivide(ComputationNode):
-    def __init__(self, aMatrix, anotherMatrix, name='ElementDivide', var_name=None):
-        super(ElementDivide, self).__init__(params=['aMatrix', 'anotherMatrix'], name=name, var_name=var_name)
+    def __init__(self, aMatrix, anotherMatrix, op_name='ElementDivide', name=None):
+        super(ElementDivide, self).__init__(params=['aMatrix', 'anotherMatrix'], op_name=op_name, name=name)
         self.aMatrix = aMatrix
         self.anotherMatrix = anotherMatrix
         self.inputs = ['aMatrix', 'anotherMatrix']
         self.params_with_defaults = []
         
 class Round(ComputationNode):
-    def __init__(self, x, name='Round', var_name=None):
-        super(Round, self).__init__(params=['x'], name=name, var_name=var_name)
+    def __init__(self, x, op_name='Round', name=None):
+        super(Round, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
         self.inputs = ['x']
         self.params_with_defaults = []
         
 class Ceil(ComputationNode):
-    def __init__(self, x, name='Ceil', var_name=None):
-        super(Ceil, self).__init__(params=['x'], name=name, var_name=var_name)
+    def __init__(self, x, op_name='Ceil', name=None):
+        super(Ceil, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
         self.inputs = ['x']
         self.params_with_defaults = []
 
 class If(ComputationNode):
-    def __init__(self, cond, thenVal, elseVal, name='BS.Boolean.If', var_name=None):
+    def __init__(self, cond, thenVal, elseVal, op_name='BS.Boolean.If', name=None):
         super(If, self).__init__(
-            params=['cond', 'thenVal', 'elseVal'], name=name, var_name=var_name)
+            params=['cond', 'thenVal', 'elseVal'], op_name=op_name, name=name)
         self.cond = cond
         self.thenVal = thenVal
         self.elseVal = elseVal
@@ -286,23 +286,23 @@ CNTK2_MANUAL_PREFIX = """\
 from cntk.graph import ComputationNode, InputComputationNodeBase, ImageInputComputationNodeBase
 
 class Ceil(ComputationNode):
-    def __init__(self, _, name='CNTK2.Ceil', var_name=None):
-        super(Ceil, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Ceil', name=None):
+        super(Ceil, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
 
 class ElementDivide(ComputationNode):
-    def __init__(self, _, y,  name='CNTK2.ElementDivide', var_name=None):
-        super(ElementDivide, self).__init__(params=['_', 'y'], name=name, var_name=var_name)
+    def __init__(self, _, y,  op_name='CNTK2.ElementDivide', name=None):
+        super(ElementDivide, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
         self._ = _
         self.y = y
         self.inputs = ['_', 'y']
         self.params_with_defaults = []
 
 class Round(ComputationNode):
-    def __init__(self, _, name='CNTK2.Round', var_name=None):
-        super(Round, self).__init__(params=['_'], name=name, var_name=var_name)
+    def __init__(self, _, op_name='CNTK2.Round', name=None):
+        super(Round, self).__init__(params=['_'], op_name=op_name, name=name)
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
