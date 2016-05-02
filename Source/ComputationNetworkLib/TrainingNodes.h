@@ -480,9 +480,7 @@ public:
 
 			// sum and get the gradient, and add to gradient
 			const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-			// Matrix<ElemType> grdLocal = Input(1)->GradientFor(fr).DeepClone();
 			Matrix<ElemType> grdLocal = gradient.DeepClone();
-
 			const Matrix<ElemType>& grdAllLocal = *m_rightGradientAll;
 
 			size_t nCols = Input(0)->ValueFor(fr).GetNumCols();
@@ -501,9 +499,7 @@ public:
 					grdLocal(0, j) -= g;
 				}
 			}
-
 			gradient.AssignDifferenceOf(grdLocal, 0.0);
-
 		}
 	}
 
@@ -514,7 +510,6 @@ public:
 
 	virtual void UpdateFunctionMBSize() override
 	{
-		// TODO: need to get the dimension right
 		FrameRange fr(Input(0)->GetMBLayout());
 		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
 		m_pairCounts = (size_t) pairIndeces.SumOfElements();
@@ -529,35 +524,30 @@ public:
 		m_everythingForward->Resize(1, m_pairCounts);
 		m_rightGradientAll->Resize(1, m_pairCounts);
 		m_leftGradientAll->Resize(1, m_pairCounts);
-
 	}
 
-	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
+	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
 	{
-		// TODO: to make it a config?
 		// Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
 		FrameRange fr(Input(0)->GetMBLayout());
 		// construct matrices for further computation
-		// iterate through all samples
 		const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
 		const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
 		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
 		size_t nCols = singleLabels.GetNumCols();
-		//size_t nCols1 = nCols - 1;
 		size_t pairCounts = 0;
 		ElemType bad = -1.0, good = 1.0, fair = 0.0;
+		// iterate through all samples
 		for (size_t i = 0; i < nCols; i++)
 		{
 			size_t K = (size_t)pairIndeces(0, i);
 			if (K == 0) continue;
 			size_t k0 = i + 1;
 			size_t k1 = i + K;
-			//k0 = k0 <= nCols1 ? k0 : nCols1;
-			//k1 = k1 <= nCols1 ? k1 : nCols1;
-			int l1 = (size_t) singleLabels(0, i);
+			int l1 = (int) singleLabels(0, i);
 			for (size_t j = k0; j <= k1; j++)
 			{
-				int l2 = (size_t) singleLabels(0, j);
+				int l2 = (int) singleLabels(0, j);
 				// i>j (1), i<j (-1), i=j (0)
 				ElemType& pl = (*m_pairwiseLabels)(0, pairCounts);
 				pl = l1 <= l2 ? bad : good;
@@ -569,7 +559,7 @@ public:
 
 		if (m_pairCounts != pairCounts)
 		{
-			InvalidArgument("Pair count mis-match in %ls %ls operation.", NodeName().c_str(), OperationName().c_str());
+			InvalidArgument("Pair count mis-match in %ls %ls operation, MBSize should be 1024xn.", NodeName().c_str(), OperationName().c_str());
 		}
 
 		// log(1+exp(-sigma*(si - sj)))
@@ -588,7 +578,7 @@ public:
 		m_pairwiseOneMinusLabels->AssignDifferenceOf(1, *m_pairwiseLabels);
 		// -(1-lij)*sigma*(si-sj)
 		m_everythingForward->AssignElementProductOf(*m_pairwiseOneMinusLabels, *m_sigmaPairwiseNegDiff);
-		// -1/2*(1-lij)*-sigma*(si-sj) + log(1+exp(-sigma*(si - sj)))
+		// -1/2*(1-lij)*(-sigma)*(si-sj) + log(1+exp((-sigma)*(si - sj)))
 		m_logexpterm->AddWithScaleOf(-0.5, *m_everythingForward);
 
 		// sum of all elements
@@ -660,6 +650,7 @@ public:
 protected:
 
 	size_t m_pairCounts;
+	// TODO: to make it a config?
 	ElemType m_sigma;
 	shared_ptr<Matrix<ElemType>> m_pairwiseLabels;
 	shared_ptr<Matrix<ElemType>> m_pairwiseOneMinusLabels;
