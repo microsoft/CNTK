@@ -504,8 +504,9 @@ private:
         case Microsoft::MSR::CNTK::NodeGroup::nodeOutput:
             return Microsoft::MSR::CNTK::NodeGroup::nodeOutput;
         case Microsoft::MSR::CNTK::NodeGroup::nodeSpecified:
-        default:
             return Microsoft::MSR::CNTK::NodeGroup::nodeSpecified;
+        default:
+            throw gcnew CNTKRuntimeException(String::Format("Cannot convert native NodeGroup with value: {0} to corresponding managed NodeGroup.",(int)nodeGroup), "");
         }
     }
 };
