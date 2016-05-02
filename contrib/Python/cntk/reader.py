@@ -167,6 +167,9 @@ class CNTKTextFormatReader(AbstractReader):
         Args:
             node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
+
+        Returns:
+            :class:`cntk.reader.InputMap` 
         '''
 
         return InputMap(self).map(node_or_name, **kw)
@@ -428,10 +431,11 @@ class InputMap(object):
 
     Args:
         reader (descendent of `AbstractReader`)
-    Example:
-        
-        train_reader = CNTKTextFormatReader('file.txt')
-        with ctx.train(..., input_map=train_reader.map(X, shape='I').map(y, shape='L')):
+
+    Example::
+    
+       train_reader = CNTKTextFormatReader('file.txt')
+       with ctx.train(..., input_map=train_reader.map(X, shape='I').map(y, shape='L')):
             ...
     '''
     def __init__(self, reader=None):
@@ -452,6 +456,17 @@ class InputMap(object):
 
 
     def map(self, node_or_name, **kw):
+        '''
+        Updates the input map by the additional mapping from `node_or_name`
+        to the parameter settings in `kw`.
+
+        Args:
+            node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
+            kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
+
+        Returns:
+            :class:`cntk.reader.InputMap`, such that you can chain multiple invocations of `map()`.
+        '''
         self.node_map[node_or_name] = kw
         return self
 
