@@ -246,10 +246,10 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 // Gets sequences for a particular chunk.
 void MLFDataDeserializer::GetSequencesForChunk(size_t, vector<SequenceDescription>& result)
 {
-    result.reserve(m_frames.size());
     if (m_frameMode)
     {
         // Because it is a frame mode, creating a sequence for each frame.
+        result.reserve(m_frames.size());
         for (size_t i = 0; i < m_frames.size(); ++i)
         {
             SequenceDescription f;
@@ -265,6 +265,7 @@ void MLFDataDeserializer::GetSequencesForChunk(size_t, vector<SequenceDescriptio
     else
     {
         // Creating sequence description per utterance.
+        result.reserve(m_utteranceIndex.size());
         for (size_t i = 0; i < m_utteranceIndex.size() - 1; ++i)
         {
             SequenceDescription f;
