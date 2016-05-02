@@ -31,7 +31,7 @@ class AbstractReader(with_metaclass(ABCMeta)):
 class UCIFastReader(AbstractReader):
 
     """`Deprecated` - A UCIFastReader for one input node. Please switch to
-    :class:`CNTKTextFormatReader`.
+    :class:`cntk.reader.CNTKTextFormatReader`.
 
     Note that the dimensions are not inferred from the input node's shape,
     because in case of a label node the dimension does not match the shape
@@ -117,19 +117,19 @@ class CNTKTextFormatReader(AbstractReader):
        with a label.
 
        The normal matrix based format, for which you would have used
-       :class:`UCIFastReader` in the past can be simply converted by prepending
+       :class:`cntk.reader.UCIFastReader` in the past can be simply converted by prepending
        every line by the line number and a bar (``|``). Of course it only works
        for sequences of length 1, since in matrix format you cannot go beyond
        that:
 
-       :class:`UCIFastReader` format::
+       :class:`cntk.reader.UCIFastReader` format::
 
            0 1
            10 11
            20 21
 
-       can be easily converted to the :class:`CNTKTextFormatReader` format
-       (using alias `I`)::
+       can be easily converted to the :class:`cntk.reader.CNTKTextFormatReader` format
+       (using alias ``I``)::
 
            0\t|I 0 1
            1\t|I 10 21
@@ -161,14 +161,12 @@ class CNTKTextFormatReader(AbstractReader):
 
     def map(self, node_or_name, **kw):
         '''
-        Create a mapping from a `ComputationNode` or a node's name in the
-        configuration file to a parameter dictionary. Parameters:
+        Create a mapping from a :class:`cntk.graph.ComputationNode` or a node's name in the
+        configuration file to a parameter dictionary. 
 
         Args:
-            node_or_name (`ComputationNode` or str): node or its variable name
+            node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
-        name will be taken.
-            dim (int): the dimension of the imput
         '''
 
         return InputMap(self).map(node_or_name, **kw)
@@ -176,7 +174,7 @@ class CNTKTextFormatReader(AbstractReader):
     def generate_config(self, input_map):
         '''
         Write the reader configuration. For this, all previously registered
-        `LazyInputReader`s will be serialized into one common file.
+        :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
 
         Args:
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
