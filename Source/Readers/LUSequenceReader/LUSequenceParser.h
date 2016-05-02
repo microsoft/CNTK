@@ -13,8 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include "Platform.h"
 #include "DataReader.h"
 

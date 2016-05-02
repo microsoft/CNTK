@@ -16,8 +16,7 @@
 #include <regex>
 #include <set>
 #include <unordered_map>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include <limits.h>
 #include <wchar.h>
 //#include <iostream>

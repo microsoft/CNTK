@@ -28,8 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include <assert.h>
 #ifdef _WIN32
 #define NOMINMAX

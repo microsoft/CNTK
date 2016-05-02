@@ -8,8 +8,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"

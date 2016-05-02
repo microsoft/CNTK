@@ -12,8 +12,7 @@
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "File.h"
 #include <string>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include <locale>
 #ifdef _WIN32
 #define NOMINMAX

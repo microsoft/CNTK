@@ -9,8 +9,7 @@
 #include <string>
 #include <vector>
 #include <assert.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include <algorithm>
 
 #ifdef min

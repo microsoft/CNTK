@@ -12,8 +12,7 @@
 #include <assert.h>
 #include <fstream>
 #include <map>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include "Basics.h"
 #include "fileutil.h"
 
