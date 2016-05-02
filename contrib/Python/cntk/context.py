@@ -144,11 +144,12 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def test(self, input_map=None):
+    def test(self, root_nodes=None, input_map=None):
         '''
         Abstract method for the action test.
 
         Args:
+            root_nodes (list): the list of root nodes of the model
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
@@ -253,11 +254,13 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return tmpl % tmpl_dict
 
-    def _generate_test_config(self, input_map, action_name=None):
+
+    def _generate_test_config(self, input_map=None, action_name=None):
         '''
         Generates the configuration file for the test action.
 
         Args:
+            root_nodes (list): the list of root nodes of the model
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
             action_name (string): the name of the action in cntk configuration file
 
@@ -266,6 +269,9 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         '''
         if input_map is None:
             input_map = InputMap()
+
+        # we generate the config just to collect the lazy readers in input_map
+        self._generate_config(root_nodes, input_map)
 
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()        
 
@@ -676,11 +682,12 @@ class LocalExecutionContext(AbstractContext):
         return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content,
                                action_name = action_name)
 
-    def test(self, input_map=None):
+    def test(self, root_nodes=None, input_map=None):
         '''
         Run the test action locally.
 
         Args:
+            root_nodes (list): the list of root nodes of the model
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
@@ -816,19 +823,24 @@ class DeferredExecutionContext(AbstractContext):
         self._append_config(config_content)        
 
 
-    def test(self, input_map=None):
+    def test(self, root_nodes=None, input_map=None):
         '''
         Prepare the testing configuration to be run on a different environment 
 
         Args:
+            root_nodes (list): the list of root nodes of the model
             input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
             testing configuration
         '''
+        if root_nodes is None and input_map is None:
+            raise ValueError('If input_map is None, you have to specify root_nodes.')
 
-        config_content = self._generate_test_config(input_map)
+
+        config_content = self._generate_test_config(root_nodes, input_map)
         self._append_config(config_content)
+
 
     def write(self, input_map=None):
         '''

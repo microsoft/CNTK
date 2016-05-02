@@ -4,10 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-# TODO: re-write the example using the new facade
-
 """
-Example of logictic regression implementation 
+Example of logictic regression implementation using training and testing data
+from a file. 
 """
 
 import os
@@ -18,14 +17,14 @@ from cntk import *
 from cntk.ops import *
 from cntk.ops import cntk1
 
-cur_dir = os.path.dirname(__file__)
 
-# Using data from https://github.com/Microsoft/CNTK/wiki/Tutorial
-train_file = os.path.join(cur_dir, "Train-3Classes.txt")
-test_file = os.path.join(cur_dir, "Test-3Classes.txt")
+def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None):
+    cur_dir = os.path.dirname(__file__)
 
+    # Using data from https://github.com/Microsoft/CNTK/wiki/Tutorial
+    train_file = os.path.join(cur_dir, "Train-3Classes.txt")
+    test_file = os.path.join(cur_dir, "Test-3Classes.txt")
 
-def train_eval_logistic_regression(criterion_name=None, eval_name=None):
     X = input(2)
     y = input(3)
     
@@ -57,13 +56,15 @@ def train_eval_logistic_regression(criterion_name=None, eval_name=None):
             optimizer=my_sgd,
             input_map=train_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
 
-        result = ctx.test(input_map=test_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
+        result = ctx.test(
+                root_nodes=[ce, eval], 
+                input_map=test_reader.map(X, alias='I', dim=2).map(y, alias='L', dim=3))
 
         return result
 
 
-def test_logistic_regression():
-    result = train_eval_logistic_regression('crit_node', 'eval_node')
+def test_logistic_regression_from_file():
+    result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
 
     TOLERANCE_ABSOLUTE = 1E-06
     assert result['SamplesSeen'] == 500
@@ -72,4 +73,4 @@ def test_logistic_regression():
     assert np.allclose(result['eval_node'], 2.7779043, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
-    print(train_eval_logistic_regression())
+    print(train_eval_logistic_regression_from_file())
