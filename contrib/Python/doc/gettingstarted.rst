@@ -67,37 +67,39 @@ that will pass through the network, setup how learning should be performed, and 
 and test the network. Here we will go through a simple example of using the CNTK Python API to 
 learn to separate data into two classes using a simple logistic regression variant::
 
-	import cntk as C
+    import cntk as C
+    import numpy as np
 
-	def main():
-	    # 500 samples, 250-dimensional data
-	    N = 500
-	    d = 250
+    def simple_network():
+        # 500 samples, 250-dimensional data
+        N = 500
+        d = 250
 
-	    # create synthetic data using numpy
-	    X = np.random.randn(N, d)
-	    Y = np.random.randint(size=(N, 1), low=0, high=2)
-	    Y = np.hstack((Y, 1-Y))
+        # create synthetic data using numpy
+        X = np.random.randn(N, d)
+        Y = np.random.randint(size=(N, 1), low=0, high=2)
+        Y = np.hstack((Y, 1-Y))
 
-	    # set up the training data for CNTK
-	    x = C.input_reader(X, has_dynamic_axis=False)
-	    y = C.input_reader(Y, has_dynamic_axis=False)
+        # set up the training data for CNTK
+        x = C.input_reader(X, has_dynamic_axis=False)
+        y = C.input_reader(Y, has_dynamic_axis=False)
 
-	    # define our network -- one weight tensor and a bias
-	    W = C.ops.parameter((2, d))
-	    b = C.ops.parameter((2, 1))
-	    out = C.ops.times(W, x) + b
+        # define our network -- one weight tensor and a bias
+        W = C.ops.parameter((2, d))
+        b = C.ops.parameter((2, 1))
+        out = C.ops.times(W, x) + b
 
-	    # and the criterion node using cross entropy with softmax
-	    ce = C.ops.cross_entropy_with_softmax(y, out)
-	    ce.tag = 'criterion'
-		ce.name = 'loss'
+        # and the criterion node using cross entropy with softmax
+        ce = C.ops.cross_entropy_with_softmax(y, out)
+        ce.tag = 'criterion'
+        ce.name = 'loss'
 
-	    # define our SGD parameters and train!
-	    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-	    with C.LocalExecutionContext('logreg') as ctx:
-	        ctx.train(root_nodes=[ce], optimizer=my_sgd)	        
-	        print(ctx.test(root_nodes=[ce]))
+        # define our SGD parameters and train!
+        my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
+        with C.LocalExecutionContext('logreg') as ctx:
+            ctx.train(root_nodes=[ce], optimizer=my_sgd)	        
+            print(ctx.test(root_nodes=[ce]))
+
 
 In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
 one-hot vector of either ``[0 1]`` or ``[1 0]``. We then begin describing the topology of our network 
@@ -167,6 +169,51 @@ In this example we can think of the LSTM as a layer being added to the network::
 
 ...
 
+The parameters in an LSTM cell::
+
+    def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
+        
+        # input gate (t)
+        it_w = times(parameter((cell_dim, input_dim)), x)
+        it_b = parameter((cell_dim))
+        it_h = times(parameter((cell_dim, output_dim)), prev_state_h)
+        it_c = parameter((cell_dim)) * prev_state_c        
+        it = sigmoid((it_w + it_b + it_h + it_c), name='it')
+
+        # applied to tanh of input    
+        bit_w = times(parameter((cell_dim, input_dim)), x)
+        bit_h = times(parameter((cell_dim, output_dim)), prev_state_h)
+        bit_b = parameter((cell_dim))
+        bit = it * tanh(bit_w + (bit_h + bit_b))
+        
+        # forget-me-not gate (t)
+        ft_w = times(parameter((cell_dim, input_dim)), x)
+        ft_b = parameter((cell_dim))
+        ft_h = times(parameter((cell_dim, output_dim)), prev_state_h)
+        ft_c = parameter((cell_dim)) * prev_state_c        
+        ft = sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
+
+        # applied to cell(t-1)
+        bft = ft * prev_state_c
+        
+        # c(t) = sum of both
+        ct = bft + bit
+        
+        # output gate
+        ot_w = times(parameter((cell_dim, input_dim)), x)
+        ot_b = parameter((cell_dim))
+        ot_h = times(parameter((cell_dim, output_dim)), prev_state_h)
+        ot_c = parameter((cell_dim)) * prev_state_c        
+        ot = sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
+       
+        # applied to tanh(cell(t))
+        ht = ot * tanh(ct)
+        
+        # return cell value and hidden state
+        return ct, ht
+
+The above function ...
+		
 
 Operators
 ----------
