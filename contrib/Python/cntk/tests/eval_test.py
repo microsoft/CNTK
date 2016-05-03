@@ -1,35 +1,22 @@
+
 # Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
-import os
-import sys
+"""
+Unit tests for eval() functionality that is used to discover and play with 
+operations
+"""
+
 import numpy as np
+import cntk
+from ..ops import plus
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from cntk import *
+import pytest
 
-
-def test_eval_example():
-    TOLERANCE_ABSOLUTE = 1E-06
-    result = eval_example()
-    assert np.allclose(result, np.asarray([[105., 107.5], [ 110., 112.5]]), atol=TOLERANCE_ABSOLUTE)
-
-def eval_example():
-    sample = [2, 3], [4, 5]
-    sequence = np.asarray([sample])
-    batch = [sequence]
-    X = input_numpy(batch)
-    out = 2.5 * X + 100
-
-    with LocalExecutionContext('demo', clean_up=True) as ctx:
-        result = ctx.eval(out)
-        return result
-
-if __name__ == "__main__":
-    print(eval_example())
-    # outputs:
-    # [[ 105.   107.5]
-    #  [ 110.   112.5]]
+def test_eval_plus():
+    result = cntk.eval(plus([[1., 2., 3., 4.]], [[1., 1., 0., 0.]]))
+    TOLERANCE_ABSOLUTE = 1E-06    
+    assert np.allclose(result, np.asarray([[2., 3., 3., 4.]]), atol=TOLERANCE_ABSOLUTE)
