@@ -124,8 +124,6 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         RuntimeError("readMethod must be 'blockRandomize' or 'none'.");
     }
 
-    m_randomizer->Initialize(nullptr, readerConfig);
-
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)
     {

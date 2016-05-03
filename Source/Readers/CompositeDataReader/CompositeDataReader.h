@@ -72,7 +72,7 @@ private:
     void CreateTransforms(const ConfigParameters& deserializerConfig);
 
     IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
-    SlimTransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule);
+    TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule);
 
 
     enum class PackingMode
@@ -110,9 +110,8 @@ private:
     // A list of transformers.
     std::vector<Transformation> m_transforms;
 
-    // First transformer.
-    // TODO: change to iterator.
-    TransformerPtr m_transformer;
+    // Sequence provider.
+    SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // TODO: Should be removed. We already have matrices on this level.
     // Should just get the corresponding pinned memory.

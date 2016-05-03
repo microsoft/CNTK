@@ -8,6 +8,7 @@
 #include <set>
 
 #include "Transformer.h"
+#include <SequenceEnumerator.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -87,9 +87,6 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     // Pick up the randomizer.
     bool randomize = config(L"randomize", false);
-
-    // TODO: randomizer should not be a transformer.
-    TransformerPtr randomizer;
     if (randomize)
     {
         // By default randomizing the whole data set.
@@ -97,29 +94,21 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         bool useLegacyRandomization = config(L"useLegacy", true);
         bool multithreadedGetNextSequences = false;
         BlockRandomizer::DecimationMode decimationMode = BlockRandomizer::DecimationMode::chunk;
-        randomizer = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, decimationMode, useLegacyRandomization, multithreadedGetNextSequences);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, decimationMode, useLegacyRandomization, multithreadedGetNextSequences);
     }
     else
     {
-        randomizer = std::make_shared<NoRandomizer>(deserializer);
+        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer);
     }
 
-    randomizer->Initialize(nullptr, config);
-
-    if (!m_transforms.empty())
-    {
-        m_transformer = std::make_shared<CompositeTransformer>(m_transforms);
-        m_transformer->Initialize(randomizer, config);
-    }
-    else
-    {
-        m_transformer = randomizer;
-    }
+    m_sequenceEnumerator = m_transforms.empty()
+        ? m_sequenceEnumerator 
+        : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
 
     // Create output stream descriptions - where to get those? from config? what if it is not the same as network expects?
     // TODO: Currently only dense output streams.
     // TODO: Check here. We should already support repacking sparse into dense in the shim/matrix.
-    for (const auto& streamDescription : m_transformer->GetStreamDescriptions())
+    for (const auto& streamDescription : m_sequenceEnumerator->GetStreamDescriptions())
     {
         StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*streamDescription);
         stream->m_storageType = StorageType::dense;
@@ -202,29 +191,29 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
-            SlimTransformerPtr transformer = CreateTransformer(transforms[j], defaultModule);
+            TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule);
             m_transforms.push_back(Transformation{transformer, inputName});
         }
     }
 
 }
 
-SlimTransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule)
+TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule)
 {
-    typedef bool(*TransformerFactory) (SlimTransformer** t, const std::wstring& type, const ConfigParameters& cfg);
+    typedef bool(*TransformerFactory) (Transformer** t, const std::wstring& type, const ConfigParameters& cfg);
 
     std::string transformerModule = config("module", defaultModule.c_str());
     TransformerFactory f = (TransformerFactory)Plugin::Load(transformerModule, "CreateTransformer");
 
     std::wstring transformerType = config("type");
-    SlimTransformer* t;
+    Transformer* t;
     if (!f(&t, transformerType, config))
     {
         RuntimeError("Cannot create transformer. Please check module and type in the configuration.");
     }
 
     assert(t != nullptr);
-    return SlimTransformerPtr(t);
+    return TransformerPtr(t);
 }
 
 void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
@@ -236,7 +225,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
         RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
-    m_transformer->StartEpoch(config);
+    m_sequenceEnumerator->StartEpoch(config);
 
     // TODO: As the next step the packers should be moved into the network.
     switch (m_packingMode)
@@ -244,13 +233,13 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_provider,
-            m_transformer,
+            m_sequenceEnumerator,
             m_streams);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
-            m_transformer,
+            m_sequenceEnumerator,
             m_streams);
         break;
     case PackingMode::truncated:
@@ -258,7 +247,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
         config.m_truncationSize = m_truncationLength;
         m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_provider,
-            m_transformer,
+            m_sequenceEnumerator,
             m_streams);
         break;
     }

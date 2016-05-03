@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "Transformer.h"
+#include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Actual randomization happens in ChunkRandomizer and SequenceRandomizer.
 // TODO: The behavior can be simplified by only randomizing sequences forward.
 // TODO: The layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
-class BlockRandomizer : public Transformer
+class BlockRandomizer : public SequenceEnumerator
 {
 public:
     // Currently, decimation based on sequences or chunks is supported.
@@ -49,8 +49,6 @@ public:
         DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
-
-    virtual void Initialize(TransformerPtr, const ConfigParameters&) override {};
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;

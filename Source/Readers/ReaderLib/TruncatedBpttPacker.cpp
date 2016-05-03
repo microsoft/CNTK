@@ -107,9 +107,9 @@ struct SequenceBuffer
 
 TruncatedBPTTPacker::TruncatedBPTTPacker(
     MemoryProviderPtr memoryProvider,
-    TransformerPtr transformer,
+    SequenceEnumeratorPtr sequenceEnumerator,
     const vector<StreamDescriptionPtr>& streams)
-    : PackerBase(memoryProvider, transformer, streams),
+    : PackerBase(memoryProvider, sequenceEnumerator, streams),
     m_truncationSize(0)
 {
     auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
@@ -312,7 +312,7 @@ void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
     {
         // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
         // to be more efficient. In reality the truncation size usually is less the sequence size.
-        auto s = m_transformer->GetNextSequences(1);
+        auto s = m_sequenceEnumerator->GetNextSequences(1);
         if (s.m_endOfEpoch)
         {
             break;

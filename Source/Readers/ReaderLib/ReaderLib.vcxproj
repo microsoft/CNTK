@@ -49,6 +49,7 @@
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="Packer.h" />
     <ClInclude Include="PackerBase.h" />
+    <ClInclude Include="SequenceEnumerator.h" />
     <ClInclude Include="SequencePacker.h" />
     <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="StringToIdMap.h" />

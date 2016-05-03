@@ -8,46 +8,30 @@
 #include <set>
 
 #include "Transformer.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 struct Transformation
 {
-    SlimTransformerPtr m_transfromer;
+    TransformerPtr m_transfromer;
     std::wstring m_streamName;
 };
 
-class CompositeTransformer : public Transformer
+class TransformController : public SequenceEnumerator
 {
 public:
-    CompositeTransformer(const std::vector<Transformation>& transformations)
+    TransformController(const std::vector<Transformation>& transformations, SequenceEnumeratorPtr randomizer)
+        : m_randomizer(randomizer)
     {
-        for (const auto& t: transformations)
-        {
-            m_transformations.push_back(std::make_pair(t, 0ul));
-        }
-    }
-
-    // Initializes the transformer.
-    virtual void Initialize(TransformerPtr next,
-                            const ConfigParameters &) override
-    {
-        m_next = next;
         m_chainOfStreamDescriptions.reserve(m_transformations.size() + 1);
-        std::vector<StreamDescriptionPtr> streams = m_next->GetStreamDescriptions();
+        std::vector<StreamDescriptionPtr> streams = m_randomizer->GetStreamDescriptions();
         m_chainOfStreamDescriptions.push_back(streams);
-        for (auto& t : m_transformations)
+        for (auto& t : transformations)
         {
-            // filling in stream id for the transform
-            for (const auto& s: streams)
-            {
-                if (s->m_name == t.first.m_streamName)
-                {
-                    t.second = s->m_id;
-                }
-            }
-
-            streams[t.second] = std::make_shared<StreamDescription>(t.first.m_transfromer->Transform(*streams[t.second]));
+            size_t streamId = GetStreamId(t.m_streamName, streams);
+            m_transformations.push_back(std::make_pair(t, streamId));
+            streams[streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*streams[streamId]));
             m_chainOfStreamDescriptions.push_back(streams);
         }
     }
@@ -60,7 +44,8 @@ public:
         {
             t.first.m_transfromer->StartEpoch(config);
         }
-        m_next->StartEpoch(config);
+
+        m_randomizer->StartEpoch(config);
     }
 
     // Description of streams that the transformer provides.
@@ -74,7 +59,7 @@ public:
     virtual Sequences GetNextSequences(size_t sampleCount) override
     {
         assert(m_next != nullptr);
-        Sequences sequences = m_next->GetNextSequences(sampleCount);
+        Sequences sequences = m_randomizer->GetNextSequences(sampleCount);
         if (sequences.m_data.empty())
         {
             return sequences;
@@ -93,7 +78,21 @@ public:
     }
 
 private:
-    TransformerPtr m_next;
+    size_t GetStreamId(const std::wstring streamName, const std::vector<StreamDescriptionPtr>& streams) const
+    {
+        for (const auto& s : streams)
+        {
+            if (s->m_name == streamName)
+            {
+                return s->m_id;
+            }
+        }
+
+        assert(false);
+        LogicError("Unexpected stream specifed for transformation.");
+    }
+
+    SequenceEnumeratorPtr m_randomizer;
     std::vector<std::pair<Transformation, size_t>> m_transformations;
     std::vector<std::vector<StreamDescriptionPtr>> m_chainOfStreamDescriptions;
 };

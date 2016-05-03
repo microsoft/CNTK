@@ -3,25 +3,12 @@
   <ItemGroup>
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="ImageTransformers.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="ImageReader.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
-    <ClCompile Include="..\..\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ZipByteReader.cpp" />
-    <ClCompile Include="ImageSlimTransformers.cpp" />
+    <ClCompile Include="ImageTransformers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -35,12 +22,11 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="ImageTransformers.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ByteReader.h" />
-    <ClInclude Include="ImageSlimTransformers.h" />
+    <ClInclude Include="ImageTransformers.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

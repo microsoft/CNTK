@@ -6,10 +6,8 @@
 #pragma once
 
 #include <vector>
-#include <map>
-#include "Transformer.h"
+#include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
-#include "SequenceRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -18,12 +16,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TODO: currently this code moved from the old block randomizer.
 // TODO: The class will be further refactored and common based will be extracted with BlockRandomizer.
 // TODO: This layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
-class NoRandomizer : public Transformer
+class NoRandomizer : public SequenceEnumerator
 {
 public:
     NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false);
 
-    virtual void Initialize(TransformerPtr next, const ConfigParameters& readerConfig) override;
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t sampleCount) override;
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override

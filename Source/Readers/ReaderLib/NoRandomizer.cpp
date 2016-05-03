@@ -42,10 +42,6 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreaded
     m_totalNumberOfSamples = sampleCount;
 }
 
-void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
-{
-}
-
 size_t NoRandomizer::GetChunkIndexOf(size_t samplePosition)
 {
     auto result = std::upper_bound(m_chunkSampleOffset.begin(), m_chunkSampleOffset.end(), samplePosition);

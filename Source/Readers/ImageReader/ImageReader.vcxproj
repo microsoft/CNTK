@@ -121,7 +121,6 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
-    <ClInclude Include="ImageSlimTransformers.h" />
     <ClInclude Include="ImageTransformers.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -134,7 +133,6 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
       <ExcludedFromBuild Condition="!$(HasOpenCV)">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="ImageReader.cpp" />
-    <ClCompile Include="ImageSlimTransformers.cpp" />
     <ClCompile Include="ImageTransformers.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

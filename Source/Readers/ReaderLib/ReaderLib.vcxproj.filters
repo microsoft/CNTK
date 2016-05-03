@@ -64,11 +64,17 @@
     <ClInclude Include="TruncatedBpttPacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
-    <ClInclude Include="..\ExperimentalHTKMLFReader\CorpusDescriptor.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="CompositeTransformer.h">
       <Filter>Transformers</Filter>
+    </ClInclude>
+    <ClInclude Include="SequenceEnumerator.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigUtil.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CorpusDescriptor.h">
+      <Filter>Interfaces</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

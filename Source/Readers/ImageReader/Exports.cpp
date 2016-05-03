@@ -12,7 +12,7 @@
 #include "ImageReader.h"
 #include "HeapMemoryProvider.h"
 #include "ImageDataDeserializer.h"
-#include "ImageSlimTransformers.h"
+#include "ImageTransformers.h"
 #include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -51,31 +51,31 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
     return true;
 }
 
-extern "C" DATAREADER_API bool CreateTransformer(SlimTransformer** transformer, const std::wstring& type, const ConfigParameters& config)
+extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, const std::wstring& type, const ConfigParameters& config)
 {
     if (type == L"Crop")
     {
-        *transformer = new SlimCropTransformer(config);
+        *transformer = new CropTransformer(config);
     }
     else if (type == L"Scale")
     {
-        *transformer = new SlimScaleTransformer(config);
+        *transformer = new ScaleTransformer(config);
     }
     else if (type == L"Color")
     {
-        *transformer = new SlimColorTransformer(config);
+        *transformer = new ColorTransformer(config);
     }
     else if (type == L"Intensity")
     {
-        *transformer = new SlimIntensityTransformer(config);
+        *transformer = new IntensityTransformer(config);
     }
     else if (type == L"Mean")
     {
-        *transformer = new SlimMeanTransformer(config);
+        *transformer = new MeanTransformer(config);
     }
     else if (type == L"Transpose")
     {
-        *transformer = new SlimTransposeTransformer(config);
+        *transformer = new TransposeTransformer(config);
     }
     else
     {

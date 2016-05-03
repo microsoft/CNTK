@@ -11,7 +11,6 @@
 
 #include "Transformer.h"
 #include "ConcStack.h"
-#include "TransformerBase.h"
 #include "Config.h"
 #include "ImageConfigHelper.h"
 
@@ -21,37 +20,29 @@ class ConfigParameters;
 
 // Base class for image transformations based on OpenCV
 // that helps to wrap the sequences into OpenCV::Mat class.
-class ImageTransformerBase : public TransformerBase
+class ImageTransformerBase : public Transformer
 {
 public:
-    // Initializes the transformer.
-    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+    explicit ImageTransformerBase(const ConfigParameters& config);
+
+    void StartEpoch(const EpochConfiguration&) override {}
+
+    // Transformation of the stream.
+    StreamDescription Transform(const StreamDescription& inputStream) override;
+
+    // Transformation of the sequence.
+    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 protected:
-    const std::vector<StreamId> &GetAppliedStreamIds() const override
-    {
-        return m_appliedStreamIds;
-    }
-
-    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
-    {
-        return m_outputStreams;
-    }
-
     // Seed  getter.
     unsigned int GetSeed() const
     {
         return m_seed;
     }
 
-    using Base = TransformerBase;
+    using Base = Transformer;
     using UniRealT = std::uniform_real_distribution<double>;
     using UniIntT = std::uniform_int_distribution<int>;
-
-    // Applies transformation to the sequence.
-    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
-                          const StreamDescription &inputStream,
-                          const StreamDescription &outputStream) override;
 
     // The only function that should be redefined by the inherited classes.
     virtual void Apply(size_t id, cv::Mat &from) = 0;
@@ -59,10 +50,11 @@ protected:
 protected:
     std::unique_ptr<ImageConfigHelper> m_imageConfig;
 
-private:
-    std::vector<StreamDescriptionPtr> m_outputStreams;
-    std::vector<StreamId> m_appliedStreamIds;
+    StreamDescription m_inputStream;
+    StreamDescription m_outputStream;
     unsigned int m_seed;
+    int m_imageElementType;
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 };
 
 // Crop transformation of the image.
@@ -70,10 +62,10 @@ private:
 class CropTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+    explicit CropTransformer(const ConfigParameters& config);
 
-private:
-    void Apply(size_t id, cv::Mat &mat) override;
+protected:
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class RatioJitterType
@@ -84,20 +76,19 @@ private:
         UniArea = 3
     };
 
-    void InitFromConfig(const ConfigParameters &config);
 
     void StartEpoch(const EpochConfiguration &config) override;
 
+    CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
+    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
+                         std::mt19937 &rng);
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    CropType m_cropType;
     double m_cropRatioMin;
     double m_cropRatioMax;
     RatioJitterType m_jitterType;
     bool m_hFlip;
-    doubleargvector m_aspectRatioRadius;
-    double m_curAspectRatioRadius;
 };
 
 // Scale transformation of the image.
@@ -105,19 +96,17 @@ private:
 class ScaleTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    explicit ScaleTransformer(const ConfigParameters& config);
+
+    StreamDescription Transform(const StreamDescription& inputStream) override;
 
 private:
-    void InitFromConfig(const ConfigParameters &config);
-    void Apply(size_t id, cv::Mat &mat) override;
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
     std::vector<int> m_interp;
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
-    int m_dataType;
     size_t m_imgWidth;
     size_t m_imgHeight;
     size_t m_imgChannels;
@@ -127,45 +116,34 @@ private:
 class MeanTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next,
-                            const ConfigParameters &readerConfig) override;
+    explicit MeanTransformer(const ConfigParameters& config);
 
 private:
-    void Apply(size_t id, cv::Mat &mat) override;
-    void InitFromConfig(const ConfigParameters &config);
+    virtual void Apply(size_t id, cv::Mat &mat) override;
 
     cv::Mat m_meanImg;
 };
 
-// Transpose transformation from HWC to CHW (note: row-major notation).
-class TransposeTransformer : public TransformerBase
+// Transpose transformation from HWC to CHW.
+class TransposeTransformer : public Transformer
 {
 public:
-    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+    explicit TransposeTransformer(const ConfigParameters& config);
 
-protected:
-    const std::vector<StreamId>& GetAppliedStreamIds() const override
-    {
-        return m_appliedStreamIds;
-    }
+    void StartEpoch(const EpochConfiguration&) override {}
 
-    const std::vector<StreamDescriptionPtr>& GetOutputStreams() const override
-    {
-        return m_outputStreams;
-    }
+    // Transformation of the stream.
+    StreamDescription Transform(const StreamDescription& inputStream) override;
 
-    SequenceDataPtr Apply(SequenceDataPtr inputSequence,
-                          const StreamDescription &inputStream,
-                          const StreamDescription &outputStream) override;
+    // Transformation of the sequence.
+    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 private:
     template <class TElement>
-    SequenceDataPtr TypedApply(SequenceDataPtr inputSequence,
-                               const StreamDescription &inputStream,
-                               const StreamDescription &outputStream);
+    SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
 
-    std::vector<StreamDescriptionPtr> m_outputStreams;
-    std::vector<StreamId> m_appliedStreamIds;
+    StreamDescription m_inputStream;
+    StreamDescription m_outputStream;
 };
 
 // Intensity jittering based on PCA transform as described in original AlexNet paper
@@ -176,14 +154,12 @@ private:
 class IntensityTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
-
-private:
-    void InitFromConfig(const ConfigParameters &config);
+    explicit IntensityTransformer(const ConfigParameters& config);
 
     void StartEpoch(const EpochConfiguration &config) override;
-
     void Apply(size_t id, cv::Mat &mat) override;
+
+private:
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
@@ -201,14 +177,11 @@ private:
 class ColorTransformer : public ImageTransformerBase
 {
 public:
-    void Initialize(TransformerPtr next, const ConfigParameters &readerConfig) override;
+    explicit ColorTransformer(const ConfigParameters& config);
+    void StartEpoch(const EpochConfiguration &config) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
-    void InitFromConfig(const ConfigParameters &config);
-
-    void StartEpoch(const EpochConfiguration &config) override;
-
-    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
@@ -222,5 +195,6 @@ private:
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
 };
+
 
 }}}
