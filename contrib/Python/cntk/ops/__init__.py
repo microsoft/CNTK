@@ -25,10 +25,10 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     :func:`cntk.ops.softmax`
     
     Example:
-        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
+        >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
         #[0.]
         
-        >>> cntk.eval(cross_entropy_with_softmax([[0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
+        >>> C.eval(C.cross_entropy_with_softmax([[0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
         #[1.84]
     
     Args:
@@ -50,10 +50,10 @@ def square_error(target_matrix, output_matrix, name=None):
     This is often used as a training criterion node. 
     
     Example:
-        >>> cntk.eval(square_error([4., 6.], [2., 1.]))
+        >>> C.eval(C.square_error([4., 6.], [2., 1.]))
         #[29.]
         
-        >>> cntk.eval(square_error([1., 2.], [1., 2.]))
+        >>> C.eval(C.square_error([1., 2.], [1., 2.]))
         #[0.]
     
     Args:
@@ -77,10 +77,10 @@ def error_prediction(target_vector, output_vector, name=None):
     defined for it.
     
     Example:
-        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 2., 3., 4.]))
+        >>> C.eval(C.error_prediction([0., 0., 0., 1.], [1., 2., 3., 4.]))
         #[0.]
         
-        >>> cntk.eval(error_prediction([0., 0., 1., 0.], [1., 2., 3., 4.]))
+        >>> C.eval(C.error_prediction([0., 0., 1., 0.], [1., 2., 3., 4.]))
         #[1.]
     
     Args:
@@ -105,6 +105,13 @@ def plus(left, right, name=None):
     two input tensors. It supports broadcasting. In case of scalars its backward
     pass propagates the received gradient. 
 
+    Example:
+        >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
+        [array([[ 5.,  7.,  9.]])]
+        
+        >>> C.eval(C.plus([-5, -4, -3, -2, -1], [10]))
+        [array([[ 5.,  6.,  7.,  8.,  9.]])]
+
     Args:
         left: left side tensor
         right: right side tensor
@@ -121,6 +128,14 @@ def minus(left, right, name=None):
     Tensor subtraction operation. The output of this operation is left minus
     right tensor. It supports broadcasting. In case of scalars its backward
     pass propagates the received gradient. 
+
+    Example:
+        >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
+        [array([[-3., -3., -3.]])]
+        
+        >>> C.eval(C.minus([[1,2],[3,4]], 1))
+        [array([[[ 0.,  1.],
+                 [ 2.,  3.]]])]
 
     Args:
         left: left side tensor
@@ -139,7 +154,15 @@ def element_times(left, right, name=None):
     Element-wise multiplication operation. The output of this operation is the
     element-wise product of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left propagates right 
-    times the received gradient and vice versa. 
+    times the received gradient and vice versa.
+    
+    Example:
+        >>> C.eval(C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        [array([[ 0.5  ,  0.25 ,  0.125,  0.   ]])]
+        
+        >>> C.eval(C.element_times([5., 10., 15., 30.], [2.]))
+        [array([[ 10.,  20.,  30.,  60.]])]
+    
     Args:
         left: left side tensor
         right: right side tensor
@@ -155,9 +178,16 @@ def element_divide(left, right, name=None):
     """
     Element-wise division operation. The output of this operation is the
     element-wise division of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates 1/right 
+    case of scalars its backward pass to left propagates :math:`1/right` 
     times the received gradient, and the backward pass to right propagates 
-    (-left/right^2) times the received gradient. 
+    :math:`(-left/right^2)` times the received gradient. 
+
+    Example:
+        >>> C.eval(C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        [array([[ 2.,  4.,  8.,  0.]])]
+        
+        >>> C.eval(C.element_divide([5., 10., 15., 30.], [2.]))
+        [array([[  2.5,   5. ,   7.5,  15. ]])]
 
     Args:
         left: left side tensor
@@ -176,6 +206,15 @@ def times(left, right, name=None):
     tensor product of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
+
+    Example:
+        >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
+        [array([[ 17.,  39.]])]
+        
+        >>> C.eval(C.times([[1,2],[3,4],[5,6]], [[0.5,0.25],[0.25,0.5]]))
+        [array([[[ 1.  ,  1.25],
+                 [ 2.5 ,  2.75],
+                 [ 4.  ,  4.25]]])]
 
     Args:
         left: left side tensor
@@ -199,18 +238,20 @@ def floor(arg, name=None):
     element wise value rounded to the largest integer less than
     or equal to the input.
 
-    Examples:
-        >>> floor([0.2, 1.3, 4., 5.5, 0.0])
-        #[0.0, 1.0, 4.0, 5.0, 0.0]
+    Example:
+        >>> C.eval(C.floor([0.2, 1.3, 4., 5.5, 0.0]))
+        [array([[ 0.,  1.,  4.,  5.,  0.]])]
 
-        >>> floor([[0.6, 3.3], [1.9, 5.6]])
-        #[[0.0, 3.0], [1.0, 5.0]]
+        >>> C.eval(C.floor([[0.6, 3.3], [1.9, 5.6]]))
+        [array([[[ 0.,  3.],
+                 [ 1.,  5.]]])]
 
-        >>> floor([-5.5, -4.2, -3., -0.7, 0])
-        #[-6.0, -5.0, -3.0, -1.0, 0.0]
+        >>> C.eval(C.floor([-5.5, -4.2, -3., -0.7, 0]))
+        [array([[-6., -5., -3., -1.,  0.]])]
 
-        >>> floor([[-0.6, -4.3], [1.9, -3.2]])
-        #[[-1.0, -5.0], [1.0, -4.0]]
+        >>> C.eval(C.floor([[-0.6, -4.3], [1.9, -3.2]]))
+        [array([[[-1., -5.],
+                 [ 1., -4.]]])]
 
     Args:
         arg: input tensor
@@ -221,24 +262,20 @@ def floor(arg, name=None):
     from cntk.ops.cntk2 import Floor
     return Floor(arg, name = name)
 
+
 def ceil(arg, name=None):
     """
     Ceil operation. The output of this operation is the
     element wise value rounded to the smallest integer greater than
     or equal to the input.
 
-    Examples:
-        >>> ceil([0.2, 1.3, 4., 5.5, 0.0])
-        #[1.0, 2.0, 4.0, 6.0, 0.0]
-
-        >>> ceil([[0.6, 3.3], [1.9, 5.6]])
-        #[[1.0, 4.0], [2.0, 6.0]]
-
-        >>> ceil([-5.5, -4.2, -3., -0.7, 0])
-        #[-5.0, -4.0, -3.0, 0.0, 0.0]
-
-        >>> ceil([[-0.6, -4.3], [1.9, -3.2]])
-        #[[0.0, -4.0], [2.0, -3.0]]
+    Example:
+        >>> C.eval(C.ceil([0.2, 1.3, 4., 5.5, 0.0]))
+        [array([[ 1.,  2.,  4.,  6.,  0.]])]
+        
+        >>> C.eval(C.ceil([[0.6, 3.3], [1.9, 5.6]]))
+        [array([[[ 1.,  4.],
+                 [ 2.,  6.]]])]
 
     Args:
         arg: input tensor
@@ -249,6 +286,7 @@ def ceil(arg, name=None):
     from cntk.ops.cntk2 import Ceil
     return Ceil(arg, name = name)
 
+
 def round(arg, name=None):
     """
     Round operation. The output of this operation is the
@@ -258,18 +296,20 @@ def round(arg, name=None):
     This is different from the round operation of numpy which follows
     round half to even.
 
-    Examples:
-        >>> round([0.2, 1.3, 4., 5.5, 0.0])
-        #[0.0, 1.0, 4.0, 6.0, 0.0]
+    Example:
+        >>> C.eval(C.round([0.2, 1.3, 4., 5.5, 0.0]))
+        [array([[ 0.,  1.,  4.,  6.,  0.]])]
 
-        >>> round([[0.6, 3.3], [1.9, 5.6]])
-        #[[1.0, 3.0], [2.0, 6.0]]
+        >>> C.eval(C.round([[0.6, 3.3], [1.9, 5.6]]))
+        [array([[[ 1.,  3.],
+                 [ 2.,  6.]]])]
 
-        >>> round([-5.5, -4.2, -3., -0.7, 0])
-        #[-5.0, -4.0, -3.0, -1.0, 0.0]
+        >>> C.eval(C.round([-5.5, -4.2, -3., -0.7, 0]))
+        [array([[-5., -4., -3., -1.,  0.]])]
 
-        >>> round([[-0.6, -4.3], [1.9, -3.2]])
-        #[[-1.0, -4.0], [2.0, -3.0]]
+        >>> C.eval(C.round([[-0.6, -4.3], [1.9, -3.2]]))
+        [array([[[-1., -4.],
+                 [ 2., -3.]]])]
 
     Args:
         arg: input tensor
@@ -297,12 +337,12 @@ def clip(x, min_value, max_value, name=None):
     The backward pass propagates the received gradient if no clipping occurred,
     and 0 if the value was clipped.
     
-    Examples:
-        >>> clip(2., 4., [1., 2.1, 3.0, 4.1])
-        #[2.0, 2.1, 3.0, 4.0]
+    Example:
+        >>> C.eval(C.clip([1., 2.1, 3.0, 4.1], 2., 4.))
+        [array([[ 2. ,  2.1,  3. ,  4. ]])]
         
-        >>> clip([-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.], [-10., -5., 0., 5., 10.])
-        #[-5, -4., 0., 4., 9.]
+        >>> C.eval(C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]))
+        [array([[-5., -4.,  0.,  4.,  9.]])]
     
     Args:        
         x: tensor to be clipped
@@ -322,16 +362,16 @@ def relu(x, name=None):
     of `x`: ``max(x, 0)``
 
     The output tensor has the same shape as `x`.
+
+    Example:
+        >>> C.eval(C.relu([[-1, -0.5, 0, 1, 2]]))
+        [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
     Returns:
         :class:`cntk.graph.ComputationNode`
-
-    Example:
-        >>> cntk.eval(cntk.ops.rectified_linear([[-1, -0.5, 0, 1, 2]]))
-        [[[0, 0, 0, 1, 2]]]
     """
     from cntk.ops.cntk2 import Relu
     return Relu(x, name=name)
@@ -344,6 +384,10 @@ def sigmoid(x, name=None):
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
 
     The output tensor has the same shape as `x`.
+    
+    Example:
+        >>> C.eval(C.sigmoid([-2, -1., 0., 1., 2.]))
+        [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
