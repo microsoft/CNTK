@@ -86,7 +86,7 @@ Multi-dimensional arrays are often mapped to linear memory in a continous manner
 There is some freedom in which order to map the array elements.
 Two typical mappings are *row-major order* and *column-major order*.
 
-For two dimensional arrays (matrices) consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
+For two dimensional arrays (matrices) with *row-major order* consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
 consecutive elements of the columns are contiguous.
 
 For example the matrix
@@ -101,6 +101,10 @@ For example the matrix
 
 is linearized as [1, 2, 3, 4, 5, 6] using row-major order, but as [1, 3, 5, 2, 4, 6] using column-major order.
 
+This concept extends to arrays of higher dimension than two: It is always about how a specific combination of index values is mapped to linear memory.
+If you go the elements in memory one by one and observe the corresponding tensor-indices 
+then in *row major order* the right-most index changes fastest, while in *column-major order* the leftmost index changes fastest. (see `<https://en.wikipedia.org/wiki/Row-major_order>`_ )
+
 In many programming languages like C, or C# row-major order is used. The same is true for the Python library NumPy (at least by default).
 CNTK however uses column-major order.
 
@@ -109,7 +113,7 @@ There are two circumstances where you have to be aware of this ordering:
 - When preparing input-files for CNTK. The values have to be provided in column-major order.
 - When changing the shape of a tensor. 
 
-This concept extends to arrays of higher dimensions, see `<https://en.wikipedia.org/wiki/Row-major_order>`_
+
 
     
 Computational Networks
@@ -192,9 +196,9 @@ In CNTK the compuational nodes have number of properties. Some of these can or m
 - **tag** - This is a string that is attached to the node and has to be set for certain nodes. There purpouse is not documentary but controls the behaviour of CNTK.
 
   The *tag*  property can have the following values that can be set by the user:
-- *criterion* The output of such nodes as the optimisation criterion. See `Neural Net Training`_
-- *output* The output of these nodes is written of the output.
-- *eval* The output of these nodes are used of evaluation. They might e.g. provide the error rate of a classification problem.
+- *criterion*  The output of such nodes as the optimisation criterion. See `Neural Net Training`_
+- *output*  The output of these nodes is written of the output.
+- *eval*  The output of these nodes are used of evaluation. They might e.g. provide the error rate of a classification problem.
   
 - **shape** - This is a derived property that is automatically inferred from the 
   layout of the graph. 
@@ -217,7 +221,7 @@ data.
 Dynamic Axes
 ~~~~~~~~~~~~
 
-**thilow: its not clear to me what parts f this section are important for usage and which are more general info**
+**Some parts of this should be moved to an *internals* section**
 
 Every input tensor in CNTK receives an additional (implicit) dimension usually 
 referred to as "\*". This is called the *dynamic axis* of the input.
@@ -272,7 +276,7 @@ information of the dynamic axis. As a consequence,
 Loops in Computational Networks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**thilow: its not clear to me what parts f this section are important for usage and which are more general info**
+**Some parts of this should be moved to an *internals* section**
 
 Different from the CN without a directed loop, a CN with a loop cannot be 
 computed for a sequence of samples as a batch since the next sample’s value 
