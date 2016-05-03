@@ -1225,30 +1225,30 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
             // Set CPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
                 { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                { m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                { m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                NOT_IMPLEMENTED);//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                { m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
                 { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                { m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                NOT_IMPLEMENTED);//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set CPUSparseMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                NOT_IMPLEMENTED);//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUSparseMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                NOT_IMPLEMENTED,//{ m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });

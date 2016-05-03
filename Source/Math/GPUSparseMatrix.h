@@ -7,7 +7,7 @@
 
 //#include "CPUMatrix.h"
 #include "GPUMatrix.h"
-//#include "CPUSparseMatrix.h"
+#include "CPUSparseMatrix.h"
 #include <functional>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -283,11 +283,11 @@ public:
     }
 
     //void SetValue(const CPUMatrix<ElemType>& denseMatrix);
-    void SetValue(const GPUMatrix<ElemType>& denseMatrix);
-    //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
+    void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
-    
+    void SetValue(const GPUMatrix<ElemType>& denseMatrix);
+
     GPUSPARSE_INDEX_TYPE* GetCondensedVector() const;
     void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
 
@@ -314,7 +314,7 @@ public:
 
     GPUMatrix<ElemType> CopyToDenseMatrix() const;
     void CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatrix) const;
-    //void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const;
+    void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const;
     void ChangeDeviceTo(DEVICEID_TYPE toId);
 
     GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);

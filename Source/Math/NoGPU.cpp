@@ -82,12 +82,12 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& denseMatrix)
 {
 }
+#endif
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& denseMatrix)
 {
 }
-#endif
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
@@ -186,12 +186,10 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatrix) const
 {
 }
-#if 0
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const
 {
 }
-#endif
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE toId)
 {
