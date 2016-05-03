@@ -23,6 +23,7 @@
 #include "CorpusDescriptor.h"
 #include "CompositeTransformer.h"
 #include "ConfigUtil.h"
+#include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -30,6 +31,12 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
     m_corpus(std::make_shared<CorpusDescriptor>()),
     m_provider(provider)
 {
+    int threadCount = config(L"numCPUThreads", 0);
+    if (threadCount > 0)
+    {
+        omp_set_num_threads(threadCount);
+    }
+
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", true);
     bool truncated = config(L"truncated", false);
@@ -87,7 +94,16 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
     {
         // By default randomizing the whole data set.
         size_t randomizationWindow = config(L"randomizationWindow", requestDataSize);
-        randomizer = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, BlockRandomizer::DecimationMode::chunk, true);
+        bool useLegacyRandomization = config(L"useLegacy", true);
+        bool multithreadedGetNextSequences = false;
+        BlockRandomizer::DecimationMode decimationMode = BlockRandomizer::DecimationMode::chunk;
+        if (!useLegacyRandomization)
+        {
+            decimationMode = BlockRandomizer::DecimationMode::sequence;
+            multithreadedGetNextSequences = false; 
+            randomizationWindow = 1;
+        }
+        randomizer = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, decimationMode, useLegacyRandomization, multithreadedGetNextSequences);
     }
     else
     {

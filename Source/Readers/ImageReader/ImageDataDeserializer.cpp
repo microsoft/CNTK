@@ -150,7 +150,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigPa
     labels->m_id = 1;
     labels->m_name = msra::strfun::utf16(label.ConfigName());
     labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labels->m_storageType = StorageType::dense;
+    labels->m_storageType = StorageType::sparse_csc;
     labels->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
     m_streams.push_back(labels);
 

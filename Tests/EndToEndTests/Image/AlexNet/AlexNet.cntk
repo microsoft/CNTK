@@ -45,6 +45,7 @@ Train=[
     reader = [
         verbosity = 0
         randomize = true
+        useLegacy = false
 
         # A list of deserializers to use.
         deserializers = [
@@ -65,16 +66,17 @@ Train=[
                             [
                                 type="Crop"
                                 cropType=Random
-                                ratio=0.875
+                                cropRatio=0.875
                                 jitterType=UniRatio
                             ]:[
                                 type="Scale"
                                 width=224
                                 height=224
                                 channels=3
+                                interpolations=Linear
                             ]:[
                                 type="Mean"
-                                file=$ConfigDir$/ImageNet1K_mean.xml
+                                meanFile=$ConfigDir$/ImageNet1K_mean.xml
                             ]:[
                                 type="Transpose"
                             ]
