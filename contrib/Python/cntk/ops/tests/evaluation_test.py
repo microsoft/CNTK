@@ -37,10 +37,10 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
     def numpy_op(label, softmax):
         return -np.sum(label * np.log(softmax, dtype=PRECISION_TO_TYPE[precision]), dtype=PRECISION_TO_TYPE[precision])
     
-    input_target = I([target_vector], has_dynamic_axis=True)
-    input_features = I([output_vector], has_dynamic_axis=True)
+    target = I([target_vector], has_dynamic_axis=True)
+    output = I([output_vector], has_dynamic_axis=True)
     
-    op_node = cross_entropy_with_softmax(input_target, input_features)
+    op_node = cross_entropy_with_softmax(target, output)
 
     #Forward pass test
     #==================
@@ -63,7 +63,6 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
     unittest_helper(op_node, None, expected,
             device_id=device_id,
             precision=precision, clean_up=True, backward_pass=True,
-            input_node=input_features)
-
+            input_node=output)
 
 
