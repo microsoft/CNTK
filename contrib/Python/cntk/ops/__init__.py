@@ -15,8 +15,8 @@ import numpy as np
 
 def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     """
-    This operator computes the cross entropy over the softmax of the `feature_values`.
-    This op expects the `output_vector` as unscaled, it computes softmax over 
+    This operation computes the cross entropy over the softmax of the `output_vector`.
+    It expects the `output_vector` as unscaled, and it computes softmax over 
     the `output_vector` internally.  Any `output_vector` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
@@ -45,10 +45,9 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
 
 def square_error(target_matrix, output_matrix, name=None):
     """
-    This operator computes the square error. It computes the sum of the squared 
-    difference between elements in the two input matrices. The result is a scalar 
-    (i.e., one by one matrix). This is often used as a training criterion node. 
-
+    This operation computes the sum of the squared difference between elements 
+    in the two input matrices. The result is a scalar (i.e., one by one matrix). 
+    This is often used as a training criterion node. 
     
     Example:
         >>> cntk.eval(square_error([4., 6.], [2., 1.]))
@@ -70,7 +69,7 @@ def square_error(target_matrix, output_matrix, name=None):
 
 def error_prediction(target_vector, output_vector, name=None):
     """
-    This operator computes the prediction error.It finds the index of the highest 
+    This operation computes the prediction error. It finds the index of the highest 
     value in the output_vector and compares it to the actual ground truth label. 
     The result is a scalar (i.e., one by one matrix). 
     This is often used as an evaluation criterion. It cannot be used as a 
