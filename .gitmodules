@@ -1,3 +1,7 @@
 [submodule "Source/1BitSGD"]
 	path = Source/1BitSGD
 	url = https://git.codeplex.com/cntk1bitsgd
+[submodule "Source/Multiverso"]
+	path = Source/Multiverso
+	url = https://github.com/Microsoft/multiverso.git
+	branch = master
