@@ -21,10 +21,10 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.840]
     
     Args:
@@ -45,10 +45,10 @@ def square_error(target_vector, output_vector, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> cntk.eval(square_error([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        >>> C.eval(C.square_error([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cntk.eval(square_error([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        >>> C.eval(C.square_error([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
         #[1.840]
     
     Args:
@@ -71,10 +71,10 @@ def error_prediction(target_vector, output_vector, name=None):
     defined for this operation.
     
     Example:
-        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        >>> C.eval(C.error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cntk.eval(error_prediction([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        >>> C.eval(C.error_prediction([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
         #[1.840]
     
     Args:
@@ -98,6 +98,13 @@ def plus(left, right, name=None):
     two input tensors. It supports broadcasting. In case of scalars its backward
     pass propagates the received gradient. 
 
+    Example:
+        >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
+        [array([[ 5.,  7.,  9.]])]
+        
+        >>> C.eval(C.plus([-5, -4, -3, -2, -1], [10]))
+        [array([[ 5.,  6.,  7.,  8.,  9.]])]
+
     Args:
         left: left side tensor
         right: right side tensor
@@ -114,6 +121,14 @@ def minus(left, right, name=None):
     Tensor subtraction operation. The output of this operation is left minus
     right tensor. It supports broadcasting. In case of scalars its backward
     pass propagates the received gradient. 
+
+    Example:
+        >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
+        [array([[-3., -3., -3.]])]
+        
+        >>> C.eval(C.minus([[1,2],[3,4]], 1))
+        [array([[[ 0.,  1.],
+                 [ 2.,  3.]]])]
 
     Args:
         left: left side tensor
