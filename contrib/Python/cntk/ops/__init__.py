@@ -21,15 +21,17 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
-        #[1.3862]
+        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
+        #[0.]
         
-        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
-        #[1.840]
+        >>> cntk.eval(cross_entropy_with_softmax([[0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
+        #[1.84]
     
     Args:
-        target_vector: the target valid probability distribution
-        output_vector: the unscaled computed values from the network
+        target_vector: usually it is one-hot vector where the hot bit 
+        corresponds to the label index. But it can be any probability distribution
+        over the labels.
+        output_vector: the unscaled computed output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -37,49 +39,50 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     return CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
 
-def square_error(target_vector, output_vector, name=None):
+def square_error(target_matrix, output_matrix, name=None):
     """
-    This operator computes the square error.
-    This op expects the `output_vector` as unscaled, it computes softmax over 
-    the `output_vector` internally.  Any `feature_values` input over which softmax is 
-    already computed before passing to this operator will be incorrect.
+    This operator computes the square error. It computes the sum of the squared 
+    difference between elements in the two input matrices. The result is a scalar 
+    (i.e., one by one matrix). This is often used as a training criterion node. 
+
     
     Example:
-        >>> cntk.eval(square_error([0., 0., 0., 1.], [1., 1., 1., 1.]))
-        #[1.3862]
+        >>> cntk.eval(square_error([4., 6.], [2., 1.]))
+        #[29.]
         
-        >>> cntk.eval(square_error([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
-        #[1.840]
+        >>> cntk.eval(square_error([1., 2.], [1., 2.]))
+        #[0.]
     
     Args:
-        target_vector: the target valid probability distribution
-        output_vector: the unscaled computed values from the network
+        target_matrix: target matrix, it is usually a one-hot vector where the 
+        hot bit corresponds to the label index
+        output_matrix: the output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import SquareError
-    return SquareError(target_vector, output_vector, name = name)
+    return SquareError(target_matrix, output_matrix, name = name)
 
 def error_prediction(target_vector, output_vector, name=None):
     """
     This operator computes the prediction error.It finds the index of the highest 
-    value for each column in the input matrix
-    and compares it to the actual ground truth label. The result is a scalar 
-    (i.e., one by one matrix). This is often used as an evaluation criterion. 
-    It cannot be used as a training criterion though since the gradient is not 
-    defined for this operation.
+    value in the output_vector and compares it to the actual ground truth label. 
+    The result is a scalar (i.e., one by one matrix). 
+    This is often used as an evaluation criterion. It cannot be used as a 
+    training criterion though since the gradient is not defined for this operation.
     
     Example:
-        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
-        #[1.3862]
+        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 2., 3., 4.]))
+        #[0.]
         
-        >>> cntk.eval(error_prediction([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
-        #[1.840]
+        >>> cntk.eval(error_prediction([0., 0., 1., 0.], [1., 2., 3., 4.]))
+        #[1.]
     
     Args:
-        target_vector: the target valid probability distribution
-        output_vector: the unscaled computed values from the network
+        target_vector: it is one-hot vector where the hot bit corresponds to the 
+        label index
+        output_vector: the output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
