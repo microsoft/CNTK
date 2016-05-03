@@ -508,8 +508,12 @@ Parameters =
     StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-            beta = Exp (BiasParam ((inputDim)))
-            result = beta .* x
+            beta = Exp (BiasParam ((inputDim))) # init value is 0
+
+            TraceDense (h, what) =
+                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
+
+            result = TraceDense (    beta,    'beta') .* x
         ].result
     else x
 
@@ -529,30 +533,34 @@ RNNs =
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
     [
+        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
+
         # TODO: rename to just _
-        _privateInnards = [       // encapsulate the inner workings
+        _privateInnards = [     // encapsulate the inner workings
             dh = prevState.h // previous values
             dc = prevState.c
 
-            // parameter macros--these carry their own weight matrices
+            dhs = S(dh) // previous values, stabilized
+            dcs = S(dc)
+            # note: input does not get a stabilizer here, user is meant to do that outside
+
+            // parameter macros
+            # note: each invocation comes with its own set of weights
             B() = Parameters.BiasParam (cellDim)
+            W() = Parameters.WeightParam (cellDim, inputDim) 
+            H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden
+            C() = Parameters.DiagWeightParam (cellDim)              // cell-to-hiddden (note: applied elementwise)
 
-            # note: input does not get a stabilizer here, since user can do that outside
-            W(v) = Parameters.WeightParam (cellDim, inputDim)  * v
-            H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            it = Sigmoid (W() * x + H() * dhs + C() .* dcs + B())   // input gate(t)
+            bit = it .* Tanh (W() * x + H() * dhs + B())            // applied to tanh of input network
 
-            // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
-            it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
-            bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+            ft = Sigmoid (W() * x + H() * dhs + C() .* dcs + B())   // forget-me-not gate(t)
+            bft = ft .* dc                                          // applied to cell(t-1)
 
-            ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
-            bft = ft .* dc                                     // applied to cell(t-1)
+            ct = bft + bit                                          // c(t) is sum of both
 
-            ct = bft + bit                                     // c(t) is sum of both
-
-            ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
-            ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ot = Sigmoid (W() * x + H() * dhs + C() .* S(ct) + B()) // output gate(t)
+            ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
         ]
 
         # our return values
@@ -560,8 +568,8 @@ RNNs =
         h = if outputDim != cellDim     // output/hidden state
             then [                      // project
                 Wmr = Parameters.WeightParam (outputDim, cellDim);
-                htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
-            ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                htp = Wmr * S(_privateInnards.ht)
+            ].htp
             else _privateInnards.ht     // no projection
         dim = outputDim
     ]
