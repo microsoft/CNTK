@@ -228,10 +228,3 @@ The parameters in an LSTM cell::
         return ct, ht
 
 The above function ...
-		
-
-Operators
-----------
-
-Readers
-----------
