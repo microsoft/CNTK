@@ -429,18 +429,18 @@ def softmax(x, name=None):
     The term :math:`\max_{x_i \in x}(\exp(x_i))` is subtracted for numerical
     stability.
 
+    Example:
+        >>> C.eval(C.softmax([[1, 1, 2, 3]]))
+        [array([[[ 0.082595,  0.082595,  0.224515,  0.610296]]])]
+
+        >>> C.eval(C.softmax([1, 1]))
+        [array([[ 0.5,  0.5]])]
+
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
     Returns:
         :class:`cntk.graph.ComputationNode`
-
-    Examples:
-        >>> cntk.eval(cntk.ops.softmax([[1, 1, 2, 3]]))
-        [[[0.08259454, 0.08259454, 0.22451524, 0.61029569]
-
-        >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
-        [[[0.5, 0.5]]]
     """
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
