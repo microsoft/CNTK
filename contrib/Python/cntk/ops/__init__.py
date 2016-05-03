@@ -385,6 +385,10 @@ def sigmoid(x, name=None):
 
     The output tensor has the same shape as `x`.
     
+    Example:
+        >>> C.eval(C.sigmoid([-2, -1., 0., 1., 2.]))
+        [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
+    
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
