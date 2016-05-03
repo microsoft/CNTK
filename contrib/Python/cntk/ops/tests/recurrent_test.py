@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import future_value, past_value
+from .. import future_value, past_value, dynamic_axis
 
 TENSORS = [
     # forward future_value results in [[4,5,6],[7,8,9],[10,11,12],[0.1,0.1,0.1]]
@@ -58,7 +58,7 @@ def test_op_future_value(tensor, time_step, default_value, device_id, precision)
     expected = [shift(tensor)]
     
     a = 0
-    b = I([tensor], has_dynamic_axis=True)
+    b = I([tensor], dynamic_axis=dynamic_axis())
     c = time_step    
     d = default_value  
     
@@ -103,7 +103,7 @@ def test_op_past_value(tensor, time_step, default_value, device_id, precision):
     expected = [shift(tensor)]
     
     a = 0
-    b = I([tensor], has_dynamic_axis=True)
+    b = I([tensor], dynamic_axis=dynamic_axis())
     c = time_step    
     d = default_value  
     

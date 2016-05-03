@@ -598,7 +598,7 @@ def reshape(x, shape, name=None):
 # variables_and_parameters ops
 ################################################################################
 
-def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
+def input_numpy(value, alias=None, dynamic_axis='', name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -610,7 +610,7 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
         alias (str): alias to be used in the data file
-        has_dynamic_axis (bool): If True, the outermost dimension is treated as the dynamic axis. If False, it will wrap each sample into its own 1-dimensional array.
+        dynamic_axis (str): whether the tensor has already the data
         alias (str): optional the alias to be used when serializing the data into an intermediate file
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -618,17 +618,17 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     from .. import utils
     if utils.is_tensor_list(value) or utils.is_tensor(value):
         value = np.asarray(value)
-        if has_dynamic_axis:
+        if dynamic_axis:
             cntk_shape = value[0].shape[1:]
         else:
             cntk_shape = value[0].shape
 
-        node = input(cntk_shape)
+        node = input(cntk_shape, dynamic_axis=dynamic_axis)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(
             value,
             input_alias=alias,
-            has_dynamic_axis=has_dynamic_axis,
+            dynamic_axis=dynamic_axis,
             node=node)
 
         return node

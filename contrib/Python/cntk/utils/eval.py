@@ -45,8 +45,7 @@ def eval(node):
                         # inputs have the outmost dimension for sequences
                         val = [val]
 
-                    ir = input_numpy([val], alias=p,
-                                has_dynamic_axis=False, name=p)
+                    ir = input_numpy([val], alias=p, name=p)
                     setattr(node, p, ir)
                     first = False
                 else:

@@ -47,7 +47,7 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     # Compare to numpy's implementation of np.clip(x, min, max)
     expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
     
-    op_node = I([x], has_dynamic_axis=False)
+    op_node = I([x])
     a = C(min_value)    
     b = C(max_value)
     
@@ -82,12 +82,12 @@ def test_op_sigmoid(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_dynamic_axis=False)
+    input_node = I([tensor])
     op_node = sigmoid(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -129,10 +129,10 @@ def test_op_softmax(batch, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    input_node = I(batch, has_dynamic_axis=False)
+    input_node = I(batch)
     op_node = softmax(input_node)
 
     expected = [[numpy_op(sample)] for sample in batch]
@@ -176,12 +176,12 @@ def test_op_exp(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_dynamic_axis=False)
+    input_node = I([tensor])
     op_node = exp(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -209,12 +209,12 @@ def test_op_tanh(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_dynamic_axis=False)
+    input_node = I([tensor])
     op_node = tanh(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -243,12 +243,12 @@ def test_op_relu(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
     expected = [[numpy_op(tensor)]]
 
-    input_node = I([tensor], has_dynamic_axis=False)
+    input_node = I([tensor])
     op_node = relu(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -280,12 +280,12 @@ def test_op_abs(tensor, device_id, precision):
     # ==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
     expected = [[np.abs(tensor)]]
 
-    input_node = I([tensor], has_dynamic_axis=False)
+    input_node = I([tensor])
     op_node = abs(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -327,9 +327,9 @@ def test_op_cond(flag, value_a, value_b, device_id, precision):
     value_a_as_const = C([value_a])    
     value_b_as_const = C([value_b])   
 
-    cond_as_input    = I([flag],    has_dynamic_axis=False)
-    value_a_as_input = I([value_a], has_dynamic_axis=False)
-    value_b_as_input = I([value_b], has_dynamic_axis=False)
+    cond_as_input    = I([flag])
+    value_a_as_input = I([value_a])
+    value_b_as_input = I([value_b])
 
     result = cond(cond_as_input, value_a_as_const, value_b_as_const)
     unittest_helper(result, None, expected, device_id=device_id, 

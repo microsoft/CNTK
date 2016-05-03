@@ -276,12 +276,12 @@ class LazyInputReader(object):
         input_alias (str): a short name for the input, it is how inputs are
         referenced in the data files. If not provided, it will be automatically
         assigned.
-        has_dynamic_axis (bool): whether the tensor has already the data
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
         packaged as sequences. If not, it will wrapped again in a sequence of
         length 1.
     '''
 
-    def __init__(self, batch, node, input_alias=None, has_dynamic_axis=True):
+    def __init__(self, batch, node, input_alias=None, dynamic_axis=''):
         if batch is None:
             raise ValueError(
                 'you initalized LazyInputReader without valid batch data')
@@ -293,14 +293,14 @@ class LazyInputReader(object):
         self.node = node
 
         sample = batch[0]
-        if has_dynamic_axis:
+        if dynamic_axis:
             # collecting the shapes ignoring the dynamic axis
             self.node.shape = np.asarray(sample).shape[1:]
         else:
             self.node.shape = np.asarray(sample).shape
 
         self.input_alias = input_alias
-        self.has_dynamic_axis = has_dynamic_axis
+        self.dynamic_axis = dynamic_axis
 
 
 class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
@@ -534,7 +534,7 @@ class InputMap(object):
                 if isinstance(tensor, list):
                     tensor = np.asarray(tensor)
 
-                if l.has_dynamic_axis:
+                if l.dynamic_axis:
                     # collecting the shapes ignoring the dynamic axis
                     shapes_in_tensor.add(tensor.shape[1:])
                 else:
@@ -569,7 +569,7 @@ class InputMap(object):
                 alias_tensor_map = {}
                 for node in self.unmapped_nodes:
                     l = node.reader
-                    if l.has_dynamic_axis:
+                    if l.dynamic_axis:
                         alias_tensor_map[l.input_alias] = l.batch[idx]
                     else:
                         alias_tensor_map[l.input_alias] = np.asarray([l.batch[idx]])

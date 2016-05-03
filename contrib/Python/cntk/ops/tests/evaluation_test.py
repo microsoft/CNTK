@@ -14,6 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
+from .. import dynamic_axis
 
 TARGET_OUT_PAIRS = [
     ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
@@ -37,8 +38,9 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
     def numpy_op(label, softmax):
         return -np.sum(label * np.log(softmax, dtype=PRECISION_TO_TYPE[precision]), dtype=PRECISION_TO_TYPE[precision])
     
-    target = I([target_vector], has_dynamic_axis=True)
-    output = I([output_vector], has_dynamic_axis=True)
+    axis = dynamic_axis()
+    target = I([target_vector], dynamic_axis=axis)
+    output = I([output_vector], dynamic_axis=axis)
     
     op_node = cross_entropy_with_softmax(target, output)
 
@@ -74,8 +76,9 @@ def test_op_square_error(target_matrix, output_matrix, device_id, precision):
     def numpy_op(target, output): 
         return np.sum((target-output)**2)            
     
-    target = I([target_matrix], has_dynamic_axis=True)
-    output = I([output_matrix], has_dynamic_axis=True)
+    axis = dynamic_axis()
+    target = I([target_matrix], dynamic_axis=axis)
+    output = I([output_matrix], dynamic_axis=axis)
     
     op_node = square_error(target, output)
 
@@ -124,8 +127,9 @@ def test_op_error_prediction(target_vector, output_vector, device_id, precision)
     def numpy_op(target, output): 
         return np.argmax(target) != np.argmax(output)        
     
-    target = I([target_vector], has_dynamic_axis=True)
-    output = I([output_vector], has_dynamic_axis=True)
+    axis = dynamic_axis()
+    target = I([target_vector], dynamic_axis=axis)
+    output = I([output_vector], dynamic_axis=axis)
     
     op_node = error_prediction(target, output)
 

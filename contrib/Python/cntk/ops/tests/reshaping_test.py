@@ -30,7 +30,7 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
     #==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
                         
     num_tensor_elements = np.multiply.reduce(inputShape)
@@ -38,7 +38,7 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
         
     expected_tensor = input_tensor.reshape(expectedOutputShape, order='F')
 
-    a = I([input_tensor], has_dynamic_axis=False)
+    a = I([input_tensor])
 
     # reshape into output shape
     reshaped_input = reshape(a, outputShape)
@@ -55,7 +55,7 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
     # For convienience choose '100 * expected_tensor' as weight.
     # The expected gradient is identical to this weight tensor reshaped according the input shape.
 
-    a = I([input_tensor], has_dynamic_axis=False)
+    a = I([input_tensor])
 
     # reshape into output shape
     reshaped_input = reshape(a, outputShape)

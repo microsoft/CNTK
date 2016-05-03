@@ -11,7 +11,7 @@ from ..reader import *
 from ..graph import *
 from ..context import *
 from ..ops import cntk1 as cntk1_ops
-from ..ops import constant, input_numpy
+from ..ops import constant, input_numpy, dynamic_axis
 
 from cntk.tests.test_utils import *
 
@@ -26,8 +26,9 @@ def test_two_inputs(device_id, precision):
 
     expected = a + b
 
-    op_node = I([a], has_dynamic_axis=True) + \
-        I([b], has_dynamic_axis=True)
+    axis = dynamic_axis()
+    op_node = I([a], dynamic_axis=axis) + \
+        I([b], dynamic_axis=axis)
 
     unittest_helper(op_node, None, [expected], device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)
@@ -36,19 +37,20 @@ def test_two_inputs(device_id, precision):
 def test_serialize_unmapped_node(tmpdir):
     tmpfile = str(tmpdir / 'out.txt')
     from cntk.reader import LazyInputReader
+    axis = dynamic_axis()
     i1 = input_numpy(
         # 2 samples with 2 sequences each
         [
             AA([[[1, 2]], [[3, 4]]]),
             AA([[[10, 20]]])
-        ], alias='X', has_dynamic_axis=True)
+        ], alias='X', dynamic_axis=axis)
 
     i2 = input_numpy(
         # 2 samples with 1 sequence each
         [
             AA([[[44, 55]]]),
             AA([[[66, 77]]])
-        ], has_dynamic_axis=True)
+        ], dynamic_axis=axis)
 
     expected = '''\
 0	|X 1 2 |_I_0 44 55
