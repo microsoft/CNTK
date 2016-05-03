@@ -1000,7 +1000,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 	}
 
 	if (beta == 0)
-		c.Resize(m, n);
+		c.RequireSize(m, n);
 	else
 		c.VerifySize(m, n); // Can't resize if beta != 0
 
