@@ -14,14 +14,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 struct Transformation
 {
     SlimTransformerPtr m_transfromer;
-    size_t m_streamId;
+    std::wstring m_streamName;
 };
 
 class CompositeTransformer : public Transformer
 {
 public:
-    CompositeTransformer(const std::vector<Transformation>& transformations) : m_transformations(transformations)
+    CompositeTransformer(const std::vector<Transformation>& transformations)
     {
+        for (const auto& t: transformations)
+        {
+            m_transformations.push_back(std::make_pair(t, 0ul));
+        }
     }
 
     // Initializes the transformer.
@@ -34,7 +38,16 @@ public:
         m_chainOfStreamDescriptions.push_back(streams);
         for (auto& t : m_transformations)
         {
-            streams[t.m_streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*streams[t.m_streamId]));
+            // filling in stream id for the transform
+            for (const auto& s: streams)
+            {
+                if (s->m_name == t.first.m_streamName)
+                {
+                    t.second = s->m_id;
+                }
+            }
+
+            streams[t.second] = std::make_shared<StreamDescription>(t.first.m_transfromer->Transform(*streams[t.second]));
             m_chainOfStreamDescriptions.push_back(streams);
         }
     }
@@ -45,7 +58,7 @@ public:
         assert(m_next != nullptr);
         for (auto& t : m_transformations)
         {
-            t.m_transfromer->StartEpoch(config);
+            t.first.m_transfromer->StartEpoch(config);
         }
         m_next->StartEpoch(config);
     }
@@ -72,7 +85,7 @@ public:
         {
             for (auto& t : m_transformations)
             {
-                sequences.m_data[t.m_streamId][j] = t.m_transfromer->Transform(sequences.m_data[t.m_streamId][j]);
+                sequences.m_data[t.second][j] = t.first.m_transfromer->Transform(sequences.m_data[t.second][j]);
             }
         }
 
@@ -81,7 +94,7 @@ public:
 
 private:
     TransformerPtr m_next;
-    std::vector<Transformation> m_transformations;
+    std::vector<std::pair<Transformation, size_t>> m_transformations;
     std::vector<std::vector<StreamDescriptionPtr>> m_chainOfStreamDescriptions;
 };
 

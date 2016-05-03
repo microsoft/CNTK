@@ -99,6 +99,8 @@ class SlimScaleTransformer : public SlimImageTransformerBase
 public:
     explicit SlimScaleTransformer(const ConfigParameters& config);
 
+    StreamDescription Transform(const StreamDescription& inputStream) override;
+
 private:
     virtual void Apply(size_t id, cv::Mat &mat) override;
 

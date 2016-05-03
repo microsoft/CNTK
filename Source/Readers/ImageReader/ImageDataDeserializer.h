@@ -10,6 +10,7 @@
 #include "ByteReader.h"
 #include "ImageConfigHelper.h"
 #include <unordered_map>
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -21,6 +22,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ImageDataDeserializer : public DataDeserializerBase
 {
 public:
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+
+    // TODO: This constructor should be deprecated. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
@@ -34,7 +38,7 @@ public:
 
 private:
     // Creates a set of sequence descriptions.
-    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config);
+    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, bool isMultiCrop);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
     struct ImageSequenceDescription : public SequenceDescription

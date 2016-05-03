@@ -11,6 +11,7 @@
 #include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
+#include <StringUtil.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -115,13 +116,63 @@ public:
     }
 };
 
+// TODO: Provide only sequences specified in the corpus descriptor.
+ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigParameters& config)
+{
+    ConfigParameters inputs = config("inputs");
+    std::vector<std::string> featureNames = GetSectionsWithParameter(inputs, "transforms");
+    std::vector<std::string> labelNames = GetSectionsWithParameter(inputs, "labelDim");
+
+    // TODO: currently support only one feature and label section.
+    if (featureNames.size() != 1 || labelNames.size() != 1)
+    {
+        RuntimeError(
+            "ImageReader currently supports a single feature and label stream. '%d' features , '%d' labels found.",
+            static_cast<int>(featureNames.size()),
+            static_cast<int>(labelNames.size()));
+    }
+
+    string precision = (ConfigValue)config("precision", "float");
+
+    // Feature stream.
+    ConfigParameters featureSection = inputs(featureNames[0]);
+    auto features = std::make_shared<StreamDescription>();
+    features->m_id = 0;
+    features->m_name = msra::strfun::utf16(featureSection.ConfigName());
+    features->m_storageType = StorageType::dense;
+    features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    m_streams.push_back(features);
+
+    // Label stream.
+    ConfigParameters label = inputs(labelNames[0]);
+    size_t labelDimension = label("labelDim");
+    auto labels = std::make_shared<StreamDescription>();
+    labels->m_id = 1;
+    labels->m_name = msra::strfun::utf16(label.ConfigName());
+    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
+    labels->m_storageType = StorageType::dense;
+    labels->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    m_streams.push_back(labels);
+
+    m_labelGenerator = labels->m_elementType == ElementType::tfloat ?
+        (LabelGeneratorPtr)std::make_shared<TypedLabelGenerator<float>>(labelDimension) :
+        std::make_shared<TypedLabelGenerator<double>>(labelDimension);
+
+    m_grayscale = config(L"grayscale", false);
+
+    // TODO: multiview should be done on the level of randomizer/transformers - it is responsiblity of the
+    // TODO: randomizer to collect how many copies each transform needs and request same sequence several times.
+    bool multiViewCrop = config(L"multiViewCrop", false);
+    CreateSequenceDescriptions(config(L"file"), labelDimension, multiViewCrop);
+}
+
 ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 {
     ImageConfigHelper configHelper(config);
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
     m_grayscale = configHelper.UseGrayscale();
-	const auto& label = m_streams[configHelper.GetLabelStreamId()];
+    const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
     // Expect data in HWC.
@@ -147,7 +198,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension, configHelper);
+    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
 }
 
 // Descriptions of chunks exposed by the image reader.
@@ -173,7 +224,7 @@ void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<Seq
     result.push_back(m_imageSequences[chunkId]);
 }
 
-void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config)
+void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, bool isMultiCrop)
 {
     std::ifstream mapFile(mapPath);
     if (!mapFile)
@@ -181,7 +232,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
-    size_t itemsPerLine = config.IsMultiViewCrop() ? 10 : 1;
+    size_t itemsPerLine = isMultiCrop ? 10 : 1;
     size_t curId = 0;
     std::string line;
     PathReaderMap knownReaders;

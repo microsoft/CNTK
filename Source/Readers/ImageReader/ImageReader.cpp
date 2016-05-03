@@ -54,20 +54,20 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
 
     randomizer->Initialize(nullptr, config);
 
-    size_t featureStreamId = configHelper.GetFeatureStreamId();
-    ConfigParameters featureStream = config(m_streams[featureStreamId]->m_name);
+    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()]->m_name;
+    ConfigParameters featureStream = config(featureName);
 
     // Create transformations.
     std::vector<Transformation> transformations;
-    transformations.push_back(Transformation{ std::make_shared<SlimCropTransformer>(featureStream), featureStreamId });
-    transformations.push_back(Transformation{ std::make_shared<SlimScaleTransformer>(featureStream), featureStreamId });
-    transformations.push_back(Transformation{ std::make_shared<SlimColorTransformer>(featureStream), featureStreamId });
-    transformations.push_back(Transformation{ std::make_shared<SlimIntensityTransformer>(featureStream), featureStreamId });
-    transformations.push_back(Transformation{ std::make_shared<SlimMeanTransformer>(featureStream), featureStreamId });
+    transformations.push_back(Transformation{ std::make_shared<SlimCropTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<SlimScaleTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<SlimColorTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<SlimIntensityTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<SlimMeanTransformer>(featureStream), featureName });
 
     if (configHelper.GetDataFormat() == CHW)
     {
-        transformations.push_back(Transformation{ std::make_shared<SlimTransposeTransformer>(featureStream), featureStreamId });
+        transformations.push_back(Transformation{ std::make_shared<SlimTransposeTransformer>(featureStream), featureName });
     }
 
     m_transformer = std::make_shared<CompositeTransformer>(transformations);

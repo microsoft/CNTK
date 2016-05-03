@@ -303,6 +303,14 @@ SlimScaleTransformer::SlimScaleTransformer(const ConfigParameters& config) : Sli
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
+StreamDescription SlimScaleTransformer::Transform(const StreamDescription& inputStream)
+{
+    SlimImageTransformerBase::Transform(inputStream);
+    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(m_imgWidth, m_imgHeight, m_imgChannels).AsTensorShape(HWC));
+    return m_outputStream;
+}
+
+
 void SlimScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
@@ -383,18 +391,15 @@ SlimTransposeTransformer::SlimTransposeTransformer(const ConfigParameters&)
 StreamDescription SlimTransposeTransformer::Transform(const StreamDescription& inputStream)
 {
     m_inputStream = inputStream;
-
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
-
-    // Changing from NHWC to NCHW
-    m_outputStream = m_inputStream;
-    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
-
     if (m_inputStream.m_storageType != StorageType::dense)
     {
         LogicError("Transpose transformer supports only dense streams.");
     }
 
+    // Changing from NHWC to NCHW
+    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
+    m_outputStream = m_inputStream;
+    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
     return m_outputStream;
 }
 
