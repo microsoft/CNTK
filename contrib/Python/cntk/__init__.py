@@ -13,3 +13,4 @@ from . import ops
 from .optimizer import *
 from .reader import UCIFastReader, CNTKTextFormatReader
 from .ops import *
+from .utils.eval import eval

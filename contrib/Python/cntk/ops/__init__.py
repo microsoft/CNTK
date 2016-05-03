@@ -37,11 +37,11 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     return CrossEntropyWithSoftmax(target_values, feature_values, name = name)
 
-def square_error(target_values, feature_values, name=None):
+def square_error(target_vector, output_vector, name=None):
     """
     This operator computes the square error.
-    This op expects the `feature_values` as unscaled, it computes softmax over 
-    the `feature_values` internally.  Any `feature_values` input over which softmax is 
+    This op expects the `output_vector` as unscaled, it computes softmax over 
+    the `output_vector` internally.  Any `feature_values` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
     Example:
@@ -52,21 +52,23 @@ def square_error(target_values, feature_values, name=None):
         #[1.840]
     
     Args:
-        target_values: the target valid probability distribution
-        feature_values: the unscaled computed values from the network
+        target_vector: the target valid probability distribution
+        output_vector: the unscaled computed values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import SquareError
-    return SquareError(target_values, feature_values, name = name)
+    return SquareError(target_vector, output_vector, name = name)
 
-def error_prediction(target_values, feature_values, name=None):
+def error_prediction(target_vector, output_vector, name=None):
     """
-    This operator computes the prediction error.
-    This op expects the `feature_values` as unscaled, it computes softmax over 
-    the `feature_values` internally.  Any `feature_values` input over which softmax is 
-    already computed before passing to this operator will be incorrect.
+    This operator computes the prediction error.It finds the index of the highest 
+    value for each column in the input matrix
+    and compares it to the actual ground truth label. The result is a scalar 
+    (i.e., one by one matrix). This is often used as an evaluation criterion. 
+    It cannot be used as a training criterion though since the gradient is not 
+    defined for this operation.
     
     Example:
         >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
@@ -76,14 +78,14 @@ def error_prediction(target_values, feature_values, name=None):
         #[1.840]
     
     Args:
-        target_values: the target valid probability distribution
-        feature_values: the unscaled computed values from the network
+        target_vector: the target valid probability distribution
+        output_vector: the unscaled computed values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ErrorPrediction
-    return ErrorPrediction(target_values, feature_values, name = name)
+    return ErrorPrediction(target_vector, output_vector, name = name)
 
 
 ################################################################################
