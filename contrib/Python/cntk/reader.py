@@ -35,17 +35,15 @@ class UCIFastReader(AbstractReader):
 
     Note that the dimensions are not inferred from the input node's shape,
     because in case of a label node the dimension does not match the shape
-    which would be (``numOfClasses``,1).
+    which would be (``numOfClasses``, 1).
 
     Args:
         filename (str): the name of the file where the data is stored
-        custom_delimiter (str): what delimiter is used to separate columns, specify
-        it in case it neither tab nor white spaces.
+        custom_delimiter (str): what delimiter is used to separate columns, specify it in case it neither tab nor white spaces.
         input_start (int): the start column   
         input_dim (int): the number of columns
         num_of_classes (int): the number of classes
-        label_mapping_file (str): the mapping file path, it can be simply with
-        all the possible classes, one per line
+        label_mapping_file (str): the mapping file path, it can be simply with all the possible classes, one per line
     """
 
     def __init__(self, filename, input_start, input_dim,
@@ -112,11 +110,11 @@ class CNTKTextFormatReader(AbstractReader):
 
     Args:
         filename (str): path to the input file to read from
-        randomize (str): whether the input should be randomized. Valid values: 'auto' or 'none'
-        skip_sequence_ids (bool): whether the sequence ID should be ignored 
-        max_errors (int): number of errors to accept before throwing an exception
-        trace_level (int): verbosity of output (0=only errors .. 2=all output)
-        chunk_size_in_bytes (int): smallest reading unit in bytes (default 32MB)
+        randomize (str or int): whether the input should be randomized. `auto` (default): randomly shuffle the input data; integer value: shuffle within a window of that size; `none`: do not shuffle at all and take the input in the order it was read
+        skip_sequence_ids (bool): if ``True``, the sequence ID will be ignored and every line will be treated as a separate sequence
+        max_errors (int): number of errors to ignore before throwing an exception
+        trace_level (int): verbosity of output (``0``=only errors, ``1``=errors + warning, ``2``=all output)
+        chunk_size_in_bytes (int): number of bytes to read from disk in a single read operation (default 32MB)
         num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
 
     """
@@ -415,7 +413,7 @@ class InputMap(object):
     binds input nodes to the aliases in a reader.
 
     Args:
-        reader (descendent of :class:`comp.reader.AbstractReader`)
+        reader (:class:`cntk.reader.CNTKTextFormatReader`): the reader for which this instance defines the mapping. If ``None``, then the inputs are expected to be NumPy arrays, and an temporary reader will be set up automatically.
 
     Example::
     

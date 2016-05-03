@@ -60,6 +60,7 @@ class If(ComputationNode):
         self.thenVal = thenVal
         self.elseVal = elseVal
         self.params_with_defaults = []
+        self.inputs = ['cond', 'thenVal', 'elseVal']
 
 class Sign(ComputationNode):
     def __init__(self, x, op_name='Sign', name=None):

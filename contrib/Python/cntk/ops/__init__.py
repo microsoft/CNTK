@@ -369,7 +369,6 @@ def relu(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -391,7 +390,6 @@ def sigmoid(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -406,10 +404,12 @@ def tanh(x, name=None):
     The output tensor has the same shape as `x`.
     
     Example:
+        >>> C.eval(C.tanh([[1,2],[3,4]]))
+        [array([[[ 0.761594,  0.964028],
+                 [ 0.995055,  0.999329]]])]
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -426,18 +426,17 @@ def softmax(x, name=None):
     The term :math:`\max_{x_i \in x}(\exp(x_i))` is subtracted for numerical
     stability.
 
+    Example:
+        >>> C.eval(C.softmax([[1, 1, 2, 3]]))
+        [array([[[ 0.082595,  0.082595,  0.224515,  0.610296]]])]
+
+        >>> C.eval(C.softmax([1, 1]))
+        [array([[ 0.5,  0.5]])]
+
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
-
-    Examples:
-        >>> cntk.eval(cntk.ops.softmax([[1, 1, 2, 3]]))
-        [[[0.08259454, 0.08259454, 0.22451524, 0.61029569]
-
-        >>> cntk.eval(cntk.ops.softmax([[1, 1]]))
-        [[[0.5, 0.5]]]
     """
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
@@ -449,9 +448,12 @@ def exp(x, name=None):
 
     :math:`exp(x) = {e^x}`
 
+    Example:
+        >>> C.eval(C.exp([0., 1.]))
+        [array([[ 1.      ,  2.718282]])]
+
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -465,15 +467,14 @@ def abs(x, name=None):
 
     :math:`abs(x) = |x|`
 
+    Example:
+        >>> C.eval(C.abs([-1, 1, -2, 3]))
+        [array([[ 1.,  1.,  2.,  3.]])]
+
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
-
-    Example:
-        >>> cntk.eval(cntk.ops.abs([-1, 1, -2, 3]))
-        [[1, 1, 2, 3]]
     """
     from cntk.ops.cntk2 import Abs
     return Abs(x, name=name)
@@ -486,8 +487,9 @@ def cond(flag, value_if_true, value_if_false, name=None):
     Behaves analogously to numpy.where(...).
 
     Example:
-    >>> cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000])
-    # [1, 10, 200, 1000, 10000]
+        >>> C.eval(C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]))
+        [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
+                   1.00000000e+03,   1.00000000e+04]])]
 
     Args:
         flag: tensor
@@ -576,8 +578,9 @@ def reshape(x, shape, name=None):
     The backward pass propagates the received gradient for the output-shape to the input shape.
     
     Examples:
-        >>> reshape([[0,1],[2,3],[4,5]], (2:3))
-        #[[0, 2, 4], [1, 3, 5]]
+        >>> C.eval(C.reshape([[0,1],[2,3],[4,5]], (2,3)))
+        [array([[[ 0.,  4.,  3.],
+                 [ 2.,  1.,  5.]]])]
             
     Args:        
         x: tensor to be reshaped
@@ -602,12 +605,15 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
 
+    Example:
+        >>> C.eval(C.input_numpy(np.ones((3, 2))))
+        [array([[ 1.,  1.]]), array([[ 1.,  1.]]), array([[ 1.,  1.]])]
+
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
         alias (str): alias to be used in the data file
         has_dynamic_axis (bool): If True, the outermost dimension is treated as the dynamic axis. If False, it will wrap each sample into its own 1-dimensional array.
         alias (str): optional the alias to be used when serializing the data into an intermediate file
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
