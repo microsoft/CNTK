@@ -178,9 +178,16 @@ def element_divide(left, right, name=None):
     """
     Element-wise division operation. The output of this operation is the
     element-wise division of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates 1/right 
+    case of scalars its backward pass to left propagates :math:`1/right` 
     times the received gradient, and the backward pass to right propagates 
-    (-left/right^2) times the received gradient. 
+    :math:`(-left/right^2)` times the received gradient. 
+
+    Example:
+        >>> C.eval(C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        [array([[ 2.,  4.,  8.,  0.]])]
+        
+        >>> C.eval(C.element_divide([5., 10., 15., 30.], [2.]))
+        [array([[  2.5,   5. ,   7.5,  15. ]])]
 
     Args:
         left: left side tensor
