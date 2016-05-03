@@ -21,6 +21,10 @@
         if enableTracing
         then Trace (h, say=what, logFirst=10, logFrequency=traceFrequency, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
         else h
+    TraceSparse_all (h, what) =
+        if enableTracing
+        then Trace (h, say=what, logFirst=10, logFrequency=1, logGradientToo=false, /*onlyUpToRow=beamDepth*beamDepth, onlyUpToT=3,*/ format=formatSparse)
+        else h
 
     Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [
         operation = 'Trace' ; inputs = node

@@ -1,19 +1,27 @@
-# G2P.cntk
-
-makeMode = false
+############################################################################
+# G2P.cntk                                                                 #
+#                                                                          #
+# Example for sequence-to-sequence modeling for letter-to-sound conversion #
+# on the CMUDict                                                           #
+############################################################################
 
 # directory defaults (if not overridden)
+
 RunRootDir = "../.."             # default if not overridden
 DataDir    = "$RunRootDir$/Data"
 CacheDir   = "$DataDir$/cache"   # (not used currently)
 ExpRootDir = "$RunRootDir$"
 
+# command to execute
+
 command = train:test:write
 #command = write
 #command = dump
+makeMode = false
 
 # experiment id
 
+# 30-1: dumping all sequences with a small model, to test reader
 # 30-2: fixed #samples for momentum calculation
 # 30-3: after 'aux' input to LSTMP, in prep for more correct stabiliziation
 # 30-4: same as 30-5 but move to new folder and reenabled memsharing
@@ -36,7 +44,7 @@ command = train:test:write
 # 27-2: some refactoring, went back to 26-4 from LMSequenceReader
 # 27-1: fixed slicing
 # 27-0: incorrect slicing, dropped first input
-deviceId = 1
+deviceId = 0
 ExpId = 30-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
 decodeModel = 21
@@ -68,27 +76,28 @@ dumpModelPath = "$modelPath$.2" # model to dump if needed
 confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
+startSymbol = "<s>"
 
+#useCNTKTextFormatReader = false
 #inputVocabSize = 69
 #labelVocabSize = 69
-#trainFile = "g014b2b.train-dev-20-21.bsf.joint"
-##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
-#validFile = "g014b2b.train-dev-1-21.bsf.joint"
-#testFile  = "g014b2b.test.bsf.joint"
-##testFile  = "g014b2b.test.bsf.joint.masked"
-#startSymbol = "<s>"
-#useCNTKTextFormatReader = false
 #shareEmbeddings = true
+#fileExt = "joint"
+#readerType = "LMSequenceReader"
 
+useCNTKTextFormatReader = true
 inputVocabSize = 29     # 26 letters plus start, end, apostrophe
 labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
-trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
-#trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
-validFile = "g014b2b.train-dev-1-21.bsf.ctf"
-testFile  = "g014b2b.test.bsf.ctf"
-startSymbol = "<s>"
-useCNTKTextFormatReader = true
 shareEmbeddings = false
+fileExt = "ctf"
+readerInputDef = [ rawInput = [ alias = "s" ; dim = $inputVocabSize$ ; format = "sparse" ] ; rawLabels = [ alias = "t" ;  dim = $labelVocabSize$ ;  format = "sparse" ] ]
+readerType = "CNTKTextFormatReader"
+
+# pathnames
+trainFile = "g014b2b.train-dev-20-21.bsf.$fileExt$"
+#trainFile = "g014b2b.train-dev-1-21.bsf.$fileExt$" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.$fileExt$"
+testFile  = "g014b2b.test.bsf.$fileExt$"
 
 #######################################
 #  network definition                 #
@@ -104,6 +113,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     include "S2SLib.bs"
 
     # import general config options from outside config values
+    useCNTKTextFormatReader = $useCNTKTextFormatReader$
+
     inputVocabDim = $inputVocabSize$
     labelVocabDim = $labelVocabSize$
 
@@ -132,37 +143,24 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # inputs
     #############################################################
 
-    # Inputs must be defined on top-scope level in order to get a clean name.
-    useCNTKTextFormatReader = $useCNTKTextFormatReader$
-
-    # enable this for LMSequenceReader
-    #rawInput  = Input (inputVocabDim, tag='feature')
-    #rawLabels = rawInput
-
-    # enable this for CNTKTextFormatReader
-    rawInput  = src
-    rawLabels = tgt
-    inputAxis = DynamicAxis() # axes must be defined on top-scope level to get a clean name
-    src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis)
-    tgt = /*Sparse*/Input (labelVocabDim)
+    # inputs and axes must be defined on top-scope level in order to get a clean node name from BrainScript.
+    inputAxis = DynamicAxis()
+    rawInput  = if useCNTKTextFormatReader && !isAutoencoder
+                then Input (inputVocabDim, dynamicAxis=inputAxis, tag='feature')
+                else Input (inputVocabDim,                        tag='feature')
+    rawLabels = if useCNTKTextFormatReader && !isAutoencoder
+                then Input (labelVocabDim, tag='label')
+                else rawInput
 
     # get out input and label data
-    # TODO: This needs more sorting-out.
+    # Specifically, if the input and label is on a single line, we must split it in two.
     streams = [
-        out = if isAutoencoder
-        then [
-            # for an auto-encoder, both are the same
-            input  = rawInput
-            labels = rawInput
-        ]
-        else if useCNTKTextFormatReader then [
-            input  = TraceSparse (src, 'inp')
-            labels = TraceSparse (tgt, 'lbl')
+        out = if isAutoencoder || useCNTKTextFormatReader then [
+            input  = TraceSparse (rawInput, 'inp')
+            labels = TraceSparse_all (rawLabels, 'lbl')
         ]
         else [
-            # we encode input and label as a single input; this splits it into two
-            # This dance will become unnecessary once the new Reader API is fully hooked in.
-            separatorRow = 2                                                                             # row index of separator symbokl 
+            separatorRow = 2                                                                             # row index of separator symbol 
             isSeparator = RowSlice (separatorRow, 1, rawInput)                                           # cut out the separator as a flag
             inInput  = BS.Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator) # flag sequence: word is input...
             inLabels = BS.Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
@@ -171,16 +169,13 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         ]
     ].out
 
-    # inputs and labels are expected to be surrounded by sentence delimiters, e.g. <s> A B C </s> ==> <s> D E F </s>
-    # The encoder uses all tokens of 'input', while the labels used exclude the initial sentence start, which is only used as the LM history.
+    # inputs and labels are expected to be surrounded by sentence delimiters, e.g. <s> A B C </s>  ==>  <s> D E F </s>
+    # The encoder uses all tokens of 'input', while for the target labels we must exclude the initial sentence start, which is only used as the LM history.
 
     inputSequence = Pass (streams.input)                             # e.g. <s> A   B   C    </s>
     labelSequence = Pass (Slice (1,  0, streams.labels,  axis=-1))   # e.g. D   E   F   </s>
     labelSentenceStart = Pass (BS.Sequences.First (streams.labels))  # e.g. <s>
-
-    #labelSequence  = Pass (streams.labels)                   # e.g. A   B   C   </s>
-
-    inputSequenceDim = inputVocabDim # TODO: they are the same; but route these through the struct above
+    inputSequenceDim = inputVocabDim
     labelSequenceDim = labelVocabDim
 
     isFirstLabel = BS.Loop.IsFirst (labelSequence)
@@ -210,25 +205,26 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     #############################################################
 
     # TODO: do not reverse our inputs; instead, if needed, use a backwards-running loop here
+
     encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
     encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim,
-        previousHook=BS.RNNs.NextHC,
+        previousHook=BS.RNNs.NextHC,    # TODO: change back to PreviousHC!!!
         enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[Length (encoderDims)-1]
 
-    # that last frame should be fed as an additional input to every decoder step
-    # Three ways of passing encoder state:
+    # There are three ways of passing encoder state:
     #  1. as initial state for decoder (Google style)
     #  2. as side information for every decoder step (NYU style)
     #  3. attention
 
+    # get the final encoder state for use as the initial state
     thoughtVector = [
         h = BS.Sequences.Last (encoderOutput.h)
         c = BS.Sequences.Last (encoderOutput.c)
         dim = encoderOutput.dim
     ]
 
-    thoughtVectorPadded = [ # padded with zeroes until end of target sequence
+    thoughtVectorBroadcast = [ # broadcast to all time steps of the target sequence
         h = BS.Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
         c = BS.Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.c)
         dim = thoughtVector.dim
@@ -238,8 +234,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # decoder reordering hook: propagation of beam hypotheses
     #############################################################
 
-    # we bake into the LSTMs to multiply h and c with beamSearchReorderHook, which we will patch in decoding
-    # For beam decoding, this matrix will be replaced by a per-sample matrix that reorders hypotheses according to
+    # we bake into the LSTMs to multiply h and c with the 'beamSearchReorderHook' matrix, which is
+    # a dummy in training but will be patched through model editing for beam decoding.
+    # Specifically, the decoder will replace this by a per-sample matrix that reorders hypotheses according to
     # how they propagate. E.g. the 2nd best in a frame may be the history of the 3rd best in the subsequent frame
 
     beamSearchReorderHook = Pass (BS.Constants.OnesTensor (1:1))
@@ -255,8 +252,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     PreviousHCFromThoughtVectorWithReorderingHook (lstmState) = [ # with both thought vector and beam-search hook
        isFirst = BS.Loop.IsFirst (initialState.h)
        # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
-       h = BS.Boolean.If (isFirst, thoughtVectorPadded.h, BS.Loop.Previous (lstmState.h * beamSearchReorderHook)) # hidden state(t-1)
-       c = BS.Boolean.If (isFirst, thoughtVectorPadded.c, BS.Loop.Previous (lstmState.c * beamSearchReorderHook)) # cell(t-1)
+       h = BS.Boolean.If (isFirst, thoughtVectorBroadcast.h, BS.Loop.Previous (lstmState.h * beamSearchReorderHook)) # hidden state(t-1)
+       c = BS.Boolean.If (isFirst, thoughtVectorBroadcast.c, BS.Loop.Previous (lstmState.c * beamSearchReorderHook)) # cell(t-1)
        dim = lstmState.dim
     ]
 
@@ -264,11 +261,16 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # decoder history hook: LM history, from ground truth vs. output
     #############################################################
 
-    decoderHistoryFromGroundTruth = labelsEmbedded              # decoder input for training is ground truth...
-    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z))) # ...but for (greedy) decoding, the decoder's output is its input
+    # these are the two choices for the input to the decoder network
+    decoderHistoryFromGroundTruth = labelsEmbedded              # for training, decoder input is ground truth...
+    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z))) # ...but for (greedy) decoding, the decoder's output is its previous input
 
     # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
+
+    #############################################################
+    # decoder
+    #############################################################
 
     decoderInput    = Pass (BS.Boolean.If (isFirstLabel, labelSentenceStartEmbeddedScattered, BS.Loop.Previous (decoderHistoryHook)))
     decoderInputDim = labelEmbeddingDim
@@ -276,17 +278,13 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderDynamicAxis = labelsEmbedded
     FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
 
-    #############################################################
-    # decoder
-    #############################################################
-
     # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
-    # NYU style: The decoder starts with hidden state 0 and takes as input [thoughtVectorPadded.h; previous word].
+    # NYU style: The decoder starts with hidden state 0 and takes as input [thoughtVectorBroadcast.h; previous word].
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
         if i == 0
         then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
-                                                                       RowStack (S(thoughtVectorPadded.h) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
+                                                                       RowStack (S(thoughtVectorBroadcast.h) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
                                                                        previousHook=PreviousHCWithReorderingHook,
                                                                        enableSelfStabilization=useStabilizer)
              else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
@@ -335,49 +333,57 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 #######################################
 
 reader = [
-    readerType = "CNTKTextFormatReader" 
+    readerType = "$readerType$"
     file = "$DataDir$/$trainFile$"
-    #randomize="none"
-    randomize="auto"
+    randomize = "auto"
+
+    # specific to CNTKTextFormatReader
     skipSequenceIds = "false"
     maxErrors = 100
     traceLevel = 2
     chunkSizeInBytes = 30000000 # large enough for entire data set
+
+    # specific to LMSequenceReader
+    mode = "softmax"                    # TODO: find out what this means
+    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
  
-    input = [
-        src  = [
-            alias = "s"
-            dim = $inputVocabSize$
-            format = "sparse"
-        ]
-        tgt = [
-            alias = "t"
-            dim = $labelVocabSize$
-            format = "sparse"
-        ]
-    ]
+    input = $readerInputDef$
+    #[
+    #    rawInput = [
+    #        alias = "s"
+    #        dim = $inputVocabSize$
+    #        format = "sparse"
+    #    ]
+    #    rawLabels = [
+    #        alias = "t"
+    #        dim = $labelVocabSize$
+    #        format = "sparse"
+    #    ]
+    #]
 ]
 
 cvReader = [
-    readerType = "CNTKTextFormatReader" 
+    readerType = "$readerType$"
     file = "$DataDir$/$validFile$"
-    randomize="none"
+    randomize = "none"
     skipSequenceIds = "false"
     maxErrors = 100
     traceLevel = 2
  
-    input = [
-        src  = [
-            alias = "s"
-            dim = $inputVocabSize$
-            format = "sparse"
-        ]
-        tgt = [
-            alias = "t"
-            dim = $labelVocabSize$     # 39 phonemes (~AX missing), start and end symbol (in index 0)
-            format = "sparse"
-        ]
-    ]
+    input = $readerInputDef$
+    #input = [
+    #    rawInput  = [
+    #        alias = "s"
+    #        dim = $inputVocabSize$
+    #        format = "sparse"
+    #    ]
+    #    rawLabels = [
+    #        alias = "t"
+    #        dim = $labelVocabSize$     # 39 phonemes (~AX missing), start and end symbol (in index 0)
+    #        format = "sparse"
+    #    ]
+    #]
 ]
 
 #######################################
@@ -392,9 +398,9 @@ train = [
     # BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        #minibatchSize = 128:128:256:512
+        minibatchSize = 128:128:256:512
         #minibatchSize = 64:64:128:256
-        minibatchSize = 70:70:70:140:280
+        #minibatchSize = 70:70:70:140:280
         learningRatesPerSample = 0.0035*2:0.002 #0.01 #0.005 # 0.01
         momentumAsTimeConstant = 1000 #2500
         gradientClippingWithTruncation = true   # (as opposed to clipping the Frobenius norm of the matrix)
