@@ -144,19 +144,25 @@ One of the most exciting areas in deep learning is the powerful idea of recurren
 neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the deep 
 learning world. They are networks with loops in them and they allow us to model the 
 current state given the result of a previous state. In other words, they allow information 
-to persist.
+to persist. So, while a traditional neural network layer can be thought of as having data 
+flow through as in the figure on the left below, an RNN layer can be seen as the figure 
+on the right.
 
-.. images:: images/nn_layer.png
-
+.. figure:: images/nn_layers.png
+    :width: 600px
+    :alt: NN Layers
+	
 A particular type of RNN -- the Long Short Term Memory (LSTM) network -- is exceedingly 
 useful and in practice is what we commonly use when implementing an RNN. For more on why 
 LSTMs are so powerful, see, e.g. http://colah.github.io/posts/2015-08-Understanding-LSTMs/. 
 For our purposes, we will concentrate on the central feature of the LSTM model: the `memory 
 cell`. 
 
-.. image:: images/lstm_cell.png
+.. figure:: images/lstm_cell.png
     :width: 400px
     :alt: LSTM cell
+	
+    An LSTM cell.
 
 The ...
 
