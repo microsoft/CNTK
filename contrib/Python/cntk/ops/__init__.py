@@ -578,8 +578,9 @@ def reshape(x, shape, name=None):
     The backward pass propagates the received gradient for the output-shape to the input shape.
     
     Examples:
-        >>> reshape([[0,1],[2,3],[4,5]], (2:3))
-        #[[0, 2, 4], [1, 3, 5]]
+        >>> C.eval(C.reshape([[0,1],[2,3],[4,5]], (2,3)))
+        [array([[[ 0.,  4.,  3.],
+                 [ 2.,  1.,  5.]]])]
             
     Args:        
         x: tensor to be reshaped
@@ -603,6 +604,10 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
+
+    Example:
+        >>> C.eval(C.input_numpy(np.ones((3, 2))))
+        [array([[ 1.,  1.]]), array([[ 1.,  1.]]), array([[ 1.,  1.]])]
 
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
