@@ -935,12 +935,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
 
+        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
         size_t numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means accross-worker aggregate for this one minibatch.
-        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         size_t aggregateNumSamples = actualMBSize;
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork);
 

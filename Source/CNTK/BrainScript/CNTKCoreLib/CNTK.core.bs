@@ -401,47 +401,48 @@ Sequences = [
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)
 
-    # TakeWhile and DropWhile
-    TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
-    SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
-    _WhilePredicate (DelayFn, predicate, input) =
-    [
-        whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
-    ].whilePredicateRec
-    # TODO: do we need operations from the back?
-
     # First and Take
     # LINQ allows predicates as well.
-    First (x)   =  Take (1, x)
-    Take (N, x) = _Take (PastValue, N, x)
-    _Take (DelayFn, N, x) = [
-        selected = Loop._IsWithin (DelayFn, N, x)
-        out = Gather (selected, x)
-    ].out
-    # Last and TakeRight
-    Last (x) = TakeRight (1, x)
-    TakeRight (N, x) = _Take (FutureValue, N, x)
-    Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
-    _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
-        selected = Loop._IsWithin (DelayFn, N, x)
-        out = Gather (Boolean.Not (selected), x)
-    ].out
-    ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
-        startMask = Skip (n, x)                     // ...000111...
-        mask = startMask - PastValue (0, startMask) // ...000100...
-        out = Gather (mask, x)
-    ]
-    Single (predicate, x) = x
+    First (x) = Slice (0,  1, x,  axis=-1)
+    Last (x)  = Slice (-1, 0, x,  axis=-1)
+
+    # TakeWhile and DropWhile
+    #TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
+    #SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
+    #_WhilePredicate (DelayFn, predicate, input) =
+    #[
+    #    whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
+    #].whilePredicateRec
+    # TODO: do we need operations from the back?
+
+    #Take (N, x) = _Take (PastValue, N, x)
+    #TakeRight (N, x) = _Take (FutureValue, N, x)
+    #_Take (DelayFn, N, x) = [
+    #    selected = Loop._IsWithin (DelayFn, N, x)
+    #    out = Gather (selected, x)
+    #].out
+    #
+    #Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
+    #_Skip (DelayFn, N, x) = [ // TODO: merge with _Take
+    #    selected = Loop._IsWithin (DelayFn, N, x)
+    #    out = Gather (Boolean.Not (selected), x)
+    #].out
+    #ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+    #    startMask = Skip (n, x)                     // ...000111...
+    #    mask = startMask - PastValue (0, startMask) // ...000100...
+    #    out = Gather (mask, x)
+    #]
+    #Single (predicate, x) = x
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
 
-    Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
-    Sum (x)    = FoldL (Plus,    0, x)
-    LogSum (x) = FoldL (LogPlus, 0, x)
+    #Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
+    #Sum (x)    = FoldL (Plus,    0, x)
+    #LogSum (x) = FoldL (LogPlus, 0, x)
     #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
     #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
-    All (x) = FoldL (Boolean.And,  OnesLike (x), x)
-    Any (x) = FoldL (Boolean.Or, ZeroesLike (x), x)
+    #All (x) = FoldL (Boolean.And,  OnesLike (x), x)
+    #Any (x) = FoldL (Boolean.Or, ZeroesLike (x), x)
 
     # Join to create 2D fields for s2s attention?
 
