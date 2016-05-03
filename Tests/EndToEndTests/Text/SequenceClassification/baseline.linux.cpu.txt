@@ -535,31 +535,31 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 07:22:04: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:04: Starting minibatch loop.
-04/22/2016 07:22:05: Finished Epoch[ 1 of 5]: [Training Set] TrainLossPerSample = 1.5806146; TotalSamplesSeen = 1247; EvalErrPerSample = 0.49799519; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.894717
+04/22/2016 07:22:05: Finished Epoch[ 1 of 5]: [Training] ce = 1.5806146 * 1247; err = 0.49799519; learningRatePerSample = 0.00050000002; EpochTime=0.894717
 04/22/2016 07:22:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.1'
 
 04/22/2016 07:22:05: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:05: Starting minibatch loop.
-04/22/2016 07:22:06: Finished Epoch[ 2 of 5]: [Training Set] TrainLossPerSample = 1.4946844; TotalSamplesSeen = 2494; EvalErrPerSample = 0.44667201; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.676801
+04/22/2016 07:22:06: Finished Epoch[ 2 of 5]: [Training] ce = 1.4946844 * 2494; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.676801
 04/22/2016 07:22:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.2'
 
 04/22/2016 07:22:06: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:06: Starting minibatch loop.
-04/22/2016 07:22:06: Finished Epoch[ 3 of 5]: [Training Set] TrainLossPerSample = 1.4235656; TotalSamplesSeen = 3741; EvalErrPerSample = 0.44667201; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.591359
+04/22/2016 07:22:06: Finished Epoch[ 3 of 5]: [Training] ce = 1.4235656 * 3741; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.591359
 04/22/2016 07:22:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.3'
 
 04/22/2016 07:22:06: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:06: Starting minibatch loop.
-04/22/2016 07:22:07: Finished Epoch[ 4 of 5]: [Training Set] TrainLossPerSample = 1.3709035; TotalSamplesSeen = 4988; EvalErrPerSample = 0.44667201; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.666867
+04/22/2016 07:22:07: Finished Epoch[ 4 of 5]: [Training] ce = 1.3709035 * 4988; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.666867
 04/22/2016 07:22:07: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'
 
 04/22/2016 07:22:07: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:07: Starting minibatch loop.
-04/22/2016 07:22:08: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3328531; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667201; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.584706
+04/22/2016 07:22:08: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328531 * 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.584706
 04/22/2016 07:22:08: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
 04/22/2016 07:22:08: CNTKCommandTrainEnd: Train
 
@@ -1108,7 +1108,7 @@ Allocating matrices for forward and/or backward propagation.
 04/22/2016 07:22:08: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
 04/22/2016 07:22:08: Starting minibatch loop.
-04/22/2016 07:22:09: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3328531; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667201; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.747413
+04/22/2016 07:22:09: Finished Epoch[ 5 of 5]: [Training] ce = 1.3328531 * 6235; err = 0.44667201; learningRatePerSample = 0.00050000002; EpochTime=0.747413
 04/22/2016 07:22:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071746.424904/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
 04/22/2016 07:22:09: CNTKCommandTrainEnd: Train
 

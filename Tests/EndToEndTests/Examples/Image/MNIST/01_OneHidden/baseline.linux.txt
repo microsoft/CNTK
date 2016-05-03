@@ -329,10 +329,10 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:39: Starting minibatch loop.
-04/07/2016 14:04:39:  Epoch[ 1 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  1.29554907; EvalErr[0]PerSample = 0.38125000; EvalErr[1]PerSample = 0.38125000; TotalTime = 0.5578s; SamplesPerSecond = 28684.9
-04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.50022791; EvalErr[0]PerSample = 0.13212500; EvalErr[1]PerSample = 0.13212500; TotalTime = 0.4482s; SamplesPerSecond = 35702.0
-04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.39194543; EvalErr[0]PerSample = 0.11150000; EvalErr[1]PerSample = 0.11150000; TotalTime = 0.4494s; SamplesPerSecond = 35601.4
-04/07/2016 14:04:41: Finished Epoch[ 1 of 30]: [Training Set] TrainLossPerSample = 0.64949685; TotalSamplesSeen = 60000; EvalErrPerSample [0]=0.18576667; [1]=0.18576667; AvgLearningRatePerSample = 0.003125; EpochTime=2.30671
+04/07/2016 14:04:39:  Epoch[ 1 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  1.29554907; err = 0.38125000; EvalErr[1]PerSample = 0.38125000; TotalTime = 0.5578s; SamplesPerSecond = 28684.9
+04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.50022791; err = 0.13212500; EvalErr[1]PerSample = 0.13212500; TotalTime = 0.4482s; SamplesPerSecond = 35702.0
+04/07/2016 14:04:40:  Epoch[ 1 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.39194543; err = 0.11150000; EvalErr[1]PerSample = 0.11150000; TotalTime = 0.4494s; SamplesPerSecond = 35601.4
+04/07/2016 14:04:41: Finished Epoch[ 1 of 30]: [Training] ce = 0.64949685 * 60000; err = 0.18576667; [1]=0.18576667; learningRatePerSample = 0.003125; EpochTime=2.30671
 04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Criterion Node [ce] Per Sample = 0.64949685
 04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Evaluation Node [errTop5] Per Sample = 0.18576667
 04/07/2016 14:04:41: Finished Epoch[ 1 of 30]:     Evaluation Node [err] Per Sample = 0.18576667
@@ -343,10 +343,10 @@ starting epoch 1 at record count 60000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:41: Starting minibatch loop.
-04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.33514655; EvalErr[0]PerSample = 0.09568750; EvalErr[1]PerSample = 0.09568750; TotalTime = 0.2391s; SamplesPerSecond = 66912.0
-04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.31925513; EvalErr[0]PerSample = 0.09193750; EvalErr[1]PerSample = 0.09193750; TotalTime = 0.2393s; SamplesPerSecond = 66873.1
-04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.30763525; EvalErr[0]PerSample = 0.09056250; EvalErr[1]PerSample = 0.09056250; TotalTime = 0.2392s; SamplesPerSecond = 66884.0
-04/07/2016 14:04:42: Finished Epoch[ 2 of 30]: [Training Set] TrainLossPerSample = 0.31140831; TotalSamplesSeen = 120000; EvalErrPerSample [0]=0.089983337; [1]=0.089983337; AvgLearningRatePerSample = 0.003125; EpochTime=0.898468
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.33514655; err = 0.09568750; EvalErr[1]PerSample = 0.09568750; TotalTime = 0.2391s; SamplesPerSecond = 66912.0
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.31925513; err = 0.09193750; EvalErr[1]PerSample = 0.09193750; TotalTime = 0.2393s; SamplesPerSecond = 66873.1
+04/07/2016 14:04:41:  Epoch[ 2 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.30763525; err = 0.09056250; EvalErr[1]PerSample = 0.09056250; TotalTime = 0.2392s; SamplesPerSecond = 66884.0
+04/07/2016 14:04:42: Finished Epoch[ 2 of 30]: [Training] ce = 0.31140831 * 120000; err = 0.089983337; [1]=0.089983337; learningRatePerSample = 0.003125; EpochTime=0.898468
 04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Criterion Node [ce] Per Sample = 0.31140831
 04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Evaluation Node [errTop5] Per Sample = 0.089983337
 04/07/2016 14:04:42: Finished Epoch[ 2 of 30]:     Evaluation Node [err] Per Sample = 0.089983337
@@ -357,10 +357,10 @@ starting epoch 2 at record count 120000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:42: Starting minibatch loop.
-04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.28740411; EvalErr[0]PerSample = 0.08375000; EvalErr[1]PerSample = 0.08375000; TotalTime = 0.2393s; SamplesPerSecond = 66858.0
-04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.27846802; EvalErr[0]PerSample = 0.07981250; EvalErr[1]PerSample = 0.07981250; TotalTime = 0.2400s; SamplesPerSecond = 66672.5
-04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.27320044; EvalErr[0]PerSample = 0.08025000; EvalErr[1]PerSample = 0.08025000; TotalTime = 0.2390s; SamplesPerSecond = 66941.4
-04/07/2016 14:04:43: Finished Epoch[ 3 of 30]: [Training Set] TrainLossPerSample = 0.2724613; TotalSamplesSeen = 180000; EvalErrPerSample [0]=0.078916669; [1]=0.078916669; AvgLearningRatePerSample = 0.003125; EpochTime=0.899276
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.28740411; err = 0.08375000; EvalErr[1]PerSample = 0.08375000; TotalTime = 0.2393s; SamplesPerSecond = 66858.0
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.27846802; err = 0.07981250; EvalErr[1]PerSample = 0.07981250; TotalTime = 0.2400s; SamplesPerSecond = 66672.5
+04/07/2016 14:04:42:  Epoch[ 3 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.27320044; err = 0.08025000; EvalErr[1]PerSample = 0.08025000; TotalTime = 0.2390s; SamplesPerSecond = 66941.4
+04/07/2016 14:04:43: Finished Epoch[ 3 of 30]: [Training] ce = 0.2724613 * 180000; err = 0.078916669; [1]=0.078916669; learningRatePerSample = 0.003125; EpochTime=0.899276
 04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Criterion Node [ce] Per Sample = 0.2724613
 04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Evaluation Node [errTop5] Per Sample = 0.078916669
 04/07/2016 14:04:43: Finished Epoch[ 3 of 30]:     Evaluation Node [err] Per Sample = 0.078916669
@@ -371,10 +371,10 @@ starting epoch 3 at record count 180000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:43: Starting minibatch loop.
-04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.25527621; EvalErr[0]PerSample = 0.07356250; EvalErr[1]PerSample = 0.07356250; TotalTime = 0.2391s; SamplesPerSecond = 66918.4
-04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.24833566; EvalErr[0]PerSample = 0.07106250; EvalErr[1]PerSample = 0.07106250; TotalTime = 0.2393s; SamplesPerSecond = 66856.4
-04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.24453772; EvalErr[0]PerSample = 0.07056250; EvalErr[1]PerSample = 0.07056250; TotalTime = 0.2391s; SamplesPerSecond = 66919.0
-04/07/2016 14:04:43: Finished Epoch[ 4 of 30]: [Training Set] TrainLossPerSample = 0.24299194; TotalSamplesSeen = 240000; EvalErrPerSample [0]=0.069650002; [1]=0.069650002; AvgLearningRatePerSample = 0.003125; EpochTime=0.898466
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.25527621; err = 0.07356250; EvalErr[1]PerSample = 0.07356250; TotalTime = 0.2391s; SamplesPerSecond = 66918.4
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.24833566; err = 0.07106250; EvalErr[1]PerSample = 0.07106250; TotalTime = 0.2393s; SamplesPerSecond = 66856.4
+04/07/2016 14:04:43:  Epoch[ 4 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.24453772; err = 0.07056250; EvalErr[1]PerSample = 0.07056250; TotalTime = 0.2391s; SamplesPerSecond = 66919.0
+04/07/2016 14:04:43: Finished Epoch[ 4 of 30]: [Training] ce = 0.24299194 * 240000; err = 0.069650002; [1]=0.069650002; learningRatePerSample = 0.003125; EpochTime=0.898466
 04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Criterion Node [ce] Per Sample = 0.24299194
 04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Evaluation Node [errTop5] Per Sample = 0.069650002
 04/07/2016 14:04:43: Finished Epoch[ 4 of 30]:     Evaluation Node [err] Per Sample = 0.069650002
@@ -385,10 +385,10 @@ starting epoch 4 at record count 240000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:43: Starting minibatch loop.
-04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.22738316; EvalErr[0]PerSample = 0.06581250; EvalErr[1]PerSample = 0.06581250; TotalTime = 0.2392s; SamplesPerSecond = 66894.1
-04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.22237688; EvalErr[0]PerSample = 0.06400000; EvalErr[1]PerSample = 0.06400000; TotalTime = 0.2392s; SamplesPerSecond = 66875.9
-04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.21983353; EvalErr[0]PerSample = 0.06381250; EvalErr[1]PerSample = 0.06381250; TotalTime = 0.2402s; SamplesPerSecond = 66605.3
-04/07/2016 14:04:44: Finished Epoch[ 5 of 30]: [Training Set] TrainLossPerSample = 0.21759067; TotalSamplesSeen = 300000; EvalErrPerSample [0]=0.062466666; [1]=0.062466666; AvgLearningRatePerSample = 0.003125; EpochTime=0.89968
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.22738316; err = 0.06581250; EvalErr[1]PerSample = 0.06581250; TotalTime = 0.2392s; SamplesPerSecond = 66894.1
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.22237688; err = 0.06400000; EvalErr[1]PerSample = 0.06400000; TotalTime = 0.2392s; SamplesPerSecond = 66875.9
+04/07/2016 14:04:44:  Epoch[ 5 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.21983353; err = 0.06381250; EvalErr[1]PerSample = 0.06381250; TotalTime = 0.2402s; SamplesPerSecond = 66605.3
+04/07/2016 14:04:44: Finished Epoch[ 5 of 30]: [Training] ce = 0.21759067 * 300000; err = 0.062466666; [1]=0.062466666; learningRatePerSample = 0.003125; EpochTime=0.89968
 04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Criterion Node [ce] Per Sample = 0.21759067
 04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Evaluation Node [errTop5] Per Sample = 0.062466666
 04/07/2016 14:04:44: Finished Epoch[ 5 of 30]:     Evaluation Node [err] Per Sample = 0.062466666
@@ -399,10 +399,10 @@ starting epoch 5 at record count 300000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:44: Starting minibatch loop.
-04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.20367961; EvalErr[0]PerSample = 0.05812500; EvalErr[1]PerSample = 0.05812500; TotalTime = 0.2392s; SamplesPerSecond = 66900.3
-04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.20047520; EvalErr[0]PerSample = 0.05706250; EvalErr[1]PerSample = 0.05706250; TotalTime = 0.2390s; SamplesPerSecond = 66950.9
-04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.19919839; EvalErr[0]PerSample = 0.05768750; EvalErr[1]PerSample = 0.05768750; TotalTime = 0.2390s; SamplesPerSecond = 66948.4
-04/07/2016 14:04:45: Finished Epoch[ 6 of 30]: [Training Set] TrainLossPerSample = 0.19621238; TotalSamplesSeen = 360000; EvalErrPerSample [0]=0.056000002; [1]=0.056000002; AvgLearningRatePerSample = 0.003125; EpochTime=0.897957
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.20367961; err = 0.05812500; EvalErr[1]PerSample = 0.05812500; TotalTime = 0.2392s; SamplesPerSecond = 66900.3
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.20047520; err = 0.05706250; EvalErr[1]PerSample = 0.05706250; TotalTime = 0.2390s; SamplesPerSecond = 66950.9
+04/07/2016 14:04:45:  Epoch[ 6 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.19919839; err = 0.05768750; EvalErr[1]PerSample = 0.05768750; TotalTime = 0.2390s; SamplesPerSecond = 66948.4
+04/07/2016 14:04:45: Finished Epoch[ 6 of 30]: [Training] ce = 0.19621238 * 360000; err = 0.056000002; [1]=0.056000002; learningRatePerSample = 0.003125; EpochTime=0.897957
 04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Criterion Node [ce] Per Sample = 0.19621238
 04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Evaluation Node [errTop5] Per Sample = 0.056000002
 04/07/2016 14:04:45: Finished Epoch[ 6 of 30]:     Evaluation Node [err] Per Sample = 0.056000002
@@ -413,10 +413,10 @@ starting epoch 6 at record count 360000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:45: Starting minibatch loop.
-04/07/2016 14:04:45:  Epoch[ 7 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.18383334; EvalErr[0]PerSample = 0.05268750; EvalErr[1]PerSample = 0.05268750; TotalTime = 0.2395s; SamplesPerSecond = 66799.4
-04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.18212634; EvalErr[0]PerSample = 0.05206250; EvalErr[1]PerSample = 0.05206250; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
-04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.18186630; EvalErr[0]PerSample = 0.05231250; EvalErr[1]PerSample = 0.05231250; TotalTime = 0.2393s; SamplesPerSecond = 66855.8
-04/07/2016 14:04:46: Finished Epoch[ 7 of 30]: [Training Set] TrainLossPerSample = 0.17827822; TotalSamplesSeen = 420000; EvalErrPerSample [0]=0.050650001; [1]=0.050650001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898836
+04/07/2016 14:04:45:  Epoch[ 7 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.18383334; err = 0.05268750; EvalErr[1]PerSample = 0.05268750; TotalTime = 0.2395s; SamplesPerSecond = 66799.4
+04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.18212634; err = 0.05206250; EvalErr[1]PerSample = 0.05206250; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
+04/07/2016 14:04:46:  Epoch[ 7 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.18186630; err = 0.05231250; EvalErr[1]PerSample = 0.05231250; TotalTime = 0.2393s; SamplesPerSecond = 66855.8
+04/07/2016 14:04:46: Finished Epoch[ 7 of 30]: [Training] ce = 0.17827822 * 420000; err = 0.050650001; [1]=0.050650001; learningRatePerSample = 0.003125; EpochTime=0.898836
 04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Criterion Node [ce] Per Sample = 0.17827822
 04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Evaluation Node [errTop5] Per Sample = 0.050650001
 04/07/2016 14:04:46: Finished Epoch[ 7 of 30]:     Evaluation Node [err] Per Sample = 0.050650001
@@ -427,10 +427,10 @@ starting epoch 7 at record count 420000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:46: Starting minibatch loop.
-04/07/2016 14:04:46:  Epoch[ 8 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.16707426; EvalErr[0]PerSample = 0.04881250; EvalErr[1]PerSample = 0.04881250; TotalTime = 0.2393s; SamplesPerSecond = 66849.9
-04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.16657964; EvalErr[0]PerSample = 0.04762500; EvalErr[1]PerSample = 0.04762500; TotalTime = 0.2396s; SamplesPerSecond = 66789.9
-04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.16704306; EvalErr[0]PerSample = 0.04750000; EvalErr[1]PerSample = 0.04750000; TotalTime = 0.2393s; SamplesPerSecond = 66860.6
-04/07/2016 14:04:47: Finished Epoch[ 8 of 30]: [Training Set] TrainLossPerSample = 0.16303664; TotalSamplesSeen = 480000; EvalErrPerSample [0]=0.046483334; [1]=0.046483334; AvgLearningRatePerSample = 0.003125; EpochTime=0.899093
+04/07/2016 14:04:46:  Epoch[ 8 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.16707426; err = 0.04881250; EvalErr[1]PerSample = 0.04881250; TotalTime = 0.2393s; SamplesPerSecond = 66849.9
+04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.16657964; err = 0.04762500; EvalErr[1]PerSample = 0.04762500; TotalTime = 0.2396s; SamplesPerSecond = 66789.9
+04/07/2016 14:04:47:  Epoch[ 8 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.16704306; err = 0.04750000; EvalErr[1]PerSample = 0.04750000; TotalTime = 0.2393s; SamplesPerSecond = 66860.6
+04/07/2016 14:04:47: Finished Epoch[ 8 of 30]: [Training] ce = 0.16303664 * 480000; err = 0.046483334; [1]=0.046483334; learningRatePerSample = 0.003125; EpochTime=0.899093
 04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Criterion Node [ce] Per Sample = 0.16303664
 04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Evaluation Node [errTop5] Per Sample = 0.046483334
 04/07/2016 14:04:47: Finished Epoch[ 8 of 30]:     Evaluation Node [err] Per Sample = 0.046483334
@@ -441,10 +441,10 @@ starting epoch 8 at record count 480000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:47: Starting minibatch loop.
-04/07/2016 14:04:47:  Epoch[ 9 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.15274779; EvalErr[0]PerSample = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
-04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.15323347; EvalErr[0]PerSample = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
-04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.15418118; EvalErr[0]PerSample = 0.04425000; EvalErr[1]PerSample = 0.04425000; TotalTime = 0.2393s; SamplesPerSecond = 66865.9
-04/07/2016 14:04:48: Finished Epoch[ 9 of 30]: [Training Set] TrainLossPerSample = 0.14991474; TotalSamplesSeen = 540000; EvalErrPerSample [0]=0.04315; [1]=0.04315; AvgLearningRatePerSample = 0.003125; EpochTime=0.898354
+04/07/2016 14:04:47:  Epoch[ 9 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.15274779; err = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
+04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.15323347; err = 0.04450000; EvalErr[1]PerSample = 0.04450000; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:04:48:  Epoch[ 9 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.15418118; err = 0.04425000; EvalErr[1]PerSample = 0.04425000; TotalTime = 0.2393s; SamplesPerSecond = 66865.9
+04/07/2016 14:04:48: Finished Epoch[ 9 of 30]: [Training] ce = 0.14991474 * 540000; err = 0.04315; [1]=0.04315; learningRatePerSample = 0.003125; EpochTime=0.898354
 04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Criterion Node [ce] Per Sample = 0.14991474
 04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Evaluation Node [errTop5] Per Sample = 0.04315
 04/07/2016 14:04:48: Finished Epoch[ 9 of 30]:     Evaluation Node [err] Per Sample = 0.04315
@@ -455,10 +455,10 @@ starting epoch 9 at record count 540000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:48: Starting minibatch loop.
-04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.14038245; EvalErr[0]PerSample = 0.04062500; EvalErr[1]PerSample = 0.04062500; TotalTime = 0.2393s; SamplesPerSecond = 66875.1
-04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.14165695; EvalErr[0]PerSample = 0.04100000; EvalErr[1]PerSample = 0.04100000; TotalTime = 0.2391s; SamplesPerSecond = 66926.8
-04/07/2016 14:04:49:  Epoch[10 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.14291498; EvalErr[0]PerSample = 0.04093750; EvalErr[1]PerSample = 0.04093750; TotalTime = 0.2389s; SamplesPerSecond = 66971.1
-04/07/2016 14:04:49: Finished Epoch[10 of 30]: [Training Set] TrainLossPerSample = 0.13850868; TotalSamplesSeen = 600000; EvalErrPerSample [0]=0.039583333; [1]=0.039583333; AvgLearningRatePerSample = 0.003125; EpochTime=0.897973
+04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.14038245; err = 0.04062500; EvalErr[1]PerSample = 0.04062500; TotalTime = 0.2393s; SamplesPerSecond = 66875.1
+04/07/2016 14:04:48:  Epoch[10 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.14165695; err = 0.04100000; EvalErr[1]PerSample = 0.04100000; TotalTime = 0.2391s; SamplesPerSecond = 66926.8
+04/07/2016 14:04:49:  Epoch[10 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.14291498; err = 0.04093750; EvalErr[1]PerSample = 0.04093750; TotalTime = 0.2389s; SamplesPerSecond = 66971.1
+04/07/2016 14:04:49: Finished Epoch[10 of 30]: [Training] ce = 0.13850868 * 600000; err = 0.039583333; [1]=0.039583333; learningRatePerSample = 0.003125; EpochTime=0.897973
 04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Criterion Node [ce] Per Sample = 0.13850868
 04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Evaluation Node [errTop5] Per Sample = 0.039583333
 04/07/2016 14:04:49: Finished Epoch[10 of 30]:     Evaluation Node [err] Per Sample = 0.039583333
@@ -469,10 +469,10 @@ starting epoch 10 at record count 600000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:49: Starting minibatch loop.
-04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.12962636; EvalErr[0]PerSample = 0.03731250; EvalErr[1]PerSample = 0.03731250; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
-04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.13153072; EvalErr[0]PerSample = 0.03775000; EvalErr[1]PerSample = 0.03775000; TotalTime = 0.2390s; SamplesPerSecond = 66945.6
-04/07/2016 14:04:50:  Epoch[11 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.13298419; EvalErr[0]PerSample = 0.03900000; EvalErr[1]PerSample = 0.03900000; TotalTime = 0.2390s; SamplesPerSecond = 66943.6
-04/07/2016 14:04:50: Finished Epoch[11 of 30]: [Training Set] TrainLossPerSample = 0.12852019; TotalSamplesSeen = 660000; EvalErrPerSample [0]=0.036699999; [1]=0.036699999; AvgLearningRatePerSample = 0.003125; EpochTime=0.897779
+04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.12962636; err = 0.03731250; EvalErr[1]PerSample = 0.03731250; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
+04/07/2016 14:04:49:  Epoch[11 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.13153072; err = 0.03775000; EvalErr[1]PerSample = 0.03775000; TotalTime = 0.2390s; SamplesPerSecond = 66945.6
+04/07/2016 14:04:50:  Epoch[11 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.13298419; err = 0.03900000; EvalErr[1]PerSample = 0.03900000; TotalTime = 0.2390s; SamplesPerSecond = 66943.6
+04/07/2016 14:04:50: Finished Epoch[11 of 30]: [Training] ce = 0.12852019 * 660000; err = 0.036699999; [1]=0.036699999; learningRatePerSample = 0.003125; EpochTime=0.897779
 04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Criterion Node [ce] Per Sample = 0.12852019
 04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Evaluation Node [errTop5] Per Sample = 0.036699999
 04/07/2016 14:04:50: Finished Epoch[11 of 30]:     Evaluation Node [err] Per Sample = 0.036699999
@@ -483,10 +483,10 @@ starting epoch 11 at record count 660000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:50: Starting minibatch loop.
-04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.12020341; EvalErr[0]PerSample = 0.03381250; EvalErr[1]PerSample = 0.03381250; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
-04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.12260921; EvalErr[0]PerSample = 0.03587500; EvalErr[1]PerSample = 0.03587500; TotalTime = 0.2390s; SamplesPerSecond = 66936.1
-04/07/2016 14:04:51:  Epoch[12 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.12419101; EvalErr[0]PerSample = 0.03618750; EvalErr[1]PerSample = 0.03618750; TotalTime = 0.2391s; SamplesPerSecond = 66907.0
-04/07/2016 14:04:51: Finished Epoch[12 of 30]: [Training Set] TrainLossPerSample = 0.11971864; TotalSamplesSeen = 720000; EvalErrPerSample [0]=0.034066666; [1]=0.034066666; AvgLearningRatePerSample = 0.003125; EpochTime=0.898274
+04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.12020341; err = 0.03381250; EvalErr[1]PerSample = 0.03381250; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:50:  Epoch[12 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.12260921; err = 0.03587500; EvalErr[1]PerSample = 0.03587500; TotalTime = 0.2390s; SamplesPerSecond = 66936.1
+04/07/2016 14:04:51:  Epoch[12 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.12419101; err = 0.03618750; EvalErr[1]PerSample = 0.03618750; TotalTime = 0.2391s; SamplesPerSecond = 66907.0
+04/07/2016 14:04:51: Finished Epoch[12 of 30]: [Training] ce = 0.11971864 * 720000; err = 0.034066666; [1]=0.034066666; learningRatePerSample = 0.003125; EpochTime=0.898274
 04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Criterion Node [ce] Per Sample = 0.11971864
 04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Evaluation Node [errTop5] Per Sample = 0.034066666
 04/07/2016 14:04:51: Finished Epoch[12 of 30]:     Evaluation Node [err] Per Sample = 0.034066666
@@ -497,10 +497,10 @@ starting epoch 12 at record count 720000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:51: Starting minibatch loop.
-04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.11189415; EvalErr[0]PerSample = 0.03093750; EvalErr[1]PerSample = 0.03093750; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
-04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.11469778; EvalErr[0]PerSample = 0.03400000; EvalErr[1]PerSample = 0.03400000; TotalTime = 0.2393s; SamplesPerSecond = 66860.8
-04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.11637517; EvalErr[0]PerSample = 0.03412500; EvalErr[1]PerSample = 0.03412500; TotalTime = 0.2393s; SamplesPerSecond = 66862.2
-04/07/2016 14:04:52: Finished Epoch[13 of 30]: [Training Set] TrainLossPerSample = 0.11191925; TotalSamplesSeen = 780000; EvalErrPerSample [0]=0.0319; [1]=0.0319; AvgLearningRatePerSample = 0.003125; EpochTime=0.898649
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.11189415; err = 0.03093750; EvalErr[1]PerSample = 0.03093750; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.11469778; err = 0.03400000; EvalErr[1]PerSample = 0.03400000; TotalTime = 0.2393s; SamplesPerSecond = 66860.8
+04/07/2016 14:04:51:  Epoch[13 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.11637517; err = 0.03412500; EvalErr[1]PerSample = 0.03412500; TotalTime = 0.2393s; SamplesPerSecond = 66862.2
+04/07/2016 14:04:52: Finished Epoch[13 of 30]: [Training] ce = 0.11191925 * 780000; err = 0.0319; [1]=0.0319; learningRatePerSample = 0.003125; EpochTime=0.898649
 04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Criterion Node [ce] Per Sample = 0.11191925
 04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0319
 04/07/2016 14:04:52: Finished Epoch[13 of 30]:     Evaluation Node [err] Per Sample = 0.0319
@@ -511,10 +511,10 @@ starting epoch 13 at record count 780000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:52: Starting minibatch loop.
-04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.10452200; EvalErr[0]PerSample = 0.02825000; EvalErr[1]PerSample = 0.02825000; TotalTime = 0.2393s; SamplesPerSecond = 66868.7
-04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10763933; EvalErr[0]PerSample = 0.03143750; EvalErr[1]PerSample = 0.03143750; TotalTime = 0.2391s; SamplesPerSecond = 66914.2
-04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10939818; EvalErr[0]PerSample = 0.03187500; EvalErr[1]PerSample = 0.03187500; TotalTime = 0.2391s; SamplesPerSecond = 66917.0
-04/07/2016 14:04:53: Finished Epoch[14 of 30]: [Training Set] TrainLossPerSample = 0.1049702; TotalSamplesSeen = 840000; EvalErrPerSample [0]=0.029516667; [1]=0.029516667; AvgLearningRatePerSample = 0.003125; EpochTime=0.898446
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.10452200; err = 0.02825000; EvalErr[1]PerSample = 0.02825000; TotalTime = 0.2393s; SamplesPerSecond = 66868.7
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.10763933; err = 0.03143750; EvalErr[1]PerSample = 0.03143750; TotalTime = 0.2391s; SamplesPerSecond = 66914.2
+04/07/2016 14:04:52:  Epoch[14 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.10939818; err = 0.03187500; EvalErr[1]PerSample = 0.03187500; TotalTime = 0.2391s; SamplesPerSecond = 66917.0
+04/07/2016 14:04:53: Finished Epoch[14 of 30]: [Training] ce = 0.1049702 * 840000; err = 0.029516667; [1]=0.029516667; learningRatePerSample = 0.003125; EpochTime=0.898446
 04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Criterion Node [ce] Per Sample = 0.1049702
 04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Evaluation Node [errTop5] Per Sample = 0.029516667
 04/07/2016 14:04:53: Finished Epoch[14 of 30]:     Evaluation Node [err] Per Sample = 0.029516667
@@ -525,10 +525,10 @@ starting epoch 14 at record count 840000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:53: Starting minibatch loop.
-04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09794547; EvalErr[0]PerSample = 0.02681250; EvalErr[1]PerSample = 0.02681250; TotalTime = 0.2392s; SamplesPerSecond = 66879.0
-04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.10130624; EvalErr[0]PerSample = 0.02906250; EvalErr[1]PerSample = 0.02906250; TotalTime = 0.2394s; SamplesPerSecond = 66839.1
-04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.10314120; EvalErr[0]PerSample = 0.02937500; EvalErr[1]PerSample = 0.02937500; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
-04/07/2016 14:04:53: Finished Epoch[15 of 30]: [Training Set] TrainLossPerSample = 0.098746225; TotalSamplesSeen = 900000; EvalErrPerSample [0]=0.027566668; [1]=0.027566668; AvgLearningRatePerSample = 0.003125; EpochTime=0.898655
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.09794547; err = 0.02681250; EvalErr[1]PerSample = 0.02681250; TotalTime = 0.2392s; SamplesPerSecond = 66879.0
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.10130624; err = 0.02906250; EvalErr[1]PerSample = 0.02906250; TotalTime = 0.2394s; SamplesPerSecond = 66839.1
+04/07/2016 14:04:53:  Epoch[15 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.10314120; err = 0.02937500; EvalErr[1]PerSample = 0.02937500; TotalTime = 0.2391s; SamplesPerSecond = 66928.0
+04/07/2016 14:04:53: Finished Epoch[15 of 30]: [Training] ce = 0.098746225 * 900000; err = 0.027566668; [1]=0.027566668; learningRatePerSample = 0.003125; EpochTime=0.898655
 04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Criterion Node [ce] Per Sample = 0.098746225
 04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Evaluation Node [errTop5] Per Sample = 0.027566668
 04/07/2016 14:04:53: Finished Epoch[15 of 30]:     Evaluation Node [err] Per Sample = 0.027566668
@@ -539,10 +539,10 @@ starting epoch 15 at record count 900000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:53: Starting minibatch loop.
-04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.09205003; EvalErr[0]PerSample = 0.02506250; EvalErr[1]PerSample = 0.02506250; TotalTime = 0.2395s; SamplesPerSecond = 66804.5
-04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09559438; EvalErr[0]PerSample = 0.02725000; EvalErr[1]PerSample = 0.02725000; TotalTime = 0.2394s; SamplesPerSecond = 66847.2
-04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09750049; EvalErr[0]PerSample = 0.02762500; EvalErr[1]PerSample = 0.02762500; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
-04/07/2016 14:04:54: Finished Epoch[16 of 30]: [Training Set] TrainLossPerSample = 0.093143202; TotalSamplesSeen = 960000; EvalErrPerSample [0]=0.025933333; [1]=0.025933333; AvgLearningRatePerSample = 0.003125; EpochTime=0.898779
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.09205003; err = 0.02506250; EvalErr[1]PerSample = 0.02506250; TotalTime = 0.2395s; SamplesPerSecond = 66804.5
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.09559438; err = 0.02725000; EvalErr[1]PerSample = 0.02725000; TotalTime = 0.2394s; SamplesPerSecond = 66847.2
+04/07/2016 14:04:54:  Epoch[16 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.09750049; err = 0.02762500; EvalErr[1]PerSample = 0.02762500; TotalTime = 0.2391s; SamplesPerSecond = 66930.5
+04/07/2016 14:04:54: Finished Epoch[16 of 30]: [Training] ce = 0.093143202 * 960000; err = 0.025933333; [1]=0.025933333; learningRatePerSample = 0.003125; EpochTime=0.898779
 04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Criterion Node [ce] Per Sample = 0.093143202
 04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Evaluation Node [errTop5] Per Sample = 0.025933333
 04/07/2016 14:04:54: Finished Epoch[16 of 30]:     Evaluation Node [err] Per Sample = 0.025933333
@@ -553,10 +553,10 @@ starting epoch 16 at record count 960000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:54: Starting minibatch loop.
-04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08674107; EvalErr[0]PerSample = 0.02350000; EvalErr[1]PerSample = 0.02350000; TotalTime = 0.2393s; SamplesPerSecond = 66849.4
-04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.09041695; EvalErr[0]PerSample = 0.02531250; EvalErr[1]PerSample = 0.02531250; TotalTime = 0.2393s; SamplesPerSecond = 66860.0
-04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.09238812; EvalErr[0]PerSample = 0.02618750; EvalErr[1]PerSample = 0.02618750; TotalTime = 0.2391s; SamplesPerSecond = 66914.8
-04/07/2016 14:04:55: Finished Epoch[17 of 30]: [Training Set] TrainLossPerSample = 0.088073827; TotalSamplesSeen = 1020000; EvalErrPerSample [0]=0.024383334; [1]=0.024383334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898655
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.08674107; err = 0.02350000; EvalErr[1]PerSample = 0.02350000; TotalTime = 0.2393s; SamplesPerSecond = 66849.4
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.09041695; err = 0.02531250; EvalErr[1]PerSample = 0.02531250; TotalTime = 0.2393s; SamplesPerSecond = 66860.0
+04/07/2016 14:04:55:  Epoch[17 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.09238812; err = 0.02618750; EvalErr[1]PerSample = 0.02618750; TotalTime = 0.2391s; SamplesPerSecond = 66914.8
+04/07/2016 14:04:55: Finished Epoch[17 of 30]: [Training] ce = 0.088073827 * 1020000; err = 0.024383334; [1]=0.024383334; learningRatePerSample = 0.003125; EpochTime=0.898655
 04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Criterion Node [ce] Per Sample = 0.088073827
 04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Evaluation Node [errTop5] Per Sample = 0.024383334
 04/07/2016 14:04:55: Finished Epoch[17 of 30]:     Evaluation Node [err] Per Sample = 0.024383334
@@ -567,10 +567,10 @@ starting epoch 17 at record count 1020000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:55: Starting minibatch loop.
-04/07/2016 14:04:55:  Epoch[18 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.08193969; EvalErr[0]PerSample = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
-04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08570138; EvalErr[0]PerSample = 0.02375000; EvalErr[1]PerSample = 0.02375000; TotalTime = 0.2394s; SamplesPerSecond = 66836.5
-04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08772934; EvalErr[0]PerSample = 0.02425000; EvalErr[1]PerSample = 0.02425000; TotalTime = 0.2392s; SamplesPerSecond = 66901.9
-04/07/2016 14:04:56: Finished Epoch[18 of 30]: [Training Set] TrainLossPerSample = 0.083464988; TotalSamplesSeen = 1080000; EvalErrPerSample [0]=0.022849999; [1]=0.022849999; AvgLearningRatePerSample = 0.003125; EpochTime=0.898846
+04/07/2016 14:04:55:  Epoch[18 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.08193969; err = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.08570138; err = 0.02375000; EvalErr[1]PerSample = 0.02375000; TotalTime = 0.2394s; SamplesPerSecond = 66836.5
+04/07/2016 14:04:56:  Epoch[18 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.08772934; err = 0.02425000; EvalErr[1]PerSample = 0.02425000; TotalTime = 0.2392s; SamplesPerSecond = 66901.9
+04/07/2016 14:04:56: Finished Epoch[18 of 30]: [Training] ce = 0.083464988 * 1080000; err = 0.022849999; [1]=0.022849999; learningRatePerSample = 0.003125; EpochTime=0.898846
 04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Criterion Node [ce] Per Sample = 0.083464988
 04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Evaluation Node [errTop5] Per Sample = 0.022849999
 04/07/2016 14:04:56: Finished Epoch[18 of 30]:     Evaluation Node [err] Per Sample = 0.022849999
@@ -581,10 +581,10 @@ starting epoch 18 at record count 1080000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:56: Starting minibatch loop.
-04/07/2016 14:04:56:  Epoch[19 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07757853; EvalErr[0]PerSample = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66848.6
-04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.08138667; EvalErr[0]PerSample = 0.02262500; EvalErr[1]PerSample = 0.02262500; TotalTime = 0.2393s; SamplesPerSecond = 66852.7
-04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.08346284; EvalErr[0]PerSample = 0.02318750; EvalErr[1]PerSample = 0.02318750; TotalTime = 0.2391s; SamplesPerSecond = 66921.2
-04/07/2016 14:04:57: Finished Epoch[19 of 30]: [Training Set] TrainLossPerSample = 0.079255536; TotalSamplesSeen = 1140000; EvalErrPerSample [0]=0.0217; [1]=0.0217; AvgLearningRatePerSample = 0.003125; EpochTime=0.898689
+04/07/2016 14:04:56:  Epoch[19 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.07757853; err = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66848.6
+04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.08138667; err = 0.02262500; EvalErr[1]PerSample = 0.02262500; TotalTime = 0.2393s; SamplesPerSecond = 66852.7
+04/07/2016 14:04:57:  Epoch[19 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.08346284; err = 0.02318750; EvalErr[1]PerSample = 0.02318750; TotalTime = 0.2391s; SamplesPerSecond = 66921.2
+04/07/2016 14:04:57: Finished Epoch[19 of 30]: [Training] ce = 0.079255536 * 1140000; err = 0.0217; [1]=0.0217; learningRatePerSample = 0.003125; EpochTime=0.898689
 04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Criterion Node [ce] Per Sample = 0.079255536
 04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0217
 04/07/2016 14:04:57: Finished Epoch[19 of 30]:     Evaluation Node [err] Per Sample = 0.0217
@@ -595,10 +595,10 @@ starting epoch 19 at record count 1140000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:57: Starting minibatch loop.
-04/07/2016 14:04:57:  Epoch[20 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.07360051; EvalErr[0]PerSample = 0.01900000; EvalErr[1]PerSample = 0.01900000; TotalTime = 0.2391s; SamplesPerSecond = 66914.5
-04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07742140; EvalErr[0]PerSample = 0.02206250; EvalErr[1]PerSample = 0.02206250; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
-04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07953708; EvalErr[0]PerSample = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2391s; SamplesPerSecond = 66912.9
-04/07/2016 14:04:58: Finished Epoch[20 of 30]: [Training Set] TrainLossPerSample = 0.07539349; TotalSamplesSeen = 1200000; EvalErrPerSample [0]=0.020666666; [1]=0.020666666; AvgLearningRatePerSample = 0.003125; EpochTime=0.898458
+04/07/2016 14:04:57:  Epoch[20 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.07360051; err = 0.01900000; EvalErr[1]PerSample = 0.01900000; TotalTime = 0.2391s; SamplesPerSecond = 66914.5
+04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.07742140; err = 0.02206250; EvalErr[1]PerSample = 0.02206250; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:04:58:  Epoch[20 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.07953708; err = 0.02212500; EvalErr[1]PerSample = 0.02212500; TotalTime = 0.2391s; SamplesPerSecond = 66912.9
+04/07/2016 14:04:58: Finished Epoch[20 of 30]: [Training] ce = 0.07539349 * 1200000; err = 0.020666666; [1]=0.020666666; learningRatePerSample = 0.003125; EpochTime=0.898458
 04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Criterion Node [ce] Per Sample = 0.07539349
 04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Evaluation Node [errTop5] Per Sample = 0.020666666
 04/07/2016 14:04:58: Finished Epoch[20 of 30]:     Evaluation Node [err] Per Sample = 0.020666666
@@ -609,10 +609,10 @@ starting epoch 20 at record count 1200000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:58: Starting minibatch loop.
-04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06995720; EvalErr[0]PerSample = 0.01831250; EvalErr[1]PerSample = 0.01831250; TotalTime = 0.2394s; SamplesPerSecond = 66824.0
-04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07376222; EvalErr[0]PerSample = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
-04/07/2016 14:04:59:  Epoch[21 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07590971; EvalErr[0]PerSample = 0.02131250; EvalErr[1]PerSample = 0.02131250; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
-04/07/2016 14:04:59: Finished Epoch[21 of 30]: [Training Set] TrainLossPerSample = 0.071835473; TotalSamplesSeen = 1260000; EvalErrPerSample [0]=0.019650001; [1]=0.019650001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898979
+04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.06995720; err = 0.01831250; EvalErr[1]PerSample = 0.01831250; TotalTime = 0.2394s; SamplesPerSecond = 66824.0
+04/07/2016 14:04:58:  Epoch[21 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.07376222; err = 0.02068750; EvalErr[1]PerSample = 0.02068750; TotalTime = 0.2393s; SamplesPerSecond = 66849.1
+04/07/2016 14:04:59:  Epoch[21 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.07590971; err = 0.02131250; EvalErr[1]PerSample = 0.02131250; TotalTime = 0.2391s; SamplesPerSecond = 66912.6
+04/07/2016 14:04:59: Finished Epoch[21 of 30]: [Training] ce = 0.071835473 * 1260000; err = 0.019650001; [1]=0.019650001; learningRatePerSample = 0.003125; EpochTime=0.898979
 04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Criterion Node [ce] Per Sample = 0.071835473
 04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Evaluation Node [errTop5] Per Sample = 0.019650001
 04/07/2016 14:04:59: Finished Epoch[21 of 30]:     Evaluation Node [err] Per Sample = 0.019650001
@@ -623,10 +623,10 @@ starting epoch 21 at record count 1260000, and file position 0
 already there from last epoch
 
 04/07/2016 14:04:59: Starting minibatch loop.
-04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06660743; EvalErr[0]PerSample = 0.01756250; EvalErr[1]PerSample = 0.01756250; TotalTime = 0.2392s; SamplesPerSecond = 66895.2
-04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07037196; EvalErr[0]PerSample = 0.01937500; EvalErr[1]PerSample = 0.01937500; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
-04/07/2016 14:05:00:  Epoch[22 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.07254503; EvalErr[0]PerSample = 0.01981250; EvalErr[1]PerSample = 0.01981250; TotalTime = 0.2391s; SamplesPerSecond = 66929.6
-04/07/2016 14:05:00: Finished Epoch[22 of 30]: [Training Set] TrainLossPerSample = 0.068544805; TotalSamplesSeen = 1320000; EvalErrPerSample [0]=0.018616667; [1]=0.018616667; AvgLearningRatePerSample = 0.003125; EpochTime=0.89819
+04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.06660743; err = 0.01756250; EvalErr[1]PerSample = 0.01756250; TotalTime = 0.2392s; SamplesPerSecond = 66895.2
+04/07/2016 14:04:59:  Epoch[22 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.07037196; err = 0.01937500; EvalErr[1]PerSample = 0.01937500; TotalTime = 0.2392s; SamplesPerSecond = 66896.6
+04/07/2016 14:05:00:  Epoch[22 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.07254503; err = 0.01981250; EvalErr[1]PerSample = 0.01981250; TotalTime = 0.2391s; SamplesPerSecond = 66929.6
+04/07/2016 14:05:00: Finished Epoch[22 of 30]: [Training] ce = 0.068544805 * 1320000; err = 0.018616667; [1]=0.018616667; learningRatePerSample = 0.003125; EpochTime=0.89819
 04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Criterion Node [ce] Per Sample = 0.068544805
 04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Evaluation Node [errTop5] Per Sample = 0.018616667
 04/07/2016 14:05:00: Finished Epoch[22 of 30]:     Evaluation Node [err] Per Sample = 0.018616667
@@ -637,10 +637,10 @@ starting epoch 22 at record count 1320000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:00: Starting minibatch loop.
-04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06351610; EvalErr[0]PerSample = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2392s; SamplesPerSecond = 66901.4
-04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06721899; EvalErr[0]PerSample = 0.01825000; EvalErr[1]PerSample = 0.01825000; TotalTime = 0.2393s; SamplesPerSecond = 66862.8
-04/07/2016 14:05:01:  Epoch[23 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06941310; EvalErr[0]PerSample = 0.01856250; EvalErr[1]PerSample = 0.01856250; TotalTime = 0.2393s; SamplesPerSecond = 66869.5
-04/07/2016 14:05:01: Finished Epoch[23 of 30]: [Training Set] TrainLossPerSample = 0.065490127; TotalSamplesSeen = 1380000; EvalErrPerSample [0]=0.017633334; [1]=0.017633334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898821
+04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.06351610; err = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2392s; SamplesPerSecond = 66901.4
+04/07/2016 14:05:00:  Epoch[23 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.06721899; err = 0.01825000; EvalErr[1]PerSample = 0.01825000; TotalTime = 0.2393s; SamplesPerSecond = 66862.8
+04/07/2016 14:05:01:  Epoch[23 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06941310; err = 0.01856250; EvalErr[1]PerSample = 0.01856250; TotalTime = 0.2393s; SamplesPerSecond = 66869.5
+04/07/2016 14:05:01: Finished Epoch[23 of 30]: [Training] ce = 0.065490127 * 1380000; err = 0.017633334; [1]=0.017633334; learningRatePerSample = 0.003125; EpochTime=0.898821
 04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Criterion Node [ce] Per Sample = 0.065490127
 04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Evaluation Node [errTop5] Per Sample = 0.017633334
 04/07/2016 14:05:01: Finished Epoch[23 of 30]:     Evaluation Node [err] Per Sample = 0.017633334
@@ -651,10 +651,10 @@ starting epoch 23 at record count 1380000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:01: Starting minibatch loop.
-04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.06065337; EvalErr[0]PerSample = 0.01587500; EvalErr[1]PerSample = 0.01587500; TotalTime = 0.2392s; SamplesPerSecond = 66901.1
-04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06427705; EvalErr[0]PerSample = 0.01768750; EvalErr[1]PerSample = 0.01768750; TotalTime = 0.2395s; SamplesPerSecond = 66800.5
-04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06648905; EvalErr[0]PerSample = 0.01750000; EvalErr[1]PerSample = 0.01750000; TotalTime = 0.2393s; SamplesPerSecond = 66875.7
-04/07/2016 14:05:02: Finished Epoch[24 of 30]: [Training Set] TrainLossPerSample = 0.062645398; TotalSamplesSeen = 1440000; EvalErrPerSample [0]=0.016716667; [1]=0.016716667; AvgLearningRatePerSample = 0.003125; EpochTime=0.89884
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.06065337; err = 0.01587500; EvalErr[1]PerSample = 0.01587500; TotalTime = 0.2392s; SamplesPerSecond = 66901.1
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.06427705; err = 0.01768750; EvalErr[1]PerSample = 0.01768750; TotalTime = 0.2395s; SamplesPerSecond = 66800.5
+04/07/2016 14:05:01:  Epoch[24 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06648905; err = 0.01750000; EvalErr[1]PerSample = 0.01750000; TotalTime = 0.2393s; SamplesPerSecond = 66875.7
+04/07/2016 14:05:02: Finished Epoch[24 of 30]: [Training] ce = 0.062645398 * 1440000; err = 0.016716667; [1]=0.016716667; learningRatePerSample = 0.003125; EpochTime=0.89884
 04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Criterion Node [ce] Per Sample = 0.062645398
 04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Evaluation Node [errTop5] Per Sample = 0.016716667
 04/07/2016 14:05:02: Finished Epoch[24 of 30]:     Evaluation Node [err] Per Sample = 0.016716667
@@ -665,10 +665,10 @@ starting epoch 24 at record count 1440000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:02: Starting minibatch loop.
-04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05799355; EvalErr[0]PerSample = 0.01562500; EvalErr[1]PerSample = 0.01562500; TotalTime = 0.2393s; SamplesPerSecond = 66869.2
-04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.06152334; EvalErr[0]PerSample = 0.01718750; EvalErr[1]PerSample = 0.01718750; TotalTime = 0.2392s; SamplesPerSecond = 66896.9
-04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06375144; EvalErr[0]PerSample = 0.01687500; EvalErr[1]PerSample = 0.01687500; TotalTime = 0.2393s; SamplesPerSecond = 66862.0
-04/07/2016 14:05:03: Finished Epoch[25 of 30]: [Training Set] TrainLossPerSample = 0.059987996; TotalSamplesSeen = 1500000; EvalErrPerSample [0]=0.016233334; [1]=0.016233334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898668
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.05799355; err = 0.01562500; EvalErr[1]PerSample = 0.01562500; TotalTime = 0.2393s; SamplesPerSecond = 66869.2
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.06152334; err = 0.01718750; EvalErr[1]PerSample = 0.01718750; TotalTime = 0.2392s; SamplesPerSecond = 66896.9
+04/07/2016 14:05:02:  Epoch[25 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06375144; err = 0.01687500; EvalErr[1]PerSample = 0.01687500; TotalTime = 0.2393s; SamplesPerSecond = 66862.0
+04/07/2016 14:05:03: Finished Epoch[25 of 30]: [Training] ce = 0.059987996 * 1500000; err = 0.016233334; [1]=0.016233334; learningRatePerSample = 0.003125; EpochTime=0.898668
 04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Criterion Node [ce] Per Sample = 0.059987996
 04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Evaluation Node [errTop5] Per Sample = 0.016233334
 04/07/2016 14:05:03: Finished Epoch[25 of 30]:     Evaluation Node [err] Per Sample = 0.016233334
@@ -679,10 +679,10 @@ starting epoch 25 at record count 1500000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:03: Starting minibatch loop.
-04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05551456; EvalErr[0]PerSample = 0.01475000; EvalErr[1]PerSample = 0.01475000; TotalTime = 0.2391s; SamplesPerSecond = 66915.9
-04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05893863; EvalErr[0]PerSample = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2390s; SamplesPerSecond = 66933.3
-04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06118142; EvalErr[0]PerSample = 0.01625000; EvalErr[1]PerSample = 0.01625000; TotalTime = 0.2391s; SamplesPerSecond = 66920.7
-04/07/2016 14:05:03: Finished Epoch[26 of 30]: [Training Set] TrainLossPerSample = 0.0574985; TotalSamplesSeen = 1560000; EvalErrPerSample [0]=0.015600001; [1]=0.015600001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898136
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.05551456; err = 0.01475000; EvalErr[1]PerSample = 0.01475000; TotalTime = 0.2391s; SamplesPerSecond = 66915.9
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.05893863; err = 0.01668750; EvalErr[1]PerSample = 0.01668750; TotalTime = 0.2390s; SamplesPerSecond = 66933.3
+04/07/2016 14:05:03:  Epoch[26 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06118142; err = 0.01625000; EvalErr[1]PerSample = 0.01625000; TotalTime = 0.2391s; SamplesPerSecond = 66920.7
+04/07/2016 14:05:03: Finished Epoch[26 of 30]: [Training] ce = 0.0574985 * 1560000; err = 0.015600001; [1]=0.015600001; learningRatePerSample = 0.003125; EpochTime=0.898136
 04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Criterion Node [ce] Per Sample = 0.0574985
 04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Evaluation Node [errTop5] Per Sample = 0.015600001
 04/07/2016 14:05:03: Finished Epoch[26 of 30]:     Evaluation Node [err] Per Sample = 0.015600001
@@ -693,10 +693,10 @@ starting epoch 26 at record count 1560000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:03: Starting minibatch loop.
-04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05319750; EvalErr[0]PerSample = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2389s; SamplesPerSecond = 66970.3
-04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05650659; EvalErr[0]PerSample = 0.01600000; EvalErr[1]PerSample = 0.01600000; TotalTime = 0.2392s; SamplesPerSecond = 66879.6
-04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05876301; EvalErr[0]PerSample = 0.01531250; EvalErr[1]PerSample = 0.01531250; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
-04/07/2016 14:05:04: Finished Epoch[27 of 30]: [Training Set] TrainLossPerSample = 0.055160314; TotalSamplesSeen = 1620000; EvalErrPerSample [0]=0.014816667; [1]=0.014816667; AvgLearningRatePerSample = 0.003125; EpochTime=0.898545
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.05319750; err = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2389s; SamplesPerSecond = 66970.3
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.05650659; err = 0.01600000; EvalErr[1]PerSample = 0.01600000; TotalTime = 0.2392s; SamplesPerSecond = 66879.6
+04/07/2016 14:05:04:  Epoch[27 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.05876301; err = 0.01531250; EvalErr[1]PerSample = 0.01531250; TotalTime = 0.2393s; SamplesPerSecond = 66865.0
+04/07/2016 14:05:04: Finished Epoch[27 of 30]: [Training] ce = 0.055160314 * 1620000; err = 0.014816667; [1]=0.014816667; learningRatePerSample = 0.003125; EpochTime=0.898545
 04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Criterion Node [ce] Per Sample = 0.055160314
 04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Evaluation Node [errTop5] Per Sample = 0.014816667
 04/07/2016 14:05:04: Finished Epoch[27 of 30]:     Evaluation Node [err] Per Sample = 0.014816667
@@ -707,10 +707,10 @@ starting epoch 27 at record count 1620000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:04: Starting minibatch loop.
-04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.05102567; EvalErr[0]PerSample = 0.01300000; EvalErr[1]PerSample = 0.01300000; TotalTime = 0.2394s; SamplesPerSecond = 66845.2
-04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05421332; EvalErr[0]PerSample = 0.01500000; EvalErr[1]PerSample = 0.01500000; TotalTime = 0.2391s; SamplesPerSecond = 66911.2
-04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05648208; EvalErr[0]PerSample = 0.01443750; EvalErr[1]PerSample = 0.01443750; TotalTime = 0.2391s; SamplesPerSecond = 66924.9
-04/07/2016 14:05:05: Finished Epoch[28 of 30]: [Training Set] TrainLossPerSample = 0.052959003; TotalSamplesSeen = 1680000; EvalErrPerSample [0]=0.013950001; [1]=0.013950001; AvgLearningRatePerSample = 0.003125; EpochTime=0.898578
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.05102567; err = 0.01300000; EvalErr[1]PerSample = 0.01300000; TotalTime = 0.2394s; SamplesPerSecond = 66845.2
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.05421332; err = 0.01500000; EvalErr[1]PerSample = 0.01500000; TotalTime = 0.2391s; SamplesPerSecond = 66911.2
+04/07/2016 14:05:05:  Epoch[28 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.05648208; err = 0.01443750; EvalErr[1]PerSample = 0.01443750; TotalTime = 0.2391s; SamplesPerSecond = 66924.9
+04/07/2016 14:05:05: Finished Epoch[28 of 30]: [Training] ce = 0.052959003 * 1680000; err = 0.013950001; [1]=0.013950001; learningRatePerSample = 0.003125; EpochTime=0.898578
 04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Criterion Node [ce] Per Sample = 0.052959003
 04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013950001
 04/07/2016 14:05:05: Finished Epoch[28 of 30]:     Evaluation Node [err] Per Sample = 0.013950001
@@ -721,10 +721,10 @@ starting epoch 28 at record count 1680000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:05: Starting minibatch loop.
-04/07/2016 14:05:05:  Epoch[29 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04898481; EvalErr[0]PerSample = 0.01231250; EvalErr[1]PerSample = 0.01231250; TotalTime = 0.2392s; SamplesPerSecond = 66899.7
-04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.05204683; EvalErr[0]PerSample = 0.01406250; EvalErr[1]PerSample = 0.01406250; TotalTime = 0.2393s; SamplesPerSecond = 66867.8
-04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05432639; EvalErr[0]PerSample = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2393s; SamplesPerSecond = 66863.6
-04/07/2016 14:05:06: Finished Epoch[29 of 30]: [Training Set] TrainLossPerSample = 0.05088209; TotalSamplesSeen = 1740000; EvalErrPerSample [0]=0.013283334; [1]=0.013283334; AvgLearningRatePerSample = 0.003125; EpochTime=0.898595
+04/07/2016 14:05:05:  Epoch[29 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.04898481; err = 0.01231250; EvalErr[1]PerSample = 0.01231250; TotalTime = 0.2392s; SamplesPerSecond = 66899.7
+04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.05204683; err = 0.01406250; EvalErr[1]PerSample = 0.01406250; TotalTime = 0.2393s; SamplesPerSecond = 66867.8
+04/07/2016 14:05:06:  Epoch[29 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.05432639; err = 0.01393750; EvalErr[1]PerSample = 0.01393750; TotalTime = 0.2393s; SamplesPerSecond = 66863.6
+04/07/2016 14:05:06: Finished Epoch[29 of 30]: [Training] ce = 0.05088209 * 1740000; err = 0.013283334; [1]=0.013283334; learningRatePerSample = 0.003125; EpochTime=0.898595
 04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Criterion Node [ce] Per Sample = 0.05088209
 04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Evaluation Node [errTop5] Per Sample = 0.013283334
 04/07/2016 14:05:06: Finished Epoch[29 of 30]:     Evaluation Node [err] Per Sample = 0.013283334
@@ -735,10 +735,10 @@ starting epoch 29 at record count 1740000, and file position 0
 already there from last epoch
 
 04/07/2016 14:05:06: Starting minibatch loop.
-04/07/2016 14:05:06:  Epoch[30 of 30]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.04706239; EvalErr[0]PerSample = 0.01168750; EvalErr[1]PerSample = 0.01168750; TotalTime = 0.2395s; SamplesPerSecond = 66812.8
-04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.04999670; EvalErr[0]PerSample = 0.01318750; EvalErr[1]PerSample = 0.01318750; TotalTime = 0.2391s; SamplesPerSecond = 66925.4
-04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.05228509; EvalErr[0]PerSample = 0.01331250; EvalErr[1]PerSample = 0.01331250; TotalTime = 0.2396s; SamplesPerSecond = 66786.3
-04/07/2016 14:05:07: Finished Epoch[30 of 30]: [Training Set] TrainLossPerSample = 0.048918661; TotalSamplesSeen = 1800000; EvalErrPerSample [0]=0.0125; [1]=0.0125; AvgLearningRatePerSample = 0.003125; EpochTime=0.899362
+04/07/2016 14:05:06:  Epoch[30 of 30]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.04706239; err = 0.01168750; EvalErr[1]PerSample = 0.01168750; TotalTime = 0.2395s; SamplesPerSecond = 66812.8
+04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.04999670; err = 0.01318750; EvalErr[1]PerSample = 0.01318750; TotalTime = 0.2391s; SamplesPerSecond = 66925.4
+04/07/2016 14:05:07:  Epoch[30 of 30]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.05228509; err = 0.01331250; EvalErr[1]PerSample = 0.01331250; TotalTime = 0.2396s; SamplesPerSecond = 66786.3
+04/07/2016 14:05:07: Finished Epoch[30 of 30]: [Training] ce = 0.048918661 * 1800000; err = 0.0125; [1]=0.0125; learningRatePerSample = 0.003125; EpochTime=0.899362
 04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Criterion Node [ce] Per Sample = 0.048918661
 04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Evaluation Node [errTop5] Per Sample = 0.0125
 04/07/2016 14:05:07: Finished Epoch[30 of 30]:     Evaluation Node [err] Per Sample = 0.0125
@@ -805,9 +805,9 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 2036 retries for 10000 elements (20.4%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 2009, 1524, ...
-Minibatch[1-500]: SamplesSeen = 8000    errTop5: ErrorPrediction/Sample = 0.02575    err: ErrorPrediction/Sample = 0.02575    ce: CrossEntropyWithSoftmax/Sample = 0.084545252    
-Minibatch[501-625]: SamplesSeen = 2000    errTop5: ErrorPrediction/Sample = 0.013    err: ErrorPrediction/Sample = 0.013    ce: CrossEntropyWithSoftmax/Sample = 0.047279389    
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    errTop5: ErrorPrediction/Sample = 0.0232    err: ErrorPrediction/Sample = 0.0232    ce: CrossEntropyWithSoftmax/Sample = 0.07709208    Perplexity = 1.0801415    
+Minibatch[1-500]: * 8000    errTop5 = 0.02575    err = 0.02575    ce = 0.084545252    
+Minibatch[501-625]: * 2000    errTop5 = 0.013    err = 0.013    ce = 0.047279389    
+Final Results: Minibatch[1-625]: * 10000    errTop5 = 0.0232    err = 0.0232    ce = 0.07709208    perplexity = 1.0801415    
 
 04/07/2016 14:05:07: Action "test" complete.
 

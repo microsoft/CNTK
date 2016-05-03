@@ -2921,45 +2921,45 @@ Starting Epoch 1: learning rate per sample = 0.000781  effective momentum = 0.00
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0) with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: SamplesSeen = 6400; TrainLossPerSample =  4.80572449; EvalErr[0]PerSample = 0.90281250; TotalTime = 26.3860s; SamplesPerSecond = 242.6
- Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.59893982; EvalErr[0]PerSample = 0.85390625; TotalTime = 24.2725s; SamplesPerSecond = 263.7
- Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5738; TrainLossPerSample =  5.52913962; EvalErr[0]PerSample = 0.88654583; TotalTime = 21.3501s; SamplesPerSecond = 268.8
- Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 1840; TrainLossPerSample =  4.56729365; EvalErr[0]PerSample = 0.88369565; TotalTime = 18.5261s; SamplesPerSecond = 99.3
-Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 4.9174905; TotalSamplesSeen = 20546; EvalErrPerSample = 0.88022; AvgLearningRatePerSample = 0.00078125001; EpochTime=98.2087
+ Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: * 6400; CrossEntropyWithSoftmax =  4.80572449; EvalErrorPrediction = 0.90281250; TotalTime = 26.3860s; SamplesPerSecond = 242.6
+ Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: * 6400; CrossEntropyWithSoftmax =  4.59893982; EvalErrorPrediction = 0.85390625; TotalTime = 24.2725s; SamplesPerSecond = 263.7
+ Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: * 5738; CrossEntropyWithSoftmax =  5.52913962; EvalErrorPrediction = 0.88654583; TotalTime = 21.3501s; SamplesPerSecond = 268.8
+ Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: * 1840; CrossEntropyWithSoftmax =  4.56729365; EvalErrorPrediction = 0.88369565; TotalTime = 18.5261s; SamplesPerSecond = 99.3
+Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 4.9174905 * 20546; EvalErrorPrediction = 0.88022; learningRatePerSample  = 0.00078125001; EpochTime=98.2087
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.1'
 
 Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20546) with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: SamplesSeen = 6400; TrainLossPerSample =  4.47223267; EvalErr[0]PerSample = 0.91109375; TotalTime = 21.2927s; SamplesPerSecond = 300.6
- Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.39250671; EvalErr[0]PerSample = 0.87343750; TotalTime = 16.8668s; SamplesPerSecond = 379.4
- Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 4782; TrainLossPerSample =  4.39425923; EvalErr[0]PerSample = 0.91447093; TotalTime = 20.8955s; SamplesPerSecond = 228.9
- Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 2238; TrainLossPerSample =  4.41530524; EvalErr[0]PerSample = 0.93610366; TotalTime = 20.5999s; SamplesPerSecond = 108.6
- Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: SamplesSeen = 608; TrainLossPerSample =  4.45681281; EvalErr[0]PerSample = 0.92927632; TotalTime = 18.8459s; SamplesPerSecond = 32.3
-Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 4.421762; TotalSamplesSeen = 40980; EvalErrPerSample = 0.90310264; AvgLearningRatePerSample = 0.00078125001; EpochTime=100.965
+ Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: * 6400; CrossEntropyWithSoftmax =  4.47223267; EvalErrorPrediction = 0.91109375; TotalTime = 21.2927s; SamplesPerSecond = 300.6
+ Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: * 6400; CrossEntropyWithSoftmax =  4.39250671; EvalErrorPrediction = 0.87343750; TotalTime = 16.8668s; SamplesPerSecond = 379.4
+ Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: * 4782; CrossEntropyWithSoftmax =  4.39425923; EvalErrorPrediction = 0.91447093; TotalTime = 20.8955s; SamplesPerSecond = 228.9
+ Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: * 2238; CrossEntropyWithSoftmax =  4.41530524; EvalErrorPrediction = 0.93610366; TotalTime = 20.5999s; SamplesPerSecond = 108.6
+ Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: * 608; CrossEntropyWithSoftmax =  4.45681281; EvalErrorPrediction = 0.92927632; TotalTime = 18.8459s; SamplesPerSecond = 32.3
+Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 4.421762 * 40980; EvalErrorPrediction = 0.90310264; learningRatePerSample  = 0.00078125001; EpochTime=100.965
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.2'
 
 Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40980) with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: SamplesSeen = 6400; TrainLossPerSample =  4.14042542; EvalErr[0]PerSample = 0.83671875; TotalTime = 17.8254s; SamplesPerSecond = 359.0
- Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.17684998; EvalErr[0]PerSample = 0.86468750; TotalTime = 19.7434s; SamplesPerSecond = 324.2
- Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5330; TrainLossPerSample =  4.23903612; EvalErr[0]PerSample = 0.89530957; TotalTime = 16.5860s; SamplesPerSecond = 321.4
- Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 2390; TrainLossPerSample =  4.41369312; EvalErr[0]PerSample = 0.94016736; TotalTime = 19.7592s; SamplesPerSecond = 121.0
-Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 4.206933; TotalSamplesSeen = 61662; EvalErrPerSample = 0.87264287; AvgLearningRatePerSample = 0.00078125001; EpochTime=83.3559
+ Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: * 6400; CrossEntropyWithSoftmax =  4.14042542; EvalErrorPrediction = 0.83671875; TotalTime = 17.8254s; SamplesPerSecond = 359.0
+ Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: * 6400; CrossEntropyWithSoftmax =  4.17684998; EvalErrorPrediction = 0.86468750; TotalTime = 19.7434s; SamplesPerSecond = 324.2
+ Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: * 5330; CrossEntropyWithSoftmax =  4.23903612; EvalErrorPrediction = 0.89530957; TotalTime = 16.5860s; SamplesPerSecond = 321.4
+ Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: * 2390; CrossEntropyWithSoftmax =  4.41369312; EvalErrorPrediction = 0.94016736; TotalTime = 19.7592s; SamplesPerSecond = 121.0
+Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 4.206933 * 61662; EvalErrorPrediction = 0.87264287; learningRatePerSample  = 0.00078125001; EpochTime=83.3559
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.3'
 
 Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61662) with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: SamplesSeen = 6400; TrainLossPerSample =  4.06095703; EvalErr[0]PerSample = 0.85125000; TotalTime = 21.4723s; SamplesPerSecond = 298.1
- Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: SamplesSeen = 6400; TrainLossPerSample =  4.12552429; EvalErr[0]PerSample = 0.87437500; TotalTime = 20.8843s; SamplesPerSecond = 306.4
- Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: SamplesSeen = 5796; TrainLossPerSample =  4.13897448; EvalErr[0]PerSample = 0.87370600; TotalTime = 24.5826s; SamplesPerSecond = 235.8
- Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: SamplesSeen = 1630; TrainLossPerSample =  4.05378643; EvalErr[0]PerSample = 0.89018405; TotalTime = 20.8214s; SamplesPerSecond = 78.3
-Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 4.097261; TotalSamplesSeen = 82028; EvalErrPerSample = 0.86727881; AvgLearningRatePerSample = 0.00078125001; EpochTime=101.463
+ Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: * 6400; CrossEntropyWithSoftmax =  4.06095703; EvalErrorPrediction = 0.85125000; TotalTime = 21.4723s; SamplesPerSecond = 298.1
+ Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: * 6400; CrossEntropyWithSoftmax =  4.12552429; EvalErrorPrediction = 0.87437500; TotalTime = 20.8843s; SamplesPerSecond = 306.4
+ Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: * 5796; CrossEntropyWithSoftmax =  4.13897448; EvalErrorPrediction = 0.87370600; TotalTime = 24.5826s; SamplesPerSecond = 235.8
+ Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: * 1630; CrossEntropyWithSoftmax =  4.05378643; EvalErrorPrediction = 0.89018405; TotalTime = 20.8214s; SamplesPerSecond = 78.3
+Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 4.097261 * 82028; EvalErrorPrediction = 0.86727881; learningRatePerSample  = 0.00078125001; EpochTime=101.463
 SGD: Saving checkpoint model '/tmp/cntk-test-20160308211136.116594/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn'
 CNTKCommandTrainEnd: speechTrain
 

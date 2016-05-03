@@ -18,40 +18,53 @@ DataDir    = "$RunRootDir$/Data"
 CacheDir   = "$DataDir$/cache"   # (not used currently)
 ExpRootDir = "$RunRootDir$"
 
-# experiment id
-#ExpId = _run
+#command = train:test:write
+command = writeWordAndClassInfo:train:test:write
+#command = write
+#command = dump
 
-deviceId = 1
+# experiment id
+
+beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
+
+# 27-4: back to LMSequenceReader (regression test)
+# 27-3: used </s> for sent end
+# 27-2: some refactoring, went back to 26-4 from LMSequenceReader
+# 27-1: fixed slicing
+# 27-0: incorrect slicing, dropped first input
+deviceId = 4
+ExpId = 27-$deviceId$-g2p
+#ExpId = 22-3-g2p # for decoding a different model
+decodeModel = 21
 #ExpId = 41-$deviceId$-s2sae    # TASK
-ExpId = 14-$deviceId$-g2p
-#ExpId = 13-5-g2p # for decoding a different model
+
+hiddenDim = 512  #420 # 1024 # 200
+maxLayer = 2
+isBidirectional=false
+#hiddenDim = 256 # 1024 # 200
+#maxLayer = 2
+#isBidirectional=true
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log3
-
-# It implements a sequence-to-sequence based auto-encoder.
-# It encodes an entire sentence into a flat vector, and tries to regenerate it.
-# Meant to be useful mainly understanding how to do sequence-to-sequence in CNTK.
-
-command = writeWordAndClassInfo:train:test:write
-#command = write
-#command = dump
+stderr = $ExpDir$/S2SAutoEncoder.log2
 
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
 
-decodeModelPath = "$modelPath$.35" # epoch to decode can be appended here  TASK
-beamDepth = 3                    # 0=predict; 1=greedy; >1=beam
-decodeOutputPath = "$decodeModelPath$.b$beamDepth$"
+# decoding config
+decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
+decodeOutputPath = "$decodeModelPath$.bl$beamDepth$"
 
 dumpModelPath = "$modelPath$.2" # model to dump if needed
 
 #confVocabSize = 10000
 #confClassSize = 50
+#inputVocabSize = $confVocabSize$
+#labelVocabSize = $confVocabSize$
 #maxLength = 84
 #isAutoEncoder=true
 #
@@ -63,18 +76,34 @@ dumpModelPath = "$modelPath$.2" # model to dump if needed
 ##testFile  = "ptb.test.txt-econ1"
 ##testFile = "ptb.small.train.txt" # test on train, to see whether model makes sense at all
 #startSymbol = "</s>"
+#useCNTKTextFormatReader = false
+#shareEmbeddings = true
 
-confVocabSize = 69
 confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
 
+inputVocabSize = 69
+labelVocabSize = 69
 trainFile = "g014b2b.train-dev-20-21.bsf.joint"
 #trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
 validFile = "g014b2b.train-dev-1-21.bsf.joint"
 testFile  = "g014b2b.test.bsf.joint"
 #testFile  = "g014b2b.test.bsf.joint.masked"
 startSymbol = "<s>"
+useCNTKTextFormatReader = false
+shareEmbeddings = true
+
+#inputVocabSize = 29
+#labelVocabSize = 40
+#trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+##trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf"
+##testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+#startSymbol = "<s>"
+#useCNTKTextFormatReader = true
+#shareEmbeddings = false
 
 #######################################
 #  network definition                 #
@@ -89,16 +118,17 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     include "S2SLib.bs"
 
     # import general config options from outside config values
-    vocabDim = $confVocabSize$
-    nbrClass = $confClassSize$
+    inputVocabDim = $inputVocabSize$
+    labelVocabDim = $labelVocabSize$
+    nbrClass = $confClassSize$          # for labels only; not functional currently
 
     isAutoencoder = $isAutoEncoder$     # input is only one sequence, meant to reproduce itself
     attentionSpan = $maxLength$         # 0 to disable. We only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
+    useBidirectionalEncoder = $isBidirectional$ # bi-directional LSTM for encoder
 
     useStabilizer = true
     useEncoder    = true                # if false, this becomes a regular RNN
     useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
-    useBidirectionalEncoder = false
 
     # import some names
     Parameters = BS.Parameters
@@ -108,26 +138,42 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     Boolean    = BS.Boolean
 
     # dimensions
-    embeddingDim = $confVocabSize$ # 300
-    hiddenDim    = 512  #420 #768 # 1024 # 200   --TODO: Kaisheng used 500
+    inputEmbeddingDim = $inputVocabSize$ # 300
+    labelEmbeddingDim = $labelVocabSize$ # 300
+    shareEmbeddings = $shareEmbeddings$
+    hiddenDim    = $hiddenDim$
     attentionDim = 128 # dim of attention  projection
-    maxLayer = 1 # 0
+    maxLayer = $maxLayer$
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
 
     # inputs
-    #input = SparseInput(vocabDim, tag='feature');  # BUGBUG: Slice() not working for sparse, need to extend TensorView
-    input = Input(vocabDim, tag='feature');
+    # Inputs must be defined on top-scope level in order to get a clean name.
+    useCNTKTextFormatReader = $useCNTKTextFormatReader$
+    input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
+
+    inputAxis = DynamicAxis()
+    labelsAxis = DynamicAxis()
+    #src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
+    #tgt = /*Sparse*/Input (labelVocabDim, dynamicAxis=labelsAxis)
 
     # get out input and label data
+    # This will go away once we can switch to CNTKTextFormatReader.
     streams = [
         rawInput = input
         out = if isAutoencoder
         then [
             # for an auto-encoder, both are the same
             input  = rawInput
-            labels = rawInput
+            # strip separators
+            labels = Slice (1,  0, rawInput,  axis=-1)  # e.g. A   B   C   </s>
+            labelSentenceStart = First (rawInput)
+        ]
+        else if useCNTKTextFormatReader then [
+            input  = Pass (TraceSparse (src, 'inp'))
+            labels = Pass (TraceSparse (tgt, 'lbl'))
+            labelSentenceStart = Last (labels)   # BUGBUG: this symbol is needed in the input stream; using the end symbol for now
         ]
         else [
             # we encode input and label as a single input; this splits it into two
@@ -136,87 +182,51 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
             isSeparator = RowSlice (separatorRow, 1, rawInput)                                        # cut out the separator as a flag
             inInput  = Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator) # flag sequence: word is input...
             inLabels = Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
-            input  = Sequences.Gather (inInput,  rawInput)                                            # use flags to split raw input into input and labels
-            labels = Sequences.Gather (inLabels, rawInput)                                            # (both have different lengths)
+            input   = Sequences.Gather (inInput,  rawInput)                                           # use flags to split raw input into input and labels
+            labels1 = Sequences.Gather (inLabels, rawInput)                                           # (both have different lengths)
+            # strip separators
+            labels  = Slice (1,  0, labels1,  axis=-1)  # e.g. A   B   C   </s>
+            labelSentenceStart = First (labels1)
         ]
     ].out
+    inputSequence  = Pass (streams.input)                   # e.g. <s> A   B   C    </s>
+    labelSequence  = Pass (streams.labels)                  # e.g. A   B   C   </s>
+    labelSentenceStart = First (streams.labelSentenceStart) # e.g. <s>
+
+    inputSequenceDim = inputVocabDim # TODO: they are the same; but route these through the struct above
+    labelSequenceDim = labelVocabDim
 
     # helpers   --TODO: move to CNTK.core.bs
     First (x) = Slice (0,  1, x,  axis=-1)
     Last (x)  = Slice (-1, 0, x,  axis=-1)
 
-    # strip separators
-    inputSequence  = Pass (              streams.input            )  # e.g. <s> A   B   C    </s>
-    labelSequence  = Pass (Slice (1,  0, streams.labels,  axis=-1))  # e.g. A   B   C   </s>
-    # ^^ use Pass() to make these easily accessible in MEL, e.g. for decoding
+    isFirstLabel = Loop.IsFirst (labelSequence)
 
     # embeddings  --as long as we cannot read multiple sequences, we got one embedding
     # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
 
-    E = Parameters.Stabilize (Parameters.WeightParam (vocabDim, embeddingDim), enabled=useStabilizer) # note: this is assumed to be applied transposed, hence the swapped dimensions
-    EmbedInput (x)  = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
-    EmbedLabels (x) = if vocabDim != embeddingDim then TransposeTimes (E, x) else x
+    # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
+    Einput  =                                     Parameters.WeightParam (inputSequenceDim, inputEmbeddingDim)
+    Elabels = if shareEmbeddings then Einput else Parameters.WeightParam (labelSequenceDim, labelEmbeddingDim)
+    EmbedInput (x)  = if inputSequenceDim == inputEmbeddingDim then x else TransposeTimes (Einput, x)
+    EmbedLabels (x) = if labelSequenceDim == labelEmbeddingDim then x else TransposeTimes (Elabels, x)
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
-    labelSentenceStart = First (streams.labels)
-    labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
+    #labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
+    labelSentenceStartEmbedded = Pass (EmbedLabels (labelSentenceStart))  # TODO: remove Pass() if not actually needed in decoder
+    labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
 
-    RecurrentLSTMPWithAttentionWindow2 (inputDim1/*x.dim*/, outputDim/*h.dim*/, cellDim1/*c.dim*/, x, projectedAttentionWindowBroadcast, attentionDim, attentionSpan, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
-    [
-        prevState = previousHook (lstmState)
+    S(x) = Parameters.Stabilize (x, enabled=useStabilizer)
 
-        # compute additional hidden state from attention
-        W(x) = TraceDense(    Parameters.WeightParam (attentionDim, outputDim)    , 'Wdec') * Parameters.Stabilize (x, enabled=false/*useStabilizer*/)
-        projectedH = W (prevState.h) # [outputDim]    // [outputDim x D]
-        tanHOut = Tanh (TraceDense(   projectedAttentionWindowBroadcast.projectedValue,   'hencp') + TraceDense (   projectedH,   'hdecp')) # [attentionDim x attentionSpan]
-        # ^^ [attDim x 1 x attSpan] + [attDim x D] -> [attDim x D x attSpan]
-        v(x) = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')  * Parameters.Stabilize (x, enabled=useStabilizer) # [1 x attentionDim]
-        u = v (tanHOut)                                            # [1 x attentionSpan]
-        # [1 x D x attSpan]
-        uValid = u + Log (projectedAttentionWindowBroadcast.valid) # [1 x attentionSpan]
-        # [1 x D x attSpan] + [1 x 1 x attSpan] -> [1 x D x attSpan]
-        attentionWeights = TraceDense(  Softmax (uValid)    ,'weights')                    # [1 x attentionSpan]
-        # [1 x D x attSpan]   BUGBUG, needs to keep Softmax denoms separate over D
-        weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* attentionWeights # [encoderHiddenDim x attentionSpan]
-        # [encDim x 1 x attSpan] .* [1 x D x attSpan] -> [encDim x D x attSpan]  BUGBUG, needs to keep Softmax denoms separate over D
-        weightedAttentionAverage = weightedAttentionWindow * BS.Constants.OnesTensor (attentionSpan) # [encoderHiddenDim]
-        # [encDim x D]
-
-        # feed both to LSTM as a single agumented input, so that we can reuse the existing LSTM component
-        augmentedX = RowStack (weightedAttentionAverage : x)
-
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=projectedAttentionWindowBroadcast.dim + inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState // that's the value we return
-
+    #############################################################
     # encoder (processes inputEmbedded)
-    encoder =
-        if useBidirectionalEncoder
-        then
-        [
-            encoderOutputLayer = Length (encoderDims)-1
-            forwardEncoder  = BS.RNNs.RecurrentLSTMP2Stack (encoderDims, /*cellDims=encoderDims,*/ inputEmbedded, inputDim=embeddingDim, enableSelfStabilization=useStabilizer)
-            NextHC (lstmState) = [
-               h = Loop.Next (lstmState.h)             // hidden state(t-1)
-               c = Loop.Next (lstmState.c)             // cell(t-1)
-            ]
-            backwardEncoder = BS.RNNs.RecurrentLSTMP2Stack (encoderDims, /*encoderDims,*/ inputEmbedded, inputDim=embeddingDim, previousHook=NextHC, enableSelfStabilization=useStabilizer)
-            output = [
-                h = RowStack (forwardEncoder[encoderOutputLayer].h : backwardEncoder[encoderOutputLayer].h)
-                c = RowStack (forwardEncoder[encoderOutputLayer].c : backwardEncoder[encoderOutputLayer].c)
-                dim = 2 * encoderDims[encoderOutputLayer]
-            ]
-            #dim = 2 * encoderDims[encoderOutputLayer]
-        ]
-        else
-        [
-            encoderOutputLayer = Length (encoderDims)-1
-            encoder = BS.RNNs.RecurrentLSTMP2Stack (inputEmbedded, embeddingDim, encoderDims, encoderDims, enableSelfStabilization=useStabilizer)
-            output = encoder[encoderOutputLayer]
-            #dim = encoderDims[encoderOutputLayer]
-        ]
-    encoderOutput = encoder.output # TODO: remove .output indirection, no longer needed
+    #############################################################
+
+    # TODO: do not revert our inputs; instead, if needed, use a backwards-running loop here
+    encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
+    encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim, enableSelfStabilization=useStabilizer)
+    encoderOutput = encoder[Length (encoderDims)-1]
 
     # that last frame should be fed as an additional input to every decoder step
     # Three ways of passing encoder state:
@@ -227,9 +237,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     thoughtVector = [
         h = Last (encoderOutput.h)
         c = Last (encoderOutput.c)
-        dim = encoder.output.dim
+        dim = encoderOutput.dim
     ]
-    thoughtVectorDim = thoughtVector.dim
 
     thoughtVectorPadded = [ # padded with zeroes until end of target sequence
         h = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
@@ -237,23 +246,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
         dim = thoughtVector.dim
     ]
 
-    # attention (fixed rolling window)
-    attentionWindow = Sequences.PastValueWindow (attentionSpan, encoderOutput.h, axis=2) # BUGBUG: We need axis=3 for beam search. Track this down.
-    projectedAttentionWindowBroadcast = [
-        W(x) = TraceDense (   Parameters.WeightParam (attentionDim, thoughtVector.dim),    'Wenc')   * Parameters.Stabilize (x, enabled=false/*useStabilizer*/)
-        #B = Parameters.BiasParam (vocabDim) # no bias in attention
-        value          = Sequences.BroadcastSequenceAs (labelsEmbedded,    attentionWindow.value)
-        projectedValue = Sequences.BroadcastSequenceAs (labelsEmbedded, W (attentionWindow.value)) # apply the projection columnwise to the attentionWindow tensor
-        valid          = Sequences.BroadcastSequenceAs (labelsEmbedded,    attentionWindow.valid)
-        dim            = thoughtVector.dim
-    ]
-
     # NYU style: expand h to all, drop c
     # TODO: just use use thoughtVectorPadded.h (do this when we next test this branch again)
     thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
                                  /*then*/ thoughtVectorPadded.h,                   # then copy that
                                  /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
-    # TODO: use BroadcastSequenceAs()
+    # TODO: use thoughtVectorPadded.h  --TODO: use the new LSTM with augmentation
 
     # decoder
     # NYU style:
@@ -263,79 +261,133 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # we bake into the LSTMs to multiply h and c with beamSearchReorderHook, which we will patch in decoding
     # ReorderTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past'), TraceDense (tokens.from, 'backp'))
 
-    beamSearchReorderHook = Pass (Constants.One)
+    #############################################################
+    # decoder
+    #############################################################
+
+    beamSearchReorderHook = Pass (Constants.OnesTensor (1:1))
 
     # helper functions to delay h and c with possibility to later hook in a different matrix
 
     PreviousHCFromThoughtVectorWithReorderingHook (lstmState) = [ # with thought vector and beam-search hook
        isFirst = Loop.IsFirst (initialState.h)
        # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
-       h = Boolean.If (isFirst, thoughtVectorPadded.h, Loop.Previous (lstmState.h/* * beamSearchReorderHook*/))             // hidden state(t-1)
-       c = Boolean.If (isFirst, thoughtVectorPadded.c, Loop.Previous (lstmState.c/* * beamSearchReorderHook*/))             // cell(t-1)
+       h = Boolean.If (isFirst, thoughtVectorPadded.h, Loop.Previous (lstmState.h * beamSearchReorderHook))             // hidden state(t-1)
+       c = Boolean.If (isFirst, thoughtVectorPadded.c, Loop.Previous (lstmState.c * beamSearchReorderHook))             // cell(t-1)
+       dim = lstmState.dim
     ]
 
     PreviousHCWithReorderingHook (lstmState) = [
-       h = Loop.Previous (lstmState.h/* * beamSearchReorderHook*/)             // hidden state(t-1)
-       c = Loop.Previous (lstmState.c/* * beamSearchReorderHook*/)             // cell(t-1)
+       h = Loop.Previous (lstmState.h * beamSearchReorderHook)             // hidden state(t-1)
+       c = Loop.Previous (lstmState.c * beamSearchReorderHook)             // cell(t-1)
+       dim = lstmState.dim
     ]
 
-    decoderHistoryFromGroundTruth = labelsEmbedded                            # decoder input for training is ground truth...
-    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z)), tag='output') # ...but for testing, it's the output. Make an 'output' to make it a root that is kept
+    decoderHistoryFromGroundTruth = labelsEmbedded              # decoder input for training is ground truth...
+    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z))) # ...but for (greedy) decoding, the decoder's output is its input
 
     # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
     decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
 
-    PreviousOrDefault1 (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
-    [
-        flags = Loop.IsFirst (defaultValue/*x*/)
-        out = Boolean.If (flags,
-                 /*then*/ defaultValue,
-                 /*else*/ Loop.Previous (x))
-    ].out
-    labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (Loop.IsFirst (labelSequence), labelSentenceStartEmbedded) # unfortunately needed presently
+    decoderInput    = Pass (Boolean.If (isFirstLabel/*Loop.IsFirst (labelSentenceStartEmbeddedScattered)*/, labelSentenceStartEmbeddedScattered, Loop.Previous (decoderHistoryHook)))
+    decoderInputDim = labelEmbeddingDim #labelsEmbedded.dim
 
-    decoderInput    = Pass (PreviousOrDefault1 (defaultValue=labelSentenceStartEmbeddedScattered, decoderHistoryHook))
-    decoderInputDim = embeddingDim #labelsEmbedded.dim
+    decoderDynamicAxis = labelsEmbedded
+    FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
 
+    # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
     decoderOutputLayer = Length (decoderDims)-1
     decoder[i:0..decoderOutputLayer] =
         if i == 0
-        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
-                                                                        RowStack (thoughtVectorEverywhere : decoderInput), inputDim=thoughtVectorDim + decoderInputDim,
-                                                                        previousHook=PreviousHCWithReorderingHook,
-                                                                        enableSelfStabilization=useStabilizer)
-             else if useEncoder && attentionSpan > 0 then RecurrentLSTMPWithAttentionWindow2 (/*thoughtVectorDim + //<-BUGBUG*/ decoderInputDim, decoderDims[i], decoderDims[i],
-                                                                                              /*RowStack (thoughtVectorEverywhere : //<-BUGBUG)*/ (decoderInput),
-                                                                                              projectedAttentionWindowBroadcast, attentionDim, attentionSpan,
+        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                                                       RowStack (S(thoughtVectorEverywhere) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
+                                                                       previousHook=PreviousHCWithReorderingHook,
+                                                                       enableSelfStabilization=useStabilizer)
+             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
+                                                                                              S(decoderInput), inputDim=decoderInputDim,
+                                                                                              augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
                                                                                               previousHook=PreviousHCWithReorderingHook,
                                                                                               enableSelfStabilization=useStabilizer)
-             else BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
-                                           decoderInput, inputDim=decoderInputDim,
-                                           previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state
-                                           enableSelfStabilization=useStabilizer)
-        else BS.RNNs.RecurrentLSTMP2 (decoderDims[i],// cellDim=decoderDims[i],
-                                      decoder[i-1].h, inputDim=decoderDims[i-1] /*TODO: decoder[i-1].dim*/,
-                                      previousHook=PreviousHCWithReorderingHook,
-                                      enableSelfStabilization=useStabilizer)
+             else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                          S(decoderInput), inputDim=decoderInputDim,
+                                          previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state
+                                          enableSelfStabilization=useStabilizer)
+        else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                     S(decoder[i-1].h), inputDim=/*decoderDims[i-1]*/ decoder[i-1].dim,
+                                     previousHook=PreviousHCWithReorderingHook,
+                                     enableSelfStabilization=useStabilizer)
     decoderOutput = decoder[decoderOutputLayer].h
     #decoderDim = decoderOutput.dim
     decoderDim = decoderDims[decoderOutputLayer]
 
     # and add a softmax layer on top
 
-    W(x) = Parameters.WeightParam (vocabDim, decoderDim) * Parameters.Stabilize (x, enabled=useStabilizer)
-    B = Parameters.BiasParam (vocabDim)
+    W = Parameters.WeightParam (labelSequenceDim, decoderDim)
+    B = Parameters.BiasParam (labelSequenceDim)
 
-    z = W (decoderOutput) + B;  // top-level input to Softmax
+    z = W * S(decoderOutput) + B;  // top-level input to Softmax
 
+    #############################################################
     # training criteria
-    ce  = CrossEntropyWithSoftmax (labelSequence, z, tag='criterion')   // this is the training objective
-    wer = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+    #############################################################
+
+    ce = NewCrossEntropyWithSoftmax (labelSequence, z, tag='criterion')
+    ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
+    ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
+    errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+    cors = ReduceSum (labelSequence .* Hardmax (z), tag='evaluation')
+
+    # score output for decoding
+    scoreSequence = Pass (z)
 ])
 
 #######################################
 # shared reader definition            #
 #######################################
+
+cntkreader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$trainFile$"
+    randomize="auto"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = 29     # 26 letters plus start, end, apostrophe
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = 40     # 39 phonemes (~AX missing), end symbol (in index 0)
+            format = "sparse"
+        ]
+    ]
+]
+
+cntkcvReader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$validFile$"
+    randomize="none"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = 29     # 26 letters plus start, end, apostrophe
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = 40     # 39 phonemes (~AX missing), end symbol (in index 0)
+            format = "sparse"
+        ]
+    ]
+]
 
 reader = [
     file = "$DataDir$/$trainFile$"
@@ -377,7 +429,7 @@ reader = [
 
         # vocabulary size
         labelType = "category"
-        labelDim = "$confVocabSize$"
+        labelDim = "$inputVocabSize$"
         labelMappingFile = "$ModelDir$/vocab.wl"
         beginSequence = "$startSymbol$" # "</s>"
         endSequence   = "</s>"
@@ -445,7 +497,7 @@ cvReader = [
 
         # vocabulary size
         labelType = "category"
-        labelDim = "$confVocabSize$"
+        labelDim = "$inputVocabSize$"
         labelMappingFile = "$ModelDir$/vocab.wl"
         beginSequence = "</s>"
         endSequence   = "</s>"
@@ -485,7 +537,7 @@ writeWordAndClassInfo = [
     outputVocabFile = "$ModelDir$/vocab.txt"
     outputWord2Cls  = "$ModelDir$/word2cls.txt"
     outputCls2Index = "$ModelDir$/cls2idx.txt"
-    vocabSize = "$confVocabSize$"
+    vocabSize = "$inputVocabSize$"
     nbrClass = "$confClassSize$"
     cutoff = 0
     printValues = true
@@ -507,7 +559,7 @@ train = [
         learningRatesPerSample = 0.007*2:0.0035 #0.01 #0.005 # 0.01
         momentumAsTimeConstant = 2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
-        clippingThresholdPerSample = 1  # 15.0 # visibly impacts objectives, but not final result, so keep it for safety
+        clippingThresholdPerSample = 1   #15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
         maxEpochs = 50
         numMBsToShowResult = 100
         firstMBsToShowResult = 10
@@ -603,7 +655,7 @@ test = [
     
             # vocabulary size
             labelType = "category"
-            labelDim = "$confVocabSize$"
+            labelDim = "$inputVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
             beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"
@@ -651,9 +703,15 @@ test = [
 write = [
     action = "write"
 
-    # last trained model
-    # We need to make a change:
-    BrainScriptNetworkBuilder = ([
+    # these two lines select the decoder
+    BrainScriptNetworkBuilder = (if $beamDepth$ == 1
+                                 then BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"))
+                                 else BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), $beamDepth$))
+
+    # --- BEGIN IGNORE ---
+
+    # (old version, needed for some old setups; please ignore)
+    xBrainScriptNetworkBuilder = ([
 
         enableTracing = true
         traceFrequency = 1000
@@ -671,32 +729,9 @@ write = [
         If = Boolean.If
         OnesTensor = Constants.OnesTensor
 
-        # macro that extracts top D hypotheses from a 2D tensor
-        # input: scores[w,n]    w = word index, d = hyp index in beam (d=0 is the best one)
-        # output: [w,n1,n2]     n1 = input hyp index (prev top N); n2 = output hyp index (new top N)
-        # e.g. 4 words, beam 3; view this as 3 [4x3] planes "drawn" 3-dimensionally, with depth being the 3rd tensor index
-        GetTopNTensor (D, scores) = [
-            # recurse over up to D elements
-            # In each recursion:
-            #  - pick the best over (w,n)
-            #  - subtract it out from scores
-            recursion[n:0..D-1] =
-            [
-                curBestScores = if n == 0                            # scores excluding paths better than rank n
-                                then scores                          # top: just the path scores
-                                else recursion[n - 1].nextBestScores # next: path scores after removing all we already got
-                best = TraceOneHot (Hardmax (curBestScores), 'best')                       # best = one-hot over (w,n)
-                nextBestScores = curBestScores + Constant (-1e30) .* best     # set the ones we've already got to -INF
-                # TODO: use proper -INF; e.g. -1/0 in BS. Needs to be tested thoroughly.
-            ]
-            # splice them together into a single tensor
-            asArray[n:0..D-1] = recursion[n].best  # this is a BS array consisting only of the 'best' field    ('from r in recursion select r.best')
-            spliced = Splice (axis = 3, asArray)   # convert BS array index n to tensor index n1
-        ].spliced
-
         modelAsTrained = BS.Network.Load ("$decodeModelPath$")
 
-        useNYUStyle = false     # TODO: we should be able to infer this from some dimensions
+        #useNYUStyle = false     # TODO: we should be able to infer this from some dimensions
         hasEmbeddings = false   # TODO: infer this
 
         top1DecodingModel(model) = new ComputationNetwork [
@@ -708,7 +743,7 @@ write = [
             top1 = TraceSparse (top1b, 'logP') # TODO: get the accumulated logP out, it's a little more involved
 
             topN = 10
-            topPaths = GetTopNTensor (topN, logP) # [V x 1] -> [V x 1 x topN]
+            topPaths = BS.Seq2Seq.GetTopNTensor (topN, logP) # [V x 1] -> [V x 1 x topN]
             topPathScores = topPaths .* logP   # [V x 1 x topN]
             # reduce back to a single column
             topHyps = TraceSparse (topPathScores * OnesTensor (1 : topN), 'topHyps')
@@ -732,16 +767,20 @@ write = [
                         /*else*/ Previous (x))
         ].out
 
+        # old model structure:
         labelSentenceStart = modelAsTrained.labelSentenceStart_out # _ is a hack
-
         labelsToUse             = if hasEmbeddings then modelAsTrained.labelsEmbedded             else modelAsTrained.labelSequence
         labelSentenceStartToUse = if hasEmbeddings then modelAsTrained.labelSentenceStartEmbedded else labelSentenceStart
         labelSentenceStartEmbeddedScattered = TraceDense (BS.Sequences.Scatter (IsFirst (labelsToUse), labelSentenceStartToUse), 'sest')
+
+        # new model structure
+        #labelSentenceStartEmbeddedScattered = modelAsTrained.labelSentenceStartEmbeddedScattered
 
         delayedDecoderFeedback = TraceDense (/*Loop.*/PreviousOrDefault1 (defaultValue=labelSentenceStartEmbeddedScattered, TraceDense (decoderFeedback, 'lemb'))   , 'prev lemb')
 
         greedyDecodingModel = BS.Network.Edit (modelAsTrained,
                                                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback),
+                                               #BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, modelAsTrained.decoderHistoryFromOutput),
                                                modelAsTrained.z/*dummy for now since cannot pass empty set*/)
 
         # beam search of width 'beamDepth'
@@ -753,8 +792,8 @@ write = [
             #  decoder[0].prevState.h.elseVal = PastValue (decoder[0].lstmState._privateInnards.ht) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
             #  decoder[0].prevState.c.elseVal = PastValue (decoder[0].lstmState._privateInnards.ct) : [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h] -> [512 x 1 x labelSequence.h.out.h.indexSequence.h.indexSequence.h]
 
-            hiddenDim    = modelAsTrained.decoderFeedback.dim
-            embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
+            #hiddenDim    = modelAsTrained.decoderFeedback.dim
+            #embeddingDim = modelAsTrained.decoderOutputEmbedded.dim
             vocabSize    = modelAsTrained.z.dim
 
             # replace every reference of these by PropagateTopN(of these)
@@ -796,7 +835,8 @@ write = [
             #   decoder[0].attentionWeights.h = Softmax (decoder[0].uValid) : [1 x 3 x 20 x WhereNodeAxis21] -> [1 x 3 x 20 x WhereNodeAxis21]
             #   path SoftmaxArgs[0] to be column-wise over axis 3
 
-            ColumnwiseSoftmax (axis=1, z) = [ n = TraceDense(   Softmax (z),    'smz') ; axis1 = axis ; d = TraceDense(    ReducePlus (axis=axis1, n),    'denom') ; p = TraceDense(    n .* Reciprocal (d),    'p') ].p
+            ColumnwiseSoftmax = Softmax
+            #ColumnwiseSoftmax (axis=1, z) = [ n = TraceDense(   Softmax (z),    'smz') ; axis1 = axis ; d = TraceDense(    ReduceSum (axis=axis1, n),    'denom') ; p = TraceDense(    n .* Reciprocal (d),    'p') ].p
 
             #Columnwise (f, beamDepth, z) = # TODO: Takes LogSoftmax over axis=1. it is more tricky to do this over arbitrary axes
             #[
@@ -804,9 +844,12 @@ write = [
             #    out = Splice (cols, axis=2)
             #].out
 
-            InjectDepth (node) = SplitDimension (node, /*axis=*/1, 1 /*->0:1*/)
+            #InjectDepth (node) = SplitDimension (node, /*axis=*/1, 1 /*->0:1*/)
+            InjectDepth (node) = node     # use this with newer models (16+) that do this in the model already
 
-            propagationEdits[i:0..13] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
+            # decoderFeedback must be updated to take actual decoder output
+
+            propagationEdits[i:0..14] = // TODO: implement and use { } syntax  TODO: VV elseVal only for non-NYU?
                 # non-NYU:
                 if      i ==  0 then (node => if node.name == 'decoder[0].prevState.h.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node) # inject reshuffling of hypotheses
                 else if i ==  1 then (node => if node.name == 'decoder[0].prevState.c.elseVal' then TraceState (Previous (ReorderTopN (node.PastValueArgs[0])), 'propagated') else node)
@@ -823,15 +866,19 @@ write = [
                 else if i ==  9 then (node => if node.name != 'decoder[0].uValid'                   then node else              node.PlusArgs[0]           + InjectDepth (node.PlusArgs[1]))
                 else if i == 10 then (node => if node.name != 'decoder[0].weightedAttentionWindow'  then node else InjectDepth (node.ElementTimesArgs[0]) .*              node.ElementTimesArgs[1])
                 else if i == 11 then (node => if node.name != 'decoder[0].weightedAttentionAverage' then node else Times (node.TimesArgs[0], node.TimesArgs[1], outputRank=2))
-                else if i == 12 then (node => if node.name != 'decoder[0].attentionWeights.h'       then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
+                else if i == 12 then (node => if node.name != 'decoder[0].attentionWeights'         then node else ColumnwiseSoftmax (axis=3, node.SoftmaxArgs[0]))
+
+                else if i == 13 then (node => if node.name != 'beamSearchReorderHook'               then node else tokens.from)
+                #else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderHistoryHook, decoderFeedback)
                 else                BS.Network.Editing.ReplaceLinksToNode (modelAsTrained.decoderInput/*delayedDecoderFeedback*/, delayedDecoderFeedback)
 
-            # decoderFeedback must be updated to take actual decoder output
+            # decoderHistoryHook --> decoderFeedback
 
             m2 = BS.Network.Edit (modelAsTrained,
                                   propagationEdits,
                                   (inputsOut : labelsOut : decodeOut)) # additional roots
 
+            # TODO: use ReduceSum
             ReduceAxis (axisDim, x, axis=1) =   # unfortunately, we must feed in the dimension of the axis, it can't be inferred
                 if      axis == 1 then Times (OnesTensor (axisDim), x, outputRank = 0)
                 else if axis == 2 then ReduceAxis (axisDim, TransposeDimensions (x, 1, 2), axis=1)
@@ -848,7 +895,7 @@ write = [
             expandedPathScores = logLLs + If (IsFirst (logLLs), initialPathScores, Previous (tokens.score)) # [V x Dprev] log (P(w|hist) * P(hist)) for all top D hypotheses
 
             # determine top D of expanded paths
-            topPaths      = TraceSparse (GetTopNTensor (beamDepth, expandedPathScores), 'topPaths') # [V x Dprev] -> [V x Dprev x Dnew]
+            topPaths      = TraceSparse (BS.Seq2Seq.GetTopNTensor (beamDepth, expandedPathScores), 'topPaths') # [V x Dprev] -> [V x Dprev x Dnew]
             topPathScores = TraceSparse (topPaths .* expandedPathScores, 'topPathScores')           #                [V x Dprev x Dnew]
 
             # form new decoding token, by reducing topPaths(Scores) along relevant dimensions
@@ -918,7 +965,7 @@ write = [
             #       +-----+
 
             # tokens.word:
-            #tokens.word = ReducePlus (axis=2, topPaths) # TODO: add an axis parameter to SumColumnElements()
+            #tokens.word = ReduceSum (axis=2, topPaths) # TODO: add an axis parameter to SumColumnElements()
             #   +-+
             #   |0|
             #   |0|-+
@@ -990,7 +1037,7 @@ write = [
 
             # helper macros  --> move to BS.core.bs
 
-            FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1 : 1)) else [
+            FirstAndOther (firstVal, otherVals, N, axis = 1) = if N == 1 then ConstantTensor (firstVal, (1)) else [
                 axis1 = axis  # TODO: Is this really necessary? Why? Then we need the syntax   axis = ^.axis or ^axis
                 out = if axis == 1  # maybe this can be unified or pushed into Splice?
                       then RowStack (ConstantTensor (firstVal, (1)) : ConstantTensor (otherVals, (N -1)))                                # col vector: [ 1; 0; 0; 0 ... ]
@@ -1006,29 +1053,16 @@ write = [
         model = if beamDepth == 0 then top1DecodingModel (modelAsTrained)
            else if beamDepth == 1 then top1DecodingModel (greedyDecodingModel)
            else                        beamDecodingModel
+           #else                        BS.Seq2Seq.BeamSearchSequenceDecoderFrom (modelAsTrained, beamDepth)
 
     ].model)
 
+    # --- END IGNORE ---
+
     outputPath = $decodeOutputPath$
     #outputPath = "-"                    # "-" will write to stdout; useful for debugging
-    #outputNodeNames = z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
-    #outputNodeNames = network.beamDecodingModel.z1.out:labels1 # when processing one sentence per minibatch, this is the sentence posterior
 
-    # greedy and predict:
-    #outputNodeNames = labelsOut:decodeOut    #:topNOut
-    # beam:
-    #outputNodeNames = network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut    #:topNOut
-
-    # joint:
     outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
-
-    #outputNodeNames = labels1:network.beamDecodingModel.decode.out
-    #outputNodeNames = labels1:network.beamDecodingModel.expandedPathScores
-    #outputNodeNames = network.beamDecodingModel.tokens.score:network.beamDecodingModel.traceback
-    #   network.beamDecodingModel.topPathScores
-    #   network.beamDecodingModel.tokens.score
-    #   network.beamDecodingModel.traceback
-    #   network.beamDecodingModel.expandedPathScores
 
     format = [
         type = "category" #"sparse"
@@ -1038,12 +1072,7 @@ write = [
         #sequenceEpilogue = "\t// %s\n"
     ]
 
-    #traceNodeNamesReal = network.beamDecodingModel.tokens.score:network.beamDecodingModel.topPathScores:network.beamDecodingModel.expandedPathScores:network.beamDecodingModel.tokens.from
-    #traceNodeNamesCategory = network.beamDecodingModel.topPathScores
-    #traceNodeNamesSparse = network.beamDecodingModel.topPathScores:network.beamDecodingModel.tokens.from:decoderOutputEmbedded.x
-
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
-    # need to be small since models are updated for each minibatch
     traceLevel = 1
     epochSize = 0
 
@@ -1088,7 +1117,7 @@ write = [
 
             # vocabulary size
             labelType = "category"
-            labelDim = "$confVocabSize$"
+            labelDim = "$inputVocabSize$"
             labelMappingFile = "$ModelDir$/vocab.wl"
             beginSequence = "$startSymbol$" # "</s>"
             endSequence   = "</s>"

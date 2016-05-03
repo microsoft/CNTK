@@ -513,22 +513,22 @@ No PreCompute nodes found, skipping PreCompute step.
 Starting Epoch 1: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 1 of 3]-Minibatch[   1- 100]: SamplesSeen = 1600; TrainLossPerSample =  7.41255493; EvalErr[0]PerSample = 1.00000000; TotalTime = 10.1265s; SamplesPerSecond = 158.0
-Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 7.2270579; TotalSamplesSeen = 2999; EvalErrPerSample = 0.99966657; AvgLearningRatePerSample = 0.00062499999; EpochTime=18.8911
+ Epoch[ 1 of 3]-Minibatch[   1- 100]: * 1600; ce =  7.41255493; err = 1.00000000; TotalTime = 10.1265s; SamplesPerSecond = 158.0
+Finished Epoch[ 1 of 3]: [Training] ce = 7.2270579 * 2999; err = 0.99966657; learningRatePerSample = 0.00062499999; EpochTime=18.8911
 SGD: Saving checkpoint model '/tmp/cntk-test-20160310121538.136549/Image_AlexNet@release_gpu/models/AlexNet.1'
 
 Starting Epoch 2: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 2 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; TrainLossPerSample =  6.91086914; EvalErr[0]PerSample = 0.99937500; TotalTime = 9.4420s; SamplesPerSecond = 169.5
-Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 6.921279; TotalSamplesSeen = 5998; EvalErrPerSample = 0.99799931; AvgLearningRatePerSample = 0.00062499999; EpochTime=18.1633
+ Epoch[ 2 of 3]-Minibatch[   1- 100, 100.00%]: * 1600; ce =  6.91086914; err = 0.99937500; TotalTime = 9.4420s; SamplesPerSecond = 169.5
+Finished Epoch[ 2 of 3]: [Training] ce = 6.921279 * 5998; err = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=18.1633
 SGD: Saving checkpoint model '/tmp/cntk-test-20160310121538.136549/Image_AlexNet@release_gpu/models/AlexNet.2'
 
 Starting Epoch 3: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 3 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; TrainLossPerSample =  6.87771118; EvalErr[0]PerSample = 0.99937500; TotalTime = 9.4961s; SamplesPerSecond = 168.5
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 6.8845863; TotalSamplesSeen = 8997; EvalErrPerSample = 0.99866623; AvgLearningRatePerSample = 0.00062499999; EpochTime=18.0375
+ Epoch[ 3 of 3]-Minibatch[   1- 100, 100.00%]: * 1600; ce =  6.87771118; err = 0.99937500; TotalTime = 9.4961s; SamplesPerSecond = 168.5
+Finished Epoch[ 3 of 3]: [Training] ce = 6.8845863 * 8997; err = 0.99866623; learningRatePerSample = 0.00062499999; EpochTime=18.0375
 SGD: Saving checkpoint model '/tmp/cntk-test-20160310121538.136549/Image_AlexNet@release_gpu/models/AlexNet'
 CNTKCommandTrainEnd: Train
 
@@ -1076,8 +1076,8 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Minibatch[1-32]: SamplesSeen = 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.996    CE: CrossEntropyWithSoftmax/Sample = 6.9611959    
-Final Results: Minibatch[1-32]: SamplesSeen = 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.996    CE: CrossEntropyWithSoftmax/Sample = 6.9611959    Perplexity = 1054.8943    
+Minibatch[1-32]: * 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.996    CE: CrossEntropyWithSoftmax/Sample = 6.9611959    
+Final Results: Minibatch[1-32]: * 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.996    CE: CrossEntropyWithSoftmax/Sample = 6.9611959    perplexity = 1054.8943    
 
 Action "test" complete.
 

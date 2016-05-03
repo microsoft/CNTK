@@ -795,18 +795,18 @@ Set Max Temp Mem Size For Convolution Nodes to 0 samples.
 Starting Epoch 1: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 1 of 3]-Minibatch[   1- 100]: SamplesSeen = 1600; TrainLossPerSample =  7.42966797; EvalErr[0]PerSample = 1.00000000; TotalTime = 31.2538s; SamplesPerSecond = 51.2
-Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 7.2399459; EvalErrPerSample = 0.99933308; AvgLearningRatePerSample = 0.00062499999; EpochTime=56.2334
+ Epoch[ 1 of 3]-Minibatch[   1- 100]: * 1600; ce =  7.42966797; err = 1.00000000; TotalTime = 31.2538s; SamplesPerSecond = 51.2
+Finished Epoch[ 1 of 3]: [Training] ce = 7.2399459; err = 0.99933308; learningRatePerSample = 0.00062499999; EpochTime=56.2334
 Starting Epoch 2: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 2 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; TrainLossPerSample =  6.90161499; EvalErr[0]PerSample = 0.99875000; TotalTime = 28.6861s; SamplesPerSecond = 55.8
-Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 6.9208598; EvalErrPerSample = 0.99899966; AvgLearningRatePerSample = 0.00062499999; EpochTime=53.6826
+ Epoch[ 2 of 3]-Minibatch[   1- 100, 100.00%]: * 1600; ce =  6.90161499; err = 0.99875000; TotalTime = 28.6861s; SamplesPerSecond = 55.8
+Finished Epoch[ 2 of 3]: [Training] ce = 6.9208598; err = 0.99899966; learningRatePerSample = 0.00062499999; EpochTime=53.6826
 Starting Epoch 3: learning rate per sample = 0.000625  effective momentum = 0.900000  momentum as time constant = 151.9 samples
 
 Starting minibatch loop.
- Epoch[ 3 of 3]-Minibatch[   1- 100, 100.00%]: SamplesSeen = 1600; TrainLossPerSample =  6.87744995; EvalErr[0]PerSample = 0.99812500; TotalTime = 28.9379s; SamplesPerSecond = 55.3
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 6.8854518; EvalErrPerSample = 0.99799931; AvgLearningRatePerSample = 0.00062499999; EpochTime=53.9703
+ Epoch[ 3 of 3]-Minibatch[   1- 100, 100.00%]: * 1600; ce =  6.87744995; err = 0.99812500; TotalTime = 28.9379s; SamplesPerSecond = 55.3
+Finished Epoch[ 3 of 3]: [Training] ce = 6.8854518; err = 0.99799931; learningRatePerSample = 0.00062499999; EpochTime=53.9703
 CNTKCommandTrainEnd: Train
 WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.
 WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.
@@ -2980,5 +2980,5 @@ CUDA error 11 [c:\tools\cub-1.4.1\cub\device\dispatch/dispatch_radix_sort.cuh, 7
 CUDA error 11 [c:\tools\cub-1.4.1\cub\device\dispatch/dispatch_radix_sort.cuh, 796]: invalid argument
 CUDA error 11 [c:\tools\cub-1.4.1\cub\device\dispatch/dispatch_radix_sort.cuh, 796]: invalid argument
 Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 1    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9566009    
-Final Results: Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 1    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9566009    Perplexity = 1050.0582    
+Final Results: Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 1    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9566009    perplexity = 1050.0582    
 __COMPLETED__

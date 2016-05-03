@@ -14,6 +14,27 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// helper for criterion pretty printing
+static inline string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value)
+{
+    char format[16];
+    char buffer[512];
+
+    sprintf(format, "%%.%dg", precision);
+    sprintf(buffer, format, value);
+
+    for (int i = 0; i < strlen(buffer); i++)
+    {
+        if (buffer[i] == 'e' || buffer[i] == 'E')
+        {
+            sprintf(format, "%%%d.%de", padSize, precision);
+            return format;
+        }
+    }
+    sprintf(format, "%%%d.%df", padSize, precision);
+    return format;
+}
+
 // helper class for passing accumulated epoch-level criteria around while retaining their sample counts
 // Criteria are represented as a tuple (aggregate criterion, sample count). The average criterion value is their ratio.
 struct EpochCriterion : public std::pair<double, size_t>
@@ -32,6 +53,23 @@ struct EpochCriterion : public std::pair<double, size_t>
 
     static EpochCriterion Infinity() { return EpochCriterion(std::numeric_limits<double>::infinity()); }
     bool IsInfinity() const { return first == std::numeric_limits<double>::infinity(); }
+
+    // log a criterion value in a form like 'av * count; '
+    void LogCriterion(const wstring& name, bool addSemicolon = true) const
+    {
+        double evalErrorSinceLastLogged = Average();
+        int evalSamplesSinceLastLogged  = (int)second;
+        fprintf(stderr, "%ls = ", name.c_str());
+        string format;
+        bool asPercentage = name.back() == 's'; // heuristic: plural forms are error counters
+        if (asPercentage)
+            fprintf(stderr, (GeneratePaddedFloatOrExpFormat(2, 3, 100*evalErrorSinceLastLogged) + "%%").c_str(), 100*evalErrorSinceLastLogged);
+        else
+            fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 8, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
+        fprintf(stderr, " * %d", evalSamplesSinceLastLogged);
+        if (addSemicolon) // if no more numbers follow, then use addSemicolon = false
+            fprintf(stderr, "; ");
+    }
 };
 
 // We accumulate criteria in this struct.
@@ -77,42 +115,27 @@ private:
         size_t beta = reset ? 0 : 1;
         size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
 
-		if (numSamples == 0)
-			return *this;
-
-#if 1
         // For criterion nodes that emit criteria per frame, we will at this point
         // do masking and an implicit reduction.
 
         // get a TensorView of the criterion values to aggregate
+        // TODO: Verify that node->GetSampleLayout().GetNumElements() == 1. Require explicit summation to declare intent that this is a criterion.
         FrameRange fr(node->GetMBLayout());
         node->MaskMissingValueColumnsToZero(fr); // set gaps to zero, so that we can aggregate
-        auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
-
         // get a TensorView of our aggregator
         TensorShape shape{ m_aggregateCriterionValues->GetNumRows(), m_aggregateCriterionValues->GetNumCols() };
         shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
         auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
 
-        // accumulate
-        // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
-        criterionAccumulator.DoCopyOf((float) beta, criterionValue, 1);
+        if (numSamples > 0) // (if MB is empty, matrix may not have the correct row dmension)
+        {
+            auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+            // accumulate
+            // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
+            // If count is zero, we lazily consider the numerator as zero as well.
+            criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
+        }
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
-#else
-        // temp solution until we add TensorView reduction
-        if (beta == 0)
-        {
-            Matrix<ElemType>::AssignElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                                     0, 0, *m_aggregateCriterionValues, 0, i);
-            m_aggregateSampleCounts[i] = numSamples;
-        }
-        else if (numSamples > 0) // avoid unnecessary GPU access
-        {
-            Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
-                                                  0, 0, *m_aggregateCriterionValues, 0, i);
-            m_aggregateSampleCounts[i] += numSamples;
-        }
-#endif
         return *this;
     }
     // get the number of samples

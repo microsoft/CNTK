@@ -64,6 +64,9 @@
     <ClInclude Include="TruncatedBpttPacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
+    <ClInclude Include="..\ExperimentalHTKMLFReader\CorpusDescriptor.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">

@@ -54,6 +54,9 @@ mathlib=
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
+default_use_code_coverage=no
+enable_code_coverage=$default_use_code_coverage
+
 # List from best to worst choice
 default_path_list="/usr /usr/local /opt /opt/local /opt/intel"
 
@@ -209,6 +212,7 @@ function show_help ()
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
+    echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -250,6 +254,17 @@ do
                 enable_1bitsgd=$optarg
             else
                 echo "Invalid value for --1bitsgd $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --with-code-coverage*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                enable_code_coverage=$optarg
+            else
+                echo "Invalid value for --with-code-coverage $optarg"
                 show_help
                 exit
             fi
@@ -644,6 +659,9 @@ if test x$libzip_path != x ; then
 fi
 if test $enable_1bitsgd = yes ; then
     echo CNTK_ENABLE_1BitSGD=true >> $config
+fi
+if test $enable_code_coverage = yes ; then
+    echo CNTK_CODE_COVERAGE=true >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile

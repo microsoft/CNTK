@@ -403,7 +403,7 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 04/13/2016 15:42:32: Starting minibatch loop.
-04/13/2016 15:42:32: Finished Epoch[ 1 of 1]: [Training Set] TrainLossPerSample = 2.271538; TotalSamplesSeen = 128; EvalErrPerSample = 0.8671875; AvgLearningRatePerSample = 0.00046874999; EpochTime=2.69695
+04/13/2016 15:42:32: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 2.271538 * 128; EvalErrorPrediction = 0.8671875; learningRatePerSample = 0.00046874999; EpochTime=2.69695
 04/13/2016 15:42:32: SGD: Saving checkpoint model '/tmp/cntk-test-20160413154229.901562/Examples/Image/Miscellaneous/CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv'
 04/13/2016 15:42:32: CNTKCommandTrainEnd: Train
 
@@ -512,9 +512,9 @@ UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  10000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-Minibatch[1-500]: SamplesSeen = 8000    Err: ErrorPrediction/Sample = 0.890625    CE: CrossEntropyWithSoftmax/Sample = 2.3015966    
-Minibatch[501-625]: SamplesSeen = 2000    Err: ErrorPrediction/Sample = 0.8905    CE: CrossEntropyWithSoftmax/Sample = 2.3015046    
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0.8906    CE: CrossEntropyWithSoftmax/Sample = 2.3015782    Perplexity = 9.9899361    
+Minibatch[1-500]: * 8000    Err: ErrorPrediction/Sample = 0.890625    CE: CrossEntropyWithSoftmax/Sample = 2.3015966    
+Minibatch[501-625]: * 2000    Err: ErrorPrediction/Sample = 0.8905    CE: CrossEntropyWithSoftmax/Sample = 2.3015046    
+Final Results: Minibatch[1-625]: * 10000    Err: ErrorPrediction/Sample = 0.8906    CE: CrossEntropyWithSoftmax/Sample = 2.3015782    perplexity = 9.9899361    
 
 04/13/2016 15:42:35: Action "test" complete.
 

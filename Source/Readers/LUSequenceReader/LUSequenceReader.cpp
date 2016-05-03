@@ -796,7 +796,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 }
 
 template <class ElemType>
-size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequences()
+size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
 #if 1
     return m_pMBLayout->GetNumParallelSequences(); // (this function is only used for validation anyway)
@@ -1287,9 +1287,9 @@ void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayou
 }
 
 template <class ElemType>
-size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequences()
+size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
-    return mReader.begin()->second->GetNumParallelSequences();
+    return mReader.begin()->second->GetNumParallelSequencesForFixingBPTTMode();
 }
 
 #if 0

@@ -33,8 +33,8 @@ Train=[
                act = activation(z)
             ].act
             # TODO: suggested change of parameter order: output dims first, inputDim=input.Dim optional, cellDim=outputDim optional
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP2 (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -64,7 +64,7 @@ Train=[
         
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     
     SGD = [	

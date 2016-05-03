@@ -32,7 +32,7 @@ DNN = [
     # last layer 512 X 132 
     OL = DNNLastLayer(hiddenDim, labelDim, HL1);
 
-    cr  = CrossEntropyWithSoftmax(labels, OL, tag="criterion");
+    ce  = CrossEntropyWithSoftmax(labels, OL, tag="criterion");
     err = ErrorPrediction(labels, OL, tag="evaluation");
     scaledLogLikelihood = Minus(OL, logPrior, tag="output")
 ]

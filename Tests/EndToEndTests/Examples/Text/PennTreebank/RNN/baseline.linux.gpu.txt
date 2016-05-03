@@ -1164,33 +1164,33 @@ Allocating matrices for forward and/or backward propagation.
 04/15/2016 13:15:33: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
 WARNING: The same matrix with dim [4, 108] has been transferred between different devices for 20 times.
-04/15/2016 13:15:34: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 6.8356953; TotalSamplesSeen = 2087; AvgLearningRatePerSample = 0.1; EpochTime=0.875219
+04/15/2016 13:15:34: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.8356953 * 2087; learningRatePerSample = 0.1; EpochTime=0.875219
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-704]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.5392296    Perplexity = 691.75344    
-04/15/2016 13:15:45: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 6.5392296
+Final Results: Minibatch[1-704]: * 73760;    TrainNodeClassBasedCrossEntropy = 6.5392296    perplexity = 691.75344    
+04/15/2016 13:15:45: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.5392296
 04/15/2016 13:15:45: SGD: Saving checkpoint model '/tmp/cntk-test-20160415131349.795333/Examples/Text/PennTreebank_RNN@release_gpu/Models/rnn.dnn.1'
 
 04/15/2016 13:15:45: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 04/15/2016 13:15:45: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:15:46: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 6.6260695; TotalSamplesSeen = 4186; AvgLearningRatePerSample = 0.1; EpochTime=0.602958
+04/15/2016 13:15:46: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.6260695 * 4186; learningRatePerSample = 0.1; EpochTime=0.602958
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-353]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.5062633    Perplexity = 669.32068    
-04/15/2016 13:15:54: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 6.5062633
+Final Results: Minibatch[1-353]: * 73760;    TrainNodeClassBasedCrossEntropy = 6.5062633    perplexity = 669.32068    
+04/15/2016 13:15:54: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.5062633
 04/15/2016 13:15:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160415131349.795333/Examples/Text/PennTreebank_RNN@release_gpu/Models/rnn.dnn.2'
 
 04/15/2016 13:15:54: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 04/15/2016 13:15:54: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-04/15/2016 13:15:55: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 8.0763569; TotalSamplesSeen = 6462; AvgLearningRatePerSample = 0.1; EpochTime=0.528292
+04/15/2016 13:15:55: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 8.0763569 * 6462; learningRatePerSample = 0.1; EpochTime=0.528292
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Final Results: Minibatch[1-193]: SamplesSeen = 73760    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 9.0298885    Perplexity = 8348.9282    
-04/15/2016 13:16:02: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 9.0298885
+Final Results: Minibatch[1-193]: * 73760;    TrainNodeClassBasedCrossEntropy = 9.0298885    perplexity = 8348.9282    
+04/15/2016 13:16:02: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 9.0298885
 04/15/2016 13:16:02: Loading previous model with best training-criterion value: /tmp/cntk-test-20160415131349.795333/Examples/Text/PennTreebank_RNN@release_gpu/Models/rnn.dnn.2.
 04/15/2016 13:16:02: learnRatePerSample reduced to 0.050000001
 04/15/2016 13:16:02: SGD: Saving checkpoint model '/tmp/cntk-test-20160415131349.795333/Examples/Text/PennTreebank_RNN@release_gpu/Models/rnn.dnn'
@@ -1316,8 +1316,8 @@ Allocating matrices for forward and/or backward propagation.
 LMSequenceReader: Reading epoch data... 3760 sequences read.
 WARNING: The same matrix with dim [4, 1872] has been transferred between different devices for 20 times.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-Minibatch[1-60]: SamplesSeen = 82402    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.4614566    
-Final Results: Minibatch[1-60]: SamplesSeen = 82402    TrainNodeClassBasedCrossEntropy: ClassBasedCrossEntropyWithSoftmax/Sample = 6.4614566    Perplexity = 639.9926    
+Minibatch[1-60]: * 82402;    TrainNodeClassBasedCrossEntropy = 6.4614566    
+Final Results: Minibatch[1-60]: * 82402;    TrainNodeClassBasedCrossEntropy = 6.4614566    perplexity = 639.9926    
 
 04/15/2016 13:16:09: Action "eval" complete.
 

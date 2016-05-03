@@ -39,10 +39,10 @@
     formatOneHot = [
         type = "category"
         transpose = false
-        labelMappingFile = tracingLabelMappingFile
+        #labelMappingFile = tracingLabelMappingFile
     ]
     formatSparse = [
         type = "sparse"
         transpose = false
-        labelMappingFile = tracingLabelMappingFile
+        #labelMappingFile = tracingLabelMappingFile
     ]
