@@ -17,7 +17,7 @@ ExpRootDir = "$RunRootDir$"
 
 # command to execute
 
-command = train:test:write
+command = train
 #command = write
 #command = dump
 makeMode = false
@@ -86,6 +86,7 @@ startSymbol = "<s>"
 #labelVocabSize = 69
 #shareEmbeddings = true
 #fileExt = "joint"
+#readerInputDef = [ dim = 0 ]
 #readerType = "LMSequenceReader"
 
 useCNTKTextFormatReader = true
@@ -101,6 +102,7 @@ trainFile = "g014b2b.train-dev-20-21.bsf.$fileExt$"
 #trainFile = "g014b2b.train-dev-1-21.bsf.$fileExt$" # small one for debugging
 validFile = "g014b2b.train-dev-1-21.bsf.$fileExt$"
 testFile  = "g014b2b.test.bsf.$fileExt$"
+vocabFile = "g014b2b.wl"
 
 #######################################
 #  network definition                 #
@@ -111,7 +113,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # TODO: remove these
     enableTracing = true
     traceFrequency = 100
-    tracingLabelMappingFile = "$ModelDir$/vocab.wl"
+    tracingLabelMappingFile = "$DataDir$/$vocabFile$"
     beamDepth=3 // for above Trace macros only, need to clean that up
     include "S2SLib.bs"
 
@@ -332,64 +334,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 ])
 
 #######################################
-# shared reader definition            #
-#######################################
-
-reader = [
-    readerType = "$readerType$"
-    file = "$DataDir$/$trainFile$"
-    randomize = "auto"
-
-    # specific to CNTKTextFormatReader
-    skipSequenceIds = "false"
-    maxErrors = 100
-    traceLevel = 2
-    chunkSizeInBytes = 30000000 # large enough for entire data set
-
-    # specific to LMSequenceReader
-    mode = "softmax"                    # TODO: find out what this means
-    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
-    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
- 
-    input = $readerInputDef$
-    #[
-    #    rawInput = [
-    #        alias = "s"
-    #        dim = $inputVocabSize$
-    #        format = "sparse"
-    #    ]
-    #    rawLabels = [
-    #        alias = "t"
-    #        dim = $labelVocabSize$
-    #        format = "sparse"
-    #    ]
-    #]
-]
-
-cvReader = [
-    readerType = "$readerType$"
-    file = "$DataDir$/$validFile$"
-    randomize = "none"
-    skipSequenceIds = "false"
-    maxErrors = 100
-    traceLevel = 2
- 
-    input = $readerInputDef$
-    #input = [
-    #    rawInput  = [
-    #        alias = "s"
-    #        dim = $inputVocabSize$
-    #        format = "sparse"
-    #    ]
-    #    rawLabels = [
-    #        alias = "t"
-    #        dim = $labelVocabSize$     # 39 phonemes (~AX missing), start and end symbol (in index 0)
-    #        format = "sparse"
-    #    ]
-    #]
-]
-
-#######################################
 #  TRAINING CONFIG                    #
 #######################################
 
@@ -434,6 +378,54 @@ train = [
             numBestSearchEpoch = 1
         ]
     ]
+
+    # reader definitions
+    reader = [
+        readerType = "$readerType$"
+        file = "$DataDir$/$trainFile$"
+        randomize = "auto"
+
+        # everything below here is identical for all readers in this file
+
+        # specific to CNTKTextFormatReader
+        skipSequenceIds = "false"
+        maxErrors = 100
+        traceLevel = 2
+        chunkSizeInBytes = 30000000         # large enough for entire data set
+
+        # specific to LMSequenceReader
+        mode = "softmax"                    # TODO: find out what this means
+        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+ 
+        input = $readerInputDef$
+
+        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
+        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        outputDummy = [ labelType = "none" ]
+    ]
+
+    cvReader = [
+        readerType = "$readerType$"
+        file = "$DataDir$/$validFile$"
+        randomize = "none"
+
+        # specific to CNTKTextFormatReader
+        skipSequenceIds = "false"
+        maxErrors = 100
+        traceLevel = 2
+
+        # specific to LMSequenceReader
+        mode = "softmax"                    # TODO: find out what this means
+        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+ 
+        input = $readerInputDef$
+
+        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
+        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        outputDummy = [ labelType = "none" ]
+    ]
 ]
 
 #######################################
@@ -446,88 +438,6 @@ dump = [
     action = "dumpnode"
     modelPath = "$dumpModelPath$"
     outputFile = "$dumpModelPath$.txt"
-]
-
-#######################################
-#  TEST CONFIG                        #
-#######################################
-
-test = [
-    action = "eval"
-
-    # correspond to the number of words/characteres to train in a minibatch
-    minibatchSize = 8192                # choose as large as memory allows for maximum GPU concurrency
-    # need to be small since models are updated for each minibatch
-    traceLevel = 1
-    epochSize = 0
-
-    reader = [
-        file = "$DataDir$/$testFile$"
-        #randomize = "none" # gets ignored
-    
-        # everything below here is duplicated from 'reader'
-        readerType = LMSequenceReader
-        mode = "softmax"
-        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
-        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-    
-        # word class info
-        wordclass = "$ModelDir$/vocab.txt"
-    
-        #### write definition
-        # if writerType is set, we will cache to a binary file
-        # if the binary file exists, we will use it instead of parsing this file
-        #writerType = BinaryReader
-        wfile = $CacheDir$\sequenceSentence.bin
-        # if calculated size would be bigger, that is used instead
-        wsize = 256
-        #wrecords - number of records we should allocate space for in the file
-        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-        wrecords = 1000
-        #windowSize - number of records we should include in BinaryWriter window
-        windowSize = 10000
-    
-        # additional features sections
-        # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
-        input = [
-            dim = 0     # no (explicit) labels   ...labelDim correct??
-            ### write definition
-            sectionType = "data"
-        ]
-        # labels sections
-        # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
-        # labels sections  --this is required, but our labels are extracted from the inLabels
-        inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
-            dim = 1
-    
-            # vocabulary size
-            labelType = "category"
-            labelDim = "$inputVocabSize$"
-            labelMappingFile = "$ModelDir$/vocab.wl"
-            beginSequence = "$startSymbol$" # "</s>"
-            endSequence   = "</s>"
-    
-            #### Write definition ####
-            # sizeof(unsigned) which is the label index type
-            elementSize=4
-            sectionType=labels
-            mapping = [
-              #redefine number of records for this section, since we don't need to save it for each data record
-              wrecords=11
-              #variable size so use an average string size
-              elementSize=10
-              sectionType=labelMapping
-            ]
-            category = [
-              dim=11
-              #elementSize=sizeof(ElemType) is default
-              sectionType=categoryLabels
-            ]
-        ]
-        outputDummy = [
-            labelType = "none"
-        ]
-    ]
 ]
 
 #######################################
@@ -555,6 +465,8 @@ write = [
     outputPath = $decodeOutputPath$
     #outputPath = "-"                    # "-" will write to stdout; useful for debugging
 
+    # declare the nodes we want to write out
+    # not all decoder configs have the same node names, so we just list them all
     outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     # output format
@@ -562,7 +474,7 @@ write = [
     format = [
         type = "category"
         transpose = false
-        labelMappingFile = "$ModelDir$/vocab.wl"
+        labelMappingFile = "$DataDir$/$vocabFile$"
     ]
 
     minibatchSize = 8192                # choose this to be big enough for the longest sentence
@@ -570,71 +482,25 @@ write = [
     epochSize = 0
 
     reader = [
+        readerType = "$readerType$"
         file = "$DataDir$/$testFile$"
-        #randomize = "none" # gets ignored
-    
-        # everything below here is duplicated from 'reader'
-        readerType = LMSequenceReader
-        mode = "softmax"
+        randomize = "none"
+
+        # specific to CNTKTextFormatReader
+        skipSequenceIds = "false"
+        maxErrors = 100
+        traceLevel = 2
+
+        # specific to LMSequenceReader
+        mode = "softmax"                    # TODO: find out what this means
         nbruttsineachrecurrentiter = 1      # 1 means one per minibatch
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+ 
+        input = $readerInputDef$
 
-        # word class info
-        wordclass = "$ModelDir$/vocab.txt"
-
-        #### write definition
-        # if writerType is set, we will cache to a binary file
-        # if the binary file exists, we will use it instead of parsing this file
-        #writerType = BinaryReader
-        wfile = $CacheDir$\sequenceSentence.bin
-        # if calculated size would be bigger, that is used instead
-        wsize = 256
-        #wrecords - number of records we should allocate space for in the file
-        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-        wrecords = 1000
-        #windowSize - number of records we should include in BinaryWriter window
-        windowSize = 10000
-    
-        # additional features sections
-        # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
-        input = [
-            dim = 0     # no (explicit) labels   ...labelDim correct??
-            ### write definition
-            sectionType = "data"
-        ]
-        # labels sections
-        # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
-        # labels sections  --this is required, but our labels are extracted from the inLabels
-        inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
-            dim = 1
-
-            # vocabulary size
-            labelType = "category"
-            labelDim = "$inputVocabSize$"
-            labelMappingFile = "$ModelDir$/vocab.wl"
-            beginSequence = "$startSymbol$" # "</s>"
-            endSequence   = "</s>"
-
-            #### Write definition ####
-            # sizeof(unsigned) which is the label index type
-            elementSize=4
-            sectionType=labels
-            mapping = [
-              #redefine number of records for this section, since we don't need to save it for each data record
-              wrecords=11
-              #variable size so use an average string size
-              elementSize=10
-              sectionType=labelMapping
-            ]
-            category = [
-              dim=11
-              #elementSize=sizeof(ElemType) is default
-              sectionType=categoryLabels
-            ]
-        ]
-        outputDummy = [
-            labelType = "none"
-        ]
+        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
+        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        outputDummy = [ labelType = "none" ]
     ]
 ]
 
@@ -682,7 +548,7 @@ lmreader = [
         # vocabulary size
         labelType = "category"
         labelDim = "$inputVocabSize$"
-        labelMappingFile = "$ModelDir$/vocab.wl"
+        labelMappingFile = "$DataDir$/$vocabFile$"
         beginSequence = "$startSymbol$" # "</s>"
         endSequence   = "</s>"
 
@@ -750,7 +616,7 @@ lmcvReader = [
         # vocabulary size
         labelType = "category"
         labelDim = "$inputVocabSize$"
-        labelMappingFile = "$ModelDir$/vocab.wl"
+        labelMappingFile = "$DataDir$/$vocabFile$"
         beginSequence = "</s>"
         endSequence   = "</s>"
 
