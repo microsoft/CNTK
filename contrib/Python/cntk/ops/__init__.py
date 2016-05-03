@@ -154,7 +154,15 @@ def element_times(left, right, name=None):
     Element-wise multiplication operation. The output of this operation is the
     element-wise product of the two input tensors. It supports broadcasting. In
     case of scalars its backward pass to left propagates right 
-    times the received gradient and vice versa. 
+    times the received gradient and vice versa.
+    
+    Example:
+        >>> C.eval(C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        [array([[ 0.5  ,  0.25 ,  0.125,  0.   ]])]
+        
+        >>> C.eval(C.element_times([5., 10., 15., 30.], [2.]))
+        [array([[ 10.,  20.,  30.,  60.]])]
+    
     Args:
         left: left side tensor
         right: right side tensor
