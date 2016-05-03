@@ -108,7 +108,7 @@ explained::
 In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
 one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
 by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
-in from a file, but for interactive experimentation and small examples we can use the ``numpy_reader`` to 
+in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
 access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
 the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
 set ``has_dynamic_axis`` to False.
@@ -125,8 +125,12 @@ SGD looks at all of the training data in each epoch. Next, `minibatch_size` is t
 at for each minibatch; `learning_rates_per_mb` is the learning rate that SGD will use when the parameters are 
 updated at the end of each minibatch; and `max_epochs` is the maximum number of epochs to train for.
 
-We set up an execution context, train the network passing in the root node and the optimizer we are using, and 
-finally, test its performance. Here is the output of the above example:
+The last step is to set up an execution context. An execution context can be either `Local` or `Deferred`. In the 
+former case, as we use here, the methods (such as training and testing the network) are done locally and 
+immediately so that the result is returned interactively to python. With a `Deferred` context, the methods simply 
+set up a configuration file that can be used with CNTK at a later date. Here, with the local execution context, 
+we train the network by passing in the root node and the optimizer we are using, and finally, we test its 
+performance. Here is the output of the above example:
 
 ``{'SamplesSeen': 500, 'Perplexity': 1.1140191, 'loss': 0.10797427}``
 
