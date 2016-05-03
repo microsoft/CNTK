@@ -935,13 +935,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
 
-        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
-        size_t numSamplesWithLabel = wasDataRead ? CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], net->GetNumSamplesWithLabelOfNetwork(actualMBSize)) : 0;
+        // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
+        size_t numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means accross-worker aggregate for this one minibatch.
+        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         size_t aggregateNumSamples = actualMBSize;
-        size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
+        size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork);
 
         if (!useGradientAggregation)
         {
@@ -950,9 +951,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 assert(wasDataRead);
                 // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabel);
+                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
-                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabel);
+                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
             }
         }
         else
@@ -985,9 +986,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             m_gradHeader->numEvalNode = evaluationNodes.size();
             m_gradHeader->numSamples = actualMBSize;
             // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabel);
+            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabel);
+                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabelOfNetwork);
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second;
             m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
             for (size_t i = 0; i < evaluationNodes.size(); i++)
