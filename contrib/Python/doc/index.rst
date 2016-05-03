@@ -3,7 +3,7 @@
 .. _CNTK: http://cntk.ai/
 
 Python Wrapper for CNTK 1.4
-===================
+===========================
 
 CNTK_, the Computational Network Toolkit, is a system for describing, training,
 and executing computational networks, a unified framework for describing
@@ -25,7 +25,7 @@ them on sample data in real time.
    Concepts <concepts>
    Readers <readers>
    Operators <cntk.ops>
-   Optimizer <optimizer>
+   Training <training>
    Execution Context <context>
    Examples <examples>
 

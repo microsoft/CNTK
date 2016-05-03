@@ -91,14 +91,6 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         self.precision = precision
         self.input_nodes = set()
 
-    def __enter__(self):
-        _CONTEXT[self.name] = self
-
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        del _CONTEXT[self.name]
-
     def _save_file(self, config_file_name, config_content, action_name):
         '''
         Writes the content of a config file on disk.
@@ -112,8 +104,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             the full path of the saved file
         '''
 
-        filename = os.path.join(self.directory, config_file_name)
-        filename = os.path.relpath(filename)
+        filename = os.path.join(self.directory, config_file_name)        
 
         with open(filename, 'w') as out:
             out.write(config_content)
@@ -128,7 +119,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (dict): map from input nodes to :class:`cntk.reader.InputMap`
             override_existing (bool): if the folder exists already override it
@@ -221,7 +212,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
             action_name (str): the name of the action in cntk configuration file
@@ -373,8 +364,12 @@ class LocalExecutionContext(AbstractContext):
         self.model_path = os.path.join(self.model_dir, self.name)
         self.output_filename_base = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
 
+    def __enter__(self):
+        _CONTEXT[self.name] = self
+        return self
+
     def __exit__(self, exc_type, exc_value, exc_tb):
-        super(self.__class__, self).__exit__( exc_type, exc_value, exc_tb)
+        del _CONTEXT[self.name]
         if self.clean_up:
             sh.rmtree(self.directory)
 
@@ -648,7 +643,7 @@ class LocalExecutionContext(AbstractContext):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -763,21 +758,29 @@ class DeferredExecutionContext(AbstractContext):
     that would be executed on different enviroment (e.g., on a cluster) rather than 
     the machine that generated them.
         
-    Args:
-        name (str): context name
+    Args:        
         device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
         precision (str): either float or double            
     '''
     
-    def __init__(self, name,
+    def __init__(self, 
                  device_id=-1,
-                 precision="float",
-                 clean_up=True):
-        super(self.__class__,self).__init__(name, device_id, precision)        
-        self.model_path = os.path.join("$ModelDir$", self.name)
+                 precision="float"):        
+                
+        self.device_id = device_id
+        self.precision = precision
+        self.input_nodes = set()        
+        
+        self.model_path = os.path.join("$ModelDir$", "model")
         self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
         self.config = []
         self.actions = []
+
+    def __enter__(self):        
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
         
     def _append_config(self, action_name, config_content):
         '''
@@ -796,7 +799,7 @@ class DeferredExecutionContext(AbstractContext):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -866,17 +869,28 @@ class DeferredExecutionContext(AbstractContext):
             node, input_map, backward_pass, action_name)
         self._append_config(action_name, config_content)        
     
-    def export(self):
+    def export(self, name):
         '''
         Exports the requested actions (via function calls like train()) to 
         a signle cntk configuration file that will be executed on the cluster
 
         Returns: 
+            name (str): context name, which is also the name of the output folder
+            that contains the configuration
             filename to which the configuration has been exported
         '''                
-        filename = '%s.cntk' %self.name
-        filename = os.path.join(self.directory,  filename)    
-        filename = os.path.relpath(filename)
+                
+        self.directory = os.path.abspath(name)
+
+        if os.path.exists(self.directory):
+            print("Directory '%s' already exists" %
+                  self.directory)
+        else:
+            os.mkdir(self.directory)
+        
+        
+        filename = '%s.cntk' %name
+        filename = os.path.join(self.directory,  filename)            
 
         with open(filename, 'w') as out:            
             out.write('\n'.join(self.config))

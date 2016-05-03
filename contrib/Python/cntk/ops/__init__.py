@@ -21,14 +21,12 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     already computed before passing to this operator will be incorrect.
     
     :math:`cross\_entropy\_with\_softmax(t, o) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
-
-    :func:`cntk.ops.softmax`
     
     Example:
         >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
         #[0.]
         
-        >>> C.eval(C.cross_entropy_with_softmax([[0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
+        >>> C.eval(C.cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
         #[1.84]
     
     Args:
@@ -487,9 +485,9 @@ def cond(flag, value_if_true, value_if_false, name=None):
     Behaves analogously to numpy.where(...).
 
     Example:
-    >>> C.eval(C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]))
-    [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
-               1.00000000e+03,   1.00000000e+04]])]
+        >>> C.eval(C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]))
+        [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
+                   1.00000000e+03,   1.00000000e+04]])]
 
     Args:
         flag: tensor
@@ -578,8 +576,9 @@ def reshape(x, shape, name=None):
     The backward pass propagates the received gradient for the output-shape to the input shape.
     
     Examples:
-        >>> reshape([[0,1],[2,3],[4,5]], (2:3))
-        #[[0, 2, 4], [1, 3, 5]]
+        >>> C.eval(C.reshape([[0,1],[2,3],[4,5]], (2,3)))
+        [array([[[ 0.,  4.,  3.],
+                 [ 2.,  1.,  5.]]])]
             
     Args:        
         x: tensor to be reshaped
@@ -603,6 +602,10 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
+
+    Example:
+        >>> C.eval(C.input_numpy(np.ones((3, 2))))
+        [array([[ 1.,  1.]]), array([[ 1.,  1.]]), array([[ 1.,  1.]])]
 
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
@@ -736,6 +739,9 @@ def dynamic_axis(name=None):
     This function creates a dynamic axis object that can be connected to an input. 
     For sequence-based inputs, this allows the sequences to be of arbitrary lengths 
     and therefore allows networks to be setup without the need for padding.
+    
+    Example:
+        See Examples/LSTM/seqcla.py for a use of :func:`cntk.ops.dynamic_axis`.
     
     Args:
         name: the name of the node in the network
