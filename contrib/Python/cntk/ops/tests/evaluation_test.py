@@ -22,8 +22,8 @@ TARGET_OUT_PAIRS = [
     ]
 
 # -- CrossEntropy with softmax operation tests --
-@pytest.mark.parametrize("target_values, feature_values", TARGET_OUT_PAIRS)
-def test_op_crossentropywithsoftmax(target_values, feature_values, device_id, precision):
+@pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS)
+def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, precision):
     
     from .. import cross_entropy_with_softmax
 
@@ -37,15 +37,15 @@ def test_op_crossentropywithsoftmax(target_values, feature_values, device_id, pr
     def numpy_op(label, softmax):
         return -np.sum(label * np.log(softmax, dtype=PRECISION_TO_TYPE[precision]), dtype=PRECISION_TO_TYPE[precision])
     
-    input_target = I([target_values], has_dynamic_axis=True)
-    input_features = I([feature_values], has_dynamic_axis=True)
+    input_target = I([target_vector], has_dynamic_axis=True)
+    input_features = I([output_vector], has_dynamic_axis=True)
     
     op_node = cross_entropy_with_softmax(input_target, input_features)
 
     #Forward pass test
     #==================
     # we compute the expected output for the forward pass
-    expected = [[[numpy_op(AA(target_values, dtype=PRECISION_TO_TYPE[precision]), numpy_softmax(feature_values))]]]
+    expected = [[[numpy_op(AA(target_vector, dtype=PRECISION_TO_TYPE[precision]), numpy_softmax(output_vector))]]]
     unittest_helper(op_node, None, expected,
                 device_id=device_id,
                 precision=precision,
@@ -59,8 +59,11 @@ def test_op_crossentropywithsoftmax(target_values, feature_values, device_id, pr
     # Backward pass test
     # ==================
     # The expected results for the backward pass is fi*sum(ti)-ti
-    expected = [numpy_grad(numpy_softmax(feature_values), AA(target_values, dtype=PRECISION_TO_TYPE[precision]))]
+    expected = [numpy_grad(numpy_softmax(output_vector), AA(target_vector, dtype=PRECISION_TO_TYPE[precision]))]
     unittest_helper(op_node, None, expected,
             device_id=device_id,
             precision=precision, clean_up=True, backward_pass=True,
             input_node=input_features)
+
+
+

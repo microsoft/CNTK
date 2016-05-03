@@ -13,29 +13,29 @@ import numpy as np
 # evaluation ops
 ################################################################################
 
-def cross_entropy_with_softmax(target_values, feature_values, name=None):
+def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     """
     This operator computes the cross entropy over the softmax of the `feature_values`.
-    This op expects the `feature_values` as unscaled, it computes softmax over 
-    the `feature_values` internally.  Any `feature_values` input over which softmax is 
+    This op expects the `output_vector` as unscaled, it computes softmax over 
+    the `output_vector` internally.  Any `output_vector` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
     Example:
         >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cntk.eval(cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.840]
     
     Args:
-        target_values: the target valid probability distribution
-        feature_values: the unscaled computed values from the network
+        target_vector: the target valid probability distribution
+        output_vector: the unscaled computed values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
-    return CrossEntropyWithSoftmax(target_values, feature_values, name = name)
+    return CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
 
 def square_error(target_vector, output_vector, name=None):
     """
