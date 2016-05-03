@@ -25,7 +25,7 @@ Installing CNTK
 Please follow the instructions on `CNTK's GitHub page 
 <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine>`_. 
 After you have built the CNTK binary, find the build location. It will be 
-something like ``<cntkpath>/x64/Debug_CpuOnly/cntk``. You will need this for 
+something like ``<cntkpath>/x64/Release/cntk``. You will need this for 
 the next step.
 
 Installing the Python module
