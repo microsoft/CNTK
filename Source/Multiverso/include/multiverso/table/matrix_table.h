@@ -12,40 +12,41 @@ namespace multiverso {
 template <typename T>
 class MatrixWorkerTable : public WorkerTable {
 public:
-  MatrixWorkerTable(int num_row, int num_col);
+  MatrixWorkerTable(integer_t num_row, integer_t num_col);
+  ~MatrixWorkerTable();
 
   // get whole table, data is user-allocated memory
   void Get(T* data, size_t size);
 
   // data is user-allocated memory
-  void Get(int row_id, T* data, size_t size);
+  void Get(integer_t row_id, T* data, size_t size);
 
-  void Get(const std::vector<int>& row_ids,
+  void Get(const std::vector<integer_t>& row_ids,
            const std::vector<T*>& data_vec, size_t size);
 
   // Add whole table
-  void Add(T* data, size_t size, const UpdateOption* option = nullptr);
+  void Add(T* data, size_t size, const AddOption* option = nullptr);
 
-  void Add(int row_id, T* data, size_t size, 
-           const UpdateOption* option = nullptr);
+  void Add(integer_t row_id, T* data, size_t size, 
+           const AddOption* option = nullptr);
 
-  void Add(const std::vector<int>& row_ids,
+  void Add(const std::vector<integer_t>& row_ids,
            const std::vector<T*>& data_vec, size_t size, 
-           const UpdateOption* option = nullptr);
+           const AddOption* option = nullptr);
 
   int Partition(const std::vector<Blob>& kv,
     std::unordered_map<int, std::vector<Blob>>* out) override;
 
   void ProcessReplyGet(std::vector<Blob>& reply_data) override;
 
-private:
-  std::unordered_map<int, T*> row_index_;  // index of data with row id in data_vec_
+protected:
+  T** row_index_;
   int get_reply_count_;                    // number of unprocessed get reply
-  int num_row_;
-  int num_col_;
-  int row_size_;                           // equals to sizeof(T) * num_col_
+  integer_t num_row_;
+  integer_t num_col_;
+  integer_t row_size_;                           // equals to sizeof(T) * num_col_
   int num_server_;
-  std::vector<int> server_offsets_;        // row id offset
+  std::vector<integer_t> server_offsets_;        // row id offset
 };
 
 template <typename T>
@@ -54,7 +55,7 @@ class Updater;
 template <typename T>
 class MatrixServerTable : public ServerTable {
 public:
-  MatrixServerTable(int num_row, int num_col);
+  MatrixServerTable(integer_t num_row, integer_t num_col);
 
   void ProcessAdd(const std::vector<Blob>& data) override;
 
@@ -64,11 +65,11 @@ public:
   void Store(Stream* s) override;
   void Load(Stream* s) override;
 
-private:
+protected:
   int server_id_;
-  int my_num_row_;
-  int num_col_;
-  int row_offset_;
+  integer_t my_num_row_;
+  integer_t num_col_;
+  integer_t row_offset_;
   Updater<T>* updater_;
   std::vector<T> storage_;
 };
@@ -77,7 +78,7 @@ private:
 template <typename T>
 class MatrixTableHelper : public TableHelper {
 public:
-  MatrixTableHelper(int num_row, int num_col) : num_row_(num_row), num_col_(num_col){}
+  MatrixTableHelper(integer_t num_row, integer_t num_col) : num_row_(num_row), num_col_(num_col){}
   ~MatrixTableHelper() {}
 
 protected:
@@ -87,8 +88,8 @@ protected:
   ServerTable* CreateServerTable() override{
     return new MatrixServerTable<T>(num_row_, num_col_);
   }
-  int num_row_;
-  int num_col_;
+  integer_t num_row_;
+  integer_t num_col_;
 };
 
 ////new implementation

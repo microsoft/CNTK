@@ -4,15 +4,16 @@
 namespace multiverso {
 
 enum Role {
+  NONE   = 0,
   WORKER = 1,
-  SERVER = 2
+  SERVER = 2,
+  ALL    = 3
 };
 
 struct Node {
   int rank;
   // role can be 0, 1, 2, 3
-  // 00 means neither worker nor server, should be controllor, so at most
-  // one node could use this value
+  // 00 means neither worker nor server
   // 01 means worker
   // 10 means server
   // 11 means both server and worker, default value

@@ -1,17 +1,22 @@
 #ifndef MULTIVERSO_TABLE_INTERFACE_H_
 #define MULTIVERSO_TABLE_INTERFACE_H_
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <cctype>
 
 #include "multiverso/blob.h"
-#include "multiverso/util/io.h"
+#include "multiverso/io/io.h"
 
 namespace multiverso {
 
+typedef int32_t integer_t;
+
 class Waiter;
-struct UpdateOption;
+struct AddOption;
+struct GetOption;
 
 // User implementent this
 class WorkerTable {
@@ -19,11 +24,11 @@ public:
   WorkerTable();
   virtual ~WorkerTable() = default;
 
-  void Get(Blob keys);
-  void Add(Blob keys, Blob values, const UpdateOption* option = nullptr);
+  void Get(Blob keys, const GetOption* option = nullptr);
+  void Add(Blob keys, Blob values, const AddOption* option = nullptr);
 
-  int GetAsync(Blob keys);
-  int AddAsync(Blob keys, Blob values, const UpdateOption* option = nullptr);
+  int GetAsync(Blob keys, const GetOption* option = nullptr);
+  int AddAsync(Blob keys, Blob values, const AddOption* option = nullptr);
 
   void Wait(int id);
 
@@ -39,8 +44,10 @@ public:
   // add user defined data structure
 private:
   std::string table_name_;
+  // assuming there are at most 2^32 tables
   int table_id_;
-  std::unordered_map<int, Waiter*> waitings_;
+  std::mutex m_;
+  std::vector<Waiter*> waitings_;
   int msg_id_;
 };
 

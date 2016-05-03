@@ -1,18 +1,16 @@
 #ifndef MULTIVERSO_UPDATER_UPDATER_H_
 #define MULTIVERSO_UPDATER_UPDATER_H_
 
-#include <multiverso/multiverso.h>
-
 #include <cstring>
 #include <sstream>
-#include <multiverso/util/log.h>
+#include <multiverso/multiverso.h>
 
 namespace multiverso {
 
-struct UpdateOption {
+struct AddOption {
 public:
   // TODO(qiwye): make these default value more flexiable
-  UpdateOption(){
+  AddOption(){
     data_[0].i = MV_WorkerId(); 
     data_[1].f = 0.0f;
     data_[2].f = 0.01f;
@@ -20,7 +18,7 @@ public:
     data_[4].f = 0.1f;
   }
 
-  UpdateOption(const char* data, size_t size) {
+  AddOption(const char* data, size_t size) {
     CopyFrom(data, size);
   }
 
@@ -40,7 +38,7 @@ public:
 
   std::string toString(){
     std::stringstream  ss;
-    ss << "UpdateOption " << worker_id() << " " << momentum() << " "
+    ss << "AddOption " << worker_id() << " " << momentum() << " "
       << learning_rate() << " " << rho() << " " << lambda() << std::endl;
 
     return ss.str();
@@ -71,6 +69,47 @@ private:
   InternalType data_[kSize];
 };
 
+struct GetOption {
+public:
+  // TODO(qiwye): to make these Option configuable 
+  GetOption(){
+    data_[0].i = MV_WorkerId();
+  }
+
+  GetOption(const char* data, size_t size) {
+    CopyFrom(data, size);
+  }
+
+  int worker_id() const { return data_[0].i; }
+  void set_worker_id(int worker_id) { data_[0].i = worker_id; }
+
+  std::string toString(){
+    std::stringstream  ss;
+    ss << "AddOption " << worker_id() << std::endl;
+    return ss.str();
+  }
+
+
+  const char* data() const { return reinterpret_cast<const char*>(&data_[0]); }
+  size_t size() const { return kSize * sizeof(InternalType); }
+  void CopyFrom(const char* data, size_t size) {
+    memcpy(data_, data, size);
+  }
+private:
+  static const size_t kSize = 1;
+  // Option can be either int type or float, 
+  // to make it easy to serialize and deserialize
+  union InternalType{
+    int i;
+    float f;
+  };
+
+  // 0: src worker id
+  // ...
+  InternalType data_[kSize];
+};
+
+
 template <typename T>
 class Updater {
 public:
@@ -82,8 +121,12 @@ public:
   //    Update data[index + offset] with delta[index], option, and the updater member
   // This is mainly for model sparse update consideration
   virtual void Update(size_t num_element, T* data, T* delta, 
-                      UpdateOption* option = nullptr, size_t offset = 0);
+                      AddOption* option = nullptr, size_t offset = 0);
 
+  // The updater will access the data to out_data in following way 
+  //   Get data[offset : offset + num_element) to blob_data[0 : num_element)
+  virtual void Access(size_t num_element, T* data, T* blob_data,
+                      size_t offset = 0, AddOption* option = nullptr);
   // Factory method to get the updater
   static Updater<T>* GetUpdater(size_t size = 0);
 };

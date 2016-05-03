@@ -2,6 +2,7 @@
 #define MULTIVERSO_TIMER_H_
 
 #include <chrono>
+#include <string>
 
 namespace multiverso {
 
@@ -9,7 +10,7 @@ class Timer {
 public:
   Timer();
 
-  // (Re)start the timer
+  // Restart the timer
   void Start();
 
   // Get elapsed milliseconds since last Timer::Start

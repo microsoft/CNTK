@@ -18,7 +18,7 @@ public:
   void Get(T* data, size_t size);
 
   // Add all element
-  void Add(T* data, size_t size, const UpdateOption* option = nullptr);
+  void Add(T* data, size_t size, const AddOption* option = nullptr);
 
   int Partition(const std::vector<Blob>& kv,
                 std::unordered_map<int, std::vector<Blob> >* out) override;
@@ -50,7 +50,7 @@ public:
   void Load(Stream* s) override;
 
 private:
-  int server_id_;
+  int32_t server_id_;
   std::vector<T> storage_;
   Updater<T>* updater_;
   size_t size_; // number of element with type T

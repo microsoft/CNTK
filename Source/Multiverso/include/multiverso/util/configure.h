@@ -102,7 +102,12 @@ void SetCMDFlag(const std::string& name, const T& value) {
 
 #define MV_DECLARE_bool(name)  \
   DECLARE_CONFIGURE(bool, name)
+ 
+#define MV_DEFINE_double(name, default_value, text) \
+  DEFINE_CONFIGURE(double, name, default_value, text)
 
+#define MV_DECLARE_double(name)  \
+  DECLARE_CONFIGURE(double, name)
 }  // namespace multiverso
 
 #endif  // MULTIVERSO_UTIL_CONFIGURE_H_

@@ -25,6 +25,13 @@ namespace multiverso {
 
 #define MV_MPI_CALL(mpi_return) CHECK((mpi_return) == MPI_SUCCESS)
 
+namespace {
+  static MPI_Datatype GetDataType(char*)   { return MPI_CHAR; }
+  static MPI_Datatype GetDataType(int*)    { return MPI_INT; }
+  static MPI_Datatype GetDataType(float*)  { return MPI_FLOAT; }
+  static MPI_Datatype GetDataType(double*) { return MPI_DOUBLE; }
+}
+
 class MPINetWrapper : public NetInterface {
 public:
   MPINetWrapper() : /* more_(std::numeric_limits<char>::max()) */ 
@@ -70,6 +77,7 @@ public:
     MV_MPI_CALL(MPI_Initialized(&inited_));
     if (!inited_) {
       MV_MPI_CALL(MPI_Init_thread(argc, &argv, MPI_THREAD_SERIALIZED, &thread_provided_));
+      MV_MPI_CALL(MPI_Initialized(&inited_));
     }
     MV_MPI_CALL(MPI_Query_thread(&thread_provided_));
     if (thread_provided_ < MPI_THREAD_SERIALIZED) {
@@ -104,6 +112,12 @@ public:
   int rank() const override { return rank_; }
   int size() const override { return size_; }
   std::string name() const override { return "MPI"; }
+
+  template <typename ElemType>
+  static void Allreduce(ElemType* data, size_t elem_count) {
+    MPI_Allreduce(MPI_IN_PLACE, data, (int)elem_count,
+      GetDataType(data), MPI_SUM, MPI_COMM_WORLD);
+  }
 
   //size_t Send(MessagePtr& msg) override {
   //  while (!msg_handles_.empty()) {
@@ -196,6 +210,49 @@ public:
     }
     // CHECK(count == Message::kHeaderSize);
     return RecvAndDeserialize(status.MPI_SOURCE, count, msg);
+  }
+
+  void SendTo(int rank, const char* buf, int len) const override {
+    if (len <= 0) {
+      return;
+    }
+    MPI_Request	send_request;
+    MPI_Status status;
+    MV_MPI_CALL(MPI_Isend(buf, len, MPI_BYTE, rank, MPI_ANY_TAG, 
+                          MPI_COMM_WORLD, &send_request));
+    MV_MPI_CALL(MPI_Wait(&send_request, &status));
+  }
+
+  void RecvFrom(int rank, char* buf, int len) const override {
+    MPI_Status status;
+    int read_cnt = 0;
+    while (read_cnt < len) {
+      MV_MPI_CALL(MPI_Recv(buf + read_cnt, len - read_cnt, MPI_BYTE, 
+                           rank, MPI_ANY_TAG, MPI_COMM_WORLD, &status));
+      int cur_cnt;
+      MV_MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &cur_cnt));
+      read_cnt += cur_cnt;
+    }
+  }
+
+  void SendRecv(int send_rank, const char* send_data, int send_len,
+    int recv_rank, char* recv_data, int recv_len) const {
+    MPI_Request	send_request;
+    // send first, non-blocking
+    MV_MPI_CALL(MPI_Isend(send_data, send_len, MPI_BYTE, send_rank, 
+                          MPI_ANY_TAG, MPI_COMM_WORLD, &send_request));
+    // then receive, blocking
+    MPI_Status status;
+    int read_cnt = 0;
+    while (read_cnt < recv_len) {
+      MV_MPI_CALL(MPI_Recv(recv_data + read_cnt, recv_len - read_cnt, MPI_BYTE,
+                           recv_rank, MPI_ANY_TAG, MPI_COMM_WORLD, &status));
+      int cur_cnt;
+      MV_MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &cur_cnt));
+      read_cnt += cur_cnt;
+    }
+    // wait for send complete
+    MV_MPI_CALL(MPI_Wait(&send_request, &status));
   }
 
   size_t SerializeAndSend(MessagePtr& msg, MPIMsgHandle* msg_handle) {

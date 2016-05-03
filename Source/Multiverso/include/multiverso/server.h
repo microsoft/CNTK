@@ -9,21 +9,18 @@
 namespace multiverso {
 
 class ServerTable;
+class Synchronizer;
 
 class Server : public Actor {
 public:
   Server();
+  static Server* GetServer();
   int RegisterTable(ServerTable* table);
-  // store server data to file
-  void StoreTable(int epoch);
-  // load data from file and return next iteration number
-  int LoadTable(const std::string& file_path);
-  void SetTableFilePath(const std::string& table_file_path);
-private:
-  void ProcessGet(MessagePtr& msg);
-  void ProcessAdd(MessagePtr& msg);
-  std::string table_file_path_;
+protected:
+  virtual void ProcessGet(MessagePtr& msg);
+  virtual void ProcessAdd(MessagePtr& msg);
   // contains the parameter data structure and related handle method
+  // Synchronizer* sync_;
   std::vector<ServerTable*> store_;
 };
 

@@ -3,8 +3,6 @@
 
 #include "multiverso/table_interface.h"
 #include "multiverso/util/log.h"
-//TODO(feiga): remove this dependence
-#include "multiverso/zoo.h"
 
 #include <unordered_map>
 #include <vector>
@@ -43,7 +41,7 @@ public:
     std::unordered_map<int, int> counts;
     Blob keys = kv[0];
     for (int i = 0; i < keys.size<Key>(); ++i) { // iterate as type Key
-      int dst = static_cast<int>(keys.As<Key>(i) % Zoo::Get()->num_servers());
+      int dst = static_cast<int>(keys.As<Key>(i) % MV_NumServers());
       ++counts[dst];
     }
     for (auto& it : counts) { // Allocate memory
@@ -53,7 +51,7 @@ public:
     }
     counts.clear();
     for (int i = 0; i < keys.size<Key>(); ++i) {
-      int dst = static_cast<int>(keys.As<Key>(i) % Zoo::Get()->num_servers());
+      int dst = static_cast<int>(keys.As<Key>(i) % MV_NumServers());
       (*out)[dst][0].As<Key>(counts[dst]) = keys.As<Key>(i);
       if (kv.size() == 2) 
         (*out)[dst][1].As<Val>(counts[dst]) = kv[1].As<Val>(i);

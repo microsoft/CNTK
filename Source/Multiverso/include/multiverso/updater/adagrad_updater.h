@@ -2,6 +2,7 @@
 #define MULTIVERSO_UPDATER_ADAGRAD_UPDATER_H_
 
 #include "multiverso/updater/updater.h"
+#include "multiverso/util/log.h"
 
 #include <vector>
 #include <cmath>
@@ -20,7 +21,8 @@ public:
   }
 
   void Update(size_t num_element, T* data, T* delta, 
-              UpdateOption* option, size_t offset) override {
+              AddOption* option, size_t offset) override {
+
     auto g_sqr_data_ = historic_g_sqr_.at(option->worker_id());
     for (size_t index = 0; index < num_element; ++index) {
       g_sqr_data_[index + offset] -=

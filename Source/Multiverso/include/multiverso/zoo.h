@@ -24,7 +24,7 @@ public:
   static Zoo* Get() { static Zoo zoo; return &zoo; }
 
   // Start all actors
-  void Start(int* argc, char** argv, int role);
+  void Start(int* argc, char** argv);
   // Stop all actors
   void Stop(bool finalize_net);
 
@@ -38,6 +38,14 @@ public:
 
   int worker_rank() const { return nodes_[rank()].worker_id; }
   int server_rank() const { return nodes_[rank()].server_id; }
+
+  int rank_to_worker_id(int rank) const {
+    return nodes_[rank].worker_id;
+  }
+
+  int rank_to_server_id(int rank) const {
+    return nodes_[rank].server_id;
+  }
 
   int worker_id_to_rank(int worker_id) const {
     return worker_id_to_rank_[worker_id];
@@ -63,6 +71,8 @@ private:
   // private constructor
   Zoo();
   void RegisterNode();
+  void StartPS();
+  void StopPS();
 
   std::unordered_map<std::string, Actor*> zoo_;
 

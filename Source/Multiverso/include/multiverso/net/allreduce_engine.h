@@ -1,14 +1,11 @@
 #ifndef MULTIVERSO_NET_ALLREDUCE_ENGINE_H_
 #define MULTIVERSO_NET_ALLREDUCE_ENGINE_H_
 
-#ifdef MULTIVERSO_USE_ZMQ
-
 #include <vector>
 
-namespace multiverso {
+#include "multiverso/net.h"
 
-/*! \brief forward declaration */
-class AllreduceNetWrapper;
+namespace multiverso {
 
 /*! \brief Reduce function */
 typedef void (ReduceFunction)(const char *src, char *dst, int len);
@@ -43,8 +40,8 @@ public:
 */
 enum RecursiveHalvingNodeType {
   Normal, //normal node, 1 group only have 1 machine 
-  ReciveNeighbor, //leader of group when number of machines in this group is 2.
-  SendNeighbor// non-leader machines in group
+  GroupLeader, //leader of group when number of machines in this group is 2.
+  Other// non-leader machines in group
 };
 
 /*! \brief Network structure for recursive halving algorithm */
@@ -89,7 +86,7 @@ public:
   * \brief Initial
   * \param linkers, the low-level communication methods
   */
-  void Init(const AllreduceNetWrapper* linkers);
+  void Init(const NetInterface* linkers);
 
   ~AllreduceEngine();
   /*! \brief Get rank of this machine */
@@ -155,7 +152,7 @@ private:
   /*! \brief Rank of local machine */
   int rank_;
   /*! \brief The network interface, provide send/recv functions  */
-  const AllreduceNetWrapper *linkers_;
+  const NetInterface* linkers_;
   /*! \brief Bruck map for all gather algorithm*/
   BruckMap bruck_map_;
   /*! \brief Recursive halving map for reduce scatter */
@@ -180,6 +177,5 @@ inline int AllreduceEngine::num_machines() {
 
 }
 
-#endif // MULTIVERSO_USE_ZMQ
 
 #endif //MULTIVERSO_NET_ALLREDUCE_ENGINE_H_

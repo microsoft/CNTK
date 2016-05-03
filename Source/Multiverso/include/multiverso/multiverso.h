@@ -5,13 +5,11 @@
 
 namespace multiverso {
 
-void MV_Init(int* argc = nullptr,
-             char* argv[] = nullptr,
-             int role = 3);
+void MV_Init(int* argc = nullptr, char* argv[] = nullptr);
 
 void MV_Barrier();
 
-void MV_ShutDown(bool finalize_mpi = true);
+void MV_ShutDown(bool finalize_net = true);
 
 int  MV_Rank();
 int  MV_Size();
@@ -25,9 +23,9 @@ int  MV_ServerId();
 int  MV_WorkerIdToRank(int worker_id);
 int  MV_ServerIdToRank(int server_id);
 
-// Show the dashboard information about the monitored excuation time
-// used for profile
-void MV_Dashboard();
+// inplace sum by allreduce
+template <typename ElemType>
+void MV_Aggregate(ElemType* data, int size);
 
 // --- Net API -------------------------------------------------------------- //
 // NOTE(feiga): these API is only used for specific situation.
