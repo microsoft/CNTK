@@ -68,6 +68,16 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*
 }
 
 template <class ElemType>
+cusparseHandle_t GPUSparseMatrix<ElemType>::s_cusparseHandle[GPUSparseMatrix<ElemType>::MaxGpus] = {0};
+
+template <class ElemType>
+cusparseHandle_t GPUSparseMatrix<ElemType>::GetCusparseHandle(DEVICEID_TYPE deviceId /*=-1*/)
+{
+	cusparseHandle_t cusparseHandle = 0;
+	return cusparseHandle;
+}
+
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy)
 {
 }
