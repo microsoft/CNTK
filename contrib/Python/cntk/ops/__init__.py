@@ -406,6 +406,9 @@ def tanh(x, name=None):
     The output tensor has the same shape as `x`.
     
     Example:
+        >>> C.eval(C.tanh([[1,2],[3,4]]))
+        [array([[[ 0.761594,  0.964028],
+                 [ 0.995055,  0.999329]]])]
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
