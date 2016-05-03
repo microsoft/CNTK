@@ -112,11 +112,11 @@ class CNTKTextFormatReader(AbstractReader):
 
     Args:
         filename (str): path to the input file to read from
-        randomize (str): whether the input should be randomized. Valid values: 'auto' or 'none'
-        skip_sequence_ids (bool): whether the sequence ID should be ignored 
+        randomize (str or int): whether the input should be randomized. `auto` (default): randomly shuffle the input data; integer value: shuffle within a window of that size; `none`: do not shuffle at all and take the input in the order it was read
+        skip_sequence_ids (bool): if True, the sequence ID will be ignored and every line will be treated as a separate sample
         max_errors (int): number of errors to accept before throwing an exception
-        trace_level (int): verbosity of output (0=only errors .. 2=all output)
-        chunk_size_in_bytes (int): smallest reading unit in bytes (default 32MB)
+        trace_level (int): verbosity of output (0=only errors ... 2=all output)
+        chunk_size_in_bytes (int): maxium number of bytest to read from disk (default 32MB)
         num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
 
     """
