@@ -244,7 +244,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             'ModelDescription': description,
             'ModelPath': self.model_path,
             'Reader': input_map.generate_config(),
-            'SGD': optimizer.generate_config(),
+            'SGD': training_params.generate_config(),
         }
 
         return tmpl % tmpl_dict
