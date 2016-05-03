@@ -296,7 +296,7 @@ def round(arg, name=None):
     This is different from the round operation of numpy which follows
     round half to even.
 
-    Examples:
+    Example:
         >>> C.eval(C.round([0.2, 1.3, 4., 5.5, 0.0]))
         [array([[ 0.,  1.,  4.,  6.,  0.]])]
 
@@ -337,12 +337,12 @@ def clip(x, min_value, max_value, name=None):
     The backward pass propagates the received gradient if no clipping occurred,
     and 0 if the value was clipped.
     
-    Examples:
-        >>> clip(2., 4., [1., 2.1, 3.0, 4.1])
-        #[2.0, 2.1, 3.0, 4.0]
+    Example:
+        >>> C.eval(C.clip([1., 2.1, 3.0, 4.1], 2., 4.))
+        [array([[ 2. ,  2.1,  3. ,  4. ]])]
         
-        >>> clip([-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.], [-10., -5., 0., 5., 10.])
-        #[-5, -4., 0., 4., 9.]
+        >>> C.eval(C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]))
+        [array([[-5., -4.,  0.,  4.,  9.]])]
     
     Args:        
         x: tensor to be clipped
@@ -362,16 +362,16 @@ def relu(x, name=None):
     of `x`: ``max(x, 0)``
 
     The output tensor has the same shape as `x`.
+
+    Example:
+        >>> C.eval(C.relu([[-1, -0.5, 0, 1, 2]]))
+        [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
 
     Returns:
         :class:`cntk.graph.ComputationNode`
-
-    Example:
-        >>> cntk.eval(cntk.ops.rectified_linear([[-1, -0.5, 0, 1, 2]]))
-        [[[0, 0, 0, 1, 2]]]
     """
     from cntk.ops.cntk2 import Relu
     return Relu(x, name=name)
