@@ -1,1 +1,405 @@
-__COMPLETED__
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/FeedForward.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu DeviceId=-1 timestamping=true speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=2048]]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  3 2016 13:15:46
+		Last modified date: Tue Apr 26 23:35:31 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: c:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on cntk-muc01
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+MPIWrapper: initializing MPI
+ping [requestnodes (before change)]: 1 nodes pinging each other
+ping [requestnodes (before change)]: all 1 nodes responded
+requestnodes [MPIWrapper]: using 1 out of 1 MPI nodes (1 requested); we (0) are in (participating)
+ping [requestnodes (after change)]: 1 nodes pinging each other
+ping [requestnodes (after change)]: all 1 nodes responded
+mpihelper: only one MPI process: MPI operation will be boring
+ping [mpihelper]: 1 nodes pinging each other
+ping [mpihelper]: all 1 nodes responded
+05/03/2016 13:22:22: -------------------------------------------------------------------
+05/03/2016 13:22:22: Build info: 
+
+05/03/2016 13:22:22: 		Built time: May  3 2016 13:15:46
+05/03/2016 13:22:22: 		Last modified date: Tue Apr 26 23:35:31 2016
+05/03/2016 13:22:22: 		Build type: Release
+05/03/2016 13:22:22: 		Build target: GPU
+05/03/2016 13:22:22: 		With 1bit-SGD: no
+05/03/2016 13:22:22: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 13:22:22: 		CUB_PATH: c:\src\cub-1.4.1
+05/03/2016 13:22:22: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 13:22:22: 		Build Branch: HEAD
+05/03/2016 13:22:22: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 13:22:22: 		Built by svcphil on cntk-muc01
+05/03/2016 13:22:22: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 13:22:22: -------------------------------------------------------------------
+
+05/03/2016 13:22:22: Running on DPHAIM-22 at 2016/05/03 13:22:22
+05/03/2016 13:22:22: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/FeedForward.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu  DeviceId=-1  timestamping=true  speechTrain=[SGD=[maxEpochs=1]]  speechTrain=[SGD=[epochSize=2048]]
+
+
+
+05/03/2016 13:22:22: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 13:22:22: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+deviceId = -1
+command = speechTrain
+precision = "float"
+traceLevel = "1"
+modelPath = "$ModelDir$/cntkSpeechFF.dnn"
+parallelTrain = true
+speechTrain = [
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 256:1024:2048
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+        autoAdjust=[
+            autoAdjustMinibatch = true
+            minibatchSizeTuningFrequency = 1
+            minibatchSearchCriterionErrorMargin = 2
+        ]
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [ 
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+DeviceId=-1
+timestamping=true
+speechTrain=[SGD=[maxEpochs=1]]
+speechTrain=[SGD=[epochSize=2048]]
+
+05/03/2016 13:22:22: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 13:22:22: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 13:22:22: RootDir = ".."
+ConfigDir = "../Config"
+DataDir = "../Data"
+OutputDir = "../Output"
+ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models"
+deviceId = -1
+command = speechTrain
+precision = "float"
+traceLevel = "1"
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models/cntkSpeechFF.dnn"
+parallelTrain = true
+speechTrain = [
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 256:1024:2048
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+        autoAdjust=[
+            autoAdjustMinibatch = true
+            minibatchSizeTuningFrequency = 1
+            minibatchSearchCriterionErrorMargin = 2
+        ]
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [ 
+            dim = 363
+            type = "real"
+            scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+DeviceId=-1
+timestamping=true
+speechTrain=[SGD=[maxEpochs=1]]
+speechTrain=[SGD=[epochSize=2048]]
+
+05/03/2016 13:22:22: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 13:22:22: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: FeedForward.cntk:command=speechTrain
+configparameters: FeedForward.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+configparameters: FeedForward.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+configparameters: FeedForward.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+configparameters: FeedForward.cntk:deviceId=-1
+configparameters: FeedForward.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models
+configparameters: FeedForward.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models/cntkSpeechFF.dnn
+configparameters: FeedForward.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+configparameters: FeedForward.cntk:parallelTrain=true
+configparameters: FeedForward.cntk:precision=float
+configparameters: FeedForward.cntk:RootDir=..
+configparameters: FeedForward.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu
+configparameters: FeedForward.cntk:speechTrain=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 256:1024:2048
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+        autoAdjust=[
+            autoAdjustMinibatch = true
+            minibatchSizeTuningFrequency = 1
+            minibatchSearchCriterionErrorMargin = 2
+        ]
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [ 
+            dim = 363
+            type = "real"
+            scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+] [SGD=[maxEpochs=1]] [SGD=[epochSize=2048]]
+
+configparameters: FeedForward.cntk:timestamping=true
+configparameters: FeedForward.cntk:traceLevel=1
+05/03/2016 13:22:22: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 13:22:22: Commands: speechTrain
+05/03/2016 13:22:22: Precision = "float"
+05/03/2016 13:22:22: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models/cntkSpeechFF.dnn
+05/03/2016 13:22:22: CNTKCommandTrainInfo: speechTrain : 1
+05/03/2016 13:22:22: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+
+05/03/2016 13:22:22: ##############################################################################
+05/03/2016 13:22:22: #                                                                            #
+05/03/2016 13:22:22: # Action "train"                                                             #
+05/03/2016 13:22:22: #                                                                            #
+05/03/2016 13:22:22: ##############################################################################
+
+05/03/2016 13:22:22: CNTKCommandTrainBegin: speechTrain
+SimpleNetworkBuilder Using CPU
+reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp ... 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+
+05/03/2016 13:22:23: Creating virgin network.
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [132 x *]
+Validating --> W2 = LearnableParameter() :  -> [132 x 512]
+Validating --> W1 = LearnableParameter() :  -> [512 x 512]
+Validating --> W0 = LearnableParameter() :  -> [512 x 363]
+Validating --> features = InputValue() :  -> [363 x *]
+Validating --> MeanOfFeatures = Mean (features) : [363 x *] -> [363]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [363 x *] -> [363]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [363 x *], [363], [363] -> [363 x *]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [512 x 363], [363 x *] -> [512 x *]
+Validating --> B0 = LearnableParameter() :  -> [512 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *], [512 x 1] -> [512 x 1 x *]
+Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> W1*H1 = Times (W1, H1) : [512 x 512], [512 x 1 x *] -> [512 x 1 x *]
+Validating --> B1 = LearnableParameter() :  -> [512 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *], [512 x 1] -> [512 x 1 x *]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
+Validating --> B2 = LearnableParameter() :  -> [132 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
+Validating --> Prior = Mean (labels) : [132 x *] -> [132]
+Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+05/03/2016 13:22:23: Created model with 25 nodes on CPU.
+
+05/03/2016 13:22:23: Training criterion node(s):
+05/03/2016 13:22:23: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+05/03/2016 13:22:23: Evaluation criterion node(s):
+
+05/03/2016 13:22:23: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[EvalErrorPrediction Gradient[1]] [InvStdOfFeatures Gradient[363]] [LogOfPrior Gradient[132]] [MVNormalizedFeatures Gradient[363 x *]] [MeanOfFeatures Gradient[363]] [PosteriorProb Gradient[132 x 1 x *]] [PosteriorProb Value[132 x 1 x *]] [Prior Gradient[132]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [features Gradient[363 x *]] [labels Gradient[132 x *]] }
+000000BDD334C430: {[features Value[363 x *]] }
+000000BDD334C4D0: {[W0 Value[512 x 363]] }
+000000BDD334C610: {[MeanOfFeatures Value[363]] }
+000000BDD334C890: {[B0 Value[512 x 1]] }
+000000BDD334CCF0: {[W1 Value[512 x 512]] }
+000000BDD334CE30: {[B1 Value[512 x 1]] }
+000000BDD334D1F0: {[InvStdOfFeatures Value[363]] }
+000000BDD5BCA080: {[Prior Value[132]] }
+000000BDD5BCA120: {[EvalErrorPrediction Value[1]] }
+000000BDD5BCA260: {[W2 Value[132 x 512]] }
+000000BDD5BCA440: {[labels Value[132 x *]] }
+000000BDD5BCA6C0: {[MVNormalizedFeatures Value[363 x *]] }
+000000BDD5BCAE40: {[B0 Gradient[512 x 1]] [H1 Gradient[512 x 1 x *]] [W1*H1+B1 Gradient[512 x 1 x *]] [W2*H1 Value[132 x 1 x *]] }
+000000BDD5BCAEE0: {[CrossEntropyWithSoftmax Gradient[1]] }
+000000BDD5BCAF80: {[B1 Gradient[512 x 1]] [H2 Gradient[512 x 1 x *]] [HLast Gradient[132 x 1 x *]] }
+000000BDD5BCB0C0: {[H1 Value[512 x 1 x *]] [W0*features Gradient[512 x *]] }
+000000BDD5BCB160: {[ScaledLogLikelihood Value[132 x 1 x *]] }
+000000BDD5BCB340: {[W0 Gradient[512 x 363]] [W0*features+B0 Value[512 x 1 x *]] }
+000000BDD5BCB520: {[W1 Gradient[512 x 512]] [W1*H1+B1 Value[512 x 1 x *]] }
+000000BDD5BCB5C0: {[B2 Gradient[132 x 1]] }
+000000BDD5BCB700: {[W0*features Value[512 x *]] }
+000000BDD5BCB7A0: {[HLast Value[132 x 1 x *]] [W2 Gradient[132 x 512]] }
+000000BDD5BCB8E0: {[LogOfPrior Value[132]] }
+000000BDD5BCB980: {[H2 Value[512 x 1 x *]] [W1*H1 Gradient[512 x 1 x *]] }
+000000BDD5BCBAC0: {[B2 Value[132 x 1]] }
+000000BDD5BCBB60: {[CrossEntropyWithSoftmax Value[1]] }
+000000BDD5BCBC00: {[W0*features+B0 Gradient[512 x 1 x *]] [W1*H1 Value[512 x 1 x *]] }
+000000BDD5BCBCA0: {[W2*H1 Gradient[132 x 1 x *]] }
+
+
+05/03/2016 13:22:23: Precomputing --> 3 PreCompute nodes found.
+
+05/03/2016 13:22:23: 	MeanOfFeatures = Mean()
+05/03/2016 13:22:23: 	InvStdOfFeatures = InvStdDev()
+05/03/2016 13:22:23: 	Prior = Mean()
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+05/03/2016 13:22:24: Precomputing --> Completed.
+
+
+05/03/2016 13:22:24: Starting Epoch 1: learning rate per sample = 0.003906  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..2048] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+05/03/2016 13:22:24: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1), distributed reading is ENABLED.
+05/03/2016 13:22:25: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 4.48531419 * 2048; EvalErrorPrediction = 0.90722656 * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.00390625; epochTime=0.288909s
+05/03/2016 13:22:25: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models/cntkSpeechFF.dnn'
+05/03/2016 13:22:25: CNTKCommandTrainEnd: speechTrain
+
+05/03/2016 13:22:25: Action "train" complete.
+
+05/03/2016 13:22:25: __COMPLETED__
