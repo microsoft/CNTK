@@ -18,8 +18,8 @@ DataDir    = "$RunRootDir$/Data"
 CacheDir   = "$DataDir$/cache"   # (not used currently)
 ExpRootDir = "$RunRootDir$"
 
-command = train:test:write
-#command = writeWordAndClassInfo:train:test:write
+#command = train:test:write
+command = writeWordAndClassInfo:train:test:write
 #command = write
 #command = dump
 
@@ -27,6 +27,8 @@ command = train:test:write
 
 beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 
+# 29-1: same as 29-0 but also switched back to 128 MBSize
+# 29-0: switched back to old reader
 # 28-5: like 28-4 but using default axis for labels
 # 28-4: like 28-3 but with momentum changed from 2500 to 1250 (since applied to different #samples)
 # 28-3: like 28-2 but with randomization enabled
@@ -39,8 +41,8 @@ beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 # 27-2: some refactoring, went back to 26-4 from LMSequenceReader
 # 27-1: fixed slicing
 # 27-0: incorrect slicing, dropped first input
-deviceId = 5
-ExpId = 28-$deviceId$-g2p
+deviceId = 1
+ExpId = 29-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
 decodeModel = 21
 #ExpId = 41-$deviceId$-s2sae    # TASK
@@ -90,27 +92,27 @@ confClassSize = 0
 maxLength = 20
 isAutoEncoder=false
 
-#inputVocabSize = 69
-#labelVocabSize = 69
-#trainFile = "g014b2b.train-dev-20-21.bsf.joint"
-##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
-#validFile = "g014b2b.train-dev-1-21.bsf.joint"
-#testFile  = "g014b2b.test.bsf.joint"
-##testFile  = "g014b2b.test.bsf.joint.masked"
-#startSymbol = "<s>"
-#useCNTKTextFormatReader = false
-#shareEmbeddings = true
-
-inputVocabSize = 29     # 26 letters plus start, end, apostrophe
-labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
-trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
-#trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
-validFile = "g014b2b.train-dev-1-21.bsf.ctf"
-testFile  = "g014b2b.test.bsf.ctf"
-#testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+inputVocabSize = 69
+labelVocabSize = 69
+trainFile = "g014b2b.train-dev-20-21.bsf.joint"
+#trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.joint"
+testFile  = "g014b2b.test.bsf.joint"
+#testFile  = "g014b2b.test.bsf.joint.masked"
 startSymbol = "<s>"
-useCNTKTextFormatReader = true
-shareEmbeddings = false
+useCNTKTextFormatReader = false
+shareEmbeddings = true
+
+#inputVocabSize = 29     # 26 letters plus start, end, apostrophe
+#labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
+#trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+##trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf"
+##testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+#startSymbol = "<s>"
+#useCNTKTextFormatReader = true
+#shareEmbeddings = false
 
 #######################################
 #  network definition                 #
@@ -158,12 +160,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # inputs
     # Inputs must be defined on top-scope level in order to get a clean name.
     useCNTKTextFormatReader = $useCNTKTextFormatReader$
-    #input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
+    input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
 
     inputAxis = DynamicAxis()
     //labelsAxis = DynamicAxis()
-    src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
-    tgt = /*Sparse*/Input (labelVocabDim/*, dynamicAxis=labelsAxis*/)
+    #src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
+    #tgt = /*Sparse*/Input (labelVocabDim/*, dynamicAxis=labelsAxis*/)
 
     # get out input and label data
     # This will go away once we can switch to CNTKTextFormatReader.
@@ -352,7 +354,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 # shared reader definition            #
 #######################################
 
-reader = [
+cntkreader = [
     readerType = "CNTKTextFormatReader" 
     file = "$DataDir$/$trainFile$"
     #randomize="none"
@@ -376,7 +378,7 @@ reader = [
     ]
 ]
 
-cvReader = [
+cntkcvReader = [
     readerType = "CNTKTextFormatReader" 
     file = "$DataDir$/$validFile$"
     randomize="none"
@@ -398,7 +400,7 @@ cvReader = [
     ]
 ]
 
-lmreader = [
+reader = [
     file = "$DataDir$/$trainFile$"
     #randomize = "auto" # gets ignored
 
@@ -465,7 +467,7 @@ lmreader = [
     ]
 ]
 
-lmcvReader = [
+cvReader = [
     file = "$DataDir$/$validFile$"
     #randomize = "none" # gets ignored
 
@@ -564,10 +566,10 @@ train = [
     # BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        #minibatchSize = 128:128:256:512
-        minibatchSize = 64:64:128:256
+        minibatchSize = 128:128:256:512
+        #minibatchSize = 64:64:128:256
         learningRatesPerSample = 0.007*2:0.0035 #0.01 #0.005 # 0.01
-        momentumAsTimeConstant = 1250 #2500
+        momentumAsTimeConstant = 2500 #1250 #2500
         gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
         clippingThresholdPerSample = 1   #15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
         maxEpochs = 50
