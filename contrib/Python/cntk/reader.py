@@ -14,7 +14,7 @@ from .graph import ComputationNode
 
 class AbstractReader(with_metaclass(ABCMeta)):
 
-    """Abstract class that represents a reader for one input node.
+    """Abstract class that represents a reader.
     """
 
     # required so that instances can be put into a set
@@ -74,16 +74,6 @@ class CNTKTextFormatReader(AbstractReader):
     full format definition please see
     https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader.
 
-    Args:
-        filename (str): the name of the file where the data is stored
-        filename (str): path to the input file to read from
-        randomize (str): whether the input should be randomized. Valid values: 'auto' or 'none'
-        skip_sequence_ids (bool): whether the sequence ID should be ignored 
-        max_errors (int): number of errors to accept before throwing an exception
-        trace_level (int): verbosity of output (0=only errors .. 2=all output)
-        chunk_size_in_bytes (int): smallest reading unit in bytes (default 32MB)
-        num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
-
     Example:
        The following example encodes two samples, one has a sequence of one
        scalar, while the second has a sequence of two scalars::
@@ -116,24 +106,19 @@ class CNTKTextFormatReader(AbstractReader):
        e.g. a sentence being a sequence of varying number of words is tagged
        with a label.
 
-       The normal matrix based format, for which you would have used
-       :class:`cntk.reader.UCIFastReader` in the past can be simply converted by prepending
-       every line by the line number and a bar (``|``). Of course it only works
-       for sequences of length 1, since in matrix format you cannot go beyond
-       that:
+       If your data is in matrix format (one column per feature), you can use
+       `uci_to_cntk_text_format_converter.py <https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
+       to convert it to the CNTKTextFormatReader format.
 
-       :class:`cntk.reader.UCIFastReader` format::
+    Args:
+        filename (str): path to the input file to read from
+        randomize (str): whether the input should be randomized. Valid values: 'auto' or 'none'
+        skip_sequence_ids (bool): whether the sequence ID should be ignored 
+        max_errors (int): number of errors to accept before throwing an exception
+        trace_level (int): verbosity of output (0=only errors .. 2=all output)
+        chunk_size_in_bytes (int): smallest reading unit in bytes (default 32MB)
+        num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
 
-           0 1
-           10 11
-           20 21
-
-       can be easily converted to the :class:`cntk.reader.CNTKTextFormatReader` format
-       (using alias ``I``)::
-
-           0\t|I 0 1
-           1\t|I 10 21
-           2\t|I 20 21
     """
 
     def __init__(self, 
@@ -180,7 +165,7 @@ class CNTKTextFormatReader(AbstractReader):
         :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
 
         Args:
-            input_map (`InputMap`): describes how to map inputs to the data in a data file using a reader
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
             string representation of the reader configuration
@@ -430,7 +415,7 @@ class InputMap(object):
     binds input nodes to the aliases in a reader.
 
     Args:
-        reader (descendent of `AbstractReader`)
+        reader (descendent of :class:`comp.reader.AbstractReader`)
 
     Example::
     

@@ -128,7 +128,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (dict): map from input nodes to :class:`cntk.reader.InputMap`
             override_existing (bool): if the folder exists already override it
@@ -221,7 +221,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
             action_name (str): the name of the action in cntk configuration file
@@ -648,7 +648,7 @@ class LocalExecutionContext(AbstractContext):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -796,13 +796,11 @@ class DeferredExecutionContext(AbstractContext):
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
+            training_params (instance of :class:`cntk.optimizer.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
 
-        Returns:
-            training configuration
         '''
         #TODO: for this action and others as well, use a counter with the 
         # action name to avoid name collision in case we generate a config 
@@ -821,9 +819,6 @@ class DeferredExecutionContext(AbstractContext):
         Args:
             root_nodes (list): the list of root nodes of the model
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
-
-        Returns:
-            testing configuration
         '''
         if root_nodes is None and input_map is None:
             raise ValueError('If input_map is None, you have to specify root_nodes.')
@@ -840,9 +835,6 @@ class DeferredExecutionContext(AbstractContext):
         Args:
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate.
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
-
-        Returns: 
-           write configuration
         '''
         action_name = "Write"
         config_content = self._generate_write_config(input_map, action_name)
@@ -858,9 +850,6 @@ class DeferredExecutionContext(AbstractContext):
             backward_pass (bool): set to True if you want to output the gradient of a node (backward pass)
             input_name (:class:`cntk.graph.ComputationNode`): if backward_pass is True then input_node should contain the input name that
             the gradient is performed with respect to.
-
-        Returns: 
-            eval configuration
         '''
         action_name = "Eval"
         if not isinstance(node, ComputationNode):
@@ -881,6 +870,9 @@ class DeferredExecutionContext(AbstractContext):
         '''
         Exports the requested actions (via function calls like train()) to 
         a signle cntk configuration file that will be executed on the cluster
+
+        Returns: 
+            filename to which the configuration has been exported
         '''                
         filename = '%s.cntk' %self.name
         filename = os.path.join(self.directory,  filename)    

@@ -21,10 +21,10 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.])
+        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.])
+        >>> cntk.eval(cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
         #[1.840]
     
     Args:
@@ -36,6 +36,57 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     return CrossEntropyWithSoftmax(target_values, feature_values, name = name)
+
+def square_error(target_vector, output_vector, name=None):
+    """
+    This operator computes the square error.
+    This op expects the `output_vector` as unscaled, it computes softmax over 
+    the `output_vector` internally.  Any `feature_values` input over which softmax is 
+    already computed before passing to this operator will be incorrect.
+    
+    Example:
+        >>> cntk.eval(square_error([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        #[1.3862]
+        
+        >>> cntk.eval(square_error([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        #[1.840]
+    
+    Args:
+        target_vector: the target valid probability distribution
+        output_vector: the unscaled computed values from the network
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk1 import SquareError
+    return SquareError(target_vector, output_vector, name = name)
+
+def error_prediction(target_vector, output_vector, name=None):
+    """
+    This operator computes the prediction error.It finds the index of the highest 
+    value for each column in the input matrix
+    and compares it to the actual ground truth label. The result is a scalar 
+    (i.e., one by one matrix). This is often used as an evaluation criterion. 
+    It cannot be used as a training criterion though since the gradient is not 
+    defined for this operation.
+    
+    Example:
+        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        #[1.3862]
+        
+        >>> cntk.eval(error_prediction([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        #[1.840]
+    
+    Args:
+        target_vector: the target valid probability distribution
+        output_vector: the unscaled computed values from the network
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import ErrorPrediction
+    return ErrorPrediction(target_vector, output_vector, name = name)
+
 
 ################################################################################
 # linear ops
@@ -495,7 +546,7 @@ def reshape(x, shape, name=None):
 # variables_and_parameters ops
 ################################################################################
 
-def input_numpy(value, alias=None, has_dynamic_axis=True, name=None):
+def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -536,8 +587,9 @@ def input(shape, dynamic_axis='', name=None):
     fed to this input.
 
     Args:
-        shape: the shape of the input tensor
-        name: the name of the node in the network
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
