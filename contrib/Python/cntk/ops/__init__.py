@@ -70,10 +70,11 @@ def square_error(target_matrix, output_matrix, name=None):
 def error_prediction(target_vector, output_vector, name=None):
     """
     This operation computes the prediction error. It finds the index of the highest 
-    value in the output_vector and compares it to the actual ground truth label. 
-    The result is a scalar (i.e., one by one matrix). 
-    This is often used as an evaluation criterion. It cannot be used as a 
-    training criterion though since the gradient is not defined for this operation.
+    value in the output_vector and compares it to the actual ground truth label
+    (the index of the hot bit in the target vector). The result is a scalar 
+    (i.e., one by one matrix). This is often used as an evaluation criterion. 
+    It cannot be used as a training criterion though since the gradient is not
+    defined for it.
     
     Example:
         >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 2., 3., 4.]))
