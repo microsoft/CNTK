@@ -8,7 +8,7 @@
 #include "GPUMatrix.h"
 #include "CPUSparseMatrix.h"
 #include <functional>
-#include "cusparse_v2.h"
+#include <cusparse_v2.h>
 // Max number of GPUs on a _single_ node.
 #ifndef MAX_GPUS
 #define MAX_GPUS 16
