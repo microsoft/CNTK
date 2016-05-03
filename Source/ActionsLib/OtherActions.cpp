@@ -510,11 +510,11 @@ template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
     wstring modelPath     = config(L"modelPath");
-    wstring outputDotFile = config(L"outputDotFile"); // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outputFile    = config(L"outputFile");    // filename for the rendered topology plot
+    wstring outputDotFile = config(L"outputDotFile", L""); // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outputFile    = config(L"outputFile", L"");    // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
     // or if this is set, renderCmd must be set, so CNTK will call re
-    wstring renderCmd = config(L"renderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    wstring renderCmd = config(L"renderCmd", L""); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
@@ -544,7 +544,8 @@ void DoTopologyPlot(const ConfigParameters& config)
         renderCmd = msra::strfun::ReplaceAll(renderCmd, wstring(L"<OUT>"), outputFile);
     }
 
-
+    if (!renderCmd.empty())
+    {
         fprintf(stderr, "Executing third-party tool for rendering dot:\n%ls\n", renderCmd.c_str());
 #ifdef __unix__
         auto rc = system(msra::strfun::utf8(renderCmd).c_str());
@@ -552,7 +553,8 @@ void DoTopologyPlot(const ConfigParameters& config)
 #else
         _wsystem(renderCmd.c_str());
 #endif
-        fprintf(stderr, "Done.\n");
+    }
+    fprintf(stderr, "Done.\n");
 }
 
 template void DoTopologyPlot<float>(const ConfigParameters& config);

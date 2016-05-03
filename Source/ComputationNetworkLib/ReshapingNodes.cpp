@@ -24,6 +24,133 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
+// ReduceElements (op, axis=, input)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+{
+    Base::CopyTo(nodeP, newName, flags);
+    auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
+    node->m_axis      = m_axis;
+    node->m_operation = m_operation;
+    node->m_op        = m_op;
+}
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::Load(File& fstream, size_t modelVersion) /*override*/
+{
+    Base::Load(fstream, modelVersion);
+    fstream >> m_axis >> m_operation;
+    ValidateOp();
+}
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::Save(File& fstream) const /*override*/
+{
+    Base::Save(fstream);
+    fstream << m_axis << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+}
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+{
+    // get the args
+    size_t rank = DetermineElementwiseTensorRank();
+    auto result =           ValueTensorFor(rank, fr);
+    auto input  = Input(0)->ValueTensorFor(rank, fr);
+
+    // the actual operation is a Copy with a reduction op
+    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
+    // note: we can implement "Mean" by passing 1/dim for alpha
+}
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
+{
+    assert(inputIndex == 0), inputIndex;
+
+    // get the args
+    size_t rank = DetermineElementwiseTensorRank();
+    auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
+    auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
+
+    // gradients are not as simple as passing an op-code, unfortunately
+    switch (m_op)
+    {
+    case ElementWiseOperator::opSum:
+        // "Plus": broadcast the gradient
+        sliceInputGrad.AddCopyOf(sliceOutputGrad);
+        break;
+
+        // more coming
+
+        // "LogPlus": softmax
+        //   f(x) = log(sum_i exp x_i), hence gradient is:
+        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  – ReduceLogPlus(x))
+        // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
+        // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
+
+        // "Max": Copy the gradient only to the max value. targetGradient += gradientFromTop .* (outputValue == inputValue). Needs its own opcode. --TODO : verify
+    }
+}
+
+template <class ElemType>
+/*virtual*/ bool ReduceElementsNode<ElemType>::OutputUsedInComputingInputNodesGradients() const /*override*/
+{
+    switch (m_op)
+    {
+    case ElementWiseOperator::opSum: return false;
+    // will be different e.g. for LogPlus, Max, and Min
+    }
+    LogicError("Should not get here.");
+}
+
+template <class ElemType>
+/*virtual*/ bool ReduceElementsNode<ElemType>::InputUsedInComputingInputNodesGradients(size_t inputIndex) const /*override*/
+{
+    switch (m_op)
+    {
+    case ElementWiseOperator::opSum: return false;
+    // will be different for LogPlus, Max, and Min
+    }
+    LogicError("Should not get here.");
+}
+
+// map the operation specific as a string to an ElementWiseOperator to pass to 
+template <class ElemType>
+void ReduceElementsNode<ElemType>::ValidateOp()
+{
+    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    // more here
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Plus'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+}
+
+template <class ElemType>
+/*virtual*/ void ReduceElementsNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
+{
+    Base::Validate(isFinalValidationPass);
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+    // validate the opcode (in case we got instantiated empty and never updated)
+    ValidateOp();
+
+    let shape = Input(0)->GetSampleLayout();
+    auto dims = shape.GetDims();
+    if (m_axis == 0)
+        dims = { 1 };                       // entire sample is reduced to a scalar
+    else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
+        dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+    else if (isFinalValidationPass)
+        InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
+
+    SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+}
+
+template class ReduceElementsNode<float>;
+template class ReduceElementsNode<double>;
+
+// -----------------------------------------------------------------------
 // Where(bitVector) -- extract indices of non-0 values in a sequence
 // -----------------------------------------------------------------------
 
@@ -74,7 +201,7 @@ template <class ElemType>
                 indexSequence.push_back(t);
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
-    input.CollapseDataLocationAfterWriting(); // BUGBUG: Move back, since BOTH state is broken at present.
+    input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
     // create a new MBLayout
     let& outMBLayout = GetMBLayout();
     outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
@@ -158,7 +285,7 @@ template <class ElemType>
         }
     }
     // Note: maybe this is no longer needed, now that we do the same inside UpdateFunctionValueSize() for all nodes.
-    result.CollapseDataLocationAfterWriting(); // BUGBUG: Move back, since BOTH state is broken at present.
+    result.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
 }
 
 template <class ElemType>
@@ -223,12 +350,12 @@ template <class ElemType>
     // inherit MBLayout from indexData
     m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
     if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout()))
-        LogicError("%ls requires first argument (index data) to have a time dimension.", this->NodeDescription().c_str());
+        LogicError("%ls requires first argument (index data) to have a time dimension.", NodeDescription().c_str());
 
     bool sourceHasTimeDimension = Input(SOURCEDATA)->HasMBLayout();
 
     if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)
-        InvalidArgument("%ls requires the first argument (index data) to be a scalar time sequence.", this->NodeDescription().c_str());
+        InvalidArgument("%ls requires the first argument (index data) to be a scalar time sequence.", NodeDescription().c_str());
 
     // inherit tensor dimension from sourceData, minus the last (column or time) dimension. TODO this needs to become simpler...
     if (sourceHasTimeDimension)

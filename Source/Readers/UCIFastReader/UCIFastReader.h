@@ -155,7 +155,7 @@ public:
 
     bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_pMBLayout->GetNumParallelSequences();
     }

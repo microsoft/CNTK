@@ -54,16 +54,18 @@ enum class GradientsUpdateType : int
     FSAdaGrad
 };
 
-// TODO: While currently combining these methods is not supported,
-// these are not mutually exclusive and we can/should support combinations of these
-// in the future
+// modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
+// but dataParallelSGD/modelAveragingSGD/blockMomentumSGD are mutually exclusive (at least at the moment)
+// we assign the lower 8 bits to the enumerate data parallelization methods 
+// and next 8 bits to model parallelization methods
 enum class ParallelizationMethod : int
 {
-    None = 0,
-    DataParallelSGD = 1,
-    ModelAveragingSGD = (1 << 1),
-    ModelParallelSGD = (1 << 2), // Currently unsupported
-	DataParallelASGD = (1 << 3),
+    none = 0,
+    dataParallelSGD = 1,
+    modelAveragingSGD = 2,
+    blockMomentumSGD = 3,
+    dataParallelASGD = 4,
+    modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
 // configuration parameters associated with RMSProp learning algorithm
@@ -131,7 +133,14 @@ protected:
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
         if (m_truncated && specifiedMBSize > 1)      // currently only happens in this mode
+        {
+            if (numParallelSequences == 0)
+            {
+                RuntimeError("Learning rate and momentum are not supported per minibatch, please specify them per sample.");
+            }
+
             specifiedMBSize *= numParallelSequences; // assume 'specifiedMBSize' refers to truncation size
+        }
         // end bug post-fix
         // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
 
@@ -152,7 +161,7 @@ protected:
     ParallelizationMethod GetParallelizationMethod() const
     {
         if (m_mpi == nullptr)
-            return ParallelizationMethod::None;
+            return ParallelizationMethod::none;
 
         return m_parallelizationMethod;
     }
@@ -260,8 +269,12 @@ protected:
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
-    // Parallel training related with MA
+    // Parallel training related with MA / BM
     size_t m_nFramesBetweenMASync;
+    bool   m_resetSGDMomentum; 
+    bool   m_useNesterovBlockMomentum;
+    double m_blockLearningRate; 
+    double m_blockMomentumAsTimeConstant;
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
@@ -338,7 +351,14 @@ public:
         m_mpi = mpi;
 
         if (m_mpi == nullptr)
-            m_parallelizationMethod = ParallelizationMethod::None;
+            m_parallelizationMethod = ParallelizationMethod::none;
+
+        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
+        {
+            // This is used to finish initializing BlockMomentumSGD parameter 
+            // since some of the parameter may not be specified by the users 
+            InitializeAndCheckBlockMomentumSGDParameters(); 
+        }
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
@@ -469,7 +489,7 @@ protected:
                          const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-    void InitModelAggregationHandler(int traceLevel);
+    void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
@@ -561,6 +581,7 @@ protected:
 
 private:
     int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
+    void InitializeAndCheckBlockMomentumSGDParameters();
     MultiversoHelper<ElemType>* m_pMultiversoHelper;
     bool m_pMultiversoHelperBarrier;
 };

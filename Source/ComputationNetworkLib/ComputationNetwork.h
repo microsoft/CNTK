@@ -188,6 +188,7 @@ public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
+    template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
@@ -832,7 +833,7 @@ private:
 
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
-    void PlotNetworkTopology(const std::wstring outputFile);
+    void PlotNetworkTopology(const std::wstring& outputFile);
 
     // -----------------------------------------------------------------------
     // scripting integration

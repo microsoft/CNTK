@@ -267,6 +267,38 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+{
+    VerifyWritable(__func__);
+
+    size_t n = GetNumCols();
+    if (n != columnsMask.GetNumCols())
+        RuntimeError("Matrix and column mask must have equal number of columns.");
+
+    if (val != 0)
+        LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
+
+#ifdef _DEBUG
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        // Get the binary columns mask
+        char* maskedCols = columnsMask.Data();
+
+        // If we're CSC, we only need to verify that the columns to be zeroed are empty.
+        GPUSPARSE_INDEX_TYPE* colVector = SecondaryIndexLocation();
+
+#pragma omp parallel for
+        for (long j = 0; j < n; j++)
+            if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
+                LogicError("CPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
+    }
+    else
+        NOT_IMPLEMENTED;
+#endif
+}
+
+
+template <class ElemType>
 void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const
 {
     Print(matrixName, 0, 0, 0, 0);
@@ -360,7 +392,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 }
 
 template <class ElemType>
-CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
@@ -368,7 +400,8 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
-    CPUMatrix<ElemType> slice(m_numRows, numCols);
+    // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
+    slice.RequireSize(m_numRows, numCols);
 
 #pragma omp parallel for
     for (long j = 0; j < numCols; j++)
@@ -383,6 +416,14 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
             slice(i, (size_t) j) = value;
         }
     }
+
+}
+template <class ElemType>
+CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+{
+    CPUMatrix<ElemType> slice(m_numRows, numCols);
+
+    AssignColumnSliceToDense(slice, startColumn, numCols);
 
     return slice;
 }

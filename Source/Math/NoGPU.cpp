@@ -93,6 +93,17 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCo
 }
 
 template <class ElemType>
+GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
+{
+    return NULL;
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+{
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
 {
     return *this;
@@ -436,6 +447,10 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 {
     GPUSparseMatrix<ElemType> a(0);
     return a;
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
+{
 }
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const

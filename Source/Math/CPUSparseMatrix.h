@@ -83,6 +83,7 @@ public:
 
     void SetValue(const size_t row, const size_t col, ElemType val);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
     size_t BufferSize() const
     {
@@ -97,6 +98,7 @@ public:
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    void AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
     CPUMatrix<ElemType> DiagonalToDense() const;
 

@@ -27,12 +27,14 @@ Train=[
                 embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
                 lookup = GatherPacked(features, embedding)
             ].lookup
+            # TODO: suggested change of parameter order: output dims first, inputDim=input.dim
             DenseLayer(input, inputSize, outputSize, activation) = [
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
+            # TODO: suggested change of parameter order: output dims first, inputDim=input.Dim optional, cellDim=outputDim optional
             LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+               lstm = BS.RNNs.RecurrentLSTMP2 (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -71,6 +73,8 @@ Train=[
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      # We are testing checkpointing, keep all checkpoint (.ckp) files
+      keepCheckPointFiles = true
     ]
     
     reader = [

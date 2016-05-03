@@ -47,23 +47,23 @@ DNN=[
     pool1vs = 2
     pool1 = MaxNDPooling(conv1, pool1W, pool1H, pool1hs, pool1vs)
     
-    rn1_1 = ResNetNode3BInc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst, 1)
+    rn1_1 = ResNetNode3BInc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst, 1, 1, 1)
     rn1_2 = ResNetNode3A(rn1_1, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst)
     rn1_3 = ResNetNode3A(rn1_2, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst)
 
-    rn2_1 = ResNetNode3BInc(rn1_3, cMap3, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst, 2)
+    rn2_1 = ResNetNode3BInc(rn1_3, cMap3, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst, 2, $stride1x1$, $stride3x3$)
     rn2_2 = ResNetNode3A(rn2_1, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst)
     rn2_3 = ResNetNode3A(rn2_2, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst)
     rn2_4 = ResNetNode3A(rn2_3, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst)
     
-    rn3_1 = ResNetNode3BInc(rn2_4,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst, 2)
+    rn3_1 = ResNetNode3BInc(rn2_4,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst, 2, $stride1x1$, $stride3x3$)
     rn3_2 = ResNetNode3A(rn3_1, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_3 = ResNetNode3A(rn3_2, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_4 = ResNetNode3A(rn3_3, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_5 = ResNetNode3A(rn3_4, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_6 = ResNetNode3A(rn3_5, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
 
-    rn4_1 = ResNetNode3BInc(rn3_6, cMap5, cMap4, cMap6, 4608, convWScale, convBValue, scValue, bnTimeConst, 2)
+    rn4_1 = ResNetNode3BInc(rn3_6, cMap5, cMap4, cMap6, 4608, convWScale, convBValue, scValue, bnTimeConst, 2, $stride1x1$, $stride3x3$)
     rn4_2 = ResNetNode3A(rn4_1, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue, bnTimeConst)
     rn4_3 = ResNetNode3A(rn4_2, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue, bnTimeConst)
 

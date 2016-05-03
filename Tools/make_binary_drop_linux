@@ -116,7 +116,7 @@ declare -a opencvFiles=("libopencv_core.so.3.0" "libopencv_imgproc.so.3.0" "libo
 declare -a libzipFiles=("libzip.so")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.7.0" "libcublas.so.7.0" "libcurand.so.7.0" "libcusparse.so.7.0")
+declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
 
 # cuDNN
 declare -a cudnnFiles=("libcudnn.so.4")

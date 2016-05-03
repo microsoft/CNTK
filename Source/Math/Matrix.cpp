@@ -1152,12 +1152,11 @@ void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemTyp
     else if (GetDeviceId() != columnsMask.GetDeviceId() && columnsMask.GetCurrentMatrixLocation() != BOTH)
         RuntimeError("MaskColumnsValue: Matrix and column mask must be on the same device.");
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val),
-                            m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
+        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); },
+        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
+        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); });
 }
 
 template <class ElemType>
@@ -1246,12 +1245,21 @@ template <class ElemType>
 void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                               const size_t nz, const size_t numRows, const size_t numCols)
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED,
-                            m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols),
-                            m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols));
+    // Note: The current implementation uses the xPUSparseMatrix as temporary space. This allows for memory sharing between calls. If
+    // xPUSparseMatrix is a view, this code will cause an error during runtime stating that the view is not writable nor resizable.
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+    {
+        if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
+        m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+        m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, numCols);
+    },
+    {
+        if (!m_GPUSparseMatrix) m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
+        m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+        m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
+    },
+    { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
+    { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); });
 }
 
 template <class ElemType>
@@ -4027,6 +4035,63 @@ void Matrix<ElemType>::ConvolutionBackwardKernel(const Matrix<ElemType>& in, con
                                                                      *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(kernelGrad.m_CPUMatrix)),
                             m_GPUMatrix->ConvolutionBackwardKernel(*(in.m_GPUMatrix), *(mpRowCol.m_GPUMatrix), *(mpRowIwht.m_GPUMatrix),
                                                                      *(mpRowRun.m_GPUMatrix), *(runs.m_GPUMatrix), *(kernelGrad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOutSize, const Matrix<int>& mpRowCol,
+                                              const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->UnrollConvolutionInput(unrollCols, mapOutSize, *(mpRowCol.m_CPUMatrix),
+                                                                *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const Matrix<int>& mpRowCol,
+                                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, *(mpRowCol.m_CPUMatrix),
+                                                                 *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutSize, const Matrix<int>& mpRowCol,
+                                                               const Matrix<int>& mpRowRun, const Matrix<int>& runs, Matrix<ElemType>& output) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowRun.GetNumCols() == 1);
+    assert(runs.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->UnrollConvolutionInputForKernelBackprop(mapOutSize, *(mpRowCol.m_CPUMatrix),
+                                                                                 *(mpRowRun.m_CPUMatrix), *(runs.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

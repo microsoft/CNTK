@@ -20,10 +20,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // The code is based on the old block randomizer and it preserves the same behavior to pass all available tests.
 // The high-level algorithm is:
 //     When next sequences are requested (limited by the sampleCount), the following steps are performed:
-//         1) if a new sweep is entered, randomize chunk descriptions using ChunkRandomizer, also precalculate randomization windows for all 
+//         1) if a new sweep is entered, randomize chunk descriptions using ChunkRandomizer, also precalculate randomization windows for all
 //            chunk descriptions
 //         2) if a new chunk is entered, using SequenceRandomizer identify a window of chunks and requested their sequence descriptions from deserializer.
-//         3) randomize sequence descriptions inside the window 
+//         3) randomize sequence descriptions inside the window
 //         4) return sequence descriptions not exceeding sampleCount/minibatch limit
 //         5) decimate sequence descriptions based on the worker rank
 //         6) request chunks of data based on decimated sequences and return sequence data
@@ -47,7 +47,8 @@ public:
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
         DecimationMode decimationMode = DecimationMode::chunk,
-        bool useLegacyRandomization = false);
+        bool useLegacyRandomization = false,
+        bool multithreadedGetNextSequences = false);
 
     virtual void Initialize(TransformerPtr, const ConfigParameters&) override {};
 
@@ -117,6 +118,10 @@ private:
 
     // Decimation mode.
     DecimationMode m_decimationMode;
+
+    // Whether to get sequences using multiple thread.
+    // TODO temporary; should go away when transformers are moved closer to the deserializer
+    bool m_multithreadedGetNextSequences;
 
     // General configuration
     int m_verbosity;

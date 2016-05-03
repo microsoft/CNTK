@@ -61,8 +61,11 @@
     <ClInclude Include="FramePacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
-    <ClInclude Include="BpttPacker.h">
+    <ClInclude Include="TruncatedBpttPacker.h">
       <Filter>Packers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ExperimentalHTKMLFReader\CorpusDescriptor.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -93,7 +96,7 @@
     <ClCompile Include="FramePacker.cpp">
       <Filter>Packers</Filter>
     </ClCompile>
-    <ClCompile Include="BpttPacker.cpp">
+    <ClCompile Include="TruncatedBpttPacker.cpp">
       <Filter>Packers</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
@@ -12,6 +12,7 @@ import struct
 import numpy as np
 
 # This is a script to download and prepare MNIST training and testing data
+
 
 def load_data(src, cimg):
     print('Downloading ' + src)

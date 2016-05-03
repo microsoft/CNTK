@@ -267,7 +267,7 @@ public:
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/){NOT_IMPLEMENTED};
     virtual bool DataEnd();
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_pMBLayout->GetNumParallelSequences();
     }

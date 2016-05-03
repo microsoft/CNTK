@@ -45,15 +45,15 @@ DNN=[
     rn1_2 = ResNetNode2A(rn1_1, cMap1, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap2 = 128
-    rn2_1 = ResNetNode2BInc(rn1_2, cMap2, cMap1, 576, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_1 = ResNetNode2BInc(rn1_2, cMap2, cMap1, 576, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn2_2 = ResNetNode2A(rn2_1, cMap2, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     
     cMap3 = 256
-    rn3_1 = ResNetNode2BInc(rn2_2, cMap3, cMap2, 1152, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_1 = ResNetNode2BInc(rn2_2, cMap3, cMap2, 1152, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn3_2 = ResNetNode2A(rn3_1, cMap3, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap4 = 512
-    rn4_1 = ResNetNode2BInc(rn3_2, cMap4, cMap3, 2304, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn4_1 = ResNetNode2BInc(rn3_2, cMap4, cMap3, 2304, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn4_2 = ResNetNode2A(rn4_1, cMap4, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn4_3 = ResNetNode2A(rn4_2, cMap4, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 

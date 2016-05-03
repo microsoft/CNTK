@@ -16,9 +16,8 @@ public:
     FramePacker(
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
-        size_t minibatchSize,
         const std::vector<StreamDescriptionPtr>& streams) :
-        SequencePacker(memoryProvider, transformer, minibatchSize, streams)
+        SequencePacker(memoryProvider, transformer, streams)
     {
 
     }

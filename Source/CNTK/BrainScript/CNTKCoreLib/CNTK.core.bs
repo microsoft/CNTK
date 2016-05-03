@@ -15,10 +15,7 @@ Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how
 Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
 Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] 
 Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Ceil(x) = -Floor(-x) 
-Round(x) = Floor(x+0.5)
 Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
 Min(a,b) = if a < b then a else b 
 Max(a,b) = if a > b then a else b 
@@ -29,7 +26,87 @@ IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b)
 # ComputationNodes
 ##############################################################################
 
-LearnableParameter(rows, cols, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]
+##############################################################################
+# "Stable API" with the purpose of staying compatible towards 2.0. 
+# - Use only tensors as concept. Move away from matrices.
+# - Main input goes first
+# - Main input is called "_" (becomes either self, or is moved to the end, 
+#   depending on language binding)
+# - tensor shape is called "shape"
+# - output shape before input shape
+# Operator list is sorted alphabetically within the category.
+##############################################################################
+CNTK2 = [
+    # Currently restricted to operators introduced with Python API in CNTK 1.4.
+
+    // 1. Inputs
+    // Changes: dims -> shape
+    DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+    Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
+    
+    // 2. Variables and constants
+    // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
+    // Python API: 
+    // - constant(value, name=None) - value: the tensor constant passed as numpy array. Forwards to parameter() with learningRateMultiplier=0 and initFromLiteral
+    // - parameter: Like below, but can take an NDArray on the "init_from_literal" parameter, in which case it is serialized and turned into "initFromLiteral".
+    //              (TODO: should be the value parameter instead)
+    // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
+    // This needs to be fixed to follow the way the Constant() is exposed in Python
+    // Making this an internal node with "_" until we agree on the final interface:
+    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+
+    // 3. Shape operations
+    // Changes: NewReshape -> Reshape, input -> _, dims -> shape
+    Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 4. Tensor operations
+    // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
+    Times(x, y, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+
+    // 5. Elementwise operations.
+    // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
+    Abs(_, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = _ /*plus the function args*/ ]
+    Ceil(_, tag='') = Negate(Floor(Negate(_)), tag=tag)
+    Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
+    ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
+    ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
+    Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
+    Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
+    Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
+    Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
+
+    // 6. Reductions
+    // None so far
+
+    // 7. Control flow (if, composite etc.)
+    // None so far
+
+    // 8. Boolean operations
+    // None so far
+
+    // 9. Recurrent operations
+    // Changes: input first; input -> _
+    FutureValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+
+    // 10. NN-specific operations
+    // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
+    Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
+    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+
+    // 11. Criterion nodes
+    // No changes here - we said the default input would be the label sequence here, against which the 
+    // empirical sequence is compared to. Keeping this for now.
+    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
+    ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
+
+    // 12. Others
+    // None so far.
+]
+
+LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
 # TODO: make Parameter take tensor dims?
 ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
@@ -41,6 +118,7 @@ SparseInput(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operati
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
+# TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
 ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
@@ -94,7 +172,9 @@ Delay = PastValue
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
 Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
+Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
+Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 // TODO: ColumnElementTimes = ElementTimes
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -109,11 +189,13 @@ ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation =
 ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix), tag=tag)
 ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
+Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Log(x, tag='') = new ComputationNode [ operation = 'Log' ; inputs = x /*plus the function args*/ ]
+LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = z /*plus the function args*/ ]
 MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; inputs = matrix /*plus the function args*/ ]
 MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = matrix /*plus the function args*/ ]
@@ -127,6 +209,12 @@ PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag=
 Plus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = z /*plus the function args*/ ]
+ReducePlus (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Plus"    /*plus the function args*/ ]
+#ReduceLogPlus (z, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogPlus" /*plus the function args*/ ]
+#ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
+#ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
+#ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
+Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -136,8 +224,7 @@ Softmax(z, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = z /*
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
-SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ]
-# ^^ TODO: Rename to SumElements? ReduceSum without axis?
+SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ] // deprecated
 SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
 # ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
@@ -212,7 +299,7 @@ Boolean = [
 
     # select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
+    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) /*plus the function args*/ ]
 ]
 
 ##############################################################################
@@ -223,16 +310,24 @@ Boolean = [
 Sequences = [
     # broadcast a single-step sequence to a multi-step sequence
     BroadcastSequenceAs (type, data1) = [                      # type=example sequence with desired length (outside of a loop), data1=1 time step
-        ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
-        index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
-        packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
-        out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
+        # BUGBUG: This should work but gives worse results.
+        #ZeroSequenceLike (x) = RowSlice (0, 1, x) .* Constants.Zero # BUGBUG: SumColumnElements() has a CPU/GPU problem
+        #index = /*Constants.*/ZeroSequenceLike (type)  # create an index sequence [ 0 0 0 ... ] of target length
+        #packedIndex = PackedIndex (data1, index)       # convert into internal packed index w.r.t. 'data1'
+        #out = GatherPacked (packedIndex, data1)        # copy data1[0] to all elements, total length like 'type'
+
+        # alternative (slower, older) implementation (10% slower end-to-end?)
+        # Gives nearly the same result, but not completely. Since Gather() above has an atomicAdd(), let's leave this on for now and check later.
+        dataPadded = Sequences.Scatter (Loop.IsFirst (type), data1) # padded with zeroes until end of target sequence
+        out = Boolean.If (Loop.IsFirst (dataPadded), # if first entry
+                 /*then*/ dataPadded,                # then copy that
+                 /*else*/ Loop.Previous (out))       # else just propagate to the front
     ].out
 
     # rolling window over past N samples
-    # returns a record [ value=..., valid=... ]
+    # returns a record [ value=..., valid=... ], both being 1-step sequences of [dim x N]. N can optionally be moved to axes >2.
     # This implementation is suboptimal in that it creates copies for the intermediate steps.
-    PastValueWindow (N, in) = [
+    PastValueWindow (N, in, axis=2) = [
         delayLine[t:0..N-1] = [     # shift register for encoder, last N inputs
             value = if t == 0
                     then in        # delay 0: current value
@@ -243,8 +338,12 @@ Sequences = [
         ]
         # delayLine[t].value = value of t steps in the past
         # delayLine[t].valid = true if we had a value t steps in the past
-        value = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].value)), 1, N))  # [i, delay]
-        valid = Slice (-1, 0, axis=-1, SplitDimension (RowStack (array[0..N-1](t=>delayLine[t].valid)), 1, N))  # [i, delay]
+        SplitStack (x) =
+            if      axis == 2 then SplitDimension (x, 1, N)
+            else if axis > 2  then TransposeDimensions (SplitDimension (x, 1, N), 2, axis)
+            else Fail ("PastValueWindow: axis>2 required.") # BUGBUG: We also require that input is a single vector. Address later.
+        value = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].value))))  # [i, delay]
+        valid = Slice (-1, 0, axis=-1, SplitStack (RowStack (array[0..N-1](t=>delayLine[t].valid))))  # [i, delay]
     ]
 
     # fold left/right: Reduce entire sequence by applying binaryOp, e.g. FoldL (Plus, 0, input)
@@ -287,7 +386,7 @@ Sequences = [
         out = Gather (selected, x)
     ].out
     # Last and TakeRight
-    Last(x) = TakeRight(1, x)
+    Last (x) = TakeRight (1, x)
     TakeRight (N, x) = _Take (FutureValue, N, x)
     Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
     _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
@@ -374,14 +473,17 @@ Parameters =
     BiasParam (dim)                   = ParameterTensor ((dim), init='fixedValue', value=0.0)
     ScalarParam()                     = BiasParam (1)
 
-    # route input through an extra scalar weight, for stabilization
-    Stabilize (x, enabled=true) =
+    # route input through an extra weight, for stabilization
+    StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-                 beta = Exp (ScalarParam())
-                 result = Scale (beta, x)
-             ].result
-        else x
+            beta = Exp (BiasParam ((inputDim)))
+            result = beta .* x
+        ].result
+    else x
+
+    # and the same with a scalar stabilizer shared across all components
+    Stabilize (x, enabled=true) = if enabled then StabilizeElements (x, inputDim=1, enabled=true) else x
 ]
 
 ##############################################################################
@@ -393,19 +495,20 @@ RNNs =
     # LSTMP -- LSTM function with projection and self-stabilization
     # Projection it enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
-    # It returns a dictionary with two members: h and c. prevState must be in the same format.
-    // TODO: Standardize on one parameter order. Is first dimension the output (like in math, strcpy, or functional style) or the input (listing inputs first)?
-    //       If we change this, we'd need to fix the LSTM end-to-end test.
-    LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=false) =
+    # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
+    LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
     [
-        #inputDim = x.dim   # get dimension from 'x' (if this works, we can remove the inputDim1 parameter)
-        _privateInnards = [       // encapsulate the privateInnards workings
+        # TODO: rename to just _
+        _privateInnards = [       // encapsulate the inner workings
             dh = prevState.h // previous values
             dc = prevState.c
 
             // parameter macros--these carry their own weight matrices
             B() = Parameters.BiasParam (cellDim)
 
+            #inputDim1 = inputDim
+            #W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.StabilizeElements (v, inputDim=inputDim1, enabled=enableSelfStabilization) // input-to-hidden
+            # ^^ element-wise stab, use if input is a concatenation; vv stab for entire matrix
             W(v) = Parameters.WeightParam (cellDim, inputDim)  * Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
             H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
             C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
@@ -423,55 +526,52 @@ RNNs =
             ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
         ]
 
-        // LSTM cell
-        # TODO: This is temporary test code for the new ShiftNode (until we switch PastValue() itself over)
-        #PastValueShift(dimDummy, input) = Shift(input, /*fromOffsets=*/-1, /*boundaryValue=*/Constant(0.1), dim=-1)
-        #PastValue1 = PastValue
-        #PastValue1 = PastValueShift
-
         # our return values
         c = _privateInnards.ct          // cell value
         h = if outputDim != cellDim     // output/hidden state
             then [                      // project
-                Wmr = Parameters.WeightParam(outputDim, cellDim);
+                Wmr = Parameters.WeightParam (outputDim, cellDim);
                 htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
             ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
             else _privateInnards.ht     // no projection
+        dim = outputDim
+    ]
+
+    # helper function to delay h and c
+    # Callers can provide their own, e.g. useful for beam decoding.
+    PreviousHC (lstmState) = [
+       h = Loop.Previous (lstmState.h)         // hidden state(t-1)
+       c = Loop.Previous (lstmState.c)         // cell(t-1)
+    ]
+
+    # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
+    NextHC (lstmState) = [
+       h = Loop.Next (lstmState.h)             // hidden state(t-1)
+       c = Loop.Next (lstmState.c)             // cell(t-1)
     ]
 
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
-    RecurrentLSTMP (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
+    # It returns a record (h,c). To use its output, say .h
+    # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
+    # TODO: remove the -2 once this works
+    RecurrentLSTMP = RecurrentLSTMP2
+    RecurrentLSTMP2 (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
     [
-        prevState =
-        [
-            h = Loop.Previous (lstmState.h)             // hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             // cell(t-1)
-        ]
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState.h // that's the value we return
-
-    # same as RecurrentLSTMP but returns both h and c
-    RecurrentLSTMP2 (inputDim, outputDim, cellDim, x, enableSelfStabilization=false) =
-    [
-        prevState =
-        [
-            h = Loop.Previous (lstmState.h)             # hidden state(t-1)
-            c = Loop.Previous (lstmState.c)             # cell(t-1)
-        ]
-        enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (inputDim, outputDim, cellDim, x, prevState, enableSelfStabilization=enableSelfStabilization1)
-    ].lstmState // that's the value we return
+        prevState = previousHook (lstmState)
+        inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].lstmState // we return the state record (h,c)
 
     # a stack of recurrent LSTMs (unidirectional)
-    RecurrentLSTMP2Stack (input, inputDim, hiddenDims, cellDims, enableSelfStabilization=false) = [
-        useStabilizer = enableSelfStabilization
-        layer[i:0..Length (hiddenDims)-1] =
-            RecurrentLSTMP2 (if i == 0 then inputDim else hiddenDims[i-1],
-                             hiddenDims[i], cellDims[i],
-                             if i == 0 then input else layer[i-1].h,
+    RecurrentLSTMPStack = RecurrentLSTMP2Stack  # TODO: remove the -2 name once this works
+    RecurrentLSTMP2Stack (hiddenDims, cellDims=hiddenDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
+        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
+        layers[i:0..Length (hiddenDims)-1] =
+            RecurrentLSTMP2 (hiddenDims[i], cellDim=cellDims[i],
+                             if i == 0 then input else layers[i-1].h, inputDim=if i == 0 then inputDim else hiddenDims[i-1] /*TODO: layers[i-1].dim*/,
+                             previousHook=previousHook1,
                              enableSelfStabilization=useStabilizer)
-    ].layer
+    ].layers
 ]
 
 ##############################################################################
