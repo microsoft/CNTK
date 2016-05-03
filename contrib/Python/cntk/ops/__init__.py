@@ -21,10 +21,10 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
     already computed before passing to this operator will be incorrect.
     
     Example:
-        >>> cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.])
+        >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
         
-        >>> cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.])
+        >>> cntk.eval(cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
         #[1.840]
     
     Args:
@@ -36,6 +36,55 @@ def cross_entropy_with_softmax(target_values, feature_values, name=None):
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     return CrossEntropyWithSoftmax(target_values, feature_values, name = name)
+
+def square_error(target_values, feature_values, name=None):
+    """
+    This operator computes the square error.
+    This op expects the `feature_values` as unscaled, it computes softmax over 
+    the `feature_values` internally.  Any `feature_values` input over which softmax is 
+    already computed before passing to this operator will be incorrect.
+    
+    Example:
+        >>> cntk.eval(square_error([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        #[1.3862]
+        
+        >>> cntk.eval(square_error([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        #[1.840]
+    
+    Args:
+        target_values: the target valid probability distribution
+        feature_values: the unscaled computed values from the network
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk1 import SquareError
+    return SquareError(target_values, feature_values, name = name)
+
+def error_prediction(target_values, feature_values, name=None):
+    """
+    This operator computes the prediction error.
+    This op expects the `feature_values` as unscaled, it computes softmax over 
+    the `feature_values` internally.  Any `feature_values` input over which softmax is 
+    already computed before passing to this operator will be incorrect.
+    
+    Example:
+        >>> cntk.eval(error_prediction([0., 0., 0., 1.], [1., 1., 1., 1.]))
+        #[1.3862]
+        
+        >>> cntk.eval(error_prediction([0.35, 0.15, 0.05, 0.45], [1, 2., 3., 4.]))
+        #[1.840]
+    
+    Args:
+        target_values: the target valid probability distribution
+        feature_values: the unscaled computed values from the network
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import ErrorPrediction
+    return ErrorPrediction(target_values, feature_values, name = name)
+
 
 ################################################################################
 # linear ops
