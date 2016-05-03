@@ -86,17 +86,16 @@ explained::
         y = C.input_numpy(Y, has_dynamic_axis=False)
 
         # define our network parameters: a weight tensor and a bias
-        W = C.ops.parameter((2, d))
-        b = C.ops.parameter((2, 1))
+        W = C.parameter((2, d))
+        b = C.parameter((2, 1))
 		
         # create a dense 'layer' by multiplying the weight tensor and  
         # the features and adding the bias
-        out = C.ops.times(W, x) + b
+        out = C.times(W, x) + b
 
         # setup the criterion node using cross entropy with softmax
-        ce = C.ops.cross_entropy_with_softmax(y, out)
+        ce = C.cross_entropy_with_softmax(y, out, name='loss')
         ce.tag = 'criterion'
-        ce.name = 'loss'
 
         # define our SGD parameters and train!
         my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
@@ -146,6 +145,8 @@ neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the de
 learning world. They are networks with loops in them and they allow us to model the 
 current state given the result of a previous state. In other words, they allow information 
 to persist.
+
+.. images:: images/nn_layer.png
 
 A particular type of RNN -- the Long Short Term Memory (LSTM) network -- is exceedingly 
 useful and in practice is what we commonly use when implementing an RNN. For more on why 
