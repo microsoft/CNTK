@@ -109,3 +109,33 @@ def test_op_square_error(target_matrix, output_matrix, device_id, precision):
             device_id=device_id,
             precision=precision, clean_up=True, backward_pass=True,
             input_node=target)
+
+TARGET_OUT_PAIRS_EP = [
+    ([[1., 0., 0., 0]], [[1., 2., 3., 4.]]),
+    ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),    
+    ]
+
+# -- ErrorPrediction with softmax operation tests --
+@pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS_EP)
+def test_op_error_prediction(target_vector, output_vector, device_id, precision):
+    
+    from .. import error_prediction
+
+    def numpy_op(target, output): 
+        return np.argmax(target) != np.argmax(output)        
+    
+    target = I([target_vector], has_dynamic_axis=True)
+    output = I([output_vector], has_dynamic_axis=True)
+    
+    op_node = error_prediction(target, output)
+
+    #Forward pass test
+    #==================
+    # we compute the expected output for the forward pass
+    expected = [[[numpy_op(AA(target_vector, dtype=PRECISION_TO_TYPE[precision]), 
+                              AA(output_vector, dtype=PRECISION_TO_TYPE[precision]))]]]    
+    unittest_helper(op_node, None, expected,
+                device_id=device_id,
+                precision=precision,
+                clean_up=True, backward_pass=False)
+                                
