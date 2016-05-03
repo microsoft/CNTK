@@ -269,18 +269,13 @@ def ceil(arg, name=None):
     element wise value rounded to the smallest integer greater than
     or equal to the input.
 
-    Examples:
-        >>> ceil([0.2, 1.3, 4., 5.5, 0.0])
-        #[1.0, 2.0, 4.0, 6.0, 0.0]
-
-        >>> ceil([[0.6, 3.3], [1.9, 5.6]])
-        #[[1.0, 4.0], [2.0, 6.0]]
-
-        >>> ceil([-5.5, -4.2, -3., -0.7, 0])
-        #[-5.0, -4.0, -3.0, 0.0, 0.0]
-
-        >>> ceil([[-0.6, -4.3], [1.9, -3.2]])
-        #[[0.0, -4.0], [2.0, -3.0]]
+    Example:
+        >>> C.eval(C.ceil([0.2, 1.3, 4., 5.5, 0.0]))
+        [array([[ 1.,  2.,  4.,  6.,  0.]])]
+        
+        >>> C.eval(C.ceil([[0.6, 3.3], [1.9, 5.6]]))
+        [array([[[ 1.,  4.],
+                 [ 2.,  6.]]])]
 
     Args:
         arg: input tensor
@@ -290,6 +285,7 @@ def ceil(arg, name=None):
     """
     from cntk.ops.cntk2 import Ceil
     return Ceil(arg, name = name)
+
 
 def round(arg, name=None):
     """
