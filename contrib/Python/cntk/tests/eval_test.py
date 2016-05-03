@@ -17,6 +17,6 @@ from ..ops import plus
 import pytest
 
 def test_eval_plus():
-    result = cntk.eval(plus([[1., 2., 3., 4.]], [[1., 1., 0., 0.]]))
+    result = cntk.eval(plus([1., 2., 3., 4.], [1., 1., 0., 0.]))
     TOLERANCE_ABSOLUTE = 1E-06    
-    assert np.allclose(result, np.asarray([[2., 3., 3., 4.]]), atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result, np.asarray([2., 3., 3., 4.]), atol=TOLERANCE_ABSOLUTE)
