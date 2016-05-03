@@ -495,7 +495,7 @@ def reshape(x, shape, name=None):
 # variables_and_parameters ops
 ################################################################################
 
-def input_numpy(value, alias=None, dynamic_axis=None, name=None):
+def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
