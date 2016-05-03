@@ -50,7 +50,7 @@ class ComputationNode(object):
         '''
         Returns: True if this node is an input node.
         '''
-        return isinstance(self, InputComputationNodeBase)
+        return isinstance(self, _InputComputationNodeBase)
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
@@ -282,7 +282,7 @@ class ComputationNode(object):
         return "\n".join(desc), inputs
 
 
-class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
+class _InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
 
     '''
     Base class for all non-image input nodes nodes and operators. 
@@ -290,7 +290,7 @@ class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
     pass
 
 
-class ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
+class _ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
 
     '''
     Base class for all image input nodes nodes and operators. 
@@ -348,7 +348,7 @@ def eval(node):
     return ctx.eval(node)
 
 
-class LazyInput(InputComputationNodeBase):
+class _LazyInput(_InputComputationNodeBase):
 
     '''
     Lazy reader that takes an NumPy array and serializes it to disk only when
