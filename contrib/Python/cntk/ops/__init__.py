@@ -546,7 +546,7 @@ def reshape(x, shape, name=None):
 # variables_and_parameters ops
 ################################################################################
 
-def input_numpy(value, alias=None, has_dynamic_axis=True, name=None):
+def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
@@ -587,8 +587,9 @@ def input(shape, dynamic_axis='', name=None):
     fed to this input.
 
     Args:
-        shape: the shape of the input tensor
-        name: the name of the node in the network
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """

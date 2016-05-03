@@ -67,5 +67,5 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
     expected_gradient = input_tensor * some_factor 
     
     unittest_helper(output, None, [[expected_gradient]], device_id = device_id,
-                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
 

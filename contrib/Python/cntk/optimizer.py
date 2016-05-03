@@ -8,6 +8,84 @@ class SGDParams:
     """
     This class encapsulates the training parameters of Stochastic Gradien
     Descent. 
+
+    * Training process control
+        * **model_path**: the full path to save the final model. Must be provided and points to a valid file name.
+        * **train_criterion_node_name**: the name of the training criterion node. If not provided the default training criterion node in the network will be used.
+        * **eval_criterion_node_name**: the name of the evaluation criterion node. If not provided the default evaluation criterion node in the network will be used.
+        * **epoch_size**: epoch size, i.e., the number of samples in each epoch. Often it is the dataset size, but can also be different. An intermediate model and other check point information is saved for each epoch. When set to 0 the whole dataset size is used.
+        * **keep_check_point_files**: whether you want to keep the check point file after a new epoch starts. Valid values are true and false (default).
+        * **max_epochs**: maximum number of epochs to run.
+        * **minibatch_size: minibatch size for each epoch. Default value is 256. Can use syntax such as 128*2**:1024 which means using minibatch size 128 for 2 epochs and then 1024 for the rest.
+        * **dropout_rate: dropout rate during the training procedure. Default is 0.0. Can use syntax such as 0.5*10**:0.2 which means using dropout rate 0.5 for 10 epochs and then 0.2 for the rest.
+        * **max_temp_mem_size_in_samples_for_cnn**: maximum temporary memory used (in number of samples) when packaging and unpackaging input features. Default is 0, which means using any value as needed. Useful to control the memory foot print esp. when run under GPU.
+    
+    * Learning rate and momentum control
+        * **learning_rates_per_mb: learning rates per minibatch. Useful when you want to use the same learning rate while the minibatch size is changed. Can use syntax such as 0.8*10**:0.2 which means using the learning rate 0.8 for 10 epochs and then 0.2 for the rest. learningRatesPerMB may be missing, for example, when learningRatesPerSample is provided or the automatic learning rate determination algorithm is used.
+        * **learning_rates_per_sample: learning rates per sample. Useful when you want to keep the learning rates per sample constant, i.e., automatically increases effective learning rate for the minibatch when the minibatch size is increased. Can use syntax such as 0.008*10**:0.002 which means using the learning rate 0.008 for 10 epochs and then 0.002 for the rest. learningRatesPerSample may be missing, for example, when learningRatesPerMB is provided or the automatic learning rate determination algorithm is used.
+        * **momentum_per_mb: momentum per minibatch. Default is 0.9. Can use syntax such as 0.1*2**:0.9 which means using momentum 0.1 for 2 epochs and then 0.9 for the rest.
+        * **momentum_per_sample: momentum per sample. Useful when you want to keep the momentum per sample constant, i.e., automatically scales effective momentum for the minibatch when the minibatch size is changed. Can use syntax such as 0.9996*10**:0.998 which means using the per sample momentum 0.9996 for 10 epochs and then 0.998 for the rest. momentumPerSample may be missing, for example, when momentumPerMB is provided.
+        * **momentum_as_time_constant**: number of samples after which the contribution is decayed to e^-1
+        * **auto_adjust parameters**: they represent information related to the automatic learning rate control. 
+        * **auto_adjust_lr**: the automatic learning rate adjustment algorithm to use. Valid values are None (default, dont auto adjust learning rate), AdjustAfterEpoch (check the training criterion after each epoch using the development set of the training set and decide whether to adjust the learning rate), and SearchBeforeEpoch (search the learning rate based on a small portion of the training set before each epoch starts).
+    
+    * When used in the AdjustAfterEpoch mode
+        * **reduce_learn_rate_if_improve_less_than**: reduce the learning rate if the improvement is less than this value. Default is 0.
+        * **learn_rate_decrease_factor**: the learning rate decrease factor. Default value is 0.618.
+        * **increase_learn_rate_if_improve_more_than**: increase the learning rate if the improvement is larger than this value. Default value is `1#INF` (infinity) which means never increase.
+        * **learn_rate_increase_factor**: the learning rate increase factor. Default value is 1.382.
+        * **load_best_model**: weather to load the best model if the current model decreases the performance. Valid values are true (default) and false.
+        * **learn_rate_adjust_interval**: determine the frequency of applying the learning rate adjustment check. Default is 1 epoch. If this value is set to a value larger than 1 the learning rate adjustment will be based on the average criterion computed from the last learnRateAdjustInterval epochs.
+    
+    * When used in the SearchBeforeEpoch mode.
+        * **numMiniBatch4LRSearch**: the number of minibatches used to search the learning rate. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch.
+        * **num_prev_learn_rate**: number of previous learning rates used as a hint to the search range. Default value is 5.
+        * **num_best_search_epoch**: number of epochs in which we use the best learning rate instead of the sufficient learning rate . Default value is 1.
+    
+    * When used in the 'AdaptiveMinibatchSizing' mode
+        * **num_minibatch_for_lr_search**: the number of minibatches used to search the minibatch size when in adaptive minibatch size mode. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch this is shared with the search for learning rate in SearchBeforeEpoch mode.
+        * **auto_adjust_minibatch: enable or disable whether minibatch size is adaptively adjusted. Default value is false. Adapative minibatch sizing will begin on epochs starting after user minbatch sizes expcitily specified are complete. For example if the user specifed minibatchSize=256**:1024, then 256 and 1024 are used in the first 2 Epochs and adaptive minibatch sizing is used afterwards.
+        * **minibatch_size_tuning_frequency**: The number of epochs to skip, on a periodic basis, before dynamically adjusting the minibatch size. Default value is 1.
+        * **minibatch_size_tuning_max**: The maximum size allowed for an adaptively adjusted minibatch size. Default value is 1048576.
+
+    * **continue_reduce**: If true, the learning rate is always reduced per epoch once it is reduced.
+    * **num_prev_learn_rates**: TBA
+    
+    * Gradient control
+        * **gradient_clipping_with_truncation**: whether to use the truncation based gradient clipping to control gradient explosion. Valid values are true (default) and false. If it is false the norm based clipping will be used instead which is more expensive.
+        * **clipping_threshold_per_sample**: the clipping thread for each sample. Default value is `1#INF` which means infinity (i.e., clipping is turned off).
+        * **L2_reg_weight**: the L2 regularization weight. Default is 0.
+        * **L1_reg_weight**: the L1 regularization weight. Default is 0.
+        * **grad_update_type**: gradient update type. Valid values are None (default, no special treatment to the gradient), AdaGrad, and RmsProp. 
+      
+        * When gradUpdateType equals to AdaGrad or RmsProp, you can control the behavior of the gradient update using following parameters:
+            * **norm_with_ave_multiplier**: normalize the gradient with the average multipliers applied to the gradients by the AdaGrad/RmsProp algorithm. Default is true. 
+      
+        * When gradUpdateType equals to RmsProp, you can control the behavior of the gradient update using following parameters:
+            * **rms_wgt_inc**: multiplicative increment of the learning rate scale. Default is 1.2.
+            * **rms_wgt_dec**: multiplicative decrement of the learning rate scale. Default is 0.75.
+            * **rms_wgt_max**: maximum learning rate scale allowed. A value closer to 1 makes the learning rate adjustment more stable but slower. Default is 10.
+            * **rms_wgt_min**: minimum learning rate scale allowed. A value closer to 1 makes the learning rate adjustment more stable but slower. Default is 0.1.
+            * **rms_gamma**: smoothing factor used to estimate the moving average of the variance. The smaller the value, the quicker it forgets the past information. Default is 0.99.
+    
+        * **gaussian_noise_inject_std**: the standard deviation of the Gaussian noise added when using the AdaGrad approach. Default is 0.
+    
+    * Adaptation
+        * Only KL divergence regularization is directly supported. Other adaptation techniques can be easily implemented by adding computation nodes to the network using the model editing language (MEL). 
+        * **adaptation_reg_type**: adaptation regularization type. Valid values are None (default) and KL (for KL divergence based regularization).
+        * **adaptation_reg_weight**: adaptation regularization weight. Default value is 0.
+    
+    * Information display
+        * **trace_level**: trace level to decide what information to print out in the stderr. Valid values are 0 (default) and 1.
+        * **num_mbs_to_show_result**: display training statistics after how many minibatches. Default is 10.
+        * **first_mbs_to_show_result**: the number of mini batches (counting from the start) to display training statistics for. 
+        * **trace_node_names_real**: tracing (enable these for debugging) on the given nodes for real printing
+        * **trace_node_names_category**: tracing (enable these for debugging) on the given nodes for category printing
+        * **trace_node_names_sparse**: tracing (enable these for debugging) on the given nodes for sparse printing
+    
+    * Gradient Check
+        * **gradient_check**: determines whether to use the gradient checker. The default value is false. When using the gradient checker you need to use a minibatch size that is larger than the sequence length for RNNs due to the truncated backpropagation through time (BPTT) algorithm used to train RNNs, and a smaller learning rate to prevent numerical issues caused by divergence. In addition, precision should be set to double.
+    
     """
     
     def __init__(self,
@@ -63,103 +141,6 @@ class SGDParams:
                 gradient_check=None,
                 ):
 
-        """
-        Training process control
-        ========================
-        model_path: the full path to save the final model. Must be provided and points to a valid file name.
-        train_criterion_node_name: the name of the training criterion node. If not provided the default training criterion node in the network will be used.
-        eval_criterion_node_name: the name of the evaluation criterion node. If not provided the default evaluation criterion node in the network will be used.
-        epoch_size: epoch size, i.e., the number of samples in each epoch. Often it is the dataset size, but can also be different. An intermediate model and other check point information is saved for each epoch. When set to 0 the whole
-        dataset size is used.
-        keep_check_point_files: whether you want to keep the check point file after a new epoch starts. Valid values are true and false (default).
-        max_epochs: maximum number of epochs to run.
-        minibatch_size: minibatch size for each epoch. Default value is 256. Can use syntax such as 128*2:1024 which means using minibatch size 128 for 2 epochs and then 1024 for the rest.
-        dropout_rate: dropout rate during the training procedure. Default is 0.0. Can use syntax such as 0.5*10:0.2 which means using dropout rate 0.5 for 10 epochs and then 0.2 for the rest.
-        max_temp_mem_size_in_samples_for_cnn: maximum temporary memory used (in number of samples) when packaging and unpackaging input features. Default is 0, which means using any value as needed. Useful to control the memory foot print esp. when run under GPU.
-        
-        Learning rate and momentum control
-        ==================================
-        
-        learning_rates_per_mb: learning rates per minibatch. Useful when you want to use the same learning rate while the minibatch size is changed. Can use syntax such as 0.8*10:0.2 which means using the learning rate 0.8 for 10 epochs and then 0.2 for the rest. learningRatesPerMB may be missing, for example, when learningRatesPerSample is provided or the automatic learning rate determination algorithm is used.
-        learning_rates_per_sample: learning rates per sample. Useful when you want to keep the learning rates per sample constant, i.e., automatically increases effective learning rate for the minibatch when the minibatch size is increased. Can use syntax such as 0.008*10:0.002 which means using the learning rate 0.008 for 10 epochs and then 0.002 for the rest. learningRatesPerSample may be missing, for example, when learningRatesPerMB is provided or the automatic learning rate determination algorithm is used.
-        momentum_per_mb: momentum per minibatch. Default is 0.9. Can use syntax such as 0.1*2:0.9 which means using momentum 0.1 for 2 epochs and then 0.9 for the rest.
-        momentum_per_sample: momentum per sample. Useful when you want to keep the momentum per sample constant, i.e., automatically scales effective momentum for the minibatch when the minibatch size is changed. Can use syntax such as 0.9996*10:0.998 which means using the per sample momentum 0.9996 for 10 epochs and then 0.998 for the rest. momentumPerSample may be missing, for example, when momentumPerMB is provided.
-        momentum_as_time_constant: number of samples after which the contribution is decayed to e^-1
-        auto_adjust parameters: they represent information related to the automatic learning rate control. 
-          
-          * auto_adjust_lr: the automatic learning rate adjustment algorithm to use. Valid values are None (default, dont auto adjust learning rate), AdjustAfterEpoch (check the training criterion after each epoch using the development set of the training set and decide whether to adjust the learning rate), and SearchBeforeEpoch (search the learning rate based on a small portion of the training set before each epoch starts).
-        
-          * When used in the AdjustAfterEpoch mode:
-            
-            + reduce_learn_rate_if_improve_less_than: reduce the learning rate if the improvement is less than this value. Default is 0.
-            + learn_rate_decrease_factor: the learning rate decrease factor. Default value is 0.618.
-            + increase_learn_rate_if_improve_more_than: increase the learning rate if the improvement is larger than this value. Default value is 1#INF (infinity) which means never increase.
-            + learn_rate_increase_factor: the learning rate increase factor. Default value is 1.382.
-            + load_best_model: weather to load the best model if the current model decreases the performance. Valid values are true (default) and false.
-            + learn_rate_adjust_interval: determine the frequency of applying the learning rate adjustment check. Default is 1 epoch. If this value is set to a value larger than 1 the learning rate adjustment will be based on the average criterion computed from the last learnRateAdjustInterval epochs.
-        
-          * When used in the SearchBeforeEpoch mode.
-            
-            + numMiniBatch4LRSearch: the number of minibatches used to search the learning rate. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch.
-            + num_prev_learn_rate: number of previous learning rates used as a hint to the search range. Default value is 5.
-            + num_best_search_epoch: number of epochs in which we use the best learning rate instead of the sufficient learning rate . Default value is 1.
-        
-          * When used in the 'AdaptiveMinibatchSizing' mode.
-            
-            + num_minibatch_for_lr_search: the number of minibatches used to search the minibatch size when in adaptive minibatch size mode. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch this is shared with the search for learning rate in SearchBeforeEpoch mode.
-            + auto_adjust_minibatch: enable or disable whether minibatch size is adaptively adjusted. Default value is false. Adapative minibatch sizing will begin on epochs starting after user minbatch sizes expcitily specified are complete. For example if the user specifed minibatchSize=256:1024, then 256 and 1024 are used in the first 2 Epochs and adaptive minibatch sizing is used afterwards.
-            + minibatch_size_tuning_frequency: The number of epochs to skip, on a periodic basis, before dynamically adjusting the minibatch size. Default value is 1.
-            + minibatch_size_tuning_max: The maximum size allowed for an adaptively adjusted minibatch size. Default value is 1048576.
-
-          * continue_reduce: If true, the learning rate is always reduced per epoch once it is reduced.
-          * num_prev_learn_rates: TBA
-        
-        Gradient control
-        ===================
-        
-        gradient_clipping_with_truncation: whether to use the truncation based gradient clipping to control gradient explosion. Valid values are true (default) and false. If it is false the norm based clipping will be used instead which is more expensive.
-        clipping_threshold_per_sample: the clipping thread for each sample. Default value is 1#INF which means infinity (i.e., clipping is turned off).
-        L2_reg_weight: the L2 regularization weight. Default is 0.
-        L1_reg_weight: the L1 regularization weight. Default is 0.
-        grad_update_type: gradient update type. Valid values are None (default, no special treatment to the gradient), AdaGrad, and RmsProp. 
-          
-          * When gradUpdateType equals to AdaGrad or RmsProp, you can control the behavior of the gradient update using following parameters:
-            
-            + norm_with_ave_multiplier: normalize the gradient with the average multipliers applied to the gradients by the AdaGrad/RmsProp algorithm. Default is true (default). 
-          
-          * When gradUpdateType equals to RmsProp, you can control the behavior of the gradient update using following parameters:
-            
-            + rms_wgt_inc: multiplicative increment of the learning rate scale. Default is 1.2.
-            + rms_wgt_dec: multiplicative decrement of the learning rate scale. Default is 0.75.
-            + rms_wgt_max: maximum learning rate scale allowed. A value closer to 1 makes the learning rate adjustment more stable but slower. Default is 10.
-            + rms_wgt_min: minimum learning rate scale allowed. A value closer to 1 makes the learning rate adjustment more stable but slower. Default is 0.1.
-            + rms_gamma: smoothing factor used to estimate the moving average of the variance. The smaller the value, the quicker it forgets the past information. Default is 0.99.
-        
-        gaussian_noise_inject_std: the standard deviation of the Gaussian noise added when using the AdaGrad approach. Default is 0.
-        
-        Adaptation
-        ==========
-        
-        Only KL divergence regularization is directly supported. Other adaptation techniques can be easily implemented by adding computation nodes to the network using the model editing language (MEL). 
-        adaptation_reg_type: adaptation regularization type. Valid values are None (default) and KL (for KL divergence based regularization).
-        adaptation_reg_weight: adaptation regularization weight. Default value is 0.
-        
-        Information display
-        ===================
-        
-        trace_level: trace level to decide what information to print out in the stderr. Valid values are 0 (default) and 1.
-        num_mbs_to_show_result: display training statistics after how many minibatches. Default is 10.
-        first_mbs_to_show_result: the number of mini batches (counting from the start) to display training statistics for. 
-        trace_node_names_real: tracing (enable these for debugging) on the given nodes for real printing
-        trace_node_names_category: tracing (enable these for debugging) on the given nodes for category printing
-        trace_node_names_sparse: tracing (enable these for debugging) on the given nodes for sparse printing
-        
-        Gradient Check
-        ==============
-        
-        gradient_check: determines whether to use the gradient checker. The default value is false. When using the gradient checker you need to use a minibatch size that is larger than the sequence length for RNNs due to the truncated backpropagation through time (BPTT) algorithm used to train RNNs, and a smaller learning rate to prevent numerical issues caused by divergence. In addition, precision should be set to double.
-        
-        """
         
         # this can be automated but cases like: maxTempMemSizeInSamplesForCNN
         # would be tricky because it is not camelCase
