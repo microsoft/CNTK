@@ -1105,6 +1105,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PlotDNN", "PlotDNN", "{4D6F
 		tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml = tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelBM", "ParallelBM", "{36C42845-0D48-4A46-9C67-2B593A80A09C}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.cpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.gpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\cntk.cntk = Tests\EndToEndTests\Speech\DNN\ParallelBM\cntk.cntk
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\run-test = Tests\EndToEndTests\Speech\DNN\ParallelBM\run-test
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\testcases.yml = Tests\EndToEndTests\Speech\DNN\ParallelBM\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1475,6 +1486,7 @@ Global
 		{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{181664AC-4C95-4798-A923-09B879215B33} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{7B7A563D-AA8E-4660-A805-D50235A02120} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{B1110F99-A307-4745-B464-7FD75951645A} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
 		{369656B8-DDFD-412E-901B-DFEBCC31ABE0} = {B1110F99-A307-4745-B464-7FD75951645A}
 		{CCEFD1F9-E843-43E0-B127-EF73EF90582D} = {B1110F99-A307-4745-B464-7FD75951645A}
@@ -1491,6 +1503,6 @@ Global
 		{9834E864-A8CD-4D28-A3C9-F79FE0F421AE} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{40F65441-A7B7-4425-8E75-CD74AB262F3F} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E} = {6994C86D-A672-4254-824A-51F4DFEB807F}
-		{7B7A563D-AA8E-4660-A805-D50235A02120} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{36C42845-0D48-4A46-9C67-2B593A80A09C} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 	EndGlobalSection
 EndGlobal
