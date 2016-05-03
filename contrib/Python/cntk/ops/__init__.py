@@ -468,8 +468,8 @@ def abs(x, name=None):
     :math:`abs(x) = |x|`
 
     Example:
-        >>> cntk.eval(cntk.ops.abs([-1, 1, -2, 3]))
-        [[1, 1, 2, 3]]
+        >>> C.eval(C.abs([-1, 1, -2, 3]))
+        [array([[ 1.,  1.,  2.,  3.]])]
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
@@ -487,8 +487,9 @@ def cond(flag, value_if_true, value_if_false, name=None):
     Behaves analogously to numpy.where(...).
 
     Example:
-    >>> cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000])
-    # [1, 10, 200, 1000, 10000]
+    >>> C.eval(C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]))
+    [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
+               1.00000000e+03,   1.00000000e+04]])]
 
     Args:
         flag: tensor
