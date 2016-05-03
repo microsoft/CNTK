@@ -9,7 +9,6 @@ import sys
 import numpy as np
 import scipy.sparse
 
-
 def get_cntk_cmd():
     if "CNTK_EXECUTABLE_PATH" not in os.environ:
         raise ValueError(
