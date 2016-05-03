@@ -147,7 +147,7 @@ def seqcla():
         
         # and test for the same number...
         TOLERANCE_ABSOLUTE = 1E-06    
-        assert np.allclose(acc, 0.5982357658380112, atol=TOLERANCE_ABSOLUTE)
+        assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
 
 """
 Test the accuracy of the trained model.
