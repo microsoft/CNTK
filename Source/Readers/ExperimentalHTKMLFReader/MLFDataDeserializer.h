@@ -17,6 +17,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class MLFDataDeserializer : public DataDeserializerBase
 {
 public:
+    // Expects new configuration.
+    MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
+
+    // TODO: Should be removed, when all readers go away, expects configuration in a legacy mode.
     MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const std::wstring& streamName);
 
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
@@ -36,6 +40,9 @@ public:
 private:
     class MLFChunk;
     DISABLE_COPY_AND_MOVE(MLFDataDeserializer);
+
+    void InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath, size_t dimension);
+    void InitializeStream(const std::wstring& name, size_t dimension);
 
     // Inner class for a frame.
     struct MLFFrame : SequenceDescription

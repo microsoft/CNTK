@@ -853,18 +853,22 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     VerifyIsCompiled("AllocateAllMatrices");
 
-    // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
-    MarkValueNonSharableNodes();
-
-    bool performingBackPropagation = (trainRootNode != nullptr);
-
-    // Create a composite Eval order with the specified nodes as roots
     std::vector<ComputationNodeBasePtr> forwardPropRoots;
     forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
     forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
     if (trainRootNode != nullptr)
         forwardPropRoots.push_back(trainRootNode);
 
+    // Mark all the eval, output and criterion roots as non-shareable
+    for (auto& rootNode : forwardPropRoots)
+        rootNode->MarkValueNonSharable();
+
+    // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
+    MarkValueNonSharableNodes();
+
+    bool performingBackPropagation = (trainRootNode != nullptr);
+
+    // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;

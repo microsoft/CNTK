@@ -4,6 +4,8 @@
 //
 
 #include "stdafx.h"
+#include <inttypes.h>
+#include <limits>
 #include "TextConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
@@ -14,20 +16,22 @@ using std::pair;
 using std::vector;
 using std::map;
 
+#undef max // max is defined in minwindef.h
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 {
     if (!config.ExistsCurrent(L"input"))
     {
-        RuntimeError("CNTKTextFormatReader configuration does not contain input section");
+        RuntimeError("CNTKTextFormatReader configuration does not contain \"input\" section.");
     }
 
     const ConfigParameters& input = config(L"input");
 
     if (input.empty())
     {
-        RuntimeError("CNTKTextFormatReader configuration contains an empty input section");
+        RuntimeError("CNTKTextFormatReader configuration contains an empty \"input\" section.");
     }
 
     string precision = config.Find("precision", "float");
@@ -70,10 +74,16 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
             stream.m_storageType = StorageType::sparse_csc;
+            if (stream.m_sampleDimension > numeric_limits<IndexType>::max())
+            {
+                RuntimeError("Sample dimension (%" PRIu64 ") for sparse input '%ls'"
+                    " exceeds the maximum allowed value (%" PRIu64 ").\n",
+                    stream.m_sampleDimension, name.c_str(), (size_t)numeric_limits<IndexType>::max());
+            }
         }
         else
         {
-            RuntimeError("'format' parameter must be set either to 'dense' or 'sparse'");
+            RuntimeError("'format' parameter must be set either to 'dense' or 'sparse'.");
         }
 
         // alias is optional
@@ -82,7 +92,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
             stream.m_alias = input(L"alias");
             if (stream.m_alias.empty())
             {
-                RuntimeError("Alias value for input '%ls' is empty", name.c_str());
+                RuntimeError("Alias value for input '%ls' is empty.", name.c_str());
             }
         }
         else

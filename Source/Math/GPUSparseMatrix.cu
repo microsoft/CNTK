@@ -2166,19 +2166,21 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     return slice;
 }
 
+    
 template <class ElemType>
-GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
     int m = (int) GetNumRows();
     int n = (int) GetNumCols();
+
+    // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
+    slice.RequireSize(m, numCols);
 
     if (startColumn + numCols > n)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) n);
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
-
-    GPUMatrix<ElemType> slice(m, numCols, GetComputeDeviceId());
 
     PrepareDevice();
     cusparseHandle_t cusparseHandle = 0;
@@ -2200,6 +2202,14 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     }
 
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
+
+}
+template <class ElemType>
+GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+{
+    GPUMatrix<ElemType> slice(GetNumRows(), numCols, GetComputeDeviceId());
+
+    AssignColumnSliceToDense(slice, startColumn, numCols);
 
     return slice;
 }

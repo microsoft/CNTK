@@ -150,7 +150,7 @@ public:
         return true;
     }
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return 1;
     }

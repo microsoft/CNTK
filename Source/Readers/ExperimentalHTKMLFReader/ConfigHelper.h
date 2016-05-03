@@ -31,7 +31,7 @@ public:
 
     // Gets element type.
     // Currently both features and labels should be of the same type.
-    ElementType GetElementType();
+    ElementType GetElementType() const;
 
     // Checks feature type in the configuration.
     void CheckFeatureType();
@@ -47,7 +47,7 @@ public:
         std::vector<std::wstring>& lattices);
 
     // Gets mlf file paths from the configuraiton.
-    std::vector<std::wstring> GetMlfPaths();
+    std::vector<std::wstring> GetMlfPaths() const;
 
     // Gets utterance paths from the configuration.
     std::vector<std::wstring> GetSequencePaths();

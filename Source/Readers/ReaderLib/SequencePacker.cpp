@@ -7,6 +7,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include <numeric>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "SequencePacker.h"
 #include "ElementTypeUtils.h"

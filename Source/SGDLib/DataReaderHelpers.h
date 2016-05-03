@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // into how many pieces would we need to break the minibatch?
             // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = dataReader->GetNumParallelSequences();
+            size_t numParallelSequences = dataReader->GetNumParallelSequencesForFixingBPTTMode();
             size_t estimatedMBSize = tunedMBSize * numParallelSequences;
             return (estimatedMBSize + maxSamplesInRAM - 1) / maxSamplesInRAM;
         }

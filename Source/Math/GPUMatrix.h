@@ -635,7 +635,10 @@ public:
     {
         m_done = nullptr;
         if (DoSync())
+        {
+            CUDA_CALL(cudaGetLastError());
             CUDA_CALL(cudaEventCreate(&m_done));
+        }
     }
     ~SyncGuard()
     {
