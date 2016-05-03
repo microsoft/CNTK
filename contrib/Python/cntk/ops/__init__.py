@@ -605,6 +605,10 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 
 
+    Example:
+        >>> C.eval(C.input_numpy(np.ones((3, 2))))
+        [array([[ 1.,  1.]]), array([[ 1.,  1.]]), array([[ 1.,  1.]])]
+
     Args:
         value (list): list of tensors potentially having sequences of different lengths.
         alias (str): alias to be used in the data file
