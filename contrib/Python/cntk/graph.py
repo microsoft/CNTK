@@ -318,7 +318,7 @@ def eval(node):
     """    
     
     from cntk.context import get_context        
-    from cntk.ops import input_reader
+    from cntk.ops import input_numpy
 
     # call a helper method to get a context
     ctx = get_context()    
@@ -338,7 +338,7 @@ def eval(node):
                         # inputs have the outmost dimension for sequences
                         val = [val]
 
-                    ir = input_reader([val], alias=p,
+                    ir = input_numpy([val], alias=p,
                                 has_dynamic_axis=False, name=p)
                     setattr(node, p, ir)
                     first = False

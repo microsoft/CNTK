@@ -6,7 +6,7 @@
 
 """
 Example of logictic regression implementation using training and testing data
-from a file. 
+from a NumPy array. 
 """
 
 import os
@@ -30,8 +30,8 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
     Y = np.hstack((Y, 1-Y))
 
     # set up the training data for CNTK
-    x = C.input_reader(X, has_dynamic_axis=False)
-    y = C.input_reader(Y, has_dynamic_axis=False)
+    x = C.input_numpy(X, has_dynamic_axis=False)
+    y = C.input_numpy(Y, has_dynamic_axis=False)
 
     # define our network -- one weight tensor and a bias
     W = C.ops.parameter((2, d))

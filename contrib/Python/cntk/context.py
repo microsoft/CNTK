@@ -330,8 +330,8 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement on CNTK side
             #import ipdb;ipdb.set_trace()
-            from cntk.ops import input_reader
-            dummy_input = input_reader([[[1]]])
+            from cntk.ops import input_numpy
+            dummy_input = input_numpy([[[1]]])
             dummy_input.name='_dummy_input'
             input_map._add_unmapped(dummy_input)
             desc, _inputs = dummy_input.to_config(input_map)

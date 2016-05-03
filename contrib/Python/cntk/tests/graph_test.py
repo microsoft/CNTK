@@ -7,14 +7,14 @@
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
 from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes
-from ..ops import constant, input_reader, plus, times, past_value
+from ..ops import constant, input_numpy, plus, times, past_value
 
 import pytest
 
 # keeping things short
 A = np.asarray
 C = constant
-I = input_reader
+I = input_numpy
 
 
 # testing whether operator overloads result in proper type
