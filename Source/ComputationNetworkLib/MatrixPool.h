@@ -36,6 +36,7 @@ public:
         if (freeMatrix == nullptr || freeMatrix->GetMatrixType() == SPARSE)
             LogicError("MatrixPool::Release: freeMatrix should not be null or sparse.");
 //#define SUPRESS_MEMSHARING // #define this to disable memory sharing through this structure
+        // TODO: Make this a runtime option.
 #ifndef SUPRESS_MEMSHARING
         vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
 #ifdef _DEBUG

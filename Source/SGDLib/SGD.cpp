@@ -9,7 +9,7 @@
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
+//static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
 #include "BlockMomentumSGD.h"
@@ -483,14 +483,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
             lrControlCriterion = epochCriterion.Average();
 
-#if 1
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
         epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
-#else
-        LOGPRINTF(stderr,
-                  "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; TotalSamplesSeen = %d; ",
-                  i + 1, (int)m_maxEpochs, epochCriterion.Average(), (int)totalTrainingSamplesSeen);
-#endif
+
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
         for (size_t j = 0; j < epochEvalErrors.size(); j++)
             epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
@@ -1078,8 +1073,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
-            // BUGBUG: How does this work if useGradientAggregation? epochCriterion has not been set.
-            //double trainLossSinceLastLogged = (trainSamplesSinceLastLogged != 0) ? ((epochCriterion - epochCriterionLastLogged) / trainSamplesSinceLastLogged) : 0.0;
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
             let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
             let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
@@ -1113,10 +1106,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
                 fprintf(stderr, "]: ");
-                //fprintf(stderr, "SamplesSeen = %d; ", (int)trainSamplesSinceLastLogged);
                 epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
-                //fprintf(stderr, ("%ls = " + GeneratePaddedFloatOrExpFormat(11, 8, trainLossSinceLastLogged) + " * %d").c_str(),
-                //        criterionNodes[0]->NodeName().c_str(), trainLossSinceLastLogged, trainSamplesSinceLastLogged);
                 for (size_t i = 0; i < epochEvalErrors.size(); i++)
                     (epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(evaluationNodes[i]->NodeName());
 
@@ -1280,7 +1270,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
-    // [1/12/2015 erw] to support large dataset, we usually partition whole dataset into several epoch's,
+    // To support large dataset, we usually partition whole dataset into several epoch's,
     // so we need to use all the data to do precomputing
     if (m_useAllDataForPreComputedNode) // using all the data
         trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
@@ -1756,27 +1746,6 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
                                          pMBLayout);
     }
 }
-
-#if 0
-template <class ElemType>
-int SGD<ElemType>::SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...)
-{
-    int result = 0;
-    if (m_traceLevel > 0)
-    {
-        va_list args;
-        va_start(args, __format);
-        if (isPrependTimestamp)
-        {
-            PREPENDTS(__stream);
-        }
-
-        result = vfprintf(__stream, __format, args);
-        va_end(args);
-    }
-    return result;
-}
-#endif
 
 template <class ElemType>
 void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
