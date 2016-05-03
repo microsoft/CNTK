@@ -65,7 +65,8 @@ First basic use
 The CNTK Python API allows users to easily define a computational network, define the data 
 that will pass through the network, setup how learning should be performed, and finally, train 
 and test the network. Here we will go through a simple example of using the CNTK Python API to 
-learn to separate data into two classes using a simple logistic regression variant::
+learn to separate data into two classes. Following the code, some basic CNTK concepts will be 
+explained::
 
     import cntk as C
     import numpy as np
@@ -81,15 +82,18 @@ learn to separate data into two classes using a simple logistic regression varia
         Y = np.hstack((Y, 1-Y))
 
         # set up the training data for CNTK
-        x = C.input_reader(X, has_dynamic_axis=False)
-        y = C.input_reader(Y, has_dynamic_axis=False)
+        x = C.input_numpy(X, has_dynamic_axis=False)
+        y = C.input_numpy(Y, has_dynamic_axis=False)
 
-        # define our network -- one weight tensor and a bias
+        # define our network parameters: a weight tensor and a bias
         W = C.ops.parameter((2, d))
         b = C.ops.parameter((2, 1))
+		
+        # create a dense 'layer' by multiplying the weight tensor and  
+        # the features and adding the bias
         out = C.ops.times(W, x) + b
 
-        # and the criterion node using cross entropy with softmax
+        # setup the criterion node using cross entropy with softmax
         ce = C.ops.cross_entropy_with_softmax(y, out)
         ce.tag = 'criterion'
         ce.name = 'loss'
@@ -97,14 +101,14 @@ learn to separate data into two classes using a simple logistic regression varia
         # define our SGD parameters and train!
         my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
         with C.LocalExecutionContext('logreg') as ctx:
-            ctx.train(root_nodes=[ce], optimizer=my_sgd)	        
+            ctx.train(root_nodes=[ce], training_params=my_sgd)	        
             print(ctx.test(root_nodes=[ce]))
 
 
 In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
-one-hot vector of either ``[0 1]`` or ``[1 0]``. We then begin describing the topology of our network 
-by setting up the data inputs. This is typically done using the `CNTKTextFormatReader` by reading data 
-in from a file, but for interactive experimentation and small examples we can use the `InputReader` to 
+one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
+by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
+in from a file, but for interactive experimentation and small examples we can use the ``numpy_reader`` to 
 access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
 the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
 set ``has_dynamic_axis`` to False.
