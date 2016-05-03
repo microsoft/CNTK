@@ -648,27 +648,46 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
-            SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
-            auto modelName = GetModelNameForEpoch(i);
-            LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
-            net->Save(modelName);
-            if (!m_keepCheckPointFiles)
+            if (loadedPrevModel)
             {
-                // delete previous checkpoint file to save space
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
+                //if previous best model is loaded, we will first remove epochs that lead to worse results
+                for (int j = 1; j < m_learnRateAdjustInterval; j++)
                 {
-                    if (epochsSinceLastLearnRateAdjust != 1)
+                    int epochToDelete = i - j;
+                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d\n", epochToDelete+1);  // report 1 based epoch number
+                    _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
+                    _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
+                }
+
+                //set i back to the loaded model
+                i -= m_learnRateAdjustInterval;
+                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+            }
+            else
+            {
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                auto modelName = GetModelNameForEpoch(i);
+                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                net->Save(modelName);
+                if (!m_keepCheckPointFiles)
+                {
+                    // delete previous checkpoint file to save space
+                    if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
+                    {
+                        if (epochsSinceLastLearnRateAdjust != 1)
+                        {
+                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                        }
+                        if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                        {
+                            _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
+                        }
+                    }
+                    else
                     {
                         _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                     }
-                    if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-                    {
-                        _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
-                    }
-                }
-                else
-                {
-                    _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                 }
             }
         }
@@ -1986,6 +2005,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
             fstream.Flush();
         }
 
+        _wunlink(checkPointFileName.c_str());
         renameOrDie(tempFileName, checkPointFileName);
     }
 }
