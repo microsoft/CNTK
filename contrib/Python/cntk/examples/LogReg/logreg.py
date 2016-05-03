@@ -35,7 +35,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
     ce = C.cross_entropy_with_softmax(y, out)
     ce.name = criterion_name
     ce.tag = 'criterion'
-    eval = C.ops.cntk1.SquareError(y, out)
+    eval = C.ops.square_error(y, out)
     eval.tag = 'eval'
     eval.name = eval_name
 
