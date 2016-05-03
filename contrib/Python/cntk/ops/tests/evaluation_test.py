@@ -65,4 +65,47 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
             precision=precision, clean_up=True, backward_pass=True,
             input_node=output)
 
+# -- SquareError with softmax operation tests --
+@pytest.mark.parametrize("target_matrix, output_matrix", TARGET_OUT_PAIRS)
+def test_op_square_error(target_matrix, output_matrix, device_id, precision):
+    
+    from .. import square_error
 
+    def numpy_op(target, output): 
+        return np.sum((target-output)**2)            
+    
+    target = I([target_matrix], has_dynamic_axis=True)
+    output = I([output_matrix], has_dynamic_axis=True)
+    
+    op_node = square_error(target, output)
+
+    #Forward pass test
+    #==================
+    # we compute the expected output for the forward pass
+    expected = [[[numpy_op(AA(target_matrix, dtype=PRECISION_TO_TYPE[precision]), 
+                              AA(output_matrix, dtype=PRECISION_TO_TYPE[precision]))]]]    
+    unittest_helper(op_node, None, expected,
+                device_id=device_id,
+                precision=precision,
+                clean_up=True, backward_pass=False)
+                                
+    def numpy_grad(left, right):                
+        return 2*np.subtract(left, right)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass w.r.t. output is 2*(output - target)
+    expected = [numpy_grad(AA(output_matrix, dtype=PRECISION_TO_TYPE[precision]), 
+                              AA(target_matrix, dtype=PRECISION_TO_TYPE[precision]))]
+    unittest_helper(op_node, None, expected,
+            device_id=device_id,
+            precision=precision, clean_up=True, backward_pass=True,
+            input_node=output)
+    
+    # The expected results for the backward pass w.r.t. target is 2*(target - output)
+    expected = [numpy_grad(AA(target_matrix, dtype=PRECISION_TO_TYPE[precision]), 
+                              AA(output_matrix, dtype=PRECISION_TO_TYPE[precision]))]
+    unittest_helper(op_node, None, expected,
+            device_id=device_id,
+            precision=precision, clean_up=True, backward_pass=True,
+            input_node=target)
