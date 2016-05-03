@@ -182,7 +182,7 @@ def calc_accuracy(test_file, output_filename_base):
 """
 Test function so the test suite picks this up and runs it
 """
-def _test_lstm_sequence_classification():
+def test_lstm_sequence_classification():
     seqcla()
 
 if (__name__ == "__main__"):

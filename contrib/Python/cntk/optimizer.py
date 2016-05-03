@@ -284,7 +284,7 @@ class SGDParams:
         self.trace_node_names_sparse = trace_node_names_sparse
         self.gradient_check = gradient_check
 
-    def generate_config(self):
+    def _to_config_description(self):
         """Generate the SGDParams configuration block
         """
         config = []

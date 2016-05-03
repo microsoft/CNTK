@@ -59,7 +59,7 @@ def _to_list(desc):
 def test_graph_with_same_node_twice():
     v0 = constant(1)
     root_node = ops.plus(v0, v0)
-    description, has_inputs = root_node.to_config()
+    description, inputs = root_node._to_config_description()
     expected = ["v0 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='1.0000", "', initOnCPUOnly=true, randomSeed=-1)",
                 'v1 = CNTK2.Plus(v0, v0)']
     result = _to_list(description) 
@@ -96,5 +96,5 @@ def test_loose_coupling():
                 "v1 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='2.0000", "', initOnCPUOnly=true, randomSeed=-1)",
                 'outnode = CNTK2.Times(v0, v1, outputRank=1)']
 
-    description, has_inputs = out.to_config()
+    description, inputs = out._to_config_description()
     assert _to_list(description) == expected
