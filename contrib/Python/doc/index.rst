@@ -25,6 +25,7 @@ them on sample data in real time.
    Concepts <concepts>
    Readers <readers>
    Operators <cntk.ops>
+   Optimizer <optimizer>
    Execution Context <context>
    Examples <examples>
 
