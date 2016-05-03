@@ -45,6 +45,10 @@ Train=[
     reader = [
         verbosity = 0
         randomize = true
+
+        # Currently,f for image reader a single sequence is a chunk
+        # so setting randomization window to 1.
+        randomizationWindow =1
         useLegacy = false
 
         # A list of deserializers to use.
@@ -109,18 +113,41 @@ Test=[
     ]
     
     reader=[
-        readerType=ImageReader
-        file=$ConfigDir$/val_map.txt
-        randomize=None
-        features=[
-            width=224
-            height=224
-            channels=3
-            cropType=Center
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
+        verbosity = 0
+        randomize = false
+
+        # A list of deserializers to use.
+        deserializers = [
+            [   
+                type = "ImageDataDeserializer"        
+                module = "ImageReader"
+                file=$ConfigDir$/val_map.txt
+
+                # Description of input streams
+                inputs = [
+                    features=[
+                        transforms=[
+                            [
+                                type="Crop"
+                                cropType=Center
+                            ]:[
+                                type="Scale"
+                                width=224
+                                height=224
+                                channels=3
+                            ]:[
+                                type="Mean"
+                                meanFile=$ConfigDir$/ImageNet1K_mean.xml
+                            ]:[
+                                type="Transpose"
+                            ]
+                        ]
+                    ]
+                    labels=[
+                        labelDim=1000
+                    ]
+                ]
+            ]
         ]
-        labels=[
-            labelDim=1000
-        ]
-    ]    
+    ]        
 ]

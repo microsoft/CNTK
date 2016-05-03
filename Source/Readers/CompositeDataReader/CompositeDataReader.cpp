@@ -97,12 +97,6 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         bool useLegacyRandomization = config(L"useLegacy", true);
         bool multithreadedGetNextSequences = false;
         BlockRandomizer::DecimationMode decimationMode = BlockRandomizer::DecimationMode::chunk;
-        if (!useLegacyRandomization)
-        {
-            decimationMode = BlockRandomizer::DecimationMode::sequence;
-            multithreadedGetNextSequences = false; 
-            randomizationWindow = 1;
-        }
         randomizer = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, decimationMode, useLegacyRandomization, multithreadedGetNextSequences);
     }
     else
