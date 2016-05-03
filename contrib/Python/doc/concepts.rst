@@ -3,35 +3,34 @@ Concepts
 
 There is a common property in key machine learning models, such as deep neural
 networks (DNNs), convolutional neural networks (CNNs), and recurrent neural 
-networks (RNNs). All these models can be described as a series of computational 
-steps.
+networks (RNNs). All these models can be described as *computational networks*.
 
-The edges on these networks are vectors, matrices, or in general n-dimensional 
+The directed edges of these *cómputational networks* are vectors, matrices, or in general n-dimensional 
 arrays (tensors) which represent input data and model parameters. The vertices 
-or are *functions* (also called operations) that are performing a computation on 
-one or more input tensors. 
+are *functions* (also called operations) that are performing a computation on 
+these input tensors. 
 
 
 Tensors
 -------
 
 The underlying data structure in CNTK is that of a *tensor*. It is a 
-multidimensional array to which computations can be applied. Every dimension in 
+multidimensional array on which computations can be performed. Every dimension in 
 these arrays is referred to as an *axis* to distinguish it from the scalar size 
 of every axis. So, a matrix has two *axes* which have both a certain 
-*dimension*. 
+*dimension* corresponding to the number of rows and clumns of the *axes*. 
 
 Using tensors makes the framework generic in that it can be used e.g. for 
 classification problems where the inputs are vectors, black-and-white 
 images (input is a matrix of points), color images (includes a separate dimension 
 for r, g, and b) or videos (has an extra time dimension). 
 
-- Tensors have a *shape* which describes the different axes. E.g. a shape ``[2,3,4]`` 
+- Tensors have a *shape* which describes the dimensions of its axes. E.g. a shape ``[2,3,4]`` 
   would refer to a tensor with three axes that have, respectively, 2, 3, and 4 
   dimensions. 
 
 - CNTK allows for the last axis to be a *dynamic axis*, i.e. an axis whose size 
-  is defined by the input data and not known upfront. This allows for easily 
+  might vary between input samples. This allows for easily 
   modelling sequences (for recurrent networks) without needing to introduce masks 
   or padding. See below for a detailed explanation.
 
@@ -70,7 +69,7 @@ Broadcasting
 ~~~~~~~~~~~~
 
 For operations that require the tensor dimensions of their arguments to match, 
-*broadcasting* is applied automatically whenever a tensor dimension is 1. 
+*broadcasting*  is applied automatically whenever a tensor dimension is 1. 
 Examples are elementwise product or plus operations.
 E.g. the following are equivalent:
 
@@ -83,20 +82,14 @@ E.g. the following are equivalent:
 A Note On Tensor Indices
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Multi-dimensional arrays can be organized in two different ways: In many 
-programming languages like C, C#, or Java, the first dimension(s) contain 
-pointers the final dimension which contains the actual data. This usually results 
-in a called *row-major* organization, as an index like ``[5][3]`` would 
-typically refer to the 5th *row* and 3rd *column* of a matrix. 
+Multi-dimensional arrays are often mapped to linear memory in a continous manner.
+There is some freedom in which order to map the array elements.
+Two typical mappings are *row-major order* and *column-major order*.
 
-In other implementations, like Fortran or NumPy, data is laid out continuously in 
-memory and indexed using *strides*: According to the index organization above, in 
-order to jump from one row to the next, one would have to skip 3 entries (the 
-*stride*). In other words, an array like::
+For two dimensional arrays (matrices) consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
+consecutive elements of the columns are contiguous.
 
-    a = [[1,2],[3,4],[5,6]]
-
-would represent the matrix
+For example the matrix
 
 +--+--+
 | 1| 2|
@@ -106,45 +99,28 @@ would represent the matrix
 | 5| 6|
 +--+--+
 
-CNTK, however, always organizes the data according to the *last* 
-dimension. This is also called *column-major* organization. In other words, the 
-array from above would be interpreted as a matrix like the following:
+is linearized as [1, 2, 3, 4, 5, 6] using row-major order, but as [1, 3, 5, 2, 4, 6] using column-major order.
 
-+--+--+--+
-| 1| 3| 5|
-+--+--+--+
-| 2| 4| 6|
-+--+--+--+
+In many programming languages like C, or C# row-major order is used. The same is true for the Python library NumPy (at least by default).
+CNTK however uses column-major order.
 
-Otherwise, there are no differences to how data is handled. In both cases, data 
-is laid out continuously in memory as in: ``am = [1,2,3,4,5,6]``. The main difference 
-lies in how indices to the actual values are constructed. For the two-dimensional 
-example, the value for an index ``[x1,x2]`` can be gotten for array am as  ``am[s1 * x1 
-+ s2 * x2]``. Here, ``s1`` and ``s2`` are the *strides* for the respective dimensions. For 
-row-major adressing, for a 2x2 matrix, ``s1`` and ``s2`` are ``[2,1]``, respectively, whereas 
-for column-major addressing they are ``[1,2]``. It is also cheap to get the 
-*transpose* of a matrix by simply exchanging the strides of the two dimensions.
+There are two circumstances where you have to be aware of this ordering:
 
-This concept can be extended to arrays of higher dimensions. In that case, it 
-might still sometimes make sense to speak of "rows" and "columns" sometimes. E.g. 
-in the following, consider a training set 
-consisting of 2x2 *matrices* which are concatenated to form a training set: 
+- When preparing input-files for CNTK. The values have to be provided in column-major order.
+- When changing the shape of a tensor. 
 
->>> a = [[[1,2],[3,4]],[[5,6],[7,8]]]
+This concept extends to arrays of higher dimensions, see `<https://en.wikipedia.org/wiki/Row-major_order>`_
 
-Here it still makes sense to refer to the *last* dimension of that of the column 
-dimension, whereas all other dimensions together are seen as the *row* dimension.
     
 Computational Networks
 ----------------------
 
 Once the input tensors are defined, CNTK allows for building up descriptions of 
-the computations that are applied to it. These networks are graphs that describe 
-data flow as it is moved from input (leaf nodes) through computations, to one or 
+the computations that are applied to it. These are translated into computational networks that describe the
+data flow as the data are transformed from input (leaf nodes) through computations, to one or 
 more output (root) nodes.
 
-For example, a one-hidden-layer sigmoid neural network can be described as the
-computational steps in Python::
+The Python api allows to specify such a computational network. For example, a one-hidden-layer sigmoid neural network can be described like shown below::
 
     from cntk import *
     # X is a data input, W1, W2, B are parameters
@@ -202,7 +178,8 @@ Computational networks are flexible in several dimensions:
 Properties of Computation Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- *name* - The symbolic name for the node. If left out, the name is assigned
+In CNTK the compuational nodes have number of properties. Some of these can or must be set by the user.
+- **name** - The symbolic name for the node. If left out, the name is assigned
   automatically to a numeric value.::
   
     S1 = sigmoid(P1) # Elementwise sigmoid function
@@ -210,16 +187,19 @@ Properties of Computation Nodes
   
   
   Assigning a name to a node is only necessary if it is the target of a loop. 
-  See below. Otherwise, this can be used for debugging.
+  See below. Otherwise, it can be used for debugging.
   
-- *tag* - This is a string that is attached to the node and which is set
-  by the user. It is used by the training loop to identify different parts of the 
-  network to identify root nodes. It can be one of "criterion", "output" or "eval".
+- **tag** - This is a string that is attached to the node and has to be set for certain nodes. There purpouse is not documentary but controls the behaviour of CNTK.
+
+  The *tag*  property can have the following values that can be set by the user:
+- *criterion* The output of such nodes as the optimisation criterion. See `Neural Net Training`_
+- *output* The output of these nodes is written of the output.
+- *eval* The output of these nodes are used of evaluation. They might e.g. provide the error rate of a classification problem.
   
-- *shape* - This is a derived property that is automatically inferred from the 
+- **shape** - This is a derived property that is automatically inferred from the 
   layout of the graph. 
   
-- *output* - At the moment every node has exactly one output. Thus, a computation
+- **output** - At the moment every node has exactly one output. Thus, a computation
   node can be used wherever a tensor is requested as an input.
   
 
@@ -236,6 +216,8 @@ data.
 
 Dynamic Axes
 ~~~~~~~~~~~~
+
+**thilow: its not clear to me what parts f this section are important for usage and which are more general info**
 
 Every input tensor in CNTK receives an additional (implicit) dimension usually 
 referred to as "\*". This is called the *dynamic axis* of the input.
@@ -255,7 +237,7 @@ setup which are hidden behind a single concept:
     tensor dimension which changes for every input unit.
     
   - CNTK tries to compute as many sequences in parallel as possible for a given 
-    minibatch. For this it puts all sequences in a minibatch in a rectangular 
+    minibatch. For this it puts all sequences of a minibatch in a rectangular 
     structure called a *minibatch layout* and lays out parallel sequences in y 
     direction and the dynamic (time or sequence) dimension in x direction. For
     a network that describes a loop in time dimension, this means that certain
@@ -289,6 +271,9 @@ information of the dynamic axis. As a consequence,
 
 Loops in Computational Networks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**thilow: its not clear to me what parts f this section are important for usage and which are more general info**
+
 Different from the CN without a directed loop, a CN with a loop cannot be 
 computed for a sequence of samples as a batch since the next sample’s value 
 depends on the the previous samples. A simple way to do forward computation and 
@@ -366,12 +351,12 @@ Neural Net Training
 To perform a neural net training run, we need every operation to be defined for
 *forward* and *backward* operation. The forward operation simply computes the 
 function value; The backward operation computes the gradients with regards to
-all of the operation's inputs, chained (multiplied) with the output gradient. 
+all of the operation's inputs. 
 
 All of the built-in operations (as far as they can take part in neural net 
 training) define both the forward and backward pass. As such, CNTK implements 
 *automatic differentiation*, since, for any function that can be defined through 
-the use of the built-in operations, its derivative can be computed.
+the use of the built-in operations, CNTK knows how to compute its derivatives.
 
 In order to set up a computational network for training, the following is needed
 (in addition to training data):
@@ -383,7 +368,7 @@ In order to set up a computational network for training, the following is needed
   The built-in criterion nodes currently output a scalar value which contains the
   aggregate loss over a minibatch. 
 
-- A training algorithm. CNTK uses an implementation of SGD
+- A training algorithm. Currently CNTK provides an implementation of SGD
   (stochastic gradient descent) with optional momentum. This means that gradients
   are computed and backpropagated once for every minibatch. The SGD implementation
   offers a whole number of options, e.g. for changing the learning rate over the
