@@ -120,8 +120,8 @@ speechTrain = [
         S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/(featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
-            else BS.RNNs.RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/(LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
         W = BS.Parameters.WeightParam (labelDim, hiddenDim)
