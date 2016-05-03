@@ -24,6 +24,7 @@ makeMode = false
 
 # experiment id
 
+# 30-0: switching back to LMSequenceReader, trying to recreate the old settings that worked
 # 30-1: dumping all sequences with a small model, to test reader
 # 30-2: fixed #samples for momentum calculation
 # 30-3: after 'aux' input to LSTMP, in prep for more correct stabiliziation
@@ -50,14 +51,6 @@ makeMode = false
 deviceId = 0
 ExpId = 30-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
-decodeModel = 21
-
-hiddenDim = 512  #420 # 1024 # 200
-maxLayer = 2
-isBidirectional=false
-#hiddenDim = 256 # 1024 # 200
-#maxLayer = 2
-#isBidirectional=true
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -70,39 +63,51 @@ traceLevel = 1
 modelPath  = "$ModelDir$/G2P.dnn"
 
 # decoding config
-beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
-decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
-decodeOutputPath = "$decodeModelPath$.bl$beamDepth$"
+beamDepth = 1                                      # 0=predict; 1=greedy; >1=beam
+decodeModel = 21
+decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended
+decodeOutputPath = "$decodeModelPath$.$beamDepth$" # results are written next to the model, with beamDepth appended
 
-dumpModelPath = "$modelPath$.2" # model to dump if needed
+# dump config
+dumpModelPath = "$modelPath$.2" # put the epoch id here
 
-confClassSize = 0
+# top-level model configuration
+hiddenDim = 512 
+maxLayer = 2
+isBidirectional = false
+
+# comment/uncomment this or the next block to switch between readers
+# --- begin uncomment for LMSequenceReader ---
+readerType = "LMSequenceReader"
+useCNTKTextFormatReader = false
+inputVocabSize = 69
+labelVocabSize = 69
+shareEmbeddings = true
+fileExt = "joint"
+# --- end uncomment ---
+
+# --- begin uncomment for CNTKTextFormatReader ---
+#readerType = "CNTKTextFormatReader"
+#useCNTKTextFormatReader = true
+#inputVocabSize = 29     # 26 letters plus start, end, apostrophe
+#labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
+#shareEmbeddings = false
+#fileExt = "ctf"
+# --- end uncomment ---
+
+# corpus
 maxLength = 20
 isAutoEncoder=false
 startSymbol = "<s>"
-
-#useCNTKTextFormatReader = false
-#inputVocabSize = 69
-#labelVocabSize = 69
-#shareEmbeddings = true
-#fileExt = "joint"
-#readerInputDef = [ dim = 0 ]
-#readerType = "LMSequenceReader"
-
-useCNTKTextFormatReader = true
-inputVocabSize = 29     # 26 letters plus start, end, apostrophe
-labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
-shareEmbeddings = false
-fileExt = "ctf"
-readerInputDef = [ rawInput = [ alias = "s" ; dim = $inputVocabSize$ ; format = "sparse" ] ; rawLabels = [ alias = "t" ;  dim = $labelVocabSize$ ;  format = "sparse" ] ]
-readerType = "CNTKTextFormatReader"
-
-# pathnames
 trainFile = "g014b2b.train-dev-20-21.bsf.$fileExt$"
-#trainFile = "g014b2b.train-dev-1-21.bsf.$fileExt$" # small one for debugging
 validFile = "g014b2b.train-dev-1-21.bsf.$fileExt$"
 testFile  = "g014b2b.test.bsf.$fileExt$"
 vocabFile = "g014b2b.wl"
+
+# some reader variables that occur multiple times
+cntkReaderInputDef = [ rawInput = [ alias = "s" ; dim = $inputVocabSize$ ; format = "sparse" ] ; rawLabels = [ alias = "t" ;  dim = $labelVocabSize$ ;  format = "sparse" ] ]
+lmSequenceReaderInputDef = [ dim = 0 ]
+lmSequenceReaderInputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
 
 #######################################
 #  network definition                 #
@@ -162,7 +167,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     streams = [
         out = if isAutoencoder || useCNTKTextFormatReader then [
             input  = TraceSparse (rawInput, 'inp')
-            labels = TraceSparse_all (rawLabels, 'lbl')
+            labels = TraceSparse (rawLabels, 'lbl')
         ]
         else [
             separatorRow = 2                                                                             # row index of separator symbol 
@@ -213,7 +218,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
     encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim,
-        previousHook=BS.RNNs.NextHC,    # TODO: change back to PreviousHC!!!
+        previousHook=BS.RNNs.PreviousHC,
         enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[Length (encoderDims)-1]
 
@@ -306,7 +311,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                      previousHook=PreviousHCWithReorderingHook,
                                      enableSelfStabilization=useStabilizer)
     decoderOutput = decoder[decoderOutputLayer].h
-    #decoderDim = decoderOutput.dim
     decoderDim = decoderDims[decoderOutputLayer]
 
     #############################################################
@@ -345,13 +349,11 @@ train = [
     # BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        minibatchSize = 128:128:256:512
-        #minibatchSize = 64:64:128:256
-        #minibatchSize = 70:70:70:140:280
-        learningRatesPerSample = 0.0035*2:0.002 #0.01 #0.005 # 0.01
-        momentumAsTimeConstant = 1000 #2500
+        minibatchSize = 72:72:144:288
+        learningRatesPerSample = 0.007*2:0.0035
+        momentumAsTimeConstant = 1100
         gradientClippingWithTruncation = true   # (as opposed to clipping the Frobenius norm of the matrix)
-        clippingThresholdPerSample = 1   #15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
+        clippingThresholdPerSample = 2.3   # visibly impacts objectives, but not final result, so keep it for safety
         maxEpochs = 50
         numMBsToShowResult = 100
         firstMBsToShowResult = 10
@@ -385,23 +387,19 @@ train = [
         file = "$DataDir$/$trainFile$"
         randomize = "auto"
 
-        # everything below here is identical for all readers in this file
-
         # specific to CNTKTextFormatReader
         skipSequenceIds = "false"
         maxErrors = 100
         traceLevel = 2
         chunkSizeInBytes = 30000000         # large enough for entire data set
+        input = $cntkReaderInputDef$
 
         # specific to LMSequenceReader
         mode = "softmax"                    # TODO: find out what this means
         nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
- 
-        input = $readerInputDef$
-
-        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
-        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        rawInput = $lmSequenceReaderInputDef$
+        inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
     ]
 
@@ -414,16 +412,14 @@ train = [
         skipSequenceIds = "false"
         maxErrors = 100
         traceLevel = 2
+        input = $cntkReaderInputDef$
 
         # specific to LMSequenceReader
         mode = "softmax"                    # TODO: find out what this means
         nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
- 
-        input = $readerInputDef$
-
-        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
-        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        rawInput = $lmSequenceReaderInputDef$
+        inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
     ]
 ]
@@ -490,16 +486,14 @@ write = [
         skipSequenceIds = "false"
         maxErrors = 100
         traceLevel = 2
+        input = $cntkReaderInputDef$
 
         # specific to LMSequenceReader
         mode = "softmax"                    # TODO: find out what this means
-        nbruttsineachrecurrentiter = 1      # 1 means one per minibatch
+        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
- 
-        input = $readerInputDef$
-
-        # specific to LMSequenceReader: labels sections  --outputDummy is required, althogh our labels are extracted from the inLabels
-        inputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$vocabFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
+        rawInput = $lmSequenceReaderInputDef$
+        inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
     ]
 ]
