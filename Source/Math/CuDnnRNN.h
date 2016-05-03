@@ -164,7 +164,6 @@ public:
     CuDnnRNNExecutor(const TensorShape &/*inputShape*/, const TensorShape &/*outputShape*/, const size_t numRows, const size_t numHidden) :
         m_cudnn(CuDnn::Instance()),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
-        workspace(0), reserve(0),
         m_BackwardDataCalledYet(false)
     {
         m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(numRows, numHidden);
@@ -172,9 +171,9 @@ public:
 
     size_t GetWSize(cudnnTensorDescriptor_t *xDesc);
 
-    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY);
-    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw);
-    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx);
+    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
 protected:
     std::unique_ptr<CuDnnFilter<ElemType>> wDesc;
@@ -194,8 +193,6 @@ private:
 
 private:
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;
-    GPUMatrix<ElemType> workspace;
-    GPUMatrix<ElemType> reserve;
     bool m_BackwardDataCalledYet;
 };
 

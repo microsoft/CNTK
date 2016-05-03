@@ -4204,35 +4204,45 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
 }
 
 template <class ElemType>
-void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden)
+void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
 {
-    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DecideAndMoveToRightDevice(*this, inputX, paramW);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+
     DISPATCH_MATRIX_ON_FLAG(this, this,
         NOT_IMPLEMENTED,
-        m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, numRows, numHidden),
+        m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, numRows, numHidden, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX)
+void Matrix<ElemType>::RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
 {
-    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DecideAndMoveToRightDevice(*this, outputDY, paramW, outputDX);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
     DISPATCH_MATRIX_ON_FLAG(this, this,
         NOT_IMPLEMENTED,
-        m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), shapeY, *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), shapeDX),
+        m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), shapeY, *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), shapeDX, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw)
+void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
 {
-    //DecideAndMoveToRightDevice(*this, grad); -bugbug- still need to move matricies
+    DecideAndMoveToRightDevice(*this, inputX, outputY, dw);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
     DISPATCH_MATRIX_ON_FLAG(this,
         this,
         NOT_IMPLEMENTED,
-        m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), shapeX, *(outputY.m_GPUMatrix), shapeY, *(dw.m_GPUMatrix)),
+        m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), shapeX, *(outputY.m_GPUMatrix), shapeY, *(dw.m_GPUMatrix), *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }

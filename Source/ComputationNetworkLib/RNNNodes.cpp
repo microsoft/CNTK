@@ -109,7 +109,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     // this copy is necessary so that the strides are dense.
     shapeYT = TensorShape(shapeYT.GetDims());
 
-    m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_numLayers, m_numHidden);
+    m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_numLayers, m_numHidden, *m_reserve, *m_workspace);
 
     // No one uses shapeY, but it is necessary
     TensorShape shapeY;
@@ -134,13 +134,13 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
         m_transposedDInput->Resize(Input(1)->Gradient());
 
         // Do the work
-        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT);
+        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT, *m_reserve, *m_workspace);
         m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
         Matrix<ElemType>& paramDW = Input(1)->Gradient();
-        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, shapeXT, *m_transposedOutput, shapeYT, paramDW);
+        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, shapeXT, *m_transposedOutput, shapeYT, paramDW, *m_reserve, *m_workspace);
     }
     else if (inputIndex == 0) // data
     {

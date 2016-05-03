@@ -500,9 +500,9 @@ public:
     void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
                                     Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
 
-    void RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden);
-    void RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX);
-    void RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw);
+    void RNNForward(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
+    void RNNBackwardData(const Matrix<ElemType>& outputDY, const TensorShape shapeY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const TensorShape shapeDX, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
+    void RNNBackwardWeights(const Matrix<ElemType>& inputX, const TensorShape shapeX, const Matrix<ElemType>& outputY, const TensorShape shapeY, Matrix<ElemType>& dw, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
 
 public:
     // TODO: why are these not static? And why are they here?

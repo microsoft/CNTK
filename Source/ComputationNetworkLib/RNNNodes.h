@@ -52,6 +52,8 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_transposedInput, matrixPool);
         RequestMatrixFromPool(m_transposedOutput, matrixPool);
+        RequestMatrixFromPool(m_reserve, matrixPool);
+        RequestMatrixFromPool(m_workspace, matrixPool);
     }
 
     // request matrices needed to do node derivative value evaluation
@@ -70,6 +72,10 @@ public:
         ReleaseMatrixToPool(m_transposedOutput, matrixPool);
         ReleaseMatrixToPool(m_transposedDInput, matrixPool);
         ReleaseMatrixToPool(m_transposedDOutput, matrixPool);
+#if 0
+        ReleaseMatrixToPool(m_reserve, matrixPool);
+        ReleaseMatrixToPool(m_workspace, matrixPool);
+#endif
     }
 
     // Is the output value of the computation node needed for computing
@@ -86,7 +92,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_transposedOutput;
     shared_ptr<Matrix<ElemType>> m_transposedDInput;
     shared_ptr<Matrix<ElemType>> m_transposedDOutput;
-
+    shared_ptr<Matrix<ElemType>> m_workspace;
+    shared_ptr<Matrix<ElemType>> m_reserve;
 
 private:
     TensorView<ElemType> TensorHelper(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr);

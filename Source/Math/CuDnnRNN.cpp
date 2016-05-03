@@ -60,7 +60,8 @@ size_t CuDnnRNNExecutor<ElemType>::GetWSize(cudnnTensorDescriptor_t *xDesc)
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::ForwardCore(
     const GPUMatrix<ElemType>& weightsW,
-    const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY
+    const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY,
+    GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     // get input data layout
@@ -150,7 +151,8 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
-    const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& weightsW, GPUMatrix<ElemType>& dx
+    const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& weightsW, GPUMatrix<ElemType>& dx,
+    GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     if (!m_BackwardDataCalledYet)
@@ -174,7 +176,9 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
 }
 
 template <class ElemType>
-void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw)
+void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw,
+    GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
+    )
 {
     if (!m_BackwardDataCalledYet)
         LogicError("out of order calling you have been very bad");
