@@ -443,7 +443,6 @@ template class MatrixL1RegNode<float>;
 template class MatrixL1RegNode<double>;
 
 // -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
 // OrderedCrossEntropyWithSoftmaxNode (labels, prediction)
 // TO DO: calculates: -sum(left_i * log(softmax_i(right)))
 // -----------------------------------------------------------------------
