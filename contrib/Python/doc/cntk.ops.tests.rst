@@ -1,10 +1,10 @@
-cntk.utils package
-==================
+cntk.ops.tests package
+======================
 
 Module contents
 ---------------
 
-.. automodule:: cntk.utils.eval
+.. automodule:: cntk.ops.tests
     :members:
     :undoc-members:
     :show-inheritance:
