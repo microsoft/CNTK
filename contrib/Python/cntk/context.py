@@ -122,13 +122,13 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         return filename
         
     @abstractmethod
-    def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
         '''
         Abstract method to run the train action locally.
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            optimizer (instance of `cntk.optimizer.SGDParams'): the SGD optimizer to use for training
+            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (dict): map from input nodes to :class:`cntk.reader.InputMap`
             override_existing (bool): if the folder exists already override it
@@ -214,14 +214,14 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return description, inputs
 
-    def _generate_train_config(self, root_nodes, optimizer, input_map, 
+    def _generate_train_config(self, root_nodes, training_params, input_map, 
                                override_existing, action_name=None):
         '''
         Generates the configuration file for the train action.
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            optimizer (instance of `cntk.optimizer.SGDParams'): the SGD optimizer to use for training
+            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
             action_name (str): the name of the action in cntk configuration file
@@ -642,13 +642,13 @@ class LocalExecutionContext(AbstractContext):
 
         return expected_shape, expected_size
 
-    def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
         '''
         Run the train action locally.
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            optimizer (instance of `cntk.optimizer.SGDParams'): the SGD optimizer to use for training
+            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -667,7 +667,7 @@ class LocalExecutionContext(AbstractContext):
                                 "override it" % self.directory)
 
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_map, override_existing, action_name = action_name)
+            root_nodes, training_params, input_map, override_existing, action_name = action_name)
 
         return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content,
                                action_name = action_name)
@@ -790,13 +790,13 @@ class DeferredExecutionContext(AbstractContext):
         self.config.append(config_content)
         self.actions.append(action_name)
 
-    def train(self, root_nodes, optimizer, input_map=None, override_existing=True):
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
         '''
         Prepare the training configuration to be run on a different environment 
 
         Args:
             root_nodes (list): the list of root nodes of the model
-            optimizer (instance of `cntk.optimizer.SGDParams'): the SGD optimizer to use for training
+            training_params (instance of `cntk.optimizer.SGDParams'): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -810,7 +810,7 @@ class DeferredExecutionContext(AbstractContext):
         
         action_name = "Train"
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_map, override_existing, action_name)
+            root_nodes, training_params, input_map, override_existing, action_name)
         self._append_config(action_name, config_content)        
 
 

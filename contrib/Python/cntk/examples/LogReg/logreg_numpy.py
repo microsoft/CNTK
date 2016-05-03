@@ -50,7 +50,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
     with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
         ctx.train(
                 root_nodes=[ce,eval], 
-                optimizer=my_sgd)
+                training_params=my_sgd)
 
         result = ctx.test(root_nodes=[ce,eval])
         return result

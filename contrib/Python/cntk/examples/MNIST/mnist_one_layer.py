@@ -66,7 +66,7 @@ if (__name__ == "__main__"):
     ec = CrossEntropyWithSoftmax(labels, out)
     ec.tag = 'criterion'
 
-    # Build the optimizer (settings are scaled down)
+    # Specify the training parameters (settings are scaled down)
     my_sgd = SGDParams(epoch_size=600, minibatch_size=32,
                        learning_ratesPerMB=0.1, max_epochs=5, momentum_per_mb=0)
 

@@ -136,7 +136,7 @@ def seqcla():
     
     with LocalExecutionContext('seqcla', clean_up=False) as ctx:
         # train the model
-        ctx.train(root_nodes=[ce], optimizer=my_sgd, input_map=train_reader.map(
+        ctx.train(root_nodes=[ce], training_params=my_sgd, input_map=train_reader.map(
                   features, alias='x', dim=vocab, format='Sparse').map(
                   labels, alias='y', dim=num_labels, format='Dense'))        
         
