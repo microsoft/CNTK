@@ -14,8 +14,7 @@ command = train:test:write
 
 # experiment id
 
-beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
-
+# 30-3: after 'aux' input to LSTMP, in prep for more correct stabiliziation
 # 30-4: same as 30-5 but move to new folder and reenabled memsharing
 # 30-5: same as 29-5 but rerun with logging of stabilizers
 # 29-3: same as 29-5, repro test
@@ -36,7 +35,7 @@ beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 # 27-2: some refactoring, went back to 26-4 from LMSequenceReader
 # 27-1: fixed slicing
 # 27-0: incorrect slicing, dropped first input
-deviceId = 4
+deviceId = 3
 ExpId = 30-$deviceId$-g2p
 #ExpId = 22-3-g2p # for decoding a different model
 decodeModel = 21
@@ -52,13 +51,14 @@ isBidirectional=false
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/S2SAutoEncoder.log1
+stderr = $ExpDir$/G2P
 
 precision  = "float"
 traceLevel = 1
-modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
+modelPath  = "$ModelDir$/G2P.dnn"
 
 # decoding config
+beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
 decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
 decodeOutputPath = "$decodeModelPath$.bl$beamDepth$"
 
@@ -85,7 +85,6 @@ trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
 #trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
 validFile = "g014b2b.train-dev-1-21.bsf.ctf"
 testFile  = "g014b2b.test.bsf.ctf"
-#testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
 startSymbol = "<s>"
 useCNTKTextFormatReader = true
 shareEmbeddings = false
@@ -105,10 +104,9 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # import general config options from outside config values
     inputVocabDim = $inputVocabSize$
     labelVocabDim = $labelVocabSize$
-    nbrClass = $confClassSize$          # for labels only; not functional currently
 
     isAutoencoder = $isAutoEncoder$     # input is only one sequence, meant to reproduce itself
-    attentionSpan = $maxLength$         # 0 to disable. We only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
+    attentionSpan = $maxLength$         # attention window, must be large ebnough for largest input sequence. 0 to disable. Exactly 20 is needed for the g2p CMUDict task
     useBidirectionalEncoder = $isBidirectional$ # bi-directional LSTM for encoder
 
     useStabilizer = true
@@ -291,11 +289,11 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
                                                                        RowStack (S(thoughtVectorEverywhere) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
                                                                        previousHook=PreviousHCWithReorderingHook,
                                                                        enableSelfStabilization=useStabilizer)
-             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
-                                                                                              S(decoderInput), inputDim=decoderInputDim,
-                                                                                              augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
-                                                                                              previousHook=PreviousHCWithReorderingHook,
-                                                                                              enableSelfStabilization=useStabilizer)
+             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                                                                  S(decoderInput), inputDim=decoderInputDim,
+                                                                                  augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
+                                                                                  previousHook=PreviousHCWithReorderingHook,
+                                                                                  enableSelfStabilization=useStabilizer)
              else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
                                           S(decoderInput), inputDim=decoderInputDim,
                                           previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state

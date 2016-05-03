@@ -292,6 +292,8 @@ Constants = [
     # is this like Sequences.Repeat?
     True  = 1
     False = 0
+    None = ConstantTensor (42, (1))
+    IsNone (x) = IsSameObject (x, None)
 ]
 
 ##############################################################################
@@ -531,7 +533,8 @@ RNNs =
     # Projection is enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
-    LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+    # This function also takes an optional auxiliary input, e.g. for suporting attention models.
+    LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
 
@@ -547,19 +550,25 @@ RNNs =
             // parameter macros
             # note: each invocation comes with its own set of weights
             B() = Parameters.BiasParam (cellDim)
-            W() = Parameters.WeightParam (cellDim, inputDim) 
+            W() = Parameters.WeightParam (cellDim, inputDim)        // input
+            A() = Parameters.WeightParam (cellDim, auxDim)          // aux input
             H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden
             C() = Parameters.DiagWeightParam (cellDim)              // cell-to-hiddden (note: applied elementwise)
 
-            it = Sigmoid (W() * x + H() * dhs + C() .* dcs + B())   // input gate(t)
-            bit = it .* Tanh (W() * x + H() * dhs + B())            // applied to tanh of input network
+            # projected contribution from input(s) and bias
+            pin() = if Constants.IsNone (aux)
+                    then B() + W() * x
+                    else B() + W() * x + A() * aux
 
-            ft = Sigmoid (W() * x + H() * dhs + C() .* dcs + B())   // forget-me-not gate(t)
+            it = Sigmoid (pin() + H() * dhs + C() .* dcs)           // input gate(t)
+            bit = it .* Tanh (pin() + H() * dhs)                    // applied to tanh of input network
+
+            ft = Sigmoid (pin() + H() * dhs + C() .* dcs)           // forget-me-not gate(t)
             bft = ft .* dc                                          // applied to cell(t-1)
 
             ct = bft + bit                                          // c(t) is sum of both
 
-            ot = Sigmoid (W() * x + H() * dhs + C() .* S(ct) + B()) // output gate(t)
+            ot = Sigmoid (pin() + H() * dhs + C() .* S(ct))         // output gate(t)
             ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
         ]
 
@@ -593,31 +602,18 @@ RNNs =
     # It returns a record (h,c). To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
 
-    # TODO: remove the -2 once this works
-    RecurrentLSTMPWithAttentionWindow2 = RecurrentLSTMP2
-    RecurrentLSTMP2 = RecurrentLSTMP
-    RecurrentLSTMP2Stack = RecurrentLSTMPStack  # TODO: remove the -2 name once this works
-    #xRecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
-    #[
-    #    prevState = previousHook (lstmState)
-    #    inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-    #    lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
-    #].lstmState // we return the state record (h,c)
-
-    #DontAugmentInputHook (input, lstmState) = input
     RecurrentLSTMP (outputDim/*h.dim*/, cellDim=outputDim,
                     x, inputDim=x.dim,
                     previousHook=BS.RNNs.PreviousHC,
-                    augmentInputHook=[DontAugmentInputHook (input, lstmState) = input].DontAugmentInputHook, augmentInputDim=0,
+                    augmentInputHook=[NoAuxInputHook (input, lstmState) = Constants.None].NoAuxInputHook, augmentInputDim=0,
                     enableSelfStabilization=false) =
     [
         prevState = previousHook (lstmState)        # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
-        augmentedX = augmentInputHook(x, prevState) # optionally augment input, e.g. 
-        augmentedXDim = augmentInputDim + inputDim
+        auxInput = augmentInputHook(x, prevState)   # optionally augment input. Constants.None if none.
 
-        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=augmentedXDim, prevState, enableSelfStabilization=enableSelfStabilization1)
+        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim ; inputDim1 = inputDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
+        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, aux=auxInput, auxDim=augmentInputDim, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
@@ -712,11 +708,9 @@ Seq2Seq =
             #attentionWeights = Softmax (uValid)                    # [1 x beamDepth x attentionSpan]
             weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* TraceDense(  attentionWeights    ,'weights') # [encoderHiddenDim x beamDepth x attentionSpan]
             # TODO: use ReduceSum:
+            # this is the auxiliary input to the LSTMP function
             weightedAttentionAverage = S(Times (weightedAttentionWindow, BS.Constants.OnesTensor (attentionSpan), outputRank=2)) # [encoderHiddenDim x beamDepth]
-
-            # feed both to LSTM as a single augmented input, so that we can reuse the existing LSTM component
-            augmentedX = RowStack (weightedAttentionAverage : input)  # TODO: change to Splice()
-        ].augmentedX
+        ].weightedAttentionAverage
     ].AugmentInputHook
 
     # helper macro that extracts top D hypotheses from a 2D tensor
