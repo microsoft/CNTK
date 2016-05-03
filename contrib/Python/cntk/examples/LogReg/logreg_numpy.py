@@ -6,14 +6,14 @@
 
 """
 Example of logictic regression implementation using training and testing data
-from a file. 
+from a NumPy array. 
 """
 
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-import numpy as np
 
+import numpy as np
 import cntk as C
 
 def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=None):
@@ -30,15 +30,15 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
     Y = np.hstack((Y, 1-Y))
 
     # set up the training data for CNTK
-    x = C.input_reader(X, has_dynamic_axis=False)
-    y = C.input_reader(Y, has_dynamic_axis=False)
+    x = C.input_numpy(X, has_dynamic_axis=False)
+    y = C.input_numpy(Y, has_dynamic_axis=False)
 
     # define our network -- one weight tensor and a bias
-    W = C.ops.parameter((2, d))
-    b = C.ops.parameter((2, 1))
-    out = C.ops.times(W, x) + b
+    W = C.parameter((2, d))
+    b = C.parameter((2, 1))
+    out = C.times(W, x) + b
 
-    ce = C.ops.cross_entropy_with_softmax(y, out)
+    ce = C.cross_entropy_with_softmax(y, out)
     ce.tag = 'criterion'
     ce.name = criterion_name    
     
@@ -50,7 +50,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
     with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
         ctx.train(
                 root_nodes=[ce,eval], 
-                optimizer=my_sgd)
+                training_params=my_sgd)
 
         result = ctx.test(root_nodes=[ce,eval])
         return result

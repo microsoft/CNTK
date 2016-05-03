@@ -14,7 +14,7 @@ from cntk.utils import *
 # Keeping things short
 AA = np.asarray
 C = constant
-I = input_reader
+I = input_numpy
 
 
 @pytest.mark.parametrize("idx, alias_tensor_map, expected", [

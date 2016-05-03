@@ -10,6 +10,6 @@ from .context import *
 from .graph import *
 from .objectives import *
 from . import ops
-from .ops import input, input_reader
 from .optimizer import *
 from .reader import UCIFastReader, CNTKTextFormatReader
+from .ops import *

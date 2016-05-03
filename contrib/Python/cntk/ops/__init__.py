@@ -512,6 +512,30 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
 # reshaping ops
 ################################################################################
 
+
+def reshape(x, shape, name=None):
+    """
+    Reinterpret input samples as having different tensor dimensions
+    One dimension may be specified as 0 and will be inferred
+
+    The output tensor has the same shape as 'shape'.
+    
+    The backward pass propagates the received gradient for the output-shape to the input shape.
+    
+    Examples:
+        >>> reshape([[0,1],[2,3],[4,5]], (2:3))
+        #[[0, 2, 4], [1, 3, 5]]
+            
+    Args:        
+        x: tensor to be reshaped
+        shape: a tuple defining the resulting shape
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk1 import NewReshape
+    return NewReshape(x, shape, 0, 0, name = name)
+
 ################################################################################
 # training ops
 ################################################################################
@@ -520,7 +544,7 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
 # variables_and_parameters ops
 ################################################################################
 
-def input_reader(value, alias=None, has_dynamic_axis=True, name=None):
+def input_numpy(value, alias=None, has_dynamic_axis=True, name=None):
     '''
     Creates an input node from a list of tensors. The tensors represent one
     sample and can have sequences of different lengths. 

@@ -15,9 +15,9 @@ from cntk.tests.test_utils import *
 
 from ...context import get_new_context
 from ...reader import *
-from .. import constant, input_reader
+from .. import constant, input_numpy
 
 
 # Keeping things short
 C = constant
-I = input_reader
+I = input_numpy

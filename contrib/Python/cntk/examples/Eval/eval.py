@@ -21,7 +21,7 @@ def eval_example():
     sample = [2, 3], [4, 5]
     sequence = np.asarray([sample])
     batch = [sequence]
-    X = input_reader(batch)
+    X = input_numpy(batch)
     out = 2.5 * X + 100
 
     with LocalExecutionContext('demo', clean_up=True) as ctx:

@@ -15,3 +15,6 @@ Usage
 
 .. autoclass:: cntk.reader.UCIFastReader
    :members:
+
+.. autoclass:: cntk.reader.InputMap
+   :members:

@@ -5,8 +5,9 @@
 # ==============================================================================
 
 class SGDParams:
-    """This is the Stochastic Gradien Descent optimizer used to train the networks
-
+    """
+    This class encapsulates the training parameters of Stochastic Gradien
+    Descent. 
     """
     
     def __init__(self,
@@ -283,7 +284,7 @@ class SGDParams:
         self.trace_node_names_sparse = trace_node_names_sparse
         self.gradient_check = gradient_check
 
-    def generate_config(self):
+    def _to_config_description(self):
         """Generate the SGDParams configuration block
         """
         config = []

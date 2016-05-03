@@ -11,13 +11,13 @@ from ..reader import *
 from ..graph import *
 from ..context import *
 from ..ops import cntk1 as cntk1_ops
-from ..ops import constant, input_reader
+from ..ops import constant, input_numpy
 
 from cntk.tests.test_utils import *
 
 # Keeping things short
 C = constant
-I = input_reader
+I = input_numpy
 
 
 def test_two_inputs(device_id, precision):
@@ -36,14 +36,14 @@ def test_two_inputs(device_id, precision):
 def test_serialize_unmapped_node(tmpdir):
     tmpfile = str(tmpdir / 'out.txt')
     from cntk.reader import LazyInputReader
-    i1 = input_reader(
+    i1 = input_numpy(
         # 2 samples with 2 sequences each
         [
             AA([[[1, 2]], [[3, 4]]]),
             AA([[[10, 20]]])
         ], alias='X', has_dynamic_axis=True)
 
-    i2 = input_reader(
+    i2 = input_numpy(
         # 2 samples with 1 sequence each
         [
             AA([[[44, 55]]]),

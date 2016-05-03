@@ -50,7 +50,7 @@ class ComputationNode(object):
         '''
         Returns: True if this node is an input node.
         '''
-        return isinstance(self, InputComputationNodeBase)
+        return isinstance(self, _InputComputationNodeBase)
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
@@ -265,7 +265,7 @@ class ComputationNode(object):
 
         return name, node_counter, desc, inputs
 
-    def to_config(self, input_map=None):
+    def _to_config_description(self, input_map=None):
         '''
         Generate CNTK configuration for this node including the configuration
         for all dependent child nodes.
@@ -283,7 +283,7 @@ class ComputationNode(object):
         return "\n".join(desc), inputs
 
 
-class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
+class _InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
 
     '''
     Base class for all non-image input nodes nodes and operators. 
@@ -291,7 +291,7 @@ class InputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
     pass
 
 
-class ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
+class _ImageInputComputationNodeBase(with_metaclass(ABCMeta, ComputationNode)):
 
     '''
     Base class for all image input nodes nodes and operators. 
@@ -319,7 +319,7 @@ def eval(node):
     """    
     
     from cntk.context import get_context        
-    from cntk.ops import input_reader
+    from cntk.ops import input_numpy
 
     # call a helper method to get a context
     ctx = get_context()    
@@ -339,7 +339,7 @@ def eval(node):
                         # inputs have the outmost dimension for sequences
                         val = [val]
 
-                    ir = input_reader([val], alias=p,
+                    ir = input_numpy([val], alias=p,
                                 has_dynamic_axis=False, name=p)
                     setattr(node, p, ir)
                     first = False
@@ -348,37 +348,6 @@ def eval(node):
 
     return ctx.eval(node)
 
-
-class LazyInput(InputComputationNodeBase):
-
-    '''
-    Lazy reader that takes an NumPy array and serializes it to disk only when
-    the complete graph is specified. This is necessary in case of multiple
-    inputs, because they have to reside in the same file.
-
-    Note:
-        All readers of this type need to have the exact same number of samples,
-        as they will be aligned by the first index.
-
-    Note:
-        This class will be deprecated once the reader bundlers have arrived in
-        CNTK.
-
-    Args:
-        value (ndarray): the data to be serialized.
-        input_alias (str): a short name for the input, it is how inputs are
-        referenced in the data files. If not provided, it will be automatically
-        assigned.
-        has_dynamic_axis (bool): whether the tensor already has the data
-        packaged as sequences. If not, it will be wrapped again in a sequence of
-        length 1.
-
-    '''
-
-    def __init__(self, value, input_alias=None, has_dynamic_axis=True):
-        self.value = value
-        self.input_alias = input_alias
-        self.has_dynamic_axis = has_dynamic_axis
 
 # At the bottom to avoid circular import
 from . import ops
