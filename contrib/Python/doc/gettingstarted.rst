@@ -65,7 +65,8 @@ First basic use
 The CNTK Python API allows users to easily define a computational network, define the data 
 that will pass through the network, setup how learning should be performed, and finally, train 
 and test the network. Here we will go through a simple example of using the CNTK Python API to 
-learn to separate data into two classes using a simple logistic regression variant::
+learn to separate data into two classes. Following the code, some basic CNTK concepts will be 
+explained::
 
     import cntk as C
     import numpy as np
@@ -81,30 +82,32 @@ learn to separate data into two classes using a simple logistic regression varia
         Y = np.hstack((Y, 1-Y))
 
         # set up the training data for CNTK
-        x = C.input_reader(X, has_dynamic_axis=False)
-        y = C.input_reader(Y, has_dynamic_axis=False)
+        x = C.input_numpy(X, has_dynamic_axis=False)
+        y = C.input_numpy(Y, has_dynamic_axis=False)
 
-        # define our network -- one weight tensor and a bias
-        W = C.ops.parameter((2, d))
-        b = C.ops.parameter((2, 1))
-        out = C.ops.times(W, x) + b
+        # define our network parameters: a weight tensor and a bias
+        W = C.parameter((2, d))
+        b = C.parameter((2, 1))
+		
+        # create a dense 'layer' by multiplying the weight tensor and  
+        # the features and adding the bias
+        out = C.times(W, x) + b
 
-        # and the criterion node using cross entropy with softmax
-        ce = C.ops.cross_entropy_with_softmax(y, out)
+        # setup the criterion node using cross entropy with softmax
+        ce = C.cross_entropy_with_softmax(y, out, name='loss')
         ce.tag = 'criterion'
-        ce.name = 'loss'
 
         # define our SGD parameters and train!
         my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
         with C.LocalExecutionContext('logreg') as ctx:
-            ctx.train(root_nodes=[ce], optimizer=my_sgd)	        
+            ctx.train(root_nodes=[ce], training_params=my_sgd)	        
             print(ctx.test(root_nodes=[ce]))
 
 
 In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
-one-hot vector of either ``[0 1]`` or ``[1 0]``. We then begin describing the topology of our network 
-by setting up the data inputs. This is typically done using the `CNTKTextFormatReader` by reading data 
-in from a file, but for interactive experimentation and small examples we can use the `InputReader` to 
+one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
+by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
+in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
 access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
 the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
 set ``has_dynamic_axis`` to False.
@@ -121,8 +124,12 @@ SGD looks at all of the training data in each epoch. Next, `minibatch_size` is t
 at for each minibatch; `learning_rates_per_mb` is the learning rate that SGD will use when the parameters are 
 updated at the end of each minibatch; and `max_epochs` is the maximum number of epochs to train for.
 
-We set up an execution context, train the network passing in the root node and the optimizer we are using, and 
-finally, test its performance. Here is the output of the above example:
+The last step is to set up an execution context. An execution context can be either `Local` or `Deferred`. In the 
+former case, as we use here, the methods (such as training and testing the network) are done locally and 
+immediately so that the result is returned interactively to python. With a `Deferred` context, the methods simply 
+set up a configuration file that can be used with CNTK at a later date. Here, with the local execution context, 
+we train the network by passing in the root node and the optimizer we are using, and finally, we test its 
+performance. Here is the output of the above example:
 
 ``{'SamplesSeen': 500, 'Perplexity': 1.1140191, 'loss': 0.10797427}``
 
@@ -137,17 +144,25 @@ One of the most exciting areas in deep learning is the powerful idea of recurren
 neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the deep 
 learning world. They are networks with loops in them and they allow us to model the 
 current state given the result of a previous state. In other words, they allow information 
-to persist.
+to persist. So, while a traditional neural network layer can be thought of as having data 
+flow through as in the figure on the left below, an RNN layer can be seen as the figure 
+on the right.
 
+.. figure:: images/nn_layers.png
+    :width: 600px
+    :alt: NN Layers
+	
 A particular type of RNN -- the Long Short Term Memory (LSTM) network -- is exceedingly 
 useful and in practice is what we commonly use when implementing an RNN. For more on why 
 LSTMs are so powerful, see, e.g. http://colah.github.io/posts/2015-08-Understanding-LSTMs/. 
 For our purposes, we will concentrate on the central feature of the LSTM model: the `memory 
 cell`. 
 
-.. image:: images/lstm_cell.png
+.. figure:: images/lstm_cell.png
     :width: 400px
     :alt: LSTM cell
+	
+    An LSTM cell.
 
 The ...
 
