@@ -174,7 +174,7 @@ class CNTKTextFormatReader(AbstractReader):
 
         return InputMap(self).map(node_or_name, **kw)
 
-    def generate_config(self, input_map):
+    def _to_config_description(self, input_map):
         '''
         Write the reader configuration. For this, all previously registered
         :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
@@ -329,7 +329,7 @@ class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
     """
 
     @abstractmethod
-    def generate_config(self):
+    def _to_config_description(self):
         """Generate the reader configuration block
         """
         raise NotImplementedError
@@ -375,7 +375,7 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
         self.inputs_def.append(
             (node_or_name, input_start, input_dim, num_of_classes, label_mapping_file))
 
-    def generate_config(self):
+    def _to_config_description(self):
         """Generate the reader configuration block
         """
         template = '''\
@@ -479,7 +479,7 @@ class InputMap(object):
     def is_empty(self):
         return not self.has_mapped() and not self.has_unmapped()
 
-    def generate_config(self):
+    def _to_config_description(self):
         if self.reader is None:
             if not self.unmapped_nodes:
                 # No inputs in the graph
@@ -497,10 +497,10 @@ class InputMap(object):
             
             r = CNTKTextFormatReader(filename)
 
-            return r.generate_config(self)
+            return r._to_config_description(self)
 
         else:
-            return self.reader.generate_config(self)
+            return self.reader._to_config_description(self)
 
     def _add_unmapped(self, node):
         '''
