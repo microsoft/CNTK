@@ -8,7 +8,6 @@ __version__ = '1.4'
 
 from .context import *
 from .graph import *
-from .objectives import *
 from . import ops
 from .sgd import *
 from .reader import UCIFastReader, CNTKTextFormatReader
