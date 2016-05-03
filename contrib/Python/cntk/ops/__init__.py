@@ -369,7 +369,6 @@ def relu(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -391,7 +390,6 @@ def sigmoid(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -412,7 +410,6 @@ def tanh(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -438,7 +435,6 @@ def softmax(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -452,9 +448,12 @@ def exp(x, name=None):
 
     :math:`exp(x) = {e^x}`
 
+    Example:
+        >>> C.eval(C.exp([0., 1.]))
+        [array([[ 1.      ,  2.718282]])]
+
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -468,15 +467,14 @@ def abs(x, name=None):
 
     :math:`abs(x) = |x|`
 
-    Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-
     Example:
         >>> cntk.eval(cntk.ops.abs([-1, 1, -2, 3]))
         [[1, 1, 2, 3]]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Abs
     return Abs(x, name=name)
@@ -610,7 +608,6 @@ def input_numpy(value, alias=None, has_dynamic_axis=None, name=None):
         alias (str): alias to be used in the data file
         has_dynamic_axis (bool): If True, the outermost dimension is treated as the dynamic axis. If False, it will wrap each sample into its own 1-dimensional array.
         alias (str): optional the alias to be used when serializing the data into an intermediate file
-
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
