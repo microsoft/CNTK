@@ -508,7 +508,8 @@ Parameters =
     StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-            beta = Exp (BiasParam ((inputDim)))
+            beta = Exp (DiagWeightParam ((inputDim)))
+            #beta = Exp (BiasParam ((inputDim)))
             result = beta .* x
         ].result
     else x
