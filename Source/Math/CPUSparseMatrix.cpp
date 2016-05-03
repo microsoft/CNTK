@@ -274,6 +274,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     }
 }
 
+#if 0
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*v*/)
 {
@@ -291,6 +292,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*v*/)
 {
     NOT_IMPLEMENTED;
 }
+#endif
 
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
@@ -1375,10 +1377,10 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const&);
 template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
-template void CPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
-template void CPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
+//template void CPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
+//template void CPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
-template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
+//template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
 template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);

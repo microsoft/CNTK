@@ -6,8 +6,8 @@
 
 #include <stdio.h>
 #include "CPUMatrix.h"
-#include "GPUMatrix.h"
-#include "GPUSparseMatrix.h"
+//#include "GPUMatrix.h"
+//#include "GPUSparseMatrix.h"
 #include <map>
 #include <unordered_map>
 
@@ -84,10 +84,10 @@ public:
 public:
 
     void SetValue(const size_t row, const size_t col, ElemType val);
-    void SetValue(const CPUMatrix<ElemType>& /*val*/);
-    void SetValue(const GPUMatrix<ElemType>& /*val*/);
+    //void SetValue(const CPUMatrix<ElemType>& /*val*/);
+    //void SetValue(const GPUMatrix<ElemType>& /*val*/);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
-    void SetValue(const GPUSparseMatrix<ElemType>& /*val*/);
+    //void SetValue(const GPUSparseMatrix<ElemType>& /*val*/);
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 

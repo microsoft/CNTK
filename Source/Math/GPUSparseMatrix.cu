@@ -93,9 +93,8 @@ GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUMatrix<ElemType>& deepCopy, 
 template <class ElemType>
 GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-
-	ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
-	DeepCopy(deepCopy);
+    ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
+    DeepCopy(deepCopy);
 }
 
 // PrepareDevice - Setup the correct cuda context for an operation
@@ -145,6 +144,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
     DeepCopy(deepCopy);
 }
 
+#if 0
 // from CPU
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
@@ -234,6 +234,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
     else
         NOT_IMPLEMENTED;
 }
+#endif
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatrix) const
@@ -414,11 +415,13 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     SetComputeDeviceId(PrepareDevice(to_id));
 }
 
+#if 0
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*denseMatrix*/)
 {
     NOT_IMPLEMENTED;
 }
+#endif
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
@@ -2659,12 +2662,12 @@ template GPUSparseMatrix<char>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixForma
 template GPUSparseMatrix<char>::GPUSparseMatrix(const size_t, const size_t, const size_t, DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char> const&);
 template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
-template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
+//template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
-template void GPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
+//template void GPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char>&) const;
-template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>&) const;
+//template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>&) const;
 template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
 template void GPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void GPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);

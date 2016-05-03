@@ -19,9 +19,9 @@
 #include <memory>   // for unique_ptr
 #include <limits.h> // for ULONG_MAX
 
-#include "CPUMatrix.h"
-#include "CPUSparseMatrix.h"
-#include "GPUSparseMatrix.h"
+//#include "CPUMatrix.h"
+//#include "CPUSparseMatrix.h"
+//#include "GPUSparseMatrix.h"
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -227,10 +227,10 @@ public:
 
     void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
 
-    void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
     void SetDiagonalValue(const ElemType v);

@@ -1207,12 +1207,11 @@ void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom)
     DecideAndMoveToRightDevice(deepCopyFrom, *this);
     SwitchToMatrixType(deepCopyFrom.GetMatrixType(), deepCopyFrom.GetFormat(), false);
 
-    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
-                            this,
-                            m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
-                            m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
-                            m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
-                            m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix));
+    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, this,
+        { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+        { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+        { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+        { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
 }
 
 template <class ElemType>
