@@ -1,0 +1,769 @@
+# G2P.cntk
+
+makeMode = false
+
+# directory defaults (if not overridden)
+RunRootDir = "../.."             # default if not overridden
+DataDir    = "$RunRootDir$/Data"
+CacheDir   = "$DataDir$/cache"   # (not used currently)
+ExpRootDir = "$RunRootDir$"
+
+command = train:test:write
+#command = write
+#command = dump
+
+# experiment id
+
+beamDepth = 1                    # 0=predict; 1=greedy; >1=beam
+
+# 30-4: same as 30-5 but move to new folder and reenabled memsharing
+# 30-5: same as 29-5 but rerun with logging of stabilizers
+# 29-3: same as 29-5, repro test
+# 29-5: same as 29-4 but right-to-left encoder
+# 29-4: trying once more with new reader, MB size 70, LR changed to 0.0035,then 0.002; shared stab weights in LSTMP
+# 29-2: switched to new reader again, emulating 69-dim outputs  --gives comparable 'ce', but not comparable convergence; SOME att weights are totally flat
+# 29-1: same as 29-0 but also switched back to 128 MBSize  --also GLITCH??
+# 29-0: switched back to old reader   --not quite the same :( what am I missing?
+# 28-5: like 28-4 but using default axis for labels  --minor glitch, got worse
+# 28-4: like 28-3 but with momentum changed from 2500 to 1250 (since applied to different #samples)  --GLITCH
+# 28-3: like 28-2 but with randomization enabled
+# 28-2: like 28-0 but after yet another reader fix   --GLITCH
+# 28-1: like 28-0 but halving the MB size--CNTKTextFormatReader interprets the length differently
+# 28-0: CNTK reader after data-format fix
+# 27-5: trying CNTK reader again after Ryan's bug fix --data format bad
+# 27-4: back to LMSequenceReader (regression test)
+# 27-3: used </s> for sent end
+# 27-2: some refactoring, went back to 26-4 from LMSequenceReader
+# 27-1: fixed slicing
+# 27-0: incorrect slicing, dropped first input
+deviceId = 4
+ExpId = 30-$deviceId$-g2p
+#ExpId = 22-3-g2p # for decoding a different model
+decodeModel = 21
+
+hiddenDim = 512  #420 # 1024 # 200
+maxLayer = 2
+isBidirectional=false
+#hiddenDim = 256 # 1024 # 200
+#maxLayer = 2
+#isBidirectional=true
+
+# directories
+ExpDir    = "$ExpRootDir$/$ExpId$"
+ModelDir  = "$ExpDir$/Models"
+
+stderr = $ExpDir$/S2SAutoEncoder.log1
+
+precision  = "float"
+traceLevel = 1
+modelPath  = "$ModelDir$/S2SAutoEncoder.dnn"
+
+# decoding config
+decodeModelPath = "$modelPath$.$decodeModel$" # epoch to decode appended
+decodeOutputPath = "$decodeModelPath$.bl$beamDepth$"
+
+dumpModelPath = "$modelPath$.2" # model to dump if needed
+
+confClassSize = 0
+maxLength = 20
+isAutoEncoder=false
+
+#inputVocabSize = 69
+#labelVocabSize = 69
+#trainFile = "g014b2b.train-dev-20-21.bsf.joint"
+##trainFile = "g014b2b.train-dev-1-21.bsf.joint" # small one for debugging
+#validFile = "g014b2b.train-dev-1-21.bsf.joint"
+#testFile  = "g014b2b.test.bsf.joint"
+##testFile  = "g014b2b.test.bsf.joint.masked"
+#startSymbol = "<s>"
+#useCNTKTextFormatReader = false
+#shareEmbeddings = true
+
+inputVocabSize = 29     # 26 letters plus start, end, apostrophe
+labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
+trainFile = "g014b2b.train-dev-20-21.bsf.ctf"
+#trainFile = "g014b2b.train-dev-1-21.bsf.ctf" # small one for debugging
+validFile = "g014b2b.train-dev-1-21.bsf.ctf"
+testFile  = "g014b2b.test.bsf.ctf"
+#testFile  = "g014b2b.test.bsf.ctf.masked"   # not existing yet
+startSymbol = "<s>"
+useCNTKTextFormatReader = true
+shareEmbeddings = false
+
+#######################################
+#  network definition                 #
+#######################################
+
+BrainScriptNetworkBuilder = (new ComputationNetwork [
+
+    enableTracing = true
+    traceFrequency = 100
+    tracingLabelMappingFile = "$ModelDir$/vocab.wl"
+    beamDepth=3 // for above Trace macros only, need to clean that up
+    include "S2SLib.bs"
+
+    # import general config options from outside config values
+    inputVocabDim = $inputVocabSize$
+    labelVocabDim = $labelVocabSize$
+    nbrClass = $confClassSize$          # for labels only; not functional currently
+
+    isAutoencoder = $isAutoEncoder$     # input is only one sequence, meant to reproduce itself
+    attentionSpan = $maxLength$         # 0 to disable. We only support fixed-size attention windows for now. 0 means no attention; exactly 20 is needed for the g2p CMUDict task
+    useBidirectionalEncoder = $isBidirectional$ # bi-directional LSTM for encoder
+
+    useStabilizer = true
+    useEncoder    = true                # if false, this becomes a regular RNN
+    useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
+
+    # import some names
+    Parameters = BS.Parameters
+    Constants  = BS.Constants
+    Sequences  = BS.Sequences
+    Loop       = BS.Loop
+    Boolean    = BS.Boolean
+
+    # dimensions
+    inputEmbeddingDim = inputVocabDim # 300
+    labelEmbeddingDim = labelVocabDim # 300
+    shareEmbeddings = $shareEmbeddings$
+    hiddenDim    = $hiddenDim$
+    attentionDim = 128 # dim of attention  projection
+    maxLayer = $maxLayer$
+
+    encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
+    decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
+
+    # inputs
+    # Inputs must be defined on top-scope level in order to get a clean name.
+    useCNTKTextFormatReader = $useCNTKTextFormatReader$
+    #input = if !useCNTKTextFormatReader then Input (inputVocabDim, tag='feature') else Fail("'input' defined when using the CNTKTextFormatReader") # LMSequenceReader
+
+    inputAxis = DynamicAxis()
+    //labelsAxis = DynamicAxis()
+    src = /*Sparse*/Input (inputVocabDim, dynamicAxis=inputAxis) # CNTKTextFormatReader  --TODO: may need to guard as well
+    tgt = /*Sparse*/Input ($labelVocabSize$/*labelVocabDim*//*, dynamicAxis=labelsAxis*/)
+
+    # get out input and label data
+    # This will go away once we can switch to CNTKTextFormatReader.
+    streams = [
+        rawInput = input
+        out = if isAutoencoder
+        then [
+            # for an auto-encoder, both are the same
+            input  = rawInput
+            # strip separators
+            labels = Slice (1,  0, rawInput,  axis=-1)  # e.g. A   B   C   </s>
+            labelSentenceStart = First (rawInput)
+        ]
+        else if useCNTKTextFormatReader then [
+            input  = TraceSparse (src, 'inp')
+            #tgt1 = RowStack (tgt : ConstantTensor (0, labelVocabDim-$labelVocabSize$))   # pad with zeroes, just like the LMSequenceReader
+            labels = TraceSparse (    Slice (1,  0, tgt,  axis=-1),   'lbl')  # e.g. A   B   C   </s>
+            labelSentenceStart = First (tgt)
+        ]
+        else [
+            # we encode input and label as a single input; this splits it into two
+            # This dance will become unnecessary once the new Reader API is fully hooked in.
+            separatorRow = 2                                                                          # row index of separator symbokl 
+            isSeparator = RowSlice (separatorRow, 1, rawInput)                                        # cut out the separator as a flag
+            inInput  = Boolean.Or (FutureValue (1, inInput , defaultHiddenActivation=0), isSeparator) # flag sequence: word is input...
+            inLabels = Boolean.Or (PastValue   (1, inLabels, defaultHiddenActivation=0), isSeparator) # ...or labels
+            input   = Sequences.Gather (inInput,  rawInput)                                           # use flags to split raw input into input and labels
+            labels1 = Sequences.Gather (inLabels, rawInput)                                           # (both have different lengths)
+            # strip separators
+            labels  = Slice (1,  0, labels1,  axis=-1)  # e.g. A   B   C   </s>
+            labelSentenceStart = First (labels1)
+        ]
+    ].out
+    inputSequence  = Pass (streams.input)                   # e.g. <s> A   B   C    </s>
+    labelSequence  = Pass (streams.labels)                  # e.g. A   B   C   </s>
+    labelSentenceStart = First (streams.labelSentenceStart) # e.g. <s>
+
+    inputSequenceDim = inputVocabDim # TODO: they are the same; but route these through the struct above
+    labelSequenceDim = labelVocabDim
+
+    # helpers   --TODO: move to CNTK.core.bs
+    First (x) = Slice (0,  1, x,  axis=-1)
+    Last (x)  = Slice (-1, 0, x,  axis=-1)
+
+    isFirstLabel = Loop.IsFirst (labelSequence)
+
+    # embeddings  --as long as we cannot read multiple sequences, we got one embedding
+    # Note: Embeddings are linear, so better stabilize. We really should use BatchNorm.
+
+    # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
+    Einput  =                                     Parameters.WeightParam (inputSequenceDim, inputEmbeddingDim)
+    Elabels = if shareEmbeddings then Einput else Parameters.WeightParam (labelSequenceDim, labelEmbeddingDim)
+    EmbedInput (x)  = if inputSequenceDim == inputEmbeddingDim then x else TransposeTimes (Einput, x)
+    EmbedLabels (x) = if labelSequenceDim == labelEmbeddingDim then x else TransposeTimes (Elabels, x)
+
+    inputEmbedded  = EmbedInput  (inputSequence)
+    labelsEmbedded = EmbedLabels (labelSequence)
+    #labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
+    labelSentenceStartEmbedded = Pass (EmbedLabels (labelSentenceStart))  # TODO: remove Pass() if not actually needed in decoder
+    labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
+
+    S(x) = Parameters.Stabilize (x, enabled=useStabilizer)
+
+    #############################################################
+    # encoder (processes inputEmbedded)
+    #############################################################
+
+    # TODO: do not reverse our inputs; instead, if needed, use a backwards-running loop here
+    encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
+    encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim,
+        previousHook=BS.RNNs.NextHC,
+        enableSelfStabilization=useStabilizer)
+    encoderOutput = encoder[Length (encoderDims)-1]
+
+    # that last frame should be fed as an additional input to every decoder step
+    # Three ways of passing encoder state:
+    #  1. as initial state for decoder (Google style)
+    #  2. as side information for every decoder step (NYU style)
+    #  3. attention
+
+    thoughtVector = [
+        h = Last (encoderOutput.h)
+        c = Last (encoderOutput.c)
+        dim = encoderOutput.dim
+    ]
+
+    thoughtVectorPadded = [ # padded with zeroes until end of target sequence
+        h = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.h)
+        c = Sequences.BroadcastSequenceAs (labelsEmbedded, thoughtVector.c)
+        dim = thoughtVector.dim
+    ]
+
+    # NYU style: expand h to all, drop c
+    # TODO: just use use thoughtVectorPadded.h (do this when we next test this branch again)
+    thoughtVectorEverywhere = Boolean.If (Loop.IsFirst (thoughtVectorPadded.h),    # if first entry
+                                 /*then*/ thoughtVectorPadded.h,                   # then copy that
+                                 /*else*/ Loop.Previous (thoughtVectorEverywhere)) # else just propagate to the front
+    # TODO: use thoughtVectorPadded.h  --TODO: use the new LSTM with augmentation
+
+    # decoder
+    # NYU style:
+    # The decoder starts with hidden state 0
+    # and takes as input [thoughtVectorEverywhere; previous word].
+
+    # we bake into the LSTMs to multiply h and c with beamSearchReorderHook, which we will patch in decoding
+    # ReorderTopN (past_h_or_c) = Times (TraceState (past_h_or_c, 'past'), TraceDense (tokens.from, 'backp'))
+
+    #############################################################
+    # decoder
+    #############################################################
+
+    beamSearchReorderHook = Pass (Constants.OnesTensor (1:1))
+
+    # helper functions to delay h and c with possibility to later hook in a different matrix
+
+    PreviousHCFromThoughtVectorWithReorderingHook (lstmState) = [ # with thought vector and beam-search hook
+       isFirst = Loop.IsFirst (initialState.h)
+       # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
+       h = Boolean.If (isFirst, thoughtVectorPadded.h, Loop.Previous (lstmState.h * beamSearchReorderHook))             // hidden state(t-1)
+       c = Boolean.If (isFirst, thoughtVectorPadded.c, Loop.Previous (lstmState.c * beamSearchReorderHook))             // cell(t-1)
+       dim = lstmState.dim
+    ]
+
+    PreviousHCWithReorderingHook (lstmState) = [
+       h = Loop.Previous (lstmState.h * beamSearchReorderHook)             // hidden state(t-1)
+       c = Loop.Previous (lstmState.c * beamSearchReorderHook)             // cell(t-1)
+       dim = lstmState.dim
+    ]
+
+    decoderHistoryFromGroundTruth = labelsEmbedded              # decoder input for training is ground truth...
+    decoderHistoryFromOutput = Pass (EmbedLabels (Hardmax (z))) # ...but for (greedy) decoding, the decoder's output is its input
+
+    # during training, we use ground truth. For decoding, we will rewire decoderHistoryHook = decoderHistoryFromOutput
+    decoderHistoryHook = Pass (decoderHistoryFromGroundTruth) # this gets redirected in decoding to feed back decoding output instead
+
+    decoderInput    = Pass (Boolean.If (isFirstLabel/*Loop.IsFirst (labelSentenceStartEmbeddedScattered)*/, labelSentenceStartEmbeddedScattered, Loop.Previous (decoderHistoryHook)))
+    decoderInputDim = labelEmbeddingDim #labelsEmbedded.dim
+
+    decoderDynamicAxis = labelsEmbedded
+    FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
+
+    # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
+    decoderOutputLayer = Length (decoderDims)-1
+    decoder[i:0..decoderOutputLayer] =
+        if i == 0
+        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                                                       RowStack (S(thoughtVectorEverywhere) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
+                                                                       previousHook=PreviousHCWithReorderingHook,
+                                                                       enableSelfStabilization=useStabilizer)
+             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMPWithAttentionWindow2 (decoderDims[i], cellDim=decoderDims[i],
+                                                                                              S(decoderInput), inputDim=decoderInputDim,
+                                                                                              augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
+                                                                                              previousHook=PreviousHCWithReorderingHook,
+                                                                                              enableSelfStabilization=useStabilizer)
+             else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                          S(decoderInput), inputDim=decoderInputDim,
+                                          previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state
+                                          enableSelfStabilization=useStabilizer)
+        else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
+                                     S(decoder[i-1].h), inputDim=/*decoderDims[i-1]*/ decoder[i-1].dim,
+                                     previousHook=PreviousHCWithReorderingHook,
+                                     enableSelfStabilization=useStabilizer)
+    decoderOutput = decoder[decoderOutputLayer].h
+    #decoderDim = decoderOutput.dim
+    decoderDim = decoderDims[decoderOutputLayer]
+
+    # and add a softmax layer on top
+
+    W = Parameters.WeightParam (labelSequenceDim, decoderDim)
+    B = Parameters.BiasParam (labelSequenceDim)
+
+    z = W * S(decoderOutput) + B;  // top-level input to Softmax
+
+    #############################################################
+    # training criteria
+    #############################################################
+
+    ce = NewCrossEntropyWithSoftmax (labelSequence, z, tag='criterion')
+    #ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
+    #ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
+    #errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+    cors = ReduceSum (labelSequence .* Hardmax (z), tag='evaluation')
+    errs = Pass (Constants.One - cors, tag='evaluation')
+
+    # score output for decoding
+    scoreSequence = Pass (z)
+])
+
+#######################################
+# shared reader definition            #
+#######################################
+
+reader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$trainFile$"
+    #randomize="none"
+    randomize="auto"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+    chunkSizeInBytes = 30000000 # large enough for entire data set
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = $inputVocabSize$
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = $labelVocabSize$
+            format = "sparse"
+        ]
+    ]
+]
+
+cvReader = [
+    readerType = "CNTKTextFormatReader" 
+    file = "$DataDir$/$validFile$"
+    randomize="none"
+    skipSequenceIds = "false"
+    maxErrors = 100
+    traceLevel = 2
+ 
+    input = [
+        src  = [
+            alias = "s"
+            dim = $inputVocabSize$
+            format = "sparse"
+        ]
+        tgt = [
+            alias = "t"
+            dim = $labelVocabSize$     # 39 phonemes (~AX missing), start and end symbol (in index 0)
+            format = "sparse"
+        ]
+    ]
+]
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = [
+    action = "train"
+    traceLevel = 1
+    epochSize = 0               # (for quick tests, this can be overridden with something small)
+
+    # BrainScriptNetworkBuilder is defined in outer scope
+
+    SGD = [
+        #minibatchSize = 128:128:256:512
+        #minibatchSize = 64:64:128:256
+        minibatchSize = 70:70:70:140:280
+        learningRatesPerSample = 0.0035*2:0.002 #0.01 #0.005 # 0.01
+        momentumAsTimeConstant = 1500 #2500
+        gradientClippingWithTruncation = true   # TODO: clip and truncate? What is the difference?
+        clippingThresholdPerSample = 1   #15.0 # 1#visibly impacts objectives, but not final result, so keep it for safety
+        maxEpochs = 50
+        numMBsToShowResult = 100
+        firstMBsToShowResult = 10
+        gradUpdateType = "none" # FSAdaGrad?
+        loadBestModel = false   # true # broken for some models (rereading overwrites something that got set by validation)
+
+        # tracing (enable these for debugging)
+        #traceNodeNamesReal = labelsEmbedded:decoderInput:"decoder[0].lstmState._privateInnards.ht":z.Plus_left.Times_right.result:z:ce
+        #traceNodeNamesReal = labelsEmbedded:decoderInput:z:ce
+        #traceNodeNamesReal = thoughtVectorEverywhere.result:zMask:z:ce:wer:indexTestVals:index:packedIndex:filtered:unfiltered:isTraining
+        #traceNodeNamesCategory = inputSequence.out:labelSequence
+
+        dropoutRate = 0.0
+
+        # settings for Auto Adjust Learning Rate
+        AutoAdjust = [
+            autoAdjustLR = "adjustAfterEpoch"
+            reduceLearnRateIfImproveLessThan = 0.001
+            continueReduce = false
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            numMiniBatch4LRSearch = 100
+            numPrevLearnRates = 5
+            numBestSearchEpoch = 1
+        ]
+    ]
+]
+
+#######################################
+#  DUMP CONFIG                        #
+#######################################
+
+# dumps the model, specifically the learnable parameters
+
+dump = [
+    action = "dumpnode"
+    modelPath = "$dumpModelPath$"
+    outputFile = "$dumpModelPath$.txt"
+]
+
+#######################################
+#  TEST CONFIG                        #
+#######################################
+
+test = [
+    action = "eval"
+
+    # correspond to the number of words/characteres to train in a minibatch
+    minibatchSize = 8192                # choose as large as memory allows for maximum GPU concurrency
+    # need to be small since models are updated for each minibatch
+    traceLevel = 1
+    epochSize = 0
+
+    reader = [
+        file = "$DataDir$/$testFile$"
+        #randomize = "none" # gets ignored
+    
+        # everything below here is duplicated from 'reader'
+        readerType = LMSequenceReader
+        mode = "softmax"
+        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+    
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+    
+        #### write definition
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        #writerType = BinaryReader
+        wfile = $CacheDir$\sequenceSentence.bin
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+        #wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        #windowSize - number of records we should include in BinaryWriter window
+        windowSize = 10000
+    
+        # additional features sections
+        # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
+        input = [
+            dim = 0     # no (explicit) labels   ...labelDim correct??
+            ### write definition
+            sectionType = "data"
+        ]
+        # labels sections
+        # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
+        # labels sections  --this is required, but our labels are extracted from the inLabels
+        inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
+            dim = 1
+    
+            # vocabulary size
+            labelType = "category"
+            labelDim = "$inputVocabSize$"
+            labelMappingFile = "$ModelDir$/vocab.wl"
+            beginSequence = "$startSymbol$" # "</s>"
+            endSequence   = "</s>"
+    
+            #### Write definition ####
+            # sizeof(unsigned) which is the label index type
+            elementSize=4
+            sectionType=labels
+            mapping = [
+              #redefine number of records for this section, since we don't need to save it for each data record
+              wrecords=11
+              #variable size so use an average string size
+              elementSize=10
+              sectionType=labelMapping
+            ]
+            category = [
+              dim=11
+              #elementSize=sizeof(ElemType) is default
+              sectionType=categoryLabels
+            ]
+        ]
+        outputDummy = [
+            labelType = "none"
+        ]
+    ]
+]
+
+#######################################
+#  WRITE CONFIG                       #
+#######################################
+
+# This will decode the test set. The beamDepth parameter specifies the decoding mode:
+#  beamDepth = 0: word prediction given ground truth history (only useful for perplexity measurement)
+#  beamDepth = 1: greedy decoding: At each time step, choose a word greedily
+#  beamDepth > 1: beam decoder. Keep 'beamDepth' best hypotheses, and output their globally best at the end.
+
+write = [
+    action = "write"
+
+    # select the decoder
+    BrainScriptNetworkBuilder = (
+        # beamDepth = 0 will decode with the unmodified model.
+        # beamDepth = 1 will modify the model to use the decoding output as the decoder's input.
+        # beamDepth > 1 will modify the model to track multiple hypotheses and select the globally best at the end.
+        if      $beamDepth$ == 0 then BS.Network.Load ("$decodeModelPath$")
+        else if $beamDepth$ == 1 then BS.Seq2Seq.GreedySequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"))
+        else                          BS.Seq2Seq.BeamSearchSequenceDecoderFrom (BS.Network.Load ("$decodeModelPath$"), $beamDepth$)
+    )
+
+    outputPath = $decodeOutputPath$
+    #outputPath = "-"                    # "-" will write to stdout; useful for debugging
+
+    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+
+    # output format
+    # We configure the output to emit a flat sequence of token strings.
+    format = [
+        type = "category"
+        transpose = false
+        labelMappingFile = "$ModelDir$/vocab.wl"
+    ]
+
+    minibatchSize = 8192                # choose this to be big enough for the longest sentence
+    traceLevel = 1
+    epochSize = 0
+
+    reader = [
+        file = "$DataDir$/$testFile$"
+        #randomize = "none" # gets ignored
+    
+        # everything below here is duplicated from 'reader'
+        readerType = LMSequenceReader
+        mode = "softmax"
+        nbruttsineachrecurrentiter = 1      # 1 means one per minibatch
+        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+
+        # word class info
+        wordclass = "$ModelDir$/vocab.txt"
+
+        #### write definition
+        # if writerType is set, we will cache to a binary file
+        # if the binary file exists, we will use it instead of parsing this file
+        #writerType = BinaryReader
+        wfile = $CacheDir$\sequenceSentence.bin
+        # if calculated size would be bigger, that is used instead
+        wsize = 256
+        #wrecords - number of records we should allocate space for in the file
+        # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+        wrecords = 1000
+        #windowSize - number of records we should include in BinaryWriter window
+        windowSize = 10000
+    
+        # additional features sections
+        # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
+        input = [
+            dim = 0     # no (explicit) labels   ...labelDim correct??
+            ### write definition
+            sectionType = "data"
+        ]
+        # labels sections
+        # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
+        # labels sections  --this is required, but our labels are extracted from the inLabels
+        inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
+            dim = 1
+
+            # vocabulary size
+            labelType = "category"
+            labelDim = "$inputVocabSize$"
+            labelMappingFile = "$ModelDir$/vocab.wl"
+            beginSequence = "$startSymbol$" # "</s>"
+            endSequence   = "</s>"
+
+            #### Write definition ####
+            # sizeof(unsigned) which is the label index type
+            elementSize=4
+            sectionType=labels
+            mapping = [
+              #redefine number of records for this section, since we don't need to save it for each data record
+              wrecords=11
+              #variable size so use an average string size
+              elementSize=10
+              sectionType=labelMapping
+            ]
+            category = [
+              dim=11
+              #elementSize=sizeof(ElemType) is default
+              sectionType=categoryLabels
+            ]
+        ]
+        outputDummy = [
+            labelType = "none"
+        ]
+    ]
+]
+
+
+# some outdated things we should remove:
+
+lmreader = [
+    file = "$DataDir$/$trainFile$"
+    #randomize = "auto" # gets ignored
+
+    readerType = LMSequenceReader
+    mode = "softmax"                    # TODO: find out what this means
+    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+
+    # word class info
+    wordclass = "$ModelDir$/vocab.txt"
+
+    #### write definition
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    #writerType = BinaryReader
+    wfile = $CacheDir$\sequenceSentence.bin
+    # if calculated size would be bigger, that is used instead
+    wsize = 256
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords = 1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize = 10000
+
+    # additional features sections
+    # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
+    input = [
+        dim = 0     # no (explicit) labels   ...labelDim correct??
+        ### write definition
+        sectionType = "data"
+    ]
+    # labels sections
+    # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
+    # labels sections  --this is required, but our labels are extracted from the inLabels
+    inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
+        dim = 1
+
+        # vocabulary size
+        labelType = "category"
+        labelDim = "$inputVocabSize$"
+        labelMappingFile = "$ModelDir$/vocab.wl"
+        beginSequence = "$startSymbol$" # "</s>"
+        endSequence   = "</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping = [
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category = [
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+    ]
+    outputDummy = [
+        labelType = "none"
+    ]
+]
+
+lmcvReader = [
+    file = "$DataDir$/$validFile$"
+    #randomize = "none" # gets ignored
+
+    # everything below here is duplicated from 'reader'
+    readerType = LMSequenceReader
+    mode = "softmax"
+    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+
+    # word class info
+    wordclass = "$ModelDir$/vocab.txt"
+
+    #### write definition
+    # if writerType is set, we will cache to a binary file
+    # if the binary file exists, we will use it instead of parsing this file
+    #writerType = BinaryReader
+    wfile = $CacheDir$\sequenceSentence.bin
+    # if calculated size would be bigger, that is used instead
+    wsize = 256
+    #wrecords - number of records we should allocate space for in the file
+    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+    wrecords = 1000
+    #windowSize - number of records we should include in BinaryWriter window
+    windowSize = 10000
+
+    # additional features sections
+    # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
+    input = [
+        dim = 0     # no (explicit) labels   ...labelDim correct??
+        ### write definition
+        sectionType = "data"
+    ]
+    # labels sections
+    # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
+    # labels sections  --this is required, but our labels are extracted from the inLabels
+    inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
+        dim = 1
+
+        # vocabulary size
+        labelType = "category"
+        labelDim = "$inputVocabSize$"
+        labelMappingFile = "$ModelDir$/vocab.wl"
+        beginSequence = "</s>"
+        endSequence   = "</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping = [
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category = [
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+    ]
+    outputDummy = [
+        labelType = "none"
+    ]
+]
