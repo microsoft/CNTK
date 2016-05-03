@@ -9,9 +9,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
-from cntk import *
-from cntk.ops import *
+import cntk as C
 from cntk.ops import cntk1
+import numpy as np
 
 cur_dir = os.path.dirname(__file__)
 
@@ -24,7 +24,7 @@ embedding_file = os.path.join(cur_dir, "embeddingmatrix.txt")
 
 # this class is a temporary stop-gap to use a BS macro that hasn't been fully 
 # ported to the python API as of yet
-class Last(ComputationNode):
+class Last(C.ComputationNode):
     def __init__(self, x, op_name='BS.Sequences.Last', name=None):
         super(Last, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
@@ -33,38 +33,38 @@ class Last(ComputationNode):
 
 def lstm_layer(output_dim, cell_dim, x, input_dim):    
         
-    prev_state_h = past_value(0, 'lstm_state_h')
-    prev_state_c = past_value(0, 'lstm_state_c')
+    prev_state_h = C.past_value(0, 'lstm_state_h')
+    prev_state_c = C.past_value(0, 'lstm_state_c')
         
     lstm_state_c, lstm_state_h = lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c)
     lstm_state_c.name = 'lstm_state_c'
     lstm_state_h.name = 'lstm_state_h'
 
-    # return the hidden state
-    return lstm_state_h
+    # return the last hidden state
+    return Last(lstm_state_h)
     
 # currently requires output_dim==cell_dim    
 def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
         
     # input gate (t)
-    it_w = times(parameter((cell_dim, input_dim)), x)
-    it_b = parameter((cell_dim))
-    it_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    it_c = parameter((cell_dim)) * prev_state_c        
-    it = sigmoid((it_w + it_b + it_h + it_c), name='it')
+    it_w = C.times(C.parameter((cell_dim, input_dim)), x)
+    it_b = C.parameter((cell_dim))
+    it_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
+    it_c = C.parameter((cell_dim)) * prev_state_c        
+    it = C.sigmoid((it_w + it_b + it_h + it_c), name='it')
 
     # applied to tanh of input    
-    bit_w = times(parameter((cell_dim, input_dim)), x)
-    bit_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    bit_b = parameter((cell_dim))
-    bit = it * tanh(bit_w + (bit_h + bit_b))
+    bit_w = C.times(C.parameter((cell_dim, input_dim)), x)
+    bit_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
+    bit_b = C.parameter((cell_dim))
+    bit = it * C.tanh(bit_w + (bit_h + bit_b))
         
     # forget-me-not gate (t)
-    ft_w = times(parameter((cell_dim, input_dim)), x)
-    ft_b = parameter((cell_dim))
-    ft_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    ft_c = parameter((cell_dim)) * prev_state_c        
-    ft = sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
+    ft_w = C.times(C.parameter((cell_dim, input_dim)), x)
+    ft_b = C.parameter((cell_dim))
+    ft_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
+    ft_c = C.parameter((cell_dim)) * prev_state_c        
+    ft = C.sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
 
     # applied to cell(t-1)
     bft = ft * prev_state_c
@@ -73,14 +73,14 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
     ct = bft + bit
         
     # output gate
-    ot_w = times(parameter((cell_dim, input_dim)), x)
-    ot_b = parameter((cell_dim))
-    ot_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-    ot_c = parameter((cell_dim)) * prev_state_c        
-    ot = sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
+    ot_w = C.times(C.parameter((cell_dim, input_dim)), x)
+    ot_b = C.parameter((cell_dim))
+    ot_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
+    ot_c = C.parameter((cell_dim)) * prev_state_c        
+    ot = C.sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
        
     # applied to tanh(cell(t))
-    ht = ot * tanh(ct)
+    ht = ot * C.tanh(ct)
         
     # return cell value and hidden state
     return ct, ht
@@ -100,41 +100,38 @@ def seqcla():
     vocab = 2000
     embed_dim = 50    
 
-    t = dynamic_axis(name='t')
+    t = C.dynamic_axis(name='t')
     # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
     features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
-    labels = input(num_labels, name='labels')
+    labels = C.input(num_labels, name='labels')
    
-    train_reader = CNTKTextFormatReader(train_file)
+    train_reader = C.CNTKTextFormatReader(train_file)
 
     # setup embedding matrix
-    embedding = parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
+    embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
                           init='fromFile', init_from_file_path=embedding_file)
 
     # get the vector representing the word
-    sequence = times(embedding, features, name='sequence')
+    sequence = C.times(embedding, features, name='sequence')
     
     # add an LSTM layer
     L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
     
-    # get only the last hidden state
-    lst = Last(L, name='lst')
-    
     # add a softmax layer on top
-    w = parameter((num_labels, output_dim), name='w')
-    b = parameter((num_labels), name='b')
-    z = plus(times(w, lst), b, name='z')
+    w = C.parameter((num_labels, output_dim), name='w')
+    b = C.parameter((num_labels), name='b')
+    z = C.plus(C.times(w, L), b, name='z')
     z.tag = "output"
     
     # and reconcile the shared dynamic axis
-    pred = reconcile_dynamic_axis(z, labels, name='pred')    
+    pred = C.reconcile_dynamic_axis(z, labels, name='pred')    
     
-    ce = cntk1.CrossEntropyWithSoftmax(labels, pred)
+    ce = C.cross_entropy_with_softmax(labels, pred)
     ce.tag = "criterion"
     
-    my_sgd = SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
+    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
     
-    with LocalExecutionContext('seqcla') as ctx:
+    with C.LocalExecutionContext('seqcla') as ctx:
         # train the model
         ctx.train(root_nodes=[ce], training_params=my_sgd, input_map=train_reader.map(
                   features, alias='x', dim=vocab, format='Sparse').map(
@@ -150,7 +147,7 @@ def seqcla():
         
         # and test for the same number...
         TOLERANCE_ABSOLUTE = 1E-06    
-        assert np.allclose(acc, 0.5982357658380112, atol=TOLERANCE_ABSOLUTE)
+        assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
 
 """
 Test the accuracy of the trained model.

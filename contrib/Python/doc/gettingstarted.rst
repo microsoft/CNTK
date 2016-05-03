@@ -35,13 +35,13 @@ Installing the Python module
    CNTK executable
 #. Enjoy Python's ease of use with CNTK's speed::
 
->>> import cntk as cn
->>> cn.__version__
-1.4
->>> with cn.Context('demo', clean_up=False) as ctx:
-...     a = cn.constant([[1,2], [3,4]])
-...     print(ctx.eval(a + [[10,20], [30, 40]]))
-[[11.0, 22.0], [33.0, 44.0]]
+    >>> import cntk as cn
+    >>> cn.__version__
+    1.4
+    >>> with cn.Context('demo', clean_up=False) as ctx:
+    ...     a = cn.constant([[1,2], [3,4]])
+    ...     print(ctx.eval(a + [[10,20], [30, 40]]))
+    [[11.0, 22.0], [33.0, 44.0]]
 
 In this case, we have set ``clean_up=False`` so that you can now peek into the
 folder ``_cntk_demo`` and see what has been created under the hood for you.
@@ -114,7 +114,7 @@ set ``has_dynamic_axis`` to False.
 
 Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
 We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
-into the `cross_entropy_with_softmax` node. This node first runs the data through a `softmax` to get 
+into the :func:`cntk.ops.cross_entropy_with_softmax` node. This node first runs the data through a `softmax` to get 
 probabilities for each class. Then the Cross Entropy loss function is applied. We tag the node `ce` with 
 "criterion" so that CNTK knows it's a node from which the learning can start flowing back through the network.
 
@@ -152,11 +152,19 @@ on the right.
     :width: 600px
     :alt: NN Layers
 	
-A particular type of RNN -- the Long Short Term Memory (LSTM) network -- is exceedingly 
-useful and in practice is what we commonly use when implementing an RNN. For more on why 
-LSTMs are so powerful, see, e.g. http://colah.github.io/posts/2015-08-Understanding-LSTMs/. 
-For our purposes, we will concentrate on the central feature of the LSTM model: the `memory 
-cell`. 
+As is apparent from the figure above on the right, RNNs are the natural structure for 
+dealing with sequences. This includes everything from text to music to video; anything 
+where the current state is dependent on the previous state. While RNNs are indeed 
+powerful, the "vanilla" RNN suffers from an important problem: long-term dependencies. 
+Because the gradient needs to flow back through the network to learn, the contribution 
+from an early element (for example a word at the start of a sentence) on a much later 
+elements (like the last word) can essentially vanish.
+
+To deal with the above problem, we turn to the Long Short Term Memory (LSTM) network. 
+LSTMs are a type of RNN that are exceedingly useful and in practice are what we commonly 
+use when implementing an RNN. For more on why LSTMs are so powerful, see, e.g. 
+http://colah.github.io/posts/2015-08-Understanding-LSTMs. For our purposes, we will 
+concentrate on the central feature of the LSTM model: the `memory cell`. 
 
 .. figure:: images/lstm_cell.png
     :width: 400px
@@ -164,74 +172,112 @@ cell`.
 	
     An LSTM cell.
 
-The ...
+The LSTM cell is associated with three gates that control how information is stored / 
+remembered in the LSTM. The "forget gate" determines what information should be kept 
+after a single element has flowed through the network. It makes this determination 
+using data for the current time step and the previous hidden state. 
 
-In this example we can think of the LSTM as a layer being added to the network::
+The "input gate" uses the same information as the forget gate, but passes it through 
+a `tanh` to determine what to add to the state. The final gate is the "output gate" 
+and it modulates what information should be output from the LSTM cell. This time we 
+also take the previous state's value into account in addition to the previous hidden 
+state and the data of the current state. We have purposely left the full details out 
+for conciseness, so please see the link above for a full understanding of how an LSTM 
+works.
 
-	def lstm_layer(output_dim, cell_dim, x, input_dim):    
-    
-		# use the CNTK operator `past_value` to get the previous state of the LSTM
-		prev_state_h = past_value(0, 'lstm_state_h')
-		prev_state_c = past_value(0, 'lstm_state_c')
-        
-		lstm_state_c, lstm_state_h = lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c)
-		lstm_state_c.name = 'lstm_state_c'
-		lstm_state_h.name = 'lstm_state_h'
+In our example, we will be using an LSTM to do sequence classification. But for even 
+better results, we will also introduce an additional concept here: 
+`word embeddings <https://en.wikipedia.org/wiki/Word_embedding>`_. 
+In traditional NLP approaches, words are seen as single points in a high dimensional 
+space (the vocabulary). A word is represented by an arbitrary id and that single number 
+contains no information about the meaning of the word or how it is used. However, with 
+word embeddings each word is represented by a learned vector that has some meaning. For 
+example, the vector representing the word "cat" may somehow be close, in some sense, to 
+the vector for "dog", and each dimension is encoding some similarities or differences 
+between those words that were learned usually by analyzing a large corpus. In our task, 
+we will use a pre-computed word embedding model (e.g. from `GloVe <http://nlp.stanford.edu/projects/glove/>`_) 
+and each of the words in the sequences will be replaced by their respective GloVe vector.
 
-		# return the hidden state
-		return lstm_state_h
+Now that we've decided on our word representation and the type of recurrent neural 
+network we want to use, let's define the computational network that we'll use to do 
+sequence classification. We can think of the network as adding a series of layers:
 
+1. Embedding layer (individual words in each sequence become vectors)
+2. LSTM layer (allow each word to depend on previous words)
+3. Softmax layer (an additional set of parameters and output probabilities per class)
 
-...
+We can define this network as follows in the CNTK Python API::
 
-The parameters in an LSTM cell::
+    import cntk as C
 
-    def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
-        
-        # input gate (t)
-        it_w = times(parameter((cell_dim, input_dim)), x)
-        it_b = parameter((cell_dim))
-        it_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-        it_c = parameter((cell_dim)) * prev_state_c        
-        it = sigmoid((it_w + it_b + it_h + it_c), name='it')
-
-        # applied to tanh of input    
-        bit_w = times(parameter((cell_dim, input_dim)), x)
-        bit_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-        bit_b = parameter((cell_dim))
-        bit = it * tanh(bit_w + (bit_h + bit_b))
-        
-        # forget-me-not gate (t)
-        ft_w = times(parameter((cell_dim, input_dim)), x)
-        ft_b = parameter((cell_dim))
-        ft_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-        ft_c = parameter((cell_dim)) * prev_state_c        
-        ft = sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
-
-        # applied to cell(t-1)
-        bft = ft * prev_state_c
-        
-        # c(t) = sum of both
-        ct = bft + bit
-        
-        # output gate
-        ot_w = times(parameter((cell_dim, input_dim)), x)
-        ot_b = parameter((cell_dim))
-        ot_h = times(parameter((cell_dim, output_dim)), prev_state_h)
-        ot_c = parameter((cell_dim)) * prev_state_c        
-        ot = sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
-       
-        # applied to tanh(cell(t))
-        ht = ot * tanh(ct)
-        
-        # return cell value and hidden state
-        return ct, ht
-
-The above function ...
+    def seqcla():    
+        # model
+        num_labels = 5
+        vocab = 2000
+        embed_dim = 50    
 		
+        # LSTM params
+        input_dim = 50
+        output_dim = 128
+        cell_dim = 128
 
-Operators
-----------
+        t = C.dynamic_axis(name='t')
+        # temporarily using cntk1 SpareInput because cntk2's input() will simply allow sparse as a parameter
+        features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
+        labels = C.input(num_labels, name='labels')
+   
+        train_reader = C.CNTKTextFormatReader(train_file)
 
-Readers
-----------
+        # setup embedding matrix
+        embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
+                                 init='fromFile', init_from_file_path=embedding_file)
+
+        # get the vector representing the word
+        sequence = C.times(embedding, features, name='sequence')
+    
+        # add an LSTM layer
+        L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
+    
+        # add a dense layer on top
+        w = C.parameter((num_labels, output_dim), name='w')
+        b = C.parameter((num_labels), name='b')
+        z = C.plus(C.times(w, L), b, name='z')
+        z.tag = "output"
+    
+        # and reconcile the shared dynamic axis
+        pred = C.reconcile_dynamic_axis(z, labels, name='pred')    
+    
+        ce = C.cross_entropy_with_softmax(labels, pred)
+        ce.tag = "criterion"
+
+Let's go through some of the intricacies of the above network definition. First, we define 
+some parameters of the data and the network. We have 5 possible classes for the sequences; 
+we're working with a vocabulary of 2000 words; and our embedding vectors have a dimension of 
+50. Because the word vectors are input to the LSTM, the `input_dim` of the LSTM is also 50. 
+We can, however, output any dimension from the LSTM; our `cell_dim` and `output_dim` are the 
+same and we output 128-dimensional tensors.
+
+We then set up our training data. First, we create a dynamic axis. The dynamic axis is a key 
+concept in CNTK that allows us to work with sequences without having to pad our data when we 
+have sequences of different lengths (which is almost always the case). We then set up our 
+features by defining a `SparseInput`. In this release, :func:`cntk.ops.input` only supports dense features 
+so we have to use the legacy `cntk1.SparseInput` until 1.5. Each word has a dimension of size 
+`vocab` and we attach the dynamic axis `t` that we created just above. Then we set up our labels 
+using the standard :func:`cntk.ops.input` where the dimension is of size `num_labels`.
+
+Our final piece of setup before beginning to define the network is creating a `reader` for our 
+training data. We use the :class:`cntk.reader.CNTKTextFormatReader` and pass in the name of our 
+training data file.
+
+Now we can start defining our network. The first layer is the word embedding. We define this 
+using a `parameter` of shape `(embed_dim, vocab)` that is initialized from a file where our 
+embedding matrix is stored. We set the `learning_rate_multiplier` parameter to 0.0 so that this 
+is treated as a constant.
+
+To view the input data words as vectors, we multiply the embedding matrix with the one-hot vector 
+words which results in the data being represented by vectors. An LSTM layer is then added which 
+returns the last hidden state of the unrolled network. We then add the dense layer followed by 
+the criterion node that adds a softmax and then implements the cross entropy loss function. Before 
+we add the criterion node, however, we call :func:`cntk.ops.reconcile_dynamic_axis` which will ensure 
+that the minibatch layout for the labels and the data with dynamic axes is compatible.
+
