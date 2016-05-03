@@ -207,6 +207,15 @@ def times(left, right, name=None):
     case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
 
+    Example:
+        >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
+        [array([[ 17.,  39.]])]
+        
+        >>> C.eval(C.times([[1,2],[3,4],[5,6]], [[0.5,0.25],[0.25,0.5]]))
+        [array([[[ 1.  ,  1.25],
+                 [ 2.5 ,  2.75],
+                 [ 4.  ,  4.25]]])]
+
     Args:
         left: left side tensor
         right: right side tensor
