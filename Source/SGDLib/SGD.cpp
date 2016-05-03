@@ -935,11 +935,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
 
-        // for progress and statistics, we should only count frames that are not gaps
-        // BUGBUG: Once we have multiple layouts, this must be done on a per-criterion basis.
-        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
+        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
+        size_t numSamplesWithLabel = wasDataRead ? CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], net->GetNumSamplesWithLabelOfNetwork(actualMBSize)) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
+        // 'aggregate' here means accross-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize;
         size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
 
@@ -1006,6 +1006,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
+#if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
+            // This will break test cases. So for now, we will only enable this for per-sample criteria.
+            size_t numSamplesInMinibatch = aggregateNumSamples;
+            if (criterionNodes[0]->HasMBLayout())
+#endif
+            numSamplesInMinibatch = aggregateNumSamplesWithLabel;
+#if 0
+            if (numSamplesInMinibatch != aggregateNumSamples)
+                fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
+#endif
             auto smoothedGradientIter = smoothedGradients.begin();
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {
@@ -1019,7 +1029,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
