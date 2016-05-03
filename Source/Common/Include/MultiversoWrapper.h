@@ -1,11 +1,11 @@
 #pragma once
 
-// This uses Multiverso.h which requires 
-// the header files in ..\Multiverso\include
+// the header files located in Source\Multiverso\include
 #include <multiverso/multiverso.h>
 #include <multiverso/table/matrix_table.h>
 #include <multiverso/util/configure.h>
-#pragma comment(lib, "IMultiverso.lib")
+
+#pragma comment(lib, "Multiverso.lib")
 
 #ifndef CPUONLY
 #include <cuda_runtime.h>
@@ -127,15 +127,12 @@ namespace Microsoft {
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 						Matrix<ElemType> &mat = node->Value();
-          printf("here!2\n");
-          fflush(stdout);
 #pragma warning( push )
 #pragma warning( disable : 4238)
 
 #ifndef CPUONLY
 						for (int j = 0; j < m_localCacheNumber; j++)
               m_gpuAsyncBuffer[j].push_back(mat.DeepClone());
-              //m_gpuAsyncBuffer[j][i] = mat.DeepClone();
 #endif
 #pragma warning( pop )
 						ElemType* px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
@@ -383,13 +380,8 @@ namespace Microsoft {
 					}
 
 #ifndef CPUONLY
-          printf("here!1\n");
-          fflush(stdout);
 					for (int i = 0; i < m_localCacheNumber; i++)
-						//m_gpuAsyncBuffer[i] = new Matrix<ElemType>*[m_tableCount];
 						m_gpuAsyncBuffer[i].reserve(m_tableCount);
-          printf("here!2\n");
-          fflush(stdout);
 
 					//create pinned memory
 					for (int i = 0; i < m_localCacheNumber; ++i)

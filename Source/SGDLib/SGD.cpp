@@ -351,7 +351,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     //Multiverso Warpper for ASGD logic init
-    if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+    if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
     {
         m_pMultiversoHelper = new MultiversoHelper<ElemType>(learnableNodes,
         m_mpi->NumNodesInUse(),
@@ -370,7 +370,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
-        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
         {
             m_mpi->WaitAll();
         }
@@ -672,7 +672,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // nobody tries reading the checkpoint file at the same time
         // as rank 0 deleting it below
         // TODO[DataASGD]: worker in async-mode didn't wait for the rank 0
-        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
         {
             m_mpi->WaitAll();
         }
@@ -716,7 +716,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
     // TODO[DataASGD]: should othet other rank waiting in async-mode
-    if (m_mpi != nullptr &&  GetParallelizationMethod() != ParallelizationMethod::DataParallelASGD)
+    if (m_mpi != nullptr &&  GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
     {
         m_mpi->WaitAll();
     }
@@ -736,7 +736,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     delete inputMatrices;
-	if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+	if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
 		delete m_pMultiversoHelper;
 }
 
@@ -2431,8 +2431,8 @@ static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
     else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::dataParallelSGD;
     else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::modelAveragingSGD;
     else if (EqualCI(s, L"BlockMomentumSGD"))        return ParallelizationMethod::blockMomentumSGD;
-    else if (EqualCI(s, L"DataParallelASGD"))        return ParallelizationMethod::dataParallelASGD;
-    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | DataParallelSGD | ModelAveragingSGD | BlockMomentumSGD | DataParallelASGD)");
+    else if (EqualCI(s, L"dataParallelASGD"))        return ParallelizationMethod::dataParallelASGD;
+    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | DataParallelSGD | ModelAveragingSGD | BlockMomentumSGD | dataParallelASGD)");
 }
 
 static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
@@ -2755,6 +2755,20 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #endif 
         }
 
+        if (configParallelTrain.Exists(L"DataParallelASGD"))
+        {
+            const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
+            m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
+            m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", ConfigRecordType::Array(intargvector(vector<int>{0})));
+            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
+            {
+                const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
+                m_adjustlearningrateatbeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"None"));
+                m_adjustcoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.1);
+                m_adjustnbminibatch = configAdjustLearningRateAtBeginning(L"adjustNbMinibatch", (size_t)256);
+            }
+        }
     }
 }
 
