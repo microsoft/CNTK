@@ -116,7 +116,7 @@ class CNTKTextFormatReader(AbstractReader):
         skip_sequence_ids (bool): if True, the sequence ID will be ignored and every line will be treated as a separate sample
         max_errors (int): number of errors to accept before throwing an exception
         trace_level (int): verbosity of output (0=only errors ... 2=all output)
-        chunk_size_in_bytes (int): maxium number of bytest to read from disk (default 32MB)
+        chunk_size_in_bytes (int): maximum number of bytes to read from disk (default 32MB)
         num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
 
     """
@@ -415,7 +415,7 @@ class InputMap(object):
     binds input nodes to the aliases in a reader.
 
     Args:
-        reader (descendent of :class:`comp.reader.AbstractReader`)
+        reader (:class:`cntk.reader.CNTKTextFormatReader`): the reader for which this instance defines the mapping. If ``None``, then the inputs are expected to be NumPy arrays, and an temporary reader will be set up automatically.
 
     Example::
     
