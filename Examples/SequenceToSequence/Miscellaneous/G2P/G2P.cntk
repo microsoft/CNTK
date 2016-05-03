@@ -349,7 +349,7 @@ train = [
     # BrainScriptNetworkBuilder is defined in outer scope
 
     SGD = [
-        minibatchSize = 72:72:144:288
+        minibatchSize = 144:144:288:576
         learningRatesPerSample = 0.007*2:0.0035
         momentumAsTimeConstant = 1100
         gradientClippingWithTruncation = true   # (as opposed to clipping the Frobenius norm of the matrix)
