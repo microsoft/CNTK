@@ -20,6 +20,10 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     the `output_vector` internally.  Any `output_vector` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
+    :math:`cross\_entropy\_with\_softmax(t, o) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
+
+    :func:`cntk.ops.softmax`
+    
     Example:
         >>> cntk.eval(cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 1.]))
         #[1.3862]
