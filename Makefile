@@ -60,7 +60,7 @@ endif
 CXX = mpic++
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
 COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
 CPPFLAGS:= 
@@ -294,6 +294,27 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
+
+########################################
+# Performance profiler library
+########################################
+
+CNTKPP:=cntkpp
+
+PP_SRC =\
+	$(SOURCEDIR)/PerformanceProfilerDll/PerformanceProfiler.cpp \
+
+PP_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC)))
+
+CNTKPP_LIB:= $(LIBDIR)/lib$(CNTKPP).so
+ALL += $(CNTKPP_LIB)
+SRC += $(PP_SRC)
+
+$(CNTKPP_LIB): $(PP_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+
 ########################################
 # BinaryReader plugin
 ########################################
@@ -310,9 +331,9 @@ BINARY_READER:= $(LIBDIR)/BinaryReader.so
 #ALL += $(BINARY_READER)
 #SRC+=$(BINARYREADER_SRC)
 
-$(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
+$(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # HTKMLFReader plugin
@@ -330,9 +351,9 @@ HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.so
 ALL+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
-$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # ExperimentalHTKMLFReader plugin
@@ -353,9 +374,9 @@ EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
 ALL+=$(EXPERIMENTALHTKMLFREADER)
 SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
 
-$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # LMSequenceReader plugin
@@ -373,9 +394,9 @@ LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.so
 ALL+=$(LMSEQUENCEREADER)
 SRC+=$(LMSEQUENCEREADER_SRC)
 
-$(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
+$(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # LUSequenceReader plugin
@@ -394,9 +415,9 @@ LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.so
 ALL+=$(LUSEQUENCEREADER)
 SRC+=$(LUSEQUENCEREADER_SRC)
 
-$(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
+$(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # UCIFastReader plugin
@@ -413,9 +434,9 @@ UCIFASTREADER:=$(LIBDIR)/UCIFastReader.so
 ALL += $(UCIFASTREADER)
 SRC+=$(UCIFASTREADER_SRC)
 
-$(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
+$(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # LibSVMBinaryReader plugin
@@ -431,9 +452,9 @@ LIBSVMBINARYREADER:=$(LIBDIR)/LibSVMBinaryReader.so
 ALL += $(LIBSVMBINARYREADER)
 SRC+=$(LIBSVMBINARYREADER_SRC)
 
-$(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # SparsePCReader plugin
@@ -449,9 +470,9 @@ SPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
 ALL += $(SPARSEPCREADER)
 SRC+=$(SPARSEPCREADER_SRC)
 
-$(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+$(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 ########################################
 # CNTKTextFormatReader plugin
@@ -470,9 +491,9 @@ CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
 ALL += $(CNTKTEXTFORMATREADER)
 SRC+=$(CNTKTEXTFORMATREADER_SRC)
 
-$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
+$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(CNTKPP)
 
 
 ########################################
@@ -495,9 +516,9 @@ KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
 ALL+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
-$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
+$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS) -l$(CNTKPP)
 
 endif
 
@@ -532,9 +553,9 @@ SRC+=$(IMAGEREADER_SRC)
 INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
-$(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
+$(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS) -l$(CNTKPP)
 endif
 
 ########################################
@@ -608,11 +629,11 @@ CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 SRC+=$(CNTK_SRC)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(CNTKPP_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp -l$(CNTKPP)
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs

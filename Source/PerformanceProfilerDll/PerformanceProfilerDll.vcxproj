@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{482999D1-B7E2-466E-9F8D-2119F93EAFD9}</ProjectGuid>
+    <ProjectGuid>{4b442d34-641a-4b37-9a4b-d18dbe28a979}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>EvalDll</RootNamespace>
-    <ProjectName>EvalDll</ProjectName>
+    <RootNamespace>PerformanceProfilerDll</RootNamespace>
+    <ProjectName>PerformanceProfilerDll</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -48,18 +48,18 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>EvalDll</TargetName>
+    <TargetName>PerformanceProfilerDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>EvalDll</TargetName>
+    <TargetName>PerformanceProfilerDll</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Common\Include;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -67,7 +67,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>EVALDLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFORMANCE_PROFILER_DLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -75,8 +75,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; ActionsLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalDependencies>ComputationNetworkLib.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs></DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -86,7 +86,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>EVALDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFORMANCE_PROFILER_DLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>false</OpenMPSupport>
       <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -99,9 +99,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; ActionsLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <DelayLoadDLLs></DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -120,33 +120,17 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" "$(TargetDir)"</Command>
-      <Message>Copying NVidia GDK extension DLL to target folder</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\Basics.h" />
-    <ClInclude Include="..\Common\Include\Config.h" />
-    <ClInclude Include="..\Common\Include\Eval.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\Common\Include\TimerUtility.h" />
-    <ClInclude Include="EvalReader.h" />
-    <ClInclude Include="EvalWriter.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
-    <ClInclude Include="CNTKEval.h" />
+    <ClInclude Include="PerformanceProfiler.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
-    <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp" />
-    <ClCompile Include="..\Common\Config.cpp" />
-    <ClCompile Include="..\Common\DataReader.cpp" />
-    <ClCompile Include="..\Common\Eval.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">true</ExcludedFromBuild>
+    <ClCompile Include="PerformanceProfiler.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="..\Common\File.cpp">
@@ -155,7 +139,6 @@
     <ClCompile Include="..\Common\fileutil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Common\TimerUtility.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
@@ -164,7 +147,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="CNTKEval.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <opencv2/opencv.hpp>
 #include "ByteReader.h"
+#include "PerformanceProfiler.h"
 
 #ifdef USE_ZIP
 
@@ -89,7 +90,11 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path)
                          path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(zipFile.get()))).c_str());
         }
         assert(contents.size() >= size);
+
+        auto profilerStateId = ProfilerThroughputBegin(profilerEvtDiskThroghput);
         zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
+        ProfilerThroughputEnd(profilerStateId, size);
+
         assert(bytesRead == size);
         if (bytesRead != size)
         {

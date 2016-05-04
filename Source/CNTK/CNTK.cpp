@@ -30,6 +30,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <chrono>
@@ -471,6 +472,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (config.Find(L"type"))
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
+    // Setup profiling
+    ProfilerContext profilerContext(config(L"profilerDirectory", "./profiler").c_str());
+
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     bool paralleltrain = config(L"parallelTrain", false);
@@ -635,6 +639,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     for (int i = 0; i < command.size(); i++)
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
+
+    // Setup profiling
+    ProfilerContext profilerContext(config(L"profilerDirectory", "./profiler").c_str());
 
     // run commands
     std::string type = config(L"precision", "float");

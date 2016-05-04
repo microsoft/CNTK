@@ -53,7 +53,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(NvmlLibPath)</AdditionalLibraryDirectories>
@@ -81,8 +81,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
@@ -106,9 +106,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">

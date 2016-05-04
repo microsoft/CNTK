@@ -56,7 +56,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(NvmlLibPath)</AdditionalLibraryDirectories>
@@ -77,8 +77,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>Math.dll; nvml.dll</DelayLoadDLLs>
+      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
@@ -101,9 +101,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; nvml.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">

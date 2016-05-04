@@ -11,6 +11,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -305,6 +306,8 @@ public:
     template <typename VECTORLIKEOBJECT>
     void AllReduce(VECTORLIKEOBJECT &accumulator) const
     {
+        PROFILE_SCOPE(profilerEvtMPIProcessing);
+
         auto *dataptr = accumulator.data();
         size_t totalnumelements = accumulator.size();
 
@@ -319,6 +322,8 @@ public:
     template <class ElemType>
     void AllReduce(ElemType *pData, size_t nData)
     {
+        PROFILE_SCOPE(profilerEvtMPIProcessing);
+
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
             MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
@@ -328,15 +333,20 @@ public:
     template <class ElemType>
     void Bcast(ElemType *pData, size_t nData, size_t srcRank)
     {
+        PROFILE_SCOPE(profilerEvtMPIProcessing);
+
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
+            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
             MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+            ProfilerThroughputEnd(profilerStateId, (long long)nData * sizeof(size_t));
         }
     }
 
     // wait for all ranks to reach here
     void WaitAll()
     {
+        PROFILE_SCOPE(profilerEvtMPIProcessing);
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
 };
