@@ -938,7 +938,7 @@ public:
             if (m_value)
             {
                 node->CreateValueMatrixIfNull();
-            node->m_value->SetValue(*m_value);
+                node->m_value->SetValue(*m_value);
             }
             else
                 node->m_value = nullptr;
@@ -1320,7 +1320,7 @@ public:
     void UpdateFunctionValuesSize()
     {
         UpdateDataSize(Value());
-        Value().CollapseDataLocation(); // actually before writing, should change the name
+        Value().CollapseDataLocation();
     }
 
     // -----------------------------------------------------------------------
@@ -1549,6 +1549,7 @@ public:
 
     void Trace()
     {
+        //DebugLogMinibatch();
 #if 0
         static const std::set<std::wstring> toLog{
             L"labelSentenceStartEmbedded",

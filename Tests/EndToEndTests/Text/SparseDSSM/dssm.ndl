@@ -41,10 +41,10 @@ DSSMLabel=Input(RC, 1)
 
 SIM=CosDistanceWithNegativeSamples(WQ1_Q_Tanh, WD1_D_Tanh, S, N)
 SIM_Scale=Scale(G,SIM)
-CE=CrossEntropyWithSoftmax(DSSMLabel, SIM_Scale)
+ce=CrossEntropyWithSoftmax(DSSMLabel, SIM_Scale)
 
 FeatureNodes=(Query,Keyword)
 LabelNodes=(DSSMLabel)
-CriterionNodes=(CE)
-EvalNodes=(CE)
+CriterionNodes=(ce)
+EvalNodes=(ce)
 OutputNodes=(SIM)

@@ -884,7 +884,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixColumnSlice, RandomSeedFixture)
     cg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
     Matrix<float> dg(k, m, c_deviceIdZero);
-    dg.SetValue(cg);
+    dg.AssignValuesOf(cg);
 
     Matrix<float>::MultiplyAndAdd(ag, false, bg, false, dg);
 

@@ -13,6 +13,10 @@
 #include <ctime>
 #include <limits.h>
 
+//#include "GPUMatrix.h"
+//#include "CPUSparseMatrix.h"
+//#include "GPUSparseMatrix.h"
+
 // NOTE NOTE NOTE:
 // use CPUSingleMatrix and CPUDoubleMatrix instead of using the template directly
 ///////////////////////////////////////////////
@@ -127,6 +131,9 @@ public:
 
     void SetValue(const ElemType v);
     void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);

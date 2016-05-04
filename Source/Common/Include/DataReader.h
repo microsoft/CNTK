@@ -168,7 +168,10 @@ public:
     {
         NOT_IMPLEMENTED;
     };
-    virtual size_t GetNumParallelSequences() = 0;
+
+    // TODO: Should be removed when BPTT follows proper minibatch size.
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() = 0;
+
     //virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz)
     {
@@ -337,7 +340,7 @@ public:
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     //int GetSentenceEndIdFromOutputLabel();
     //bool RequireSentenceSeg() const override;
 

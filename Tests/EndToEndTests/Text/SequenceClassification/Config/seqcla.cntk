@@ -17,11 +17,6 @@ Train=[
     run=BrainScriptNetworkBuilder
     
     BrainScriptNetworkBuilder=[
-        Macros = [
-            // define "last hidden state of sequence" in the LSTM (really for any sequence though)
-            TakeRight (N, x) = BS.Sequences._Take(FutureValue, N, x)
-            Last(x) = TakeRight(1, x)
-        ]
         Layers = [
             EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
                 embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
@@ -33,8 +28,8 @@ Train=[
                act = activation(z)
             ].act
             # TODO: suggested change of parameter order: output dims first, inputDim=input.Dim optional, cellDim=outputDim optional
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP2 (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -42,39 +37,39 @@ Train=[
         // LSTM params
         lstmDim = 25
         cellDim = 25
-        
+
         // model
         numLabels = 5        
         vocab = 2000
         embedDim = 50        
-                
+
         // set up features and labels
         t = DynamicAxis()
         features = Input(1, dynamicAxis=t)   # Input has shape (1,t)
         labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
-        
+
         // load the pre-learned word embedding matrix
         l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
-        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, Macros.Last)
+        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
         l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
         out = Pass(l3, tag='output')   
-        
+
         // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
         l3p = ReconcileDynamicAxis(l3, labels)
-        
+
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     
     SGD = [	
-      epochSize = 0
-      minibatchSize = 200
-      maxEpochs = 5
-      momentumPerMB = 0.9
-      learningRatesPerMB = 0.1
-      # We are testing checkpointing, keep all checkpoint (.ckp) files
-      keepCheckPointFiles = true
+        epochSize = 0
+        minibatchSize = 200
+        maxEpochs = 5
+        momentumPerMB = 0.9
+        learningRatesPerMB = 0.1
+        # We are testing checkpointing, keep all checkpoint (.ckp) files
+        keepCheckPointFiles = true
     ]
     
     reader = [
@@ -111,7 +106,6 @@ Write=[
     modelFile = "$ModelDir$/seqcla.dnn"    
     
     reader = [
-        
             readerType = "CNTKTextFormatReader"
             file = "$DataDir$/Train.txt"            
             

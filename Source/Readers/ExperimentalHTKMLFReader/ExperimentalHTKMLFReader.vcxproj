@@ -87,7 +87,6 @@
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h" />
     <ClInclude Include="HTKChunkDescription.h" />
     <ClInclude Include="ConfigHelper.h" />
-    <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="HTKDataDeserializer.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="MLFDataDeserializer.h" />

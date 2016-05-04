@@ -142,4 +142,3 @@ def test_op_error_prediction(target_vector, output_vector, device_id, precision)
                 device_id=device_id,
                 precision=precision,
                 clean_up=True, backward_pass=False)
-                                

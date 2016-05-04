@@ -19,15 +19,15 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=.5%}}
+      - ce = {{float,tolerance=.5%}}
       # TODO GPU has an initial EvalErr rate which is larger than on CPU and otherwise. 
       # In later epochs the results are aligned. Why?
-      - EvalErrPerSample = {{float,tolerance=13%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - err = {{float,tolerance=13%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
 #  Per-minibatch training results must match:
 #    patterns:
 #      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-#      - SamplesSeen = {{integer}}
-#      - TrainLossPerSample = {{float,tolerance=.5%}}
-#      - EvalErr[0]PerSample = {{float,tolerance=.5%}}
+#      - " * {{integer}}; "
+#      - ce = {{float,tolerance=.5%}}
+#      - EvalErrorPrediction = {{float,tolerance=.5%}}

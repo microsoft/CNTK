@@ -24,6 +24,44 @@ using namespace std;
 
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
+    const ConfigParameters& cfg,
+    bool primary)
+    : m_ioFeatureDimension(0),
+    m_samplePeriod(0),
+    m_verbosity(0),
+    m_corpus(corpus),
+    m_totalNumberOfFrames(0),
+    m_primary(primary)
+{
+    // TODO: This should be read in one place, potentially given by SGD.
+    m_frameMode = (ConfigValue)cfg("frameMode", "true");
+
+    argvector<ConfigValue> inputs = cfg("inputs");
+    if (inputs.size() != 1)
+    {
+        InvalidArgument("HTKDataDeserializer supports a single input stream only.");
+    }
+
+    ConfigParameters input = inputs.front();
+    auto inputName = input.GetMemberIds().front();
+
+    ConfigParameters streamConfig = input(inputName);
+
+    ConfigHelper config(streamConfig);
+    auto context = config.GetContextWindow();
+
+    m_elementType = config.GetElementType();
+    m_dimension = config.GetFeatureDimension();
+    m_dimension = m_dimension * (1 + context.first + context.second);
+
+    InitializeChunkDescriptions(config);
+    InitializeStreams(inputName);
+    InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
+
+HTKDataDeserializer::HTKDataDeserializer(
+    CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
@@ -51,7 +89,11 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeChunkDescriptions(config);
     InitializeStreams(featureName);
     InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
 
+void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+{
     m_augmentationWindow = config.GetContextWindow();
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension

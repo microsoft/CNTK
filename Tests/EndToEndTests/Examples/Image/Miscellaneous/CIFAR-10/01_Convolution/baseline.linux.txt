@@ -1,11 +1,11 @@
-Looking for data in: /home/gaizka/CNTK
+Looking for data in: /hdfs/public/CNTKTestData
 Copying test data to local directory
-=== Running /home/gaizka/Repos/cntk/build/release/bin/cntk configFile=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Conv.cntk currentDirectory=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData RunDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu DataDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData ConfigDir=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10 OutputDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=10]] Train=[SGD=[epochSize=100]] Train=[reader=[randomize=none]] stderr=-
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Conv.cntk currentDirectory=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData RunDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu DataDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10 OutputDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=10]] Train=[SGD=[epochSize=100]] Train=[reader=[randomize=none]] stderr=-
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 26 2016 16:18:13
-		Last modified date: Thu Apr 14 12:37:58 2016
+		Built time: May  3 2016 17:56:15
+		Last modified date: Tue May  3 11:36:22 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -13,39 +13,39 @@ Build info:
 		CUDA_PATH: /usr/local/cuda-7.5
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: gaizna/fix_cifar
-		Build SHA1: 2db72998767d0855253216486b5c2eddb8d6f57d
-		Built by gaizka on GAIZKA-UBUNTU
-		Build Path: /home/gaizka/Repos/cntk
+		Build Branch: HEAD
+		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+		Built by philly on 18750d26eb32
+		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-04/26/2016 16:20:37: Redirecting stderr to file -_Train_Test.log
-04/26/2016 16:20:37: -------------------------------------------------------------------
-04/26/2016 16:20:37: Build info: 
+Changed current directory to /tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+05/03/2016 18:08:50: Redirecting stderr to file -_Train_Test.log
+05/03/2016 18:08:50: -------------------------------------------------------------------
+05/03/2016 18:08:50: Build info: 
 
-04/26/2016 16:20:37: 		Built time: Apr 26 2016 16:18:13
-04/26/2016 16:20:37: 		Last modified date: Thu Apr 14 12:37:58 2016
-04/26/2016 16:20:37: 		Build type: release
-04/26/2016 16:20:37: 		Build target: GPU
-04/26/2016 16:20:37: 		With 1bit-SGD: no
-04/26/2016 16:20:37: 		Math lib: acml
-04/26/2016 16:20:37: 		CUDA_PATH: /usr/local/cuda-7.5
-04/26/2016 16:20:37: 		CUB_PATH: /usr/local/cub-1.4.1
-04/26/2016 16:20:37: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/26/2016 16:20:37: 		Build Branch: gaizna/fix_cifar
-04/26/2016 16:20:37: 		Build SHA1: 2db72998767d0855253216486b5c2eddb8d6f57d
-04/26/2016 16:20:37: 		Built by gaizka on GAIZKA-UBUNTU
-04/26/2016 16:20:37: 		Build Path: /home/gaizka/Repos/cntk
-04/26/2016 16:20:37: -------------------------------------------------------------------
+05/03/2016 18:08:50: 		Built time: May  3 2016 17:56:15
+05/03/2016 18:08:50: 		Last modified date: Tue May  3 11:36:22 2016
+05/03/2016 18:08:50: 		Build type: release
+05/03/2016 18:08:50: 		Build target: GPU
+05/03/2016 18:08:50: 		With 1bit-SGD: no
+05/03/2016 18:08:50: 		Math lib: acml
+05/03/2016 18:08:50: 		CUDA_PATH: /usr/local/cuda-7.5
+05/03/2016 18:08:50: 		CUB_PATH: /usr/local/cub-1.4.1
+05/03/2016 18:08:50: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/03/2016 18:08:50: 		Build Branch: HEAD
+05/03/2016 18:08:50: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+05/03/2016 18:08:50: 		Built by philly on 18750d26eb32
+05/03/2016 18:08:50: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/03/2016 18:08:50: -------------------------------------------------------------------
 
-04/26/2016 16:20:37: Running on localhost at 2016/04/26 16:20:37
-04/26/2016 16:20:37: Command line: 
-/home/gaizka/Repos/cntk/build/release/bin/cntk  configFile=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Conv.cntk  currentDirectory=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData  RunDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu  DataDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData  ConfigDir=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10  OutputDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=10]]  Train=[SGD=[epochSize=100]]  Train=[reader=[randomize=none]]  stderr=-
+05/03/2016 18:08:50: Running on localhost at 2016/05/03 18:08:50
+05/03/2016 18:08:50: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Conv.cntk  currentDirectory=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData  RunDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu  DataDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10  OutputDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=10]]  Train=[SGD=[epochSize=100]]  Train=[reader=[randomize=none]]  stderr=-
 
 
 
-04/26/2016 16:20:37: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/26/2016 16:20:37: RootDir = "."
+05/03/2016 18:08:50: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:08:50: RootDir = "."
 ConfigDir = "$RootDir$"
 DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
@@ -111,11 +111,11 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-RunDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
-DataDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-ConfigDir=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
-OutputDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+currentDirectory=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+RunDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+DataDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+OutputDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=10]]
@@ -123,29 +123,29 @@ Train=[SGD=[epochSize=100]]
 Train=[reader=[randomize=none]]
 stderr=-
 
-04/26/2016 16:20:37: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:08:50: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/26/2016 16:20:37: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/26/2016 16:20:37: RootDir = "."
+05/03/2016 18:08:50: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:08:50: RootDir = "."
 ConfigDir = "."
 DataDir = "."
 OutputDir = "./Output"
-ModelDir = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models"
-ndlMacros = "/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/Macros.ndl"
+ModelDir = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models"
+ndlMacros = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/Macros.ndl"
 precision = "float"
 deviceId = 0
 imageLayout = "cudnn"
 initOnCPUOnly=true
 prefetch = "true"
 command = Train:Test
-modelPath = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution"
-stderr = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/01_Conv"
+modelPath = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution"
+stderr = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/01_Conv"
 traceLevel = 1
 numMBsToShowResult = 500
 Train = [
     action = "train"
      NDLNetworkBuilder = [
-        networkDescription = "/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Convolution.ndl"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Convolution.ndl"
     ]
     SGD = [
         epochSize = 49984
@@ -158,7 +158,7 @@ Train = [
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt"
+        file = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt"
         randomize = "auto"
         minibatchMode="full"
         features = [
@@ -169,7 +169,7 @@ Train = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
+            labelMappingFile = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
         ]
     ]    
 ]
@@ -178,7 +178,7 @@ Test = [
     minibatchSize = 16
     reader = [
         readerType = "UCIFastReader"
-        file = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt"
+        file = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt"
         randomize = "none"
         features = [
             dim = 3072
@@ -188,15 +188,15 @@ Test = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
+            labelMappingFile = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
         ]
     ]    
 ]
-currentDirectory=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-RunDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
-DataDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-ConfigDir=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
-OutputDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+currentDirectory=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+RunDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+DataDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+OutputDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=10]]
@@ -204,32 +204,32 @@ Train=[SGD=[epochSize=100]]
 Train=[reader=[randomize=none]]
 stderr=-
 
-04/26/2016 16:20:37: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:08:50: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/26/2016 16:20:37: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:08:50: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: 01_Conv.cntk:command=Train:Test
-configparameters: 01_Conv.cntk:ConfigDir=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
-configparameters: 01_Conv.cntk:currentDirectory=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
-configparameters: 01_Conv.cntk:DataDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+configparameters: 01_Conv.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+configparameters: 01_Conv.cntk:currentDirectory=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
+configparameters: 01_Conv.cntk:DataDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData
 configparameters: 01_Conv.cntk:deviceId=0
 configparameters: 01_Conv.cntk:imageLayout=cudnn
 configparameters: 01_Conv.cntk:initOnCPUOnly=true
-configparameters: 01_Conv.cntk:ModelDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models
-configparameters: 01_Conv.cntk:modelPath=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution
-configparameters: 01_Conv.cntk:ndlMacros=/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/Macros.ndl
+configparameters: 01_Conv.cntk:ModelDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models
+configparameters: 01_Conv.cntk:modelPath=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution
+configparameters: 01_Conv.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/Macros.ndl
 configparameters: 01_Conv.cntk:numMBsToShowResult=500
-configparameters: 01_Conv.cntk:OutputDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+configparameters: 01_Conv.cntk:OutputDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
 configparameters: 01_Conv.cntk:precision=float
 configparameters: 01_Conv.cntk:prefetch=true
 configparameters: 01_Conv.cntk:RootDir=.
-configparameters: 01_Conv.cntk:RunDir=/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
+configparameters: 01_Conv.cntk:RunDir=/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu
 configparameters: 01_Conv.cntk:stderr=-
 configparameters: 01_Conv.cntk:Test=[
     action = "test"
     minibatchSize = 16
     reader = [
         readerType = "UCIFastReader"
-        file = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt"
+        file = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt"
         randomize = "none"
         features = [
             dim = 3072
@@ -239,7 +239,7 @@ configparameters: 01_Conv.cntk:Test=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
+            labelMappingFile = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
         ]
     ]    
 ]
@@ -249,7 +249,7 @@ configparameters: 01_Conv.cntk:traceLevel=1
 configparameters: 01_Conv.cntk:Train=[
     action = "train"
      NDLNetworkBuilder = [
-        networkDescription = "/home/gaizka/Repos/cntk/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Convolution.ndl"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Miscellaneous/CIFAR-10/01_Convolution/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10/01_Convolution.ndl"
     ]
     SGD = [
         epochSize = 49984
@@ -262,7 +262,7 @@ configparameters: 01_Conv.cntk:Train=[
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt"
+        file = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt"
         randomize = "auto"
         minibatchMode="full"
         features = [
@@ -273,29 +273,29 @@ configparameters: 01_Conv.cntk:Train=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
+            labelMappingFile = "/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/labelsmap.txt"
         ]
     ]    
 ] [SGD=[maxEpochs=10]] [SGD=[epochSize=100]] [reader=[randomize=none]]
 
-04/26/2016 16:20:37: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/26/2016 16:20:37: Commands: Train Test
-04/26/2016 16:20:37: Precision = "float"
-04/26/2016 16:20:37: CNTKModelPath: /tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution
-04/26/2016 16:20:37: CNTKCommandTrainInfo: Train : 10
-04/26/2016 16:20:37: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 10
+05/03/2016 18:08:50: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:08:50: Commands: Train Test
+05/03/2016 18:08:50: Precision = "float"
+05/03/2016 18:08:50: CNTKModelPath: /tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution
+05/03/2016 18:08:50: CNTKCommandTrainInfo: Train : 10
+05/03/2016 18:08:50: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 10
 
-04/26/2016 16:20:37: ##############################################################################
-04/26/2016 16:20:37: #                                                                            #
-04/26/2016 16:20:37: # Action "train"                                                             #
-04/26/2016 16:20:37: #                                                                            #
-04/26/2016 16:20:37: ##############################################################################
+05/03/2016 18:08:50: ##############################################################################
+05/03/2016 18:08:50: #                                                                            #
+05/03/2016 18:08:50: # Action "train"                                                             #
+05/03/2016 18:08:50: #                                                                            #
+05/03/2016 18:08:50: ##############################################################################
 
-04/26/2016 16:20:37: CNTKCommandTrainBegin: Train
+05/03/2016 18:08:50: CNTKCommandTrainBegin: Train
 NDLBuilder Using GPU 0
-Reading UCI file /tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt
+Reading UCI file /tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Train.txt
 
-04/26/2016 16:20:37: Creating virgin network.
+05/03/2016 18:08:50: Creating virgin network.
 SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
@@ -365,14 +365,14 @@ Using cuDNN convolution engine for geometry: Input: 7 x 7 x 64, Output: 3 x 3 x 
 
 Post-processing network complete.
 
-04/26/2016 16:20:38: Created model with 34 nodes on GPU 0.
+05/03/2016 18:08:50: Created model with 34 nodes on GPU 0.
 
-04/26/2016 16:20:38: Training criterion node(s):
-04/26/2016 16:20:38: 	CE = CrossEntropyWithSoftmax
+05/03/2016 18:08:50: Training criterion node(s):
+05/03/2016 18:08:50: 	CE = CrossEntropyWithSoftmax
 
-04/26/2016 16:20:38: Evaluation criterion node(s):
+05/03/2016 18:08:50: Evaluation criterion node(s):
 
-04/26/2016 16:20:38: 	Err = ErrorPrediction
+05/03/2016 18:08:50: 	Err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -380,154 +380,155 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[Err Gradient[1]] [featOffs Gradient[1 x 1]] [featScaled Gradient[32 x 32 x 3 x *]] [features Gradient[32 x 32 x 3 x *]] [labels Gradient[10 x *]] }
-0x2ae8ff8: {[features Value[32 x 32 x 3 x *]] }
-0x3a59b98: {[conv2_act.W Value[32 x 800]] }
-0x3a5a9e8: {[conv2_act.b Value[1 x 1 x 32]] }
-0x3a5c568: {[conv3_act.W Value[64 x 800]] }
-0x3a5cdc8: {[conv3_act.b Value[1 x 1 x 64]] }
-0x3a5eb98: {[h1.W Value[64 x 3 x 3 x 64]] }
-0x3a5f228: {[h1.b Value[64 x 1]] }
-0x3a608b8: {[OutputNodes.W Value[10 x 64]] }
-0x3a61788: {[OutputNodes.b Value[10]] }
-0x3a8ce28: {[featOffs Value[1 x 1]] }
-0x3a8e098: {[labels Value[10 x *]] }
-0x3a8eb98: {[conv1_act.W Value[32 x 75]] }
-0x3a8f448: {[conv1_act.b Value[1 x 1 x 32]] }
-0xdceb948: {[conv1_act.c Gradient[32 x 32 x 32 x *]] [conv1_act.y Value[32 x 32 x 32 x *]] }
-0xdcedcd8: {[conv1_act.c Value[32 x 32 x 32 x *]] }
-0xdcedf38: {[featScaled Value[32 x 32 x 3 x *]] }
-0xdcee0c8: {[conv1_act.p Gradient[32 x 32 x 32 x *]] [pool1 Value[15 x 15 x 32 x *]] }
-0xdcee8c8: {[conv2_act.c Value[15 x 15 x 32 x *]] }
-0xdceea88: {[conv1_act.b Gradient[1 x 1 x 32]] [conv1_act.y Gradient[32 x 32 x 32 x *]] }
-0xdceeff8: {[conv2_act.W Gradient[32 x 800]] [conv2_act.p Value[15 x 15 x 32 x *]] }
-0xdcef1b8: {[conv2_act.c Gradient[15 x 15 x 32 x *]] [conv2_act.y Value[15 x 15 x 32 x *]] }
-0xdcef378: {[conv2_act.p Gradient[15 x 15 x 32 x *]] [pool1 Gradient[15 x 15 x 32 x *]] [pool2 Value[7 x 7 x 32 x *]] }
-0xdcef538: {[conv3_act.c Value[7 x 7 x 64 x *]] }
-0xdcf6ed8: {[conv1_act.W Gradient[32 x 75]] [conv1_act.p Value[32 x 32 x 32 x *]] }
-0xe5765b8: {[conv2_act.b Gradient[1 x 1 x 32]] [conv2_act.y Gradient[15 x 15 x 32 x *]] }
-0xe576778: {[conv3_act.W Gradient[64 x 800]] [conv3_act.p Value[7 x 7 x 64 x *]] }
-0xe576938: {[conv3_act.c Gradient[7 x 7 x 64 x *]] [conv3_act.y Value[7 x 7 x 64 x *]] }
-0xe576af8: {[conv3_act.p Gradient[7 x 7 x 64 x *]] [pool2 Gradient[7 x 7 x 32 x *]] [pool3 Value[3 x 3 x 64 x *]] }
-0xe576cb8: {[conv3_act.b Gradient[1 x 1 x 64]] [conv3_act.y Gradient[7 x 7 x 64 x *]] [h1.t Value[64 x *]] }
-0xe576e78: {[h1.W Gradient[64 x 3 x 3 x 64]] [h1.z Value[64 x 1 x *]] }
-0xe577038: {[h1.t Gradient[64 x *]] [h1.y Value[64 x 1 x *]] }
-0xe5771f8: {[h1_d Value[64 x 1 x *]] }
-0xe5773b8: {[h1.z Gradient[64 x 1 x *]] [pool3 Gradient[3 x 3 x 64 x *]] }
-0xe577578: {[OutputNodes.t Value[10 x 1 x *]] [h1.b Gradient[64 x 1]] [h1.y Gradient[64 x 1 x *]] }
-0xe577738: {[OutputNodes.W Gradient[10 x 64]] [OutputNodes.z Value[10 x 1 x *]] }
-0xe577928: {[CE Value[1]] }
-0xe577e98: {[Err Value[1]] }
-0xe578598: {[CE Gradient[1]] }
-0xe578758: {[OutputNodes.z Gradient[10 x 1 x *]] [h1_d Gradient[64 x 1 x *]] }
-0xe578918: {[OutputNodes.t Gradient[10 x 1 x *]] }
-0xe578ad8: {[OutputNodes.b Gradient[10]] }
+0x1b4c2a8: {[features Value[32 x 32 x 3 x *]] }
+0x27b7318: {[featOffs Value[1 x 1]] }
+0x27b8418: {[labels Value[10 x *]] }
+0x27b8f18: {[conv1_act.W Value[32 x 75]] }
+0x27b9698: {[conv1_act.b Value[1 x 1 x 32]] }
+0x27baff8: {[conv2_act.W Value[32 x 800]] }
+0x27bc1a8: {[conv2_act.b Value[1 x 1 x 32]] }
+0x2892a38: {[conv3_act.W Value[64 x 800]] }
+0x2893518: {[conv3_act.b Value[1 x 1 x 64]] }
+0x2895298: {[h1.W Value[64 x 3 x 3 x 64]] }
+0x2895a88: {[h1.b Value[64 x 1]] }
+0x2897078: {[OutputNodes.W Value[10 x 64]] }
+0x2897f28: {[OutputNodes.b Value[10]] }
+0x7f74e71b1798: {[Err Value[1]] }
+0x7f74e71b9b98: {[CE Value[1]] }
+0x7f74e71b9fe8: {[conv1_act.W Gradient[32 x 75]] [conv1_act.p Value[32 x 32 x 32 x *]] }
+0x7f74e71bcd88: {[conv1_act.c Value[32 x 32 x 32 x *]] }
+0x7f74e71bd0e8: {[featScaled Value[32 x 32 x 3 x *]] }
+0x7f74e71d9cc8: {[conv1_act.c Gradient[32 x 32 x 32 x *]] [conv1_act.y Value[32 x 32 x 32 x *]] }
+0x7f74e71d9e88: {[conv1_act.p Gradient[32 x 32 x 32 x *]] [pool1 Value[15 x 15 x 32 x *]] }
+0x7f74e71da048: {[conv2_act.c Value[15 x 15 x 32 x *]] }
+0x7f74e71da208: {[conv1_act.b Gradient[1 x 1 x 32]] [conv1_act.y Gradient[32 x 32 x 32 x *]] }
+0x7f74e71da3c8: {[conv2_act.W Gradient[32 x 800]] [conv2_act.p Value[15 x 15 x 32 x *]] }
+0x7f74e71da588: {[conv2_act.c Gradient[15 x 15 x 32 x *]] [conv2_act.y Value[15 x 15 x 32 x *]] }
+0x7f74e71da748: {[conv2_act.p Gradient[15 x 15 x 32 x *]] [pool1 Gradient[15 x 15 x 32 x *]] [pool2 Value[7 x 7 x 32 x *]] }
+0x7f74e71da908: {[conv3_act.c Value[7 x 7 x 64 x *]] }
+0x7f74e71daac8: {[conv2_act.b Gradient[1 x 1 x 32]] [conv2_act.y Gradient[15 x 15 x 32 x *]] }
+0x7f74e71dac88: {[conv3_act.W Gradient[64 x 800]] [conv3_act.p Value[7 x 7 x 64 x *]] }
+0x7f74e71dae48: {[conv3_act.c Gradient[7 x 7 x 64 x *]] [conv3_act.y Value[7 x 7 x 64 x *]] }
+0x7f74e71db008: {[conv3_act.p Gradient[7 x 7 x 64 x *]] [pool2 Gradient[7 x 7 x 32 x *]] [pool3 Value[3 x 3 x 64 x *]] }
+0x7f74e71db1c8: {[conv3_act.b Gradient[1 x 1 x 64]] [conv3_act.y Gradient[7 x 7 x 64 x *]] [h1.t Value[64 x *]] }
+0x7f74e71db388: {[h1.W Gradient[64 x 3 x 3 x 64]] [h1.z Value[64 x 1 x *]] }
+0x7f74e71db548: {[h1.t Gradient[64 x *]] [h1.y Value[64 x 1 x *]] }
+0x7f74e71db708: {[h1_d Value[64 x 1 x *]] }
+0x7f74e71db8c8: {[h1.z Gradient[64 x 1 x *]] [pool3 Gradient[3 x 3 x 64 x *]] }
+0x7f74e71dba88: {[OutputNodes.t Value[10 x 1 x *]] [h1.b Gradient[64 x 1]] [h1.y Gradient[64 x 1 x *]] }
+0x7f74e71dc568: {[CE Gradient[1]] }
+0x7f74e71dc728: {[OutputNodes.W Gradient[10 x 64]] [OutputNodes.z Gradient[10 x 1 x *]] }
+0x7f74e71dc8e8: {[OutputNodes.t Gradient[10 x 1 x *]] }
+0x7f74e71dcaa8: {[OutputNodes.b Gradient[10]] }
+0x7f74e71dcc68: {[h1_d Gradient[64 x 1 x *]] }
+0x7f74e71e61f8: {[OutputNodes.z Value[10 x 1 x *]] }
 
-04/26/2016 16:20:38: No PreCompute nodes found, skipping PreCompute step.
+05/03/2016 18:08:50: No PreCompute nodes found, skipping PreCompute step.
 
-04/26/2016 16:20:38: Starting Epoch 1: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:50: Starting Epoch 1: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  50000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 2.3022168; TotalSamplesSeen = 128; EvalErrPerSample = 0.8515625; AvgLearningRatePerSample = 0.00015625; EpochTime=2.92425
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.1'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 1 of 10]: [Training] CE = 2.30221677 * 128; Err = 0.85156250 * 128; totalSamplesSeen = 128; learningRatePerSample = 0.00015625; epochTime=2.65749s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.1'
 
-04/26/2016 16:20:41: Starting Epoch 2: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 2: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 1 at record count 128, and file position 128
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 2.3033237; TotalSamplesSeen = 256; EvalErrPerSample = 0.953125; AvgLearningRatePerSample = 0.00015625; EpochTime=0.025409
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.2'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 2 of 10]: [Training] CE = 2.30332375 * 128; Err = 0.95312500 * 128; totalSamplesSeen = 256; learningRatePerSample = 0.00015625; epochTime=0.018644s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.2'
 
-04/26/2016 16:20:41: Starting Epoch 3: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 3: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 2 at record count 256, and file position 256
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 2.2999659; TotalSamplesSeen = 384; EvalErrPerSample = 0.8828125; AvgLearningRatePerSample = 0.00015625; EpochTime=0.027618
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.3'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 3 of 10]: [Training] CE = 2.29995584 * 128; Err = 0.88281250 * 128; totalSamplesSeen = 384; learningRatePerSample = 0.00015625; epochTime=0.018913s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.3'
 
-04/26/2016 16:20:41: Starting Epoch 4: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 4: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 3 at record count 384, and file position 384
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 2.2966146; TotalSamplesSeen = 512; EvalErrPerSample = 0.84375; AvgLearningRatePerSample = 0.00015625; EpochTime=0.027035
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.4'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 4 of 10]: [Training] CE = 2.29656601 * 128; Err = 0.85156250 * 128; totalSamplesSeen = 512; learningRatePerSample = 0.00015625; epochTime=0.018631s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.4'
 
-04/26/2016 16:20:41: Starting Epoch 5: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 5: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 4 at record count 512, and file position 512
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 5 of 10]: [Training Set] TrainLossPerSample = 2.2917795; TotalSamplesSeen = 640; EvalErrPerSample = 0.84375; AvgLearningRatePerSample = 0.00015625; EpochTime=0.02676
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.5'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 5 of 10]: [Training] CE = 2.29180217 * 128; Err = 0.85937500 * 128; totalSamplesSeen = 640; learningRatePerSample = 0.00015625; epochTime=0.018817s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.5'
 Setting dropout rate to 0.5.
 
-04/26/2016 16:20:41: Starting Epoch 6: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 6: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 5 at record count 640, and file position 640
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 6 of 10]: [Training Set] TrainLossPerSample = 2.2963715; TotalSamplesSeen = 768; EvalErrPerSample = 0.8671875; AvgLearningRatePerSample = 0.00015625; EpochTime=0.026806
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.6'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 6 of 10]: [Training] CE = 2.29621005 * 128; Err = 0.85937500 * 128; totalSamplesSeen = 768; learningRatePerSample = 0.00015625; epochTime=0.018876s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.6'
 
-04/26/2016 16:20:41: Starting Epoch 7: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 7: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 6 at record count 768, and file position 768
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 7 of 10]: [Training Set] TrainLossPerSample = 2.2942185; TotalSamplesSeen = 896; EvalErrPerSample = 0.890625; AvgLearningRatePerSample = 0.00015625; EpochTime=0.026681
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.7'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 7 of 10]: [Training] CE = 2.29371405 * 128; Err = 0.87500000 * 128; totalSamplesSeen = 896; learningRatePerSample = 0.00015625; epochTime=0.018292s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.7'
 
-04/26/2016 16:20:41: Starting Epoch 8: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 8: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 7 at record count 896, and file position 896
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 8 of 10]: [Training Set] TrainLossPerSample = 2.3183403; TotalSamplesSeen = 1024; EvalErrPerSample = 0.9140625; AvgLearningRatePerSample = 0.00015625; EpochTime=0.026731
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.8'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 8 of 10]: [Training] CE = 2.31822634 * 128; Err = 0.89843750 * 128; totalSamplesSeen = 1024; learningRatePerSample = 0.00015625; epochTime=0.018631s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.8'
 
-04/26/2016 16:20:41: Starting Epoch 9: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 9: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 8 at record count 1024, and file position 1024
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[ 9 of 10]: [Training Set] TrainLossPerSample = 2.2802896; TotalSamplesSeen = 1152; EvalErrPerSample = 0.875; AvgLearningRatePerSample = 0.00015625; EpochTime=0.027357
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.9'
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[ 9 of 10]: [Training] CE = 2.27969623 * 128; Err = 0.88281250 * 128; totalSamplesSeen = 1152; learningRatePerSample = 0.00015625; epochTime=0.01862s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution.9'
 
-04/26/2016 16:20:41: Starting Epoch 10: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+05/03/2016 18:08:53: Starting Epoch 10: learning rate per sample = 0.000156  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 epochSize rounded up to 128 to fit an integral number of minibatches
 starting epoch 9 at record count 1152, and file position 1152
 already there from last epoch
 
-04/26/2016 16:20:41: Starting minibatch loop.
-04/26/2016 16:20:41: Finished Epoch[10 of 10]: [Training Set] TrainLossPerSample = 2.2577953; TotalSamplesSeen = 1280; EvalErrPerSample = 0.828125; AvgLearningRatePerSample = 0.00015625; EpochTime=0.026785
-04/26/2016 16:20:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution'
-04/26/2016 16:20:41: CNTKCommandTrainEnd: Train
+05/03/2016 18:08:53: Starting minibatch loop.
+05/03/2016 18:08:53: Finished Epoch[10 of 10]: [Training] CE = 2.25664067 * 128; Err = 0.83593750 * 128; totalSamplesSeen = 1280; learningRatePerSample = 0.00015625; epochTime=0.018467s
+05/03/2016 18:08:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/Models/01_Convolution'
+05/03/2016 18:08:53: CNTKCommandTrainEnd: Train
 
-04/26/2016 16:20:41: Action "train" complete.
+05/03/2016 18:08:53: Action "train" complete.
 
 
-04/26/2016 16:20:41: ##############################################################################
-04/26/2016 16:20:41: #                                                                            #
-04/26/2016 16:20:41: # Action "test"                                                              #
-04/26/2016 16:20:41: #                                                                            #
-04/26/2016 16:20:41: ##############################################################################
+05/03/2016 18:08:53: ##############################################################################
+05/03/2016 18:08:53: #                                                                            #
+05/03/2016 18:08:53: # Action "test"                                                              #
+05/03/2016 18:08:53: #                                                                            #
+05/03/2016 18:08:53: ##############################################################################
 
-Reading UCI file /tmp/cntk-test-20160426162036.683274/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt
+Reading UCI file /tmp/cntk-test-20160503180114.713822/Examples/Image/Miscellaneous/CIFAR-10_01_Convolution@release_gpu/TestData/Test.txt
 
 Post-processing network...
 
@@ -604,47 +605,47 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[CE Gradient[1]] [Err Gradient[1]] [OutputNodes.W Gradient[10 x 64]] [OutputNodes.b Gradient[10]] [OutputNodes.t Gradient[10 x 1 x *1]] [OutputNodes.z Gradient[10 x 1 x *1]] [conv1_act.W Gradient[32 x 75]] [conv1_act.b Gradient[1 x 1 x 32]] [conv1_act.c Gradient[32 x 32 x 32 x *1]] [conv1_act.p Gradient[32 x 32 x 32 x *1]] [conv1_act.y Gradient[32 x 32 x 32 x *1]] [conv2_act.W Gradient[32 x 800]] [conv2_act.b Gradient[1 x 1 x 32]] [conv2_act.c Gradient[15 x 15 x 32 x *1]] [conv2_act.p Gradient[15 x 15 x 32 x *1]] [conv2_act.y Gradient[15 x 15 x 32 x *1]] [conv3_act.W Gradient[64 x 800]] [conv3_act.b Gradient[1 x 1 x 64]] [conv3_act.c Gradient[7 x 7 x 64 x *1]] [conv3_act.p Gradient[7 x 7 x 64 x *1]] [conv3_act.y Gradient[7 x 7 x 64 x *1]] [featOffs Gradient[1 x 1]] [featScaled Gradient[32 x 32 x 3 x *1]] [features Gradient[32 x 32 x 3 x *1]] [h1.W Gradient[64 x 3 x 3 x 64]] [h1.b Gradient[64 x 1]] [h1.t Gradient[64 x *1]] [h1.y Gradient[64 x 1 x *1]] [h1.z Gradient[64 x 1 x *1]] [h1_d Gradient[64 x 1 x *1]] [labels Gradient[10 x *1]] [pool1 Gradient[15 x 15 x 32 x *1]] [pool2 Gradient[7 x 7 x 32 x *1]] [pool3 Gradient[3 x 3 x 64 x *1]] }
-0x2a98878: {[conv2_act.W Value[32 x 800]] }
-0x2a9bc68: {[conv3_act.c Value[7 x 7 x 64 x *1]] }
-0x2a9bf88: {[conv3_act.p Value[7 x 7 x 64 x *1]] }
-0x2a9c148: {[conv3_act.y Value[7 x 7 x 64 x *1]] }
-0x2aa3288: {[conv1_act.c Value[32 x 32 x 32 x *1]] }
-0x2aa39a8: {[featScaled Value[32 x 32 x 3 x *1]] }
-0x2aa3a78: {[conv1_act.y Value[32 x 32 x 32 x *1]] }
-0x2ab3018: {[conv1_act.W Value[32 x 75]] }
-0x2ae86e8: {[h1.b Value[64 x 1]] }
-0x2ae8fd8: {[featOffs Value[1 x 1]] }
-0x2aebda8: {[conv3_act.b Value[1 x 1 x 64]] }
-0x2aec778: {[OutputNodes.W Value[10 x 64]] }
-0x2aee478: {[conv1_act.b Value[1 x 1 x 32]] }
-0x2af1a78: {[conv2_act.c Value[15 x 15 x 32 x *1]] }
-0x2af5098: {[OutputNodes.b Value[10]] }
-0x2af5598: {[conv2_act.p Value[15 x 15 x 32 x *1]] }
-0x2af5758: {[conv2_act.y Value[15 x 15 x 32 x *1]] }
-0x2af5918: {[pool2 Value[7 x 7 x 32 x *1]] }
-0x2af8b48: {[features Value[32 x 32 x 3 x *1]] }
-0x3a62718: {[conv3_act.W Value[64 x 800]] }
-0x3a8c258: {[h1_d Value[64 x 1 x *1]] }
-0x3a8c5d8: {[OutputNodes.t Value[10 x 1 x *1]] }
-0x3a8c798: {[OutputNodes.z Value[10 x 1 x *1]] }
-0x3a8c988: {[CE Value[1]] }
-0xdceea68: {[h1.W Value[64 x 3 x 3 x 64]] }
-0xe5778f8: {[pool3 Value[3 x 3 x 64 x *1]] }
-0xe577ab8: {[h1.t Value[64 x *1]] }
-0xe577c78: {[h1.z Value[64 x 1 x *1]] }
-0xe577e38: {[h1.y Value[64 x 1 x *1]] }
-0xe5786e8: {[conv1_act.p Value[32 x 32 x 32 x *1]] }
-0xe57b438: {[labels Value[10 x *1]] }
-0xe59b408: {[pool1 Value[15 x 15 x 32 x *1]] }
-0xe5e7358: {[Err Value[1]] }
-0xe5e8178: {[conv2_act.b Value[1 x 1 x 32]] }
+0x7f74e02b1f68: {[labels Value[10 x *1]] }
+0x7f74e02b2b68: {[conv3_act.b Value[1 x 1 x 64]] }
+0x7f74e02b3908: {[features Value[32 x 32 x 3 x *1]] }
+0x7f74e02b3fd8: {[h1.b Value[64 x 1]] }
+0x7f74e02c04a8: {[conv1_act.c Value[32 x 32 x 32 x *1]] }
+0x7f74e02c0808: {[featScaled Value[32 x 32 x 3 x *1]] }
+0x7f74e02c0998: {[conv1_act.p Value[32 x 32 x 32 x *1]] }
+0x7f74e6f0ba58: {[conv1_act.y Value[32 x 32 x 32 x *1]] }
+0x7f74e6f0bbb8: {[pool1 Value[15 x 15 x 32 x *1]] }
+0x7f74e6f0c958: {[OutputNodes.b Value[10]] }
+0x7f74e6f0d1f8: {[OutputNodes.W Value[10 x 64]] }
+0x7f74e6f100b8: {[conv1_act.W Value[32 x 75]] }
+0x7f74e6f112f8: {[conv3_act.W Value[64 x 800]] }
+0x7f74e6f11918: {[conv1_act.b Value[1 x 1 x 32]] }
+0x7f74e6f2f228: {[conv2_act.W Value[32 x 800]] }
+0x7f74e7195058: {[featOffs Value[1 x 1]] }
+0x7f74e71bb7f8: {[h1.W Value[64 x 3 x 3 x 64]] }
+0x7f74e71d9a48: {[CE Value[1]] }
+0x7f74e71de798: {[Err Value[1]] }
+0x7f74e71deb78: {[conv2_act.b Value[1 x 1 x 32]] }
+0x7f74e71f10a8: {[conv2_act.c Value[15 x 15 x 32 x *1]] }
+0x7f74e71f1428: {[conv2_act.p Value[15 x 15 x 32 x *1]] }
+0x7f74e71f15e8: {[conv2_act.y Value[15 x 15 x 32 x *1]] }
+0x7f74e71f17a8: {[pool2 Value[7 x 7 x 32 x *1]] }
+0x7f74e71f1968: {[conv3_act.c Value[7 x 7 x 64 x *1]] }
+0x7f74e71f1ce8: {[conv3_act.p Value[7 x 7 x 64 x *1]] }
+0x7f74e71f1ea8: {[conv3_act.y Value[7 x 7 x 64 x *1]] }
+0x7f74e71f2068: {[pool3 Value[3 x 3 x 64 x *1]] }
+0x7f74e71f2228: {[h1.t Value[64 x *1]] }
+0x7f74e71f23e8: {[h1.z Value[64 x 1 x *1]] }
+0x7f74e71f25a8: {[h1.y Value[64 x 1 x *1]] }
+0x7f74e71f2768: {[h1_d Value[64 x 1 x *1]] }
+0x7f74e71f2ae8: {[OutputNodes.t Value[10 x 1 x *1]] }
+0x7f74e71f2ca8: {[OutputNodes.z Value[10 x 1 x *1]] }
 
 UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  10000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-Final Results: Minibatch[1-625]: SamplesSeen = 10000    Err: ErrorPrediction/Sample = 0.8638    CE: CrossEntropyWithSoftmax/Sample = 2.2684776    Perplexity = 9.6646765    
+05/03/2016 18:08:59: Final Results: Minibatch[1-625]: Err = 0.86770000 * 10000; CE = 2.26844636 * 10000; perplexity = 9.66437418
 
-04/26/2016 16:20:46: Action "test" complete.
+05/03/2016 18:08:59: Action "test" complete.
 
-04/26/2016 16:20:46: __COMPLETED__
+05/03/2016 18:08:59: __COMPLETED__

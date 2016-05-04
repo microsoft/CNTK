@@ -4,6 +4,7 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "Indexer.h"
 #include "TextReaderConstants.h"
@@ -87,7 +88,6 @@ void Indexer::BuildFromLines()
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            // TODO: ignore empty lines.
             AddSequence(sd);
             ++m_pos;
             ++lines;
@@ -97,6 +97,20 @@ void Indexer::BuildFromLines()
             RefillBuffer();
         }
     }
+
+    if (offset < m_fileOffsetEnd)
+    {
+        // There's a number of characters, not terminated by a newline,
+        // add a sequence to the index, parser will have to deal with it.
+        SequenceDescriptor sd = {};
+        sd.m_id = lines;
+        sd.m_numberOfSamples = 1;
+        sd.m_isValid = true;
+        sd.m_fileOffsetBytes = offset;
+        sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
+        AddSequence(sd);
+    }
+
 }
 
 void Indexer::Build()
@@ -201,40 +215,23 @@ bool Indexer::TryGetSequenceId(size_t& id)
         while (m_pos != m_bufferEnd)
         {
             char c = *m_pos;
-            // a well-formed sequence id must end in either a column delimiter 
-            // or a name prefix
-            if (c == COLUMN_DELIMITER || c == NAME_PREFIX)
-            {
-                return found;
-            }
 
             if (!isdigit(c))
             {
-                // TODO: ignore malformed sequences
-                RuntimeError("Unexpected character('%c')"
-                    " while reading a sequence id"
-                    " at the offset = %" PRIi64 "\n", c, GetFileOffset());
+                // Stop as soon as there's a non-digit character
+                return found;
             }
 
             found |= true;
-            size_t temp = id;
             id = id * 10 + (c - '0');
-            if (temp > id)
-            {
-                // TODO: ignore malformed sequences
-                RuntimeError("Size_t overflow while reading a sequence id"
-                    " at the offset = %" PRIi64 "\n", GetFileOffset());
-            }
             ++m_pos;
         }
         RefillBuffer();
     }
 
-    // TODO: ignore malformed sequences
-    // reached EOF without hitting the pipe character.
-    RuntimeError("Reached the end of file "
-        " while reading a sequence id"
-        " at the offset = %" PRIi64 "\n", GetFileOffset());
+    // reached EOF without hitting the pipe character,
+    // ignore it for not, parser will have to deal with it.
+    return false;
 }
 
 }}}

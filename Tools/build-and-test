@@ -6,6 +6,7 @@ RUN=1
 CLEAN_AFTER=0
 CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
+CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
 TESTTARGETS="cpu:gpu"
@@ -25,6 +26,7 @@ case $key in
     echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build (by default $FLAVORS)"
     echo "  -t|--targets <target1:target2...> - which target to build (by default $TARGETS)"
     echo "  -tt|--test-targets <testtarget1:testtarget2...> - which target to test (by default $TESTTARGETS)"
+    echo "  -cc|--code-coverage - build with support for code coverage (gcov)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
@@ -65,6 +67,9 @@ case $key in
     -tt|--test-targets)
     TESTTARGETS="${2,,}"
     shift # past argument
+    ;;
+    -cc|--code-coverage)
+    CODE_COVERAGE=yes
     ;;
     -o|--output-directory)
     OUTPUT_DIR="$2"
@@ -219,7 +224,7 @@ if [[ $BUILD == 1 ]]; then
                         OneBitSGDOPT=yes
                     fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT --1bitsgd=$OneBitSGDOPT
+                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi

@@ -23,12 +23,12 @@ testCases:
   Epochs (with low train loss) must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0.05}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.1%}}
+      - TrainNodeClassBasedCrossEntropy = {{float,tolerance=0.05}}
+      - learningRatePerSample = {{float,tolerance=0.1%}}
 
   Per-minibatch (with low train loss) training results must match:
     patterns:
       - Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - CrossEntropyWithSoftmax/Sample = {{float,tolerance=0.05}}
-      - Perplexity = {{float,tolerance=0.05}}
+      - " * {{integer}}; "
+      - TrainNodeClassBasedCrossEntropy = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.05}}
