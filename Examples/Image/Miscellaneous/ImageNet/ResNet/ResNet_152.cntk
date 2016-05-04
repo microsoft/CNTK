@@ -19,8 +19,8 @@ traceLevel=1
 numMBsToShowResult=500
 
 # Strides for increasing layers. Defaults (paper) are 2 for 1x1 and 1 for 3x3.
-stride1x1=2
-stride3x3=1
+stride1x1=1
+stride3x3=2
 
 Train=[
     action="train"
@@ -35,7 +35,7 @@ Train=[
         minibatchSize=256
         # Note that learning rates are 10x more than in the paper due to a different
         # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
-        learningRatesPerMB=1.0*35:0.1*35:0.01
+        learningRatesPerMB=1.0*30:0.1*30:0.01*30:0.001
         momentumPerMB=0.9
         maxEpochs=125
         gradUpdateType="None"

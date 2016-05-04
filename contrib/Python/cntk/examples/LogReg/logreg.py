@@ -17,7 +17,8 @@ import numpy as np
 import cntk as C 
 
 
-def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None):
+def train_eval_logistic_regression_from_file(criterion_name=None,
+        eval_name=None, device_id=-1):
     cur_dir = os.path.dirname(__file__)
 
     # Using data from https://github.com/Microsoft/CNTK/wiki/Tutorial
@@ -27,8 +28,8 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
     X = C.input(2)
     y = C.input(3)
     
-    W = C.parameter((3, 2))
-    b = C.parameter((3, 1))
+    W = C.parameter(value=np.zeros(shape=(3, 2)))
+    b = C.parameter(value=np.zeros(shape=(3, 1)))
 
     out = C.times(W, X) + b
     out.tag = 'output'
@@ -40,15 +41,16 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
     eval.name = eval_name
 
     # training data readers
-    train_reader = C.CNTKTextFormatReader(train_file)
+    train_reader = C.CNTKTextFormatReader(train_file, randomize=None)
 
     # testing data readers
-    test_reader = C.CNTKTextFormatReader(test_file)
+    test_reader = C.CNTKTextFormatReader(test_file, randomize=None)
 
     my_sgd = C.SGDParams(
         epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
 
     with C.LocalExecutionContext('logreg') as ctx:
+        ctx.device_id = device_id
 
         ctx.train(
             root_nodes=[ce, eval], 
@@ -61,13 +63,13 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
 
         return result
 
-def _test_logistic_regression_from_file():
-    result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
+def test_logistic_regression_from_file(device_id):
+    result = train_eval_logistic_regression_from_file('crit_node', 'eval_node', device_id)
 
     TOLERANCE_ABSOLUTE = 1E-02
-    assert np.allclose(result['perplexity'], 1.5584637, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 0.4437005, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 2.7779043, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['perplexity'], 1.55153792, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.43924664, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 3.26340137, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression_from_file())

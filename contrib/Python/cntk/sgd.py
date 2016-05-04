@@ -270,9 +270,9 @@ class SGDParams:
             if  k[0] != '_' and v is not None:
                 # this is a sub-block
                 if k in self._auto_adjust_params:
-                    auto_adjust_block.append('\t{0} = {1}\r\n'.format(self._py_to_cntk[k], v))
+                    auto_adjust_block.append('\t{0} = {1}\n'.format(self._py_to_cntk[k], v))
                 else:
-                    config.append('{0} = {1}\r\n'.format(self._py_to_cntk[k], v))    
+                    config.append('{0} = {1}\n'.format(self._py_to_cntk[k], v))    
             
         if len(auto_adjust_block) > 0:
             config.append("autoAdjust=[\n")

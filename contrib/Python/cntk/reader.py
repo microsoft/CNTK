@@ -130,6 +130,8 @@ class CNTKTextFormatReader(AbstractReader):
             ):
         self.reader_type = 'CNTKTextFormatReader'
         self.filename = filename
+        if randomize is None:
+            randomize = 'none'
         self.randomize = randomize.lower()
         assert self.randomize in ['auto', 'none']
         self.skip_sequence_ids = bool(skip_sequence_ids)
