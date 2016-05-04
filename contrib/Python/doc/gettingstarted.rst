@@ -230,7 +230,7 @@ We can define this network as follows in the CNTK Python API::
 
         # setup embedding matrix
         embedding = C.parameter((embed_dim, vocab), 
-		                         learning_rate_multiplier=0.0, 
+                                 learning_rate_multiplier=0.0, 
                                  init_from_file_path=embedding_file)
 
         # get the vector representing the word
