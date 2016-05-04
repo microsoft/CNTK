@@ -24,22 +24,6 @@ size_t RoundUpToMultiple(size_t n, size_t blockSize)
     return (n + blockSize - 1) / blockSize;
 }
 
-cudaError_t GetLastCudaError()
-{
-    cudaError_t prelaunchErr = cudaGetLastError();
-    assert(cudaSuccess == prelaunchErr);
-    if (prelaunchErr != cudaSuccess)
-        return prelaunchErr;
-
-#ifndef NO_SYNC
-    cudaError_t executionErr = cudaStreamSynchronize(GetStream());
-    assert(cudaSuccess == executionErr);
-    if (executionErr != cudaSuccess)
-        return executionErr;
-#endif
-    return cudaSuccess;
-}
-
 template <int U, typename T>
 __device__ __forceinline__ void LoadValues(const T* src, T dst[U])
 {
@@ -154,16 +138,16 @@ void Call(size_t vectorSize, Targs... args)
 // Mean and variance computation
 //--------------------------------------------------------------------
 
-// The kernel implements online, parallel and numerically stable algorithm
+// The kernel implements online, parallel and numerically stable algorithm 
 // for computing batch mean and variance (and inverse standard deviation) with one pass over the data.
 // It uses algorithms by Knuth/Welford and Chan et al (http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf)
 // In short, algorithm has 2 steps:
-// 1. Each thread strides over the input and computes mean and
+// 1. Each thread strides over the input and computes mean and 
 //    m2 value (used to compute variance and inverse standard deviation at the end) - Welford algorithm.
-// 2. Parallel reduction (Chan algorithm) performed by columns (note that
+// 2. Parallel reduction (Chan algorithm) performed by columns (note that 
 //    thread block and grid X dimensions go along the vector and Y dimension - along the batch).
 //    As a result, each block has 2 * blockDim.x (mean and inverse stddev) values to write at the end.
-//
+//    
 // Running mean and variance will be averaged according to an exponential
 // averaging factor (expAvgFactor), taking the running statistics with weight
 // (1 - expAvgFactor).
@@ -209,116 +193,116 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
 
     if (expAvgFactor != 0 || blendFactor != 1)
     {
-        int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
-        if (irowSrcBase >= vectorSize)
-            return;
-        assert(irowSrcBase + U <= vectorSize);
+    int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
+    if (irowSrcBase >= vectorSize)
+        return;
+    assert(irowSrcBase + U <= vectorSize);
 
         // --- estimate this minibatch's mean/variance
 
-        // first estimate mean over all data for this thread
-        int n = 0;
-        ElemType mean[U]; // this thread's part of the mean vector (stored as a normalized mean also during accumulation)
+    // first estimate mean over all data for this thread
+    int n = 0;
+    ElemType mean[U]; // this thread's part of the mean vector (stored as a normalized mean also during accumulation)
         ElemType m2[U];   // likewise for variance
         ElemType im2[U];  // and inverse stddev
 #pragma unroll
+    for (int k = 0; k < U; k++)
+    {
+        mean[k] = 0;
+        m2[k] = 0;
+    }
+
+    int icolSrc = threadIdx.y;
+    const ElemType* psrc = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+    // Stride over all vectors in the batch.
+    for (; icolSrc < batchSize; icolSrc += BlockDimY)
+    {
+        n++;
+        ElemType curVal[U];
+        LoadValues<U>(psrc, curVal);
+        // No need for separate unrolling, SASS looks good.
+#pragma unroll
         for (int k = 0; k < U; k++)
         {
-            mean[k] = 0;
-            m2[k] = 0;
+            ElemType d = curVal[k] - mean[k];
+            // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
+            // Using precise math slows down the code by about 40%.
+            mean[k] += d / n; // mean_n = [mean_{n-1} * (n-1) + curVal] / n = mean_{n-1} *n/n - mean_{n-1} / n + curVal / n
+            m2[k] += d * (curVal[k] - mean[k]);
         }
-
-        int icolSrc = threadIdx.y;
-        const ElemType* psrc = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
-        // Stride over all vectors in the batch.
-        for (; icolSrc < batchSize; icolSrc += BlockDimY)
-        {
-            n++;
-            ElemType curVal[U];
-            LoadValues<U>(psrc, curVal);
-            // No need for separate unrolling, SASS looks good.
-#pragma unroll
-            for (int k = 0; k < U; k++)
-            {
-                ElemType d = curVal[k] - mean[k];
-                // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
-                // Using precise math slows down the code by about 40%.
-                mean[k] += d / n; // mean_n = [mean_{n-1} * (n-1) + curVal] / n = mean_{n-1} *n/n - mean_{n-1} / n + curVal / n
-                m2[k] += d * (curVal[k] - mean[k]);
-            }
-            psrc += vectorSize * BlockDimY;
-        }
+        psrc += vectorSize * BlockDimY;
+    }
 
         // now reduce minibatch mean/variance across threads
-        const int tid = threadIdx.y * BlockDimX + threadIdx.x;
-        const int laneId = tid & 0x1f;
-        // First, reduce within warp using shuffle.
-        if (n > 0)
-        {
+    const int tid = threadIdx.y * BlockDimX + threadIdx.x;
+    const int laneId = tid & 0x1f;
+    // First, reduce within warp using shuffle.
+    if (n > 0)
+    {
 #pragma unroll
-            for (int i = 1; i < CUB_PTX_WARP_THREADS / BlockDimX; i *= 2)
-            {
-                int srcLane = laneId + BlockDimX * i;
-                int n2 = Shuffle(n, srcLane);
-                int nsum = n + n2;
-                ElemType d[U];
-#pragma unroll
-                for (int k = 0; k < U; k++)
-                {
-                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
-                    mean[k] += dScaled;
-                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
-                }
-                n = nsum;
-            }
-        }
-
-        // Storage for each warp in a thread block. First warp ("accumulator") holds
-        // final results so it does not need shared memory.
-        const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ ElemType meanRes[BlockDimX * U][cwarp - 1];
-        __shared__ ElemType m2Res[BlockDimX * U][cwarp - 1];
-        __shared__ int nRes[cwarp - 1];
-
-        // Each warp (except warp0) will write accumulated results to shared memory.
-        const int iwarp = tid / CUB_PTX_WARP_THREADS;
-        if (iwarp > 0 && laneId < BlockDimX)
+        for (int i = 1; i < CUB_PTX_WARP_THREADS / BlockDimX; i *= 2)
         {
-            if (laneId == 0)
-                nRes[iwarp - 1] = n;
+            int srcLane = laneId + BlockDimX * i;
+            int n2 = Shuffle(n, srcLane);
+            int nsum = n + n2;
+            ElemType d[U];
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                meanRes[laneId * U + k][iwarp - 1] = mean[k];
-                m2Res[laneId * U + k][iwarp - 1] = m2[k];
+                d[k] = Shuffle(mean[k], srcLane) - mean[k];
+                ElemType dScaled = d[k] * n2 / nsum;
+                mean[k] += dScaled;
+                m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
             }
+            n = nsum;
         }
-        __syncthreads();
+    }
+
+    // Storage for each warp in a thread block. First warp ("accumulator") holds 
+    // final results so it does not need shared memory.
+    const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
+    __shared__ ElemType meanRes[BlockDimX * U][cwarp - 1];
+    __shared__ ElemType m2Res[BlockDimX * U][cwarp - 1];
+    __shared__ int nRes[cwarp - 1];
+
+    // Each warp (except warp0) will write accumulated results to shared memory.
+    const int iwarp = tid / CUB_PTX_WARP_THREADS;
+    if (iwarp > 0 && laneId < BlockDimX)
+    {
+        if (laneId == 0)
+            nRes[iwarp - 1] = n;
+#pragma unroll
+        for (int k = 0; k < U; k++)
+        {
+            meanRes[laneId * U + k][iwarp - 1] = mean[k];
+            m2Res[laneId * U + k][iwarp - 1] = m2[k];
+        }
+    }
+    __syncthreads();
 
         // --- final reduction and update of running mean/variance
 
-        // Accumulate and write final results.
-        // REVIEW alexeyk: see if atomicAdd can be used instead, do perf comparison.
-        if (threadIdx.y == 0)
+    // Accumulate and write final results.
+    // REVIEW alexeyk: see if atomicAdd can be used instead, do perf comparison.
+    if (threadIdx.y == 0)
+    {
+        // Use simple loop as number of warps is small, 8 at max.
+#pragma unroll
+        for (int i = 0; i < cwarp - 1; i++)
         {
-            // Use simple loop as number of warps is small, 8 at max.
+            int n2 = nRes[i];
+            int nsum = n + n2;
+            ElemType d[U];
 #pragma unroll
-            for (int i = 0; i < cwarp - 1; i++)
+            for (int k = 0; k < U; k++)
             {
-                int n2 = nRes[i];
-                int nsum = n + n2;
-                ElemType d[U];
-#pragma unroll
-                for (int k = 0; k < U; k++)
-                {
-                    d[k] = meanRes[threadIdx.x * U + k][i] - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
-                    mean[k] += dScaled;
-                    m2[k] += m2Res[threadIdx.x * U + k][i] + d[k] * n * dScaled;
-                }
-                n = nsum;
+                d[k] = meanRes[threadIdx.x * U + k][i] - mean[k];
+                ElemType dScaled = d[k] * n2 / nsum;
+                mean[k] += dScaled;
+                m2[k] += m2Res[threadIdx.x * U + k][i] + d[k] * n * dScaled;
             }
+            n = nsum;
+        }
 
             size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
             ElemType run[U];
@@ -331,7 +315,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             {
                 run[k] = expAvgFactor * mean[k] + (1.0 - expAvgFactor) * run[k];
                 x[k] = blendFactor * run[k] + (1.0 - blendFactor) * mean[k];
-            }
+        }
             StoreValues<U>(run, runMean + idxDstBase);
             StoreValues<U>(x, xMean + idxDstBase);
             // At this point, runMean[] and xMean[] have been updated
@@ -340,8 +324,8 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             LoadValues<U>(runVariance + idxDstBase, run);
             // TODO add back special cases
 #pragma unroll
-            for (int k = 0; k < U; k++)
-            {
+        for (int k = 0; k < U; k++)
+        {
                 // Compute batch inverse standard deviation and variance
                 ElemType runVariance = batchSize == 1 ? 0 : m2[k] / (batchSize - 1);
                 // Average
@@ -352,7 +336,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
                 {
                     ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(run[k] + epsilon));
                     im2[k] = blendFactor * runInvStdDev + (1.0 - blendFactor) * im2[k];
-                }
+        }
             }
             StoreValues<U>(run, runVariance + idxDstBase);
             StoreValues<U>(im2, xInvStdDev + idxDstBase);
@@ -360,9 +344,9 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         }
     }
     else if (threadIdx.y == 0)
-    {
+        {
         size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
-        ElemType run[U];
+            ElemType run[U];
 
         // Copy mean
         LoadValues<U>(runMean + idxDstBase, run);
@@ -371,20 +355,20 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         // Copy & convert variance
         LoadValues<U>(runVariance + idxDstBase, run);
 #pragma unroll
-        for (int k = 0; k < U; k++)
+            for (int k = 0; k < U; k++)
             run[k] = Operations::RSqrt(static_cast<ElemType>(run[k] + epsilon));
         StoreValues<U>(run, xInvStdDev + idxDstBase);
+        }
     }
-}
 
 // This kernel is very similar to kComputeBatchMeanAndInvStdDev except it reduces not just over N (minibatch)
 // but also W and H dimensions.
 // REVIEW alexeyk: is it possible to combine this and previous kernel into a single kernel without hurting performance/readability much?
 template <int BlockDimX, int BlockDimY, int U, typename ElemType>
-__global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const ElemType* x,
+__global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatialSize, int batchSize, const ElemType* x, 
                                                      double expAvgFactor, double blendFactor,
                                                      ElemType* runMean, ElemType* runVariance,
-                                                     double epsilon, ElemType* xMean, ElemType* xInvStdDev)
+                                                        double epsilon, ElemType* xMean, ElemType* xInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -402,123 +386,123 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
 
     if (expAvgFactor != 0 || blendFactor != 1)
     {
-        int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
-        if (irowSrcBase >= vectorSize)
-            return;
-        assert(irowSrcBase + U <= vectorSize);
-        int irowSrcLim = (blockIdx.x + 1) * spatialSize;
+    int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
+    if (irowSrcBase >= vectorSize)
+        return;
+    assert(irowSrcBase + U <= vectorSize);
+    int irowSrcLim = (blockIdx.x + 1) * spatialSize;
 
-        int n = 0;
-        ElemType mean[U];
-        ElemType m2[U];
+    int n = 0;
+    ElemType mean[U];
+    ElemType m2[U];
 #pragma unroll
-        for (int k = 0; k < U; k++)
-        {
-            mean[k] = 0;
-            m2[k] = 0;
-        }
+    for (int k = 0; k < U; k++)
+    {
+        mean[k] = 0;
+        m2[k] = 0;
+    }
 
-        int icolSrc = threadIdx.y;
-        const ElemType* psrcBase = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
-        // Stride over all vectors in the batch.
-        for (; icolSrc < batchSize; icolSrc += BlockDimY)
+    int icolSrc = threadIdx.y;
+    const ElemType* psrcBase = x + static_cast<size_t>(icolSrc) * vectorSize + irowSrcBase;
+    // Stride over all vectors in the batch.
+    for (; icolSrc < batchSize; icolSrc += BlockDimY)
+    {
+        const ElemType* psrc = psrcBase;
+        // Stride over all values in feature map (W and H dimensions).
+        for (int irowSrc = irowSrcBase; irowSrc < irowSrcLim; irowSrc += BlockDimX * U, psrc += BlockDimX * U)
         {
-            const ElemType* psrc = psrcBase;
-            // Stride over all values in feature map (W and H dimensions).
-            for (int irowSrc = irowSrcBase; irowSrc < irowSrcLim; irowSrc += BlockDimX * U, psrc += BlockDimX * U)
-            {
-                n++;
-                ElemType curVal[U];
-                LoadValues<U>(psrc, curVal);
-                // No need for separate unrolling, SASS looks good.
-#pragma unroll
-                for (int k = 0; k < U; k++)
-                {
-                    ElemType d = curVal[k] - mean[k];
-                    // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
-                    // Using precise math slows down the code by about 40%.
-                    mean[k] += d / n;
-                    m2[k] += d * (curVal[k] - mean[k]);
-                }
-            }
-            psrcBase += vectorSize * BlockDimY;
-        }
-
-        const int tid = threadIdx.y * BlockDimX + threadIdx.x;
-        const int laneId = tid & 0x1f;
-        // First, reduce within warp using shuffle.
-        if (n > 0)
-        {
-#pragma unroll
-            for (int i = 1; i < CUB_PTX_WARP_THREADS; i *= 2)
-            {
-                int srcLane = laneId + i;
-                int n2 = Shuffle(n, srcLane);
-                int nsum = n + n2;
-                ElemType d[U];
-#pragma unroll
-                for (int k = 0; k < U; k++)
-                {
-                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
-                    mean[k] += dScaled;
-                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
-                }
-                n = nsum;
-            }
-        }
-
-        // Storage for each warp in a thread block. First warp ("accumulator") holds
-        // final results so it does not need shared memory.
-        const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ ElemType meanRes[U][cwarp - 1];
-        __shared__ ElemType m2Res[U][cwarp - 1];
-        __shared__ int nRes[cwarp - 1];
-
-        // Each warp (except warp0) will write accumulated results to shared memory.
-        const int iwarp = tid / CUB_PTX_WARP_THREADS;
-        if (iwarp > 0 && laneId == 0)
-        {
-            nRes[iwarp - 1] = n;
+            n++;
+            ElemType curVal[U];
+            LoadValues<U>(psrc, curVal);
+            // No need for separate unrolling, SASS looks good.
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                meanRes[k][iwarp - 1] = mean[k];
-                m2Res[k][iwarp - 1] = m2[k];
+                ElemType d = curVal[k] - mean[k];
+                // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
+                // Using precise math slows down the code by about 40%.
+                mean[k] += d / n;
+                m2[k] += d * (curVal[k] - mean[k]);
             }
         }
-        __syncthreads();
+        psrcBase += vectorSize * BlockDimY;
+    }
 
-        // One thread will accumulate and write final results.
-        if (tid == 0)
+    const int tid = threadIdx.y * BlockDimX + threadIdx.x;
+    const int laneId = tid & 0x1f;
+    // First, reduce within warp using shuffle.
+    if (n > 0)
+    {
+#pragma unroll
+        for (int i = 1; i < CUB_PTX_WARP_THREADS; i *= 2)
         {
-            // Use simple loop as number of warps is small, 8 at max.
+            int srcLane = laneId + i;
+            int n2 = Shuffle(n, srcLane);
+            int nsum = n + n2;
+            ElemType d[U];
 #pragma unroll
-            for (int i = 0; i < cwarp - 1; i++)
+            for (int k = 0; k < U; k++)
             {
-                int n2 = nRes[i];
-                int nsum = n + n2;
-                ElemType d[U];
-#pragma unroll
-                for (int k = 0; k < U; k++)
-                {
-                    d[k] = meanRes[k][i] - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
-                    mean[k] += dScaled;
-                    m2[k] += m2Res[k][i] + d[k] * n * dScaled;
-                }
-                n = nsum;
+                d[k] = Shuffle(mean[k], srcLane) - mean[k];
+                ElemType dScaled = d[k] * n2 / nsum;
+                mean[k] += dScaled;
+                m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
             }
-            // Final step - accumlate results in mean[0] and m2[0].
-            // REVIEW alexeyk: move outside of the loop, before storing values to smem.
+            n = nsum;
+        }
+    }
+
+    // Storage for each warp in a thread block. First warp ("accumulator") holds 
+    // final results so it does not need shared memory.
+    const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
+    __shared__ ElemType meanRes[U][cwarp - 1];
+    __shared__ ElemType m2Res[U][cwarp - 1];
+    __shared__ int nRes[cwarp - 1];
+
+    // Each warp (except warp0) will write accumulated results to shared memory.
+    const int iwarp = tid / CUB_PTX_WARP_THREADS;
+    if (iwarp > 0 && laneId == 0)
+    {
+        nRes[iwarp - 1] = n;
 #pragma unroll
-            for (int k = 1; k < U; k++)
+        for (int k = 0; k < U; k++)
+        {
+            meanRes[k][iwarp - 1] = mean[k];
+            m2Res[k][iwarp - 1] = m2[k];
+        }
+    }
+    __syncthreads();
+
+    // One thread will accumulate and write final results.
+    if (tid == 0)
+    {
+        // Use simple loop as number of warps is small, 8 at max.
+#pragma unroll
+        for (int i = 0; i < cwarp - 1; i++)
+        {
+            int n2 = nRes[i];
+            int nsum = n + n2;
+            ElemType d[U];
+#pragma unroll
+            for (int k = 0; k < U; k++)
             {
-                ElemType d = mean[k] - mean[0];
-                ElemType dScaled = d * n / (n + k * n);
-                mean[0] += dScaled;
-                m2[0] += m2[k] + d * k * n * dScaled;
+                d[k] = meanRes[k][i] - mean[k];
+                ElemType dScaled = d[k] * n2 / nsum;
+                mean[k] += dScaled;
+                m2[k] += m2Res[k][i] + d[k] * n * dScaled;
             }
+            n = nsum;
+        }
+        // Final step - accumlate results in mean[0] and m2[0].
+        // REVIEW alexeyk: move outside of the loop, before storing values to smem.
+#pragma unroll
+        for (int k = 1; k < U; k++)
+        {
+            ElemType d = mean[k] - mean[0];
+            ElemType dScaled = d * n / (n + k * n);
+            mean[0] += dScaled;
+            m2[0] += m2[k] + d * k * n * dScaled;
+        }
 
             // TODO add back special cases
             runMean[blockIdx.x] = expAvgFactor * mean[0] + (1.0 - expAvgFactor) * runMean[blockIdx.x];
@@ -531,8 +515,8 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
             {
                 ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(runVariance[blockIdx.x] + epsilon));
                 xInvStdDev[blockIdx.x] = blendFactor * runInvStdDev + (1.0 - blendFactor) * xInvStdDev[blockIdx.x];
-            }
-        }
+    }
+}
     }
     else if (threadIdx.y == 0 && threadIdx.x == 0)
     {
@@ -565,7 +549,7 @@ struct ComputeBatchMeanAndInvStdDev
         // Create grid with only one block in y(batch)-dimension as kernel uses striding.
         auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
         kComputeBatchMeanAndInvStdDev<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
-            static_cast<int>(vectorSize), static_cast<int>(batchSize),
+            static_cast<int>(vectorSize), static_cast<int>(batchSize), 
             x, expAvgFactor, blendFactor, runMean, runVariance, epsilon, xMean, xInvStdDev);
     }
 };
@@ -574,7 +558,7 @@ template <int U>
 struct ComputeSpatialBatchMeanAndInvStdDev
 {
     template <typename ElemType>
-    static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x,
+    static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, 
                         double expAvgFactor, double blendFactor, ElemType* runMean, ElemType* runVariance,
                         double epsilon, ElemType* xMean, ElemType* xInvStdDev, cudaStream_t stream)
     {
@@ -589,7 +573,7 @@ struct ComputeSpatialBatchMeanAndInvStdDev
         // Each thread block processes a single whole feature map independently (i.e. reduces over W, H and N dimensions).
         auto gdim = dim3(static_cast<unsigned int>(vectorSize / spatialSize));
         kComputeSpatialBatchMeanAndInvStdDev<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
-            static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize),
+            static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), 
             x, expAvgFactor, blendFactor, runMean, runVariance, epsilon, xMean, xInvStdDev);
     }
 };
@@ -726,7 +710,7 @@ struct NormalizeBatchTraining
                     epsilon,
                     x, y, bnScale, bnBias,
                     runningMean, runningVariance,
-                    batchMean, batchInvStdDev);
+                batchMean, batchInvStdDev);
         }
         else
         {
@@ -743,7 +727,7 @@ struct NormalizeBatchTraining
                     epsilon,
                     x, y, bnScale, bnBias,
                     runningMean, runningVariance,
-                    batchMean, batchInvStdDev);
+                batchMean, batchInvStdDev);
 
         }
     }
@@ -861,7 +845,7 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
 }
 
 template <int BlockDimX, int BlockDimY, int U, typename ElemType>
-__global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy,
+__global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy, 
                                                         ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");

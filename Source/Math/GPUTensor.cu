@@ -36,7 +36,7 @@
 // thread local storage to access the current stream, initalize to default stream
 __declspec(thread)
 #endif
-extern cudaStream_t t_stream;
+    extern cudaStream_t t_stream;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -586,7 +586,7 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_launchTensorOp", t_stream);
     GridDim grid(NN);
     _launchTensorOp<ElemType, N, /*M=*/0, K> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >>>(beta, pointers, alpha, op, (ElementWiseOperator)(-1) /* dummy reductionOp */, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
 }
@@ -744,6 +744,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         // This involves no reduction across blocks.
         if (numReductionChunks == 1)
         {
+            PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
                 beta, pointers, alpha, op, reductionOp,
                 regularOpStrides, regularStrides, NN,
@@ -781,10 +782,13 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             FixedMatrix<C_int, N, K> regularStrides1(regularStrideVectors1);
             ElemType beta1  = 0;
             ElemType alpha1 = 1;
-            _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(
-                beta1, pointers1, alpha1, op, reductionOp,
-                regularOpStrides, regularStrides1, NN,
-                reducingOpDims, reducingStrides, /*reductionBegin*/0, reductionChunkSize);
+            {
+                PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(
+                    beta1, pointers1, alpha1, op, reductionOp,
+                    regularOpStrides, regularStrides1, NN,
+                    reducingOpDims, reducingStrides, /*reductionBegin*/0, reductionChunkSize);
+            }
 
 #if 1
             // now reduce and redistribute
@@ -828,12 +832,14 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 #else
         else if (beta == 1)
         {
+            PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
             // no need to pre-scale; just add (common for gradients)
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             return;
-        }
-        else
-        {
+    }
+    else
+    {
+            PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
@@ -901,7 +907,7 @@ void LaunchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemTy
             _launchUnaryTensorOp<ElemType, Functor##oper><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pa, pb, alpha, NN);\
         break;
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("LaunchUnaryTensorOp", t_stream);
     GridDim grid(NN);
     switch (op)
     {

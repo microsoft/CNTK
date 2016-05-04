@@ -10,6 +10,7 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
+
 #include <string>
 #include <vector>
 #include <list>

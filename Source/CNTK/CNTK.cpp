@@ -36,6 +36,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <chrono>
@@ -73,6 +74,18 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+// Setup profiling
+template <typename ConfigParamType>
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
+{
+    if (config(L"profilerEnabled", true))
+    {
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(),
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)),
+                             std::to_string(nodeRank).c_str(), config(L"profilerSyncGpu", false));
+    }
+}
 
 void RedirectStdErr(wstring logpath)
 {
@@ -544,6 +557,13 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // echo gpu info to log
     PrintGpuInfo();
 
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
+#ifndef CPUONLY
+    AsyncGPUProfiler gpuProfiler;
+#endif
+
     // execute the actions
     // std::string type = config(L"precision", "float");
     int numCPUThreads = config(L"numCPUThreads", 0);
@@ -690,6 +710,13 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     for (int i = 0; i < command.size(); i++)
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling<ConfigParameters>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
+#ifndef CPUONLY
+    AsyncGPUProfiler gpuProfiler;
+#endif
 
     // run commands
     std::string type = config(L"precision", "float");

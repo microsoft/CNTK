@@ -18,6 +18,8 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 
+#include "PerformanceProfiler.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -82,6 +84,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     // return the result and kick off a new one.
     m_prefetchTask = std::async(m_launchType, [this]()
     {
+        PROFILE_SCOPE(profilerEvtReadMinibatch);
         return m_reader->ReadMinibatch();
     });
 }
@@ -194,6 +197,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // return the result and kick off a new one.
         m_prefetchTask = std::async(m_launchType, [this]()
         {
+            PROFILE_SCOPE(profilerEvtReadMinibatch);
             return m_reader->ReadMinibatch();
         });
     }

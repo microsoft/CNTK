@@ -37,7 +37,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -54,11 +54,19 @@
       <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>Math.lib; kernel32.lib; user32.lib; shell32.lib; PerformanceProfilerDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Math.dll; nvml.dll; PerformanceProfilerDll.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
@@ -71,7 +79,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll);PerformanceProfilerDll.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" "$(TargetDir)"</Command>

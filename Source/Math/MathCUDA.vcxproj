@@ -62,14 +62,14 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(CudaLibs);%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>$(CudaDlls);%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalDependencies>$(CudaLibs);PerformanceProfilerDll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>$(CudaDlls);PerformanceProfilerDll.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>$(OutDir);$(CudaLibPath);$(CuDnnLibPath)</AdditionalLibraryDirectories>
