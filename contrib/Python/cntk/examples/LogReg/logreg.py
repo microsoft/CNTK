@@ -17,7 +17,8 @@ import numpy as np
 import cntk as C 
 
 
-def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None):
+def train_eval_logistic_regression_from_file(criterion_name=None,
+        eval_name=None, device_id=-1):
     cur_dir = os.path.dirname(__file__)
 
     # Using data from https://github.com/Microsoft/CNTK/wiki/Tutorial
@@ -49,6 +50,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
         epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
 
     with C.LocalExecutionContext('logreg') as ctx:
+        ctx.device_id = device_id
 
         ctx.train(
             root_nodes=[ce, eval], 
@@ -61,8 +63,8 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
 
         return result
 
-def test_logistic_regression_from_file():
-    result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
+def test_logistic_regression_from_file(device_id):
+    result = train_eval_logistic_regression_from_file('crit_node', 'eval_node', device_id)
 
     TOLERANCE_ABSOLUTE = 1E-02
     assert np.allclose(result['perplexity'], 1.55153792, atol=TOLERANCE_ABSOLUTE)

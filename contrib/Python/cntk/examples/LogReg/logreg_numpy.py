@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import numpy as np
 import cntk as C
 
-def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=None):
+def train_eval_logistic_regression_with_numpy(criterion_name=None,
+        eval_name=None, device_id=-1):
 
     # for repro and tests :-)
     np.random.seed(1)
@@ -48,6 +49,8 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
 
     my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
     with C.LocalExecutionContext('logreg') as ctx:
+        ctx.device_id = device_id
+
         ctx.train(
                 root_nodes=[ce,eval], 
                 training_params=my_sgd)
@@ -56,10 +59,11 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
         return result
 
 
-def test_logistic_regression_with_numpy():
-    result = train_eval_logistic_regression_with_numpy('crit_node', 'eval_node')
+def test_logistic_regression_with_numpy(device_id):
+    result = train_eval_logistic_regression_with_numpy('crit_node',
+            'eval_node', device_id)
 
-    TOLERANCE_ABSOLUTE = 1E-03
+    TOLERANCE_ABSOLUTE = 1E-02
     assert np.allclose(result['perplexity'], 1.55057073, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['crit_node'], 0.43862308, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['eval_node'], 1.16664551, atol=TOLERANCE_ABSOLUTE)
