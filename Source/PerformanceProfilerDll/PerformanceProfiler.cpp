@@ -43,11 +43,13 @@ static const char* c_profilerEvtDesc[profilerEvtMax] = {
     "Backward Pass Time........:",
     "Input Data Processing Time:",
     "MPI Processing Time.......:",
+    "MPI Wait Time.............:",
     "MPI Throughput............:",
-    "Disk Throughput...........:"
+    "ImageReader Throughput....:"
 };
 
 static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
+    profilerEvtTime,
     profilerEvtTime,
     profilerEvtTime,
     profilerEvtTime,
@@ -97,7 +99,7 @@ inline void LockEnter();
 inline void LockLeave();
 void LockClose();
 
-void ProfilerGenerateReport(const char* fileName, const char* timeStamp);
+void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo);
 void FormatTimeStr(char* str, size_t strLen, double value);
 void FormatThroughputStr(char* str, size_t strLen, double value);
 
@@ -140,9 +142,10 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
 {
-    LOCK
     if (!g_profilerState.init) return 0;
 
+    LOCK
+    
     if (g_profilerState.fixedEvents[eventId].refCnt == 0)
     {
         g_profilerState.fixedEvents[eventId].beginClock = GetClock();
@@ -161,8 +164,10 @@ int PERF_PROFILER_API ProfilerTimeBegin(const char* description)
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 {
     long long endClock = GetClock();
-    LOCK
     if (!g_profilerState.init) return;
+
+    LOCK
+    
     g_profilerState.fixedEvents[stateId].refCnt--;
     if (g_profilerState.fixedEvents[stateId].refCnt == 0)
     {
@@ -186,8 +191,10 @@ void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 //
 int PERF_PROFILER_API ProfilerThroughputBegin(int eventId)
 {
-    LOCK
     if (!g_profilerState.init) return 0;
+
+    LOCK
+    
     g_profilerState.throughputIdx++;
     if (g_profilerState.throughputIdx >= THROUGHPUT_EVENT_MAX)
     {
@@ -209,8 +216,10 @@ int PERF_PROFILER_API ProfilerThroughputBegin(const char* description)
 void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 {
     long long endClock = GetClock();
-    LOCK
     if (!g_profilerState.init) return;
+
+    LOCK
+    
     if (stateId == g_profilerState.throughputIdx)
     {
         g_profilerState.throughputIdx--;
@@ -234,7 +243,8 @@ void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 //
 void PERF_PROFILER_API ProfilerClose()
 {
-    { LOCK g_profilerState.init = false; }
+    if (!g_profilerState.init) return;
+
     LockClose();
 
     _wmkdir(s2ws(g_profilerState.profilerDir).c_str());
@@ -248,7 +258,7 @@ void PERF_PROFILER_API ProfilerClose()
 
     char fileName[256];
     sprintf_s(fileName, sizeof(fileName)-1, "%s/%s_" PROFILER_SUMMARY, g_profilerState.profilerDir, timeStr);
-    ProfilerGenerateReport(fileName, timeStr);
+    ProfilerGenerateReport(fileName, timeInfo);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -358,12 +368,19 @@ void LockClose()
 //
 // Generate summary report.
 //
-void ProfilerGenerateReport(const char* fileName, const char* timeStamp)
+void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
 {
-    FILE* f = fopenOrDie(fileName, "wt");
+    FILE* f = fopen(fileName, "wt");
+    if (f == NULL)
+    {
+        fprintf(stderr, "Error: ProfilerGenerateReport: Cannot create file <%s>\n", fileName);
+        return;
+    }
 
     fprintfOrDie(f, "CNTK Performance Profiler Summary Report\n\n");
-    fprintfOrDie(f, "Time Stamp: %s\n\n", timeStamp);
+    char timeStr[32];
+    strftime(timeStr, sizeof(timeStr), "%Y/%m/%d %H:%M:%S", timeInfo);
+    fprintfOrDie(f, "Time Stamp: %s\n\n", timeStr);
 
     fprintfOrDie(f, "Description................ ............Mean ..........StdDev .............Min .............Max ...........Count\n");
 

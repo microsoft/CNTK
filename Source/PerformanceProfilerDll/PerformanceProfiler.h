@@ -32,8 +32,9 @@ enum ProfilerEvents
     profilerEvtBackwardPass,
     profilerEvtInputProcessing,
     profilerEvtMPIProcessing,
+    profilerEvtMPIWait,
     profilerEvtMPIThroughput,
-    profilerEvtDiskThroghput,
+    profilerEvtImageReaderThroughput,
     profilerEvtMax,
 };
 

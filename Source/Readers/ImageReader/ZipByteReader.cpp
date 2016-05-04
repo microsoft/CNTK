@@ -91,7 +91,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path)
         }
         assert(contents.size() >= size);
 
-        auto profilerStateId = ProfilerThroughputBegin(profilerEvtDiskThroghput);
+        auto profilerStateId = ProfilerThroughputBegin(profilerEvtImageReaderThroughput);
         zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
         ProfilerThroughputEnd(profilerStateId, size);
 

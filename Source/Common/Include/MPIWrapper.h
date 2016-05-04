@@ -306,15 +306,16 @@ public:
     template <typename VECTORLIKEOBJECT>
     void AllReduce(VECTORLIKEOBJECT &accumulator) const
     {
-        PROFILE_SCOPE(profilerEvtMPIProcessing);
-
         auto *dataptr = accumulator.data();
         size_t totalnumelements = accumulator.size();
 
         // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
+            PROFILE_SCOPE(profilerEvtMPIProcessing);
+            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
             MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
+            ProfilerThroughputEnd(profilerStateId, (long long)totalnumelements * sizeof(size_t));
         }
     }
 
@@ -322,21 +323,21 @@ public:
     template <class ElemType>
     void AllReduce(ElemType *pData, size_t nData)
     {
-        PROFILE_SCOPE(profilerEvtMPIProcessing);
-
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
+            PROFILE_SCOPE(profilerEvtMPIProcessing);
+            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
             MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+            ProfilerThroughputEnd(profilerStateId, (long long)nData * sizeof(size_t));
         }
     }
 
     template <class ElemType>
     void Bcast(ElemType *pData, size_t nData, size_t srcRank)
     {
-        PROFILE_SCOPE(profilerEvtMPIProcessing);
-
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
+            PROFILE_SCOPE(profilerEvtMPIProcessing);
             auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
             MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
             ProfilerThroughputEnd(profilerStateId, (long long)nData * sizeof(size_t));
@@ -346,7 +347,7 @@ public:
     // wait for all ranks to reach here
     void WaitAll()
     {
-        PROFILE_SCOPE(profilerEvtMPIProcessing);
+        PROFILE_SCOPE(profilerEvtMPIWait);
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
 };
