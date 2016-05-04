@@ -83,7 +83,5 @@ private:
     CropType m_cropType;
 };
 
-std::vector<std::string> GetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName);
-
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;
 } } }
