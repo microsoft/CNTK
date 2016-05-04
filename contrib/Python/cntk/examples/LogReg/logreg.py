@@ -48,7 +48,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
     my_sgd = C.SGDParams(
         epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
 
-    with C.LocalExecutionContext('demo') as ctx:
+    with C.LocalExecutionContext('logreg') as ctx:
 
         ctx.train(
             root_nodes=[ce, eval], 
@@ -65,9 +65,8 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
 def test_logistic_regression_from_file():
     result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
 
-    TOLERANCE_ABSOLUTE = 1E-02
-    assert result['SamplesSeen'] == 500
-    assert np.allclose(result['Perplexity'], 1.5584637, atol=TOLERANCE_ABSOLUTE)
+    TOLERANCE_ABSOLUTE = 1E-06
+    assert np.allclose(result['perplexity'], 1.5584637, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['crit_node'], 0.4437005, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['eval_node'], 2.7779043, atol=TOLERANCE_ABSOLUTE)
 
