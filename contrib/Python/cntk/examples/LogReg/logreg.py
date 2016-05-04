@@ -61,8 +61,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
 
         return result
 
-
-def test_logistic_regression_from_file():
+def _test_logistic_regression_from_file():
     result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
 
     TOLERANCE_ABSOLUTE = 1E-02

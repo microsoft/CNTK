@@ -56,7 +56,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
         return result
 
 
-def test_logistic_regression_with_numpy():
+def _test_logistic_regression_with_numpy():
     result = train_eval_logistic_regression_with_numpy('crit_node', 'eval_node')
 
     TOLERANCE_ABSOLUTE = 1E-02
