@@ -771,6 +771,9 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     of `layout_input`. It allows these two tensors to be properly compared using, e.g. 
     a criterion node.
     
+    Example:
+        See Examples/LSTM/seqcla.py for a use of :func:`cntk.ops.reconcile_dynamic_axis`.    
+    
     Args:
         data_input: the tensor to have its dynamic axis layout adapted
         layout_input: the tensor layout to use for adapting `data_input`s layout
