@@ -8,7 +8,6 @@
 #include "DataDeserializerBase.h"
 #include "Config.h"
 #include "ByteReader.h"
-#include "ImageConfigHelper.h"
 #include <unordered_map>
 #include "CorpusDescriptor.h"
 
@@ -22,9 +21,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ImageDataDeserializer : public DataDeserializerBase
 {
 public:
+    // Constructor for compositional configuration.
     ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
 
-    // TODO: This constructor should be deprecated. Compositional config should be used instead.
+    // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.

@@ -86,20 +86,22 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     // Pick up the randomizer.
     bool randomize = config(L"randomize", false);
+    // By default do not use omp threads for deserialization.
+    bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", false);
     if (randomize)
     {
         // By default randomizing the whole data set.
         size_t randomizationWindow = config(L"randomizationWindow", requestDataSize);
-        bool useLegacyRandomization = config(L"useLegacy", true);
-        bool multithreadedGetNextSequences = false;
-        BlockRandomizer::DecimationMode decimationMode = BlockRandomizer::DecimationMode::chunk;
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, decimationMode, useLegacyRandomization, multithreadedGetNextSequences);
+        // By default using STL random number generator.
+        bool useLegacyRandomization = config(L"useLegacyRandomization", false);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {
-        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer);
+        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization);
     }
 
+    // In case when there are transforms, applying them to the data.
     m_sequenceEnumerator = m_transforms.empty()
         ? m_sequenceEnumerator 
         : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
@@ -126,13 +128,14 @@ Minibatch CompositeDataReader::ReadMinibatch()
     return m_packer->ReadMinibatch();
 }
 
+// Create deserializers based on the specified configuration.
 void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
 {
     argvector<ConfigValue> deserializerConfigs =
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
 
     assert(m_deserializers.empty());
-    bool primary = true;  // CUrrently, the first deserializer becomes primary - it drives chunking.
+    bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
         // TODO: Should go away in the future. Framing can be done on top of deserializers.
@@ -146,6 +149,7 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     }
 }
 
+// Creates a particular deserializer based on the config.
 IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
     typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
@@ -160,13 +164,14 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
         RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
     }
 
+    // Create transformers if necessary.
     CreateTransforms(deserializerConfig);
-
 
     assert(d != nullptr);
     return IDataDeserializerPtr(d);
 }
 
+// Create transformers based on the configuration.
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
@@ -179,6 +184,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
             LogicError("Only a single 'transforms' config is allowed per stream.");
         }
 
+        // No need to create anything for this stream, skipping.
         if (inputSections.empty())
         {
             continue;
@@ -187,6 +193,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         ConfigParameters input = inputs[i](inputSections.front());
         std::wstring inputName = msra::strfun::utf16(input.ConfigName());
 
+        // Read tranformers in order.
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
@@ -197,6 +204,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
 
 }
 
+// Create a transformer for a particular configuration. Loading it from the default module if module is not specified.
 TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule)
 {
     typedef bool(*TransformerFactory) (Transformer** t, const std::wstring& type, const ConfigParameters& cfg);

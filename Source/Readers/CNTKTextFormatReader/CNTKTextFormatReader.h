@@ -33,8 +33,8 @@ public:
 private:
     IDataDeserializerPtr m_deserializer;
 
-    // A head transformer in a list of transformers.
-    SequenceEnumeratorPtr m_sequenceEnumerator;
+    // Randomizer.
+    SequenceEnumeratorPtr m_randomizer;
 
     // Packer.
     PackerPtr m_packer;

@@ -36,17 +36,17 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         {
             // Verbosity is a general config parameter, not specific to the text format reader.
             int verbosity = config(L"verbosity", 2);
-            m_sequenceEnumerator = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
+            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
         }
         else
         {
-            m_sequenceEnumerator = std::make_shared<NoRandomizer>(m_deserializer);
+            m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
         // TODO: add "frameMode"  config paramter
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
-            m_sequenceEnumerator,
+            m_randomizer,
             GetStreamDescriptions());
     }
     catch (const std::runtime_error& e)
@@ -67,7 +67,7 @@ void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
         RuntimeError("Epoch size cannot be 0.");
     }
 
-    m_sequenceEnumerator->StartEpoch(config);
+    m_randomizer->StartEpoch(config);
     m_packer->StartEpoch(config);
 }
 

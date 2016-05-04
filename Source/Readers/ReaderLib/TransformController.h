@@ -12,31 +12,34 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// A pair of a transformer and the stream name to which the transformer should be a applied.
 struct Transformation
 {
     TransformerPtr m_transfromer;
     std::wstring m_streamName;
 };
 
+// A class responsible for applying a list of transformers to sequences and stream descriptions.
 class TransformController : public SequenceEnumerator
 {
 public:
-    TransformController(const std::vector<Transformation>& transformations, SequenceEnumeratorPtr randomizer)
-        : m_randomizer(randomizer)
+    TransformController(const std::vector<Transformation>& transformations, SequenceEnumeratorPtr sequenceProvider)
+        : m_sequenceProvider(sequenceProvider)
     {
-        m_chainOfStreamDescriptions.reserve(m_transformations.size() + 1);
-        std::vector<StreamDescriptionPtr> streams = m_randomizer->GetStreamDescriptions();
-        m_chainOfStreamDescriptions.push_back(streams);
+        // Applying transformations to stream descriptions,
+        // i.e. a transofrmation can change a stream from dense to sparse.
+        std::vector<StreamDescriptionPtr> transformedStreams = m_sequenceProvider->GetStreamDescriptions();
         for (auto& t : transformations)
         {
-            size_t streamId = GetStreamId(t.m_streamName, streams);
+            size_t streamId = GetStreamId(t.m_streamName, transformedStreams);
             m_transformations.push_back(std::make_pair(t, streamId));
-            streams[streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*streams[streamId]));
-            m_chainOfStreamDescriptions.push_back(streams);
+            transformedStreams[streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*transformedStreams[streamId]));
         }
+        m_outputStreams = transformedStreams;
     }
 
     // Sets configuration for the current epoch.
+    // Some transformers can change their config based on the epoch.
     virtual void StartEpoch(const EpochConfiguration &config) override
     {
         assert(m_next != nullptr);
@@ -45,21 +48,21 @@ public:
             t.first.m_transfromer->StartEpoch(config);
         }
 
-        m_randomizer->StartEpoch(config);
+        m_sequenceProvider->StartEpoch(config);
     }
 
     // Description of streams that the transformer provides.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
     {
-        return m_chainOfStreamDescriptions.back();
+        return m_outputStreams;
     }
 
-    // Gets next sequences up to a maximum count of samples.
-    // Sequences contains data for all streams.
+    // Gets next sequences up to a maximum count of samples,
+    // applying transformers to particular streams.
     virtual Sequences GetNextSequences(size_t sampleCount) override
     {
         assert(m_next != nullptr);
-        Sequences sequences = m_randomizer->GetNextSequences(sampleCount);
+        Sequences sequences = m_sequenceProvider->GetNextSequences(sampleCount);
         if (sequences.m_data.empty())
         {
             return sequences;
@@ -92,9 +95,9 @@ private:
         LogicError("Unexpected stream specifed for transformation.");
     }
 
-    SequenceEnumeratorPtr m_randomizer;
+    SequenceEnumeratorPtr m_sequenceProvider;
+    std::vector<StreamDescriptionPtr> m_outputStreams;
     std::vector<std::pair<Transformation, size_t>> m_transformations;
-    std::vector<std::vector<StreamDescriptionPtr>> m_chainOfStreamDescriptions;
 };
 
 }}}

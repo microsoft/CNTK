@@ -35,55 +35,39 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 }
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
+// A factory method for creating image deserializers.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
 {
     if (type == L"ImageDataDeserializer")
-    {
         *deserializer = new ImageDataDeserializer(corpus, deserializerConfig);
-    }
     else
-    {
         // Unknown type.
         return false;
-    }
 
     // Deserializer created.
     return true;
 }
 
+// A factory method for creating image transformers.
 extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, const std::wstring& type, const ConfigParameters& config)
 {
     if (type == L"Crop")
-    {
         *transformer = new CropTransformer(config);
-    }
     else if (type == L"Scale")
-    {
         *transformer = new ScaleTransformer(config);
-    }
     else if (type == L"Color")
-    {
         *transformer = new ColorTransformer(config);
-    }
     else if (type == L"Intensity")
-    {
         *transformer = new IntensityTransformer(config);
-    }
     else if (type == L"Mean")
-    {
         *transformer = new MeanTransformer(config);
-    }
     else if (type == L"Transpose")
-    {
         *transformer = new TransposeTransformer(config);
-    }
     else
-    {
         // Unknown type.
         return false;
-    }
 
-    // Deserializer created.
+    // Transformer created.
     return true;
 }
 

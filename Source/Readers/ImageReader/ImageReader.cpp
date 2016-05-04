@@ -7,13 +7,13 @@
 #include "ImageReader.h"
 #include "Config.h"
 #include "ImageConfigHelper.h"
+#include "ImageTransformers.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "ImageDataDeserializer.h"
 #include "FramePacker.h"
-#include "TransformController.h"
 #include <omp.h>
-#include "ImageTransformers.h"
+#include "TransformController.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
