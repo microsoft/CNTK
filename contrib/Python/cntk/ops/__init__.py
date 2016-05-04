@@ -689,10 +689,12 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
 
         if init_from_file_path:
             return cntk1.ParameterTensor(shape, init='fromFile',
+                    learningRateMultiplier=learning_rate_multiplier,
                     initFromFilePath=init_from_file_path, name=name)
         else:
-            return cntk1.ParameterTensor(shape, name=name)
-
+            return cntk1.ParameterTensor(shape, 
+                    learningRateMultiplier=learning_rate_multiplier,
+                    name=name)
     """
     To be as generic as possible, we 
      - flatten the data 
