@@ -6,7 +6,6 @@
 #pragma once
 
 #include "DataDeserializer.h"
-#include <Config.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

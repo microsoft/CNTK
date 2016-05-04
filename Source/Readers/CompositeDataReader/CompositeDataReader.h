@@ -11,7 +11,7 @@
 #include "DataReader.h"
 #include "Reader.h"
 #include "Transformer.h"
-#include "CompositeTransformer.h"
+#include "TransformController.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

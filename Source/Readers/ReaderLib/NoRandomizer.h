@@ -15,7 +15,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Used training where the training data has already been pre - randomized.
 // TODO: currently this code moved from the old block randomizer.
 // TODO: The class will be further refactored and common based will be extracted with BlockRandomizer.
-// TODO: This layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
 class NoRandomizer : public SequenceEnumerator
 {
 public:

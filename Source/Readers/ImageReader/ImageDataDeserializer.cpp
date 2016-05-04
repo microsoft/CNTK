@@ -11,7 +11,8 @@
 #include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
-#include <StringUtil.h>
+#include "StringUtil.h"
+#include "ConfigUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

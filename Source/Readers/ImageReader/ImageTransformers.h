@@ -64,8 +64,8 @@ class CropTransformer : public ImageTransformerBase
 public:
     explicit CropTransformer(const ConfigParameters& config);
 
-protected:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+private:
+    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class RatioJitterType
@@ -76,7 +76,6 @@ private:
         UniArea = 3
     };
 
-
     void StartEpoch(const EpochConfiguration &config) override;
 
     CropType ParseCropType(const std::string &src);
@@ -84,11 +83,14 @@ private:
     cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio,
                          std::mt19937 &rng);
 
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     CropType m_cropType;
     double m_cropRatioMin;
     double m_cropRatioMax;
     RatioJitterType m_jitterType;
     bool m_hFlip;
+    doubleargvector m_aspectRatioRadius;
+    double m_curAspectRatioRadius;
 };
 
 // Scale transformation of the image.
@@ -101,12 +103,13 @@ public:
     StreamDescription Transform(const StreamDescription& inputStream) override;
 
 private:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     using StrToIntMapT = std::unordered_map<std::string, int>;
     StrToIntMapT m_interpMap;
     std::vector<int> m_interp;
 
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     size_t m_imgWidth;
     size_t m_imgHeight;
     size_t m_imgChannels;
@@ -119,7 +122,7 @@ public:
     explicit MeanTransformer(const ConfigParameters& config);
 
 private:
-    virtual void Apply(size_t id, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     cv::Mat m_meanImg;
 };
@@ -156,10 +159,10 @@ class IntensityTransformer : public ImageTransformerBase
 public:
     explicit IntensityTransformer(const ConfigParameters& config);
 
-    void StartEpoch(const EpochConfiguration &config) override;
-    void Apply(size_t id, cv::Mat &mat) override;
-
 private:
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
@@ -178,10 +181,11 @@ class ColorTransformer : public ImageTransformerBase
 {
 public:
     explicit ColorTransformer(const ConfigParameters& config);
-    void StartEpoch(const EpochConfiguration &config) override;
-    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
+    void StartEpoch(const EpochConfiguration &config) override;
+
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 

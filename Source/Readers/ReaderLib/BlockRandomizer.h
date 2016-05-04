@@ -31,7 +31,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // This class is responsible for decimation and loading the data chunks in to memory.
 // Actual randomization happens in ChunkRandomizer and SequenceRandomizer.
 // TODO: The behavior can be simplified by only randomizing sequences forward.
-// TODO: The layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
 class BlockRandomizer : public SequenceEnumerator
 {
 public:

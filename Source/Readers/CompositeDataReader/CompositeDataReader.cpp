@@ -21,7 +21,6 @@
 #include "SequencePacker.h"
 #include "TruncatedBpttPacker.h"
 #include "CorpusDescriptor.h"
-#include "CompositeTransformer.h"
 #include "ConfigUtil.h"
 #include <omp.h>
 

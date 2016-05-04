@@ -26,4 +26,15 @@ inline std::vector<std::string> TryGetSectionsWithParameter(const ConfigParamete
     return sectionNames;
 }
 
+// Helper function to get sections that contains specified parameter. Throws if the parameter does not exist.
+inline std::vector<std::string> GetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName)
+{
+    auto result = TryGetSectionsWithParameter(config, parameterName);
+    if (result.empty())
+    {
+        RuntimeError("ImageReader requires %s parameter.", parameterName.c_str());
+    }
+    return result;
+}
+
 }}}

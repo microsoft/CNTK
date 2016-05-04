@@ -11,7 +11,7 @@
 #include "NoRandomizer.h"
 #include "ImageDataDeserializer.h"
 #include "FramePacker.h"
-#include "CompositeTransformer.h"
+#include "TransformController.h"
 #include <omp.h>
 #include "ImageTransformers.h"
 

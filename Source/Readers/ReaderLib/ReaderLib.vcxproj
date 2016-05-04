@@ -44,7 +44,7 @@
     <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="Bundler.h" />
     <ClInclude Include="ChunkRandomizer.h" />
-    <ClInclude Include="CompositeTransformer.h" />
+    <ClInclude Include="TransformController.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="Packer.h" />
@@ -53,7 +53,6 @@
     <ClInclude Include="SequencePacker.h" />
     <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="StringToIdMap.h" />
-    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />

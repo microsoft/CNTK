@@ -6,27 +6,9 @@
 #include "stdafx.h"
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
+#include "ConfigUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-std::vector<std::string> GetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName)
-{
-    std::vector<std::string> sectionNames;
-    for (const std::pair<std::string, ConfigParameters>& section : config)
-    {
-        if (section.second.ExistsCurrent(parameterName))
-        {
-            sectionNames.push_back(section.first);
-        }
-    }
-
-    if (sectionNames.empty())
-    {
-        RuntimeError("ImageReader requires %s parameter.", parameterName.c_str());
-    }
-
-    return sectionNames;
-}
 
 ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     : m_dataFormat(CHW)

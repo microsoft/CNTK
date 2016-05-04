@@ -4,11 +4,11 @@
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="ImageTransformers.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="ImageReader.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ZipByteReader.cpp" />
-    <ClCompile Include="ImageTransformers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -22,11 +22,11 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="ImageTransformers.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ByteReader.h" />
-    <ClInclude Include="ImageTransformers.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
