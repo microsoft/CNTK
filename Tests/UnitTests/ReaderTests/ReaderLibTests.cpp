@@ -8,9 +8,7 @@
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
-
-// Should be corrected after rebase.
-#include "../ExperimentalHTKMLFReader/CorpusDescriptor.h"
+#include "CorpusDescriptor.h"
 
 #include <numeric>
 #include <random>
@@ -423,13 +421,13 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 
 BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
 {
-    FILE* test = fopen("test", "w+");
+    FILE* test = fopen("test.tmp", "w+");
     fwrite("1\n", sizeof(char), 2, test);
     fwrite("2\n", sizeof(char), 2, test);
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test");
+    CorpusDescriptor corpus(L"test.tmp");
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded(L"0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"2"));
@@ -437,7 +435,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"4"));
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded(L"5"));
 
-    remove("test");
+    remove("test.tmp");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
