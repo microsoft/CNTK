@@ -19,5 +19,4 @@ from .. import constant, input_numpy
 
 
 # Keeping things short
-C = constant
 I = input_numpy
