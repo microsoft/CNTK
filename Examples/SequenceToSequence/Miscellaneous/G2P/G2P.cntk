@@ -25,13 +25,13 @@ makeMode = false
 # experiment id
 deviceId = 0
 ExpId = 30-$deviceId$-g2p
-#ExpId = 22-3-g2p # change to different id when decoding a different model
+#ExpId = 26-4-g2p # change to different id when decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/G2P-debug
+stderr = $ExpDir$/G2P
 
 precision  = "float"
 traceLevel = 1
@@ -39,7 +39,7 @@ modelPath  = "$ModelDir$/G2P.dnn"
 
 # decoding config  --used by the "write" command ("write" decodes and writes the result)
 beamDepth = 1                                      # 0=predict; 1=greedy; >1=beam
-decodeModel = 21
+decodeModel = 31
 decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended to the model path
 decodeOutputPath = "$decodeModelPath$.$beamDepth$" # results are written next to the model, with beamDepth appended
 
@@ -449,7 +449,7 @@ write = [
 
     # declare the nodes we want to write out
     # not all decoder configs have the same node names, so we just list them all
-    outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
+    #outputNodeNames = inputsOut:labelsOut:decodeOut:network.beamDecodingModel.inputsOut:network.beamDecodingModel.labelsOut:network.beamDecodingModel.decodeOut
 
     # output format
     # We configure the output to emit a flat sequence of token strings.
@@ -476,148 +476,11 @@ write = [
 
         # specific to LMSequenceReader
         mode = "softmax"                    # TODO: find out what this means
-        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        nbruttsineachrecurrentiter = 1      # 1 means one sequence at a time
+        # BUGBUG: ^^ =0 currently produces bad output. I suspect Times (data, data)
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
         rawInput = $lmSequenceReaderInputDef$
         inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
-    ]
-]
-
-
-# some outdated things we should remove:
-
-lmreader = [
-    file = "$DataDir$/$trainFile$"
-    #randomize = "auto" # gets ignored
-
-    readerType = LMSequenceReader
-    mode = "softmax"                    # TODO: find out what this means
-    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
-    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-
-    # word class info
-    wordclass = "$ModelDir$/vocab.txt"
-
-    #### write definition
-    # if writerType is set, we will cache to a binary file
-    # if the binary file exists, we will use it instead of parsing this file
-    #writerType = BinaryReader
-    wfile = $CacheDir$\sequenceSentence.bin
-    # if calculated size would be bigger, that is used instead
-    wsize = 256
-    #wrecords - number of records we should allocate space for in the file
-    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-    wrecords = 1000
-    #windowSize - number of records we should include in BinaryWriter window
-    windowSize = 10000
-
-    # additional features sections
-    # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
-    input = [
-        dim = 0     # no (explicit) labels   ...labelDim correct??
-        ### write definition
-        sectionType = "data"
-    ]
-    # labels sections
-    # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
-    # labels sections  --this is required, but our labels are extracted from the inLabels
-    inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
-        dim = 1
-
-        # vocabulary size
-        labelType = "category"
-        labelDim = "$inputVocabSize$"
-        labelMappingFile = "$DataDir$/$vocabFile$"
-        beginSequence = "$startSymbol$" # "</s>"
-        endSequence   = "</s>"
-
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping = [
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=11
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category = [
-          dim=11
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
-    ]
-    outputDummy = [
-        labelType = "none"
-    ]
-]
-
-lmcvReader = [
-    file = "$DataDir$/$validFile$"
-    #randomize = "none" # gets ignored
-
-    # everything below here is duplicated from 'reader'
-    readerType = LMSequenceReader
-    mode = "softmax"
-    nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
-    cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-
-    # word class info
-    wordclass = "$ModelDir$/vocab.txt"
-
-    #### write definition
-    # if writerType is set, we will cache to a binary file
-    # if the binary file exists, we will use it instead of parsing this file
-    #writerType = BinaryReader
-    wfile = $CacheDir$\sequenceSentence.bin
-    # if calculated size would be bigger, that is used instead
-    wsize = 256
-    #wrecords - number of records we should allocate space for in the file
-    # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
-    wrecords = 1000
-    #windowSize - number of records we should include in BinaryWriter window
-    windowSize = 10000
-
-    # additional features sections
-    # For input labels, we need both 'features' and the first labels section (called 'inputLabelsDef' below)
-    input = [
-        dim = 0     # no (explicit) labels   ...labelDim correct??
-        ### write definition
-        sectionType = "data"
-    ]
-    # labels sections
-    # TODO: seems we must specify two labels (in and out), but labelType = "none" is allowed
-    # labels sections  --this is required, but our labels are extracted from the inLabels
-    inputLabelsDef = [ # BUGBUG: Make sure that this section name comes before the dummy output labels alphabetically
-        dim = 1
-
-        # vocabulary size
-        labelType = "category"
-        labelDim = "$inputVocabSize$"
-        labelMappingFile = "$DataDir$/$vocabFile$"
-        beginSequence = "</s>"
-        endSequence   = "</s>"
-
-        #### Write definition ####
-        # sizeof(unsigned) which is the label index type
-        elementSize=4
-        sectionType=labels
-        mapping = [
-          #redefine number of records for this section, since we don't need to save it for each data record
-          wrecords=11
-          #variable size so use an average string size
-          elementSize=10
-          sectionType=labelMapping
-        ]
-        category = [
-          dim=11
-          #elementSize=sizeof(ElemType) is default
-          sectionType=categoryLabels
-        ]
-    ]
-    outputDummy = [
-        labelType = "none"
     ]
 ]
