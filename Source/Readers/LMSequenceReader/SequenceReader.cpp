@@ -1808,7 +1808,13 @@ namespace Microsoft {
 				size_t endIndex = (m_subsetNum + 1) * numSequencesPerWorker;
 
 				if (startIndex >= totalNumSequencesToProcess)
-					return false;	// no data to process for this worker, so return false
+				{
+					// no data to process. clear vectors and return
+					mToProcess.clear();
+					m_featureData.clear();
+					m_labelIdData.clear();
+					return true;
+				}
 
 				std::vector<size_t> toProcessTemp(mToProcess.begin() + startIndex, mToProcess.begin() + endIndex);
 				mToProcess = toProcessTemp;
@@ -1911,45 +1917,51 @@ namespace Microsoft {
 					m_pMBLayout->Init(mToProcess.size(), 0);
 					return false;
 				}
-				// now:
-				//  - there is at least one sequence to return
-				//  - mToProcess[] lists all sequences
-				//  - mProcessed[s] says whether a sequence has completed
-				//  - m_featureData[j] contains the input label indices
-				//  - m_labelIdData[j] contains the output label indices
-
-				// --- STEP 2: transfer the data to the matrices
 
 				size_t actualmbsize = m_featureData.size(); // total number of tokens across all sequences in this MB
-				assert(actualmbsize > 0);
-				assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
-
-				// create MBLayout
-				// This handles variable-length sequences.
-				size_t nT = actualmbsize / mToProcess.size();
-				assert(nT * mToProcess.size() == actualmbsize);
-				m_pMBLayout->Init(mToProcess.size(), nT);
-				for (size_t s = 0; s < mToProcess.size(); s++)
+				if (actualmbsize == 0)
 				{
-					size_t seq = mToProcess[s];
-					const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-					size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
-																												// ############### BREAKING CHANGE ################
-																												// We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
-																												// ############### BREAKING CHANGE ################
-					ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
-					ptrdiff_t end = (ptrdiff_t)len - (ptrdiff_t)firstPosInSentence;
-					if (begin >= (ptrdiff_t)nT)
-						LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
-					if (end < 0)
-						LogicError("BatchSequenceReader: Sentence end outside minibatch?");
-					m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t)end);
-					if (begin > 0)
-						m_pMBLayout->AddGap(s, 0, (size_t)begin);
-					if (end < (ptrdiff_t)nT)
-						m_pMBLayout->AddGap(s, end, nT);
+					m_pMBLayout->Init(0, 0);
 				}
+				else
+				{
+					// now:
+					//  - there is at least one sequence to return
+					//  - mToProcess[] lists all sequences
+					//  - mProcessed[s] says whether a sequence has completed
+					//  - m_featureData[j] contains the input label indices
+					//  - m_labelIdData[j] contains the output label indices
 
+					// --- STEP 2: transfer the data to the matrices
+					assert(actualmbsize > 0);
+					assert(m_labelIdData.empty() || m_labelIdData.size() == actualmbsize);
+
+					// create MBLayout
+					// This handles variable-length sequences.
+					size_t nT = actualmbsize / mToProcess.size();
+					assert(nT * mToProcess.size() == actualmbsize);
+					m_pMBLayout->Init(mToProcess.size(), nT);
+					for (size_t s = 0; s < mToProcess.size(); s++)
+					{
+						size_t seq = mToProcess[s];
+						const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
+						size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
+																													// ############### BREAKING CHANGE ################
+																													// We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
+																													// ############### BREAKING CHANGE ################
+						ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
+						ptrdiff_t end = (ptrdiff_t)len - (ptrdiff_t)firstPosInSentence;
+						if (begin >= (ptrdiff_t)nT)
+							LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
+						if (end < 0)
+							LogicError("BatchSequenceReader: Sentence end outside minibatch?");
+						m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t)end);
+						if (begin > 0)
+							m_pMBLayout->AddGap(s, 0, (size_t)begin);
+						if (end < (ptrdiff_t)nT)
+							m_pMBLayout->AddGap(s, end, nT);
+					}
+				}
 				// copy m_featureData to matrix
 				// m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
 				// we always copy it to cpu first and then convert to gpu if gpu is desired.
