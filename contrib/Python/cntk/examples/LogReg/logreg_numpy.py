@@ -59,7 +59,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
 def test_logistic_regression_with_numpy():
     result = train_eval_logistic_regression_with_numpy('crit_node', 'eval_node')
 
-    TOLERANCE_ABSOLUTE = 1E-04
+    TOLERANCE_ABSOLUTE = 1E-03
     assert np.allclose(result['perplexity'], 1.55057073, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['crit_node'], 0.43862308, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['eval_node'], 1.16664551, atol=TOLERANCE_ABSOLUTE)

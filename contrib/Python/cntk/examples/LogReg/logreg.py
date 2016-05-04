@@ -64,7 +64,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None, eval_name=None
 def test_logistic_regression_from_file():
     result = train_eval_logistic_regression_from_file('crit_node', 'eval_node')
 
-    TOLERANCE_ABSOLUTE = 1E-04
+    TOLERANCE_ABSOLUTE = 1E-03
     assert np.allclose(result['perplexity'], 1.55153792, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['crit_node'], 0.43924664, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(result['eval_node'], 3.26340137, atol=TOLERANCE_ABSOLUTE)
