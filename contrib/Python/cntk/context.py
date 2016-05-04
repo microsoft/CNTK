@@ -325,7 +325,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             dummy_input = input_numpy([[[1]]])
             dummy_input.name='_dummy_input'
             input_map._add_unmapped(dummy_input)
-            desc, _inputs = dummy_input.to_config(input_map)
+            desc, _inputs = dummy_input._to_config_description(input_map)
             description += '\n\n' + desc
 
 
