@@ -46,7 +46,7 @@ class ComputationNode(object):
         # Create sub-class construtor and more these
         self.reader = None
 
-    def is_input(self):
+    def _is_input(self):
         '''
         Returns: True if this node is an input node.
         '''
@@ -244,7 +244,7 @@ class ComputationNode(object):
             "%s = %s(%s)" % (self.name, self.op_name, params)
         desc.append(line)
 
-        if self.is_input():
+        if self._is_input():
             if not self in input_map:
                 input_map._add_unmapped(self)
             inputs.add(self)
