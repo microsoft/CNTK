@@ -215,7 +215,7 @@ Efficiently modelling recurrent networks was an important design goal for CNTK.
 As such, in contrast to other toolkits, they are *first-order citizens* of the 
 system. CNTK therefore allows for modelling of loops as part of the networks, and 
 for dynamically sized input data. As such, it offers a very efficient 
-implementation for training of recurrent networks and does not require applying 
+implementation for training recurrent networks and does not require applying 
 tricks to the input (like padding or masking) to simulate dynamically sized input 
 data.
 
@@ -243,17 +243,17 @@ setup which are hidden behind a single concept:
     
   - CNTK tries to compute as many sequences in parallel as possible for a given 
     minibatch. For this it puts all sequences of a minibatch in a rectangular 
-    structure called a *minibatch layout* and lays out parallel sequences in y 
-    direction and the dynamic (time or sequence) dimension in x direction. For
-    a network that describes a loop in time dimension, this means that certain
-    computations need to be run in sequence over this x direction, while they
+    structure called a *minibatch layout* and lays out parallel sequences in the y 
+    direction and the dynamic (time or sequence) dimension in the x direction. For
+    a network that describes a loop in the time dimension, this means that certain
+    computations need to be run in sequence over the x direction, while they
     can run in parallel over the y direction.
-    To make best use of parallelism, the width of the rectangular structure 
+    To make the best use of parallelism, the width of the rectangular structure 
     is that of the longest sequence.
     
-  - Since sequences can be of different length, the rectangular minibatch 
+  - Since sequences can be of different lengthes, the rectangular minibatch 
     layout structure can have *gaps* with empty entries. To reduce the number of
-    gaps, CNTK can concatenate several sequences in x direction, and will reset
+    gaps, CNTK can concatenate several sequences in the x direction, and will reset
     the state of the sequence computation when a boundary is encountered.
 
 In the model description, a specific dynamic axis is introduced by adding a 
@@ -288,7 +288,7 @@ computation and gradient calculation algorithms we just discussed can be directl
 used. This means, however, all computation nodes in the CN need to be computed 
 sample by sample and this significantly reduces the potential of parallelization.
 
-In CNTK, a recurrent neural network in can simply be modelled by using the 
+In CNTK, a recurrent neural network can simply be modelled by using the 
 ``past_value()`` (earlier known as ``delay()`` node) and ``future_value()``
 operations. These connect the network to the output of a previous (or next) step 
 on the dynamic axis. CNTK detects loops automatically that are created
@@ -305,7 +305,7 @@ treated as a composite node in the CN and the CN is reduced to a DAG. All the
 nodes inside each loop (or composite node) can be unrolled over time and also 
 reduced to a DAG. 
 
-It is important to note that the shapes of the outputs of any operation that 
+It is important to note that the shape of the output of any operation that 
 participates in a loop *shares the dynamic axis with its input*. This way, a
 recurrent network like LSTM can output its hidden state, cell state etc., 
 unrolled over the time dimension.
@@ -315,9 +315,9 @@ Readers
 
 In CNTK, a data reader is a separate concept from the network itself. It is 
 called by the network training algorithm to provide information about the data,
-to load minibatches into memory and to attach this memory to the input nodes in the network.
+to load minibatches into memory, and to attach this memory to the input nodes in the network.
 
-Readers are designed for performing high performance to not become a bottlneck
+Readers are designed to be high performance to not become a bottlneck
 in GPU-heavy computations. They provide special facilities for
 
 - Data prefetch: Readers can split up reading and preprocessing of data such
@@ -332,11 +332,11 @@ in GPU-heavy computations. They provide special facilities for
 Several task-specific readers have been implemented. The most generic ones 
 are the following:
 
-- A generic CNTKTextFormatReader, which defines a text format for reading 
-  tensors and attaching them to inputs. The reader supports multiple inputs
-  defined in a single file, allows for specifying dynamic axes by grouping 
-  samples by work unit (sequence) ID, and supports both sparse and dense 
-  tensors.
+- A generic CNTKTextFormatReader (:class:`cntk.reader.CNTKTextFormatReader`), 
+  which defines a text format for reading tensors and attaching them to inputs. 
+  The reader supports multiple inputs defined in a single file, allows for 
+  specifying dynamic axes by grouping samples by work unit (sequence) ID, and 
+  supports both sparse and dense tensors.
   
 - ImageReader - for reading in image data stored in directories. Not exposed
   in Python API at this point.
@@ -355,7 +355,7 @@ Neural Net Training
 
 To perform a neural net training run, we need every operation to be defined for
 *forward* and *backward* operation. The forward operation simply computes the 
-function value; The backward operation computes the gradients with regards to
+function value; the backward operation computes the gradients with regards to
 all of the operation's inputs. 
 
 All of the built-in operations (as far as they can take part in neural net 
@@ -376,7 +376,7 @@ In order to set up a computational network for training, the following is needed
 - A training algorithm. Currently CNTK provides an implementation of SGD
   (stochastic gradient descent) with optional momentum. This means that gradients
   are computed and backpropagated once for every minibatch. The SGD implementation
-  offers a whole number of options, e.g. for changing the learning rate over the
+  offers an extensive number of options, e.g. for changing the learning rate over the
   course of training, or for choosing algorithms for distributed computation
   using data parallelism.
 
