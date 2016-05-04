@@ -11,12 +11,6 @@ Utils for unit tests
 import numpy as np
 import pytest
 
-# NumPy's allclose() has 1e-08 as the absolute tolerance, which is too strict for
-# functions like sigmoid.
-TOLERANCE_ABSOLUTE = 1E-06
-
-PRECISION_TO_TYPE = {'float': np.float32, 'double': np.float64}
-
 # NumPy's allclose() has 1e08 as the absolute tolerance, which is too strict for
 # functions like sigmoid.
 TOLERANCE_ABSOLUTE = 1E-06
@@ -31,7 +25,7 @@ def precision(request):
     return request.param
 
 
-def unittest_helper(root_node, input_reader, expected, device_id=-1, precision="float",
+def unittest_helper(root_node, input_numpy, expected, device_id=-1, precision="float",
                     clean_up=True, backward_pass=False, input_node=None):
     from cntk.context import get_new_context
     with get_new_context() as ctx:
@@ -39,7 +33,7 @@ def unittest_helper(root_node, input_reader, expected, device_id=-1, precision="
         ctx.device_id = device_id
         ctx.precision = precision
         assert not ctx.input_nodes
-        result = ctx.eval(root_node, input_reader, backward_pass, input_node)
+        result = ctx.eval(root_node, input_numpy, backward_pass, input_node)
 
         assert len(result) == len(expected)
         for res, exp in zip(result, expected):
