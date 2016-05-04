@@ -101,7 +101,7 @@ def seqcla():
     embed_dim = 50    
 
     t = C.dynamic_axis(name='t')
-    # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
+    # temporarily using cntk1 SparseInput because cntk2's Input() will simply allow sparse as a parameter
     features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
     labels = C.input(num_labels, name='labels')
    
