@@ -3,6 +3,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS 1
+#else
+#endif
+
 #include "stdafx.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
