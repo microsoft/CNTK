@@ -19,9 +19,10 @@ def eval(node):
         #   [array([[[-150., 200.], [5., 10.]]])]        
 
     Args:
-        node (cntk.graph.ComputationNode): the node to evaluate        
+        node (:class:`cntk.graph.ComputationNode`): the node to evaluate        
+
     Returns:
-        numpy array containing the result
+        NumPy array containing the result
     """    
     
     from cntk.context import get_context        
@@ -31,15 +32,15 @@ def eval(node):
     ctx = get_context()    
     first = True    
     
-    # the params are passed as arryas e.g. plus([1,2], [3,4]), we need to 
-    # wrap them with input and parameter nodes
+    # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
+    # wrap them with input and parameter nodes.
     if node.params:
         for p in node.params:
             if p in node.inputs:
                 val = getattr(node, p)
-                # one param needs to be an Input() node. This is being fixed in 
-                #CNTK we will remove this workaround onces we can evaluate a 
-                #network with no inputs
+                # One param needs to be an Input() node. This will being fixed in 
+                # CNTK soon, so that we can remove this workaround and evaluate a 
+                # network with no inputs.
                 if first:
                     if not isinstance(val, list):                
                         # inputs have the outmost dimension for sequences
