@@ -55,26 +55,22 @@ public:
             double adjustcoef = 0.2,
             size_t adjustnbmb = 600,
             int traceLevel = 0)
+            : m_modelSyncCount(0), m_adjustLearningRateAtBeginningType(adjusttype),
+            m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
+            m_totalClientNumber(MPINodeNum), m_isUseAsyncBuffered(isAsyncBuffered),
+            m_traceLevel(traceLevel)
     {
-        m_modelSyncCount = 0;
-        m_adjustLearningRateAtBeginningType = adjusttype;
-        m_adjustCoefficient = adjustcoef;
-        m_adjustMBNumber = adjustnbmb;
-
-        m_totalClientNumber = MPINodeNum;
-
         //Pipeline releated variables
-        m_isUseAsyncBuffered = isAsyncBuffered;
         m_localCacheNumber = m_isUseAsyncBuffered ? 2 : 1;
         m_cacheSwapIndex = new int[m_localCacheNumber];
 
         //CPU asynchronous buffer
         m_cpuAsyncBuffer = new ElemType*[m_localCacheNumber];
+        
 #ifndef CPUONLY
         //GPU asynchronous buffer
         //m_gpuAsyncBuffer = new Matrix<ElemType>**[m_localCacheNumber];
         m_gpuAsyncBuffer.resize(m_localCacheNumber);
-
         //creat an communication stream for the data tranfer between GPU and CPU
         CudaErrorCheck(cudaStreamCreate(&_commStream));
 #endif
@@ -84,7 +80,7 @@ public:
 
         m_prefetchThread = nullptr;
 
-        if (traceLevel > 3)
+        if (m_traceLevel > 3)
             multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
 
         MultiversoInit(learnableNodes);
