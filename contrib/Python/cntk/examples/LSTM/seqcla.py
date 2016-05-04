@@ -156,7 +156,7 @@ def calc_accuracy(test_file, output_filename_base):
     
     # load labels
     labels=[]
-    with open(test_file, 'r', encoding='utf8') as f_in:      
+    with open(test_file, 'r') as f_in:      
         for l in f_in:
             dd = l.split('|')
             if len(dd) > 2:
