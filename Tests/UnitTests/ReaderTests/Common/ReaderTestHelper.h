@@ -161,16 +161,16 @@ struct ReaderFixture
         std::ifstream ifstream1(filename1);
         std::ifstream ifstream2(filename2);
 
-        std::istream_iterator<char> beginStream1(ifstream1);
-        std::istream_iterator<char> endStream1;
-        std::istream_iterator<char> beginStream2(ifstream2);
-        std::istream_iterator<char> endStream2;
+        std::istream_iterator<string> beginStream1(ifstream1), endStream1;
+        std::istream_iterator<string> beginStream2(ifstream2), endStream2;
 
         BOOST_CHECK_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
     }
 
+
+
     // Helper function to write the Reader's content to a file.
-    // outputFile       : the file stream to output to.
+    // testDataFilePath     : the file path for writing the minibatch data (used for comparing against control data)
     // dataReader       : the DataReader to get minibatches from
     // map              : the map containing the feature and label matrices
     // epochs           : the number of epochs to read
@@ -182,7 +182,7 @@ struct ReaderFixture
     // numSubsets       : the number of parallel trainings (set to 1 for single)
     template <class ElemType>
     void HelperWriteReaderContentToFile(
-        ofstream& outputFile,
+        const string testDataFilePath,
         DataReader& dataReader,
         StreamMinibatchInputs& map,
         size_t epochs,
@@ -193,6 +193,10 @@ struct ReaderFixture
         size_t subsetNum,
         size_t numSubsets)
     {
+        // Setup output file
+        boost::filesystem::remove(testDataFilePath);
+        ofstream outputFile(testDataFilePath, ios::out);
+
         for (auto epoch = 0; epoch < epochs; epoch++)
         {
             if (numSubsets == 1)
@@ -223,6 +227,135 @@ struct ReaderFixture
                 }
             }
         }
+
+        outputFile.close();
+    }
+
+
+    // Helper function to create and populate input structure.
+    // numFeatureFiles      : the number of feature input streams
+    // numLabelFiles        : the number of label input streams
+    // sparseFeatures       : indicates whether the corresponding matrix type should be set to sparse or not
+    // sparseLabels         : same as above, but for labels
+    // useSharedLayout      : if false, an individual layout is created for each input
+
+    template <class ElemType>
+    shared_ptr<StreamMinibatchInputs> CreateStreamMinibatchInputs(
+        size_t numFeatureInputs,
+        size_t numLabelInputs,
+        bool sparseFeatures = false,
+        bool sparseLabels = false,
+        bool useSharedLayout = true)
+    {
+        auto mbInputs = make_shared<StreamMinibatchInputs>();
+        std::vector<shared_ptr<Matrix<ElemType>>> features;
+        std::vector<shared_ptr<Matrix<ElemType>>> labels;
+
+        // For the time being, use the same layout across all inputs.
+        // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
+        MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
+
+        for (auto i = 0; i < numFeatureInputs; i++)
+        {
+            features.push_back(make_shared<Matrix<ElemType>>(0));
+            if (sparseFeatures)
+            {
+                features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+            }
+            wstring name = numFeatureInputs > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
+            if (!useSharedLayout)
+            {
+                pMBLayout = make_shared<MBLayout>(1, 0, name);
+            }
+            mbInputs->insert(make_pair(name, StreamMinibatchInputs::Input(features[i], pMBLayout, TensorShape())));
+        }
+
+        for (auto i = 0; i < numLabelInputs; i++)
+        {
+            labels.push_back(make_shared<Matrix<ElemType>>(0));
+            if (sparseLabels)
+            {
+                labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+            }
+            wstring name = numLabelInputs > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
+            if (!useSharedLayout)
+            {
+                pMBLayout = make_shared<MBLayout>(1, 0, name);
+            }
+            
+            mbInputs->insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], pMBLayout, TensorShape())));
+        }
+
+        return mbInputs;
+    }
+
+    // Helper function instantiate a data reader based on the provided configuration.
+    // configFileName       : the file name for the config file
+    // testSectionName      : the section name for the test inside the config file
+    // readerSectionName    : the reader field name in the test section
+
+    shared_ptr<DataReader> GetDataReader(
+        const string configFileName,
+        const string testSectionName,
+        const string readerSectionName)
+    {
+        std::wstring configFN(configFileName.begin(), configFileName.end());
+        std::wstring configFileCommand(L"configFile=" + configFN);
+
+        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
+        ConfigParameters config;
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+
+        config.ResolveVariables(rawConfigString);
+        const ConfigParameters simpleDemoConfig = config(testSectionName);
+        const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
+
+        return make_shared<DataReader>(readerConfig);
+    }
+
+    // Helper function to read in the input dataset and write out the resulting minibatches to a file.
+    // configFileName       : the file name for the config file
+    // testDataFilePath     : the file path for writing the minibatch data (used for comparing against control data)
+    // testSectionName      : the section name for the test inside the config file
+    // readerSectionName    : the reader field name in the test section
+    // epochSize            : the epoch size
+    // mbSize               : the minibatch size
+    // epochs               : the number of epochs to read
+    // numFeatureFiles      : the number of feature files used (multi IO)
+    // numLabelFiles        : the number of label files used (multi IO)
+    // subsetNum            : the subset number for parallel trainings
+    // numSubsets           : the number of parallel trainings (set to 1 for single)
+    // sparseFeatures       : indicates whether the corresponding matrix type should be set to sparse or not
+    // sparseLabels         : same as above, but for labels
+    // useSharedLayout      : if false, an individual layout is created for each input
+
+    template <class ElemType>
+    void HelperReadInAndWriteOut(
+        string configFileName,
+        string testDataFilePath,
+        string testSectionName,
+        string readerSectionName,
+        size_t epochSize,
+        size_t mbSize,
+        size_t epochs,
+        size_t numFeatureFiles,
+        size_t numLabelFiles,
+        size_t subsetNum,
+        size_t numSubsets,
+        bool sparseFeatures = false,
+        bool sparseLabels = false,
+        bool useSharedLayout = true)
+    {
+        shared_ptr<StreamMinibatchInputs> inputsPtr =
+            CreateStreamMinibatchInputs<ElemType>(numFeatureFiles, numLabelFiles,
+            sparseFeatures, sparseLabels, useSharedLayout);
+
+        shared_ptr<DataReader> readerPtr = GetDataReader(configFileName,
+            testSectionName, readerSectionName);
+
+        // Perform the data reading
+        HelperWriteReaderContentToFile<ElemType>(testDataFilePath, *readerPtr, *inputsPtr,
+            epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
     }
 
     // Helper function to run a Reader test.
@@ -245,8 +378,8 @@ struct ReaderFixture
     template <class ElemType>
     void HelperRunReaderTest(
         string configFileName,
-        const string controlDataFilePath,
-        const string testDataFilePath,
+        string controlDataFilePath,
+        string testDataFilePath,
         string testSectionName,
         string readerSectionName,
         size_t epochSize,
@@ -260,65 +393,9 @@ struct ReaderFixture
         bool sparseLabels = false,
         bool useSharedLayout = true)
     {
-        std::wstring configFN(configFileName.begin(), configFileName.end());
-        std::wstring configFileCommand(L"configFile=" + configFN);
-
-        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
-        ConfigParameters config;
-        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
-
-        config.ResolveVariables(rawConfigString);
-        const ConfigParameters simpleDemoConfig = config(testSectionName);
-        const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
-
-        DataReader dataReader(readerConfig);
-
-        StreamMinibatchInputs map;
-        std::vector<shared_ptr<Matrix<ElemType>>> features;
-        std::vector<shared_ptr<Matrix<ElemType>>> labels;
-
-        // For the time being, use the same layout across all inputs.
-        // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
-        MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
-
-        for (auto i = 0; i < numFeatureFiles; i++)
-        {
-            features.push_back(make_shared<Matrix<ElemType>>(0));
-            if (sparseFeatures)
-            {
-                features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
-            }
-            wstring name = numFeatureFiles > 1 ? L"features" + std::to_wstring(i + 1) : L"features";
-            if (!useSharedLayout)
-            {
-                pMBLayout = make_shared<MBLayout>(1, 0, L"F" + std::to_wstring(i + 1));
-            }
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(features[i], pMBLayout, TensorShape())));
-        }
-
-        for (auto i = 0; i < numLabelFiles; i++)
-        {
-            labels.push_back(make_shared<Matrix<ElemType>>(0));
-            if (sparseLabels)
-            {
-                labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
-            }
-            if (!useSharedLayout)
-            {
-                pMBLayout = make_shared<MBLayout>(1, 0, L"L" + std::to_wstring(i + 1));
-            }
-            wstring name = numLabelFiles > 1 ? L"labels" + std::to_wstring(i + 1) : L"labels";
-            map.insert(make_pair(name, StreamMinibatchInputs::Input(labels[i], pMBLayout, TensorShape())));
-        }
-
-        // Setup output file
-        boost::filesystem::remove(testDataFilePath);
-        ofstream outputFile(testDataFilePath, ios::out);
-
-        // Perform the data reading
-        HelperWriteReaderContentToFile<ElemType>(outputFile, dataReader, map, epochs, mbSize, epochSize, numFeatureFiles, numLabelFiles, subsetNum, numSubsets);
-
-        outputFile.close();
+        HelperReadInAndWriteOut<ElemType>(configFileName, testDataFilePath, testSectionName, readerSectionName,
+            epochSize, mbSize, epochs, numFeatureFiles, numLabelFiles, subsetNum,numSubsets,
+            sparseFeatures, sparseLabels, useSharedLayout);
 
         CheckFilesEquivalent(controlDataFilePath, testDataFilePath);
     }
@@ -333,18 +410,9 @@ struct ReaderFixture
         string testSectionName,
         string readerSectionName)
     {
-        std::wstring configFN(configFileName.begin(), configFileName.end());
-        std::wstring configFileCommand(L"configFile=" + configFN);
-
-        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
-        ConfigParameters config;
-        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
-
-        config.ResolveVariables(rawConfigString);
-        const ConfigParameters simpleDemoConfig = config(testSectionName);
-        const ConfigParameters readerConfig = simpleDemoConfig(readerSectionName);
-
-        BOOST_CHECK_THROW(DataReader dataReader(readerConfig), ExceptionType);
+        BOOST_CHECK_THROW(
+            GetDataReader(configFileName,testSectionName, readerSectionName),
+            ExceptionType);
     }
 };
 }

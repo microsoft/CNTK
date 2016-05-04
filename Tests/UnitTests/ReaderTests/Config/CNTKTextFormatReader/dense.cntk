@@ -238,3 +238,58 @@ Simple = [
         ]
     ]
 ]
+
+100x100x3_randomize_auto = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 100 sequence with *up to* 100 samples 
+        # in each of 3 inputs.
+        file = "100x100x3_jagged_sequences_dense.txt"
+
+        randomize = "auto"
+
+        input = [
+             features1 = [
+                alias = "F0"
+                dim = 10
+                format = "dense"
+            ]
+            features2 = [
+                alias = "F1"
+                dim = 50
+                format = "dense"
+            ]
+            features3 = [
+                alias = "F2"
+                dim = 100
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+200x200x2_seq2seq = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 200 sequence with *up to* 200 samples 
+        # in an input for each of 2 inputs
+        file = "200x200x2_seq2seq_dense.txt"
+
+        randomize = "auto"
+
+        input = [
+             features1 = [
+                alias = "F0"
+                dim = 5
+                format = "dense"
+            ]
+            features2 = [
+                alias = "F1"
+                dim = 50
+                format = "dense"
+            ]
+        ]
+    ]
+]
