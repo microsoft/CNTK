@@ -109,7 +109,7 @@ def seqcla():
 
     # setup embedding matrix
     embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                          init='fromFile', init_from_file_path=embedding_file)
+                          init_from_file_path=embedding_file)
 
     # get the vector representing the word
     sequence = C.times(embedding, features, name='sequence')
@@ -146,7 +146,7 @@ def seqcla():
         acc = calc_accuracy(train_file, ctx.output_filename_base)
         
         # and test for the same number...
-        TOLERANCE_ABSOLUTE = 1E-06    
+        TOLERANCE_ABSOLUTE = 1E-05    
         assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
 
 """
