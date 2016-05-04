@@ -165,7 +165,7 @@ def calc_accuracy(test_file, output_filename_base):
                 
     # load predicted answers
     predicted=[]
-    with open(output_filename_base + ".z", 'r', encoding='utf8') as f_in:      
+    with open(output_filename_base + ".z", 'r') as f_in:      
         for l in f_in:
             predicted.append(np.argmax(l.strip().split(' ')))
             
