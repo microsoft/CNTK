@@ -2112,11 +2112,11 @@ namespace Microsoft {
 				size_t j = 0;
 				Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
 				if (readerMode == ReaderMode::NCE)
-					labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
+					labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize, (2 * (m_noiseSampleSize + 1)) * actualmbsize, true);
 				else if (readerMode == ReaderMode::Class)
-					labels.Resize(4, actualmbsize, false);
+					labels.Resize(4, actualmbsize, 4 * actualmbsize, true);
 				else
-					labels.Resize(1, actualmbsize, false);
+					labels.Resize(1, actualmbsize, 1 * actualmbsize, true);
 
 				// move to CPU since element-wise operation is expensive on GPU
 				int curDevId = labels.GetDeviceId();
