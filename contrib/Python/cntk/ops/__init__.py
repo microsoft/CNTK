@@ -518,8 +518,14 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     value is returned which is 0.1 by default.
     
     Example:
-        >>> future_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
-        # [[3, 4], [5, 6], [0.5, 0.5]]
+        >>> data = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]])
+        >>> t = C.dynamic_axis(name='t')
+        >>> x = C.input_numpy([data], dynamic_axis=t)
+        >>> with C.LocalExecutionContext('future_value') as ctx:
+        ...     print(ctx.eval(C.future_value(0, x)))
+        [array([[  5. ,   6. ,   7. ,   8. ],
+                [  9. ,  10. ,  11. ,  12. ],
+                [  0.1,   0.1,   0.1,   0.1]])]
     
     Args:        
         dims: dimensions of the input `x`
@@ -544,8 +550,14 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     value is returned which is 0.1 by default.
     
     Example:
-        >>> past_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
-        # [[0.5, 0.5], [1, 2], [3, 4]]
+        >>> data = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]])
+        >>> t = C.dynamic_axis(name='t')
+        >>> x = C.input_numpy([data], dynamic_axis=t)
+        >>> with C.LocalExecutionContext('past_value') as ctx:
+        ...     print(ctx.eval(C.past_value(0, x)))
+        [array([[ 0.1,  0.1,  0.1,  0.1],
+                [ 1. ,  2. ,  3. ,  4. ],
+                [ 5. ,  6. ,  7. ,  8. ]])]
     
     Args:        
         dims: dimensions of the input `x`
