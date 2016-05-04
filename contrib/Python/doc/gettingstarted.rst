@@ -281,3 +281,6 @@ the criterion node that adds a softmax and then implements the cross entropy los
 we add the criterion node, however, we call :func:`cntk.ops.reconcile_dynamic_axis` which will ensure 
 that the minibatch layout for the labels and the data with dynamic axes is compatible.
 
+For the full explanation of how ``lstm_layer()`` is defined, please see the full example in the 
+Examples section.
+
