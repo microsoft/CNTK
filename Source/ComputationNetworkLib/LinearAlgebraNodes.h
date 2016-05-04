@@ -219,6 +219,7 @@ template class ElementTimesNode<double>;
 // If A is minibatch data, then this operation is currently not efficient.
 // TODO: Implement this with TensorView::DoElementwiseProductOf() and stride magic
 // TODO: Transpose flags for all matrices, inputs and outputs?
+// TODO: allow outputRank < 0 meaning to denote "all but", from right
 // -----------------------------------------------------------------------
 
 template <class ElemType, bool m_transpose>
@@ -230,6 +231,16 @@ public:
     TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
         : Base(deviceId, name), m_outputRank(outputRank)
     {
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
+            node->m_outputRank = m_outputRank;
+        }
     }
 
     void Save(File& fstream) const
@@ -309,6 +320,7 @@ public:
         {
             // currently we only support one combination when the input is sparse
             // If input data is sparse, then gradient is block sparse.
+            // BUGBUG: This does not accumulate into the Input(0)->Gradient, which might cause problems elsewhere.
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
             auto input0Gradient = OneSampleTensorFor(0, /*gradient=*/true,   fr.AllowBroadcast());
@@ -422,9 +434,11 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
             // update if LearnableParameter
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
+#if 0 // Removed this, because the check is just wrong.
             // and verify once again
             if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
                 InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
+#endif
         }
     }
 
@@ -490,7 +504,7 @@ template class TimesNode<double>;
 // This differs from TimesNode in that A is transposed, where A must be a
 // rank-1 or rank-2 tensor.
 // A common use of transposition is trace(X'X) where X is a matrix of samples.
-// This can be more efficiently implemented as ReducePlus (ElementTimes (X, X))
+// This can be more efficiently implemented as ReduceSum (ElementTimes (X, X))
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -564,7 +578,7 @@ public:
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        sliceOutputValue.SetValue(sliceInput1Value);
+        sliceOutputValue.AssignValuesOf(sliceInput1Value);
         sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
     }
 

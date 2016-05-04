@@ -589,7 +589,7 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return 1;
     }

@@ -1,46 +1,46 @@
-=== Running /cygdrive/c/src/cntk_github/x64/release/cntk.exe configFile=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu DeviceId=0 timestamping=true
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 11 2016 13:32:44
-		Last modified date: Thu Apr  7 11:05:47 2016
+		Built time: May  3 2016 13:23:06
+		Last modified date: Mon Apr 18 00:00:12 2016
 		Build type: Release
 		Build target: GPU
 		With 1bit-SGD: no
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-		CUB_PATH: E:\lib\cub-1.4.1
-		CUDNN_PATH: E:\lib\cuDNN_v4
-		Build Branch: alrezni/examples_text
-		Build SHA1: 110e330e5b490c97d4836374ed83fbe642e4f857 (modified)
-		Built by alrezni on DIFFENG
-		Build Path: C:\src\cntk_github\Source\CNTK\
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on LIANA-09-w
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-04/11/2016 14:20:26: -------------------------------------------------------------------
-04/11/2016 14:20:26: Build info: 
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+05/03/2016 14:29:39: -------------------------------------------------------------------
+05/03/2016 14:29:39: Build info: 
 
-04/11/2016 14:20:26: 		Built time: Apr 11 2016 13:32:44
-04/11/2016 14:20:26: 		Last modified date: Thu Apr  7 11:05:47 2016
-04/11/2016 14:20:26: 		Build type: Release
-04/11/2016 14:20:26: 		Build target: GPU
-04/11/2016 14:20:26: 		With 1bit-SGD: no
-04/11/2016 14:20:26: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-04/11/2016 14:20:26: 		CUB_PATH: E:\lib\cub-1.4.1
-04/11/2016 14:20:26: 		CUDNN_PATH: E:\lib\cuDNN_v4
-04/11/2016 14:20:26: 		Build Branch: alrezni/examples_text
-04/11/2016 14:20:26: 		Build SHA1: 110e330e5b490c97d4836374ed83fbe642e4f857 (modified)
-04/11/2016 14:20:26: 		Built by alrezni on DIFFENG
-04/11/2016 14:20:26: 		Build Path: C:\src\cntk_github\Source\CNTK\
-04/11/2016 14:20:26: -------------------------------------------------------------------
+05/03/2016 14:29:39: 		Built time: May  3 2016 13:23:06
+05/03/2016 14:29:39: 		Last modified date: Mon Apr 18 00:00:12 2016
+05/03/2016 14:29:39: 		Build type: Release
+05/03/2016 14:29:39: 		Build target: GPU
+05/03/2016 14:29:39: 		With 1bit-SGD: no
+05/03/2016 14:29:39: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 14:29:39: 		CUB_PATH: C:\src\cub-1.4.1
+05/03/2016 14:29:39: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 14:29:39: 		Build Branch: HEAD
+05/03/2016 14:29:39: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 14:29:39: 		Built by svcphil on LIANA-09-w
+05/03/2016 14:29:39: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 14:29:39: -------------------------------------------------------------------
 
-04/11/2016 14:20:26: Running on DIFFENG at 2016/04/11 14:20:26
-04/11/2016 14:20:26: Command line: 
-C:\src\cntk_github\x64\release\cntk.exe  configFile=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk  currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu  DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU  OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu  DeviceId=0  timestamping=true
+05/03/2016 14:29:39: Running on cntk-muc02 at 2016/05/03 14:29:39
+05/03/2016 14:29:39: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/globals.cntk+rnnlu.ndl.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu  DeviceId=0  timestamping=true
 
 
 
-04/11/2016 14:20:26: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/11/2016 14:20:26: NdlDir=$ConfigDir$
+05/03/2016 14:29:39: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:29:39: NdlDir=$ConfigDir$
 ExpDir=$RunDir$
 OutDir=$OutputDir$
 precision="double"
@@ -276,20 +276,20 @@ LSTMTest=[
     ]
   ]
 ]
-currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
-DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 DeviceId=0
 timestamping=true
 
-04/11/2016 14:20:26: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:29:39: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/11/2016 14:20:26: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/11/2016 14:20:26: NdlDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-ExpDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
-OutDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+05/03/2016 14:29:39: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:29:39: NdlDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+ExpDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
+OutDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 precision="double"
 deviceId = 0
 command=LSTM:LSTMTest
@@ -299,9 +299,9 @@ LSTM=[
   makeMode=true
   minibatchSize=10
   epochSize=4430000
-  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn
+  modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn
   NDLNetworkBuilder=[
-      networkDescription=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/lstm.ndl
+      networkDescription=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/lstm.ndl
   ]
   SGD=[
     learningRatesPerSample=0.1
@@ -329,13 +329,13 @@ LSTM=[
     wordContext=0:1:2
     randomize=None
     nbruttsineachrecurrentiter=10
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.bin
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -349,12 +349,12 @@ LSTM=[
       dim=1
       usewordmap=true
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -372,8 +372,8 @@ LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
-    labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
+    labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       sectionType=labels
       mapping=[
         sectionType=labelMapping
@@ -387,13 +387,13 @@ LSTM=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.valid.bin
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.valid.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -406,12 +406,12 @@ LSTM=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.in.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.in.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -429,9 +429,9 @@ LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -451,16 +451,16 @@ LSTMTest=[
   minibatchSize=100
   epochSize=4430000
   defaultHiddenActivity=0.1
-  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn
+  modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn
   outputNodeNames=outputs
   reader=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.bin
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
@@ -476,12 +476,12 @@ LSTMTest=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -499,9 +499,9 @@ LSTMTest=[
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=127
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -518,36 +518,36 @@ LSTMTest=[
   writer=[
     writerType=LUSequenceWriter
     outputs=[
-      file=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/output.rec.txt
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      file=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/output.rec.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
     ]
   ]
 ]
-currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
-DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 DeviceId=0
 timestamping=true
 
-04/11/2016 14:20:26: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:29:39: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/11/2016 14:20:26: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:29:39: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: rnnlu.ndl.cntk:command=LSTM:LSTMTest
-configparameters: rnnlu.ndl.cntk:ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-configparameters: rnnlu.ndl.cntk:currentDirectory=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-configparameters: rnnlu.ndl.cntk:DataDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
 configparameters: rnnlu.ndl.cntk:deviceId=0
-configparameters: rnnlu.ndl.cntk:ExpDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:ExpDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 configparameters: rnnlu.ndl.cntk:LSTM=[
   action=train
   makeMode=true
   minibatchSize=10
   epochSize=4430000
-  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn
+  modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn
   NDLNetworkBuilder=[
-      networkDescription=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/lstm.ndl
+      networkDescription=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/lstm.ndl
   ]
   SGD=[
     learningRatesPerSample=0.1
@@ -575,13 +575,13 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     wordContext=0:1:2
     randomize=None
     nbruttsineachrecurrentiter=10
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.bin
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -595,12 +595,12 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       dim=1
       usewordmap=true
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -618,8 +618,8 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
-    labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
+    labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       sectionType=labels
       mapping=[
         sectionType=labelMapping
@@ -633,13 +633,13 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.valid.bin
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.valid.bin
     wsize=256
     wrecords=1000
     windowSize=10000
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
     features=[
       dim=0
       sectionType=data
@@ -652,12 +652,12 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.in.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.in.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -675,9 +675,9 @@ configparameters: rnnlu.ndl.cntk:LSTM=[
       labelType=Category
       beginSequence="O"
       endSequence="O"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -698,16 +698,16 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
   minibatchSize=100
   epochSize=4430000
   defaultHiddenActivity=0.1
-  modelPath=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn
+  modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn
   outputNodeNames=outputs
   reader=[
     readerType=LUSequenceReader
     randomize=None
     wordContext=0:1:2
     unk="<unk>"
-    wordmap=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/inputmap.txt
-    file=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
-    wfile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sequenceSentence.bin
+    wordmap=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/inputmap.txt
+    file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
+    wfile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sequenceSentence.bin
     wsize=256
     wrecords=1000
     windowSize=10000
@@ -723,12 +723,12 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
     labelIn=[
       dim=1
       labelDim=10000
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.txt
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
       usewordmap=true
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/input.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/input.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -746,9 +746,9 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
       labelType=Category
       beginSequence="BOS"
       endSequence="EOS"
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
       labelDim=127
-      labelMappingFile=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/sentenceLabels.out.txt
+      labelMappingFile=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/sentenceLabels.out.txt
       elementSize=4
       sectionType=labels
       mapping=[
@@ -765,46 +765,46 @@ configparameters: rnnlu.ndl.cntk:LSTMTest=[
   writer=[
     writerType=LUSequenceWriter
     outputs=[
-      file=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/output.rec.txt
-      token=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/output.txt
+      file=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/output.rec.txt
+      token=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/output.txt
     ]
   ]
 ]
 
-configparameters: rnnlu.ndl.cntk:NdlDir=C:\src\cntk_github\Tests\EndToEndTests\Text\SLU
-configparameters: rnnlu.ndl.cntk:OutDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
-configparameters: rnnlu.ndl.cntk:OutputDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:NdlDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU
+configparameters: rnnlu.ndl.cntk:OutDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 configparameters: rnnlu.ndl.cntk:precision=double
-configparameters: rnnlu.ndl.cntk:RunDir=E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu
+configparameters: rnnlu.ndl.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu
 configparameters: rnnlu.ndl.cntk:timestamping=true
 configparameters: rnnlu.ndl.cntk:traceLevel=1
-04/11/2016 14:20:26: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/11/2016 14:20:26: Commands: LSTM LSTMTest
-04/11/2016 14:20:26: Precision = "double"
-04/11/2016 14:20:26: CNTKModelPath: E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn
-04/11/2016 14:20:26: CNTKCommandTrainInfo: LSTM : 3
-04/11/2016 14:20:26: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+05/03/2016 14:29:39: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:29:39: Commands: LSTM LSTMTest
+05/03/2016 14:29:39: Precision = "double"
+05/03/2016 14:29:39: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn
+05/03/2016 14:29:39: CNTKCommandTrainInfo: LSTM : 3
+05/03/2016 14:29:39: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
-04/11/2016 14:20:26: ##############################################################################
-04/11/2016 14:20:26: #                                                                            #
-04/11/2016 14:20:26: # Action "train"                                                             #
-04/11/2016 14:20:26: #                                                                            #
-04/11/2016 14:20:26: ##############################################################################
+05/03/2016 14:29:39: ##############################################################################
+05/03/2016 14:29:39: #                                                                            #
+05/03/2016 14:29:39: # Action "train"                                                             #
+05/03/2016 14:29:39: #                                                                            #
+05/03/2016 14:29:39: ##############################################################################
 
-04/11/2016 14:20:26: CNTKCommandTrainBegin: LSTM
+05/03/2016 14:29:39: CNTKCommandTrainBegin: LSTM
 NDLBuilder Using GPU 0
-BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
-BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
+BatchLUSequenceReader: Input file is C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.train.apos.pred.pos.head.IOB.simple
+BatchLUSequenceReader: Input file is C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.dev.IOB.simple
 
-04/11/2016 14:20:26: Creating virgin network.
+05/03/2016 14:29:39: Creating virgin network.
 Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==8
 
 Post-processing network...
 
 4 roots:
-	Err = CrossEntropyWithSoftmax()
 	LSTMoutputW1 = Times()
-	cr = CrossEntropyWithSoftmax()
+	ce = CrossEntropyWithSoftmax()
+	err = CrossEntropyWithSoftmax()
 	outputs = Softmax()
 
 Loop[0] --> Loop_LSTMoutput.outputTest -> 31 nodes
@@ -823,16 +823,6 @@ Loop[0] --> Loop_LSTMoutput.outputTest -> 31 nodes
 
 Validating network. 62 nodes to process in pass 1.
 
-
-Validating network. 43 nodes to process in pass 2.
-
-
-Validating network. 14 nodes to process in pass 3.
-
-
-Validating network, final pass.
-
-Validating --> labels = InputValue() :  -> [127 x *]
 Validating --> W1 = LearnableParameter() :  -> [127 x 300]
 Validating --> LSTMoutput.Wxo = LearnableParameter() :  -> [300 x 150]
 Validating --> Wlookup = LearnableParameter() :  -> [50 x 944]
@@ -859,29 +849,22 @@ Validating --> LSTMoutput.Wxc = LearnableParameter() :  -> [300 x 150]
 Validating --> LSTMoutput.WxcInput = Times (LSTMoutput.Wxc, featLookuped) : [300 x 150], [150 x *] -> [300 x *]
 Validating --> LSTMoutput.Whc = LearnableParameter() :  -> [300 x 300]
 Validating --> LSTMoutput.bc = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.delayHO = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed134 = Plus (LSTMoutput.unnamed135, LSTMoutput.WhodelayHO) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHF = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed131 = Plus (LSTMoutput.unnamed132, LSTMoutput.WhfdelayHF) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCF = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed130 = Plus (LSTMoutput.unnamed131, LSTMoutput.WcfdelayCF) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300] -> [300]
+Validating --> LSTMoutput.unnamed134 = Plus (LSTMoutput.unnamed135, LSTMoutput.WhodelayHO) : [300 x 1 x *], [300] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300] -> [300]
+Validating --> LSTMoutput.unnamed131 = Plus (LSTMoutput.unnamed132, LSTMoutput.WhfdelayHF) : [300 x 1 x *], [300] -> [300 x 1 x *]
+Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300] -> [300]
+Validating --> LSTMoutput.unnamed130 = Plus (LSTMoutput.unnamed131, LSTMoutput.WcfdelayCF) : [300 x 1 x *], [300] -> [300 x 1 x *]
 Validating --> LSTMoutput.ft = Sigmoid (LSTMoutput.unnamed130) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCC = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.bft = ElementTimes (LSTMoutput.ft, LSTMoutput.delayCC) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHI = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed125 = Plus (LSTMoutput.unnamed126, LSTMoutput.WhidelayHI) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCI = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed124 = Plus (LSTMoutput.unnamed125, LSTMoutput.WcidelayCI) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.bft = ElementTimes (LSTMoutput.ft, LSTMoutput.delayCC) : [300 x 1 x *], [300] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300] -> [300]
+Validating --> LSTMoutput.unnamed125 = Plus (LSTMoutput.unnamed126, LSTMoutput.WhidelayHI) : [300 x 1 x *], [300] -> [300 x 1 x *]
+Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300] -> [300]
+Validating --> LSTMoutput.unnamed124 = Plus (LSTMoutput.unnamed125, LSTMoutput.WcidelayCI) : [300 x 1 x *], [300] -> [300 x 1 x *]
 Validating --> LSTMoutput.it = Sigmoid (LSTMoutput.unnamed124) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHC = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300 x 1 x *], [300 x 1] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed128 = Plus (LSTMoutput.WxcInput, LSTMoutput.unnamed129) : [300 x *], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300] -> [300]
+Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed128 = Plus (LSTMoutput.WxcInput, LSTMoutput.unnamed129) : [300 x *], [300 x 1] -> [300 x 1 x *]
 Validating --> LSTMoutput.unnamed127 = Tanh (LSTMoutput.unnamed128) : [300 x 1 x *] -> [300 x 1 x *]
 Validating --> LSTMoutput.bit = ElementTimes (LSTMoutput.it, LSTMoutput.unnamed127) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
 Validating --> LSTMoutput.ct = Plus (LSTMoutput.bft, LSTMoutput.bit) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
@@ -891,100 +874,236 @@ Validating --> LSTMoutput.ot = Sigmoid (LSTMoutput.unnamed133) : [300 x 1 x *] -
 Validating --> LSTMoutput.unnamed136 = Tanh (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
 Validating --> LSTMoutput.outputTest = ElementTimes (LSTMoutput.ot, LSTMoutput.unnamed136) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
 Validating --> LSTMoutputW1 = Times (W1, LSTMoutput.outputTest) : [127 x 300], [300 x 1 x *] -> [127 x 1 x *]
-Validating --> Err = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
-Validating --> cr = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
+Validating --> labels = InputValue() :  -> [127 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
+Validating --> err = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
 Validating --> outputs = Softmax (LSTMoutputW1) : [127 x 1 x *] -> [127 x 1 x *]
+
+Validating network. 43 nodes to process in pass 2.
+
+Validating --> LSTMoutput.delayHO = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayHF = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayCF = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayCC = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayHI = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayCI = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.delayHC = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
+Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300 x 1 x *], [300 x 1] -> [300 x 1 x *]
+
+Validating network. 14 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
 
 
 19 out of 62 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-04/11/2016 14:20:27: Created model with 62 nodes on GPU 0.
+05/03/2016 14:29:40: Created model with 62 nodes on GPU 0.
 
-04/11/2016 14:20:27: Training criterion node(s):
-04/11/2016 14:20:27: 	cr = CrossEntropyWithSoftmax
+05/03/2016 14:29:40: Training criterion node(s):
+05/03/2016 14:29:40: 	ce = CrossEntropyWithSoftmax
 
-04/11/2016 14:20:27: Evaluation criterion node(s):
+05/03/2016 14:29:40: Evaluation criterion node(s):
 
-04/11/2016 14:20:27: 	Err = CrossEntropyWithSoftmax
+05/03/2016 14:29:40: 	err = CrossEntropyWithSoftmax
 
 
 Allocating matrices for forward and/or backward propagation.
-04/11/2016 14:20:27: No PreCompute nodes found, skipping PreCompute step.
 
-04/11/2016 14:20:27: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+Memory Sharing Structure:
 
-04/11/2016 14:20:27: Starting minibatch loop.
+0000000000000000: {[err Gradient[1]] [features Gradient[2832 x *]] [labels Gradient[127 x *]] [outputs Gradient[127 x 1 x *]] }
+0000003A393DD270: {[features Value[2832 x *]] }
+0000003A4E84CB80: {[LSTMoutput.Wxo Value[300 x 150]] }
+0000003A4E84CD60: {[LSTMoutput.Wxc Value[300 x 150]] }
+0000003A4E84D1C0: {[LSTMoutput.bo Value[300 x 1]] }
+0000003A4E84D6C0: {[labels Value[127 x *]] }
+0000003A4E84D760: {[LSTMoutput.bi Value[300 x 1]] }
+0000003A4E84D9E0: {[LSTMoutput.Wci Value[300 x 1]] }
+0000003A4E84DB20: {[LSTMoutput.Whf Value[300 x 300]] }
+0000003A4E84DDA0: {[LSTMoutput.bf Value[300 x 1]] }
+0000003A4E84E2A0: {[Wlookup Value[50 x 944]] }
+0000003A4E84E3E0: {[LSTMoutput.Wxf Value[300 x 150]] }
+0000003A4E84E700: {[LSTMoutput.bc Value[300 x 1]] }
+0000003A4E84E840: {[LSTMoutput.Whi Value[300 x 300]] }
+0000003A4E84E8E0: {[LSTMoutput.Wxi Value[300 x 150]] }
+0000003A516A7D90: {[LSTMoutput.Wxc Gradient[300 x 150]] [LSTMoutput.delayHO Value[300 x 1 x *]] }
+0000003A516A8290: {[LSTMoutput.unnamed124 Value[300 x 1 x *]] }
+0000003A516A8330: {[LSTMoutput.delayCI Value[300 x 1 x *]] }
+0000003A516A83D0: {[LSTMoutput.delayCC Value[300 x 1 x *]] }
+0000003A516A8A10: {[LSTMoutput.Wcf Value[300 x 1]] }
+0000003A516A8AB0: {[LSTMoutput.delayCF Value[300 x 1 x *]] }
+0000003A516A8B50: {[LSTMoutput.Who Value[300 x 300]] }
+0000003A516A8BF0: {[LSTMoutput.delayHF Value[300 x 1 x *]] }
+0000003A516A90F0: {[LSTMoutput.delayHC Value[300 x 1 x *]] }
+0000003A516A9190: {[LSTMoutput.delayHI Value[300 x 1 x *]] }
+0000003A516A9230: {[LSTMoutput.Wco Value[300 x 1]] }
+0000003A516A9910: {[LSTMoutput.Whc Value[300 x 300]] }
+0000003A516B5DE0: {[LSTMoutput.Wxfinput Gradient[300 x *]] [LSTMoutput.WxiInput Value[300 x *]] [LSTMoutput.bo Gradient[300 x 1]] }
+0000003A516B5E80: {[LSTMoutput.WxcInput Value[300 x *]] [LSTMoutput.WxiInput Gradient[300 x *]] [LSTMoutput.bf Gradient[300 x 1]] }
+0000003A516B5F20: {[LSTMoutput.WhodelayHO Value[300 x 1 x *]] }
+0000003A516B6060: {[LSTMoutput.Wxoinput Value[300 x *]] [Wlookup Gradient[50 x 944]] }
+0000003A516B6100: {[ce Value[1]] }
+0000003A516B61A0: {[LSTMoutput.Wxf Gradient[300 x 150]] [LSTMoutput.unnamed132 Value[300 x 1 x *]] }
+0000003A516B6240: {[LSTMoutput.unnamed134 Value[300 x 1 x *]] }
+0000003A516B62E0: {[featLookuped Value[150 x *]] }
+0000003A516B6380: {[LSTMoutput.Wxi Gradient[300 x 150]] [LSTMoutput.unnamed126 Value[300 x 1 x *]] }
+0000003A516B6420: {[W1 Value[127 x 300]] }
+0000003A516B64C0: {[LSTMoutput.WhfdelayHF Value[300 x 1 x *]] }
+0000003A516B6560: {[LSTMoutput.unnamed131 Value[300 x 1 x *]] }
+0000003A516B6600: {[LSTMoutput.WcfdelayCF Value[300 x 1 x *]] }
+0000003A516B67E0: {[LSTMoutput.unnamed130 Value[300 x 1 x *]] }
+0000003A516B6880: {[LSTMoutput.WhidelayHI Value[300 x 1 x *]] }
+0000003A516B6920: {[LSTMoutput.bft Value[300 x 1 x *]] }
+0000003A516B6E20: {[err Value[1]] }
+0000003A516B6EC0: {[LSTMoutput.Wxfinput Value[300 x *]] [LSTMoutput.Wxoinput Gradient[300 x *]] }
+0000003A516B71E0: {[LSTMoutput.ft Value[300 x 1 x *]] }
+0000003A516B7320: {[LSTMoutput.unnamed125 Value[300 x 1 x *]] }
+0000003A516B7460: {[outputs Value[127 x 1 x *]] }
+0000003A516B7500: {[LSTMoutput.WcidelayCI Value[300 x 1 x *]] }
+0000003A516B75A0: {[LSTMoutput.Wxo Gradient[300 x 150]] [LSTMoutput.unnamed135 Value[300 x 1 x *]] }
+0000003A516B7BE0: {[LSTMoutputW1 Value[127 x 1 x *]] }
+0000003A516C25C0: {[LSTMoutput.WcfdelayCF Gradient[300 x 1 x *]] }
+0000003A516C2840: {[LSTMoutput.Who Gradient[300 x 300]] }
+0000003A516C2B60: {[LSTMoutput.Whf Gradient[300 x 300]] }
+0000003A516C2DE0: {[LSTMoutput.unnamed131 Gradient[300 x 1 x *]] }
+0000003A516C2E80: {[LSTMoutput.ft Gradient[300 x 1 x *]] }
+0000003A516C2F20: {[LSTMoutput.unnamed135 Gradient[300 x 1 x *]] }
+0000003A516C3100: {[LSTMoutput.delayHO Gradient[300 x 1 x *]] [featLookuped Gradient[150 x *]] }
+0000003A516C31A0: {[LSTMoutput.Wcf Gradient[300 x 1]] }
+0000003A516C34C0: {[LSTMoutput.unnamed132 Gradient[300 x 1 x *]] }
+0000003A516C3560: {[LSTMoutput.delayCC Gradient[300 x 1 x *]] }
+0000003A516C3600: {[LSTMoutput.delayHF Gradient[300 x 1 x *]] }
+0000003A516C36A0: {[LSTMoutput.delayCF Gradient[300 x 1 x *]] }
+0000003A516C37E0: {[LSTMoutput.WhodelayHO Gradient[300 x 1 x *]] }
+0000003A516C3EC0: {[LSTMoutput.WhfdelayHF Gradient[300 x 1 x *]] }
+0000003A516C3F60: {[LSTMoutput.unnamed130 Gradient[300 x 1 x *]] }
+0000003A51BAC590: {[LSTMoutput.Wco Gradient[300 x 1]] }
+0000003A51BAC630: {[LSTMoutput.unnamed129 Value[300 x 1 x *]] }
+0000003A51BAC6D0: {[LSTMoutput.bit Gradient[300 x 1 x *]] }
+0000003A51BAC770: {[LSTMoutput.Whc Gradient[300 x 300]] }
+0000003A51BAC810: {[LSTMoutput.unnamed124 Gradient[300 x 1 x *]] }
+0000003A51BAC8B0: {[LSTMoutput.outputTest Gradient[300 x 1 x *]] }
+0000003A51BAC950: {[LSTMoutput.unnamed125 Gradient[300 x 1 x *]] }
+0000003A51BAC9F0: {[LSTMoutput.WcidelayCI Gradient[300 x 1 x *]] }
+0000003A51BACA90: {[LSTMoutput.bc Gradient[300 x 1]] }
+0000003A51BACBD0: {[LSTMoutput.outputTest Value[300 x 1 x *]] }
+0000003A51BACC70: {[LSTMoutput.delayHC Gradient[300 x 1 x *]] }
+0000003A51BACD10: {[LSTMoutput.ot Gradient[300 x 1 x *]] [LSTMoutputW1 Gradient[127 x 1 x *]] }
+0000003A51BACDB0: {[LSTMoutput.unnamed136 Value[300 x 1 x *]] }
+0000003A51BACE50: {[LSTMoutput.ot Value[300 x 1 x *]] }
+0000003A51BACF90: {[LSTMoutput.unnamed136 Gradient[300 x 1 x *]] }
+0000003A51BAD030: {[LSTMoutput.delayCI Gradient[300 x 1 x *]] }
+0000003A51BAD0D0: {[LSTMoutput.WhidelayHI Gradient[300 x 1 x *]] }
+0000003A51BAD170: {[LSTMoutput.unnamed133 Value[300 x 1 x *]] }
+0000003A51BAD210: {[LSTMoutput.delayHI Gradient[300 x 1 x *]] }
+0000003A51BAD2B0: {[LSTMoutput.ct Value[300 x 1 x *]] }
+0000003A51BAD3F0: {[LSTMoutput.WxcInput Gradient[300 x *]] [LSTMoutput.bi Gradient[300 x 1]] }
+0000003A51BAD490: {[LSTMoutput.bit Value[300 x 1 x *]] }
+0000003A51BAD530: {[LSTMoutput.it Value[300 x 1 x *]] }
+0000003A51BAD670: {[LSTMoutput.Wcoct Value[300 x 1 x *]] }
+0000003A51BAD710: {[W1 Gradient[127 x 300]] }
+0000003A51BAD7B0: {[LSTMoutput.bft Gradient[300 x 1 x *]] }
+0000003A51BAD850: {[LSTMoutput.WhcdelayHC Value[300 x 1 x *]] }
+0000003A51BAD8F0: {[LSTMoutput.unnamed134 Gradient[300 x 1 x *]] }
+0000003A51BAD990: {[ce Gradient[1]] }
+0000003A51BADA30: {[LSTMoutput.it Gradient[300 x 1 x *]] }
+0000003A51BADC10: {[LSTMoutput.unnamed128 Gradient[300 x 1 x *]] }
+0000003A51BADCB0: {[LSTMoutput.ct Gradient[300 x 1 x *]] }
+0000003A51BADD50: {[LSTMoutput.unnamed133 Gradient[300 x 1 x *]] }
+0000003A51BADDF0: {[LSTMoutput.WhcdelayHC Gradient[300 x 1 x *]] }
+0000003A51BADF30: {[LSTMoutput.Wci Gradient[300 x 1]] }
+0000003A51BADFD0: {[LSTMoutput.unnamed128 Value[300 x 1 x *]] }
+0000003A51BAE070: {[LSTMoutput.unnamed127 Value[300 x 1 x *]] }
+0000003A51BAE1B0: {[LSTMoutput.unnamed126 Gradient[300 x 1 x *]] }
+0000003A51BAE250: {[LSTMoutput.Whi Gradient[300 x 300]] }
+0000003A51BAE2F0: {[LSTMoutput.Wcoct Gradient[300 x 1 x *]] }
+0000003A51BAE390: {[LSTMoutput.unnamed127 Gradient[300 x 1 x *]] }
+0000003A51BAE430: {[LSTMoutput.unnamed129 Gradient[300 x 1 x *]] }
+
+05/03/2016 14:29:40: No PreCompute nodes found, skipping PreCompute step.
+
+05/03/2016 14:29:40: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+
+05/03/2016 14:29:40: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 WARNING: The same matrix with dim [127, 3] has been transferred between different devices for 20 times.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 14:20:27: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 4.7706065; TotalSamplesSeen = 81; EvalErrPerSample = 4.7706065; AvgLearningRatePerSample = 0.1; EpochTime=0.241044
+05/03/2016 14:29:40: Finished Epoch[ 1 of 3]: [Training] ce = 4.77060648 * 81; err = 4.77060648 * 81; totalSamplesSeen = 81; learningRatePerSample = 0.1; epochTime=0.316358s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    Err: CrossEntropyWithSoftmax/Sample = 4.4589574    Perplexity = 86.397381    
-04/11/2016 14:20:27: Finished Epoch[ 1 of 3]: [Validation Set] TrainLossPerSample = 4.4589574; EvalErrPerSample = 4.4589574
-04/11/2016 14:20:27: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn.1'
+05/03/2016 14:29:40: Final Results: Minibatch[1-51]: ce = 4.45895737 * 81; perplexity = 86.39738119; err = 4.45895737 * 81; perplexity = 86.39738119
+05/03/2016 14:29:40: Finished Epoch[ 1 of 3]: [Validate] ce = 4.45895737 * 81; err = 4.45895737 * 81
+05/03/2016 14:29:40: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn.1'
 
-04/11/2016 14:20:27: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+05/03/2016 14:29:40: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
 
-04/11/2016 14:20:27: Starting minibatch loop.
+05/03/2016 14:29:40: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 14:20:27: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 4.1254825; TotalSamplesSeen = 162; EvalErrPerSample = 4.1254825; AvgLearningRatePerSample = 0.1; EpochTime=0.102854
+05/03/2016 14:29:40: Finished Epoch[ 2 of 3]: [Training] ce = 4.12548252 * 81; err = 4.12548252 * 81; totalSamplesSeen = 162; learningRatePerSample = 0.1; epochTime=0.118504s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    Err: CrossEntropyWithSoftmax/Sample = 3.4404076    Perplexity = 31.199672    
-04/11/2016 14:20:27: Finished Epoch[ 2 of 3]: [Validation Set] TrainLossPerSample = 3.4404076; EvalErrPerSample = 3.4404076
-04/11/2016 14:20:27: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn.2'
+05/03/2016 14:29:40: Final Results: Minibatch[1-51]: ce = 3.44040758 * 81; perplexity = 31.19967203; err = 3.44040758 * 81; perplexity = 31.19967203
+05/03/2016 14:29:40: Finished Epoch[ 2 of 3]: [Validate] ce = 3.44040758 * 81; err = 3.44040758 * 81
+05/03/2016 14:29:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn.2'
 
-04/11/2016 14:20:28: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
+05/03/2016 14:29:41: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.900000  momentum as time constant = 94.9 samples
 
-04/11/2016 14:20:28: Starting minibatch loop.
+05/03/2016 14:29:41: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-04/11/2016 14:20:28: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 2.8280984; TotalSamplesSeen = 243; EvalErrPerSample = 2.8280984; AvgLearningRatePerSample = 0.1; EpochTime=0.102437
+05/03/2016 14:29:41: Finished Epoch[ 3 of 3]: [Training] ce = 2.82809840 * 81; err = 2.82809840 * 81; totalSamplesSeen = 243; learningRatePerSample = 0.1; epochTime=0.117746s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 51 lines with a total of 36+51 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-Final Results: Minibatch[1-51]: SamplesSeen = 81    cr: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    Err: CrossEntropyWithSoftmax/Sample = 2.2055314    Perplexity = 9.0750731    
-04/11/2016 14:20:28: Finished Epoch[ 3 of 3]: [Validation Set] TrainLossPerSample = 2.2055314; EvalErrPerSample = 2.2055314
-04/11/2016 14:20:28: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160411151928.899517\Text_SLU@release_gpu/cntkdebug.dnn'
-04/11/2016 14:20:28: CNTKCommandTrainEnd: LSTM
+05/03/2016 14:29:41: Final Results: Minibatch[1-51]: ce = 2.20553143 * 81; perplexity = 9.07507308; err = 2.20553143 * 81; perplexity = 9.07507308
+05/03/2016 14:29:41: Finished Epoch[ 3 of 3]: [Validate] ce = 2.20553143 * 81; err = 2.20553143 * 81
+05/03/2016 14:29:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503142201.423154\Text_SLU@release_gpu/cntkdebug.dnn'
+05/03/2016 14:29:41: CNTKCommandTrainEnd: LSTM
 
-04/11/2016 14:20:28: Action "train" complete.
+05/03/2016 14:29:41: Action "train" complete.
 
 
-04/11/2016 14:20:28: ##############################################################################
-04/11/2016 14:20:28: #                                                                            #
-04/11/2016 14:20:28: # Action "write"                                                             #
-04/11/2016 14:20:28: #                                                                            #
-04/11/2016 14:20:28: ##############################################################################
+05/03/2016 14:29:41: ##############################################################################
+05/03/2016 14:29:41: #                                                                            #
+05/03/2016 14:29:41: # Action "write"                                                             #
+05/03/2016 14:29:41: #                                                                            #
+05/03/2016 14:29:41: ##############################################################################
 
-BatchLUSequenceReader: Input file is C:\src\cntk_github\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
+BatchLUSequenceReader: Input file is C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SLU/atis.test.apos.pred.pos.head.IOB.simple
 
 Post-processing network...
 
 3 roots:
-	Err = CrossEntropyWithSoftmax()
-	cr = CrossEntropyWithSoftmax()
+	ce = CrossEntropyWithSoftmax()
+	err = CrossEntropyWithSoftmax()
 	outputs = Softmax()
 
 Loop[0] --> Loop_LSTMoutput.outputTest -> 31 nodes
@@ -1003,77 +1122,84 @@ Loop[0] --> Loop_LSTMoutput.outputTest -> 31 nodes
 
 Validating network. 62 nodes to process in pass 1.
 
+Validating --> labels = InputValue() :  -> [127 x *1]
+Validating --> W1 = LearnableParameter() :  -> [127 x 300]
+Validating --> LSTMoutput.Wxo = LearnableParameter() :  -> [300 x 150]
+Validating --> Wlookup = LearnableParameter() :  -> [50 x 944]
+Validating --> features = InputValue() :  -> [2832 x *1]
+Validating --> featLookuped = LookupTable (Wlookup, features) : [50 x 944], [2832 x *1] -> [150 x *1]
+Validating --> LSTMoutput.Wxoinput = Times (LSTMoutput.Wxo, featLookuped) : [300 x 150], [150 x *1] -> [300 x *1]
+Validating --> LSTMoutput.bo = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.unnamed135 = Plus (LSTMoutput.Wxoinput, LSTMoutput.bo) : [300 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.Who = LearnableParameter() :  -> [300 x 300]
+Validating --> LSTMoutput.Wco = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.Wxf = LearnableParameter() :  -> [300 x 150]
+Validating --> LSTMoutput.Wxfinput = Times (LSTMoutput.Wxf, featLookuped) : [300 x 150], [150 x *1] -> [300 x *1]
+Validating --> LSTMoutput.bf = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.unnamed132 = Plus (LSTMoutput.Wxfinput, LSTMoutput.bf) : [300 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.Whf = LearnableParameter() :  -> [300 x 300]
+Validating --> LSTMoutput.Wcf = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.Wxi = LearnableParameter() :  -> [300 x 150]
+Validating --> LSTMoutput.WxiInput = Times (LSTMoutput.Wxi, featLookuped) : [300 x 150], [150 x *1] -> [300 x *1]
+Validating --> LSTMoutput.bi = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.unnamed126 = Plus (LSTMoutput.WxiInput, LSTMoutput.bi) : [300 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.Whi = LearnableParameter() :  -> [300 x 300]
+Validating --> LSTMoutput.Wci = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.Wxc = LearnableParameter() :  -> [300 x 150]
+Validating --> LSTMoutput.WxcInput = Times (LSTMoutput.Wxc, featLookuped) : [300 x 150], [150 x *1] -> [300 x *1]
+Validating --> LSTMoutput.Whc = LearnableParameter() :  -> [300 x 300]
+Validating --> LSTMoutput.bc = LearnableParameter() :  -> [300 x 1]
+Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed134 = Plus (LSTMoutput.unnamed135, LSTMoutput.WhodelayHO) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed131 = Plus (LSTMoutput.unnamed132, LSTMoutput.WhfdelayHF) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed130 = Plus (LSTMoutput.unnamed131, LSTMoutput.WcfdelayCF) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.ft = Sigmoid (LSTMoutput.unnamed130) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.bft = ElementTimes (LSTMoutput.ft, LSTMoutput.delayCC) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed125 = Plus (LSTMoutput.unnamed126, LSTMoutput.WhidelayHI) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed124 = Plus (LSTMoutput.unnamed125, LSTMoutput.WcidelayCI) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.it = Sigmoid (LSTMoutput.unnamed124) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300 x 1], [300 x 1] -> [300 x 1]
+Validating --> LSTMoutput.unnamed128 = Plus (LSTMoutput.WxcInput, LSTMoutput.unnamed129) : [300 x *1], [300 x 1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.unnamed127 = Tanh (LSTMoutput.unnamed128) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.bit = ElementTimes (LSTMoutput.it, LSTMoutput.unnamed127) : [300 x 1 x *1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.ct = Plus (LSTMoutput.bft, LSTMoutput.bit) : [300 x 1 x *1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.Wcoct = DiagTimes (LSTMoutput.Wco, LSTMoutput.ct) : [300 x 1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.unnamed133 = Plus (LSTMoutput.unnamed134, LSTMoutput.Wcoct) : [300 x 1 x *1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.ot = Sigmoid (LSTMoutput.unnamed133) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.unnamed136 = Tanh (LSTMoutput.ct) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.outputTest = ElementTimes (LSTMoutput.ot, LSTMoutput.unnamed136) : [300 x 1 x *1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutputW1 = Times (W1, LSTMoutput.outputTest) : [127 x 300], [300 x 1 x *1] -> [127 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *1], [127 x 1 x *1] -> [1]
+Validating --> err = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *1], [127 x 1 x *1] -> [1]
+Validating --> outputs = Softmax (LSTMoutputW1) : [127 x 1 x *1] -> [127 x 1 x *1]
 
 Validating network. 43 nodes to process in pass 2.
 
+Validating --> LSTMoutput.delayHO = PastValue (LSTMoutput.outputTest) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayHF = PastValue (LSTMoutput.outputTest) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayCF = PastValue (LSTMoutput.ct) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayCC = PastValue (LSTMoutput.ct) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayHI = PastValue (LSTMoutput.outputTest) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayCI = PastValue (LSTMoutput.ct) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.delayHC = PastValue (LSTMoutput.outputTest) : [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300 x 1 x *1] -> [300 x 1 x *1]
+Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300 x 1 x *1], [300 x 1] -> [300 x 1 x *1]
 
 Validating network. 14 nodes to process in pass 3.
 
 
 Validating network, final pass.
 
-Validating --> labels = InputValue() :  -> [127 x *]
-Validating --> W1 = LearnableParameter() :  -> [127 x 300]
-Validating --> LSTMoutput.Wxo = LearnableParameter() :  -> [300 x 150]
-Validating --> Wlookup = LearnableParameter() :  -> [50 x 944]
-Validating --> features = InputValue() :  -> [2832 x *]
-Validating --> featLookuped = LookupTable (Wlookup, features) : [50 x 944], [2832 x *] -> [150 x *]
-Validating --> LSTMoutput.Wxoinput = Times (LSTMoutput.Wxo, featLookuped) : [300 x 150], [150 x *] -> [300 x *]
-Validating --> LSTMoutput.bo = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.unnamed135 = Plus (LSTMoutput.Wxoinput, LSTMoutput.bo) : [300 x *], [300 x 1] -> [300 x 1 x *]
-Validating --> LSTMoutput.Who = LearnableParameter() :  -> [300 x 300]
-Validating --> LSTMoutput.Wco = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.Wxf = LearnableParameter() :  -> [300 x 150]
-Validating --> LSTMoutput.Wxfinput = Times (LSTMoutput.Wxf, featLookuped) : [300 x 150], [150 x *] -> [300 x *]
-Validating --> LSTMoutput.bf = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.unnamed132 = Plus (LSTMoutput.Wxfinput, LSTMoutput.bf) : [300 x *], [300 x 1] -> [300 x 1 x *]
-Validating --> LSTMoutput.Whf = LearnableParameter() :  -> [300 x 300]
-Validating --> LSTMoutput.Wcf = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.Wxi = LearnableParameter() :  -> [300 x 150]
-Validating --> LSTMoutput.WxiInput = Times (LSTMoutput.Wxi, featLookuped) : [300 x 150], [150 x *] -> [300 x *]
-Validating --> LSTMoutput.bi = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.unnamed126 = Plus (LSTMoutput.WxiInput, LSTMoutput.bi) : [300 x *], [300 x 1] -> [300 x 1 x *]
-Validating --> LSTMoutput.Whi = LearnableParameter() :  -> [300 x 300]
-Validating --> LSTMoutput.Wci = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.Wxc = LearnableParameter() :  -> [300 x 150]
-Validating --> LSTMoutput.WxcInput = Times (LSTMoutput.Wxc, featLookuped) : [300 x 150], [150 x *] -> [300 x *]
-Validating --> LSTMoutput.Whc = LearnableParameter() :  -> [300 x 300]
-Validating --> LSTMoutput.bc = LearnableParameter() :  -> [300 x 1]
-Validating --> LSTMoutput.delayHO = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhodelayHO = Times (LSTMoutput.Who, LSTMoutput.delayHO) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed134 = Plus (LSTMoutput.unnamed135, LSTMoutput.WhodelayHO) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHF = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhfdelayHF = Times (LSTMoutput.Whf, LSTMoutput.delayHF) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed131 = Plus (LSTMoutput.unnamed132, LSTMoutput.WhfdelayHF) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCF = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WcfdelayCF = DiagTimes (LSTMoutput.Wcf, LSTMoutput.delayCF) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed130 = Plus (LSTMoutput.unnamed131, LSTMoutput.WcfdelayCF) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.ft = Sigmoid (LSTMoutput.unnamed130) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCC = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.bft = ElementTimes (LSTMoutput.ft, LSTMoutput.delayCC) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHI = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhidelayHI = Times (LSTMoutput.Whi, LSTMoutput.delayHI) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed125 = Plus (LSTMoutput.unnamed126, LSTMoutput.WhidelayHI) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayCI = PastValue (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WcidelayCI = DiagTimes (LSTMoutput.Wci, LSTMoutput.delayCI) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed124 = Plus (LSTMoutput.unnamed125, LSTMoutput.WcidelayCI) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.it = Sigmoid (LSTMoutput.unnamed124) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.delayHC = PastValue (LSTMoutput.outputTest) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.WhcdelayHC = Times (LSTMoutput.Whc, LSTMoutput.delayHC) : [300 x 300], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed129 = Plus (LSTMoutput.WhcdelayHC, LSTMoutput.bc) : [300 x 1 x *], [300 x 1] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed128 = Plus (LSTMoutput.WxcInput, LSTMoutput.unnamed129) : [300 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed127 = Tanh (LSTMoutput.unnamed128) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.bit = ElementTimes (LSTMoutput.it, LSTMoutput.unnamed127) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.ct = Plus (LSTMoutput.bft, LSTMoutput.bit) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.Wcoct = DiagTimes (LSTMoutput.Wco, LSTMoutput.ct) : [300 x 1], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed133 = Plus (LSTMoutput.unnamed134, LSTMoutput.Wcoct) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.ot = Sigmoid (LSTMoutput.unnamed133) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.unnamed136 = Tanh (LSTMoutput.ct) : [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutput.outputTest = ElementTimes (LSTMoutput.ot, LSTMoutput.unnamed136) : [300 x 1 x *], [300 x 1 x *] -> [300 x 1 x *]
-Validating --> LSTMoutputW1 = Times (W1, LSTMoutput.outputTest) : [127 x 300], [300 x 1 x *] -> [127 x 1 x *]
-Validating --> Err = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
-Validating --> cr = CrossEntropyWithSoftmax (labels, LSTMoutputW1) : [127 x *], [127 x 1 x *] -> [1]
-Validating --> outputs = Softmax (LSTMoutputW1) : [127 x 1 x *] -> [127 x 1 x *]
 
 
 19 out of 62 nodes do not share the minibatch layout with the input data.
@@ -1083,6 +1209,71 @@ Post-processing network complete.
 
 
 Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[LSTMoutput.Wcf Gradient[300 x 1]] [LSTMoutput.WcfdelayCF Gradient[300 x 1 x *1]] [LSTMoutput.Wci Gradient[300 x 1]] [LSTMoutput.WcidelayCI Gradient[300 x 1 x *1]] [LSTMoutput.Wco Gradient[300 x 1]] [LSTMoutput.Wcoct Gradient[300 x 1 x *1]] [LSTMoutput.Whc Gradient[300 x 300]] [LSTMoutput.WhcdelayHC Gradient[300 x 1 x *1]] [LSTMoutput.Whf Gradient[300 x 300]] [LSTMoutput.WhfdelayHF Gradient[300 x 1 x *1]] [LSTMoutput.Whi Gradient[300 x 300]] [LSTMoutput.WhidelayHI Gradient[300 x 1 x *1]] [LSTMoutput.Who Gradient[300 x 300]] [LSTMoutput.WhodelayHO Gradient[300 x 1 x *1]] [LSTMoutput.Wxc Gradient[300 x 150]] [LSTMoutput.WxcInput Gradient[300 x *1]] [LSTMoutput.Wxf Gradient[300 x 150]] [LSTMoutput.Wxfinput Gradient[300 x *1]] [LSTMoutput.Wxi Gradient[300 x 150]] [LSTMoutput.WxiInput Gradient[300 x *1]] [LSTMoutput.Wxo Gradient[300 x 150]] [LSTMoutput.Wxoinput Gradient[300 x *1]] [LSTMoutput.bc Gradient[300 x 1]] [LSTMoutput.bf Gradient[300 x 1]] [LSTMoutput.bft Gradient[300 x 1 x *1]] [LSTMoutput.bi Gradient[300 x 1]] [LSTMoutput.bit Gradient[300 x 1 x *1]] [LSTMoutput.bo Gradient[300 x 1]] [LSTMoutput.ct Gradient[300 x 1 x *1]] [LSTMoutput.delayCC Gradient[300 x 1 x *1]] [LSTMoutput.delayCF Gradient[300 x 1 x *1]] [LSTMoutput.delayCI Gradient[300 x 1 x *1]] [LSTMoutput.delayHC Gradient[300 x 1 x *1]] [LSTMoutput.delayHF Gradient[300 x 1 x *1]] [LSTMoutput.delayHI Gradient[300 x 1 x *1]] [LSTMoutput.delayHO Gradient[300 x 1 x *1]] [LSTMoutput.ft Gradient[300 x 1 x *1]] [LSTMoutput.it Gradient[300 x 1 x *1]] [LSTMoutput.ot Gradient[300 x 1 x *1]] [LSTMoutput.outputTest Gradient[300 x 1 x *1]] [LSTMoutput.unnamed124 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed125 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed126 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed127 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed128 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed129 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed130 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed131 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed132 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed133 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed134 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed135 Gradient[300 x 1 x *1]] [LSTMoutput.unnamed136 Gradient[300 x 1 x *1]] [LSTMoutputW1 Gradient[127 x 1 x *1]] [W1 Gradient[127 x 300]] [Wlookup Gradient[50 x 944]] [ce Gradient[1]] [ce Value[1]] [err Gradient[1]] [err Value[1]] [featLookuped Gradient[150 x *1]] [features Gradient[2832 x *1]] [labels Gradient[127 x *1]] [outputs Gradient[127 x 1 x *1]] }
+0000003A4E84D1C0: {[LSTMoutput.ct Value[300 x 1 x *1]] }
+0000003A4E84D3A0: {[LSTMoutput.unnamed133 Value[300 x 1 x *1]] }
+0000003A4E84D440: {[LSTMoutputW1 Value[127 x 1 x *1]] }
+0000003A4E84D6C0: {[LSTMoutput.outputTest Value[300 x 1 x *1]] }
+0000003A4E84E0C0: {[LSTMoutput.Wcoct Value[300 x 1 x *1]] }
+0000003A4E84E2A0: {[LSTMoutput.ot Value[300 x 1 x *1]] }
+0000003A4E84E840: {[LSTMoutput.unnamed136 Value[300 x 1 x *1]] }
+0000003A516B5DE0: {[LSTMoutput.Who Value[300 x 300]] }
+0000003A516B6240: {[LSTMoutput.Wco Value[300 x 1]] }
+0000003A516B62E0: {[LSTMoutput.Wxi Value[300 x 150]] }
+0000003A516B64C0: {[LSTMoutput.Wxo Value[300 x 150]] }
+0000003A516B6B00: {[LSTMoutput.Whi Value[300 x 300]] }
+0000003A516B71E0: {[LSTMoutput.Wci Value[300 x 1]] }
+0000003A516B73C0: {[LSTMoutput.Whf Value[300 x 300]] }
+0000003A516B7460: {[LSTMoutput.Wxc Value[300 x 150]] }
+0000003A516B7640: {[LSTMoutput.Wxf Value[300 x 150]] }
+0000003A516B7AA0: {[LSTMoutput.Wcf Value[300 x 1]] }
+0000003A516B7B40: {[LSTMoutput.Whc Value[300 x 300]] }
+0000003A516C25C0: {[Wlookup Value[50 x 944]] }
+0000003A516C2980: {[LSTMoutput.unnamed126 Value[300 x 1 x *1]] }
+0000003A516C2C00: {[outputs Value[127 x 1 x *1]] }
+0000003A516C2CA0: {[LSTMoutput.unnamed132 Value[300 x 1 x *1]] }
+0000003A516C2D40: {[LSTMoutput.WhodelayHO Value[300 x 1 x *1]] }
+0000003A516C2DE0: {[LSTMoutput.unnamed134 Value[300 x 1 x *1]] }
+0000003A516C2E80: {[LSTMoutput.unnamed128 Value[300 x 1 x *1]] }
+0000003A516C2F20: {[LSTMoutput.unnamed127 Value[300 x 1 x *1]] }
+0000003A516C2FC0: {[LSTMoutput.bit Value[300 x 1 x *1]] }
+0000003A516C3100: {[LSTMoutput.WhfdelayHF Value[300 x 1 x *1]] }
+0000003A516C31A0: {[LSTMoutput.unnamed130 Value[300 x 1 x *1]] }
+0000003A516C3240: {[LSTMoutput.WhidelayHI Value[300 x 1 x *1]] }
+0000003A516C3420: {[LSTMoutput.ft Value[300 x 1 x *1]] }
+0000003A516C3600: {[featLookuped Value[150 x *1]] }
+0000003A516C36A0: {[LSTMoutput.Wxoinput Value[300 x *1]] }
+0000003A516C3740: {[LSTMoutput.WxcInput Value[300 x *1]] }
+0000003A516C37E0: {[LSTMoutput.Wxfinput Value[300 x *1]] }
+0000003A516C3880: {[LSTMoutput.bft Value[300 x 1 x *1]] }
+0000003A516C3920: {[LSTMoutput.WcidelayCI Value[300 x 1 x *1]] }
+0000003A516C39C0: {[LSTMoutput.unnamed124 Value[300 x 1 x *1]] }
+0000003A516C3A60: {[LSTMoutput.it Value[300 x 1 x *1]] }
+0000003A516C3B00: {[LSTMoutput.WhcdelayHC Value[300 x 1 x *1]] }
+0000003A516C3BA0: {[LSTMoutput.unnamed129 Value[300 x 1 x *1]] }
+0000003A516C3EC0: {[W1 Value[127 x 300]] }
+0000003A516C3F60: {[LSTMoutput.WxiInput Value[300 x *1]] }
+0000003A516C4000: {[LSTMoutput.unnamed131 Value[300 x 1 x *1]] }
+0000003A516C40A0: {[LSTMoutput.unnamed125 Value[300 x 1 x *1]] }
+0000003A516C4140: {[LSTMoutput.WcfdelayCF Value[300 x 1 x *1]] }
+0000003A516C41E0: {[LSTMoutput.unnamed135 Value[300 x 1 x *1]] }
+0000003A56124B50: {[LSTMoutput.delayCI Value[300 x 1 x *1]] }
+0000003A56124F10: {[LSTMoutput.delayHC Value[300 x 1 x *1]] }
+0000003A56125050: {[LSTMoutput.bi Value[300 x 1]] }
+0000003A56125230: {[features Value[2832 x *1]] }
+0000003A56125410: {[LSTMoutput.delayHO Value[300 x 1 x *1]] }
+0000003A56125690: {[LSTMoutput.delayCF Value[300 x 1 x *1]] }
+0000003A56125870: {[LSTMoutput.bf Value[300 x 1]] }
+0000003A56125AF0: {[LSTMoutput.bc Value[300 x 1]] }
+0000003A56125B90: {[LSTMoutput.bo Value[300 x 1]] }
+0000003A56125CD0: {[LSTMoutput.delayHF Value[300 x 1 x *1]] }
+0000003A56125F50: {[LSTMoutput.delayHI Value[300 x 1 x *1]] }
+0000003A56126770: {[labels Value[127 x *1]] }
+0000003A56126810: {[LSTMoutput.delayCC Value[300 x 1 x *1]] }
+
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 5 lines with a total of 92+5 tokens.
 O O O O O O O O O O O O O O O O O O O O O 
@@ -1095,6 +1286,6 @@ BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
 Total Samples Evaluated = 91
 
-04/11/2016 14:20:28: Action "write" complete.
+05/03/2016 14:29:41: Action "write" complete.
 
-04/11/2016 14:20:28: __COMPLETED__
+05/03/2016 14:29:41: __COMPLETED__

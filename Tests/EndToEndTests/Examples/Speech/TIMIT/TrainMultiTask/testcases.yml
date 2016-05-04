@@ -19,11 +19,13 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - Per Sample = {{float,tolerance=.1%}}
+      - " * {{integer}}; "
+      - ObjFcn.O = {{float,tolerance=.1%}}
+      - CE1 = {{float,tolerance=.1%}}
 
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
+      - " * {{integer}}; "
+      - ObjFcn.O = {{float,tolerance=.1%}}
+      - CE1 = {{float,tolerance=.1%}}

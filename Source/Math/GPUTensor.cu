@@ -451,7 +451,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
             if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
             {
                 // in this case, outer calling code must pass beta = 1
-                val = atomicAdd(pout, val);
+                atomicAdd(pout, val);
             }
             else
             {
@@ -562,7 +562,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         reductionDim *= (C_size_t) reducingOpDimVector[k];
     let& props = GridDim::GetDeviceProps();
     GridDim grid(NN);
-    if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount /*    && NN == 10 && reductionDim <= GridDim::maxThreadsPerBlock*/)
+    if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount) // TODO: <= multiProcessorCount?
     {
         // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
         // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
@@ -593,7 +593,13 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+#if 0       // BUGBUG: atomicAdd not reliable enough, for now breaking it into individual launches
+            // We will leave it like this for a while, but eventually need to revisit using temporary memory.
+            for (size_t z = 1; z < numBlocksZ; z++)
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize * z, reductionChunkSize);
+#else
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+#endif
         }
     }
     else

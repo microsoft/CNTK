@@ -4,6 +4,7 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <opencv2/opencv.hpp>
 #include <numeric>
@@ -281,9 +282,6 @@ cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
 {
 	assert(!path.empty());
 
-    if (grayscale)
-        return cv::imread(path, cv::IMREAD_GRAYSCALE);
-    else
-        return cv::imread(path, cv::IMREAD_COLOR);
+    return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }
 }}}

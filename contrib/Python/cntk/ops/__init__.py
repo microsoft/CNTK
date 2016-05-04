@@ -732,7 +732,7 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
 
 def constant(value, name=None):
     """
-    It creates constant tensor initialized from a numpy array
+    It creates a constant tensor initialized from a numpy array
 
     Args:
         value: the tensor constant passed as numpy array

@@ -1,0 +1,42 @@
+RootDir = .
+ModelDir = "models"
+command = "MultiView_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderColorTransform_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+
+ColorTransform_Test = [
+    # Parameter values for the reader
+    reader = [
+        # reader to use
+        readerType = "ImageReader"
+        file = "$RootDir$/ImageReaderMultiView_map.txt"
+
+        randomize = "none"
+        verbosity = 1
+
+        numCPUThreads = 1
+        features=[
+            width=4
+            height=4
+            channels=3
+            cropType=center
+            cropRatio=1
+            jitterType=UniRatio
+            brightnessRadius=0:0.2
+            contrastRadius=0:0.2
+            saturationRadius=0:0.4
+            interpolations=Linear
+        ]
+        labels=[
+            labelDim=4
+        ]
+    ]
+]

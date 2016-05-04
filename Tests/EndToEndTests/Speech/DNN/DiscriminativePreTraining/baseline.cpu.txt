@@ -630,76 +630,76 @@ minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Starting minibatch loop.
- Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  3.74305420; EvalErr[0]PerSample = 0.81132812; TotalTime = 1.61207s; TotalTimePerSample = 0.62972ms; SamplesPerSecond = 1588
- Epoch[ 1 of 2]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.94799194; EvalErr[0]PerSample = 0.72539062; TotalTime = 1.71218s; TotalTimePerSample = 0.66882ms; SamplesPerSecond = 1495
- Epoch[ 1 of 2]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.62617187; EvalErr[0]PerSample = 0.68046875; TotalTime = 1.96081s; TotalTimePerSample = 0.76594ms; SamplesPerSecond = 1305
- Epoch[ 1 of 2]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.31340332; EvalErr[0]PerSample = 0.60000000; TotalTime = 1.98096s; TotalTimePerSample = 0.77381ms; SamplesPerSecond = 1292
- Epoch[ 1 of 2]-Minibatch[  41-  50 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.08197784; EvalErr[0]PerSample = 0.56367188; TotalTime = 2.37392s; TotalTimePerSample = 0.92731ms; SamplesPerSecond = 1078
- Epoch[ 1 of 2]-Minibatch[  51-  60 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.93575439; EvalErr[0]PerSample = 0.53437500; TotalTime = 2.27887s; TotalTimePerSample = 0.89018ms; SamplesPerSecond = 1123
- Epoch[ 1 of 2]-Minibatch[  61-  70 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.83957062; EvalErr[0]PerSample = 0.51796875; TotalTime = 2.12047s; TotalTimePerSample = 0.82831ms; SamplesPerSecond = 1207
- Epoch[ 1 of 2]-Minibatch[  71-  80 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.70679779; EvalErr[0]PerSample = 0.48750000; TotalTime = 1.99332s; TotalTimePerSample = 0.77864ms; SamplesPerSecond = 1284
- Epoch[ 1 of 2]-Minibatch[  81-  90 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.59371796; EvalErr[0]PerSample = 0.45703125; TotalTime = 2.26050s; TotalTimePerSample = 0.88301ms; SamplesPerSecond = 1132
- Epoch[ 1 of 2]-Minibatch[  91- 100 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.64279327; EvalErr[0]PerSample = 0.48593750; TotalTime = 2.19745s; TotalTimePerSample = 0.85838ms; SamplesPerSecond = 1164
- Epoch[ 1 of 2]-Minibatch[ 101- 110 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.60591888; EvalErr[0]PerSample = 0.47578125; TotalTime = 2.17477s; TotalTimePerSample = 0.84952ms; SamplesPerSecond = 1177
- Epoch[ 1 of 2]-Minibatch[ 111- 120 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.52358704; EvalErr[0]PerSample = 0.44882813; TotalTime = 2.13886s; TotalTimePerSample = 0.83549ms; SamplesPerSecond = 1196
- Epoch[ 1 of 2]-Minibatch[ 121- 130 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.49677734; EvalErr[0]PerSample = 0.44609375; TotalTime = 2.13765s; TotalTimePerSample = 0.83502ms; SamplesPerSecond = 1197
- Epoch[ 1 of 2]-Minibatch[ 131- 140 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.54127502; EvalErr[0]PerSample = 0.45273438; TotalTime = 2.20730s; TotalTimePerSample = 0.86222ms; SamplesPerSecond = 1159
- Epoch[ 1 of 2]-Minibatch[ 141- 150 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.43566284; EvalErr[0]PerSample = 0.41406250; TotalTime = 2.14483s; TotalTimePerSample = 0.83782ms; SamplesPerSecond = 1193
- Epoch[ 1 of 2]-Minibatch[ 151- 160 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.41996460; EvalErr[0]PerSample = 0.40976563; TotalTime = 2.27204s; TotalTimePerSample = 0.88751ms; SamplesPerSecond = 1126
- Epoch[ 1 of 2]-Minibatch[ 161- 170 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.38546448; EvalErr[0]PerSample = 0.40976563; TotalTime = 2.37860s; TotalTimePerSample = 0.92914ms; SamplesPerSecond = 1076
- Epoch[ 1 of 2]-Minibatch[ 171- 180 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.40654907; EvalErr[0]PerSample = 0.42109375; TotalTime = 2.21343s; TotalTimePerSample = 0.86462ms; SamplesPerSecond = 1156
- Epoch[ 1 of 2]-Minibatch[ 181- 190 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.41048584; EvalErr[0]PerSample = 0.41445312; TotalTime = 2.20519s; TotalTimePerSample = 0.86140ms; SamplesPerSecond = 1160
- Epoch[ 1 of 2]-Minibatch[ 191- 200 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.43002319; EvalErr[0]PerSample = 0.42500000; TotalTime = 2.10237s; TotalTimePerSample = 0.82124ms; SamplesPerSecond = 1217
- Epoch[ 1 of 2]-Minibatch[ 201- 210 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.41000977; EvalErr[0]PerSample = 0.42382812; TotalTime = 2.31127s; TotalTimePerSample = 0.90284ms; SamplesPerSecond = 1107
- Epoch[ 1 of 2]-Minibatch[ 211- 220 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.33088989; EvalErr[0]PerSample = 0.40468750; TotalTime = 2.30367s; TotalTimePerSample = 0.89987ms; SamplesPerSecond = 1111
- Epoch[ 1 of 2]-Minibatch[ 221- 230 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.28450928; EvalErr[0]PerSample = 0.38515625; TotalTime = 2.22202s; TotalTimePerSample = 0.86798ms; SamplesPerSecond = 1152
- Epoch[ 1 of 2]-Minibatch[ 231- 240 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.34680481; EvalErr[0]PerSample = 0.40664062; TotalTime = 2.28282s; TotalTimePerSample = 0.89173ms; SamplesPerSecond = 1121
- Epoch[ 1 of 2]-Minibatch[ 241- 250 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.32020569; EvalErr[0]PerSample = 0.39140625; TotalTime = 2.06229s; TotalTimePerSample = 0.80558ms; SamplesPerSecond = 1241
- Epoch[ 1 of 2]-Minibatch[ 251- 260 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22445068; EvalErr[0]PerSample = 0.37031250; TotalTime = 2.10306s; TotalTimePerSample = 0.82151ms; SamplesPerSecond = 1217
- Epoch[ 1 of 2]-Minibatch[ 261- 270 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23881226; EvalErr[0]PerSample = 0.37109375; TotalTime = 2.26618s; TotalTimePerSample = 0.88523ms; SamplesPerSecond = 1129
- Epoch[ 1 of 2]-Minibatch[ 271- 280 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.30255432; EvalErr[0]PerSample = 0.38984375; TotalTime = 2.17350s; TotalTimePerSample = 0.84902ms; SamplesPerSecond = 1177
- Epoch[ 1 of 2]-Minibatch[ 281- 290 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22100830; EvalErr[0]PerSample = 0.36992188; TotalTime = 1.77139s; TotalTimePerSample = 0.69195ms; SamplesPerSecond = 1445
- Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21442871; EvalErr[0]PerSample = 0.36445312; TotalTime = 2.28764s; TotalTimePerSample = 0.89361ms; SamplesPerSecond = 1119
- Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23150024; EvalErr[0]PerSample = 0.37578125; TotalTime = 2.29486s; TotalTimePerSample = 0.89643ms; SamplesPerSecond = 1115
- Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.25499268; EvalErr[0]PerSample = 0.37656250; TotalTime = 2.14378s; TotalTimePerSample = 0.83741ms; SamplesPerSecond = 1194
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.6395972; EvalErrPerSample = 0.46284181; AvgLearningRatePerSample = 0.003125000047; EpochTime=69.649363
+ Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: * 2560; ce =  3.74305420; err = 0.81132812; TotalTime = 1.61207s; TotalTimePerSample = 0.62972ms; SamplesPerSecond = 1588
+ Epoch[ 1 of 2]-Minibatch[  11-  20 of 320]: * 2560; ce =  2.94799194; err = 0.72539062; TotalTime = 1.71218s; TotalTimePerSample = 0.66882ms; SamplesPerSecond = 1495
+ Epoch[ 1 of 2]-Minibatch[  21-  30 of 320]: * 2560; ce =  2.62617187; err = 0.68046875; TotalTime = 1.96081s; TotalTimePerSample = 0.76594ms; SamplesPerSecond = 1305
+ Epoch[ 1 of 2]-Minibatch[  31-  40 of 320]: * 2560; ce =  2.31340332; err = 0.60000000; TotalTime = 1.98096s; TotalTimePerSample = 0.77381ms; SamplesPerSecond = 1292
+ Epoch[ 1 of 2]-Minibatch[  41-  50 of 320]: * 2560; ce =  2.08197784; err = 0.56367188; TotalTime = 2.37392s; TotalTimePerSample = 0.92731ms; SamplesPerSecond = 1078
+ Epoch[ 1 of 2]-Minibatch[  51-  60 of 320]: * 2560; ce =  1.93575439; err = 0.53437500; TotalTime = 2.27887s; TotalTimePerSample = 0.89018ms; SamplesPerSecond = 1123
+ Epoch[ 1 of 2]-Minibatch[  61-  70 of 320]: * 2560; ce =  1.83957062; err = 0.51796875; TotalTime = 2.12047s; TotalTimePerSample = 0.82831ms; SamplesPerSecond = 1207
+ Epoch[ 1 of 2]-Minibatch[  71-  80 of 320]: * 2560; ce =  1.70679779; err = 0.48750000; TotalTime = 1.99332s; TotalTimePerSample = 0.77864ms; SamplesPerSecond = 1284
+ Epoch[ 1 of 2]-Minibatch[  81-  90 of 320]: * 2560; ce =  1.59371796; err = 0.45703125; TotalTime = 2.26050s; TotalTimePerSample = 0.88301ms; SamplesPerSecond = 1132
+ Epoch[ 1 of 2]-Minibatch[  91- 100 of 320]: * 2560; ce =  1.64279327; err = 0.48593750; TotalTime = 2.19745s; TotalTimePerSample = 0.85838ms; SamplesPerSecond = 1164
+ Epoch[ 1 of 2]-Minibatch[ 101- 110 of 320]: * 2560; ce =  1.60591888; err = 0.47578125; TotalTime = 2.17477s; TotalTimePerSample = 0.84952ms; SamplesPerSecond = 1177
+ Epoch[ 1 of 2]-Minibatch[ 111- 120 of 320]: * 2560; ce =  1.52358704; err = 0.44882813; TotalTime = 2.13886s; TotalTimePerSample = 0.83549ms; SamplesPerSecond = 1196
+ Epoch[ 1 of 2]-Minibatch[ 121- 130 of 320]: * 2560; ce =  1.49677734; err = 0.44609375; TotalTime = 2.13765s; TotalTimePerSample = 0.83502ms; SamplesPerSecond = 1197
+ Epoch[ 1 of 2]-Minibatch[ 131- 140 of 320]: * 2560; ce =  1.54127502; err = 0.45273438; TotalTime = 2.20730s; TotalTimePerSample = 0.86222ms; SamplesPerSecond = 1159
+ Epoch[ 1 of 2]-Minibatch[ 141- 150 of 320]: * 2560; ce =  1.43566284; err = 0.41406250; TotalTime = 2.14483s; TotalTimePerSample = 0.83782ms; SamplesPerSecond = 1193
+ Epoch[ 1 of 2]-Minibatch[ 151- 160 of 320]: * 2560; ce =  1.41996460; err = 0.40976563; TotalTime = 2.27204s; TotalTimePerSample = 0.88751ms; SamplesPerSecond = 1126
+ Epoch[ 1 of 2]-Minibatch[ 161- 170 of 320]: * 2560; ce =  1.38546448; err = 0.40976563; TotalTime = 2.37860s; TotalTimePerSample = 0.92914ms; SamplesPerSecond = 1076
+ Epoch[ 1 of 2]-Minibatch[ 171- 180 of 320]: * 2560; ce =  1.40654907; err = 0.42109375; TotalTime = 2.21343s; TotalTimePerSample = 0.86462ms; SamplesPerSecond = 1156
+ Epoch[ 1 of 2]-Minibatch[ 181- 190 of 320]: * 2560; ce =  1.41048584; err = 0.41445312; TotalTime = 2.20519s; TotalTimePerSample = 0.86140ms; SamplesPerSecond = 1160
+ Epoch[ 1 of 2]-Minibatch[ 191- 200 of 320]: * 2560; ce =  1.43002319; err = 0.42500000; TotalTime = 2.10237s; TotalTimePerSample = 0.82124ms; SamplesPerSecond = 1217
+ Epoch[ 1 of 2]-Minibatch[ 201- 210 of 320]: * 2560; ce =  1.41000977; err = 0.42382812; TotalTime = 2.31127s; TotalTimePerSample = 0.90284ms; SamplesPerSecond = 1107
+ Epoch[ 1 of 2]-Minibatch[ 211- 220 of 320]: * 2560; ce =  1.33088989; err = 0.40468750; TotalTime = 2.30367s; TotalTimePerSample = 0.89987ms; SamplesPerSecond = 1111
+ Epoch[ 1 of 2]-Minibatch[ 221- 230 of 320]: * 2560; ce =  1.28450928; err = 0.38515625; TotalTime = 2.22202s; TotalTimePerSample = 0.86798ms; SamplesPerSecond = 1152
+ Epoch[ 1 of 2]-Minibatch[ 231- 240 of 320]: * 2560; ce =  1.34680481; err = 0.40664062; TotalTime = 2.28282s; TotalTimePerSample = 0.89173ms; SamplesPerSecond = 1121
+ Epoch[ 1 of 2]-Minibatch[ 241- 250 of 320]: * 2560; ce =  1.32020569; err = 0.39140625; TotalTime = 2.06229s; TotalTimePerSample = 0.80558ms; SamplesPerSecond = 1241
+ Epoch[ 1 of 2]-Minibatch[ 251- 260 of 320]: * 2560; ce =  1.22445068; err = 0.37031250; TotalTime = 2.10306s; TotalTimePerSample = 0.82151ms; SamplesPerSecond = 1217
+ Epoch[ 1 of 2]-Minibatch[ 261- 270 of 320]: * 2560; ce =  1.23881226; err = 0.37109375; TotalTime = 2.26618s; TotalTimePerSample = 0.88523ms; SamplesPerSecond = 1129
+ Epoch[ 1 of 2]-Minibatch[ 271- 280 of 320]: * 2560; ce =  1.30255432; err = 0.38984375; TotalTime = 2.17350s; TotalTimePerSample = 0.84902ms; SamplesPerSecond = 1177
+ Epoch[ 1 of 2]-Minibatch[ 281- 290 of 320]: * 2560; ce =  1.22100830; err = 0.36992188; TotalTime = 1.77139s; TotalTimePerSample = 0.69195ms; SamplesPerSecond = 1445
+ Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: * 2560; ce =  1.21442871; err = 0.36445312; TotalTime = 2.28764s; TotalTimePerSample = 0.89361ms; SamplesPerSecond = 1119
+ Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: * 2560; ce =  1.23150024; err = 0.37578125; TotalTime = 2.29486s; TotalTimePerSample = 0.89643ms; SamplesPerSecond = 1115
+ Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: * 2560; ce =  1.25499268; err = 0.37656250; TotalTime = 2.14378s; TotalTimePerSample = 0.83741ms; SamplesPerSecond = 1194
+Finished Epoch[ 1 of 2]: [Training] ce = 1.6395972; err = 0.46284181; learningRatePerSample = 0.003125000047; EpochTime=69.649363
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.24432030; EvalErr[0]PerSample = 0.38437500; TotalTime = 2.17401s; TotalTimePerSample = 0.84922ms; SamplesPerSecond = 1177
- Epoch[ 2 of 2]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21878033; EvalErr[0]PerSample = 0.37500000; TotalTime = 2.22384s; TotalTimePerSample = 0.86869ms; SamplesPerSecond = 1151
- Epoch[ 2 of 2]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.28410358; EvalErr[0]PerSample = 0.37812500; TotalTime = 2.19445s; TotalTimePerSample = 0.85721ms; SamplesPerSecond = 1166
- Epoch[ 2 of 2]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22131767; EvalErr[0]PerSample = 0.37382813; TotalTime = 2.02087s; TotalTimePerSample = 0.78940ms; SamplesPerSecond = 1266
- Epoch[ 2 of 2]-Minibatch[  41-  50 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17638283; EvalErr[0]PerSample = 0.35273437; TotalTime = 1.98391s; TotalTimePerSample = 0.77497ms; SamplesPerSecond = 1290
- Epoch[ 2 of 2]-Minibatch[  51-  60 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.28770714; EvalErr[0]PerSample = 0.39218750; TotalTime = 2.10243s; TotalTimePerSample = 0.82126ms; SamplesPerSecond = 1217
- Epoch[ 2 of 2]-Minibatch[  61-  70 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22729797; EvalErr[0]PerSample = 0.37421875; TotalTime = 2.10615s; TotalTimePerSample = 0.82271ms; SamplesPerSecond = 1215
- Epoch[ 2 of 2]-Minibatch[  71-  80 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17497940; EvalErr[0]PerSample = 0.36953125; TotalTime = 2.13498s; TotalTimePerSample = 0.83398ms; SamplesPerSecond = 1199
- Epoch[ 2 of 2]-Minibatch[  81-  90 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23583298; EvalErr[0]PerSample = 0.35742188; TotalTime = 2.17273s; TotalTimePerSample = 0.84872ms; SamplesPerSecond = 1178
- Epoch[ 2 of 2]-Minibatch[  91- 100 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.16937485; EvalErr[0]PerSample = 0.37187500; TotalTime = 1.96073s; TotalTimePerSample = 0.76591ms; SamplesPerSecond = 1305
- Epoch[ 2 of 2]-Minibatch[ 101- 110 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18656921; EvalErr[0]PerSample = 0.34765625; TotalTime = 2.07057s; TotalTimePerSample = 0.80882ms; SamplesPerSecond = 1236
- Epoch[ 2 of 2]-Minibatch[ 111- 120 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18989105; EvalErr[0]PerSample = 0.35781250; TotalTime = 1.97441s; TotalTimePerSample = 0.77125ms; SamplesPerSecond = 1296
- Epoch[ 2 of 2]-Minibatch[ 121- 130 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17073975; EvalErr[0]PerSample = 0.36445312; TotalTime = 2.17177s; TotalTimePerSample = 0.84835ms; SamplesPerSecond = 1178
- Epoch[ 2 of 2]-Minibatch[ 131- 140 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13176422; EvalErr[0]PerSample = 0.34375000; TotalTime = 2.20069s; TotalTimePerSample = 0.85964ms; SamplesPerSecond = 1163
- Epoch[ 2 of 2]-Minibatch[ 141- 150 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.08576660; EvalErr[0]PerSample = 0.32421875; TotalTime = 2.25159s; TotalTimePerSample = 0.87953ms; SamplesPerSecond = 1136
- Epoch[ 2 of 2]-Minibatch[ 151- 160 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.11148376; EvalErr[0]PerSample = 0.33867188; TotalTime = 2.25098s; TotalTimePerSample = 0.87929ms; SamplesPerSecond = 1137
- Epoch[ 2 of 2]-Minibatch[ 161- 170 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20480194; EvalErr[0]PerSample = 0.36250000; TotalTime = 2.09545s; TotalTimePerSample = 0.81854ms; SamplesPerSecond = 1221
- Epoch[ 2 of 2]-Minibatch[ 171- 180 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17241821; EvalErr[0]PerSample = 0.35820313; TotalTime = 2.07758s; TotalTimePerSample = 0.81155ms; SamplesPerSecond = 1232
- Epoch[ 2 of 2]-Minibatch[ 181- 190 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13457642; EvalErr[0]PerSample = 0.35429688; TotalTime = 2.10773s; TotalTimePerSample = 0.82333ms; SamplesPerSecond = 1214
- Epoch[ 2 of 2]-Minibatch[ 191- 200 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12700500; EvalErr[0]PerSample = 0.35234375; TotalTime = 2.33236s; TotalTimePerSample = 0.91108ms; SamplesPerSecond = 1097
- Epoch[ 2 of 2]-Minibatch[ 201- 210 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.11282043; EvalErr[0]PerSample = 0.33515625; TotalTime = 2.11595s; TotalTimePerSample = 0.82654ms; SamplesPerSecond = 1209
- Epoch[ 2 of 2]-Minibatch[ 211- 220 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13374786; EvalErr[0]PerSample = 0.34296875; TotalTime = 2.14508s; TotalTimePerSample = 0.83792ms; SamplesPerSecond = 1193
- Epoch[ 2 of 2]-Minibatch[ 221- 230 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14316711; EvalErr[0]PerSample = 0.35312500; TotalTime = 2.15834s; TotalTimePerSample = 0.84310ms; SamplesPerSecond = 1186
- Epoch[ 2 of 2]-Minibatch[ 231- 240 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27329712; EvalErr[0]PerSample = 0.38554688; TotalTime = 2.26755s; TotalTimePerSample = 0.88576ms; SamplesPerSecond = 1128
- Epoch[ 2 of 2]-Minibatch[ 241- 250 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.15661011; EvalErr[0]PerSample = 0.34726563; TotalTime = 2.30714s; TotalTimePerSample = 0.90123ms; SamplesPerSecond = 1109
- Epoch[ 2 of 2]-Minibatch[ 251- 260 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13043823; EvalErr[0]PerSample = 0.34101562; TotalTime = 2.06456s; TotalTimePerSample = 0.80647ms; SamplesPerSecond = 1239
- Epoch[ 2 of 2]-Minibatch[ 261- 270 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13791809; EvalErr[0]PerSample = 0.34960938; TotalTime = 2.19548s; TotalTimePerSample = 0.85761ms; SamplesPerSecond = 1166
- Epoch[ 2 of 2]-Minibatch[ 271- 280 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14694214; EvalErr[0]PerSample = 0.34101562; TotalTime = 2.33209s; TotalTimePerSample = 0.91097ms; SamplesPerSecond = 1097
- Epoch[ 2 of 2]-Minibatch[ 281- 290 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06658325; EvalErr[0]PerSample = 0.33476563; TotalTime = 2.20537s; TotalTimePerSample = 0.86147ms; SamplesPerSecond = 1160
- Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10054626; EvalErr[0]PerSample = 0.33750000; TotalTime = 2.02138s; TotalTimePerSample = 0.78960ms; SamplesPerSecond = 1266
- Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.09098816; EvalErr[0]PerSample = 0.34375000; TotalTime = 2.19745s; TotalTimePerSample = 0.85838ms; SamplesPerSecond = 1164
- Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.05595398; EvalErr[0]PerSample = 0.33671875; TotalTime = 2.11208s; TotalTimePerSample = 0.82503ms; SamplesPerSecond = 1212
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.165754; EvalErrPerSample = 0.35567626; AvgLearningRatePerSample = 0.003125000047; EpochTime=68.751932
+ Epoch[ 2 of 2]-Minibatch[   1-  10 of 320]: * 2560; ce =  1.24432030; err = 0.38437500; TotalTime = 2.17401s; TotalTimePerSample = 0.84922ms; SamplesPerSecond = 1177
+ Epoch[ 2 of 2]-Minibatch[  11-  20 of 320]: * 2560; ce =  1.21878033; err = 0.37500000; TotalTime = 2.22384s; TotalTimePerSample = 0.86869ms; SamplesPerSecond = 1151
+ Epoch[ 2 of 2]-Minibatch[  21-  30 of 320]: * 2560; ce =  1.28410358; err = 0.37812500; TotalTime = 2.19445s; TotalTimePerSample = 0.85721ms; SamplesPerSecond = 1166
+ Epoch[ 2 of 2]-Minibatch[  31-  40 of 320]: * 2560; ce =  1.22131767; err = 0.37382813; TotalTime = 2.02087s; TotalTimePerSample = 0.78940ms; SamplesPerSecond = 1266
+ Epoch[ 2 of 2]-Minibatch[  41-  50 of 320]: * 2560; ce =  1.17638283; err = 0.35273437; TotalTime = 1.98391s; TotalTimePerSample = 0.77497ms; SamplesPerSecond = 1290
+ Epoch[ 2 of 2]-Minibatch[  51-  60 of 320]: * 2560; ce =  1.28770714; err = 0.39218750; TotalTime = 2.10243s; TotalTimePerSample = 0.82126ms; SamplesPerSecond = 1217
+ Epoch[ 2 of 2]-Minibatch[  61-  70 of 320]: * 2560; ce =  1.22729797; err = 0.37421875; TotalTime = 2.10615s; TotalTimePerSample = 0.82271ms; SamplesPerSecond = 1215
+ Epoch[ 2 of 2]-Minibatch[  71-  80 of 320]: * 2560; ce =  1.17497940; err = 0.36953125; TotalTime = 2.13498s; TotalTimePerSample = 0.83398ms; SamplesPerSecond = 1199
+ Epoch[ 2 of 2]-Minibatch[  81-  90 of 320]: * 2560; ce =  1.23583298; err = 0.35742188; TotalTime = 2.17273s; TotalTimePerSample = 0.84872ms; SamplesPerSecond = 1178
+ Epoch[ 2 of 2]-Minibatch[  91- 100 of 320]: * 2560; ce =  1.16937485; err = 0.37187500; TotalTime = 1.96073s; TotalTimePerSample = 0.76591ms; SamplesPerSecond = 1305
+ Epoch[ 2 of 2]-Minibatch[ 101- 110 of 320]: * 2560; ce =  1.18656921; err = 0.34765625; TotalTime = 2.07057s; TotalTimePerSample = 0.80882ms; SamplesPerSecond = 1236
+ Epoch[ 2 of 2]-Minibatch[ 111- 120 of 320]: * 2560; ce =  1.18989105; err = 0.35781250; TotalTime = 1.97441s; TotalTimePerSample = 0.77125ms; SamplesPerSecond = 1296
+ Epoch[ 2 of 2]-Minibatch[ 121- 130 of 320]: * 2560; ce =  1.17073975; err = 0.36445312; TotalTime = 2.17177s; TotalTimePerSample = 0.84835ms; SamplesPerSecond = 1178
+ Epoch[ 2 of 2]-Minibatch[ 131- 140 of 320]: * 2560; ce =  1.13176422; err = 0.34375000; TotalTime = 2.20069s; TotalTimePerSample = 0.85964ms; SamplesPerSecond = 1163
+ Epoch[ 2 of 2]-Minibatch[ 141- 150 of 320]: * 2560; ce =  1.08576660; err = 0.32421875; TotalTime = 2.25159s; TotalTimePerSample = 0.87953ms; SamplesPerSecond = 1136
+ Epoch[ 2 of 2]-Minibatch[ 151- 160 of 320]: * 2560; ce =  1.11148376; err = 0.33867188; TotalTime = 2.25098s; TotalTimePerSample = 0.87929ms; SamplesPerSecond = 1137
+ Epoch[ 2 of 2]-Minibatch[ 161- 170 of 320]: * 2560; ce =  1.20480194; err = 0.36250000; TotalTime = 2.09545s; TotalTimePerSample = 0.81854ms; SamplesPerSecond = 1221
+ Epoch[ 2 of 2]-Minibatch[ 171- 180 of 320]: * 2560; ce =  1.17241821; err = 0.35820313; TotalTime = 2.07758s; TotalTimePerSample = 0.81155ms; SamplesPerSecond = 1232
+ Epoch[ 2 of 2]-Minibatch[ 181- 190 of 320]: * 2560; ce =  1.13457642; err = 0.35429688; TotalTime = 2.10773s; TotalTimePerSample = 0.82333ms; SamplesPerSecond = 1214
+ Epoch[ 2 of 2]-Minibatch[ 191- 200 of 320]: * 2560; ce =  1.12700500; err = 0.35234375; TotalTime = 2.33236s; TotalTimePerSample = 0.91108ms; SamplesPerSecond = 1097
+ Epoch[ 2 of 2]-Minibatch[ 201- 210 of 320]: * 2560; ce =  1.11282043; err = 0.33515625; TotalTime = 2.11595s; TotalTimePerSample = 0.82654ms; SamplesPerSecond = 1209
+ Epoch[ 2 of 2]-Minibatch[ 211- 220 of 320]: * 2560; ce =  1.13374786; err = 0.34296875; TotalTime = 2.14508s; TotalTimePerSample = 0.83792ms; SamplesPerSecond = 1193
+ Epoch[ 2 of 2]-Minibatch[ 221- 230 of 320]: * 2560; ce =  1.14316711; err = 0.35312500; TotalTime = 2.15834s; TotalTimePerSample = 0.84310ms; SamplesPerSecond = 1186
+ Epoch[ 2 of 2]-Minibatch[ 231- 240 of 320]: * 2560; ce =  1.27329712; err = 0.38554688; TotalTime = 2.26755s; TotalTimePerSample = 0.88576ms; SamplesPerSecond = 1128
+ Epoch[ 2 of 2]-Minibatch[ 241- 250 of 320]: * 2560; ce =  1.15661011; err = 0.34726563; TotalTime = 2.30714s; TotalTimePerSample = 0.90123ms; SamplesPerSecond = 1109
+ Epoch[ 2 of 2]-Minibatch[ 251- 260 of 320]: * 2560; ce =  1.13043823; err = 0.34101562; TotalTime = 2.06456s; TotalTimePerSample = 0.80647ms; SamplesPerSecond = 1239
+ Epoch[ 2 of 2]-Minibatch[ 261- 270 of 320]: * 2560; ce =  1.13791809; err = 0.34960938; TotalTime = 2.19548s; TotalTimePerSample = 0.85761ms; SamplesPerSecond = 1166
+ Epoch[ 2 of 2]-Minibatch[ 271- 280 of 320]: * 2560; ce =  1.14694214; err = 0.34101562; TotalTime = 2.33209s; TotalTimePerSample = 0.91097ms; SamplesPerSecond = 1097
+ Epoch[ 2 of 2]-Minibatch[ 281- 290 of 320]: * 2560; ce =  1.06658325; err = 0.33476563; TotalTime = 2.20537s; TotalTimePerSample = 0.86147ms; SamplesPerSecond = 1160
+ Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: * 2560; ce =  1.10054626; err = 0.33750000; TotalTime = 2.02138s; TotalTimePerSample = 0.78960ms; SamplesPerSecond = 1266
+ Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: * 2560; ce =  1.09098816; err = 0.34375000; TotalTime = 2.19745s; TotalTimePerSample = 0.85838ms; SamplesPerSecond = 1164
+ Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: * 2560; ce =  1.05595398; err = 0.33671875; TotalTime = 2.11208s; TotalTimePerSample = 0.82503ms; SamplesPerSecond = 1212
+Finished Epoch[ 2 of 2]: [Training] ce = 1.165754; err = 0.35567626; learningRatePerSample = 0.003125000047; EpochTime=68.751932
 CNTKCommandTrainEnd: DPT_Pre1
 
 
@@ -1784,76 +1784,76 @@ minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Starting minibatch loop.
- Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  4.12742958; EvalErr[0]PerSample = 0.80507812; TotalTime = 3.39015s; TotalTimePerSample = 1.32428ms; SamplesPerSecond = 755
- Epoch[ 1 of 2]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.76509590; EvalErr[0]PerSample = 0.69960937; TotalTime = 3.25866s; TotalTimePerSample = 1.27292ms; SamplesPerSecond = 785
- Epoch[ 1 of 2]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.20613861; EvalErr[0]PerSample = 0.57812500; TotalTime = 3.30868s; TotalTimePerSample = 1.29245ms; SamplesPerSecond = 773
- Epoch[ 1 of 2]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.90078354; EvalErr[0]PerSample = 0.50898438; TotalTime = 3.24681s; TotalTimePerSample = 1.26828ms; SamplesPerSecond = 788
- Epoch[ 1 of 2]-Minibatch[  41-  50 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.71711044; EvalErr[0]PerSample = 0.48710938; TotalTime = 3.34396s; TotalTimePerSample = 1.30623ms; SamplesPerSecond = 765
- Epoch[ 1 of 2]-Minibatch[  51-  60 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.58837662; EvalErr[0]PerSample = 0.44726562; TotalTime = 3.54100s; TotalTimePerSample = 1.38320ms; SamplesPerSecond = 722
- Epoch[ 1 of 2]-Minibatch[  61-  70 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.54870148; EvalErr[0]PerSample = 0.44296875; TotalTime = 3.27957s; TotalTimePerSample = 1.28108ms; SamplesPerSecond = 780
- Epoch[ 1 of 2]-Minibatch[  71-  80 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.46472015; EvalErr[0]PerSample = 0.42773438; TotalTime = 3.39303s; TotalTimePerSample = 1.32540ms; SamplesPerSecond = 754
- Epoch[ 1 of 2]-Minibatch[  81-  90 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.38026276; EvalErr[0]PerSample = 0.40273437; TotalTime = 3.33514s; TotalTimePerSample = 1.30279ms; SamplesPerSecond = 767
- Epoch[ 1 of 2]-Minibatch[  91- 100 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.39969788; EvalErr[0]PerSample = 0.42148438; TotalTime = 3.28349s; TotalTimePerSample = 1.28262ms; SamplesPerSecond = 779
- Epoch[ 1 of 2]-Minibatch[ 101- 110 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.37001648; EvalErr[0]PerSample = 0.41796875; TotalTime = 3.17869s; TotalTimePerSample = 1.24168ms; SamplesPerSecond = 805
- Epoch[ 1 of 2]-Minibatch[ 111- 120 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.35947266; EvalErr[0]PerSample = 0.40820312; TotalTime = 3.54772s; TotalTimePerSample = 1.38583ms; SamplesPerSecond = 721
- Epoch[ 1 of 2]-Minibatch[ 121- 130 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.32850189; EvalErr[0]PerSample = 0.40468750; TotalTime = 3.44065s; TotalTimePerSample = 1.34401ms; SamplesPerSecond = 744
- Epoch[ 1 of 2]-Minibatch[ 131- 140 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.39116974; EvalErr[0]PerSample = 0.40703125; TotalTime = 3.30371s; TotalTimePerSample = 1.29051ms; SamplesPerSecond = 774
- Epoch[ 1 of 2]-Minibatch[ 141- 150 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.31802521; EvalErr[0]PerSample = 0.38437500; TotalTime = 3.36631s; TotalTimePerSample = 1.31496ms; SamplesPerSecond = 760
- Epoch[ 1 of 2]-Minibatch[ 151- 160 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.32752075; EvalErr[0]PerSample = 0.40117188; TotalTime = 3.14228s; TotalTimePerSample = 1.22745ms; SamplesPerSecond = 814
- Epoch[ 1 of 2]-Minibatch[ 161- 170 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27012329; EvalErr[0]PerSample = 0.37929687; TotalTime = 3.23155s; TotalTimePerSample = 1.26233ms; SamplesPerSecond = 792
- Epoch[ 1 of 2]-Minibatch[ 171- 180 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.29055176; EvalErr[0]PerSample = 0.38359375; TotalTime = 3.35835s; TotalTimePerSample = 1.31186ms; SamplesPerSecond = 762
- Epoch[ 1 of 2]-Minibatch[ 181- 190 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.29355164; EvalErr[0]PerSample = 0.38593750; TotalTime = 3.42075s; TotalTimePerSample = 1.33623ms; SamplesPerSecond = 748
- Epoch[ 1 of 2]-Minibatch[ 191- 200 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27504883; EvalErr[0]PerSample = 0.38906250; TotalTime = 3.37690s; TotalTimePerSample = 1.31910ms; SamplesPerSecond = 758
- Epoch[ 1 of 2]-Minibatch[ 201- 210 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27267761; EvalErr[0]PerSample = 0.39101562; TotalTime = 3.12080s; TotalTimePerSample = 1.21906ms; SamplesPerSecond = 820
- Epoch[ 1 of 2]-Minibatch[ 211- 220 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21395569; EvalErr[0]PerSample = 0.36679688; TotalTime = 3.14198s; TotalTimePerSample = 1.22734ms; SamplesPerSecond = 814
- Epoch[ 1 of 2]-Minibatch[ 221- 230 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20708313; EvalErr[0]PerSample = 0.36445312; TotalTime = 3.50516s; TotalTimePerSample = 1.36920ms; SamplesPerSecond = 730
- Epoch[ 1 of 2]-Minibatch[ 231- 240 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.25370178; EvalErr[0]PerSample = 0.38320312; TotalTime = 3.14201s; TotalTimePerSample = 1.22735ms; SamplesPerSecond = 814
- Epoch[ 1 of 2]-Minibatch[ 241- 250 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22307739; EvalErr[0]PerSample = 0.37500000; TotalTime = 3.13153s; TotalTimePerSample = 1.22325ms; SamplesPerSecond = 817
- Epoch[ 1 of 2]-Minibatch[ 251- 260 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14909363; EvalErr[0]PerSample = 0.35234375; TotalTime = 3.41643s; TotalTimePerSample = 1.33454ms; SamplesPerSecond = 749
- Epoch[ 1 of 2]-Minibatch[ 261- 270 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17035828; EvalErr[0]PerSample = 0.35937500; TotalTime = 3.22442s; TotalTimePerSample = 1.25954ms; SamplesPerSecond = 793
- Epoch[ 1 of 2]-Minibatch[ 271- 280 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.22515869; EvalErr[0]PerSample = 0.36875000; TotalTime = 3.47776s; TotalTimePerSample = 1.35850ms; SamplesPerSecond = 736
- Epoch[ 1 of 2]-Minibatch[ 281- 290 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.16166687; EvalErr[0]PerSample = 0.35664062; TotalTime = 2.99925s; TotalTimePerSample = 1.17158ms; SamplesPerSecond = 853
- Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18268433; EvalErr[0]PerSample = 0.35820313; TotalTime = 3.23501s; TotalTimePerSample = 1.26368ms; SamplesPerSecond = 791
- Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.16473083; EvalErr[0]PerSample = 0.35195312; TotalTime = 3.21572s; TotalTimePerSample = 1.25614ms; SamplesPerSecond = 796
- Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17591248; EvalErr[0]PerSample = 0.35195312; TotalTime = 3.07276s; TotalTimePerSample = 1.20030ms; SamplesPerSecond = 833
-Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 1.491325; EvalErrPerSample = 0.42381594; AvgLearningRatePerSample = 0.003125000047; EpochTime=106.67356
+ Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: * 2560; ce =  4.12742958; err = 0.80507812; TotalTime = 3.39015s; TotalTimePerSample = 1.32428ms; SamplesPerSecond = 755
+ Epoch[ 1 of 2]-Minibatch[  11-  20 of 320]: * 2560; ce =  2.76509590; err = 0.69960937; TotalTime = 3.25866s; TotalTimePerSample = 1.27292ms; SamplesPerSecond = 785
+ Epoch[ 1 of 2]-Minibatch[  21-  30 of 320]: * 2560; ce =  2.20613861; err = 0.57812500; TotalTime = 3.30868s; TotalTimePerSample = 1.29245ms; SamplesPerSecond = 773
+ Epoch[ 1 of 2]-Minibatch[  31-  40 of 320]: * 2560; ce =  1.90078354; err = 0.50898438; TotalTime = 3.24681s; TotalTimePerSample = 1.26828ms; SamplesPerSecond = 788
+ Epoch[ 1 of 2]-Minibatch[  41-  50 of 320]: * 2560; ce =  1.71711044; err = 0.48710938; TotalTime = 3.34396s; TotalTimePerSample = 1.30623ms; SamplesPerSecond = 765
+ Epoch[ 1 of 2]-Minibatch[  51-  60 of 320]: * 2560; ce =  1.58837662; err = 0.44726562; TotalTime = 3.54100s; TotalTimePerSample = 1.38320ms; SamplesPerSecond = 722
+ Epoch[ 1 of 2]-Minibatch[  61-  70 of 320]: * 2560; ce =  1.54870148; err = 0.44296875; TotalTime = 3.27957s; TotalTimePerSample = 1.28108ms; SamplesPerSecond = 780
+ Epoch[ 1 of 2]-Minibatch[  71-  80 of 320]: * 2560; ce =  1.46472015; err = 0.42773438; TotalTime = 3.39303s; TotalTimePerSample = 1.32540ms; SamplesPerSecond = 754
+ Epoch[ 1 of 2]-Minibatch[  81-  90 of 320]: * 2560; ce =  1.38026276; err = 0.40273437; TotalTime = 3.33514s; TotalTimePerSample = 1.30279ms; SamplesPerSecond = 767
+ Epoch[ 1 of 2]-Minibatch[  91- 100 of 320]: * 2560; ce =  1.39969788; err = 0.42148438; TotalTime = 3.28349s; TotalTimePerSample = 1.28262ms; SamplesPerSecond = 779
+ Epoch[ 1 of 2]-Minibatch[ 101- 110 of 320]: * 2560; ce =  1.37001648; err = 0.41796875; TotalTime = 3.17869s; TotalTimePerSample = 1.24168ms; SamplesPerSecond = 805
+ Epoch[ 1 of 2]-Minibatch[ 111- 120 of 320]: * 2560; ce =  1.35947266; err = 0.40820312; TotalTime = 3.54772s; TotalTimePerSample = 1.38583ms; SamplesPerSecond = 721
+ Epoch[ 1 of 2]-Minibatch[ 121- 130 of 320]: * 2560; ce =  1.32850189; err = 0.40468750; TotalTime = 3.44065s; TotalTimePerSample = 1.34401ms; SamplesPerSecond = 744
+ Epoch[ 1 of 2]-Minibatch[ 131- 140 of 320]: * 2560; ce =  1.39116974; err = 0.40703125; TotalTime = 3.30371s; TotalTimePerSample = 1.29051ms; SamplesPerSecond = 774
+ Epoch[ 1 of 2]-Minibatch[ 141- 150 of 320]: * 2560; ce =  1.31802521; err = 0.38437500; TotalTime = 3.36631s; TotalTimePerSample = 1.31496ms; SamplesPerSecond = 760
+ Epoch[ 1 of 2]-Minibatch[ 151- 160 of 320]: * 2560; ce =  1.32752075; err = 0.40117188; TotalTime = 3.14228s; TotalTimePerSample = 1.22745ms; SamplesPerSecond = 814
+ Epoch[ 1 of 2]-Minibatch[ 161- 170 of 320]: * 2560; ce =  1.27012329; err = 0.37929687; TotalTime = 3.23155s; TotalTimePerSample = 1.26233ms; SamplesPerSecond = 792
+ Epoch[ 1 of 2]-Minibatch[ 171- 180 of 320]: * 2560; ce =  1.29055176; err = 0.38359375; TotalTime = 3.35835s; TotalTimePerSample = 1.31186ms; SamplesPerSecond = 762
+ Epoch[ 1 of 2]-Minibatch[ 181- 190 of 320]: * 2560; ce =  1.29355164; err = 0.38593750; TotalTime = 3.42075s; TotalTimePerSample = 1.33623ms; SamplesPerSecond = 748
+ Epoch[ 1 of 2]-Minibatch[ 191- 200 of 320]: * 2560; ce =  1.27504883; err = 0.38906250; TotalTime = 3.37690s; TotalTimePerSample = 1.31910ms; SamplesPerSecond = 758
+ Epoch[ 1 of 2]-Minibatch[ 201- 210 of 320]: * 2560; ce =  1.27267761; err = 0.39101562; TotalTime = 3.12080s; TotalTimePerSample = 1.21906ms; SamplesPerSecond = 820
+ Epoch[ 1 of 2]-Minibatch[ 211- 220 of 320]: * 2560; ce =  1.21395569; err = 0.36679688; TotalTime = 3.14198s; TotalTimePerSample = 1.22734ms; SamplesPerSecond = 814
+ Epoch[ 1 of 2]-Minibatch[ 221- 230 of 320]: * 2560; ce =  1.20708313; err = 0.36445312; TotalTime = 3.50516s; TotalTimePerSample = 1.36920ms; SamplesPerSecond = 730
+ Epoch[ 1 of 2]-Minibatch[ 231- 240 of 320]: * 2560; ce =  1.25370178; err = 0.38320312; TotalTime = 3.14201s; TotalTimePerSample = 1.22735ms; SamplesPerSecond = 814
+ Epoch[ 1 of 2]-Minibatch[ 241- 250 of 320]: * 2560; ce =  1.22307739; err = 0.37500000; TotalTime = 3.13153s; TotalTimePerSample = 1.22325ms; SamplesPerSecond = 817
+ Epoch[ 1 of 2]-Minibatch[ 251- 260 of 320]: * 2560; ce =  1.14909363; err = 0.35234375; TotalTime = 3.41643s; TotalTimePerSample = 1.33454ms; SamplesPerSecond = 749
+ Epoch[ 1 of 2]-Minibatch[ 261- 270 of 320]: * 2560; ce =  1.17035828; err = 0.35937500; TotalTime = 3.22442s; TotalTimePerSample = 1.25954ms; SamplesPerSecond = 793
+ Epoch[ 1 of 2]-Minibatch[ 271- 280 of 320]: * 2560; ce =  1.22515869; err = 0.36875000; TotalTime = 3.47776s; TotalTimePerSample = 1.35850ms; SamplesPerSecond = 736
+ Epoch[ 1 of 2]-Minibatch[ 281- 290 of 320]: * 2560; ce =  1.16166687; err = 0.35664062; TotalTime = 2.99925s; TotalTimePerSample = 1.17158ms; SamplesPerSecond = 853
+ Epoch[ 1 of 2]-Minibatch[ 291- 300 of 320]: * 2560; ce =  1.18268433; err = 0.35820313; TotalTime = 3.23501s; TotalTimePerSample = 1.26368ms; SamplesPerSecond = 791
+ Epoch[ 1 of 2]-Minibatch[ 301- 310 of 320]: * 2560; ce =  1.16473083; err = 0.35195312; TotalTime = 3.21572s; TotalTimePerSample = 1.25614ms; SamplesPerSecond = 796
+ Epoch[ 1 of 2]-Minibatch[ 311- 320 of 320]: * 2560; ce =  1.17591248; err = 0.35195312; TotalTime = 3.07276s; TotalTimePerSample = 1.20030ms; SamplesPerSecond = 833
+Finished Epoch[ 1 of 2]: [Training] ce = 1.491325; err = 0.42381594; learningRatePerSample = 0.003125000047; EpochTime=106.67356
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14145651; EvalErr[0]PerSample = 0.35078125; TotalTime = 3.20015s; TotalTimePerSample = 1.25006ms; SamplesPerSecond = 799
- Epoch[ 2 of 2]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17236452; EvalErr[0]PerSample = 0.35703125; TotalTime = 3.58645s; TotalTimePerSample = 1.40096ms; SamplesPerSecond = 713
- Epoch[ 2 of 2]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.23701782; EvalErr[0]PerSample = 0.37890625; TotalTime = 3.13229s; TotalTimePerSample = 1.22355ms; SamplesPerSecond = 817
- Epoch[ 2 of 2]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.18644638; EvalErr[0]PerSample = 0.36132812; TotalTime = 3.23432s; TotalTimePerSample = 1.26341ms; SamplesPerSecond = 791
- Epoch[ 2 of 2]-Minibatch[  41-  50 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12840500; EvalErr[0]PerSample = 0.34140625; TotalTime = 3.31180s; TotalTimePerSample = 1.29367ms; SamplesPerSecond = 772
- Epoch[ 2 of 2]-Minibatch[  51-  60 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21571541; EvalErr[0]PerSample = 0.37031250; TotalTime = 3.27370s; TotalTimePerSample = 1.27879ms; SamplesPerSecond = 781
- Epoch[ 2 of 2]-Minibatch[  61-  70 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14553375; EvalErr[0]PerSample = 0.34257813; TotalTime = 3.35806s; TotalTimePerSample = 1.31174ms; SamplesPerSecond = 762
- Epoch[ 2 of 2]-Minibatch[  71-  80 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12870712; EvalErr[0]PerSample = 0.34453125; TotalTime = 3.07358s; TotalTimePerSample = 1.20062ms; SamplesPerSecond = 832
- Epoch[ 2 of 2]-Minibatch[  81-  90 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.15200119; EvalErr[0]PerSample = 0.34179688; TotalTime = 3.26694s; TotalTimePerSample = 1.27615ms; SamplesPerSecond = 783
- Epoch[ 2 of 2]-Minibatch[  91- 100 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12955780; EvalErr[0]PerSample = 0.35312500; TotalTime = 3.26072s; TotalTimePerSample = 1.27372ms; SamplesPerSecond = 785
- Epoch[ 2 of 2]-Minibatch[ 101- 110 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.15128708; EvalErr[0]PerSample = 0.34414062; TotalTime = 3.13385s; TotalTimePerSample = 1.22416ms; SamplesPerSecond = 816
- Epoch[ 2 of 2]-Minibatch[ 111- 120 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13170090; EvalErr[0]PerSample = 0.34414062; TotalTime = 3.24222s; TotalTimePerSample = 1.26649ms; SamplesPerSecond = 789
- Epoch[ 2 of 2]-Minibatch[ 121- 130 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10571136; EvalErr[0]PerSample = 0.34296875; TotalTime = 3.26617s; TotalTimePerSample = 1.27585ms; SamplesPerSecond = 783
- Epoch[ 2 of 2]-Minibatch[ 131- 140 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06392975; EvalErr[0]PerSample = 0.32695313; TotalTime = 2.93591s; TotalTimePerSample = 1.14684ms; SamplesPerSecond = 871
- Epoch[ 2 of 2]-Minibatch[ 141- 150 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.05555420; EvalErr[0]PerSample = 0.31835938; TotalTime = 3.06553s; TotalTimePerSample = 1.19747ms; SamplesPerSecond = 835
- Epoch[ 2 of 2]-Minibatch[ 151- 160 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06729126; EvalErr[0]PerSample = 0.32460937; TotalTime = 3.01623s; TotalTimePerSample = 1.17822ms; SamplesPerSecond = 848
- Epoch[ 2 of 2]-Minibatch[ 161- 170 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14530792; EvalErr[0]PerSample = 0.34687500; TotalTime = 3.26534s; TotalTimePerSample = 1.27552ms; SamplesPerSecond = 783
- Epoch[ 2 of 2]-Minibatch[ 171- 180 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14569397; EvalErr[0]PerSample = 0.35625000; TotalTime = 3.23646s; TotalTimePerSample = 1.26424ms; SamplesPerSecond = 790
- Epoch[ 2 of 2]-Minibatch[ 181- 190 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.07375793; EvalErr[0]PerSample = 0.32929687; TotalTime = 3.50725s; TotalTimePerSample = 1.37002ms; SamplesPerSecond = 729
- Epoch[ 2 of 2]-Minibatch[ 191- 200 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.07886505; EvalErr[0]PerSample = 0.33671875; TotalTime = 3.40044s; TotalTimePerSample = 1.32829ms; SamplesPerSecond = 752
- Epoch[ 2 of 2]-Minibatch[ 201- 210 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06901398; EvalErr[0]PerSample = 0.33164063; TotalTime = 3.25460s; TotalTimePerSample = 1.27133ms; SamplesPerSecond = 786
- Epoch[ 2 of 2]-Minibatch[ 211- 220 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.09929962; EvalErr[0]PerSample = 0.33437500; TotalTime = 3.16798s; TotalTimePerSample = 1.23749ms; SamplesPerSecond = 808
- Epoch[ 2 of 2]-Minibatch[ 221- 230 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12124939; EvalErr[0]PerSample = 0.34531250; TotalTime = 3.56923s; TotalTimePerSample = 1.39423ms; SamplesPerSecond = 717
- Epoch[ 2 of 2]-Minibatch[ 231- 240 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.13580627; EvalErr[0]PerSample = 0.35937500; TotalTime = 3.10338s; TotalTimePerSample = 1.21226ms; SamplesPerSecond = 824
- Epoch[ 2 of 2]-Minibatch[ 241- 250 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.09370117; EvalErr[0]PerSample = 0.33515625; TotalTime = 3.33700s; TotalTimePerSample = 1.30352ms; SamplesPerSecond = 767
- Epoch[ 2 of 2]-Minibatch[ 251- 260 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.07206116; EvalErr[0]PerSample = 0.33359375; TotalTime = 3.24466s; TotalTimePerSample = 1.26745ms; SamplesPerSecond = 788
- Epoch[ 2 of 2]-Minibatch[ 261- 270 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06741028; EvalErr[0]PerSample = 0.33359375; TotalTime = 3.38665s; TotalTimePerSample = 1.32291ms; SamplesPerSecond = 755
- Epoch[ 2 of 2]-Minibatch[ 271- 280 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.10143433; EvalErr[0]PerSample = 0.32734375; TotalTime = 3.31745s; TotalTimePerSample = 1.29588ms; SamplesPerSecond = 771
- Epoch[ 2 of 2]-Minibatch[ 281- 290 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.02370911; EvalErr[0]PerSample = 0.31757812; TotalTime = 3.08865s; TotalTimePerSample = 1.20650ms; SamplesPerSecond = 828
- Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.08736572; EvalErr[0]PerSample = 0.33984375; TotalTime = 3.50527s; TotalTimePerSample = 1.36924ms; SamplesPerSecond = 730
- Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.06789551; EvalErr[0]PerSample = 0.32890625; TotalTime = 3.27224s; TotalTimePerSample = 1.27822ms; SamplesPerSecond = 782
- Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.05290527; EvalErr[0]PerSample = 0.33398438; TotalTime = 3.47792s; TotalTimePerSample = 1.35856ms; SamplesPerSecond = 736
-Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 1.114005; EvalErrPerSample = 0.3416504; AvgLearningRatePerSample = 0.003125000047; EpochTime=104.51539
+ Epoch[ 2 of 2]-Minibatch[   1-  10 of 320]: * 2560; ce =  1.14145651; err = 0.35078125; TotalTime = 3.20015s; TotalTimePerSample = 1.25006ms; SamplesPerSecond = 799
+ Epoch[ 2 of 2]-Minibatch[  11-  20 of 320]: * 2560; ce =  1.17236452; err = 0.35703125; TotalTime = 3.58645s; TotalTimePerSample = 1.40096ms; SamplesPerSecond = 713
+ Epoch[ 2 of 2]-Minibatch[  21-  30 of 320]: * 2560; ce =  1.23701782; err = 0.37890625; TotalTime = 3.13229s; TotalTimePerSample = 1.22355ms; SamplesPerSecond = 817
+ Epoch[ 2 of 2]-Minibatch[  31-  40 of 320]: * 2560; ce =  1.18644638; err = 0.36132812; TotalTime = 3.23432s; TotalTimePerSample = 1.26341ms; SamplesPerSecond = 791
+ Epoch[ 2 of 2]-Minibatch[  41-  50 of 320]: * 2560; ce =  1.12840500; err = 0.34140625; TotalTime = 3.31180s; TotalTimePerSample = 1.29367ms; SamplesPerSecond = 772
+ Epoch[ 2 of 2]-Minibatch[  51-  60 of 320]: * 2560; ce =  1.21571541; err = 0.37031250; TotalTime = 3.27370s; TotalTimePerSample = 1.27879ms; SamplesPerSecond = 781
+ Epoch[ 2 of 2]-Minibatch[  61-  70 of 320]: * 2560; ce =  1.14553375; err = 0.34257813; TotalTime = 3.35806s; TotalTimePerSample = 1.31174ms; SamplesPerSecond = 762
+ Epoch[ 2 of 2]-Minibatch[  71-  80 of 320]: * 2560; ce =  1.12870712; err = 0.34453125; TotalTime = 3.07358s; TotalTimePerSample = 1.20062ms; SamplesPerSecond = 832
+ Epoch[ 2 of 2]-Minibatch[  81-  90 of 320]: * 2560; ce =  1.15200119; err = 0.34179688; TotalTime = 3.26694s; TotalTimePerSample = 1.27615ms; SamplesPerSecond = 783
+ Epoch[ 2 of 2]-Minibatch[  91- 100 of 320]: * 2560; ce =  1.12955780; err = 0.35312500; TotalTime = 3.26072s; TotalTimePerSample = 1.27372ms; SamplesPerSecond = 785
+ Epoch[ 2 of 2]-Minibatch[ 101- 110 of 320]: * 2560; ce =  1.15128708; err = 0.34414062; TotalTime = 3.13385s; TotalTimePerSample = 1.22416ms; SamplesPerSecond = 816
+ Epoch[ 2 of 2]-Minibatch[ 111- 120 of 320]: * 2560; ce =  1.13170090; err = 0.34414062; TotalTime = 3.24222s; TotalTimePerSample = 1.26649ms; SamplesPerSecond = 789
+ Epoch[ 2 of 2]-Minibatch[ 121- 130 of 320]: * 2560; ce =  1.10571136; err = 0.34296875; TotalTime = 3.26617s; TotalTimePerSample = 1.27585ms; SamplesPerSecond = 783
+ Epoch[ 2 of 2]-Minibatch[ 131- 140 of 320]: * 2560; ce =  1.06392975; err = 0.32695313; TotalTime = 2.93591s; TotalTimePerSample = 1.14684ms; SamplesPerSecond = 871
+ Epoch[ 2 of 2]-Minibatch[ 141- 150 of 320]: * 2560; ce =  1.05555420; err = 0.31835938; TotalTime = 3.06553s; TotalTimePerSample = 1.19747ms; SamplesPerSecond = 835
+ Epoch[ 2 of 2]-Minibatch[ 151- 160 of 320]: * 2560; ce =  1.06729126; err = 0.32460937; TotalTime = 3.01623s; TotalTimePerSample = 1.17822ms; SamplesPerSecond = 848
+ Epoch[ 2 of 2]-Minibatch[ 161- 170 of 320]: * 2560; ce =  1.14530792; err = 0.34687500; TotalTime = 3.26534s; TotalTimePerSample = 1.27552ms; SamplesPerSecond = 783
+ Epoch[ 2 of 2]-Minibatch[ 171- 180 of 320]: * 2560; ce =  1.14569397; err = 0.35625000; TotalTime = 3.23646s; TotalTimePerSample = 1.26424ms; SamplesPerSecond = 790
+ Epoch[ 2 of 2]-Minibatch[ 181- 190 of 320]: * 2560; ce =  1.07375793; err = 0.32929687; TotalTime = 3.50725s; TotalTimePerSample = 1.37002ms; SamplesPerSecond = 729
+ Epoch[ 2 of 2]-Minibatch[ 191- 200 of 320]: * 2560; ce =  1.07886505; err = 0.33671875; TotalTime = 3.40044s; TotalTimePerSample = 1.32829ms; SamplesPerSecond = 752
+ Epoch[ 2 of 2]-Minibatch[ 201- 210 of 320]: * 2560; ce =  1.06901398; err = 0.33164063; TotalTime = 3.25460s; TotalTimePerSample = 1.27133ms; SamplesPerSecond = 786
+ Epoch[ 2 of 2]-Minibatch[ 211- 220 of 320]: * 2560; ce =  1.09929962; err = 0.33437500; TotalTime = 3.16798s; TotalTimePerSample = 1.23749ms; SamplesPerSecond = 808
+ Epoch[ 2 of 2]-Minibatch[ 221- 230 of 320]: * 2560; ce =  1.12124939; err = 0.34531250; TotalTime = 3.56923s; TotalTimePerSample = 1.39423ms; SamplesPerSecond = 717
+ Epoch[ 2 of 2]-Minibatch[ 231- 240 of 320]: * 2560; ce =  1.13580627; err = 0.35937500; TotalTime = 3.10338s; TotalTimePerSample = 1.21226ms; SamplesPerSecond = 824
+ Epoch[ 2 of 2]-Minibatch[ 241- 250 of 320]: * 2560; ce =  1.09370117; err = 0.33515625; TotalTime = 3.33700s; TotalTimePerSample = 1.30352ms; SamplesPerSecond = 767
+ Epoch[ 2 of 2]-Minibatch[ 251- 260 of 320]: * 2560; ce =  1.07206116; err = 0.33359375; TotalTime = 3.24466s; TotalTimePerSample = 1.26745ms; SamplesPerSecond = 788
+ Epoch[ 2 of 2]-Minibatch[ 261- 270 of 320]: * 2560; ce =  1.06741028; err = 0.33359375; TotalTime = 3.38665s; TotalTimePerSample = 1.32291ms; SamplesPerSecond = 755
+ Epoch[ 2 of 2]-Minibatch[ 271- 280 of 320]: * 2560; ce =  1.10143433; err = 0.32734375; TotalTime = 3.31745s; TotalTimePerSample = 1.29588ms; SamplesPerSecond = 771
+ Epoch[ 2 of 2]-Minibatch[ 281- 290 of 320]: * 2560; ce =  1.02370911; err = 0.31757812; TotalTime = 3.08865s; TotalTimePerSample = 1.20650ms; SamplesPerSecond = 828
+ Epoch[ 2 of 2]-Minibatch[ 291- 300 of 320]: * 2560; ce =  1.08736572; err = 0.33984375; TotalTime = 3.50527s; TotalTimePerSample = 1.36924ms; SamplesPerSecond = 730
+ Epoch[ 2 of 2]-Minibatch[ 301- 310 of 320]: * 2560; ce =  1.06789551; err = 0.32890625; TotalTime = 3.27224s; TotalTimePerSample = 1.27822ms; SamplesPerSecond = 782
+ Epoch[ 2 of 2]-Minibatch[ 311- 320 of 320]: * 2560; ce =  1.05290527; err = 0.33398438; TotalTime = 3.47792s; TotalTimePerSample = 1.35856ms; SamplesPerSecond = 736
+Finished Epoch[ 2 of 2]: [Training] ce = 1.114005; err = 0.3416504; learningRatePerSample = 0.003125000047; EpochTime=104.51539
 CNTKCommandTrainEnd: DPT_Pre2
 
 
@@ -3168,101 +3168,101 @@ minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Starting minibatch loop.
- Epoch[ 1 of 4]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  4.01592903; EvalErr[0]PerSample = 0.82421875; TotalTime = 3.95135s; TotalTimePerSample = 1.54350ms; SamplesPerSecond = 647
- Epoch[ 1 of 4]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.63751793; EvalErr[0]PerSample = 0.63789063; TotalTime = 1.56999s; TotalTimePerSample = 0.61328ms; SamplesPerSecond = 1630
- Epoch[ 1 of 4]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.03013535; EvalErr[0]PerSample = 0.54843750; TotalTime = 1.09485s; TotalTimePerSample = 0.42768ms; SamplesPerSecond = 2338
- Epoch[ 1 of 4]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.74010468; EvalErr[0]PerSample = 0.47148438; TotalTime = 1.14739s; TotalTimePerSample = 0.44820ms; SamplesPerSecond = 2231
- Epoch[ 1 of 4]-Minibatch[  41-  50 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.56799011; EvalErr[0]PerSample = 0.44335938; TotalTime = 1.09577s; TotalTimePerSample = 0.42803ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[  51-  60 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.46781845; EvalErr[0]PerSample = 0.41328125; TotalTime = 1.09510s; TotalTimePerSample = 0.42777ms; SamplesPerSecond = 2337
- Epoch[ 1 of 4]-Minibatch[  61-  70 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.43012238; EvalErr[0]PerSample = 0.40585938; TotalTime = 1.09635s; TotalTimePerSample = 0.42826ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[  71-  80 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.35918579; EvalErr[0]PerSample = 0.40039062; TotalTime = 1.09548s; TotalTimePerSample = 0.42792ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[  81-  90 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.28387451; EvalErr[0]PerSample = 0.37812500; TotalTime = 1.09595s; TotalTimePerSample = 0.42811ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[  91- 100 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.29969482; EvalErr[0]PerSample = 0.39726563; TotalTime = 1.09572s; TotalTimePerSample = 0.42802ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[ 101- 110 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27851257; EvalErr[0]PerSample = 0.38945313; TotalTime = 1.09571s; TotalTimePerSample = 0.42801ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[ 111- 120 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.27491150; EvalErr[0]PerSample = 0.38476562; TotalTime = 1.12142s; TotalTimePerSample = 0.43806ms; SamplesPerSecond = 2282
- Epoch[ 1 of 4]-Minibatch[ 121- 130 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.24143066; EvalErr[0]PerSample = 0.38164063; TotalTime = 1.09592s; TotalTimePerSample = 0.42809ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[ 131- 140 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.31309967; EvalErr[0]PerSample = 0.38867188; TotalTime = 1.09608s; TotalTimePerSample = 0.42816ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[ 141- 150 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.24519043; EvalErr[0]PerSample = 0.36054687; TotalTime = 1.09577s; TotalTimePerSample = 0.42804ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[ 151- 160 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.26173248; EvalErr[0]PerSample = 0.38554688; TotalTime = 1.13408s; TotalTimePerSample = 0.44300ms; SamplesPerSecond = 2257
- Epoch[ 1 of 4]-Minibatch[ 161- 170 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20199585; EvalErr[0]PerSample = 0.35390625; TotalTime = 1.11229s; TotalTimePerSample = 0.43449ms; SamplesPerSecond = 2301
- Epoch[ 1 of 4]-Minibatch[ 171- 180 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21707153; EvalErr[0]PerSample = 0.37031250; TotalTime = 1.09594s; TotalTimePerSample = 0.42810ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[ 181- 190 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.21532898; EvalErr[0]PerSample = 0.37382813; TotalTime = 1.09629s; TotalTimePerSample = 0.42824ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[ 191- 200 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20324097; EvalErr[0]PerSample = 0.37187500; TotalTime = 1.10557s; TotalTimePerSample = 0.43186ms; SamplesPerSecond = 2315
- Epoch[ 1 of 4]-Minibatch[ 201- 210 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.20709839; EvalErr[0]PerSample = 0.37343750; TotalTime = 1.09610s; TotalTimePerSample = 0.42816ms; SamplesPerSecond = 2335
- Epoch[ 1 of 4]-Minibatch[ 211- 220 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14372253; EvalErr[0]PerSample = 0.33828125; TotalTime = 1.09640s; TotalTimePerSample = 0.42828ms; SamplesPerSecond = 2334
- Epoch[ 1 of 4]-Minibatch[ 221- 230 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.15016785; EvalErr[0]PerSample = 0.34492187; TotalTime = 1.09523s; TotalTimePerSample = 0.42782ms; SamplesPerSecond = 2337
- Epoch[ 1 of 4]-Minibatch[ 231- 240 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.19444275; EvalErr[0]PerSample = 0.35546875; TotalTime = 1.09550s; TotalTimePerSample = 0.42793ms; SamplesPerSecond = 2336
- Epoch[ 1 of 4]-Minibatch[ 241- 250 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.16820984; EvalErr[0]PerSample = 0.35937500; TotalTime = 1.10647s; TotalTimePerSample = 0.43222ms; SamplesPerSecond = 2313
- Epoch[ 1 of 4]-Minibatch[ 251- 260 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.09052429; EvalErr[0]PerSample = 0.34062500; TotalTime = 1.11512s; TotalTimePerSample = 0.43559ms; SamplesPerSecond = 2295
- Epoch[ 1 of 4]-Minibatch[ 261- 270 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.11017761; EvalErr[0]PerSample = 0.34140625; TotalTime = 1.09791s; TotalTimePerSample = 0.42887ms; SamplesPerSecond = 2331
- Epoch[ 1 of 4]-Minibatch[ 271- 280 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.17647095; EvalErr[0]PerSample = 0.34960938; TotalTime = 1.09768s; TotalTimePerSample = 0.42878ms; SamplesPerSecond = 2332
- Epoch[ 1 of 4]-Minibatch[ 281- 290 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12259827; EvalErr[0]PerSample = 0.34960938; TotalTime = 1.09812s; TotalTimePerSample = 0.42895ms; SamplesPerSecond = 2331
- Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.14627686; EvalErr[0]PerSample = 0.34882812; TotalTime = 1.09796s; TotalTimePerSample = 0.42889ms; SamplesPerSecond = 2331
- Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12782593; EvalErr[0]PerSample = 0.34296875; TotalTime = 1.11678s; TotalTimePerSample = 0.43624ms; SamplesPerSecond = 2292
- Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: SamplesSeen = 2560; TrainLossPerSample =  1.12669983; EvalErr[0]PerSample = 0.34453125; TotalTime = 1.08905s; TotalTimePerSample = 0.42541ms; SamplesPerSecond = 2350
-Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 1.4077845; EvalErrPerSample = 0.40218505; AvgLearningRatePerSample = 0.003125000047; EpochTime=39.654781
+ Epoch[ 1 of 4]-Minibatch[   1-  10 of 320]: * 2560; ce =  4.01592903; err = 0.82421875; TotalTime = 3.95135s; TotalTimePerSample = 1.54350ms; SamplesPerSecond = 647
+ Epoch[ 1 of 4]-Minibatch[  11-  20 of 320]: * 2560; ce =  2.63751793; err = 0.63789063; TotalTime = 1.56999s; TotalTimePerSample = 0.61328ms; SamplesPerSecond = 1630
+ Epoch[ 1 of 4]-Minibatch[  21-  30 of 320]: * 2560; ce =  2.03013535; err = 0.54843750; TotalTime = 1.09485s; TotalTimePerSample = 0.42768ms; SamplesPerSecond = 2338
+ Epoch[ 1 of 4]-Minibatch[  31-  40 of 320]: * 2560; ce =  1.74010468; err = 0.47148438; TotalTime = 1.14739s; TotalTimePerSample = 0.44820ms; SamplesPerSecond = 2231
+ Epoch[ 1 of 4]-Minibatch[  41-  50 of 320]: * 2560; ce =  1.56799011; err = 0.44335938; TotalTime = 1.09577s; TotalTimePerSample = 0.42803ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[  51-  60 of 320]: * 2560; ce =  1.46781845; err = 0.41328125; TotalTime = 1.09510s; TotalTimePerSample = 0.42777ms; SamplesPerSecond = 2337
+ Epoch[ 1 of 4]-Minibatch[  61-  70 of 320]: * 2560; ce =  1.43012238; err = 0.40585938; TotalTime = 1.09635s; TotalTimePerSample = 0.42826ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[  71-  80 of 320]: * 2560; ce =  1.35918579; err = 0.40039062; TotalTime = 1.09548s; TotalTimePerSample = 0.42792ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[  81-  90 of 320]: * 2560; ce =  1.28387451; err = 0.37812500; TotalTime = 1.09595s; TotalTimePerSample = 0.42811ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[  91- 100 of 320]: * 2560; ce =  1.29969482; err = 0.39726563; TotalTime = 1.09572s; TotalTimePerSample = 0.42802ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[ 101- 110 of 320]: * 2560; ce =  1.27851257; err = 0.38945313; TotalTime = 1.09571s; TotalTimePerSample = 0.42801ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[ 111- 120 of 320]: * 2560; ce =  1.27491150; err = 0.38476562; TotalTime = 1.12142s; TotalTimePerSample = 0.43806ms; SamplesPerSecond = 2282
+ Epoch[ 1 of 4]-Minibatch[ 121- 130 of 320]: * 2560; ce =  1.24143066; err = 0.38164063; TotalTime = 1.09592s; TotalTimePerSample = 0.42809ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[ 131- 140 of 320]: * 2560; ce =  1.31309967; err = 0.38867188; TotalTime = 1.09608s; TotalTimePerSample = 0.42816ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[ 141- 150 of 320]: * 2560; ce =  1.24519043; err = 0.36054687; TotalTime = 1.09577s; TotalTimePerSample = 0.42804ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[ 151- 160 of 320]: * 2560; ce =  1.26173248; err = 0.38554688; TotalTime = 1.13408s; TotalTimePerSample = 0.44300ms; SamplesPerSecond = 2257
+ Epoch[ 1 of 4]-Minibatch[ 161- 170 of 320]: * 2560; ce =  1.20199585; err = 0.35390625; TotalTime = 1.11229s; TotalTimePerSample = 0.43449ms; SamplesPerSecond = 2301
+ Epoch[ 1 of 4]-Minibatch[ 171- 180 of 320]: * 2560; ce =  1.21707153; err = 0.37031250; TotalTime = 1.09594s; TotalTimePerSample = 0.42810ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[ 181- 190 of 320]: * 2560; ce =  1.21532898; err = 0.37382813; TotalTime = 1.09629s; TotalTimePerSample = 0.42824ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[ 191- 200 of 320]: * 2560; ce =  1.20324097; err = 0.37187500; TotalTime = 1.10557s; TotalTimePerSample = 0.43186ms; SamplesPerSecond = 2315
+ Epoch[ 1 of 4]-Minibatch[ 201- 210 of 320]: * 2560; ce =  1.20709839; err = 0.37343750; TotalTime = 1.09610s; TotalTimePerSample = 0.42816ms; SamplesPerSecond = 2335
+ Epoch[ 1 of 4]-Minibatch[ 211- 220 of 320]: * 2560; ce =  1.14372253; err = 0.33828125; TotalTime = 1.09640s; TotalTimePerSample = 0.42828ms; SamplesPerSecond = 2334
+ Epoch[ 1 of 4]-Minibatch[ 221- 230 of 320]: * 2560; ce =  1.15016785; err = 0.34492187; TotalTime = 1.09523s; TotalTimePerSample = 0.42782ms; SamplesPerSecond = 2337
+ Epoch[ 1 of 4]-Minibatch[ 231- 240 of 320]: * 2560; ce =  1.19444275; err = 0.35546875; TotalTime = 1.09550s; TotalTimePerSample = 0.42793ms; SamplesPerSecond = 2336
+ Epoch[ 1 of 4]-Minibatch[ 241- 250 of 320]: * 2560; ce =  1.16820984; err = 0.35937500; TotalTime = 1.10647s; TotalTimePerSample = 0.43222ms; SamplesPerSecond = 2313
+ Epoch[ 1 of 4]-Minibatch[ 251- 260 of 320]: * 2560; ce =  1.09052429; err = 0.34062500; TotalTime = 1.11512s; TotalTimePerSample = 0.43559ms; SamplesPerSecond = 2295
+ Epoch[ 1 of 4]-Minibatch[ 261- 270 of 320]: * 2560; ce =  1.11017761; err = 0.34140625; TotalTime = 1.09791s; TotalTimePerSample = 0.42887ms; SamplesPerSecond = 2331
+ Epoch[ 1 of 4]-Minibatch[ 271- 280 of 320]: * 2560; ce =  1.17647095; err = 0.34960938; TotalTime = 1.09768s; TotalTimePerSample = 0.42878ms; SamplesPerSecond = 2332
+ Epoch[ 1 of 4]-Minibatch[ 281- 290 of 320]: * 2560; ce =  1.12259827; err = 0.34960938; TotalTime = 1.09812s; TotalTimePerSample = 0.42895ms; SamplesPerSecond = 2331
+ Epoch[ 1 of 4]-Minibatch[ 291- 300 of 320]: * 2560; ce =  1.14627686; err = 0.34882812; TotalTime = 1.09796s; TotalTimePerSample = 0.42889ms; SamplesPerSecond = 2331
+ Epoch[ 1 of 4]-Minibatch[ 301- 310 of 320]: * 2560; ce =  1.12782593; err = 0.34296875; TotalTime = 1.11678s; TotalTimePerSample = 0.43624ms; SamplesPerSecond = 2292
+ Epoch[ 1 of 4]-Minibatch[ 311- 320 of 320]: * 2560; ce =  1.12669983; err = 0.34453125; TotalTime = 1.08905s; TotalTimePerSample = 0.42541ms; SamplesPerSecond = 2350
+Finished Epoch[ 1 of 4]: [Training] ce = 1.4077845; err = 0.40218505; learningRatePerSample = 0.003125000047; EpochTime=39.654781
 Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 4]-Minibatch[   1-  10 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.32465096; EvalErr[0]PerSample = 0.39160156; TotalTime = 1.80429s; TotalTimePerSample = 0.35240ms; SamplesPerSecond = 2837
- Epoch[ 2 of 4]-Minibatch[  11-  20 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.26754742; EvalErr[0]PerSample = 0.38085938; TotalTime = 1.81056s; TotalTimePerSample = 0.35363ms; SamplesPerSecond = 2827
- Epoch[ 2 of 4]-Minibatch[  21-  30 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.17425861; EvalErr[0]PerSample = 0.35332031; TotalTime = 1.79388s; TotalTimePerSample = 0.35037ms; SamplesPerSecond = 2854
- Epoch[ 2 of 4]-Minibatch[  31-  40 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.12545509; EvalErr[0]PerSample = 0.34492187; TotalTime = 1.79352s; TotalTimePerSample = 0.35030ms; SamplesPerSecond = 2854
- Epoch[ 2 of 4]-Minibatch[  41-  50 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.13674049; EvalErr[0]PerSample = 0.34238281; TotalTime = 1.79283s; TotalTimePerSample = 0.35016ms; SamplesPerSecond = 2855
- Epoch[ 2 of 4]-Minibatch[  51-  60 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.13298378; EvalErr[0]PerSample = 0.34746094; TotalTime = 1.79214s; TotalTimePerSample = 0.35003ms; SamplesPerSecond = 2856
- Epoch[ 2 of 4]-Minibatch[  61-  70 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.07790451; EvalErr[0]PerSample = 0.33378906; TotalTime = 1.79264s; TotalTimePerSample = 0.35013ms; SamplesPerSecond = 2856
- Epoch[ 2 of 4]-Minibatch[  71-  80 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.04510498; EvalErr[0]PerSample = 0.31738281; TotalTime = 1.84448s; TotalTimePerSample = 0.36025ms; SamplesPerSecond = 2775
- Epoch[ 2 of 4]-Minibatch[  81-  90 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.15464554; EvalErr[0]PerSample = 0.35839844; TotalTime = 1.79575s; TotalTimePerSample = 0.35073ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[  91- 100 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.25793457; EvalErr[0]PerSample = 0.37714844; TotalTime = 1.79629s; TotalTimePerSample = 0.35084ms; SamplesPerSecond = 2850
- Epoch[ 2 of 4]-Minibatch[ 101- 110 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.20009308; EvalErr[0]PerSample = 0.37695312; TotalTime = 1.79532s; TotalTimePerSample = 0.35065ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[ 111- 120 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.11907349; EvalErr[0]PerSample = 0.34453125; TotalTime = 1.79536s; TotalTimePerSample = 0.35066ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[ 121- 130 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.10299835; EvalErr[0]PerSample = 0.34179688; TotalTime = 1.79584s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.10662994; EvalErr[0]PerSample = 0.33437500; TotalTime = 1.79551s; TotalTimePerSample = 0.35069ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05814362; EvalErr[0]PerSample = 0.33378906; TotalTime = 1.79585s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
- Epoch[ 2 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05615540; EvalErr[0]PerSample = 0.32558594; TotalTime = 1.78428s; TotalTimePerSample = 0.34849ms; SamplesPerSecond = 2869
-Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 1.14627; EvalErrPerSample = 0.35026857; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.798577
+ Epoch[ 2 of 4]-Minibatch[   1-  10 of 160]: * 5120; ce =  1.32465096; err = 0.39160156; TotalTime = 1.80429s; TotalTimePerSample = 0.35240ms; SamplesPerSecond = 2837
+ Epoch[ 2 of 4]-Minibatch[  11-  20 of 160]: * 5120; ce =  1.26754742; err = 0.38085938; TotalTime = 1.81056s; TotalTimePerSample = 0.35363ms; SamplesPerSecond = 2827
+ Epoch[ 2 of 4]-Minibatch[  21-  30 of 160]: * 5120; ce =  1.17425861; err = 0.35332031; TotalTime = 1.79388s; TotalTimePerSample = 0.35037ms; SamplesPerSecond = 2854
+ Epoch[ 2 of 4]-Minibatch[  31-  40 of 160]: * 5120; ce =  1.12545509; err = 0.34492187; TotalTime = 1.79352s; TotalTimePerSample = 0.35030ms; SamplesPerSecond = 2854
+ Epoch[ 2 of 4]-Minibatch[  41-  50 of 160]: * 5120; ce =  1.13674049; err = 0.34238281; TotalTime = 1.79283s; TotalTimePerSample = 0.35016ms; SamplesPerSecond = 2855
+ Epoch[ 2 of 4]-Minibatch[  51-  60 of 160]: * 5120; ce =  1.13298378; err = 0.34746094; TotalTime = 1.79214s; TotalTimePerSample = 0.35003ms; SamplesPerSecond = 2856
+ Epoch[ 2 of 4]-Minibatch[  61-  70 of 160]: * 5120; ce =  1.07790451; err = 0.33378906; TotalTime = 1.79264s; TotalTimePerSample = 0.35013ms; SamplesPerSecond = 2856
+ Epoch[ 2 of 4]-Minibatch[  71-  80 of 160]: * 5120; ce =  1.04510498; err = 0.31738281; TotalTime = 1.84448s; TotalTimePerSample = 0.36025ms; SamplesPerSecond = 2775
+ Epoch[ 2 of 4]-Minibatch[  81-  90 of 160]: * 5120; ce =  1.15464554; err = 0.35839844; TotalTime = 1.79575s; TotalTimePerSample = 0.35073ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[  91- 100 of 160]: * 5120; ce =  1.25793457; err = 0.37714844; TotalTime = 1.79629s; TotalTimePerSample = 0.35084ms; SamplesPerSecond = 2850
+ Epoch[ 2 of 4]-Minibatch[ 101- 110 of 160]: * 5120; ce =  1.20009308; err = 0.37695312; TotalTime = 1.79532s; TotalTimePerSample = 0.35065ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[ 111- 120 of 160]: * 5120; ce =  1.11907349; err = 0.34453125; TotalTime = 1.79536s; TotalTimePerSample = 0.35066ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[ 121- 130 of 160]: * 5120; ce =  1.10299835; err = 0.34179688; TotalTime = 1.79584s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[ 131- 140 of 160]: * 5120; ce =  1.10662994; err = 0.33437500; TotalTime = 1.79551s; TotalTimePerSample = 0.35069ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[ 141- 150 of 160]: * 5120; ce =  1.05814362; err = 0.33378906; TotalTime = 1.79585s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
+ Epoch[ 2 of 4]-Minibatch[ 151- 160 of 160]: * 5120; ce =  1.05615540; err = 0.32558594; TotalTime = 1.78428s; TotalTimePerSample = 0.34849ms; SamplesPerSecond = 2869
+Finished Epoch[ 2 of 4]: [Training] ce = 1.14627; err = 0.35026857; learningRatePerSample = 0.003125000047; EpochTime=28.798577
 Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 3 of 4]-Minibatch[   1-  10 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.11535473; EvalErr[0]PerSample = 0.34570312; TotalTime = 1.79470s; TotalTimePerSample = 0.35053ms; SamplesPerSecond = 2852
- Epoch[ 3 of 4]-Minibatch[  11-  20 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.10306950; EvalErr[0]PerSample = 0.33984375; TotalTime = 1.79571s; TotalTimePerSample = 0.35072ms; SamplesPerSecond = 2851
- Epoch[ 3 of 4]-Minibatch[  21-  30 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08655663; EvalErr[0]PerSample = 0.33750000; TotalTime = 1.85428s; TotalTimePerSample = 0.36216ms; SamplesPerSecond = 2761
- Epoch[ 3 of 4]-Minibatch[  31-  40 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08894272; EvalErr[0]PerSample = 0.32910156; TotalTime = 1.79696s; TotalTimePerSample = 0.35097ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[  41-  50 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.12028427; EvalErr[0]PerSample = 0.34257813; TotalTime = 1.79705s; TotalTimePerSample = 0.35099ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[  51-  60 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08059044; EvalErr[0]PerSample = 0.33847656; TotalTime = 1.79691s; TotalTimePerSample = 0.35096ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[  61-  70 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.09700623; EvalErr[0]PerSample = 0.34140625; TotalTime = 1.79658s; TotalTimePerSample = 0.35090ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[  71-  80 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08042450; EvalErr[0]PerSample = 0.32988281; TotalTime = 1.79673s; TotalTimePerSample = 0.35092ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[  81-  90 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.03139420; EvalErr[0]PerSample = 0.31875000; TotalTime = 1.79605s; TotalTimePerSample = 0.35079ms; SamplesPerSecond = 2850
- Epoch[ 3 of 4]-Minibatch[  91- 100 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.04829330; EvalErr[0]PerSample = 0.31484375; TotalTime = 1.79666s; TotalTimePerSample = 0.35091ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[ 101- 110 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05102234; EvalErr[0]PerSample = 0.32949219; TotalTime = 1.79625s; TotalTimePerSample = 0.35083ms; SamplesPerSecond = 2850
- Epoch[ 3 of 4]-Minibatch[ 111- 120 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.08982849; EvalErr[0]PerSample = 0.34023437; TotalTime = 1.79698s; TotalTimePerSample = 0.35097ms; SamplesPerSecond = 2849
- Epoch[ 3 of 4]-Minibatch[ 121- 130 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.05953979; EvalErr[0]PerSample = 0.31953125; TotalTime = 1.81837s; TotalTimePerSample = 0.35515ms; SamplesPerSecond = 2815
- Epoch[ 3 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02886810; EvalErr[0]PerSample = 0.32363281; TotalTime = 1.80412s; TotalTimePerSample = 0.35237ms; SamplesPerSecond = 2837
- Epoch[ 3 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.03884735; EvalErr[0]PerSample = 0.32656250; TotalTime = 1.79584s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
- Epoch[ 3 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02478790; EvalErr[0]PerSample = 0.31718750; TotalTime = 1.78394s; TotalTimePerSample = 0.34843ms; SamplesPerSecond = 2870
-Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 1.0715507; EvalErrPerSample = 0.33092043; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.836488
+ Epoch[ 3 of 4]-Minibatch[   1-  10 of 160]: * 5120; ce =  1.11535473; err = 0.34570312; TotalTime = 1.79470s; TotalTimePerSample = 0.35053ms; SamplesPerSecond = 2852
+ Epoch[ 3 of 4]-Minibatch[  11-  20 of 160]: * 5120; ce =  1.10306950; err = 0.33984375; TotalTime = 1.79571s; TotalTimePerSample = 0.35072ms; SamplesPerSecond = 2851
+ Epoch[ 3 of 4]-Minibatch[  21-  30 of 160]: * 5120; ce =  1.08655663; err = 0.33750000; TotalTime = 1.85428s; TotalTimePerSample = 0.36216ms; SamplesPerSecond = 2761
+ Epoch[ 3 of 4]-Minibatch[  31-  40 of 160]: * 5120; ce =  1.08894272; err = 0.32910156; TotalTime = 1.79696s; TotalTimePerSample = 0.35097ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[  41-  50 of 160]: * 5120; ce =  1.12028427; err = 0.34257813; TotalTime = 1.79705s; TotalTimePerSample = 0.35099ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[  51-  60 of 160]: * 5120; ce =  1.08059044; err = 0.33847656; TotalTime = 1.79691s; TotalTimePerSample = 0.35096ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[  61-  70 of 160]: * 5120; ce =  1.09700623; err = 0.34140625; TotalTime = 1.79658s; TotalTimePerSample = 0.35090ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[  71-  80 of 160]: * 5120; ce =  1.08042450; err = 0.32988281; TotalTime = 1.79673s; TotalTimePerSample = 0.35092ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[  81-  90 of 160]: * 5120; ce =  1.03139420; err = 0.31875000; TotalTime = 1.79605s; TotalTimePerSample = 0.35079ms; SamplesPerSecond = 2850
+ Epoch[ 3 of 4]-Minibatch[  91- 100 of 160]: * 5120; ce =  1.04829330; err = 0.31484375; TotalTime = 1.79666s; TotalTimePerSample = 0.35091ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[ 101- 110 of 160]: * 5120; ce =  1.05102234; err = 0.32949219; TotalTime = 1.79625s; TotalTimePerSample = 0.35083ms; SamplesPerSecond = 2850
+ Epoch[ 3 of 4]-Minibatch[ 111- 120 of 160]: * 5120; ce =  1.08982849; err = 0.34023437; TotalTime = 1.79698s; TotalTimePerSample = 0.35097ms; SamplesPerSecond = 2849
+ Epoch[ 3 of 4]-Minibatch[ 121- 130 of 160]: * 5120; ce =  1.05953979; err = 0.31953125; TotalTime = 1.81837s; TotalTimePerSample = 0.35515ms; SamplesPerSecond = 2815
+ Epoch[ 3 of 4]-Minibatch[ 131- 140 of 160]: * 5120; ce =  1.02886810; err = 0.32363281; TotalTime = 1.80412s; TotalTimePerSample = 0.35237ms; SamplesPerSecond = 2837
+ Epoch[ 3 of 4]-Minibatch[ 141- 150 of 160]: * 5120; ce =  1.03884735; err = 0.32656250; TotalTime = 1.79584s; TotalTimePerSample = 0.35075ms; SamplesPerSecond = 2851
+ Epoch[ 3 of 4]-Minibatch[ 151- 160 of 160]: * 5120; ce =  1.02478790; err = 0.31718750; TotalTime = 1.78394s; TotalTimePerSample = 0.34843ms; SamplesPerSecond = 2870
+Finished Epoch[ 3 of 4]: [Training] ce = 1.0715507; err = 0.33092043; learningRatePerSample = 0.003125000047; EpochTime=28.836488
 Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210 
 minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 4 of 4]-Minibatch[   1-  10 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02606211; EvalErr[0]PerSample = 0.31562500; TotalTime = 1.79489s; TotalTimePerSample = 0.35056ms; SamplesPerSecond = 2852
- Epoch[ 4 of 4]-Minibatch[  11-  20 of 160]: SamplesSeen = 4926; TrainLossPerSample =  1.03991783; EvalErr[0]PerSample = 0.32216809; TotalTime = 1.95701s; TotalTimePerSample = 0.39728ms; SamplesPerSecond = 2517
- Epoch[ 4 of 4]-Minibatch[  21-  30 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.01588020; EvalErr[0]PerSample = 0.31601563; TotalTime = 1.79596s; TotalTimePerSample = 0.35077ms; SamplesPerSecond = 2850
- Epoch[ 4 of 4]-Minibatch[  31-  40 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.99285030; EvalErr[0]PerSample = 0.30957031; TotalTime = 1.79623s; TotalTimePerSample = 0.35083ms; SamplesPerSecond = 2850
- Epoch[ 4 of 4]-Minibatch[  41-  50 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.99535828; EvalErr[0]PerSample = 0.31640625; TotalTime = 1.79578s; TotalTimePerSample = 0.35074ms; SamplesPerSecond = 2851
- Epoch[ 4 of 4]-Minibatch[  51-  60 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02987175; EvalErr[0]PerSample = 0.32539062; TotalTime = 1.79591s; TotalTimePerSample = 0.35076ms; SamplesPerSecond = 2850
- Epoch[ 4 of 4]-Minibatch[  61-  70 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.03030205; EvalErr[0]PerSample = 0.31582031; TotalTime = 1.79514s; TotalTimePerSample = 0.35061ms; SamplesPerSecond = 2852
- Epoch[ 4 of 4]-Minibatch[  71-  80 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.98913116; EvalErr[0]PerSample = 0.31210938; TotalTime = 1.79670s; TotalTimePerSample = 0.35092ms; SamplesPerSecond = 2849
- Epoch[ 4 of 4]-Minibatch[  81-  90 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.98892746; EvalErr[0]PerSample = 0.30546875; TotalTime = 1.79605s; TotalTimePerSample = 0.35079ms; SamplesPerSecond = 2850
- Epoch[ 4 of 4]-Minibatch[  91- 100 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.00130386; EvalErr[0]PerSample = 0.30917969; TotalTime = 1.80031s; TotalTimePerSample = 0.35162ms; SamplesPerSecond = 2843
- Epoch[ 4 of 4]-Minibatch[ 101- 110 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02166672; EvalErr[0]PerSample = 0.31054688; TotalTime = 1.79190s; TotalTimePerSample = 0.34998ms; SamplesPerSecond = 2857
- Epoch[ 4 of 4]-Minibatch[ 111- 120 of 160]: SamplesSeen = 5120; TrainLossPerSample =  1.02634430; EvalErr[0]PerSample = 0.32597656; TotalTime = 1.79346s; TotalTimePerSample = 0.35029ms; SamplesPerSecond = 2854
- Epoch[ 4 of 4]-Minibatch[ 121- 130 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97695312; EvalErr[0]PerSample = 0.29863281; TotalTime = 1.79173s; TotalTimePerSample = 0.34995ms; SamplesPerSecond = 2857
- Epoch[ 4 of 4]-Minibatch[ 131- 140 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97142334; EvalErr[0]PerSample = 0.30546875; TotalTime = 1.79446s; TotalTimePerSample = 0.35048ms; SamplesPerSecond = 2853
- Epoch[ 4 of 4]-Minibatch[ 141- 150 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.98984375; EvalErr[0]PerSample = 0.31269531; TotalTime = 1.79283s; TotalTimePerSample = 0.35016ms; SamplesPerSecond = 2855
- Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: SamplesSeen = 5120; TrainLossPerSample =  0.97683563; EvalErr[0]PerSample = 0.30175781; TotalTime = 1.78603s; TotalTimePerSample = 0.34883ms; SamplesPerSecond = 2866
-Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 1.0043954; EvalErrPerSample = 0.31276855; AvgLearningRatePerSample = 0.003125000047; EpochTime=28.984064
+ Epoch[ 4 of 4]-Minibatch[   1-  10 of 160]: * 5120; ce =  1.02606211; err = 0.31562500; TotalTime = 1.79489s; TotalTimePerSample = 0.35056ms; SamplesPerSecond = 2852
+ Epoch[ 4 of 4]-Minibatch[  11-  20 of 160]: * 4926; ce =  1.03991783; err = 0.32216809; TotalTime = 1.95701s; TotalTimePerSample = 0.39728ms; SamplesPerSecond = 2517
+ Epoch[ 4 of 4]-Minibatch[  21-  30 of 160]: * 5120; ce =  1.01588020; err = 0.31601563; TotalTime = 1.79596s; TotalTimePerSample = 0.35077ms; SamplesPerSecond = 2850
+ Epoch[ 4 of 4]-Minibatch[  31-  40 of 160]: * 5120; ce =  0.99285030; err = 0.30957031; TotalTime = 1.79623s; TotalTimePerSample = 0.35083ms; SamplesPerSecond = 2850
+ Epoch[ 4 of 4]-Minibatch[  41-  50 of 160]: * 5120; ce =  0.99535828; err = 0.31640625; TotalTime = 1.79578s; TotalTimePerSample = 0.35074ms; SamplesPerSecond = 2851
+ Epoch[ 4 of 4]-Minibatch[  51-  60 of 160]: * 5120; ce =  1.02987175; err = 0.32539062; TotalTime = 1.79591s; TotalTimePerSample = 0.35076ms; SamplesPerSecond = 2850
+ Epoch[ 4 of 4]-Minibatch[  61-  70 of 160]: * 5120; ce =  1.03030205; err = 0.31582031; TotalTime = 1.79514s; TotalTimePerSample = 0.35061ms; SamplesPerSecond = 2852
+ Epoch[ 4 of 4]-Minibatch[  71-  80 of 160]: * 5120; ce =  0.98913116; err = 0.31210938; TotalTime = 1.79670s; TotalTimePerSample = 0.35092ms; SamplesPerSecond = 2849
+ Epoch[ 4 of 4]-Minibatch[  81-  90 of 160]: * 5120; ce =  0.98892746; err = 0.30546875; TotalTime = 1.79605s; TotalTimePerSample = 0.35079ms; SamplesPerSecond = 2850
+ Epoch[ 4 of 4]-Minibatch[  91- 100 of 160]: * 5120; ce =  1.00130386; err = 0.30917969; TotalTime = 1.80031s; TotalTimePerSample = 0.35162ms; SamplesPerSecond = 2843
+ Epoch[ 4 of 4]-Minibatch[ 101- 110 of 160]: * 5120; ce =  1.02166672; err = 0.31054688; TotalTime = 1.79190s; TotalTimePerSample = 0.34998ms; SamplesPerSecond = 2857
+ Epoch[ 4 of 4]-Minibatch[ 111- 120 of 160]: * 5120; ce =  1.02634430; err = 0.32597656; TotalTime = 1.79346s; TotalTimePerSample = 0.35029ms; SamplesPerSecond = 2854
+ Epoch[ 4 of 4]-Minibatch[ 121- 130 of 160]: * 5120; ce =  0.97695312; err = 0.29863281; TotalTime = 1.79173s; TotalTimePerSample = 0.34995ms; SamplesPerSecond = 2857
+ Epoch[ 4 of 4]-Minibatch[ 131- 140 of 160]: * 5120; ce =  0.97142334; err = 0.30546875; TotalTime = 1.79446s; TotalTimePerSample = 0.35048ms; SamplesPerSecond = 2853
+ Epoch[ 4 of 4]-Minibatch[ 141- 150 of 160]: * 5120; ce =  0.98984375; err = 0.31269531; TotalTime = 1.79283s; TotalTimePerSample = 0.35016ms; SamplesPerSecond = 2855
+ Epoch[ 4 of 4]-Minibatch[ 151- 160 of 160]: * 5120; ce =  0.97683563; err = 0.30175781; TotalTime = 1.78603s; TotalTimePerSample = 0.34883ms; SamplesPerSecond = 2866
+Finished Epoch[ 4 of 4]: [Training] ce = 1.0043954; err = 0.31276855; learningRatePerSample = 0.003125000047; EpochTime=28.984064
 CNTKCommandTrainEnd: speechTrain
 __COMPLETED__
