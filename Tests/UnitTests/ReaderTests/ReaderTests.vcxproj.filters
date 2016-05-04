@@ -291,6 +291,18 @@
     <Text Include="Control\ImageReaderIntensityTransform_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader\100x100x3_jagged_sequences_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\200x200x2_seq2seq_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\100x100x3_jagged_sequences_dense_sorted.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\200x200x2_seq2seq_dense_sorted.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
