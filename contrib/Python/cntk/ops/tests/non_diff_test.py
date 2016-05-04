@@ -11,7 +11,7 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, C, AA, I, precision
+from .ops_test_utils import unittest_helper, AA, I, precision
 from ...graph import *
 from ...reader import *
 import numpy as np

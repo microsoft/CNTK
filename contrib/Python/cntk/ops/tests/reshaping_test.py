@@ -6,7 +6,7 @@
 
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
 from .. import reshape

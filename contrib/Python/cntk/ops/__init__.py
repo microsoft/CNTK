@@ -518,8 +518,14 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     value is returned which is 0.1 by default.
     
     Example:
-        >>> future_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
-        # [[3, 4], [5, 6], [0.5, 0.5]]
+        >>> data = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]])
+        >>> t = C.dynamic_axis(name='t')
+        >>> x = C.input_numpy([data], dynamic_axis=t)
+        >>> with C.LocalExecutionContext('future_value') as ctx:
+        ...     print(ctx.eval(C.future_value(0, x)))
+        [array([[  5. ,   6. ,   7. ,   8. ],
+                [  9. ,  10. ,  11. ,  12. ],
+                [  0.1,   0.1,   0.1,   0.1]])]
     
     Args:        
         dims: dimensions of the input `x`
@@ -544,8 +550,14 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     value is returned which is 0.1 by default.
     
     Example:
-        >>> past_value(0, [[1, 2], [3, 4], [5,6]], 1, 0.5)
-        # [[0.5, 0.5], [1, 2], [3, 4]]
+        >>> data = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]])
+        >>> t = C.dynamic_axis(name='t')
+        >>> x = C.input_numpy([data], dynamic_axis=t)
+        >>> with C.LocalExecutionContext('past_value') as ctx:
+        ...     print(ctx.eval(C.past_value(0, x)))
+        [array([[ 0.1,  0.1,  0.1,  0.1],
+                [ 1. ,  2. ,  3. ,  4. ],
+                [ 5. ,  6. ,  7. ,  8. ]])]
     
     Args:        
         dims: dimensions of the input `x`
@@ -653,70 +665,69 @@ def input(shape, dynamic_axis='', name=None):
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
 
 
-def parameter(shape=None, value=0, learning_rate_multiplier=1.0, init='uniform',
-              init_value_scale=1, init_from_file_path='', init_from_literal=None,
-              random_seed=-1, name=None):
+def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
+        init_from_file_path=None, name=None):
     """
     It creates a parameter tensor. 
 
     Args:
-        shape (tuple or int): the shape of the input tensor. If `init='fromLiteral'`, shape is not needed as it will be inferred from the literal.
-        value: a scalar initial value that would be replicated for every element in the tensor
-        learning_rate_multiplier (float): 
-        init (str): 'uniform', 'fromFile' or 'fromLiteral' 
-        init_value_scale (float): a scaling factor for the initial value
-        init_from_file_path (str): the file that contains the initial tensor value
-        init_from_literal (ndarray): the numpy array used to initialize the tensor parameter
-        random_seed (float): the seed used for initialization
+        shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
+        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. If ``None``, the tensor will be initialized uniformly random.
+        learning_rate_multiplier (float): set to control the learning rate on this particular node
+        init_from_file_path (str): the file that contains the initial tensor value. Used only if ``value=None``.
         name (str, optional): the name of the node in the network
+
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
     from . import cntk1
 
-    # if the parameter is initialized from a literal value
-    if (init == 'fromLiteral'):
-        """
-        To be as generic as possible, we 
-         - flatten the data 
-         - initialize a ParameterTensor operator with it
-         - ensure that the graph does not backprob to it.  
-         - Finally we to reshape it.
-        """
+    if value is None:
+        if shape is None:
+            raise ValueError('you need to specify at least shape or value')
 
-        value = init_from_literal
+        if init_from_file_path:
+            return cntk1.ParameterTensor(shape, init='fromFile',
+                    learningRateMultiplier=learning_rate_multiplier,
+                    initFromFilePath=init_from_file_path, name=name)
+        else:
+            return cntk1.ParameterTensor(shape, 
+                    learningRateMultiplier=learning_rate_multiplier,
+                    name=name)
+    """
+    To be as generic as possible, we 
+     - flatten the data 
+     - initialize a ParameterTensor operator with it
+     - ensure that the graph does not backprob to it.  
+     - Finally we to reshape it.
+    """
 
-        from .. import utils
-        if not (np.isscalar(value) or utils.is_tensor(value)):
-            raise ValueError('value type is not supported: %s' % type(value))
+    from .. import utils
+    if not (np.isscalar(value) or utils.is_tensor(value)):
+        raise ValueError('value type is not supported: %s' % type(value))
 
-        if isinstance(value, list) or np.isscalar(value):
-            value = np.asarray(value)
+    if isinstance(value, list) or np.isscalar(value):
+        value = np.asarray(value)
 
-        import scipy.sparse
-        if scipy.sparse.issparse(value):
-            raise ValueError('only dense data is supported')
+    import scipy.sparse
+    if scipy.sparse.issparse(value):
+        raise ValueError('only dense data is supported')
 
-        param_shape = value.shape if value.shape else (1,)
-        literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
+    param_shape = value.shape if value.shape else (1,)
+    literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
 
-        literal_array = np.reshape(value, literal_shape)
+    literal_array = np.reshape(value, literal_shape)
 
-        from io import BytesIO
-        s = BytesIO()
-        np.savetxt(s, literal_array, '%.4f')
+    from io import BytesIO
+    s = BytesIO()
+    np.savetxt(s, literal_array, '%.4f')
 
-        return cntk1.ParameterTensor(
-            dims=param_shape,
-            learningRateMultiplier=learning_rate_multiplier,
-            init='fromLiteral',
-            initFromLiteral=s.getvalue().decode())
-
-    else:
-        return cntk1.ParameterTensor(shape, learning_rate_multiplier, init,
-                                     init_value_scale, value, init_from_file_path,
-                                     randomSeed=random_seed, name=name)
+    return cntk1.ParameterTensor(
+        dims=param_shape,
+        learningRateMultiplier=learning_rate_multiplier,
+        init='fromLiteral',
+        initFromLiteral=s.getvalue().decode())
 
 
 def constant(value, name=None):
@@ -730,8 +741,7 @@ def constant(value, name=None):
         :class:`cntk.graph.ComputationNode`
     """
 
-    return parameter(name=name, init='fromLiteral', init_from_literal=value,
-                     learning_rate_multiplier=0.0)
+    return parameter(value=value, learning_rate_multiplier=0.0, name=name)
 
 
 def dynamic_axis(name=None):
@@ -758,6 +768,9 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     This function adapts the dynamic axis layout for `data_input` to match that 
     of `layout_input`. It allows these two tensors to be properly compared using, e.g. 
     a criterion node.
+    
+    Example:
+        See Examples/LSTM/seqcla.py for a use of :func:`cntk.ops.reconcile_dynamic_axis`.    
     
     Args:
         data_input: the tensor to have its dynamic axis layout adapted

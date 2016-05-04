@@ -229,8 +229,9 @@ We can define this network as follows in the CNTK Python API::
         train_reader = C.CNTKTextFormatReader(train_file)
 
         # setup embedding matrix
-        embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                                 init='fromFile', init_from_file_path=embedding_file)
+        embedding = C.parameter((embed_dim, vocab), 
+                                 learning_rate_multiplier=0.0, 
+                                 init_from_file_path=embedding_file)
 
         # get the vector representing the word
         sequence = C.times(embedding, features, name='sequence')
@@ -280,4 +281,7 @@ returns the last hidden state of the unrolled network. We then add the dense lay
 the criterion node that adds a softmax and then implements the cross entropy loss function. Before 
 we add the criterion node, however, we call :func:`cntk.ops.reconcile_dynamic_axis` which will ensure 
 that the minibatch layout for the labels and the data with dynamic axes is compatible.
+
+For the full explanation of how ``lstm_layer()`` is defined, please see the full example in the 
+Examples section.
 

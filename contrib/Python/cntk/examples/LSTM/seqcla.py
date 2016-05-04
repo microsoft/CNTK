@@ -101,7 +101,7 @@ def seqcla():
     embed_dim = 50    
 
     t = C.dynamic_axis(name='t')
-    # temporarily using cntk1 SpareInput because cntk2's Input() will simply allow sparse as a parameter
+    # temporarily using cntk1 SparseInput because cntk2's Input() will simply allow sparse as a parameter
     features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
     labels = C.input(num_labels, name='labels')
    
@@ -109,7 +109,7 @@ def seqcla():
 
     # setup embedding matrix
     embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
-                          init='fromFile', init_from_file_path=embedding_file)
+                             init_from_file_path=embedding_file)
 
     # get the vector representing the word
     sequence = C.times(embedding, features, name='sequence')
@@ -146,7 +146,7 @@ def seqcla():
         acc = calc_accuracy(train_file, ctx.output_filename_base)
         
         # and test for the same number...
-        TOLERANCE_ABSOLUTE = 1E-06    
+        TOLERANCE_ABSOLUTE = 1E-06
         assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
 
 """
@@ -156,7 +156,7 @@ def calc_accuracy(test_file, output_filename_base):
     
     # load labels
     labels=[]
-    with open(test_file, 'r', encoding='utf8') as f_in:      
+    with open(test_file, 'r') as f_in:      
         for l in f_in:
             dd = l.split('|')
             if len(dd) > 2:
@@ -165,7 +165,7 @@ def calc_accuracy(test_file, output_filename_base):
                 
     # load predicted answers
     predicted=[]
-    with open(output_filename_base + ".z", 'r', encoding='utf8') as f_in:      
+    with open(output_filename_base + ".z", 'r') as f_in:      
         for l in f_in:
             predicted.append(np.argmax(l.strip().split(' ')))
             

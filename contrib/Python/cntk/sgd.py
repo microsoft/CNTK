@@ -1,5 +1,4 @@
 # Copyright (c) Microsoft. All rights reserved.
-
 #Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -27,8 +26,7 @@ class SGDParams:
         * **momentum_per_sample: momentum per sample. Useful when you want to keep the momentum per sample constant, i.e., automatically scales effective momentum for the minibatch when the minibatch size is changed. Can use syntax such as 0.9996*10**:0.998 which means using the per sample momentum 0.9996 for 10 epochs and then 0.998 for the rest. momentumPerSample may be missing, for example, when momentumPerMB is provided.
         * **momentum_as_time_constant**: number of samples after which the contribution is decayed to e^-1
         * **auto_adjust parameters**: they represent information related to the automatic learning rate control. 
-        * **auto_adjust_lr**: the automatic learning rate adjustment algorithm to use. Valid values are None (default, dont auto adjust learning rate), AdjustAfterEpoch (check the training criterion after each epoch using the development set of the training set and decide whether to adjust the learning rate), and SearchBeforeEpoch (search the learning rate based on a small portion of the training set before each epoch starts).
-    
+        * **auto_adjust_lr**: the automatic learning rate adjustment algorithm to use. Valid values are None (default, don't auto adjust learning rate), AdjustAfterEpoch (check the training criterion after each epoch using the development set of the training set and decide whether to adjust the learning rate), and SearchBeforeEpoch (search the learning rate based on a small portion of the training set before each epoch starts).
     * When used in the AdjustAfterEpoch mode
         * **reduce_learn_rate_if_improve_less_than**: reduce the learning rate if the improvement is less than this value. Default is 0.
         * **learn_rate_decrease_factor**: the learning rate decrease factor. Default value is 0.618.
@@ -38,12 +36,12 @@ class SGDParams:
         * **learn_rate_adjust_interval**: determine the frequency of applying the learning rate adjustment check. Default is 1 epoch. If this value is set to a value larger than 1 the learning rate adjustment will be based on the average criterion computed from the last learnRateAdjustInterval epochs.
     
     * When used in the SearchBeforeEpoch mode.
-        * **numMiniBatch4LRSearch**: the number of minibatches used to search the learning rate. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch.
+        * **numMiniBatch4LRSearch**: the number of minibatches used to search the learning rate. Default value is 500. It's typically set to 10-20% of the total minibatches in an epoch.
         * **num_prev_learn_rate**: number of previous learning rates used as a hint to the search range. Default value is 5.
         * **num_best_search_epoch**: number of epochs in which we use the best learning rate instead of the sufficient learning rate . Default value is 1.
     
     * When used in the 'AdaptiveMinibatchSizing' mode
-        * **num_minibatch_for_lr_search**: the number of minibatches used to search the minibatch size when in adaptive minibatch size mode. Default value is 500. Its typically set to 10-20% of the total minibatches in an epoch this is shared with the search for learning rate in SearchBeforeEpoch mode.
+        * **num_minibatch_for_lr_search**: the number of minibatches used to search the minibatch size when in adaptive minibatch size mode. Default value is 500. It's typically set to 10-20% of the total minibatches in an epoch this is shared with the search for learning rate in SearchBeforeEpoch mode.
         * **auto_adjust_minibatch: enable or disable whether minibatch size is adaptively adjusted. Default value is false. Adapative minibatch sizing will begin on epochs starting after user minbatch sizes expcitily specified are complete. For example if the user specifed minibatchSize=256**:1024, then 256 and 1024 are used in the first 2 Epochs and adaptive minibatch sizing is used afterwards.
         * **minibatch_size_tuning_frequency**: The number of epochs to skip, on a periodic basis, before dynamically adjusting the minibatch size. Default value is 1.
         * **minibatch_size_tuning_max**: The maximum size allowed for an adaptively adjusted minibatch size. Default value is 1048576.
@@ -85,9 +83,7 @@ class SGDParams:
     
     * Gradient Check
         * **gradient_check**: determines whether to use the gradient checker. The default value is false. When using the gradient checker you need to use a minibatch size that is larger than the sequence length for RNNs due to the truncated backpropagation through time (BPTT) algorithm used to train RNNs, and a smaller learning rate to prevent numerical issues caused by divergence. In addition, precision should be set to double.
-    
     """
-    
     def __init__(self,
                 model_path=None,
                 train_criterion_node_name=None,

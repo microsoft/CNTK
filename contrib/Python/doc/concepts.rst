@@ -1,11 +1,11 @@
-Concepts
+﻿Concepts
 ========
 
 There is a common property in key machine learning models, such as deep neural
 networks (DNNs), convolutional neural networks (CNNs), and recurrent neural 
-networks (RNNs). All these models can be described as *computational networks*.
+networks (RNNs). All of these models can be described as *computational networks*.
 
-The directed edges of these *cómputational networks* are vectors, matrices, or in 
+The directed edges of these *computational networks* are vectors, matrices, or in 
 general n-dimensional arrays (tensors) which represent input data and model 
 parameters. The vertices are *functions* (also called operations) that are 
 performing a computation on these input tensors. 
@@ -17,8 +17,8 @@ Tensors
 The underlying data structure in CNTK is that of a *tensor*. It is a 
 multidimensional array on which computations can be performed. Every dimension in 
 these arrays is referred to as an *axis* to distinguish it from the scalar size 
-of every axis. So, a matrix has two *axes* which have both a certain 
-*dimension* corresponding to the number of rows and clumns of the *axes*. 
+of every axis. So, a matrix has two *axes* which both have a certain 
+*dimension* corresponding to the number of rows and columns of the *axes*. 
 
 Using tensors makes the framework generic in that it can be used e.g. for 
 classification problems where the inputs are vectors, black-and-white 
@@ -40,7 +40,7 @@ for r, g, and b) or videos (has an extra time dimension).
 
 - Tensors come either in *dense* or *sparse* form. Sparse tensors should be used
   whenever the bulk of its values are 0. The Python API currently doesn't expose
-  sparse tensors; This will be added in the next release.
+  sparse tensors; this will be added in the next release.
 
   
 Usages of Tensors
@@ -98,7 +98,8 @@ Multi-dimensional arrays are often mapped to linear memory in a continous manner
 There is some freedom in which order to map the array elements.
 Two typical mappings are *row-major order* and *column-major order*.
 
-For two dimensional arrays (matrices) with *row-major order* consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
+For two-dimensional arrays (matrices) with *row-major order*, consecutive 
+elements of the rows of the array are contiguous in memory; in column-major order, 
 consecutive elements of the columns are contiguous.
 
 For example the matrix
@@ -113,17 +114,22 @@ For example the matrix
 
 is linearized as [1, 2, 3, 4, 5, 6] using row-major order, but as [1, 3, 5, 2, 4, 6] using column-major order.
 
-This concept extends to arrays of higher dimension than two: It is always about how a specific combination of index values is mapped to linear memory.
-If you go the elements in memory one by one and observe the corresponding tensor-indices 
-then in *row major order* the right-most index changes fastest, while in *column-major order* the leftmost index changes fastest. (see `<https://en.wikipedia.org/wiki/Row-major_order>`_ )
+This concept extends to arrays of higher dimension than two: it is always about 
+how a specific combination of index values is mapped to linear memory.
+If you go through elements in memory one by one and observe the corresponding 
+tensor-indices then in *row major order* the right-most index changes fastest, 
+while in *column-major order* the leftmost index changes fastest. (see 
+`<https://en.wikipedia.org/wiki/Row-major_order>`_ )
 
-In many programming languages like C, or C# row-major order is used. The same is true for the Python library NumPy (at least by default).
-CNTK however uses column-major order.
+In many programming languages like C or C#, row-major order is used. The same is 
+true for the Python library NumPy (at least by default).
+CNTK, however, uses column-major order.
 
 There are two circumstances where you have to be aware of this ordering:
 
-- When preparing input-files for CNTK. The values have to be provided in column-major order.
-- When changing the shape of a tensor. 
+1. When preparing input-files for CNTK. The values have to be provided in 
+   column-major order.
+2. When changing the shape of a tensor. 
 
 Computational Networks
 ----------------------
@@ -133,7 +139,8 @@ the computations that are applied to it. These are translated into computational
 networks that describe the data flow as the data are transformed from input (leaf 
 nodes) through computations, to one or more output (root) nodes.
 
-The Python API allows to specify such a computational network. For example, a one-hidden-layer sigmoid neural network can be described like shown below::
+The Python API allows us to specify such a computational network. For example, a 
+one-hidden-layer sigmoid neural network can be described as shown below::
 
     from cntk import *
     # X is a data input, W1, W2, B are parameters
@@ -154,11 +161,11 @@ The above creates a computational network like the following:
 
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-1HiddenNN.png
 
-Here, X represents the input data as a tensor. During a training run, this would 
-contain, in aggregated form, all the input samples for a particular minibatch. 
-For the particular model this would have to be a two-dimensional tensor: The data 
-in the first dimension would represent the feature vector, the second would refer 
-to all the samples in the minibatch.
+Here, ``X`` represents the input data as a tensor. During a training run, this 
+would contain, in aggregated form, all the input samples for a particular 
+minibatch. For the particular model this would have to be a two-dimensional 
+tensor: the data in the first dimension would represent the feature vector, the 
+second would refer to all the samples in the minibatch.
 
     Note: The above creates a network for *deferred 
     computation*. The inputs are symbolic descriptions of tensors, not the data 
@@ -188,8 +195,8 @@ Computational networks are flexible in several dimensions:
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-ShareWeight.png
      
 - They can have more than one output (root node). E.g. a single network can model 
-  a) the network output, b) the loss function, which represents the training 
-  criterion, c) an evaluation criterion which is used for verification. All these 
+  a) the network output; b) the loss function, which represents the training 
+  criterion; amd c) an evaluation criterion which is used for verification. All of these 
   functions differ only partially and can be modelled as part of the same 
   network. CNTK makes sure that a) only requested root node outputs are computed 
   and that b) shared parts between the functions represented at root nodes are 
@@ -199,7 +206,7 @@ Computational networks are flexible in several dimensions:
 Properties of Computation Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In CNTK the compuational nodes have number of properties. Some of these can or must be set by the user.
+In CNTK the computational nodes have a number of properties. Some of these can or must be set by the user.
 
 - **name** - The symbolic name for the node. If left out, the name is assigned
   automatically to a numeric value.::
@@ -208,7 +215,7 @@ In CNTK the compuational nodes have number of properties. Some of these can or m
     S1.name = 'S1'              # Alternative way of assigning a name
   
   Assigning a name to a node is only necessary if it is the target of a loop. 
-  Otherwise, it can be used for debugging.
+  Otherwise, it can also be used for debugging.
   
 - **tag** - This is a string that is attached to the node and has to be set for 
   certain nodes. There purpouse is not documentary but controls the behaviour of 
@@ -245,7 +252,7 @@ Efficiently modelling recurrent networks was an important design goal for CNTK.
 As such, in contrast to other toolkits, they are *first-order citizens* of the 
 system. CNTK therefore allows for modelling of loops as part of the networks, and 
 for dynamically sized input data. As such, it offers a very efficient 
-implementation for training of recurrent networks and does not require applying 
+implementation for training recurrent networks and does not require applying 
 tricks to the input (like padding or masking) to simulate dynamically sized input 
 data.
 
@@ -332,7 +339,7 @@ computation and gradient calculation algorithms we just discussed can be directl
 used. This means, however, all computation nodes in the CN need to be computed 
 sample by sample and this significantly reduces the potential of parallelization.
 
-In CNTK, a recurrent neural network in can simply be modelled by using the 
+In CNTK, a recurrent neural network can simply be modelled by using the 
 ``past_value()`` (earlier known as ``delay()`` node) and ``future_value()``
 operations. These connect the network to the output of a previous (or next) step 
 on the dynamic axis. CNTK detects loops automatically that are created
@@ -350,7 +357,7 @@ treated as a composite node in the CN and the CN is reduced to a DAG. All the
 nodes inside each loop (or composite node) can be unrolled over time and also 
 reduced to a DAG. 
 
-It is important to note that the shapes of the outputs of any operation that 
+It is important to note that the shape of the output of any operation that 
 participates in a loop *shares the dynamic axis with its input*. This way, a
 recurrent network like LSTM can output its hidden state, cell state etc., 
 unrolled over the time dimension.
@@ -362,10 +369,9 @@ Readers
 
 In CNTK, a data reader is a separate concept from the network itself. It is 
 called by the network training algorithm to provide information about the data,
-to load minibatches into memory and to attach this memory to the input nodes in 
-the network.
+to load minibatches into memory, and to attach this memory to the input nodes in 
 
-Readers are designed for performing high performance to not become a bottlneck
+Readers are designed to be high performance to not become a bottlneck
 in GPU-heavy computations. They provide special facilities for
 
 - Data prefetch: Readers can split up reading and preprocessing of data such
@@ -380,11 +386,11 @@ in GPU-heavy computations. They provide special facilities for
 Several task-specific readers have been implemented. The most generic ones 
 are the following:
 
-- A generic CNTKTextFormatReader, which defines a text format for reading 
-  tensors and attaching them to inputs. The reader supports multiple inputs
-  defined in a single file, allows for specifying dynamic axes by grouping 
-  samples by work unit (sequence) ID, and supports both sparse and dense 
-  tensors.
+- A generic CNTKTextFormatReader (:class:`cntk.reader.CNTKTextFormatReader`), 
+  which defines a text format for reading tensors and attaching them to inputs. 
+  The reader supports multiple inputs defined in a single file, allows for 
+  specifying dynamic axes by grouping samples by work unit (sequence) ID, and 
+  supports both sparse and dense tensors.
   
 - ImageReader - for reading in image data stored in directories. Not exposed
   in Python API at this point.
@@ -403,7 +409,7 @@ Neural Net Training
 
 To perform a neural net training run, we need every operation to be defined for
 *forward* and *backward* operation. The forward operation simply computes the 
-function value; The backward operation computes the gradients with regards to
+function value; the backward operation computes the gradients with regards to
 all of the operation's inputs. 
 
 All of the built-in operations (as far as they can take part in neural net 
@@ -427,8 +433,9 @@ In order to set up a computational network for training, the following is needed
 - A training algorithm. Currently CNTK provides an implementation of SGD
   (stochastic gradient descent) with optional momentum. This means that gradients
   are computed and backpropagated once for every minibatch. The SGD implementation
-  offers a whole number of options, e.g. for changing the learning rate over the
-  course of training. See the description of the SGDParams class for details.
+  offers an extensive number of options, e.g. for changing the learning rate over
+  the course of training, or for choosing algorithms for distributed computation
+  using data parallelism. See the description of the SGDParams class for details.
 
 CNTK also provides several variants of data parallelism. These options are all 
 available, but are currently not exposed in the Python API. To use data 

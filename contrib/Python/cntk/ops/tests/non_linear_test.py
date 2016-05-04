@@ -11,10 +11,10 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, C, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, exp, relu, sigmoid, softmax, tanh
+from .. import clip, cond, constant, exp, relu, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -48,8 +48,8 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
     
     op_node = I([x])
-    a = C(min_value)    
-    b = C(max_value)
+    a = constant(min_value)    
+    b = constant(max_value)
     
     result = clip(op_node, a, b)
     unittest_helper(result, None, expected, device_id=device_id, 
@@ -323,9 +323,9 @@ def test_op_cond(flag, value_a, value_b, device_id, precision):
 
     expected = [[[np.where(AA(flag, dtype=PRECISION_TO_TYPE[precision]), AA(value_a, dtype=PRECISION_TO_TYPE[precision]), AA(value_b, dtype=PRECISION_TO_TYPE[precision]))]]]
 
-    cond_as_const    = C([flag])
-    value_a_as_const = C([value_a])    
-    value_b_as_const = C([value_b])   
+    cond_as_const    = constant([flag])
+    value_a_as_const = constant([value_a])    
+    value_b_as_const = constant([value_b])   
 
     cond_as_input    = I([flag])
     value_a_as_input = I([value_a])

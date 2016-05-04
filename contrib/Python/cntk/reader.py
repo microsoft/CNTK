@@ -287,7 +287,7 @@ class LazyInputReader(object):
                 'you initalized LazyInputReader without valid batch data')
 
         self.batch = batch
-        if not node.is_input():
+        if not node._is_input():
             raise ValueError('LazyInputReader needs an input node')
 
         self.node = node
@@ -507,7 +507,7 @@ class InputMap(object):
         sample_sizes = collections.defaultdict(list)
         used_aliases = set()
         for node in self.unmapped_nodes:
-            assert node.is_input()
+            assert node._is_input()
             assert isinstance(node.reader, LazyInputReader)
             
             l = node.reader
