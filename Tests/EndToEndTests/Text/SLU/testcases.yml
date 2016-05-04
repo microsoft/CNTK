@@ -21,21 +21,21 @@ testCases:
 
   Epochs must be finished with expected results (validation set):
     patterns:
-      - "Finished Epoch[{{integer}} of {{integer}}]: [Validation Set]"
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErrPerSample = {{float,tolerance=0.001%}}
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Validate]"
+      - ce = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=0.001%}}
       
   Epochs must be finished with expected results (training set):
     patterns:
-      - "Finished Epoch[{{integer}} of {{integer}}]: [Training Set]"
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - TotalSamplesSeen = {{integer}}
-      - EvalErrPerSample = {{float,tolerance=0.001%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Training]"
+      - ce = {{float,tolerance=.1%}}
+      - totalSamplesSeen = {{integer}}
+      - err = {{float,tolerance=0.001%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch (with low train loss) training results must match:
     patterns:
       - Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - CrossEntropyWithSoftmax/Sample = {{float,tolerance=0.05}}
-      - Perplexity = {{float,tolerance=0.05}}
+      - " * {{integer}}; "
+      - ce = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.05}}

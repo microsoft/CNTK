@@ -7,9 +7,6 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="LUSequenceReader.cpp" />
     <ClCompile Include="LUSequenceParser.cpp" />
-    <ClCompile Include="..\..\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>

@@ -1,14 +1,14 @@
-Concepts
+﻿Concepts
 ========
 
 There is a common property in key machine learning models, such as deep neural
 networks (DNNs), convolutional neural networks (CNNs), and recurrent neural 
 networks (RNNs). All of these models can be described as *computational networks*.
 
-The directed edges of these *computational networks* are vectors, matrices, or in general n-dimensional 
-arrays (tensors) which represent input data and model parameters. The vertices 
-are *functions* (also called operations) that are performing a computation on 
-these input tensors. 
+The directed edges of these *computational networks* are vectors, matrices, or in 
+general n-dimensional arrays (tensors) which represent input data and model 
+parameters. The vertices are *functions* (also called operations) that are 
+performing a computation on these input tensors. 
 
 
 Tensors
@@ -55,8 +55,8 @@ Tensors are introduced in CNTK in one of three places:
   below for details.
 
 - **Parameters**: Parameters are weight tensors that make up the bulk of the 
-  actual model. Parameters are initialized using a constant (e.g. all 0's, randomly 
-  generated data, or initialized from a file) and are updated during 
+  actual model. Parameters are initialized using a constant (e.g. all 0's, 
+  randomly  generated data, or initialized from a file) and are updated during 
   *backpropagation* in a training run.
 
 - **Constants**: Constants are very similar to parameters, but they are not 
@@ -64,6 +64,18 @@ Tensors are introduced in CNTK in one of three places:
 
 All of these represent the *leaf nodes* in the network, or, in other words, the 
 input parameters of the function that the network represents.
+
+To introduce a tensor, simply use one of the methods in the cntk namespace. Once 
+introduced, overloaded operators can be applied to them to form an operator graph::
+
+  import cntk as C
+  x = C.input((2,3), name='features') # Input with shape [2,3,*]
+  c = C.constant(2)
+  w = C.parameter((2,3))         # Model parameter of shape [2,3], randomly initialized
+  op  = x * c                    # Elementwise product operation
+  op2 = x * 2                    # Same as above (2 will be converted to constant)
+  op3 = x * [[1,2],[3,4],[5,6]]  # Same as above (2 will be converted to constant)
+  
 
 Broadcasting
 ~~~~~~~~~~~~
@@ -86,7 +98,8 @@ Multi-dimensional arrays are often mapped to linear memory in a continous manner
 There is some freedom in which order to map the array elements.
 Two typical mappings are *row-major order* and *column-major order*.
 
-For two-dimensional arrays (matrices) with *row-major order*, consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
+For two-dimensional arrays (matrices) with *row-major order*, consecutive 
+elements of the rows of the array are contiguous in memory; in column-major order, 
 consecutive elements of the columns are contiguous.
 
 For example the matrix
@@ -101,30 +114,33 @@ For example the matrix
 
 is linearized as [1, 2, 3, 4, 5, 6] using row-major order, but as [1, 3, 5, 2, 4, 6] using column-major order.
 
-This concept extends to arrays of higher dimension than two: it is always about how a specific combination of index values is mapped to linear memory.
-If you go through elements in memory one by one and observe the corresponding tensor-indices 
-then in *row major order* the right-most index changes fastest, while in *column-major order* the leftmost index changes fastest. (see `<https://en.wikipedia.org/wiki/Row-major_order>`_ )
+This concept extends to arrays of higher dimension than two: it is always about 
+how a specific combination of index values is mapped to linear memory.
+If you go through elements in memory one by one and observe the corresponding 
+tensor-indices then in *row major order* the right-most index changes fastest, 
+while in *column-major order* the leftmost index changes fastest. (see 
+`<https://en.wikipedia.org/wiki/Row-major_order>`_ )
 
-In many programming languages like C or C#, row-major order is used. The same is true for the Python library NumPy (at least by default).
+In many programming languages like C or C#, row-major order is used. The same is 
+true for the Python library NumPy (at least by default).
 CNTK, however, uses column-major order.
 
 There are two circumstances where you have to be aware of this ordering:
 
-1. When preparing input-files for CNTK. The values have to be provided in column-major order.
+1. When preparing input-files for CNTK. The values have to be provided in 
+   column-major order.
 2. When changing the shape of a tensor. 
 
-
-
-    
 Computational Networks
 ----------------------
 
 Once the input tensors are defined, CNTK allows for building up descriptions of 
-the computations that are applied to it. These are translated into computational networks that describe the
-data flow as the data are transformed from input (leaf nodes) through computations, to one or 
-more output (root) nodes.
+the computations that are applied to it. These are translated into computational 
+networks that describe the data flow as the data are transformed from input (leaf 
+nodes) through computations, to one or more output (root) nodes.
 
-The Python API allows us to specify such a computational network. For example, a one-hidden-layer sigmoid neural network can be described as shown below::
+The Python API allows us to specify such a computational network. For example, a 
+one-hidden-layer sigmoid neural network can be described as shown below::
 
     from cntk import *
     # X is a data input, W1, W2, B are parameters
@@ -137,33 +153,41 @@ The Python API allows us to specify such a computational network. For example, a
        O = softmax(P2)  # Apply softmax column-wise to get output O
        return O
    
-   
-The function above is written using the Python API. It uses "@" as the infix 
-matrix multiplication operator, which has been introduced in Python 3.5. For 
-previous Python versions, the "times" function needs to be used instead: ``T1 
-= times(W1, X)``.
+The example uses "@" as the infix matrix multiplication operator, which has been 
+introduced in Python 3.5. For previous Python versions, the "times" function 
+needs to be used instead: ``T1 = times(W1, X)``.
 
 The above creates a computational network like the following:
 
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-1HiddenNN.png
 
-Here, ``X`` represents the input data as a tensor. During a training run, this would 
-contain, in aggregated form, all the input samples for a particular minibatch. 
-For the particular model this would have to be a two-dimensional tensor: the data 
-in the first dimension would represent the feature vector, the second would refer 
-to all the samples in the minibatch.
+Here, ``X`` represents the input data as a tensor. During a training run, this 
+would contain, in aggregated form, all the input samples for a particular 
+minibatch. For the particular model this would have to be a two-dimensional 
+tensor: the data in the first dimension would represent the feature vector, the 
+second would refer to all the samples in the minibatch.
 
-    Note: It is important to note that the above creates a network for *deferred 
+    Note: The above creates a network for *deferred 
     computation*. The inputs are symbolic descriptions of tensors, not the data 
     itself. As such the code above represents a higher-level function that 
     returns a "lambda" rather than performing a computation by
     itself.
+
+Of course, the above can also be written shorter::
+
+    def one_hidden_layer_nn(X, W1, W2, B1, B2):
+       L1 = sigmoid(W1 @ X + B)
+       L2 = W2 @ L1 + B2
+       return softmax(L2)  # Apply softmax column-wise to get output O
     
 Computational networks are flexible in several dimensions:
 
 - They can have more than one input (leaf node). This feature is used, for 
   example, to input features and labels on different inputs and model the loss 
-  function as part of the network.
+  function as part of the network. Note that CNTK doesn't apply a particular
+  semantics to any of the inputs - they're just tensors. The semantics only 
+  come in through markup of model output, training criterion, and evaluation 
+  criterion nodes. See below.
 
 - Inputs can be fed to several parts of the network. This allows for easily 
   modelling shared model parameters, as shown in the following:
@@ -182,32 +206,45 @@ Computational networks are flexible in several dimensions:
 Properties of Computation Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In CNTK the compuational nodes have a number of properties. Some of these can or must be set by the user.
+In CNTK the computational nodes have a number of properties. Some of these can or must be set by the user.
+
 - **name** - The symbolic name for the node. If left out, the name is assigned
   automatically to a numeric value.::
   
-    S1 = sigmoid(P1) # Elementwise sigmoid function
-    S1.name = 'S1'
-  
+    S1 = sigmoid(P1, name='S1') # Elementwise sigmoid function
+    S1.name = 'S1'              # Alternative way of assigning a name
   
   Assigning a name to a node is only necessary if it is the target of a loop. 
-  See below. Otherwise, it can also be used for debugging.
+  Otherwise, it can also be used for debugging.
   
-- **tag** - This is a string that is attached to the node and has to be set for certain nodes. The purpose is not 
-documentary but actually controls the behaviour of CNTK.
+- **tag** - This is a string that is attached to the node and has to be set for 
+  certain nodes. There purpouse is not documentary but controls the behaviour of 
+  CNTK. Namely, the SGD algorithm or output writers query the network for certain 
+  node tags to decide which nodes to treat as root nodes:
+
+    S1 = sigmoid(P1, name='S1') # Elementwise sigmoid function
+    S1.tag = 'output'
 
   The *tag*  property can have the following values that can be set by the user:
-- *criterion*  The output of such nodes as the optimisation criterion. See `Neural Net Training`_
-- *output*  The output of these nodes is written to the output.
-- *eval*  The output of these nodes are used for evaluation. They might e.g. provide the error rate of a classification problem.
+
+  - *criterion*  The output of such nodes as the optimisation criterion. See 
+    `Neural Net Training`_
+
+  - *output*  The output of these nodes is written of the output.
+
+  - *eval*  The output of these nodes are used of evaluation. They might e.g. 
+    provide the error rate of a classification problem.
   
 - **shape** - This is a derived property that is automatically inferred from the 
-  layout of the graph. 
+  layout of the graph. *The value of this property is currently only output on 
+  the stderr of a training run*.
   
-- **output** - At the moment every node has exactly one output. Thus, a computation
-  node can be used wherever a tensor is requested as an input.
-  
+- **output** - At the moment every node has exactly one output tensor. Thus, a 
+  computation
+  node can be used wherever a tensor is requested as an input. Therefore this is 
+  not exposed as a separate property.
 
+  
 Recurrent Networks
 ------------------
 
@@ -222,62 +259,76 @@ data.
 Dynamic Axes
 ~~~~~~~~~~~~
 
-**Some parts of this should be moved to an *internals* section**
-
 Every input tensor in CNTK receives an additional (implicit) dimension usually 
 referred to as "\*". This is called the *dynamic axis* of the input.
-For a non-sequential task, this axis is just used to read all samples of a 
-minibatch. Every operation that deals with inputs in the computational network
-is designed to deal with this extra axis and performs its operation in parallel
-on all instances within the minibatch. In addition, some nodes (in particular, 
-criterion nodes) also perform reductions on the minibatch axis.
+For a non-sequential task, this axis always has a length of 1 and thus reduces
+the behavior to that of any non-sequential machine learning tool. An example
+would be an image classification task, in which every image stands on its own.
+Nevertheless, in CNTK, a dynamic axis "*" will be printed, but it is benign.
 
-For tasks that have a dynamic dimension which is used for a recurrent network, 
-this axis is in addition used to model several distinct pieces of the training 
-setup which are hidden behind a single concept:
+For a task that involves sequences, input tensors (which are also often referred
+to as "samples") are concatenated along this axis, and every sequence may be
+of different length (hence the term "dynamic"). 
 
-  - An input can contain several entries on this axis, for a single work unit.
-    This manifests in the readers as several input samples sharing the same
-    work unit ID (also called sequence ID). This can be seen as an additional
-    tensor dimension which changes for every input unit.
-    
-  - CNTK tries to compute as many sequences in parallel as possible for a given 
-    minibatch. For this it puts all sequences of a minibatch in a rectangular 
-    structure called a *minibatch layout* and lays out parallel sequences in the y 
-    direction and the dynamic (time or sequence) dimension in the x direction. For
-    a network that describes a loop in the time dimension, this means that certain
-    computations need to be run in sequence over the x direction, while they
-    can run in parallel over the y direction.
-    To make the best use of parallelism, the width of the rectangular structure 
-    is that of the longest sequence.
-    
-  - Since sequences can be of different lengthes, the rectangular minibatch 
-    layout structure can have *gaps* with empty entries. To reduce the number of
-    gaps, CNTK can concatenate several sequences in the x direction, and will reset
-    the state of the sequence computation when a boundary is encountered.
+CNTK then manages all the intricate details of this: Loading dynamically sized
+tensors in memory in the best way possible such that the parallel computation on
+GPUs is maximized.
 
-In the model description, a specific dynamic axis is introduced by adding a 
-``dynamic_axis()`` node to the network and using it as an input argument to an 
-``input()`` node. The ``dynamic_axis()`` node thus acts as a "holder" for the layout
-information of the dynamic axis. As a consequence,
+In a CNTK model description, 
 
-- Every input can have its own dynamic axis 
+- every input can have its own dynamic axis 
 
-- Dynamic axes can be shared between inputs. In fact, the default behavior is 
-  that all inputs share the same dynamic axis definition. This makes it suitable
-  to run two types of tasks without any further declaration:
+- dynamic axes can be shared between inputs. In fact, the default behavior is 
+  that all inputs share the same dynamic axis definition called "\*". 
+  This makes it suitable to run two types of tasks without any further declaration:
   
   - tasks which do not have any sequence- or time dimension, such as a 
     classification task on static input data, image convolutions etc.
 
   - tasks where all inputs share the same sequence dimension, such as language 
     understanding or part-of-speech-tagging tasks
-      
+   
+A specific dynamic axis is introduced by adding a 
+``dynamic_axis()`` node to the network and using it as an input argument to an 
+``input()`` node. The ``dynamic_axis()`` node thus acts as a "holder" for the 
+layout information of the dynamic axis.    
+
+As an example, consider the following definition of inputs which comes from 
+the *sequence classification* example. Here, the features input contains 
+sequences which we want to classify by reading one label per sequence from
+the *labels* input::
+
+    t = C.dynamic_axis(name='t') 
+    features = C.input(vocab, dynamicAxis=t, name='features')     
+    labels = C.input(num_labels, name='labels') 
+
+These two inputs use two different dynamic axes, namely "\*" (the labels input)
+and a newly introduced one called "\t". At model verification time, CNTK now
+by default treats these two axes as incompatible, meaning that one could not 
+simply run operations on them that require the dimensions to be the same for 
+all elements.     
+
+Any operation that changes the cardinality of the dynamic axis introduces a new
+type. An example is a reduction operation that reduces the elements on this axis
+to 1. The output of this operation would have a new name assigned to the dynamic
+axis part.
+
+What if, as a user, we know that two dynamic axes actually *have* the same layout?
+In these cases, the check for equality needs to be moved from verification time
+to runtime. This is done using the ``reconcile_dynamic_axis()`` operation. It
+performs a check whether all elements on its first input have the same dimension
+on the dynamic axis as the second one and, if so, output the dynamic axis name
+of the second input.
+
+So, for the example above, a command like::
+
+    f2 = C.reconcile_dynamic_axis(labels, features)
+    
+would output a tensor shape for *labels* that is exactly that of its input, but
+with the dynamic axis name changed to 't' (that of the features input).
 
 Loops in Computational Networks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Some parts of this should be moved to an *internals* section**
 
 Different from the CN without a directed loop, a CN with a loop cannot be 
 computed for a sequence of samples as a batch since the next sample’s value 
@@ -294,6 +345,7 @@ operations. These connect the network to the output of a previous (or next) step
 on the dynamic axis. CNTK detects loops automatically that are created
 this way, and turns them into a forward or backward iteration along the dynamic
 axis.
+
 An example CN that contains a delay node is shown in the following figure.
 
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-WithDelayNode.png
@@ -310,12 +362,14 @@ participates in a loop *shares the dynamic axis with its input*. This way, a
 recurrent network like LSTM can output its hidden state, cell state etc., 
 unrolled over the time dimension.
 
+See the LSTM example how past_value is used to form recurrent loops.
+        
 Readers
 -------
 
 In CNTK, a data reader is a separate concept from the network itself. It is 
 called by the network training algorithm to provide information about the data,
-to load minibatches into memory, and to attach this memory to the input nodes in the network.
+to load minibatches into memory, and to attach this memory to the input nodes in 
 
 Readers are designed to be high performance to not become a bottlneck
 in GPU-heavy computations. They provide special facilities for
@@ -373,10 +427,19 @@ In order to set up a computational network for training, the following is needed
   The built-in criterion nodes currently output a scalar value which contains the
   aggregate loss over a minibatch. 
 
+- Optionally, an evaluation criterion node, which summarizes performance within
+  the training run.
+  
 - A training algorithm. Currently CNTK provides an implementation of SGD
   (stochastic gradient descent) with optional momentum. This means that gradients
   are computed and backpropagated once for every minibatch. The SGD implementation
-  offers an extensive number of options, e.g. for changing the learning rate over the
-  course of training, or for choosing algorithms for distributed computation
-  using data parallelism.
+  offers an extensive number of options, e.g. for changing the learning rate over
+  the course of training, or for choosing algorithms for distributed computation
+  using data parallelism. See the description of the SGDParams class for details.
 
+CNTK also provides several variants of data parallelism. These options are all 
+available, but are currently not exposed in the Python API. To use data 
+parallelism, please export the CNTK configuration file using the 
+DelayedExecutionContext and overlay it with one of the methods described here: 
+https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines
+  

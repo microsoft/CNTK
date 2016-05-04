@@ -1,1 +1,691 @@
-__COMPLETED__
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Simple.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu DeviceId=0 timestamping=true Simple_Demo_Train=[SGD=[maxEpochs=1]] Simple_Demo_Train=[SGD=[epochSize=100]] Simple_Demo_Train=[reader=[randomize=none]]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  3 2016 13:23:06
+		Last modified date: Mon Apr 18 00:00:12 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on LIANA-09-w
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+05/03/2016 14:07:20: -------------------------------------------------------------------
+05/03/2016 14:07:20: Build info: 
+
+05/03/2016 14:07:20: 		Built time: May  3 2016 13:23:06
+05/03/2016 14:07:20: 		Last modified date: Mon Apr 18 00:00:12 2016
+05/03/2016 14:07:20: 		Build type: Release
+05/03/2016 14:07:20: 		Build target: GPU
+05/03/2016 14:07:20: 		With 1bit-SGD: no
+05/03/2016 14:07:20: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 14:07:20: 		CUB_PATH: C:\src\cub-1.4.1
+05/03/2016 14:07:20: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 14:07:20: 		Build Branch: HEAD
+05/03/2016 14:07:20: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 14:07:20: 		Built by svcphil on LIANA-09-w
+05/03/2016 14:07:20: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 14:07:20: -------------------------------------------------------------------
+
+05/03/2016 14:07:20: Running on DPHAIM-25 at 2016/05/03 14:07:20
+05/03/2016 14:07:20: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Simple.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu  DeviceId=0  timestamping=true  Simple_Demo_Train=[SGD=[maxEpochs=1]]  Simple_Demo_Train=[SGD=[epochSize=100]]  Simple_Demo_Train=[reader=[randomize=none]]
+
+
+
+05/03/2016 14:07:20: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:07:20: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+deviceId = -1
+command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/simple.dnn"
+outputNodeNames = ScaledLogLikelihood
+Simple_Demo_Train = [
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25	
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/SimpleDataTrain.txt"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 1  
+        features = [
+dim = 2        
+start = 0      
+        ]
+        labels = [
+start = 2      
+dim = 1        
+labelDim = 2   
+            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        ]
+    ]
+]
+Simple_Demo_Test = [
+    action = "test"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        ]
+    ]
+]
+Simple_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "$DataDir$/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        ]
+    ]
+outputNodeNames = PosteriorProb : labels    
+outputPath = "$OutputDir$/SimpleOutput"     
+    format = [
+type = "category"                                
+labelMappingFile = "$DataDir$/SimpleMapping.txt" 
+sequenceEpilogue = "\t// %s\n"                   
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+DeviceId=0
+timestamping=true
+Simple_Demo_Train=[SGD=[maxEpochs=1]]
+Simple_Demo_Train=[SGD=[epochSize=100]]
+Simple_Demo_Train=[reader=[randomize=none]]
+
+05/03/2016 14:07:20: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 14:07:20: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:07:20: RootDir = ".."
+ConfigDir = "../Config"
+DataDir   = "../Data"
+OutputDir = "../Output"
+ModelDir  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models"
+deviceId = -1
+command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+precision = "float"
+traceLevel = 1
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models/simple.dnn"
+outputNodeNames = ScaledLogLikelihood
+Simple_Demo_Train = [
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25	
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain.txt"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 1  
+        features = [
+dim = 2        
+start = 0      
+        ]
+        labels = [
+start = 2      
+dim = 1        
+labelDim = 2   
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+]
+Simple_Demo_Test = [
+    action = "test"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+]
+Simple_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+outputNodeNames = PosteriorProb : labels    
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/SimpleOutput"     
+    format = [
+type = "category"                                
+labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt" 
+sequenceEpilogue = "\t// %s\n"                   
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+DeviceId=0
+timestamping=true
+Simple_Demo_Train=[SGD=[maxEpochs=1]]
+Simple_Demo_Train=[SGD=[epochSize=100]]
+Simple_Demo_Train=[reader=[randomize=none]]
+
+05/03/2016 14:07:20: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 14:07:20: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: Simple.cntk:command=Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+configparameters: Simple.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+configparameters: Simple.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+configparameters: Simple.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+configparameters: Simple.cntk:deviceId=0
+configparameters: Simple.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models
+configparameters: Simple.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models/simple.dnn
+configparameters: Simple.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+configparameters: Simple.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Simple.cntk:precision=float
+configparameters: Simple.cntk:RootDir=..
+configparameters: Simple.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu
+configparameters: Simple.cntk:Simple_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+outputNodeNames = PosteriorProb : labels    
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/SimpleOutput"     
+    format = [
+type = "category"                                
+labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt" 
+sequenceEpilogue = "\t// %s\n"                   
+    ]
+]
+
+configparameters: Simple.cntk:Simple_Demo_Test=[
+    action = "test"
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt"
+        randomize = "none"
+        features = [
+            dim = 2
+            start = 0
+        ]
+        labels = [
+            start = 2
+            dim = 1
+            labelDim = 2
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+]
+
+configparameters: Simple.cntk:Simple_Demo_Train=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25	
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+    ]
+    reader = [
+        readerType = "UCIFastReader"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain.txt"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 1  
+        features = [
+dim = 2        
+start = 0      
+        ]
+        labels = [
+start = 2      
+dim = 1        
+labelDim = 2   
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt"
+        ]
+    ]
+] [SGD=[maxEpochs=1]] [SGD=[epochSize=100]] [reader=[randomize=none]]
+
+configparameters: Simple.cntk:timestamping=true
+configparameters: Simple.cntk:traceLevel=1
+05/03/2016 14:07:20: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:07:20: Commands: Simple_Demo_Train Simple_Demo_Test Simple_Demo_Output
+05/03/2016 14:07:20: Precision = "float"
+05/03/2016 14:07:20: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models/simple.dnn
+05/03/2016 14:07:20: CNTKCommandTrainInfo: Simple_Demo_Train : 1
+05/03/2016 14:07:20: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+
+05/03/2016 14:07:20: ##############################################################################
+05/03/2016 14:07:20: #                                                                            #
+05/03/2016 14:07:20: # Action "train"                                                             #
+05/03/2016 14:07:20: #                                                                            #
+05/03/2016 14:07:20: ##############################################################################
+
+05/03/2016 14:07:20: CNTKCommandTrainBegin: Simple_Demo_Train
+SimpleNetworkBuilder Using GPU 0
+Reading UCI file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain.txt
+
+05/03/2016 14:07:20: Creating virgin network.
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *], [2], [2] -> [2 x *]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *] -> [50 x *]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *] -> [50 x 1 x *]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *] -> [2 x 1 x *]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *], [2 x 1] -> [2 x 1 x *]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *] -> [2 x 1 x *]
+Validating --> Prior = Mean (labels) : [2 x *] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *], [2] -> [2 x 1 x *]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+05/03/2016 14:07:21: Created model with 25 nodes on GPU 0.
+
+05/03/2016 14:07:21: Training criterion node(s):
+05/03/2016 14:07:21: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+05/03/2016 14:07:21: Evaluation criterion node(s):
+
+05/03/2016 14:07:21: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[EvalErrorPrediction Gradient[1]] [InvStdOfFeatures Gradient[2]] [LogOfPrior Gradient[2]] [MVNormalizedFeatures Gradient[2 x *]] [MeanOfFeatures Gradient[2]] [PosteriorProb Gradient[2 x 1 x *]] [PosteriorProb Value[2 x 1 x *]] [Prior Gradient[2]] [ScaledLogLikelihood Gradient[2 x 1 x *]] [features Gradient[2 x *]] [labels Gradient[2 x *]] }
+000000AD0F9722F0: {[features Value[2 x *]] }
+000000AD26AFE310: {[B1 Value[50 x 1]] }
+000000AD26AFE4F0: {[B0 Value[50 x 1]] }
+000000AD26AFEA90: {[InvStdOfFeatures Value[2]] }
+000000AD26AFF8F0: {[MeanOfFeatures Value[2]] }
+000000AD26AFFA30: {[W0 Value[50 x 2]] }
+000000AD26AFFAD0: {[W1 Value[50 x 50]] }
+000000AD26AFFCB0: {[W2 Value[2 x 50]] }
+000000AD26AFFDF0: {[B2 Value[2 x 1]] }
+000000AD2993AF00: {[Prior Value[2]] }
+000000AD2993B040: {[H1 Value[50 x 1 x *]] [W0*features Gradient[50 x *]] }
+000000AD2993B220: {[labels Value[2 x *]] }
+000000AD2993B2C0: {[W0 Gradient[50 x 2]] [W0*features+B0 Value[50 x 1 x *]] }
+000000AD2993B540: {[W0*features+B0 Gradient[50 x 1 x *]] [W1*H1 Value[50 x 1 x *]] }
+000000AD2993B720: {[HLast Value[2 x 1 x *]] [W2 Gradient[2 x 50]] }
+000000AD2993B7C0: {[B1 Gradient[50 x 1]] [H2 Gradient[50 x 1 x *]] [HLast Gradient[2 x 1 x *]] }
+000000AD2993B9A0: {[B0 Gradient[50 x 1]] [H1 Gradient[50 x 1 x *]] [W1*H1+B1 Gradient[50 x 1 x *]] [W2*H1 Value[2 x 1 x *]] }
+000000AD2993BB80: {[EvalErrorPrediction Value[1]] }
+000000AD2993BFE0: {[H2 Value[50 x 1 x *]] [W1*H1 Gradient[50 x 1 x *]] }
+000000AD2993C440: {[LogOfPrior Value[2]] }
+000000AD2993C4E0: {[CrossEntropyWithSoftmax Gradient[1]] }
+000000AD2993C6C0: {[CrossEntropyWithSoftmax Value[1]] }
+000000AD2993C760: {[W0*features Value[50 x *]] }
+000000AD2993C8A0: {[ScaledLogLikelihood Value[2 x 1 x *]] }
+000000AD2993C940: {[W1 Gradient[50 x 50]] [W1*H1+B1 Value[50 x 1 x *]] }
+000000AD2993CB20: {[B2 Gradient[2 x 1]] }
+000000AD2993CBC0: {[MVNormalizedFeatures Value[2 x *]] }
+000000AD2993CC60: {[W2*H1 Gradient[2 x 1 x *]] }
+
+
+05/03/2016 14:07:21: Precomputing --> 3 PreCompute nodes found.
+
+05/03/2016 14:07:21: 	MeanOfFeatures = Mean()
+05/03/2016 14:07:21: 	InvStdOfFeatures = InvStdDev()
+05/03/2016 14:07:21: 	Prior = Mean()
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 10000 records found.
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+
+05/03/2016 14:07:21: Precomputing --> Completed.
+
+
+05/03/2016 14:07:21: Starting Epoch 1: learning rate per sample = 0.020000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+
+05/03/2016 14:07:21: Starting minibatch loop.
+05/03/2016 14:07:21: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 0.70211647 * 100; EvalErrorPrediction = 0.55000000 * 100; totalSamplesSeen = 100; learningRatePerSample = 0.02; epochTime=0.005591s
+05/03/2016 14:07:21: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/Models/simple.dnn'
+05/03/2016 14:07:21: CNTKCommandTrainEnd: Simple_Demo_Train
+
+05/03/2016 14:07:21: Action "train" complete.
+
+
+05/03/2016 14:07:21: ##############################################################################
+05/03/2016 14:07:21: #                                                                            #
+05/03/2016 14:07:21: # Action "test"                                                              #
+05/03/2016 14:07:21: #                                                                            #
+05/03/2016 14:07:21: ##############################################################################
+
+Reading UCI file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *1]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *1]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *1] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *1] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *1], [2], [2] -> [2 x *1]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *1] -> [50 x *1]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *1] -> [2 x 1 x *1]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *1], [2 x 1] -> [2 x 1 x *1]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *1] -> [2 x 1 x *1]
+Validating --> Prior = Mean (labels) : [2 x *1] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *1], [2] -> [2 x 1 x *1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[B0 Gradient[50 x 1]] [B1 Gradient[50 x 1]] [B2 Gradient[2 x 1]] [CrossEntropyWithSoftmax Gradient[1]] [EvalErrorPrediction Gradient[1]] [H1 Gradient[50 x 1 x *1]] [H2 Gradient[50 x 1 x *1]] [HLast Gradient[2 x 1 x *1]] [InvStdOfFeatures Gradient[2]] [LogOfPrior Gradient[2]] [MVNormalizedFeatures Gradient[2 x *1]] [MeanOfFeatures Gradient[2]] [PosteriorProb Gradient[2 x 1 x *1]] [PosteriorProb Value[2 x 1 x *1]] [Prior Gradient[2]] [ScaledLogLikelihood Gradient[2 x 1 x *1]] [ScaledLogLikelihood Value[2 x 1 x *1]] [W0 Gradient[50 x 2]] [W0*features Gradient[50 x *1]] [W0*features+B0 Gradient[50 x 1 x *1]] [W1 Gradient[50 x 50]] [W1*H1 Gradient[50 x 1 x *1]] [W1*H1+B1 Gradient[50 x 1 x *1]] [W2 Gradient[2 x 50]] [W2*H1 Gradient[2 x 1 x *1]] [features Gradient[2 x *1]] [labels Gradient[2 x *1]] }
+000000AD2993AE60: {[MVNormalizedFeatures Value[2 x *1]] }
+000000AD2993AF00: {[W1*H1+B1 Value[50 x 1 x *1]] }
+000000AD2993B680: {[W2 Value[2 x 50]] }
+000000AD2993B860: {[EvalErrorPrediction Value[1]] }
+000000AD2993B9A0: {[H1 Value[50 x 1 x *1]] }
+000000AD2993BB80: {[W1*H1 Value[50 x 1 x *1]] }
+000000AD2993BEA0: {[HLast Value[2 x 1 x *1]] }
+000000AD2993C3A0: {[H2 Value[50 x 1 x *1]] }
+000000AD2993C580: {[W0*features+B0 Value[50 x 1 x *1]] }
+000000AD2993C760: {[W2*H1 Value[2 x 1 x *1]] }
+000000AD2993CA80: {[LogOfPrior Value[2]] }
+000000AD2993CB20: {[W0*features Value[50 x *1]] }
+000000AD2993CC60: {[CrossEntropyWithSoftmax Value[1]] }
+000000AD2D84BE60: {[B0 Value[50 x 1]] }
+000000AD2D84C540: {[W0 Value[50 x 2]] }
+000000AD2D84C7C0: {[MeanOfFeatures Value[2]] }
+000000AD2D84C9A0: {[Prior Value[2]] }
+000000AD2D84CB80: {[W1 Value[50 x 50]] }
+000000AD2D84D080: {[B2 Value[2 x 1]] }
+000000AD2D84D300: {[features Value[2 x *1]] }
+000000AD2D84D4E0: {[InvStdOfFeatures Value[2]] }
+000000AD2D84DB20: {[labels Value[2 x *1]] }
+000000AD2D84DBC0: {[B1 Value[50 x 1]] }
+
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 603 records found.
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+05/03/2016 14:07:22: Final Results: Minibatch[1-1]: EvalErrorPrediction = 0.53233831 * 603; CrossEntropyWithSoftmax = 0.69392924 * 603; perplexity = 2.00156473
+
+05/03/2016 14:07:22: Action "test" complete.
+
+
+05/03/2016 14:07:22: ##############################################################################
+05/03/2016 14:07:22: #                                                                            #
+05/03/2016 14:07:22: # Action "write"                                                             #
+05/03/2016 14:07:22: #                                                                            #
+05/03/2016 14:07:22: ##############################################################################
+
+Reading UCI file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest.txt
+
+Post-processing network...
+
+8 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+	labels = InputValue()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *2]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *2]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *2] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *2] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *2], [2], [2] -> [2 x *2]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *2] -> [50 x *2]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *2] -> [2 x 1 x *2]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *2], [2 x 1] -> [2 x 1 x *2]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *2] -> [2 x 1 x *2]
+Validating --> Prior = Mean (labels) : [2 x *2] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *2], [2] -> [2 x 1 x *2]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[B0 Gradient[50 x 1]] [B1 Gradient[50 x 1]] [B2 Gradient[2 x 1]] [CrossEntropyWithSoftmax Gradient[1]] [CrossEntropyWithSoftmax Value[1]] [EvalErrorPrediction Gradient[1]] [EvalErrorPrediction Value[1]] [H1 Gradient[50 x 1 x *2]] [H2 Gradient[50 x 1 x *2]] [HLast Gradient[2 x 1 x *2]] [InvStdOfFeatures Gradient[2]] [LogOfPrior Gradient[2]] [MVNormalizedFeatures Gradient[2 x *2]] [MeanOfFeatures Gradient[2]] [PosteriorProb Gradient[2 x 1 x *2]] [Prior Gradient[2]] [ScaledLogLikelihood Gradient[2 x 1 x *2]] [ScaledLogLikelihood Value[2 x 1 x *2]] [W0 Gradient[50 x 2]] [W0*features Gradient[50 x *2]] [W0*features+B0 Gradient[50 x 1 x *2]] [W1 Gradient[50 x 50]] [W1*H1 Gradient[50 x 1 x *2]] [W1*H1+B1 Gradient[50 x 1 x *2]] [W2 Gradient[2 x 50]] [W2*H1 Gradient[2 x 1 x *2]] [features Gradient[2 x *2]] [labels Gradient[2 x *2]] }
+000000AD2993B040: {[Prior Value[2]] }
+000000AD2993B180: {[B2 Value[2 x 1]] }
+000000AD2993B2C0: {[W2 Value[2 x 50]] }
+000000AD2993B400: {[features Value[2 x *2]] }
+000000AD2993B680: {[InvStdOfFeatures Value[2]] }
+000000AD2993B720: {[MeanOfFeatures Value[2]] }
+000000AD2993B860: {[B0 Value[50 x 1]] }
+000000AD2993BB80: {[B1 Value[50 x 1]] }
+000000AD2993BCC0: {[labels Value[2 x *2]] }
+000000AD2993C9E0: {[W0 Value[50 x 2]] }
+000000AD2993CA80: {[W1 Value[50 x 50]] }
+000000AD2D84C220: {[W1*H1+B1 Value[50 x 1 x *2]] }
+000000AD2D84C400: {[MVNormalizedFeatures Value[2 x *2]] }
+000000AD2D84C720: {[H1 Value[50 x 1 x *2]] }
+000000AD2D84CB80: {[W2*H1 Value[2 x 1 x *2]] }
+000000AD2D84D080: {[W0*features Value[50 x *2]] }
+000000AD2D84D1C0: {[HLast Value[2 x 1 x *2]] }
+000000AD2D84D3A0: {[W0*features+B0 Value[50 x 1 x *2]] }
+000000AD2D84D620: {[PosteriorProb Value[2 x 1 x *2]] }
+000000AD2D84D6C0: {[H2 Value[50 x 1 x *2]] }
+000000AD2D84D8A0: {[LogOfPrior Value[2]] }
+000000AD2D84DBC0: {[W1*H1 Value[50 x 1 x *2]] }
+
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 603 records found.
+starting epoch 0 at record count 0, and file position 0
+already there from last epoch
+Minibatch[0]: ActualMBSize = 603
+Written to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Other\Simple2d_Simple@release_gpu/SimpleOutput*
+Total Samples Evaluated = 603
+
+05/03/2016 14:07:22: Action "write" complete.
+
+05/03/2016 14:07:22: __COMPLETED__

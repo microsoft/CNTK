@@ -31,4 +31,5 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
     *preader = new ReaderShim<double>(factory);
 }
-} } }
+
+}}}

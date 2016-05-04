@@ -40,6 +40,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="Bundler.h" />
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="DataDeserializerBase.h" />

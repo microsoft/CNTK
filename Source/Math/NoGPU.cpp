@@ -77,6 +77,18 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
 {
 }
 
+#if 0
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& denseMatrix)
+{
+}
+#endif
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& denseMatrix)
+{
+}
+
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 {
@@ -84,11 +96,6 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
-{
-}
-
-template <class ElemType>
-void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom)
 {
 }
 
@@ -447,6 +454,10 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 {
     GPUSparseMatrix<ElemType> a(0);
     return a;
+}
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
+{
 }
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
@@ -980,10 +991,26 @@ template <class ElemType>
 void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
 {
 }
+#if 0
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
+void GPUMatrix<ElemType>::SetValue(CPUMatrix<ElemType> const&)
 {
 }
+#endif
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(GPUMatrix<ElemType> const&)
+{
+}
+#if 0
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(CPUSparseMatrix<ElemType> const&)
+{
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&)
+{
+}
+#endif
 
 template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)

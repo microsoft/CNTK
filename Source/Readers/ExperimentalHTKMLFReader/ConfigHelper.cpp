@@ -107,7 +107,7 @@ void ConfigHelper::GetDataNamesFromConfig(
     }
 }
 
-ElementType ConfigHelper::GetElementType()
+ElementType ConfigHelper::GetElementType() const
 {
     string precision = m_config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
@@ -148,7 +148,7 @@ size_t ConfigHelper::GetLabelDimension()
     InvalidArgument("Labels must specify dimension: 'dim/labelDim' property is missing.");
 }
 
-vector<wstring> ConfigHelper::GetMlfPaths()
+vector<wstring> ConfigHelper::GetMlfPaths() const
 {
     vector<wstring> result;
     if (m_config.ExistsCurrent(L"mlfFile"))

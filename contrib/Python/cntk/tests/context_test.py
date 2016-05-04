@@ -99,11 +99,11 @@ def test_parse_eval_result_output_2():
 
 def test_parse_test_result_output():
     output = '''\
-Final Results: Minibatch[1-1]: SamplesSeen = 500    v8: SquareError/Sample = 13.779223    v7: CrossEntropyWithSoftmax/Sample = 0.20016696    Perplexity = 1.2216067   '''
+Final Results: Minibatch[1-1]: eval_node = 2.77790430 * 500; crit_node = 0.44370050 * 500; perplexity = 1.55846366
+'''
     result = LocalExecutionContext._parse_test_result(output)
 
-    assert result['SamplesSeen'] == 500
-    assert result['Perplexity'] == 1.2216067
-    assert result['v8'] == 13.779223
-    assert result['v7'] == 0.20016696
-    assert len(result) == 4
+    assert result['perplexity'] == 1.55846366
+    assert result['eval_node'] == 2.77790430
+    assert result['crit_node'] == 0.44370050
+    assert len(result) == 3

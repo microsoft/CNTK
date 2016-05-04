@@ -411,7 +411,7 @@ public:
     bool DataEnd() override;
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
-    size_t GetNumParallelSequences() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?
+    size_t GetNumParallelSequencesForFixingBPTTMode() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?
 
     // TODO: what are these?
     //bool RequireSentenceSeg() const override { return true; }

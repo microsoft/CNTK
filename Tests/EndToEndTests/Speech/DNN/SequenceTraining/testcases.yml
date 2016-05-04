@@ -20,13 +20,13 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErrPerSample = {{float,tolerance=.25%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - ce = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=.25%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=.2%}}
+      - " * {{integer}}; "
+      - ce = {{float,tolerance=.2%}}
 

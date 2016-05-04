@@ -31,10 +31,13 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
 {
     Base::CopyTo(nodeP, newName, flags);
-    auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-    node->m_axis      = m_axis;
-    node->m_operation = m_operation;
-    node->m_op        = m_op;
+    if (flags & CopyNodeFlags::copyNodeValue)
+    {
+        auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
+        node->m_axis      = m_axis;
+        node->m_operation = m_operation;
+        node->m_op        = m_op;
+    }
 }
 
 template <class ElemType>
@@ -60,7 +63,7 @@ template <class ElemType>
     auto result =           ValueTensorFor(rank, fr);
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
-    // the actual operation is a Copy with a reduction op
+    // the actual operation is a Copy with reduction, where the magic is in the reduction op
     result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
     // note: we can implement "Mean" by passing 1/dim for alpha
 }
@@ -79,7 +82,7 @@ template <class ElemType>
     switch (m_op)
     {
     case ElementWiseOperator::opSum:
-        // "Plus": broadcast the gradient
+        // "Sum": broadcast the gradient
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
@@ -121,9 +124,13 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
+#if 1 // legacy with initial experiments, delete this soon
     if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    else
+#endif
+    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Plus'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>

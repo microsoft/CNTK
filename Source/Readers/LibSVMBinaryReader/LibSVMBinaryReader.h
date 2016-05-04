@@ -34,6 +34,15 @@ private:
     std::deque<T> d_queue;
 
 public:
+    void release()
+    {
+        while (!d_queue.empty())
+            free(d_queue.pop_front());
+    }
+    size_t size()
+    {
+        return d_queue.size();
+    }
     void push(T const& value)
     {
         {
@@ -267,7 +276,7 @@ public:
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/){NOT_IMPLEMENTED};
     virtual bool DataEnd();
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_pMBLayout->GetNumParallelSequences();
     }
