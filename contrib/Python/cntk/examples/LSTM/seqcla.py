@@ -146,7 +146,7 @@ def seqcla():
         acc = calc_accuracy(train_file, ctx.output_filename_base)
         
         # and test for the same number...
-        TOLERANCE_ABSOLUTE = 1E-06
+        TOLERANCE_ABSOLUTE = 1E-02
         assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
 
 """
