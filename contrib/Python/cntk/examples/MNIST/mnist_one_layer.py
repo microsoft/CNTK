@@ -20,16 +20,16 @@ import cntk as C
 
 
 def add_dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim), init_value_scale=param_scale)
-    b = C.parameter((out_dim, 1), init_value_scale=param_scale)
+    W = C.parameter((out_dim, in_dim)) * param_scale
+    b = C.parameter((out_dim, 1)) * param_scale
     t = C.times(W, x)
     z = C.plus(t, b)
     return C.sigmoid(z)
 
 
 def add_dnn_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim), init_value_scale=param_scale)
-    b = C.parameter((out_dim, 1), init_value_scale=param_scale)
+    W = C.parameter((out_dim, in_dim)) * param_scale
+    b = C.parameter((out_dim, 1)) * param_scale
     t = C.times(W, x)
     return C.plus(t, b)
 
@@ -89,7 +89,7 @@ def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
          return result
 
 
-def test_mnist_onelayer_from_file():
+def _test_mnist_onelayer_from_file():
     result = train_eval_mnist_onelayer_from_file('crit_node', 'eval_node')
 
     TOLERANCE_ABSOLUTE = 1E-06
