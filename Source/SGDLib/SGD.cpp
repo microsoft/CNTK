@@ -645,21 +645,21 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             m_mpi->WaitAll();
         }
 
-        // persist model and check-point info
+        // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
             if (loadedPrevModel)
             {
-                //if previous best model is loaded, we will first remove epochs that lead to worse results
+                // If previous best model is loaded, we will first remove epochs that lead to worse results
                 for (int j = 1; j < m_learnRateAdjustInterval; j++)
                 {
                     int epochToDelete = i - j;
-                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d\n", epochToDelete+1);  // report 1 based epoch number
+                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %d\n", epochToDelete + 1, (i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
                     _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
                     _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
                 }
 
-                //set i back to the loaded model
+                // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
                 LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
@@ -689,6 +689,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                     }
                 }
+            }
+        }
+        else
+        {
+            if (loadedPrevModel)
+            {
+                // Set i back to the loaded model
+                i -= m_learnRateAdjustInterval;
             }
         }
 
