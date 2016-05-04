@@ -3,7 +3,7 @@ Concepts
 
 There is a common property in key machine learning models, such as deep neural
 networks (DNNs), convolutional neural networks (CNNs), and recurrent neural 
-networks (RNNs). All these models can be described as *computational networks*.
+networks (RNNs). All of these models can be described as *computational networks*.
 
 The directed edges of these *computational networks* are vectors, matrices, or in general n-dimensional 
 arrays (tensors) which represent input data and model parameters. The vertices 
@@ -17,8 +17,8 @@ Tensors
 The underlying data structure in CNTK is that of a *tensor*. It is a 
 multidimensional array on which computations can be performed. Every dimension in 
 these arrays is referred to as an *axis* to distinguish it from the scalar size 
-of every axis. So, a matrix has two *axes* which have both a certain 
-*dimension* corresponding to the number of rows and clumns of the *axes*. 
+of every axis. So, a matrix has two *axes* which both have a certain 
+*dimension* corresponding to the number of rows and columns of the *axes*. 
 
 Using tensors makes the framework generic in that it can be used e.g. for 
 classification problems where the inputs are vectors, black-and-white 
@@ -40,7 +40,7 @@ for r, g, and b) or videos (has an extra time dimension).
 
 - Tensors come either in *dense* or *sparse* form. Sparse tensors should be used
   whenever the bulk of its values are 0. The Python API currently doesn't expose
-  sparse tensors; This will be added in the next release.
+  sparse tensors; this will be added in the next release.
 
   
 Usages of Tensors
@@ -86,7 +86,7 @@ Multi-dimensional arrays are often mapped to linear memory in a continous manner
 There is some freedom in which order to map the array elements.
 Two typical mappings are *row-major order* and *column-major order*.
 
-For two dimensional arrays (matrices) with *row-major order* consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
+For two-dimensional arrays (matrices) with *row-major order*, consecutive elements of the rows of the array are contiguous in memory; in column-major order, 
 consecutive elements of the columns are contiguous.
 
 For example the matrix
@@ -101,17 +101,17 @@ For example the matrix
 
 is linearized as [1, 2, 3, 4, 5, 6] using row-major order, but as [1, 3, 5, 2, 4, 6] using column-major order.
 
-This concept extends to arrays of higher dimension than two: It is always about how a specific combination of index values is mapped to linear memory.
-If you go the elements in memory one by one and observe the corresponding tensor-indices 
+This concept extends to arrays of higher dimension than two: it is always about how a specific combination of index values is mapped to linear memory.
+If you go through elements in memory one by one and observe the corresponding tensor-indices 
 then in *row major order* the right-most index changes fastest, while in *column-major order* the leftmost index changes fastest. (see `<https://en.wikipedia.org/wiki/Row-major_order>`_ )
 
-In many programming languages like C, or C# row-major order is used. The same is true for the Python library NumPy (at least by default).
-CNTK however uses column-major order.
+In many programming languages like C or C#, row-major order is used. The same is true for the Python library NumPy (at least by default).
+CNTK, however, uses column-major order.
 
 There are two circumstances where you have to be aware of this ordering:
 
-- When preparing input-files for CNTK. The values have to be provided in column-major order.
-- When changing the shape of a tensor. 
+1. When preparing input-files for CNTK. The values have to be provided in column-major order.
+2. When changing the shape of a tensor. 
 
 
 
