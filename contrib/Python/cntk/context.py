@@ -551,41 +551,28 @@ class LocalExecutionContext(AbstractContext):
 
         return list_of_tensors
 
-    _TEST_RESULT_REGEX = re.compile(
-        '(?P<name>[^:]+): [^=]+ = (?P<number>[0-9.]+)')
+    _FINAL_RESULTS_REGEX = re.compile(
+            'Final Results: Minibatch\[.*?\]: (?P<results>.*)')
 
     @staticmethod
     def _parse_test_result(output):
         result = {}
 
-        PREAMPLE = 'Final Results: Minibatch[1-1]: '
+        final_results = None
         for line in output.splitlines():
 
-            if not line.startswith(PREAMPLE):
-                continue
+            fo = LocalExecutionContext._FINAL_RESULTS_REGEX.match(line)
+            if fo:
+                final_results = fo.group('results')
 
-            line = line[len(PREAMPLE):]
+        parts = [p.strip() for p in final_results.split(';')]
 
-            if not line.startswith('SamplesSeen = '):
-                raise ValueError('expected SamplesSeen but got "%s"' % line)
+        for p in parts:
+            k, v = p.split('=')
+            if '*' in v:
+                v = v.split('*')[0].strip()
 
-            line = line[len('SamplesSeen = '):]
-            number_ends = line.index(' ')
-            result['SamplesSeen'] = int(line[:number_ends])
-            line = line[number_ends:]
-
-            perplexity_idx = line.index('Perplexity = ')
-            result['Perplexity'] = float(
-                line[perplexity_idx + len('Perplexity = '):])
-
-            line = line[:perplexity_idx]
-
-            mo = LocalExecutionContext._TEST_RESULT_REGEX.match(line)
-            while mo:
-                result[mo.group('name').strip()] = float(
-                    mo.group('number').strip())
-                line = line[mo.span()[1]:]
-                mo = LocalExecutionContext._TEST_RESULT_REGEX.match(line)
+            result[k.strip()] = float(v)
 
         return result
 
