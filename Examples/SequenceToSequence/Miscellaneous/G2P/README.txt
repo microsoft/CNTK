@@ -2,7 +2,7 @@
 This example demonstrates the use of CNTK for letter-to-sound converstion using a
 sequence-to-sequence model with attention.
 
-Unfortunately, the data is not public. This shall be addressed in a future update.
+This example uses the CMUDict as a corpus. The data or a conversion script will be included soon.
 
 To Use:
 =======

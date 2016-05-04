@@ -586,44 +586,54 @@ RNNs =
 
     # helper function to delay h and c
     # Callers can provide their own, e.g. useful for beam decoding.
-    PreviousHC (lstmState) = [
+    PreviousHC (lstmState, layerIndex=0) = [
        h = Loop.Previous (lstmState.h)         // hidden state(t-1)
        c = Loop.Previous (lstmState.c)         // cell(t-1)
        dim = lstmState.dim
     ]
 
     # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
-    NextHC (lstmState) = [
+    NextHC (lstmState, layerIndex=0) = [
        h = Loop.Next (lstmState.h)             // hidden state(t-1)
        c = Loop.Next (lstmState.c)             // cell(t-1)
        dim = lstmState.dim
     ]
 
+    NoAuxInputHook (input, lstmState) = Constants.None
+
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
     # It returns a record (h,c). To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
-
     RecurrentLSTMP (outputDim/*h.dim*/, cellDim=outputDim,
                     x, inputDim=x.dim,
                     previousHook=BS.RNNs.PreviousHC,
-                    augmentInputHook=[NoAuxInputHook (input, lstmState) = Constants.None].NoAuxInputHook, augmentInputDim=0,
+                    augmentInputHook=NoAuxInputHook, augmentInputDim=0,
+                    layerIndex=0,
                     enableSelfStabilization=false) =
     [
-        prevState = previousHook (lstmState)        # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
+        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim ; inputDim1 = inputDim ; layerIndex1 = layerIndex # workaround
+
+        prevState = previousHook (lstmState, layerIndex=layerIndex1) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
         auxInput = augmentInputHook(x, prevState)   # optionally augment input. Constants.None if none.
 
-        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim ; inputDim1 = inputDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
         lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, aux=auxInput, auxDim=augmentInputDim, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
-    RecurrentLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
-        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
+    RecurrentLSTMPStack (layerDims, cellDims=layerDims,
+                         input, inputDim=input.dim,
+                         previousHook=PreviousHC,
+                         augmentInputHook=NoAuxInputHook, augmentInputDim=0,
+                         enableSelfStabilization=false) =
+    [
+        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization ; augmentInputHook1 = augmentInputHook ; augmentInputDim1 = augmentInputDim
         layers[i:0..Length (layerDims)-1] =
             RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
-                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layerDims[i-1] /*TODO: layers[i-1].dim*/,
+                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
                             previousHook=previousHook1,
+                            augmentInputHook=if i == 0 then augmentInputHook1 else NoAuxInputHook, augmentInputDim=if i == 0 then augmentInputDim1 else 0,
+                            layerIndex=i,
                             enableSelfStabilization=useStabilizer)
     ].layers
 
@@ -638,10 +648,12 @@ RNNs =
             fwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
                                   v, inputDim=vDim,
                                   previousHook=previousHook1,
+                                  layerIndex=i,
                                   enableSelfStabilization=useStabilizer)
             bwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
                                   v, inputDim=vDim,
                                   previousHook=nextHook1,
+                                  layerIndex=i,
                                   enableSelfStabilization=useStabilizer)
             h = Splice ((fwd.h : bwd.h), axis=1)
             c = Splice ((fwd.c : bwd.c), axis=1)

@@ -23,52 +23,27 @@ command = train
 makeMode = false
 
 # experiment id
-
-# 30-0: switching back to LMSequenceReader, trying to recreate the old settings that worked
-# 30-1: dumping all sequences with a small model, to test reader
-# 30-2: fixed #samples for momentum calculation
-# 30-3: after 'aux' input to LSTMP, in prep for more correct stabiliziation
-# 30-4: same as 30-5 but move to new folder and reenabled memsharing
-# 30-5: same as 29-5 but rerun with logging of stabilizers
-# 29-3: same as 29-5, repro test
-# 29-5: same as 29-4 but right-to-left encoder
-# 29-4: trying once more with new reader, MB size 70, LR changed to 0.0035,then 0.002; shared stab weights in LSTMP
-# 29-2: switched to new reader again, emulating 69-dim outputs  --gives comparable 'ce', but not comparable convergence; SOME att weights are totally flat
-# 29-1: same as 29-0 but also switched back to 128 MBSize  --also GLITCH??
-# 29-0: switched back to old reader   --not quite the same :( what am I missing?
-# 28-5: like 28-4 but using default axis for labels  --minor glitch, got worse
-# 28-4: like 28-3 but with momentum changed from 2500 to 1250 (since applied to different #samples)  --GLITCH
-# 28-3: like 28-2 but with randomization enabled
-# 28-2: like 28-0 but after yet another reader fix   --GLITCH
-# 28-1: like 28-0 but halving the MB size--CNTKTextFormatReader interprets the length differently
-# 28-0: CNTK reader after data-format fix
-# 27-5: trying CNTK reader again after Ryan's bug fix --data format bad
-# 27-4: back to LMSequenceReader (regression test)
-# 27-3: used </s> for sent end
-# 27-2: some refactoring, went back to 26-4 from LMSequenceReader
-# 27-1: fixed slicing
-# 27-0: incorrect slicing, dropped first input
 deviceId = 0
 ExpId = 30-$deviceId$-g2p
-#ExpId = 22-3-g2p # for decoding a different model
+#ExpId = 22-3-g2p # change to different id when decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
 ModelDir  = "$ExpDir$/Models"
 
-stderr = $ExpDir$/G2P
+stderr = $ExpDir$/G2P-debug
 
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/G2P.dnn"
 
-# decoding config
+# decoding config  --used by the "write" command ("write" decodes and writes the result)
 beamDepth = 1                                      # 0=predict; 1=greedy; >1=beam
 decodeModel = 21
-decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended
+decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended to the model path
 decodeOutputPath = "$decodeModelPath$.$beamDepth$" # results are written next to the model, with beamDepth appended
 
-# dump config
+# dump config  --used by the "dump" command, for inspecting the model parameters
 dumpModelPath = "$modelPath$.2" # put the epoch id here
 
 # top-level model configuration
@@ -114,13 +89,6 @@ lmSequenceReaderInputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim 
 #######################################
 
 BrainScriptNetworkBuilder = (new ComputationNetwork [
-
-    # TODO: remove these
-    enableTracing = true
-    traceFrequency = 100
-    tracingLabelMappingFile = "$DataDir$/$vocabFile$"
-    beamDepth=3 // for above Trace macros only, need to clean that up
-    include "S2SLib.bs"
 
     # import general config options from outside config values
     useCNTKTextFormatReader = $useCNTKTextFormatReader$
@@ -204,7 +172,6 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
-    #labelSentenceStartEmbedded = EmbedLabels (labelSentenceStart)
     labelSentenceStartEmbedded = Pass (EmbedLabels (labelSentenceStart))  # TODO: remove Pass() if not actually needed in decoder
     labelSentenceStartEmbeddedScattered = BS.Sequences.Scatter (isFirstLabel, labelSentenceStartEmbedded) # unfortunately needed presently
 
@@ -253,19 +220,20 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # helper functions to delay h and c that apply beam-search reordering, if so configured
 
-    PreviousHCWithReorderingHook (lstmState) = [
+    PreviousHCWithReorderingHook (lstmState, layerIndex=0) = [
        h = BS.Loop.Previous (lstmState.h * beamSearchReorderHook)             // hidden state(t-1)
        c = BS.Loop.Previous (lstmState.c * beamSearchReorderHook)             // cell(t-1)
        dim = lstmState.dim
     ]
 
-    PreviousHCFromThoughtVectorWithReorderingHook (lstmState) = [ # with both thought vector and beam-search hook
-       isFirst = BS.Loop.IsFirst (initialState.h)
-       # BUGBUG: Should be thoughtVector, but Scatter() can't expand from inside a loop
-       h = BS.Boolean.If (isFirst, thoughtVectorBroadcast.h, BS.Loop.Previous (lstmState.h * beamSearchReorderHook)) # hidden state(t-1)
-       c = BS.Boolean.If (isFirst, thoughtVectorBroadcast.c, BS.Loop.Previous (lstmState.c * beamSearchReorderHook)) # cell(t-1)
-       dim = lstmState.dim
-    ]
+    PreviousHCFromThoughtVectorWithReorderingHook (lstmState, layerIndex=0) =
+        if layerIndex > 0 then PreviousHCWithReorderingHook (lstmState, layerIndex=1)
+        else [ # with both thought vector and beam-search hook
+            isFirst = BS.Loop.IsFirst (initialState.h)
+            h = BS.Boolean.If (isFirst, thoughtVectorBroadcast.h, BS.Loop.Previous (lstmState.h * beamSearchReorderHook))
+            c = BS.Boolean.If (isFirst, thoughtVectorBroadcast.c, BS.Loop.Previous (lstmState.c * beamSearchReorderHook))
+            dim = lstmState.dim
+        ]
 
     #############################################################
     # decoder history hook: LM history, from ground truth vs. output
@@ -288,28 +256,35 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     decoderDynamicAxis = labelsEmbedded
     FixedWindowAttentionHook = BS.Seq2Seq.CreateAugmentWithFixedWindowAttentionHook (attentionDim, attentionSpan, decoderDynamicAxis, encoderOutput, enableSelfStabilization=useStabilizer)
 
-    # TODO: collapse this into a single first-layer function; factor to lib; then merge with RecurrentLSTMPStack()
-    # NYU style: The decoder starts with hidden state 0 and takes as input [thoughtVectorBroadcast.h; previous word].
-    decoderOutputLayer = Length (decoderDims)-1
-    decoder[i:0..decoderOutputLayer] =
-        if i == 0
-        then if useEncoder && useNYUStyle then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
-                                                                       RowStack (S(thoughtVectorBroadcast.h) : S(decoderInput)), inputDim=(thoughtVector.dim + decoderInputDim),
-                                                                       previousHook=PreviousHCWithReorderingHook,
-                                                                       enableSelfStabilization=useStabilizer)
-             else if useEncoder && attentionSpan > 0 then BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
-                                                                                  S(decoderInput), inputDim=decoderInputDim,
-                                                                                  augmentInputHook=FixedWindowAttentionHook, augmentInputDim=encoderOutput.dim,
-                                                                                  previousHook=PreviousHCWithReorderingHook,
-                                                                                  enableSelfStabilization=useStabilizer)
-             else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
-                                          S(decoderInput), inputDim=decoderInputDim,
-                                          previousHook=PreviousHCFromThoughtVectorWithReorderingHook, # Previous() function with thought vector as initial state
-                                          enableSelfStabilization=useStabilizer)
-        else BS.RNNs.RecurrentLSTMP (decoderDims[i], cellDim=decoderDims[i],
-                                     S(decoder[i-1].h), inputDim=/*decoderDims[i-1]*/ decoder[i-1].dim,
-                                     previousHook=PreviousHCWithReorderingHook,
-                                     enableSelfStabilization=useStabilizer)
+    # some parameters to the decoder stack depend on the mode
+    decoderParams =
+        # with attention
+        if useEncoder && attentionSpan > 0 then [
+            previousHook = PreviousHCWithReorderingHook # add reordering for beam search
+            augmentInputHook = FixedWindowAttentionHook # input gets augmented by the attention window
+            augmentInputDim = encoderOutput.dim
+        ]
+        # with thought vector appended to every frame
+        else if useEncoder && useNYUStyle then [
+            previousHook = PreviousHCWithReorderingHook
+            augmentInputHook (input, lstmState) = S(thoughtVectorBroadcast.h) # each input frame gets augmented by the thought vector
+            augmentInputDim = thoughtVector.dim
+        ]
+        # thought vector as initial state for decoder
+        else [
+            previousHook = PreviousHCFromThoughtVectorWithReorderingHook # Previous() function with thought vector as initial state
+            augmentInputHook = BS.RNNs.NoAuxInputHook
+            augmentInputDim = 0
+        ]
+
+    # this is the decoder LSTM stack
+    decoder = BS.RNNs.RecurrentLSTMPStack (decoderDims, cellDims=decoderDims,
+                                           S(decoderInput), inputDim=decoderInputDim,
+                                           augmentInputHook=decoderParams.augmentInputHook, augmentInputDim=decoderParams.augmentInputDim,
+                                           previousHook=decoderParams.previousHook,
+                                           enableSelfStabilization=useStabilizer)
+
+    decoderOutputLayer = Length (decoder)-1
     decoderOutput = decoder[decoderOutputLayer].h
     decoderDim = decoderDims[decoderOutputLayer]
 
@@ -335,6 +310,17 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     # score output for decoding
     scoreSequence = Pass (z)
+
+    #############################################################
+    # some helper functions
+    #############################################################
+
+    # these trace functions log their parameter's value
+    TraceState (h, what) = Transpose (Trace (Transpose (h), say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=3, format=[ type = "real" ; transpose = false ; precisionFormat = ".4" ]))
+    TraceDense (h, what) = Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=21, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".4" ])
+    TraceDenseTransposed (h, what) = Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = true ; precisionFormat = ".4" ])
+    TraceOneHot (h, what) = Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, format=[ type = "category" ; transpose = false ])
+    TraceSparse (h, what) = Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, format=[ type = "sparse" ; transpose = false ])
 ])
 
 #######################################
