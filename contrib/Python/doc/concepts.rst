@@ -124,7 +124,7 @@ the computations that are applied to it. These are translated into computational
 data flow as the data are transformed from input (leaf nodes) through computations, to one or 
 more output (root) nodes.
 
-The Python api allows to specify such a computational network. For example, a one-hidden-layer sigmoid neural network can be described like shown below::
+The Python API allows us to specify such a computational network. For example, a one-hidden-layer sigmoid neural network can be described as shown below::
 
     from cntk import *
     # X is a data input, W1, W2, B are parameters
@@ -147,9 +147,9 @@ The above creates a computational network like the following:
 
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-1HiddenNN.png
 
-Here, X represents the input data as a tensor. During a training run, this would 
+Here, ``X`` represents the input data as a tensor. During a training run, this would 
 contain, in aggregated form, all the input samples for a particular minibatch. 
-For the particular model this would have to be a two-dimensional tensor: The data 
+For the particular model this would have to be a two-dimensional tensor: the data 
 in the first dimension would represent the feature vector, the second would refer 
 to all the samples in the minibatch.
 
@@ -171,8 +171,8 @@ Computational networks are flexible in several dimensions:
 .. image:: ../../../Documentation/CNTK-TechReport/figures/CN-ShareWeight.png
      
 - They can have more than one output (root node). E.g. a single network can model 
-  a) the network output, b) the loss function, which represents the training 
-  criterion, c) an evaluation criterion which is used for verification. All these 
+  a) the network output; b) the loss function, which represents the training 
+  criterion; amd c) an evaluation criterion which is used for verification. All of these 
   functions differ only partially and can be modelled as part of the same 
   network. CNTK makes sure that a) only requested root node outputs are computed 
   and that b) shared parts between the functions represented at root nodes are 
@@ -182,7 +182,7 @@ Computational networks are flexible in several dimensions:
 Properties of Computation Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In CNTK the compuational nodes have number of properties. Some of these can or must be set by the user.
+In CNTK the compuational nodes have a number of properties. Some of these can or must be set by the user.
 - **name** - The symbolic name for the node. If left out, the name is assigned
   automatically to a numeric value.::
   
@@ -191,14 +191,15 @@ In CNTK the compuational nodes have number of properties. Some of these can or m
   
   
   Assigning a name to a node is only necessary if it is the target of a loop. 
-  See below. Otherwise, it can be used for debugging.
+  See below. Otherwise, it can also be used for debugging.
   
-- **tag** - This is a string that is attached to the node and has to be set for certain nodes. There purpouse is not documentary but controls the behaviour of CNTK.
+- **tag** - This is a string that is attached to the node and has to be set for certain nodes. The purpose is not 
+documentary but actually controls the behaviour of CNTK.
 
   The *tag*  property can have the following values that can be set by the user:
 - *criterion*  The output of such nodes as the optimisation criterion. See `Neural Net Training`_
-- *output*  The output of these nodes is written of the output.
-- *eval*  The output of these nodes are used of evaluation. They might e.g. provide the error rate of a classification problem.
+- *output*  The output of these nodes is written to the output.
+- *eval*  The output of these nodes are used for evaluation. They might e.g. provide the error rate of a classification problem.
   
 - **shape** - This is a derived property that is automatically inferred from the 
   layout of the graph. 
