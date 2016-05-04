@@ -34,8 +34,8 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
     y = C.input_numpy(Y)
 
     # define our network -- one weight tensor and a bias
-    W = C.parameter((2, d))
-    b = C.parameter((2, 1))
+    W = C.parameter(value=np.zeros(shape=(2, d)))
+    b = C.parameter(value=np.zeros(shape=(2, 1)))
     out = C.times(W, x) + b
 
     ce = C.cross_entropy_with_softmax(y, out)
@@ -56,13 +56,13 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None, eval_name=Non
         return result
 
 
-def _test_logistic_regression_with_numpy():
+def test_logistic_regression_with_numpy():
     result = train_eval_logistic_regression_with_numpy('crit_node', 'eval_node')
 
-    TOLERANCE_ABSOLUTE = 1E-02
-    assert np.allclose(result['perplexity'], 1.5575403, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 0.44310782, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 1.4050217, atol=TOLERANCE_ABSOLUTE)
+    TOLERANCE_ABSOLUTE = 1E-06
+    assert np.allclose(result['perplexity'], 1.55057073, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.43862308, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 1.16664551, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression_with_numpy())
