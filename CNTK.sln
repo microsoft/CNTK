@@ -1124,6 +1124,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "G2P", "G2P", "{4AD12278-970
 		Examples\SequenceToSequence\Miscellaneous\G2P\README.txt = Examples\SequenceToSequence\Miscellaneous\G2P\README.txt
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Source\Extensibility\CPPEvalClient\CPPEvalClient.vcxproj", "{578D52A0-3928-4405-A016-F016E8B49031}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1362,6 +1364,14 @@ Global
 		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release|x64.ActiveCfg = Release|x64
 		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release|x64.Build.0 = Release|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug|x64.ActiveCfg = Debug|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug|x64.Build.0 = Debug|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release|x64.ActiveCfg = Release|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1515,5 +1525,6 @@ Global
 		{A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{85A05261-41D0-41DF-80B5-ADB6ABB54632} = {A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}
 		{4AD12278-9705-4BBA-B2C3-D6D5856AADC3} = {85A05261-41D0-41DF-80B5-ADB6ABB54632}
+		{578D52A0-3928-4405-A016-F016E8B49031} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
 	EndGlobalSection
 EndGlobal
