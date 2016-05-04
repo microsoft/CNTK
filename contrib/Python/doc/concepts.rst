@@ -5,7 +5,7 @@ There is a common property in key machine learning models, such as deep neural
 networks (DNNs), convolutional neural networks (CNNs), and recurrent neural 
 networks (RNNs). All these models can be described as *computational networks*.
 
-The directed edges of these *cómputational networks* are vectors, matrices, or in general n-dimensional 
+The directed edges of these *computational networks* are vectors, matrices, or in general n-dimensional 
 arrays (tensors) which represent input data and model parameters. The vertices 
 are *functions* (also called operations) that are performing a computation on 
 these input tensors. 
