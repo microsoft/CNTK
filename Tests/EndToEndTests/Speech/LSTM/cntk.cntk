@@ -75,7 +75,7 @@ speechTrain = [
         Stabilize (x, enabled=true) =
             if enabled
             then [
-                beta = Exp (BiasParam ((1))) # init value is 0
+                beta = Exp (BS.Parameters.BiasParam ((1))) # init value is 0
                 result = beta .* x
             ].result
             else x
