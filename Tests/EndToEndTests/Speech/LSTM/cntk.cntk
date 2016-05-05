@@ -89,9 +89,9 @@ speechTrain = [
                 // parameter macros--these carry their own weight matrices
                 B() = BS.Parameters.BiasParam (cellDim)
 
-                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * BS.Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * BS.Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* BS.Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
                 // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
                 it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
@@ -111,7 +111,7 @@ speechTrain = [
             h = if outputDim != cellDim     // output/hidden state
                 then [                      // project
                     Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
-                    htp = Wmr * BS.Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
                 ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
                 else _privateInnards.ht     // no projection
             dim = outputDim
@@ -125,7 +125,7 @@ speechTrain = [
         ].lstmState // we return the state record (h,c)
 
         // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
-        S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
             then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
