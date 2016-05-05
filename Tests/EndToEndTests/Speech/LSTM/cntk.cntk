@@ -140,15 +140,15 @@ speechTrain = [
         #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
         # ^^^ PROBABLY OUTDATED
 
-        useExplicitCriterion = false
-        crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the objective, as a node
+        #err = ErrorPrediction(labels, z, tag='evaluation')       // this also gets tracked
 
-        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
+        # this shows how both CE and frame error rate can be constructed as BS expressions
+        ce  = Pass (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = Pass (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
 
         // decoding
         logPrior = LogPrior(labels)	 
-        ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
     ]
 ]
