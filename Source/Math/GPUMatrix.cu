@@ -885,7 +885,7 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
     CUDA_LONG jOut = id / usStride; // col index into 'us' and 'idx'
 
     auto jInF = idx[jOut * idxStride]; // this is the column we need to get
-    if (isnan(jInF) || jInF < 0)       // negative index means gap
+    if (::isnan(jInF) || jInF < 0)     // negative index means gap
         return;
     size_t jIn = (size_t)jInF;
     //if (jIn >= aCols)
@@ -955,8 +955,8 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
     CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
 
-    auto jOutF = idx[jIn * idxStride]; // this is the column we copy/add into
-    if (isnan(jOutF) || jOutF < 0)     // negative index means gap
+    auto jOutF = idx[jIn * idxStride];  // this is the column we copy/add into
+    if (::isnan(jOutF) || jOutF < 0)    // negative index means gap
         return;
     size_t jOut = (size_t)jOutF;
     //if (jOut >= usCols)
