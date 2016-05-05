@@ -41,7 +41,8 @@ enum ProfilerEvents
 
 //
 // Initialize all resources to enable profiling.
-// Optionally provide a directory path where profiling files are saved, or nullptr.
+// Optionally provide a directory path where profiling files are saved,
+// or nullptr to use the default.
 //
 void PERF_PROFILER_API ProfilerInit(const char* profilerDir);
 

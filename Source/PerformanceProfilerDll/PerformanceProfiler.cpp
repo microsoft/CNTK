@@ -115,7 +115,8 @@ struct ScopeLock
 
 //
 // Initialize all resources to enable profiling.
-// Optionally provide a directory path where profiling files are saved, or nullptr.
+// Optionally provide a directory path where profiling files are saved,
+// or nullptr to use the default.
 //
 void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
 {
@@ -219,12 +220,16 @@ void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
     if (!g_profilerState.init) return;
 
     LOCK
-    
+
     if (stateId == g_profilerState.throughputIdx)
     {
         g_profilerState.throughputIdx--;
     }
-    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - g_profilerState.throughputEvents[stateId].beginClock);
+    long long KBytesPerSec = 0ll;
+    if (endClock != g_profilerState.throughputEvents[stateId].beginClock)
+    {
+        KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - g_profilerState.throughputEvents[stateId].beginClock);
+    }
     int eventId = g_profilerState.throughputEvents[stateId].eventId;
     if (g_profilerState.fixedEvents[eventId].cnt == 0)
     {
