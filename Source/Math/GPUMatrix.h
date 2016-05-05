@@ -11,6 +11,7 @@
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "BestGpu.h" // for CPUONLY macro
 #include "ConcStack.h"
+#include "GPURNGHandle.h"
 #include <string>
 #include <vector>
 #include <array>
@@ -237,7 +238,7 @@ public:
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
-    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
 
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);

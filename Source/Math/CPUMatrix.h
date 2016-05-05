@@ -8,6 +8,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "CPURNGHandle.h"
 #include <vector>
 #include <stdio.h>
 #include <ctime>
@@ -146,7 +147,7 @@ public:
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
-    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
     CPUMatrix<ElemType> Transpose();
