@@ -966,11 +966,11 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
-#ifdef ALLOW_ATOMIC_SCATTER
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
+#ifdef ALLOW_ATOMIC_SCATTER
         atomicAdd(&rus, res); // rus += res;
 #else
-    rus += res;
+        rus += res;
 #endif
     // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
 }
@@ -1000,7 +1000,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
         for (size_t i = 0; i < buf.size(); i++)
         {
             auto colF = buf[i];
-            if (isnan(colF) || colF < 0)
+            if (std::isnan(colF) || colF < 0)
                 continue;
             size_t col = (size_t)colF;
             if (col >= GetNumCols())

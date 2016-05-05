@@ -456,7 +456,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
                 // in this case, outer calling code must pass beta = 1
                 atomicAdd(pout, val);
 #else
-                *pout = 1000000.0f;  // something that can't be missed? How to crash it?
+                assert(false);
 #endif
             }
             else
