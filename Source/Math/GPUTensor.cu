@@ -393,6 +393,8 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
     }
 };
 
+#define ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
+
 // specialization for k = -1 terminates the template recursion, and computes reductions in parallel
 template <class ElemType, C_size_t N, C_int M, C_int K>
 struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
@@ -403,8 +405,8 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
                                    const FixedArray<C_unsigned_int, K>& /*regularOpStrides*/, const FixedMatrix<C_int, N, K>& /*regularStrides*/,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
     {
-        CUDA_LONG reductionBlock = blockIdx.z; // block index  --larger reductions are split into blocks
-        CUDA_LONG reductionBlocks = gridDim.z; // number of blocks
+        CUDA_LONG reductionBlock = blockIdx.z; // reduction-block index  --larger reductions are split into blocks
+        CUDA_LONG reductionBlocks = gridDim.z; // number of reduction blocks. If >1 we need atomicAdd
         CUDA_LONG tid = threadIdx.x;           // thread index
         CUDA_LONG tids = blockDim.x;           // out of how many threads  --note: last block is partial
 
@@ -427,7 +429,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
-        __shared__ ReduceElemType accumulators[GridDim::maxThreadsPerBlock /*tids*/];
+        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
         accumulators[tid] = sum;
         __syncthreads();
         static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
@@ -450,8 +452,12 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
             auto* pout = pointers[pointers.size() - 1];
             if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
             {
+#ifdef ALLOW_ATOMIC_REDUCTION
                 // in this case, outer calling code must pass beta = 1
                 atomicAdd(pout, val);
+#else
+                *pout = 1000000.0f;  // something that can't be missed? How to crash it?
+#endif
             }
             else
             {
@@ -560,8 +566,9 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     C_size_t reductionDim = 1; // number of elements to reduce over
     for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
         reductionDim *= (C_size_t) reducingOpDimVector[k];
-    let& props = GridDim::GetDeviceProps();
     GridDim grid(NN);
+#ifdef ALLOW_ATOMIC_REDUCTION // temporarily disabled to ensure it is not causing the non-reproducability
+    let& props = GridDim::GetDeviceProps();
     if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount) // TODO: <= multiProcessorCount?
     {
         // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
@@ -603,6 +610,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         }
     }
     else
+#endif
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
