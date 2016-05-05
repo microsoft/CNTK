@@ -120,6 +120,7 @@ public:
     ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr If(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
+	ComputationNodePtr IRMetric(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairindex, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
