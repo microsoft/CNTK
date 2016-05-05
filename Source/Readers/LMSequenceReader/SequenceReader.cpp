@@ -18,9 +18,7 @@
 #include <vector>
 #include <string>
 
-namespace Microsoft {
-	namespace MSR {
-		namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 			// add this to all 
 			static void FailBecauseDeprecated(const char * fnName)
@@ -1614,9 +1612,6 @@ namespace Microsoft {
 					return;
 				}
 
-				//m_featuresBufferRow = new size_t[mbSize];
-				//m_featuresBufferRowIdx = new size_t[mbSize];
-
 				m_id2classLocal = new Matrix<ElemType>(CPUDEVICE);
 				m_classInfoLocal = new Matrix<ElemType>(CPUDEVICE);
 
@@ -1644,8 +1639,7 @@ namespace Microsoft {
 				m_featureData.reserve(m_featureCount * epochSize);
 				if (m_labelInfo[labelInfoOut].type == labelCategory)
 					m_labelIdData.reserve(epochSize);
-				//else if (m_labelInfo[labelInfoOut].type != labelNone)
-				//    m_labelData.reserve(epochSize);
+
 				m_sequence.reserve(m_seqIndex); // clear out the sequence array
 												// this is too complicated for LM
 												// SetupEpoch();
@@ -1709,7 +1703,6 @@ namespace Microsoft {
 				size_t maxTokens = mRequestedNumParallelSequences > 0 ? SIZE_MAX : m_mbSize;
 				size_t numTokens = 0;  // token counter
 
-									   // added modulo logic for distributed reading across workers
 				for (size_t seq = mLastProcessedSentenceId;
 					seq < mNumRead &&                 // hit end of buffer
 					mToProcess.size() < maxToProcess; // hit parallel-sequence limit
@@ -1717,11 +1710,6 @@ namespace Microsoft {
 				{
 					// skip entries that are done
 					if (mProcessed[seq])
-						continue;
-
-					// logic to partition data b/w different MPI workers.
-					// need to consider only those sequences for which seq ID modulo m_numSubsets is m_subsetNum
-					if (seq % m_numSubsets != m_subsetNum)
 						continue;
 
 					// first unprocessed sequence determines the length if this minibatch
@@ -1740,10 +1728,6 @@ namespace Microsoft {
 					// and count tokens
 					numTokens += m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
 				}
-
-				// if all were already done, we will get here with sln=0 and return that
-
-				//fprintf(stderr, "DetermineSequencesToProcess: %d sequences of len %d, %d tokens\n", (int) mToProcess.size(), (int) sln, (int) numTokens);
 
 				return sln;
 			}
@@ -1828,11 +1812,12 @@ namespace Microsoft {
 
 				firstPosInSentence = mLastPosInSentence;
 
-				size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       // exclude the last token since it is the last label to be predicted
-																								// ############### BREAKING CHANGE ################
-																								// We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
-																								// ############### BREAKING CHANGE ################
-				const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;                           // mbSize here is truncation length
+				size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);       
+				// exclude the last token since it is the last label to be predicted
+				// ############### BREAKING CHANGE ################
+				// We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
+				// ############### BREAKING CHANGE ################
+				const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;	// mbSize here is truncation length
 				for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
 				{
 					for (size_t k = 0; k < mToProcess.size(); k++)
@@ -1946,9 +1931,9 @@ namespace Microsoft {
 						size_t seq = mToProcess[s];
 						const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
 						size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
-																													// ############### BREAKING CHANGE ################
-																													// We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
-																													// ############### BREAKING CHANGE ################
+						// ############### BREAKING CHANGE ################
+						// We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
+						// ############### BREAKING CHANGE ################
 						ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
 						ptrdiff_t end = (ptrdiff_t)len - (ptrdiff_t)firstPosInSentence;
 						if (begin >= (ptrdiff_t)nT)
