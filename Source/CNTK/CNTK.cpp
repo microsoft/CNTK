@@ -713,7 +713,8 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     catch (const IExceptionWithCallStackBase& err)
     {
         fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "%sEXCEPTION occurred: %s\n", err.CallStack(), dynamic_cast<const std::exception&>(err).what());
+        fprintf(stderr, "%s", err.CallStack());
+        LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
         return EXIT_FAILURE;
     }
     catch (const std::exception& err)
