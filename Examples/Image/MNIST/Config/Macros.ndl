@@ -48,8 +48,8 @@ ConvND(w, inp, kW, kH, inMap, outMap, hStride, vStride) = [
     c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]
 
-DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride) = [
-    c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, transpose=1, imageLayout=$imageLayout$)
+DeConv(w, inp, k, inMap, outMap, hStride, vStride, lpad, upad) = [
+    c = Convolution(w, inp, {k, k, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1, imageLayout=$imageLayout$)
 ]
 
 Conv2DReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [

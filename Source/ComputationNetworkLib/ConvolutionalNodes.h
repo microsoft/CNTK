@@ -140,7 +140,10 @@ public:
             {
                 auto& grad = Input(0)->GradientAsMatrix();
                 auto sliceInput1Value = Input(1)->ValueFor(fr);
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+                if (!m_transpose)
+                    m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+                else
+                    m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, fr.IsAllFrames(), *m_tempMatrix);
             }
             else if (inputIndex == 1) // derivative with respect to the input feature
             {
@@ -337,6 +340,7 @@ public:
 
         size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape;
+        TensorShape outputShape;
         if (m_convolution2D)
         {
             // Need to update some tensors with correct input dims.
@@ -363,10 +367,10 @@ public:
                            Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
             }
 
-            auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+            outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             // ConvolveGeometry always uses CHW.
-            SetDims(ImageDimensions(outDims, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
+            SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
         else
         {
@@ -377,17 +381,29 @@ public:
                     "Please specify imageLayout=\"cudnn\" in %ls node in your script "
                     "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
             }
+
             inputShape = GetInputSampleLayout(inputIdx);
-            auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-            SetDims(outDims, HasMBLayout());
+            if (!m_transpose)
+            {
+                outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            }
+            else
+            {
+                // In case of transpose (deconvolution), node input (inputShape) is really the output of the convolution
+                // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+                outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            }
+            SetDims(outputShape, HasMBLayout());
         }
 
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
             {
-                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
+                                                                   m_kernelShape, m_mapCount, m_stride, 
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
