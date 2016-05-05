@@ -72,6 +72,14 @@ speechTrain = [
         featNorm = MeanVarNorm(feashift)
 
         // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+                beta = Exp (BiasParam ((1))) # init value is 0
+                result = beta .* x
+            ].result
+            else x
+
         LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
         [
             _privateInnards = [       // encapsulate the inner workings
