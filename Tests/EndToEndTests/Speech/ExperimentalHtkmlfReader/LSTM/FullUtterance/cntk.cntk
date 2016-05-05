@@ -65,13 +65,9 @@ speechTrain = [
         ]
     ]
 
+    # TODO share this section ../../../LSTM/cntk.cntk
     # define network using BrainScript
     BrainScriptNetworkBuilder = [
-
-        # import some namespaces
-        # TODO: allow to say import BS.RNNs LSTMP or import BS.RNNs to import all (literally creates new dict members mirroring those)
-        RecurrentLSTMP2 = BS.RNNs.RecurrentLSTMP2
-        Parameters = BS.Parameters
 
         useSelfStabilization = true
 
@@ -93,27 +89,84 @@ speechTrain = [
 
         featNorm = MeanVarNorm(feashift)
 
-        // define the stack of hidden LSTM layers
+        // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+        [
+            _privateInnards = [       // encapsulate the inner workings
+                dh = prevState.h // previous values
+                dc = prevState.c
+
+                // parameter macros--these carry their own weight matrices
+                B() = BS.Parameters.BiasParam (cellDim)
+
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * BS.Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * BS.Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* BS.Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+
+                // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+                it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+                bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+
+                ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
+                bft = ft .* dc                                     // applied to cell(t-1)
+
+                ct = bft + bit                                     // c(t) is sum of both
+
+                ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+                ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ]
+
+            # our return values
+            c = _privateInnards.ct          // cell value
+            h = if outputDim != cellDim     // output/hidden state
+                then [                      // project
+                    Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
+                    htp = Wmr * BS.Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                else _privateInnards.ht     // no projection
+            dim = outputDim
+        ]
+
+        RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+        [
+            prevState = previousHook (lstmState)
+            inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
+            lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        ].lstmState // we return the state record (h,c)
+
+        // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
+        S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
-            then RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, featNorm,        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
-            else RecurrentLSTMP2 (hiddenDim, cellDim=innerCellDim, LSTMoutput[k-1], inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
         // and add a softmax layer on top
-        W(x) = Parameters.WeightParam (labelDim, hiddenDim) * Parameters.Stabilize (x, enabled=useSelfStabilization)
-        B = Parameters.BiasParam (labelDim)
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
 
-        z = W(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
         // training
-        useExplicitCriterion = true
+        # vvv PROBABLY OUTDATED
+        # TODO: the following fails with useExplicitCriterion = true in FullUtterance mode:
+        # --> 'err' gets overwritten by crExplicit
+        # and with useExplicitCriterion = fals:
+        # --> 'err' comes out equal to 'ce'
+        # and the crExplicit value also comes out inaccurate (while it is totally fine with Truncated LSTM)
+        # so do it this way for now:
+        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
+        # ^^^ PROBABLY OUTDATED
+
+        useExplicitCriterion = false
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        crExplicit = -(ReducePlus (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        cr = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        Err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
+        crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
+        ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+
+        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 
-        ScaledLogLikelihood = Minus(z, logPrior, tag='output')      // sadly we can't say x - y since we want to assign a tag
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
     ]
 ]

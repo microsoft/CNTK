@@ -935,13 +935,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
 
-        // for progress and statistics, we should only count frames that are not gaps
-        // BUGBUG: Once we have multiple layouts, this must be done on a per-criterion basis.
-        size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
+        // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
+        // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
+        size_t numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
 
         // Sum of actualMBSize across all nodes when using parallel training
+        // 'aggregate' here means accross-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize;
-        size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
+        size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork);
 
         if (!useGradientAggregation)
         {
@@ -950,9 +951,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 assert(wasDataRead);
                 // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabel);
+                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
-                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabel);
+                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
             }
         }
         else
@@ -985,9 +986,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             m_gradHeader->numEvalNode = evaluationNodes.size();
             m_gradHeader->numSamples = actualMBSize;
             // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabel);
+            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabel);
+                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabelOfNetwork);
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second;
             m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1006,6 +1007,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
+#if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
+            // This will break test cases. So for now, we will only enable this for per-sample criteria.
+            size_t numSamplesInMinibatch = aggregateNumSamples;
+            if (criterionNodes[0]->HasMBLayout())
+#endif
+            numSamplesInMinibatch = aggregateNumSamplesWithLabel;
+#if 0
+            if (numSamplesInMinibatch != aggregateNumSamples)
+                fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
+#endif
             auto smoothedGradientIter = smoothedGradients.begin();
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {
@@ -1019,7 +1030,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG

@@ -138,6 +138,8 @@ private:
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
         return *this;
     }
+
+public:
     // get the number of samples
     static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t legacyNumSamples)
     {

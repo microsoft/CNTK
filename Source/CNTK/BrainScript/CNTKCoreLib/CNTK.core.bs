@@ -292,6 +292,8 @@ Constants = [
     # is this like Sequences.Repeat?
     True  = 1
     False = 0
+    None = ConstantTensor (42, (1))
+    IsNone (x) = IsSameObject (x, None)
 ]
 
 ##############################################################################
@@ -399,47 +401,48 @@ Sequences = [
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)
 
-    # TakeWhile and DropWhile
-    TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
-    SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
-    _WhilePredicate (DelayFn, predicate, input) =
-    [
-        whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
-    ].whilePredicateRec
-    # TODO: do we need operations from the back?
-
     # First and Take
     # LINQ allows predicates as well.
-    First (x)   =  Take (1, x)
-    Take (N, x) = _Take (PastValue, N, x)
-    _Take (DelayFn, N, x) = [
-        selected = Loop._IsWithin (DelayFn, N, x)
-        out = Gather (selected, x)
-    ].out
-    # Last and TakeRight
-    Last (x) = TakeRight (1, x)
-    TakeRight (N, x) = _Take (FutureValue, N, x)
-    Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
-    _Skip (DelayFn, N, x) = [ // TODO: merge with _Take
-        selected = Loop._IsWithin (DelayFn, N, x)
-        out = Gather (Boolean.Not (selected), x)
-    ].out
-    ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
-        startMask = Skip (n, x)                     // ...000111...
-        mask = startMask - PastValue (0, startMask) // ...000100...
-        out = Gather (mask, x)
-    ]
-    Single (predicate, x) = x
+    First (x) = Slice (0,  1, x,  axis=-1)
+    Last (x)  = Slice (-1, 0, x,  axis=-1)
+
+    # TakeWhile and DropWhile
+    #TakeWhile (predicate, x) = Filter ( _WhilePredicate (PastValue, predicate), x)
+    #SkipWhile (predicate, x) = Filter (!_WhilePredicate (PastValue, predicate), x)
+    #_WhilePredicate (DelayFn, predicate, input) =
+    #[
+    #    whilePredicateRec = Boolean.And (DelayFn (whilePredicateRec, defaultHiddenActivation=Boolean.True), predicate)
+    #].whilePredicateRec
+    # TODO: do we need operations from the back?
+
+    #Take (N, x) = _Take (PastValue, N, x)
+    #TakeRight (N, x) = _Take (FutureValue, N, x)
+    #_Take (DelayFn, N, x) = [
+    #    selected = Loop._IsWithin (DelayFn, N, x)
+    #    out = Gather (selected, x)
+    #].out
+    #
+    #Skip (N, x) = if N > 0 then _Skip (PastValue, N, x) else x
+    #_Skip (DelayFn, N, x) = [ // TODO: merge with _Take
+    #    selected = Loop._IsWithin (DelayFn, N, x)
+    #    out = Gather (Boolean.Not (selected), x)
+    #].out
+    #ElementAt (n, x) = [ // not efficient, as it filters twice. Better AND the predicates. TODO: what if n is out of range? ElementAtOrDefault
+    #    startMask = Skip (n, x)                     // ...000111...
+    #    mask = startMask - PastValue (0, startMask) // ...000100...
+    #    out = Gather (mask, x)
+    #]
+    #Single (predicate, x) = x
 
     #FirstOrDefault (x) = ? // can empty sequences exist or even be represented by CNTK?
 
-    Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
-    Sum (x)    = FoldL (Plus,    0, x)
-    LogSum (x) = FoldL (LogPlus, 0, x)
+    #Average (x) = Sum (x) / Loop.Count(x)  // TODO: patch opQuotient to check 0/0 = 0
+    #Sum (x)    = FoldL (Plus,    0, x)
+    #LogSum (x) = FoldL (LogPlus, 0, x)
     #Max (x) = FoldL (^.Max, ?, x) // TODO: name clash; need to implement ^.
     #Min (x) = FoldL (^.Min, ?, x) // TODO: what's the init value?
-    All (x) = FoldL (Boolean.And,  OnesLike (x), x)
-    Any (x) = FoldL (Boolean.Or, ZeroesLike (x), x)
+    #All (x) = FoldL (Boolean.And,  OnesLike (x), x)
+    #Any (x) = FoldL (Boolean.Or, ZeroesLike (x), x)
 
     # Join to create 2D fields for s2s attention?
 
@@ -508,8 +511,12 @@ Parameters =
     StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-            beta = Exp (BiasParam ((inputDim)))
-            result = beta .* x
+            beta = Exp (BiasParam ((inputDim))) # init value is 0
+
+            TraceDense (h, what) =
+                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
+
+            result = TraceDense (    beta,    'beta') .* x
         ].result
     else x
 
@@ -527,32 +534,43 @@ RNNs =
     # Projection is enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
-    LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+    # This function also takes an optional auxiliary input, e.g. for suporting attention models.
+    LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false) =
     [
+        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
+
         # TODO: rename to just _
-        _privateInnards = [       // encapsulate the inner workings
+        _privateInnards = [     // encapsulate the inner workings
             dh = prevState.h // previous values
             dc = prevState.c
 
-            // parameter macros--these carry their own weight matrices
+            dhs = S(dh) // previous values, stabilized
+            dcs = S(dc)
+            # note: input does not get a stabilizer here, user is meant to do that outside
+
+            // parameter macros
+            # note: each invocation comes with its own set of weights
             B() = Parameters.BiasParam (cellDim)
+            W() = Parameters.WeightParam (cellDim, inputDim)        // input
+            A() = Parameters.WeightParam (cellDim, auxDim)          // aux input
+            H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden
+            C() = Parameters.DiagWeightParam (cellDim)              // cell-to-hiddden (note: applied elementwise)
 
-            # note: input does not get a stabilizer here, since user can do that outside
-            W(v) = Parameters.WeightParam (cellDim, inputDim)  * v
-            H(h) = Parameters.WeightParam (cellDim, outputDim) * Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-            C(c) = Parameters.DiagWeightParam (cellDim)       .* Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+            # projected contribution from input(s) and bias
+            pin() = if Constants.IsNone (aux)
+                    then B() + W() * x
+                    else B() + W() * x + A() * aux
 
-            // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
-            it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
-            bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+            it = Sigmoid (pin() + H() * dhs + C() .* dcs)           // input gate(t)
+            bit = it .* Tanh (pin() + H() * dhs)                    // applied to tanh of input network
 
-            ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
-            bft = ft .* dc                                     // applied to cell(t-1)
+            ft = Sigmoid (pin() + H() * dhs + C() .* dcs)           // forget-me-not gate(t)
+            bft = ft .* dc                                          // applied to cell(t-1)
 
-            ct = bft + bit                                     // c(t) is sum of both
+            ct = bft + bit                                          // c(t) is sum of both
 
-            ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
-            ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ot = Sigmoid (pin() + H() * dhs + C() .* S(ct))         // output gate(t)
+            ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
         ]
 
         # our return values
@@ -560,65 +578,62 @@ RNNs =
         h = if outputDim != cellDim     // output/hidden state
             then [                      // project
                 Wmr = Parameters.WeightParam (outputDim, cellDim);
-                htp = Wmr * Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
-            ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                htp = Wmr * S(_privateInnards.ht)
+            ].htp
             else _privateInnards.ht     // no projection
         dim = outputDim
     ]
 
     # helper function to delay h and c
     # Callers can provide their own, e.g. useful for beam decoding.
-    PreviousHC (lstmState) = [
+    PreviousHC (lstmState, layerIndex=0) = [
        h = Loop.Previous (lstmState.h)         // hidden state(t-1)
        c = Loop.Previous (lstmState.c)         // cell(t-1)
        dim = lstmState.dim
     ]
 
     # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
-    NextHC (lstmState) = [
+    NextHC (lstmState, layerIndex=0) = [
        h = Loop.Next (lstmState.h)             // hidden state(t-1)
        c = Loop.Next (lstmState.c)             // cell(t-1)
        dim = lstmState.dim
     ]
 
+    NoAuxInputHook (input, lstmState) = Constants.None
+
     # this implements a recurrent (stateful) LSTM with projection and self-stabilization
     # It returns a record (h,c). To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
-
-    # TODO: remove the -2 once this works
-    RecurrentLSTMPWithAttentionWindow2 = RecurrentLSTMP2
-    RecurrentLSTMP2 = RecurrentLSTMP
-    RecurrentLSTMP2Stack = RecurrentLSTMPStack  # TODO: remove the -2 name once this works
-    #xRecurrentLSTMP2 (outputDim, cellDim=outputDim, x, inputDim=x.dim, previousHook=PreviousHC, enableSelfStabilization=false) =
-    #[
-    #    prevState = previousHook (lstmState)
-    #    inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization // TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-    #    lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
-    #].lstmState // we return the state record (h,c)
-
-    #DontAugmentInputHook (input, lstmState) = input
     RecurrentLSTMP (outputDim/*h.dim*/, cellDim=outputDim,
                     x, inputDim=x.dim,
                     previousHook=BS.RNNs.PreviousHC,
-                    augmentInputHook=[DontAugmentInputHook (input, lstmState) = input].DontAugmentInputHook, augmentInputDim=0,
+                    augmentInputHook=NoAuxInputHook, augmentInputDim=0,
+                    layerIndex=0,
                     enableSelfStabilization=false) =
     [
-        prevState = previousHook (lstmState)        # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
+        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim ; inputDim1 = inputDim ; layerIndex1 = layerIndex # workaround
 
-        augmentedX = augmentInputHook(x, prevState) # optionally augment input, e.g. 
-        augmentedXDim = augmentInputDim + inputDim
+        prevState = previousHook (lstmState, layerIndex=layerIndex1) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
-        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim # TODO: BS syntax needs to allow to say ^.enableSelfStabilization
-        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, augmentedX, inputDim=augmentedXDim, prevState, enableSelfStabilization=enableSelfStabilization1)
+        auxInput = augmentInputHook(x, prevState)   # optionally augment input. Constants.None if none.
+
+        lstmState = BS.RNNs.LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, aux=auxInput, auxDim=augmentInputDim, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].lstmState // that's the value we return
 
     # a stack of recurrent LSTMs (unidirectional)
-    RecurrentLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, enableSelfStabilization=false) = [
-        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization
+    RecurrentLSTMPStack (layerDims, cellDims=layerDims,
+                         input, inputDim=input.dim,
+                         previousHook=PreviousHC,
+                         augmentInputHook=NoAuxInputHook, augmentInputDim=0,
+                         enableSelfStabilization=false) =
+    [
+        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization ; augmentInputHook1 = augmentInputHook ; augmentInputDim1 = augmentInputDim
         layers[i:0..Length (layerDims)-1] =
             RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
-                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layerDims[i-1] /*TODO: layers[i-1].dim*/,
+                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
                             previousHook=previousHook1,
+                            augmentInputHook=if i == 0 then augmentInputHook1 else NoAuxInputHook, augmentInputDim=if i == 0 then augmentInputDim1 else 0,
+                            layerIndex=i,
                             enableSelfStabilization=useStabilizer)
     ].layers
 
@@ -633,10 +648,12 @@ RNNs =
             fwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
                                   v, inputDim=vDim,
                                   previousHook=previousHook1,
+                                  layerIndex=i,
                                   enableSelfStabilization=useStabilizer)
             bwd = RecurrentLSTMP (layerDims[i], cellDim=cellDims[i],
                                   v, inputDim=vDim,
                                   previousHook=nextHook1,
+                                  layerIndex=i,
                                   enableSelfStabilization=useStabilizer)
             h = Splice ((fwd.h : bwd.h), axis=1)
             c = Splice ((fwd.c : bwd.c), axis=1)
@@ -704,11 +721,9 @@ Seq2Seq =
             #attentionWeights = Softmax (uValid)                    # [1 x beamDepth x attentionSpan]
             weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* TraceDense(  attentionWeights    ,'weights') # [encoderHiddenDim x beamDepth x attentionSpan]
             # TODO: use ReduceSum:
+            # this is the auxiliary input to the LSTMP function
             weightedAttentionAverage = S(Times (weightedAttentionWindow, BS.Constants.OnesTensor (attentionSpan), outputRank=2)) # [encoderHiddenDim x beamDepth]
-
-            # feed both to LSTM as a single augmented input, so that we can reuse the existing LSTM component
-            augmentedX = RowStack (weightedAttentionAverage : input)  # TODO: change to Splice()
-        ].augmentedX
+        ].weightedAttentionAverage
     ].AugmentInputHook
 
     # helper macro that extracts top D hypotheses from a 2D tensor
