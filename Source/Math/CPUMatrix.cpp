@@ -1411,8 +1411,9 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     }
 
     // success
-    m_numRows = numRows;
-    m_numCols = numCols;
+    m_sliceViewOffset = 0;
+    m_numRows         = numRows;
+    m_numCols         = numCols;
 }
 
 // allocated by the callee but should be deleted by the caller
