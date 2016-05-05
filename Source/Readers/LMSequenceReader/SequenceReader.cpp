@@ -2097,11 +2097,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				size_t j = 0;
 				Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(m_labelsName[labelInfoOut]);
 				if (readerMode == ReaderMode::NCE)
-					labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize, (2 * (m_noiseSampleSize + 1)) * actualmbsize, true);
+					labels.Resize(2 * (m_noiseSampleSize + 1), actualmbsize);
 				else if (readerMode == ReaderMode::Class)
-					labels.Resize(4, actualmbsize, 4 * actualmbsize, true);
+					labels.Resize(4, actualmbsize, 10000, false);
 				else
-					labels.Resize(1, actualmbsize, 1 * actualmbsize, true);
+					labels.Resize(1, actualmbsize, false);
 
 				// move to CPU since element-wise operation is expensive on GPU
 				int curDevId = labels.GetDeviceId();
