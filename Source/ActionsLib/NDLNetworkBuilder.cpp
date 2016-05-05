@@ -299,10 +299,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             if (cnNodeType == OperationNameOf(ConvolutionNode))
             {
                 RuntimeError("%ls: unexpected parameter count. %ls supports 2 modes: \n"
-                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] \n"
+                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample] \n"
                              "and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"]. \n"
                              "2. ND convolution which takes 3 fixed parameters [weightNodeName, inputValueNodeName, kernelShape] and \n"
-                             "9 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "10 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], bool transpose = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
                              "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
                              cnNodeType.c_str(), cnNodeType.c_str());
             }
@@ -387,8 +387,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
                 if (pool == PoolKind::None)
                 {
+                    bool transpose = node->GetOptionalParameter("transpose", "false");
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, imageLayout, maxTempMemSizeInSamples, name);
+                                                  autoPad, lowerPad, upperPad, transpose, imageLayout, maxTempMemSizeInSamples, name);
                 }
                 else
                 {
