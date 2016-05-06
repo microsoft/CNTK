@@ -393,7 +393,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
     }
 };
 
-#define ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
+#undef ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
 
 // specialization for k = -1 terminates the template recursion, and computes reductions in parallel
 template <class ElemType, C_size_t N, C_int M, C_int K>
@@ -553,7 +553,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     //  - NN elements must be computed, each involving a reduction over reductionDim elements
     // Cases:
     //  - #output elements NN >= GPU cores  -->  use one proc per element, do reduction in inner loop
-    //    E.g. if >960 elements are computed, each gets its own GPU thread.
+    //    E.g. if >=960 elements are computed, each gets its own GPU thread.
     //  - reduction dimension fits into a single kernel  -->  launch it that way
     //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc
     //     - PlusNode: reducing to a bias for small matrices
@@ -570,21 +570,44 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
         reductionDim *= (C_size_t) reducingOpDimVector[k];
     GridDim grid(NN);
-#ifdef ALLOW_ATOMIC_REDUCTION // temporarily disabled to ensure it is not causing the non-reproducability
     let& props = GridDim::GetDeviceProps();
-    if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount) // TODO: <= multiProcessorCount?
+    // === simple case: NN large, one thread per output element
+    if (reductionDim == 1 || grid.m_blocksPerGrid >= props.multiProcessorCount)
     {
+        // we got enough elements to generate: do one element per thread, and reduction inside
+        _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
+    }
+    // === optimization: simple case would not use all multiprocs
+    else
+    {
+        // m_blocksPerGrid can be thought of NN / 512, with appropriate rounding
+
         // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
-        // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
+        // If we get here, then
+        //  - the total number of outputs to produce is < #multiprocs * warpSize, e.g. < 960
+        //  - each output has at least two inputs, but possibly millions
+        // Examples:
+        //  (a1) NN=900
+        //        - each multiproc processes multiple elements concurrently, each reducing over its inputs inside
+        //        - use one block per output element
+        //  (a2) NN=30
+        //        - same as (a1) except each multiproc only runs one block
+        //  (b)  NN=1    (NN < #multiprocs, e.g. NN < 30)
+        //        - multiple blocks work together on a single output element
+        //        - only this case requires memory, and only K * NN
+        //          where K = blocks that work together,
+        //          both K and NN < #multiprocs,
+        //          and K * NN = on the order of NN, but generally a bit larger due to rounding.
 
         // By how much do we underutilize?
         // We increase #blocks by that factor by breaking reduction into that many chunks.
-        let numReductionChunks = CeilDiv(props.multiProcessorCount, NN);
+        let numReductionChunks = CeilDiv(props.multiProcessorCount, NN); // only >1 for NN < multiProcessorCount
 
-        // NN may be too large for a single dimension
+        // distribute NN over block X and Y
         let blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
         let numBlocksX = CeilDiv(NN, blockXOverBy);
         let numBlocksY = CeilDiv(NN, numBlocksX);
+        // while block Z is for multiple blocks working together on a single output element
         let numBlocksZ = numReductionChunks;
         // Block dim is now:
         //  - X, Y: such that X*Y covers NN
@@ -594,29 +617,36 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
         let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
-        if (beta == 1 || numBlocksZ == 1)
+        // --- cases (a1) and (a2)
+        // This involves no reduction across blocks.
+        if (numBlocksZ == 1)
         {
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+        }
+        // --- case (b)
+        // Reduction across blocks. This is the difficult one.
+#ifndef ALLOW_ATOMIC_REDUCTION // temporarily disabled to ensure it is not causing the non-reproducability
+        else
+        {
+            for (size_t z = 0; z < numBlocksZ; z++)
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(z == 0 ? beta : 1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize * z, reductionChunkSize);
+        }
+#else
+        else if (beta == 1)
+        {
+            // no need to pre-scale; just add (common for gradients)
+            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            return;
         }
         else
         {
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
-#if 0       // BUGBUG: atomicAdd not reliable enough, for now breaking it into individual launches
             // We will leave it like this for a while, but eventually need to revisit using temporary memory.
-            for (size_t z = 1; z < numBlocksZ; z++)
-                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize * z, reductionChunkSize);
-#else
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
-#endif
         }
-    }
-    else
 #endif
-    {
-        // we got enough elements to generate: do one element per thread, and reduction inside
-        _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
     }
 }
 
