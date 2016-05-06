@@ -148,8 +148,8 @@ speechTrain = [
         #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
         # ^^^ PROBABLY OUTDATED
 
-        ce = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the objective, as a node
-        err = ErrorPrediction(labels, z, tag='evaluation')       // this also gets tracked
+        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the objective, as a node
+        #err = ErrorPrediction(labels, z, tag='evaluation')       // this also gets tracked
 
         # this shows how both CE and frame error rate can be constructed as BS expressions
         # BUGBUG: The per-sample criterion will trigger a bug fix in momentum computation
