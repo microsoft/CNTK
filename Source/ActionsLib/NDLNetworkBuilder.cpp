@@ -292,7 +292,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(PoolingNode))
+    else if (cnNodeType == OperationNameOf(ConvolutionNode) ||
+             cnNodeType == OperationNameOf(PoolingNode) ||
+             cnNodeType == OperationNameOf(MaxPoolingIndicesNode))
     {
         if (parameter.size() != 3 && parameter.size() != 7)
         {

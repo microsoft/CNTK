@@ -147,6 +147,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MaxPoolingNode))           return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MaxPoolingIndicesNode))    return New<MaxPoolingIndicesNode<ElemType>>(forward<_Types>(_Args)...);
     else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 
@@ -334,6 +335,18 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
                                                                       { inputValues });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPoolingIndices(const ComputationNodePtr inputValues,
+                                                                                             const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                             const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                             ImageLayoutKind imageLayout,
+                                                                                             const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<MaxPoolingIndicesNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                                kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                                { inputValues });
 }
 
 template <class ElemType>

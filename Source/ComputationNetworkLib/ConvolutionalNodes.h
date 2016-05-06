@@ -443,6 +443,7 @@ protected:
 
 // -----------------------------------------------------------------------
 // PoolingNode (inputFeature)
+// Performs max or average ND pooling.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -504,6 +505,51 @@ public:
                                                                 m_maxTempMemSizeInSamples, m_poolKind);
             }
         }
+    }
+};
+
+template <class ElemType>
+class MaxPoolingIndicesNode : public PoolingNode<ElemType>
+{
+    typedef PoolingNode<ElemType> Base;
+    UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"MaxPoolingIndices";
+    }
+
+public:
+    MaxPoolingIndicesNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    MaxPoolingIndicesNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
+                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                ImageLayoutKind imageLayout)
+                : Base(deviceId, name, PoolKind::Max, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout)
+    {
+    }
+    MaxPoolingIndicesNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : MaxPoolingIndicesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"),
+                                configp->Get(L"strideShape"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    {
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+
+public:
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // There is nothing to backpropagate.
+        UNUSED(inputIndex);
+        UNUSED(fr);
+    }
+
+    void ForwardProp(const FrameRange& fr) override
+    {
+        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
 };
 
