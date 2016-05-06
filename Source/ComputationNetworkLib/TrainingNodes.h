@@ -824,7 +824,7 @@ public:
 			QueryUrls& qub = m_queryUrls.back();
 			qub.urls.resize(nUrls);
 
-			typename std::vector<Url>& urls = qub.urls;
+			std::vector<Url>& urls = qub.urls;
 			typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
 			typename std::vector<Url>::iterator its0 = its;
 			int rk0 = 0; // rk0 is original rank, rk is the sorted rank 
