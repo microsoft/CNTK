@@ -306,6 +306,14 @@ protected:
                                         m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
+    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
+    {
+        UNUSED(in);
+        UNUSED(mask);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxPoolingMask is not implemented for cuDNN engine.");
+    }
+
 private:
     using C = Consts<ElemType>;
 

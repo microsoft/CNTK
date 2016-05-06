@@ -89,10 +89,16 @@ public:
                                ImageLayoutKind imageLayout,
                                const std::wstring nodeName = L"");
     ComputationNodePtr MaxPoolingMask(const ComputationNodePtr inputValues, 
-                                         const TensorShape& kernelShape, const TensorShape& strideShape,
-                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                         ImageLayoutKind imageLayout,
-                                         const std::wstring nodeName = L"");
+                                      const TensorShape& kernelShape, const TensorShape& strideShape,
+                                      const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                      ImageLayoutKind imageLayout,
+                                      const std::wstring nodeName = L"");
+    ComputationNodePtr MaxUnpooling(const ComputationNodePtr inputValues,
+                                    const ComputationNodePtr mask,
+                                    const TensorShape& kernelShape, const TensorShape& strideShape,
+                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                    ImageLayoutKind imageLayout,
+                                    const std::wstring nodeName = L"");
     ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
                                   const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                   const std::wstring nodeName = L"");

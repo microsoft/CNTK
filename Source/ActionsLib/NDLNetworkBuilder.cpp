@@ -294,9 +294,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == OperationNameOf(ConvolutionNode) ||
              cnNodeType == OperationNameOf(PoolingNode) ||
-             cnNodeType == OperationNameOf(MaxPoolingMaskNode))
+             cnNodeType == OperationNameOf(MaxPoolingMaskNode) ||
+             cnNodeType == OperationNameOf(MaxUnpoolingNode))
     {
-        if (parameter.size() != 3 && parameter.size() != 7)
+        if (parameter.size() != 2 && parameter.size() != 3 && parameter.size() != 7)
         {
             if (cnNodeType == OperationNameOf(ConvolutionNode))
             {
@@ -308,10 +309,24 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                              "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
                              cnNodeType.c_str(), cnNodeType.c_str());
             }
-            else
+            else if (cnNodeType == OperationNameOf(PoolingNode))
             {
                 RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, poolKind, kernelShape] and \n"
-                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"]. \n"
+                             "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+            else if (cnNodeType == OperationNameOf(MaxPoolingMaskNode))
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls 2 fixed parameters [inputValueNodeName, kernelShape] and \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"]. \n"
+                             "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+            else if (cnNodeType == OperationNameOf(MaxUnpoolingNode))
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, mask, kernelShape] and \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"]. \n"
                              "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
                              cnNodeType.c_str(), cnNodeType.c_str());
             }
@@ -319,11 +334,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
         // setup the parameter position of children so we can hook them up later
         nodeParamStart = 0;
-        nodeParamCount = cnNodeType == OperationNameOf(ConvolutionNode) ? 2 : 1;
+        nodeParamCount = (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(MaxUnpoolingNode))
+                         ? 2
+                         : 1;
 
         if (pass == ndlPassInitial)
         {
-            if (parameter.size() == 3)
+            if (parameter.size() == 2 || parameter.size() == 3)
             {
                 auto reqParams = node->GetParameters(false);
                 auto optParams = node->GetParameters(true);
@@ -380,22 +397,21 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 ImageLayoutKind imageLayout = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
                 size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
 
-                auto pool = PoolKind::None;
-                if (cnNodeType == OperationNameOf(PoolingNode))
+                if (cnNodeType == OperationNameOf(MaxPoolingMaskNode))
+                    nodePtr = builder.MaxPoolingMask(NULL, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                else if (cnNodeType == OperationNameOf(MaxUnpoolingNode))
+                    nodePtr = builder.MaxUnpooling(NULL, NULL, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                else if (cnNodeType == OperationNameOf(PoolingNode))
                 {
                     auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
-                    pool = PoolKindFrom(wstring(parm->GetValue()));
+                    auto pool = PoolKindFrom(wstring(parm->GetValue()));
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
                 }
-
-                if (pool == PoolKind::None)
+                else
                 {
                     bool transpose = node->GetOptionalParameter("transpose", "false");
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
                                                   autoPad, lowerPad, upperPad, transpose, imageLayout, maxTempMemSizeInSamples, name);
-                }
-                else
-                {
-                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
                 }
 
             }

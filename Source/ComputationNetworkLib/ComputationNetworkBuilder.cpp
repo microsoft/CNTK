@@ -148,6 +148,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MaxPoolingNode))           return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MaxPoolingMaskNode))       return New<MaxPoolingMaskNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MaxUnpoolingNode))         return New<MaxUnpoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 
@@ -345,8 +346,21 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPo
                                                                                           const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<MaxPoolingMaskNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                                kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
-                                                                                { inputValues });
+                                                                             kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                             { inputValues });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxUnpooling(const ComputationNodePtr inputValues,
+                                                                                        const ComputationNodePtr mask,
+                                                                                        const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                        ImageLayoutKind imageLayout,
+                                                                                        const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<MaxUnpoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                           kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                           { inputValues, mask });
 }
 
 template <class ElemType>

@@ -107,6 +107,25 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
     BackwardPoolingCore(out, srcGrad, in, grad);
 }
 
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::MaxPoolingMask(const Mat& in, Mat& mask)
+{
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == mask.GetNumRows());
+    size_t batchSize = in.GetNumCols();
+    assert(batchSize == mask.GetNumCols());
+#ifdef NDEBUG
+    UNUSED(g);
+    UNUSED(batchSize);
+#endif
+
+    EnsureCompatible();
+    EnsurePoolingInitialized();
+    MaxPoolingMaskCore(in, mask);
+}
+
 //------------------------------------------------------------------
 // Reference convolution engine implementation.
 // This engine supports arbitrary convolution geometry but does not provide efficient implementation.
@@ -208,6 +227,11 @@ protected:
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+    }
+
+    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
+    {
+        in.MaxPoolingMask(m_mpRowCol, *m_mpRowIndices, *m_indices, mask);
     }
 
 protected:
@@ -498,6 +522,14 @@ protected:
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+    }
+
+    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
+    {
+        UNUSED(in);
+        UNUSED(mask);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxPoolingMask is not implemented for legacy engine.");
     }
 
 private:

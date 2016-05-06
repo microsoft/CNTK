@@ -55,6 +55,8 @@ public:
 
     void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
 
+    void MaxPoolingMask(const Mat& in, Mat& mask);
+
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
@@ -90,6 +92,8 @@ protected:
     virtual void ForwardPoolingCore(const Mat& in, Mat& out) = 0;
 
     virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
+
+    virtual void MaxPoolingMaskCore(const Mat& in, Mat& mask) = 0;
 
 protected:
     ConvolveGeometryPtr m_geometry;
