@@ -180,4 +180,5 @@ speechTrain = [
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+    ]
 ]
