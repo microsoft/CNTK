@@ -1,10 +1,10 @@
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU/rnnlu.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU RunDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU OutputDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu DeviceId=0 timestamping=true NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU ExpDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu OutDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU/rnnlu.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU RunDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU OutputDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu DeviceId=0 timestamping=true NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU ExpDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu OutDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: May  3 2016 21:53:37
-		Last modified date: Tue May  3 11:36:23 2016
-		Build type: release
+		Built time: May  5 2016 21:53:50
+		Last modified date: Thu May  5 19:06:09 2016
+		Build type: debug
 		Build target: GPU
 		With 1bit-SGD: no
 		Math lib: acml
@@ -12,37 +12,37 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: HEAD
-		Build SHA1: d79e568663666f475b36f13033a93258058bef57
-		Built by philly on 87698aadbc9d
+		Build SHA1: 163a49b07f300a0a2c74b074373431af0fc6959a
+		Built by philly on cded08e6b560
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
 Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
-05/03/2016 22:13:18: -------------------------------------------------------------------
-05/03/2016 22:13:18: Build info: 
+05/05/2016 22:19:51: -------------------------------------------------------------------
+05/05/2016 22:19:51: Build info: 
 
-05/03/2016 22:13:18: 		Built time: May  3 2016 21:53:37
-05/03/2016 22:13:18: 		Last modified date: Tue May  3 11:36:23 2016
-05/03/2016 22:13:18: 		Build type: release
-05/03/2016 22:13:18: 		Build target: GPU
-05/03/2016 22:13:18: 		With 1bit-SGD: no
-05/03/2016 22:13:18: 		Math lib: acml
-05/03/2016 22:13:18: 		CUDA_PATH: /usr/local/cuda-7.5
-05/03/2016 22:13:18: 		CUB_PATH: /usr/local/cub-1.4.1
-05/03/2016 22:13:18: 		CUDNN_PATH: /usr/local/cudnn-4.0
-05/03/2016 22:13:18: 		Build Branch: HEAD
-05/03/2016 22:13:18: 		Build SHA1: d79e568663666f475b36f13033a93258058bef57
-05/03/2016 22:13:18: 		Built by philly on 87698aadbc9d
-05/03/2016 22:13:18: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-05/03/2016 22:13:18: -------------------------------------------------------------------
+05/05/2016 22:19:51: 		Built time: May  5 2016 21:53:50
+05/05/2016 22:19:51: 		Last modified date: Thu May  5 19:06:09 2016
+05/05/2016 22:19:51: 		Build type: debug
+05/05/2016 22:19:51: 		Build target: GPU
+05/05/2016 22:19:51: 		With 1bit-SGD: no
+05/05/2016 22:19:51: 		Math lib: acml
+05/05/2016 22:19:51: 		CUDA_PATH: /usr/local/cuda-7.5
+05/05/2016 22:19:51: 		CUB_PATH: /usr/local/cub-1.4.1
+05/05/2016 22:19:51: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/05/2016 22:19:51: 		Build Branch: HEAD
+05/05/2016 22:19:51: 		Build SHA1: 163a49b07f300a0a2c74b074373431af0fc6959a
+05/05/2016 22:19:51: 		Built by philly on cded08e6b560
+05/05/2016 22:19:51: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/05/2016 22:19:51: -------------------------------------------------------------------
 
-05/03/2016 22:13:18: Running on localhost at 2016/05/03 22:13:18
-05/03/2016 22:13:18: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU/rnnlu.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU  RunDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU  OutputDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu  DeviceId=0  timestamping=true  NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU  ExpDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu  OutDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+05/05/2016 22:19:51: Running on localhost at 2016/05/05 22:19:51
+05/05/2016 22:19:51: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU/rnnlu.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU  RunDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU  OutputDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu  DeviceId=0  timestamping=true  NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU  ExpDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu  OutDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 
 
 
-05/03/2016 22:13:18: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-05/03/2016 22:13:18: precision="float"
+05/05/2016 22:19:51: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/05/2016 22:19:51: precision="float"
 deviceId = $DeviceId$
 command=LSTM:LSTMTest
 traceLevel=1
@@ -280,27 +280,27 @@ LSTMTest=[
     ]
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
-RunDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+RunDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU
-OutputDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+OutputDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 DeviceId=0
 timestamping=true
 NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU
-ExpDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
-OutDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+ExpDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
+OutDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 
-05/03/2016 22:13:18: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/05/2016 22:19:51: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 22:13:18: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-05/03/2016 22:13:18: precision="float"
+05/05/2016 22:19:51: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/05/2016 22:19:51: precision="float"
 deviceId = 0
 command=LSTM:LSTMTest
 traceLevel=1
 LSTM=[
     action=train
 	makeMode=true
-    modelPath=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn
+    modelPath=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn
     SimpleNetworkBuilder=[
         rnnType=LSTM
         layerSizes=2832:50:300:300:300:127
@@ -335,7 +335,7 @@ epochSize=71524
         randomize=None
 nbruttsineachrecurrentiter=10  
         equalLength = false
-        wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.bin
+        wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.bin
         wsize=256
         wrecords=1000
         windowSize=10000
@@ -355,7 +355,7 @@ nbruttsineachrecurrentiter=10
             dim=1
             usewordmap=true
             labelDim=10000
-            labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.txt
+            labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.txt
             labelType=Category
             beginSequence="BOS"
             endSequence="EOS"
@@ -377,7 +377,7 @@ nbruttsineachrecurrentiter=10
             dim=1
             labelType=Category
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
-            labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+            labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
             sectionType=labels
             mapping=[
               sectionType=labelMapping
@@ -393,7 +393,7 @@ nbruttsineachrecurrentiter=10
       wordContext=0:1:2
       nbruttsineachrecurrentiter=200
       equalLength = false
-      wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.valid.bin
+      wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.valid.bin
       wsize=256
       wrecords=1000
       windowSize=10000
@@ -412,7 +412,7 @@ nbruttsineachrecurrentiter=10
       labelIn=[
         dim=1
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.in.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.in.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
@@ -435,7 +435,7 @@ nbruttsineachrecurrentiter=10
         labelType=Category
         token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
         elementSize=4
         sectionType=labels
         mapping=[
@@ -454,7 +454,7 @@ LSTMTest=[
     action=write
     epochSize=4430000
     defaultHiddenActivity=0.1
-    modelPath=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn
+    modelPath=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn
     outputNodeNames=outputs:labels
     reader=[
       readerType=LUSequenceReader
@@ -463,7 +463,7 @@ LSTMTest=[
       unk="<unk>"
       wordmap=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/inputmap.txt
       file=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.test.apos.pred.pos.head.IOB.simple
-      wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.bin
+      wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.bin
       wsize=256
       wrecords=1000
       windowSize=10000
@@ -479,7 +479,7 @@ LSTMTest=[
       labelIn=[
         dim=1
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
@@ -504,7 +504,7 @@ LSTMTest=[
         endSequence="EOS"
         token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         labelDim=127
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
         elementSize=4
         sectionType=labels
         mapping=[
@@ -521,39 +521,39 @@ LSTMTest=[
     writer=[
         writerType=LUSequenceWriter
         outputs=[
-            file=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/output.rec.txt
+            file=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/output.rec.txt
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         ]
         labels=[
-            file=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/output.lbl.txt
+            file=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/output.lbl.txt
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         ]
     ]
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
-RunDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+RunDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU
-OutputDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+OutputDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 DeviceId=0
 timestamping=true
 NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU
-ExpDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
-OutDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+ExpDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
+OutDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 
-05/03/2016 22:13:18: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/05/2016 22:19:51: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 22:13:18: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/05/2016 22:19:51: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: rnnlu.cntk:command=LSTM:LSTMTest
 configparameters: rnnlu.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU/../../../../../../Examples/Text/Miscellaneous/SLU
 configparameters: rnnlu.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
 configparameters: rnnlu.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU
 configparameters: rnnlu.cntk:deviceId=0
-configparameters: rnnlu.cntk:ExpDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+configparameters: rnnlu.cntk:ExpDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 configparameters: rnnlu.cntk:LSTM=[
     action=train
 	makeMode=true
-    modelPath=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn
+    modelPath=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn
     SimpleNetworkBuilder=[
         rnnType=LSTM
         layerSizes=2832:50:300:300:300:127
@@ -588,7 +588,7 @@ epochSize=71524
         randomize=None
 nbruttsineachrecurrentiter=10  
         equalLength = false
-        wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.bin
+        wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.bin
         wsize=256
         wrecords=1000
         windowSize=10000
@@ -608,7 +608,7 @@ nbruttsineachrecurrentiter=10
             dim=1
             usewordmap=true
             labelDim=10000
-            labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.txt
+            labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.txt
             labelType=Category
             beginSequence="BOS"
             endSequence="EOS"
@@ -630,7 +630,7 @@ nbruttsineachrecurrentiter=10
             dim=1
             labelType=Category
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
-            labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+            labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
             sectionType=labels
             mapping=[
               sectionType=labelMapping
@@ -646,7 +646,7 @@ nbruttsineachrecurrentiter=10
       wordContext=0:1:2
       nbruttsineachrecurrentiter=200
       equalLength = false
-      wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.valid.bin
+      wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.valid.bin
       wsize=256
       wrecords=1000
       windowSize=10000
@@ -665,7 +665,7 @@ nbruttsineachrecurrentiter=10
       labelIn=[
         dim=1
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.in.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.in.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
@@ -688,7 +688,7 @@ nbruttsineachrecurrentiter=10
         labelType=Category
         token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
         elementSize=4
         sectionType=labels
         mapping=[
@@ -708,7 +708,7 @@ configparameters: rnnlu.cntk:LSTMTest=[
     action=write
     epochSize=4430000
     defaultHiddenActivity=0.1
-    modelPath=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn
+    modelPath=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn
     outputNodeNames=outputs:labels
     reader=[
       readerType=LUSequenceReader
@@ -717,7 +717,7 @@ configparameters: rnnlu.cntk:LSTMTest=[
       unk="<unk>"
       wordmap=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/inputmap.txt
       file=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.test.apos.pred.pos.head.IOB.simple
-      wfile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sequenceSentence.bin
+      wfile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sequenceSentence.bin
       wsize=256
       wrecords=1000
       windowSize=10000
@@ -733,7 +733,7 @@ configparameters: rnnlu.cntk:LSTMTest=[
       labelIn=[
         dim=1
         labelDim=10000
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
@@ -758,7 +758,7 @@ configparameters: rnnlu.cntk:LSTMTest=[
         endSequence="EOS"
         token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         labelDim=127
-        labelMappingFile=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/sentenceLabels.out.txt
+        labelMappingFile=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/sentenceLabels.out.txt
         elementSize=4
         sectionType=labels
         mapping=[
@@ -775,42 +775,42 @@ configparameters: rnnlu.cntk:LSTMTest=[
     writer=[
         writerType=LUSequenceWriter
         outputs=[
-            file=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/output.rec.txt
+            file=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/output.rec.txt
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         ]
         labels=[
-            file=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/output.lbl.txt
+            file=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/output.lbl.txt
             token=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/output.txt
         ]
     ]
 ]
 
 configparameters: rnnlu.cntk:NdlDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Text/Miscellaneous/SLU
-configparameters: rnnlu.cntk:OutDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
-configparameters: rnnlu.cntk:OutputDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+configparameters: rnnlu.cntk:OutDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
+configparameters: rnnlu.cntk:OutputDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 configparameters: rnnlu.cntk:precision=float
-configparameters: rnnlu.cntk:RunDir=/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu
+configparameters: rnnlu.cntk:RunDir=/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu
 configparameters: rnnlu.cntk:timestamping=true
 configparameters: rnnlu.cntk:traceLevel=1
-05/03/2016 22:13:18: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-05/03/2016 22:13:18: Commands: LSTM LSTMTest
-05/03/2016 22:13:18: Precision = "float"
-05/03/2016 22:13:18: CNTKModelPath: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn
-05/03/2016 22:13:18: CNTKCommandTrainInfo: LSTM : 100
-05/03/2016 22:13:18: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 100
+05/05/2016 22:19:51: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/05/2016 22:19:51: Commands: LSTM LSTMTest
+05/05/2016 22:19:51: Precision = "float"
+05/05/2016 22:19:51: CNTKModelPath: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn
+05/05/2016 22:19:51: CNTKCommandTrainInfo: LSTM : 100
+05/05/2016 22:19:51: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 100
 
-05/03/2016 22:13:18: ##############################################################################
-05/03/2016 22:13:18: #                                                                            #
-05/03/2016 22:13:18: # Action "train"                                                             #
-05/03/2016 22:13:18: #                                                                            #
-05/03/2016 22:13:18: ##############################################################################
+05/05/2016 22:19:51: ##############################################################################
+05/05/2016 22:19:51: #                                                                            #
+05/05/2016 22:19:51: # Action "train"                                                             #
+05/05/2016 22:19:51: #                                                                            #
+05/05/2016 22:19:51: ##############################################################################
 
-05/03/2016 22:13:18: CNTKCommandTrainBegin: LSTM
+05/05/2016 22:19:51: CNTKCommandTrainBegin: LSTM
 SimpleNetworkBuilder Using GPU 0
 BatchLUSequenceReader: Input file is /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.train.apos.pred.pos.head.IOB.simple
 BatchLUSequenceReader: Input file is /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.dev.IOB.simple
 
-05/03/2016 22:13:18: Creating virgin network.
+05/05/2016 22:19:51: Creating virgin network.
 SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
@@ -1068,10 +1068,10 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-05/03/2016 22:13:19: Created model with 168 nodes on GPU 0.
+05/05/2016 22:19:51: Created model with 168 nodes on GPU 0.
 
-05/03/2016 22:13:19: Training criterion node(s):
-05/03/2016 22:13:19: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+05/05/2016 22:19:51: Training criterion node(s):
+05/05/2016 22:19:51: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -1079,937 +1079,937 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[PosteriorProb Gradient[127 x 1 x *]] [PosteriorProb Value[127 x 1 x *]] [features Gradient[2832 x *]] [labels Gradient[127 x *]] [outputs Gradient[127 x 1 x *]] }
-0x2d71ee8: {[features Value[2832 x *]] }
-0x36a5658: {[E0 Value[50 x 944]] }
-0x3caa868: {[WXC0 Value[300 x 150]] }
-0x3cab6c8: {[bo0 Value[300 x 1]] }
-0x3cac588: {[bc0 Value[300 x 1]] }
-0x3cacf28: {[bi0 Value[300 x 1]] }
-0x3cad8c8: {[bf0 Value[300 x 1]] }
-0x3cae278: {[WHI0 Value[300 x 300]] }
-0x3caef18: {[WXF2 Value[300 x 300]] }
-0x3caf308: {[WCI0 Value[300 x 1]] }
-0x3cafc28: {[WHF0 Value[300 x 300]] }
-0x3cb05d8: {[WCF0 Value[300 x 1]] }
-0x3cb0f88: {[WHO0 Value[300 x 300]] }
-0x3cb1e88: {[WCO0 Value[300 x 1]] }
-0x3cb2838: {[WHC0 Value[300 x 300]] }
-0x3cb3408: {[AutoName0 Value[300 x 1 x *]] }
-0x3cb3d68: {[AutoName1 Value[300 x 1 x *]] }
-0x3cb43d8: {[AutoName2 Value[300 x 1 x *]] [WXC0 Gradient[300 x 150]] }
-0x3cb4d88: {[AutoName4 Value[300 x 1 x *]] }
-0x3cb5288: {[AutoName3 Value[300 x 1 x *]] }
-0x3cba918: {[WXO0 Value[300 x 150]] }
-0x3cbb498: {[WXF0 Value[300 x 150]] }
-0x3cbb9f8: {[WXI0 Value[300 x 150]] }
-0x3f94d68: {[AutoName5 Value[300 x 1 x *]] }
-0x3f953d8: {[AutoName6 Value[300 x 1 x *]] }
-0x3f9b758: {[WXO2 Value[300 x 300]] }
-0x3f9c8c8: {[WXI2 Value[300 x 300]] }
-0x3f9d278: {[WXC3 Value[300 x 300]] }
-0x3f9e378: {[WXC2 Value[300 x 300]] }
-0x3f9ed18: {[bo2 Value[300 x 1]] }
-0x3f9f6b8: {[bc2 Value[300 x 1]] }
-0x3fa0058: {[bi2 Value[300 x 1]] }
-0x3fa09f8: {[bf2 Value[300 x 1]] }
-0x3fa13a8: {[WHI2 Value[300 x 300]] }
-0x3fa22a8: {[WCI2 Value[300 x 1]] }
-0x3fa2c58: {[WHF2 Value[300 x 300]] }
-0x3fa3608: {[WCF2 Value[300 x 1]] }
-0x3fa3fb8: {[WHO2 Value[300 x 300]] }
-0x3fa4eb8: {[WCO2 Value[300 x 1]] }
-0x3fa5868: {[WHC2 Value[300 x 300]] }
-0x3fa6438: {[AutoName38 Value[300 x 1 x *]] [WHI0 Gradient[300 x 300]] }
-0x3fa6b98: {[AutoName27 Gradient[300 x 1 x *]] [AutoName39 Value[300 x 1 x *]] }
-0x3fa71f8: {[AutoName40 Value[300 x 1 x *]] [WXC2 Gradient[300 x 300]] }
-0x3fa7958: {[AutoName30 Gradient[300 x 1 x *]] [AutoName41 Value[300 x 1 x *]] }
-0x3fa7f68: {[AutoName20 Gradient[300 x 1 x *]] [AutoName42 Value[300 x 1 x *]] }
-0x3fa86c8: {[AutoName15 Gradient[300 x 1 x *]] [AutoName43 Value[300 x 1 x *]] }
-0x3fa8d28: {[AutoName44 Value[300 x 1 x *]] [WCI0 Gradient[300 x 1]] }
-0x3faf078: {[WXO3 Value[300 x 300]] }
-0x3fb01e8: {[WXI3 Value[300 x 300]] }
-0x3fb0b98: {[WXF3 Value[300 x 300]] }
-0x3fb2838: {[bo3 Value[300 x 1]] }
-0x3fb31d8: {[bc3 Value[300 x 1]] }
-0x3fb3b78: {[bi3 Value[300 x 1]] }
-0x3fb4518: {[bf3 Value[300 x 1]] }
-0x3fb4ec8: {[WHI3 Value[300 x 300]] }
-0x3fb5dc8: {[WCI3 Value[300 x 1]] }
-0x3fb6778: {[WHF3 Value[300 x 300]] }
-0x3fb7128: {[WCF3 Value[300 x 1]] }
-0x3fb7ad8: {[WHO3 Value[300 x 300]] }
-0x3fb89d8: {[WCO3 Value[300 x 1]] }
-0x3fb9388: {[WHC3 Value[300 x 300]] }
-0x3fb9f58: {[AutoName76 Value[300 x 1 x *]] [WHI2 Gradient[300 x 300]] }
-0x3fba6b8: {[AutoName65 Gradient[300 x 1 x *]] [AutoName77 Value[300 x 1 x *]] [AutoName8 Gradient[300 x 1 x *]] }
-0x3fbad08: {[AutoName78 Value[300 x 1 x *]] [WXC3 Gradient[300 x 300]] }
-0x3fbb468: {[AutoName68 Gradient[300 x 1 x *]] [AutoName79 Value[300 x 1 x *]] }
-0x3fbba78: {[AutoName12 Gradient[300 x 1 x *]] [AutoName58 Gradient[300 x 1 x *]] [AutoName80 Value[300 x 1 x *]] }
-0x3fbc1d8: {[AutoName53 Gradient[300 x 1 x *]] [AutoName81 Value[300 x 1 x *]] }
-0x3fbc828: {[AutoName82 Value[300 x 1 x *]] [WCI2 Gradient[300 x 1]] }
-0x3fc2b78: {[W4 Value[127 x 300]] }
-0x3fc34f8: {[labels Value[127 x *]] }
-0x3fcff78: {[outputs Value[127 x 1 x *]] }
-0x3fd52a8: {[CrossEntropyWithSoftmax Value[1]] }
-0x3fe0ac8: {[LookupTable Value[150 x *]] }
-0x3fe1318: {[AutoName23 Value[300 x 1 x *]] [WXF0 Gradient[300 x 150]] }
-0x3fe1688: {[AutoName31 Value[300 x *]] [E0 Gradient[50 x 944]] }
-0x3fe2428: {[AutoName22 Value[300 x *]] [AutoName31 Gradient[300 x *]] }
-0x3fe29b8: {[AutoName22 Gradient[300 x *]] [AutoName9 Value[300 x *]] [bo0 Gradient[300 x 1]] }
-0x3fe2b18: {[AutoName10 Value[300 x 1 x *]] [WXI0 Gradient[300 x 150]] }
-0x3fe2cd8: {[AutoName16 Value[300 x *]] [AutoName9 Gradient[300 x *]] [bf0 Gradient[300 x 1]] }
-0x3fe2e98: {[AutoName30 Value[300 x 1 x *]] }
-0x3fe3ba8: {[AutoName32 Value[300 x 1 x *]] [WXO0 Gradient[300 x 150]] }
-0x3fe45f8: {[AutoName33 Value[300 x 1 x *]] }
-0x3fe47b8: {[AutoName21 Value[300 x 1 x *]] }
-0x3fe4978: {[AutoName24 Value[300 x 1 x *]] }
-0x3fe4b38: {[AutoName20 Value[300 x 1 x *]] }
-0x3fe4cf8: {[AutoName25 Value[300 x 1 x *]] }
-0x3fe4eb8: {[AutoName26 Value[300 x 1 x *]] }
-0x3fe5078: {[AutoName27 Value[300 x 1 x *]] }
-0x3fe6228: {[AutoName8 Value[300 x 1 x *]] }
-0x3fe6388: {[AutoName11 Value[300 x 1 x *]] }
-0x3fe64e8: {[AutoName7 Value[300 x 1 x *]] }
-0x3fe66a8: {[AutoName12 Value[300 x 1 x *]] }
-0x3fe6868: {[AutoName13 Value[300 x 1 x *]] }
-0x3fe6a28: {[AutoName14 Value[300 x 1 x *]] }
-0x3fe6be8: {[AutoName15 Value[300 x 1 x *]] }
-0x3fe6da8: {[AutoName17 Value[300 x 1 x *]] }
-0x3fe6f68: {[AutoName18 Value[300 x 1 x *]] }
-0x3fe7128: {[AutoName19 Value[300 x 1 x *]] }
-0x3fe72e8: {[AutoName28 Value[300 x 1 x *]] }
-0x3fe74a8: {[AutoName29 Value[300 x 1 x *]] }
-0x3fe7668: {[AutoName34 Value[300 x 1 x *]] }
-0x3fe7828: {[AutoName35 Value[300 x 1 x *]] }
-0x3fe79e8: {[AutoName36 Value[300 x 1 x *]] }
-0x3fe7ba8: {[AutoName37 Value[300 x 1 x *]] }
-0x3fe7d68: {[AutoName35 Gradient[300 x 1 x *]] [AutoName69 Value[300 x 1 x *]] }
-0x3fe7f28: {[AutoName70 Value[300 x 1 x *]] [WXO2 Gradient[300 x 300]] }
-0x3fe80e8: {[AutoName36 Gradient[300 x 1 x *]] [AutoName60 Value[300 x 1 x *]] [AutoName69 Gradient[300 x 1 x *]] }
-0x3fe82a8: {[AutoName61 Value[300 x 1 x *]] [WXF2 Gradient[300 x 300]] }
-0x3fe8468: {[AutoName47 Value[300 x 1 x *]] [AutoName60 Gradient[300 x 1 x *]] [bo2 Gradient[300 x 1]] }
-0x3fe8628: {[AutoName48 Value[300 x 1 x *]] [WXI2 Gradient[300 x 300]] }
-0x3fe87e8: {[AutoName47 Gradient[300 x 1 x *]] [AutoName54 Value[300 x 1 x *]] [bf2 Gradient[300 x 1]] }
-0x3fe89a8: {[AutoName29 Gradient[300 x 1 x *]] [AutoName68 Value[300 x 1 x *]] }
-0x3fe8b68: {[AutoName71 Value[300 x 1 x *]] }
-0x3fe8d28: {[AutoName13 Gradient[300 x 1 x *]] [AutoName59 Value[300 x 1 x *]] }
-0x3fe8ee8: {[AutoName17 Gradient[300 x 1 x *]] [AutoName62 Value[300 x 1 x *]] }
-0x3fe90a8: {[AutoName3 Gradient[300 x 1 x *]] [AutoName58 Value[300 x 1 x *]] }
-0x3fe9268: {[AutoName11 Gradient[300 x 1 x *]] [AutoName63 Value[300 x 1 x *]] }
-0x3fe9428: {[AutoName64 Value[300 x 1 x *]] }
-0x3fe95e8: {[AutoName10 Gradient[300 x 1 x *]] [AutoName65 Value[300 x 1 x *]] }
-0x3fe97a8: {[AutoName26 Gradient[300 x 1 x *]] [AutoName46 Value[300 x 1 x *]] }
-0x3fe9968: {[AutoName25 Gradient[300 x 1 x *]] [AutoName49 Value[300 x 1 x *]] }
-0x3fe9b28: {[AutoName45 Value[300 x 1 x *]] [AutoName5 Gradient[300 x 1 x *]] }
-0x3fe9ce8: {[AutoName21 Gradient[300 x 1 x *]] [AutoName50 Value[300 x 1 x *]] }
-0x3fe9ea8: {[AutoName1 Gradient[300 x 1 x *]] [AutoName51 Value[300 x 1 x *]] }
-0x3fea068: {[AutoName2 Gradient[300 x 1 x *]] [AutoName52 Value[300 x 1 x *]] [LookupTable Gradient[150 x *]] }
-0x3fea228: {[AutoName53 Value[300 x 1 x *]] }
-0x3fea3e8: {[AutoName55 Value[300 x 1 x *]] }
-0x3fea5a8: {[AutoName56 Value[300 x 1 x *]] }
-0x3fea768: {[AutoName57 Value[300 x 1 x *]] }
-0x3fea928: {[AutoName66 Value[300 x 1 x *]] }
-0x3feaae8: {[AutoName67 Value[300 x 1 x *]] }
-0x3feaca8: {[AutoName72 Value[300 x 1 x *]] }
-0x3feae68: {[AutoName73 Value[300 x 1 x *]] }
-0x3feb028: {[AutoName74 Value[300 x 1 x *]] }
-0x3feb1e8: {[AutoName75 Value[300 x 1 x *]] }
-0x3feb3a8: {[AutoName107 Value[300 x 1 x *]] [AutoName73 Gradient[300 x 1 x *]] }
-0x3feb568: {[AutoName108 Value[300 x 1 x *]] [WXO3 Gradient[300 x 300]] }
-0x3feb728: {[AutoName107 Gradient[300 x 1 x *]] [AutoName74 Gradient[300 x 1 x *]] [AutoName98 Value[300 x 1 x *]] }
-0x3feb8e8: {[AutoName99 Value[300 x 1 x *]] [WXF3 Gradient[300 x 300]] }
-0x3febaa8: {[AutoName85 Value[300 x 1 x *]] [AutoName98 Gradient[300 x 1 x *]] [bo3 Gradient[300 x 1]] }
-0x3febc68: {[AutoName86 Value[300 x 1 x *]] [WXI3 Gradient[300 x 300]] }
-0x3febe28: {[AutoName85 Gradient[300 x 1 x *]] [AutoName92 Value[300 x 1 x *]] [bf3 Gradient[300 x 1]] }
-0x3febfe8: {[AutoName106 Value[300 x 1 x *]] [AutoName67 Gradient[300 x 1 x *]] }
-0x3fec1a8: {[AutoName109 Value[300 x 1 x *]] }
-0x3fec368: {[AutoName32 Gradient[300 x 1 x *]] [AutoName51 Gradient[300 x 1 x *]] [AutoName97 Value[300 x 1 x *]] }
-0x3fec528: {[AutoName100 Value[300 x 1 x *]] [AutoName55 Gradient[300 x 1 x *]] }
-0x3fec6e8: {[AutoName41 Gradient[300 x 1 x *]] [AutoName96 Value[300 x 1 x *]] [WHO0 Gradient[300 x 300]] }
-0x3fec8a8: {[AutoName101 Value[300 x 1 x *]] [AutoName24 Gradient[300 x 1 x *]] [AutoName49 Gradient[300 x 1 x *]] }
-0x3feca68: {[AutoName102 Value[300 x 1 x *]] [WCF0 Gradient[300 x 1]] }
-0x3fecc28: {[AutoName103 Value[300 x 1 x *]] [AutoName33 Gradient[300 x 1 x *]] [AutoName48 Gradient[300 x 1 x *]] }
-0x3fecde8: {[AutoName64 Gradient[300 x 1 x *]] [AutoName84 Value[300 x 1 x *]] }
-0x3fecfa8: {[AutoName63 Gradient[300 x 1 x *]] [AutoName7 Gradient[300 x 1 x *]] [AutoName87 Value[300 x 1 x *]] }
-0x3fed168: {[AutoName14 Gradient[300 x 1 x *]] [AutoName43 Gradient[300 x 1 x *]] [AutoName83 Value[300 x 1 x *]] }
-0x3fed328: {[AutoName18 Gradient[300 x 1 x *]] [AutoName59 Gradient[300 x 1 x *]] [AutoName88 Value[300 x 1 x *]] }
-0x3fed4e8: {[AutoName19 Gradient[300 x 1 x *]] [AutoName39 Gradient[300 x 1 x *]] [AutoName89 Value[300 x 1 x *]] }
-0x3fed6a8: {[AutoName37 Gradient[300 x 1 x *]] [AutoName40 Gradient[300 x 1 x *]] [AutoName90 Value[300 x 1 x *]] }
-0x3fed868: {[AutoName91 Value[300 x 1 x *]] }
-0x3feda28: {[AutoName93 Value[300 x 1 x *]] }
-0x3fedbe8: {[AutoName94 Value[300 x 1 x *]] }
-0x3fedda8: {[AutoName95 Value[300 x 1 x *]] }
-0x3fedf68: {[AutoName104 Value[300 x 1 x *]] }
-0x3fee128: {[AutoName105 Value[300 x 1 x *]] }
-0x3fee2e8: {[AutoName110 Value[300 x 1 x *]] }
-0x3fee4a8: {[AutoName111 Value[300 x 1 x *]] }
-0x3fee668: {[AutoName112 Value[300 x 1 x *]] }
-0x3fee828: {[AutoName113 Value[300 x 1 x *]] }
-0x3fee9e8: {[AutoName111 Gradient[300 x 1 x *]] [AutoName114 Value[127 x 1 x *]] }
-0x3feef28: {[CrossEntropyWithSoftmax Gradient[1]] }
-0x3fef0e8: {[AutoName112 Gradient[300 x 1 x *]] [AutoName114 Gradient[127 x 1 x *]] }
-0x3fef2a8: {[W4 Gradient[127 x 300]] }
-0x3fef468: {[AutoName113 Gradient[300 x 1 x *]] }
-0x3fef628: {[AutoName104 Gradient[300 x 1 x *]] }
-0x3fef7e8: {[AutoName110 Gradient[300 x 1 x *]] }
-0x3fef9a8: {[AutoName109 Gradient[300 x 1 x *]] [WCO2 Gradient[300 x 1]] }
-0x3fefb68: {[AutoName105 Gradient[300 x 1 x *]] }
-0x3ff00a8: {[WCO3 Gradient[300 x 1]] }
-0x3ff0268: {[AutoName103 Gradient[300 x 1 x *]] [AutoName46 Gradient[300 x 1 x *]] [AutoName6 Gradient[300 x 1 x *]] }
-0x3ff0428: {[AutoName95 Gradient[300 x 1 x *]] }
-0x3ff05e8: {[AutoName28 Gradient[300 x 1 x *]] [AutoName70 Gradient[300 x 1 x *]] [AutoName89 Gradient[300 x 1 x *]] }
-0x3ff07a8: {[AutoName94 Gradient[300 x 1 x *]] }
-0x3ff0968: {[AutoName93 Gradient[300 x 1 x *]] }
-0x3ff0b28: {[AutoName92 Gradient[300 x 1 x *]] [bi3 Gradient[300 x 1]] }
-0x3ff0ce8: {[AutoName91 Gradient[300 x 1 x *]] }
-0x3ff0ea8: {[AutoName90 Gradient[300 x 1 x *]] }
-0x3ff1068: {[bc3 Gradient[300 x 1]] }
-0x3ff1228: {[WHC3 Gradient[300 x 300]] }
-0x3ff13e8: {[AutoName79 Gradient[300 x 1 x *]] [WHO2 Gradient[300 x 300]] }
-0x3ff15a8: {[AutoName88 Gradient[300 x 1 x *]] [WHF2 Gradient[300 x 300]] }
-0x3ff1768: {[AutoName16 Gradient[300 x *]] [AutoName62 Gradient[300 x 1 x *]] [AutoName87 Gradient[300 x 1 x *]] [bi0 Gradient[300 x 1]] }
-0x3ff1928: {[AutoName34 Gradient[300 x 1 x *]] [AutoName61 Gradient[300 x 1 x *]] [AutoName83 Gradient[300 x 1 x *]] }
-0x3ff1ae8: {[WCF2 Gradient[300 x 1]] }
-0x3ff1ca8: {[bc0 Gradient[300 x 1]] }
-0x3ff1e68: {[WCI3 Gradient[300 x 1]] }
-0x3ff2028: {[AutoName80 Gradient[300 x 1 x *]] [WHC0 Gradient[300 x 300]] }
-0x3ff21e8: {[AutoName71 Gradient[300 x 1 x *]] [AutoName86 Gradient[300 x 1 x *]] [WCO0 Gradient[300 x 1]] }
-0x3ff23a8: {[AutoName4 Gradient[300 x 1 x *]] [AutoName44 Gradient[300 x 1 x *]] [AutoName84 Gradient[300 x 1 x *]] }
-0x3ff2568: {[WHI3 Gradient[300 x 300]] }
-0x3ff2728: {[AutoName0 Gradient[300 x 1 x *]] [AutoName38 Gradient[300 x 1 x *]] [AutoName76 Gradient[300 x 1 x *]] }
-0x3ff28e8: {[AutoName102 Gradient[300 x 1 x *]] }
-0x3ff2aa8: {[AutoName42 Gradient[300 x 1 x *]] [AutoName82 Gradient[300 x 1 x *]] }
-0x3ff2c68: {[AutoName101 Gradient[300 x 1 x *]] [AutoName23 Gradient[300 x 1 x *]] [AutoName45 Gradient[300 x 1 x *]] }
-0x3ff2e28: {[AutoName100 Gradient[300 x 1 x *]] [AutoName54 Gradient[300 x 1 x *]] [bi2 Gradient[300 x 1]] }
-0x3ff2fe8: {[AutoName50 Gradient[300 x 1 x *]] [AutoName96 Gradient[300 x 1 x *]] [WHF0 Gradient[300 x 300]] }
-0x3ff31a8: {[WHC2 Gradient[300 x 300]] }
-0x3ff3368: {[bc2 Gradient[300 x 1]] }
-0x3ff3528: {[WCF3 Gradient[300 x 1]] }
-0x3ff36e8: {[AutoName52 Gradient[300 x 1 x *]] [AutoName81 Gradient[300 x 1 x *]] }
-0x3ff38a8: {[AutoName72 Gradient[300 x 1 x *]] [AutoName99 Gradient[300 x 1 x *]] }
-0x3ff3a68: {[AutoName56 Gradient[300 x 1 x *]] [AutoName97 Gradient[300 x 1 x *]] }
-0x3ff3c28: {[WHF3 Gradient[300 x 300]] }
-0x3ff3de8: {[AutoName57 Gradient[300 x 1 x *]] [AutoName77 Gradient[300 x 1 x *]] }
-0x3ff3fa8: {[AutoName108 Gradient[300 x 1 x *]] [AutoName66 Gradient[300 x 1 x *]] }
-0x3ff4168: {[AutoName106 Gradient[300 x 1 x *]] }
-0x3ff4328: {[WHO3 Gradient[300 x 300]] }
-0x3ff44e8: {[AutoName75 Gradient[300 x 1 x *]] [AutoName78 Gradient[300 x 1 x *]] }
+0x2e02568: {[features Value[2832 x *]] }
+0x327c3a8: {[E0 Value[50 x 944]] }
+0x327e638: {[WXO0 Value[300 x 150]] }
+0x3c24f98: {[WXI0 Value[300 x 150]] }
+0x3c25b58: {[WXF0 Value[300 x 150]] }
+0x3fdb3b8: {[WXC0 Value[300 x 150]] }
+0x3fdc1b8: {[bo0 Value[300 x 1]] }
+0x3fdd018: {[bc0 Value[300 x 1]] }
+0x3fdd9b8: {[bi0 Value[300 x 1]] }
+0x3fde358: {[bf0 Value[300 x 1]] }
+0x3fded08: {[WHI0 Value[300 x 300]] }
+0x3fdf9a8: {[WXF2 Value[300 x 300]] }
+0x3fdfd98: {[WCI0 Value[300 x 1]] }
+0x3fe06e8: {[WHF0 Value[300 x 300]] }
+0x3fe1098: {[WCF0 Value[300 x 1]] }
+0x3fe1a48: {[WHO0 Value[300 x 300]] }
+0x3fe2928: {[WCO0 Value[300 x 1]] }
+0x3fe32d8: {[WHC0 Value[300 x 300]] }
+0x3fe3ea8: {[AutoName0 Value[300 x 1 x *]] }
+0x3fe4808: {[AutoName1 Value[300 x 1 x *]] }
+0x3fe4df8: {[AutoName2 Value[300 x 1 x *]] [WXC0 Gradient[300 x 150]] }
+0x3fe5558: {[AutoName3 Value[300 x 1 x *]] }
+0x3fe5ba8: {[AutoName4 Value[300 x 1 x *]] }
+0x3fe6308: {[AutoName5 Value[300 x 1 x *]] }
+0x3fe6918: {[AutoName6 Value[300 x 1 x *]] }
+0x3fecc98: {[WXO2 Value[300 x 300]] }
+0x3fede08: {[WXI2 Value[300 x 300]] }
+0x3fee7b8: {[WXC3 Value[300 x 300]] }
+0x3fef8b8: {[WXC2 Value[300 x 300]] }
+0x3ff0258: {[bo2 Value[300 x 1]] }
+0x3ff0bf8: {[bc2 Value[300 x 1]] }
+0x3ff1598: {[bi2 Value[300 x 1]] }
+0x3ff1f38: {[bf2 Value[300 x 1]] }
+0x3ff28e8: {[WHI2 Value[300 x 300]] }
+0x3ff37e8: {[WCI2 Value[300 x 1]] }
+0x3ff4198: {[WHF2 Value[300 x 300]] }
+0x3ff4b48: {[WCF2 Value[300 x 1]] }
+0x3ff54f8: {[WHO2 Value[300 x 300]] }
+0x3ff63f8: {[WCO2 Value[300 x 1]] }
+0x3ff6da8: {[WHC2 Value[300 x 300]] }
+0x3ff7978: {[AutoName38 Value[300 x 1 x *]] [WHI0 Gradient[300 x 300]] }
+0x3ff80d8: {[AutoName27 Gradient[300 x 1 x *]] [AutoName39 Value[300 x 1 x *]] }
+0x3ff8738: {[AutoName40 Value[300 x 1 x *]] [WXC2 Gradient[300 x 300]] }
+0x3ff8e98: {[AutoName30 Gradient[300 x 1 x *]] [AutoName41 Value[300 x 1 x *]] }
+0x3ff94a8: {[AutoName20 Gradient[300 x 1 x *]] [AutoName42 Value[300 x 1 x *]] }
+0x3ff9c08: {[AutoName15 Gradient[300 x 1 x *]] [AutoName43 Value[300 x 1 x *]] }
+0x3ffa268: {[AutoName44 Value[300 x 1 x *]] [WCI0 Gradient[300 x 1]] }
+0x40005b8: {[WXO3 Value[300 x 300]] }
+0x4001728: {[WXI3 Value[300 x 300]] }
+0x40020d8: {[WXF3 Value[300 x 300]] }
+0x4003d78: {[bo3 Value[300 x 1]] }
+0x4004718: {[bc3 Value[300 x 1]] }
+0x40050b8: {[bi3 Value[300 x 1]] }
+0x4005a58: {[bf3 Value[300 x 1]] }
+0x4006408: {[WHI3 Value[300 x 300]] }
+0x4007308: {[WCI3 Value[300 x 1]] }
+0x4007cb8: {[WHF3 Value[300 x 300]] }
+0x4008668: {[WCF3 Value[300 x 1]] }
+0x4009018: {[WHO3 Value[300 x 300]] }
+0x4009f18: {[WCO3 Value[300 x 1]] }
+0x400a8c8: {[WHC3 Value[300 x 300]] }
+0x400b498: {[AutoName76 Value[300 x 1 x *]] [WHI2 Gradient[300 x 300]] }
+0x400bbf8: {[AutoName65 Gradient[300 x 1 x *]] [AutoName77 Value[300 x 1 x *]] [AutoName8 Gradient[300 x 1 x *]] }
+0x400c258: {[AutoName78 Value[300 x 1 x *]] [WXC3 Gradient[300 x 300]] }
+0x400c9b8: {[AutoName68 Gradient[300 x 1 x *]] [AutoName79 Value[300 x 1 x *]] }
+0x400cfc8: {[AutoName12 Gradient[300 x 1 x *]] [AutoName58 Gradient[300 x 1 x *]] [AutoName80 Value[300 x 1 x *]] }
+0x400d728: {[AutoName53 Gradient[300 x 1 x *]] [AutoName81 Value[300 x 1 x *]] }
+0x400dd88: {[AutoName82 Value[300 x 1 x *]] [WCI2 Gradient[300 x 1]] }
+0x40140d8: {[W4 Value[127 x 300]] }
+0x4014a58: {[labels Value[127 x *]] }
+0x4023108: {[outputs Value[127 x 1 x *]] }
+0x40239a8: {[CrossEntropyWithSoftmax Value[1]] }
+0x4031fa8: {[LookupTable Value[150 x *]] }
+0x40327f8: {[AutoName23 Value[300 x 1 x *]] [WXF0 Gradient[300 x 150]] }
+0x4032b68: {[AutoName31 Value[300 x *]] [E0 Gradient[50 x 944]] }
+0x4033908: {[AutoName22 Value[300 x *]] [AutoName31 Gradient[300 x *]] }
+0x4033e98: {[AutoName22 Gradient[300 x *]] [AutoName9 Value[300 x *]] [bo0 Gradient[300 x 1]] }
+0x4033ff8: {[AutoName10 Value[300 x 1 x *]] [WXI0 Gradient[300 x 150]] }
+0x40341b8: {[AutoName16 Value[300 x *]] [AutoName9 Gradient[300 x *]] [bf0 Gradient[300 x 1]] }
+0x4034378: {[AutoName30 Value[300 x 1 x *]] }
+0x4035088: {[AutoName32 Value[300 x 1 x *]] [WXO0 Gradient[300 x 150]] }
+0x4035ad8: {[AutoName33 Value[300 x 1 x *]] }
+0x4035c98: {[AutoName21 Value[300 x 1 x *]] }
+0x4035e58: {[AutoName24 Value[300 x 1 x *]] }
+0x4036018: {[AutoName20 Value[300 x 1 x *]] }
+0x40361d8: {[AutoName25 Value[300 x 1 x *]] }
+0x4036398: {[AutoName26 Value[300 x 1 x *]] }
+0x4036558: {[AutoName27 Value[300 x 1 x *]] }
+0x4037708: {[AutoName8 Value[300 x 1 x *]] }
+0x4037868: {[AutoName11 Value[300 x 1 x *]] }
+0x40379c8: {[AutoName7 Value[300 x 1 x *]] }
+0x4037b88: {[AutoName12 Value[300 x 1 x *]] }
+0x4037d48: {[AutoName13 Value[300 x 1 x *]] }
+0x4037f08: {[AutoName14 Value[300 x 1 x *]] }
+0x40380c8: {[AutoName15 Value[300 x 1 x *]] }
+0x4038288: {[AutoName17 Value[300 x 1 x *]] }
+0x4038448: {[AutoName18 Value[300 x 1 x *]] }
+0x4038608: {[AutoName19 Value[300 x 1 x *]] }
+0x40387c8: {[AutoName28 Value[300 x 1 x *]] }
+0x4038988: {[AutoName29 Value[300 x 1 x *]] }
+0x4038b48: {[AutoName34 Value[300 x 1 x *]] }
+0x4038d08: {[AutoName35 Value[300 x 1 x *]] }
+0x4038ec8: {[AutoName36 Value[300 x 1 x *]] }
+0x4039088: {[AutoName37 Value[300 x 1 x *]] }
+0x4039248: {[AutoName35 Gradient[300 x 1 x *]] [AutoName69 Value[300 x 1 x *]] }
+0x4039408: {[AutoName70 Value[300 x 1 x *]] [WXO2 Gradient[300 x 300]] }
+0x40395c8: {[AutoName36 Gradient[300 x 1 x *]] [AutoName60 Value[300 x 1 x *]] [AutoName69 Gradient[300 x 1 x *]] }
+0x4039788: {[AutoName61 Value[300 x 1 x *]] [WXF2 Gradient[300 x 300]] }
+0x4039948: {[AutoName47 Value[300 x 1 x *]] [AutoName60 Gradient[300 x 1 x *]] [bo2 Gradient[300 x 1]] }
+0x4039b08: {[AutoName48 Value[300 x 1 x *]] [WXI2 Gradient[300 x 300]] }
+0x4039cc8: {[AutoName47 Gradient[300 x 1 x *]] [AutoName54 Value[300 x 1 x *]] [bf2 Gradient[300 x 1]] }
+0x4039e88: {[AutoName29 Gradient[300 x 1 x *]] [AutoName68 Value[300 x 1 x *]] }
+0x403a048: {[AutoName71 Value[300 x 1 x *]] }
+0x403a208: {[AutoName13 Gradient[300 x 1 x *]] [AutoName59 Value[300 x 1 x *]] }
+0x403a3c8: {[AutoName17 Gradient[300 x 1 x *]] [AutoName62 Value[300 x 1 x *]] }
+0x403a588: {[AutoName3 Gradient[300 x 1 x *]] [AutoName58 Value[300 x 1 x *]] }
+0x403a748: {[AutoName11 Gradient[300 x 1 x *]] [AutoName63 Value[300 x 1 x *]] }
+0x403a908: {[AutoName64 Value[300 x 1 x *]] }
+0x403aac8: {[AutoName10 Gradient[300 x 1 x *]] [AutoName65 Value[300 x 1 x *]] }
+0x403ac88: {[AutoName26 Gradient[300 x 1 x *]] [AutoName46 Value[300 x 1 x *]] }
+0x403ae48: {[AutoName25 Gradient[300 x 1 x *]] [AutoName49 Value[300 x 1 x *]] }
+0x403b008: {[AutoName45 Value[300 x 1 x *]] [AutoName5 Gradient[300 x 1 x *]] }
+0x403b1c8: {[AutoName21 Gradient[300 x 1 x *]] [AutoName50 Value[300 x 1 x *]] }
+0x403b388: {[AutoName1 Gradient[300 x 1 x *]] [AutoName51 Value[300 x 1 x *]] }
+0x403b548: {[AutoName2 Gradient[300 x 1 x *]] [AutoName52 Value[300 x 1 x *]] [LookupTable Gradient[150 x *]] }
+0x403b708: {[AutoName53 Value[300 x 1 x *]] }
+0x403b8c8: {[AutoName55 Value[300 x 1 x *]] }
+0x403ba88: {[AutoName56 Value[300 x 1 x *]] }
+0x403bc48: {[AutoName57 Value[300 x 1 x *]] }
+0x403be08: {[AutoName66 Value[300 x 1 x *]] }
+0x403bfc8: {[AutoName67 Value[300 x 1 x *]] }
+0x403c188: {[AutoName72 Value[300 x 1 x *]] }
+0x403c348: {[AutoName73 Value[300 x 1 x *]] }
+0x403c508: {[AutoName74 Value[300 x 1 x *]] }
+0x403c6c8: {[AutoName75 Value[300 x 1 x *]] }
+0x403c888: {[AutoName107 Value[300 x 1 x *]] [AutoName73 Gradient[300 x 1 x *]] }
+0x403ca48: {[AutoName108 Value[300 x 1 x *]] [WXO3 Gradient[300 x 300]] }
+0x403cc08: {[AutoName107 Gradient[300 x 1 x *]] [AutoName74 Gradient[300 x 1 x *]] [AutoName98 Value[300 x 1 x *]] }
+0x403cdc8: {[AutoName99 Value[300 x 1 x *]] [WXF3 Gradient[300 x 300]] }
+0x403cf88: {[AutoName85 Value[300 x 1 x *]] [AutoName98 Gradient[300 x 1 x *]] [bo3 Gradient[300 x 1]] }
+0x403d148: {[AutoName86 Value[300 x 1 x *]] [WXI3 Gradient[300 x 300]] }
+0x403d308: {[AutoName85 Gradient[300 x 1 x *]] [AutoName92 Value[300 x 1 x *]] [bf3 Gradient[300 x 1]] }
+0x403d4c8: {[AutoName106 Value[300 x 1 x *]] [AutoName67 Gradient[300 x 1 x *]] }
+0x403d688: {[AutoName109 Value[300 x 1 x *]] }
+0x403d848: {[AutoName32 Gradient[300 x 1 x *]] [AutoName51 Gradient[300 x 1 x *]] [AutoName97 Value[300 x 1 x *]] }
+0x403da08: {[AutoName100 Value[300 x 1 x *]] [AutoName55 Gradient[300 x 1 x *]] }
+0x403dbc8: {[AutoName41 Gradient[300 x 1 x *]] [AutoName96 Value[300 x 1 x *]] [WHO0 Gradient[300 x 300]] }
+0x403dd88: {[AutoName101 Value[300 x 1 x *]] [AutoName24 Gradient[300 x 1 x *]] [AutoName49 Gradient[300 x 1 x *]] }
+0x403df48: {[AutoName102 Value[300 x 1 x *]] [WCF0 Gradient[300 x 1]] }
+0x403e108: {[AutoName103 Value[300 x 1 x *]] [AutoName33 Gradient[300 x 1 x *]] [AutoName48 Gradient[300 x 1 x *]] }
+0x403e2c8: {[AutoName64 Gradient[300 x 1 x *]] [AutoName84 Value[300 x 1 x *]] }
+0x403e488: {[AutoName63 Gradient[300 x 1 x *]] [AutoName7 Gradient[300 x 1 x *]] [AutoName87 Value[300 x 1 x *]] }
+0x403e648: {[AutoName14 Gradient[300 x 1 x *]] [AutoName43 Gradient[300 x 1 x *]] [AutoName83 Value[300 x 1 x *]] }
+0x403e808: {[AutoName18 Gradient[300 x 1 x *]] [AutoName59 Gradient[300 x 1 x *]] [AutoName88 Value[300 x 1 x *]] }
+0x403e9c8: {[AutoName19 Gradient[300 x 1 x *]] [AutoName39 Gradient[300 x 1 x *]] [AutoName89 Value[300 x 1 x *]] }
+0x403eb88: {[AutoName37 Gradient[300 x 1 x *]] [AutoName40 Gradient[300 x 1 x *]] [AutoName90 Value[300 x 1 x *]] }
+0x403ed48: {[AutoName91 Value[300 x 1 x *]] }
+0x403ef08: {[AutoName93 Value[300 x 1 x *]] }
+0x403f0c8: {[AutoName94 Value[300 x 1 x *]] }
+0x403f288: {[AutoName95 Value[300 x 1 x *]] }
+0x403f448: {[AutoName104 Value[300 x 1 x *]] }
+0x403f608: {[AutoName105 Value[300 x 1 x *]] }
+0x403f7c8: {[AutoName110 Value[300 x 1 x *]] }
+0x403f988: {[AutoName111 Value[300 x 1 x *]] }
+0x403fb48: {[AutoName112 Value[300 x 1 x *]] }
+0x403fd08: {[AutoName113 Value[300 x 1 x *]] }
+0x403fec8: {[AutoName111 Gradient[300 x 1 x *]] [AutoName114 Value[127 x 1 x *]] }
+0x4040408: {[CrossEntropyWithSoftmax Gradient[1]] }
+0x40405c8: {[AutoName112 Gradient[300 x 1 x *]] [AutoName114 Gradient[127 x 1 x *]] }
+0x4040788: {[W4 Gradient[127 x 300]] }
+0x4040948: {[AutoName113 Gradient[300 x 1 x *]] }
+0x4040b08: {[AutoName104 Gradient[300 x 1 x *]] }
+0x4040cc8: {[AutoName110 Gradient[300 x 1 x *]] }
+0x4040e88: {[AutoName109 Gradient[300 x 1 x *]] [WCO2 Gradient[300 x 1]] }
+0x4041048: {[AutoName105 Gradient[300 x 1 x *]] }
+0x4041588: {[WCO3 Gradient[300 x 1]] }
+0x4041748: {[AutoName103 Gradient[300 x 1 x *]] [AutoName46 Gradient[300 x 1 x *]] [AutoName6 Gradient[300 x 1 x *]] }
+0x4041908: {[AutoName95 Gradient[300 x 1 x *]] }
+0x4041ac8: {[AutoName28 Gradient[300 x 1 x *]] [AutoName70 Gradient[300 x 1 x *]] [AutoName89 Gradient[300 x 1 x *]] }
+0x4041c88: {[AutoName94 Gradient[300 x 1 x *]] }
+0x4041e48: {[AutoName93 Gradient[300 x 1 x *]] }
+0x4042008: {[AutoName92 Gradient[300 x 1 x *]] [bi3 Gradient[300 x 1]] }
+0x40421c8: {[AutoName91 Gradient[300 x 1 x *]] }
+0x4042388: {[AutoName90 Gradient[300 x 1 x *]] }
+0x4042548: {[bc3 Gradient[300 x 1]] }
+0x4042708: {[WHC3 Gradient[300 x 300]] }
+0x40428c8: {[AutoName79 Gradient[300 x 1 x *]] [WHO2 Gradient[300 x 300]] }
+0x4042a88: {[AutoName88 Gradient[300 x 1 x *]] [WHF2 Gradient[300 x 300]] }
+0x4042c48: {[AutoName16 Gradient[300 x *]] [AutoName62 Gradient[300 x 1 x *]] [AutoName87 Gradient[300 x 1 x *]] [bi0 Gradient[300 x 1]] }
+0x4042e08: {[AutoName34 Gradient[300 x 1 x *]] [AutoName61 Gradient[300 x 1 x *]] [AutoName83 Gradient[300 x 1 x *]] }
+0x4042fc8: {[WCF2 Gradient[300 x 1]] }
+0x4043188: {[bc0 Gradient[300 x 1]] }
+0x4043348: {[WCI3 Gradient[300 x 1]] }
+0x4043508: {[AutoName80 Gradient[300 x 1 x *]] [WHC0 Gradient[300 x 300]] }
+0x40436c8: {[AutoName71 Gradient[300 x 1 x *]] [AutoName86 Gradient[300 x 1 x *]] [WCO0 Gradient[300 x 1]] }
+0x4043888: {[AutoName4 Gradient[300 x 1 x *]] [AutoName44 Gradient[300 x 1 x *]] [AutoName84 Gradient[300 x 1 x *]] }
+0x4043a48: {[WHI3 Gradient[300 x 300]] }
+0x4043c08: {[AutoName0 Gradient[300 x 1 x *]] [AutoName38 Gradient[300 x 1 x *]] [AutoName76 Gradient[300 x 1 x *]] }
+0x4043dc8: {[AutoName102 Gradient[300 x 1 x *]] }
+0x4043f88: {[AutoName42 Gradient[300 x 1 x *]] [AutoName82 Gradient[300 x 1 x *]] }
+0x4044148: {[AutoName101 Gradient[300 x 1 x *]] [AutoName23 Gradient[300 x 1 x *]] [AutoName45 Gradient[300 x 1 x *]] }
+0x4044308: {[AutoName100 Gradient[300 x 1 x *]] [AutoName54 Gradient[300 x 1 x *]] [bi2 Gradient[300 x 1]] }
+0x40444c8: {[AutoName50 Gradient[300 x 1 x *]] [AutoName96 Gradient[300 x 1 x *]] [WHF0 Gradient[300 x 300]] }
+0x4044688: {[WHC2 Gradient[300 x 300]] }
+0x4044848: {[bc2 Gradient[300 x 1]] }
+0x4044a08: {[WCF3 Gradient[300 x 1]] }
+0x4044bc8: {[AutoName52 Gradient[300 x 1 x *]] [AutoName81 Gradient[300 x 1 x *]] }
+0x4044d88: {[AutoName72 Gradient[300 x 1 x *]] [AutoName99 Gradient[300 x 1 x *]] }
+0x4044f48: {[AutoName56 Gradient[300 x 1 x *]] [AutoName97 Gradient[300 x 1 x *]] }
+0x4045108: {[WHF3 Gradient[300 x 300]] }
+0x40452c8: {[AutoName57 Gradient[300 x 1 x *]] [AutoName77 Gradient[300 x 1 x *]] }
+0x4045488: {[AutoName108 Gradient[300 x 1 x *]] [AutoName66 Gradient[300 x 1 x *]] }
+0x4045648: {[AutoName106 Gradient[300 x 1 x *]] }
+0x4045808: {[WHO3 Gradient[300 x 300]] }
+0x40459c8: {[AutoName75 Gradient[300 x 1 x *]] [AutoName78 Gradient[300 x 1 x *]] }
 
-05/03/2016 22:13:19: No PreCompute nodes found, skipping PreCompute step.
+05/05/2016 22:19:51: No PreCompute nodes found, skipping PreCompute step.
 
-05/03/2016 22:13:19: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:51: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:19: Starting minibatch loop.
+05/05/2016 22:19:51: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Finished Epoch[ 1 of 100]: [Training] CrossEntropyWithSoftmax = 4.84160435 * 81; totalSamplesSeen = 81; learningRatePerSample = 0.1; epochTime=0.176341s
+05/05/2016 22:19:51: Finished Epoch[ 1 of 100]: [Training] CrossEntropyWithSoftmax = 4.84160435 * 81; totalSamplesSeen = 81; learningRatePerSample = 0.1; epochTime=0.324407s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.80312508 * 81; perplexity = 121.89074069
-05/03/2016 22:13:19: Finished Epoch[ 1 of 100]: [Validate] CrossEntropyWithSoftmax = 4.80312508 * 81
-05/03/2016 22:13:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.1'
+05/05/2016 22:19:51: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.80312508 * 81; perplexity = 121.89074069
+05/05/2016 22:19:51: Finished Epoch[ 1 of 100]: [Validate] CrossEntropyWithSoftmax = 4.80312508 * 81
+05/05/2016 22:19:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.1'
 
-05/03/2016 22:13:19: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:52: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:19: Starting minibatch loop.
+05/05/2016 22:19:52: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Finished Epoch[ 2 of 100]: [Training] CrossEntropyWithSoftmax = 4.80312508 * 81; totalSamplesSeen = 162; learningRatePerSample = 0.1; epochTime=0.053906s
+05/05/2016 22:19:52: Finished Epoch[ 2 of 100]: [Training] CrossEntropyWithSoftmax = 4.80312508 * 81; totalSamplesSeen = 162; learningRatePerSample = 0.1; epochTime=0.20047s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.72982750 * 81; perplexity = 113.27602101
-05/03/2016 22:13:19: Finished Epoch[ 2 of 100]: [Validate] CrossEntropyWithSoftmax = 4.72982750 * 81
-05/03/2016 22:13:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.2'
+05/05/2016 22:19:52: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.72982750 * 81; perplexity = 113.27602101
+05/05/2016 22:19:52: Finished Epoch[ 2 of 100]: [Validate] CrossEntropyWithSoftmax = 4.72982750 * 81
+05/05/2016 22:19:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.2'
 
-05/03/2016 22:13:19: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:52: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:19: Starting minibatch loop.
+05/05/2016 22:19:52: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Finished Epoch[ 3 of 100]: [Training] CrossEntropyWithSoftmax = 4.72982750 * 81; totalSamplesSeen = 243; learningRatePerSample = 0.1; epochTime=0.052726s
+05/05/2016 22:19:52: Finished Epoch[ 3 of 100]: [Training] CrossEntropyWithSoftmax = 4.72982750 * 81; totalSamplesSeen = 243; learningRatePerSample = 0.1; epochTime=0.201602s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.62214190 * 81; perplexity = 101.71165487
-05/03/2016 22:13:19: Finished Epoch[ 3 of 100]: [Validate] CrossEntropyWithSoftmax = 4.62214190 * 81
-05/03/2016 22:13:19: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.3'
+05/05/2016 22:19:52: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.62214190 * 81; perplexity = 101.71165487
+05/05/2016 22:19:52: Finished Epoch[ 3 of 100]: [Validate] CrossEntropyWithSoftmax = 4.62214190 * 81
+05/05/2016 22:19:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.3'
 
-05/03/2016 22:13:19: Starting Epoch 4: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:53: Starting Epoch 4: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:19: Starting minibatch loop.
+05/05/2016 22:19:53: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Finished Epoch[ 4 of 100]: [Training] CrossEntropyWithSoftmax = 4.62214190 * 81; totalSamplesSeen = 324; learningRatePerSample = 0.1; epochTime=0.05302s
+05/05/2016 22:19:53: Finished Epoch[ 4 of 100]: [Training] CrossEntropyWithSoftmax = 4.62214190 * 81; totalSamplesSeen = 324; learningRatePerSample = 0.1; epochTime=0.20037s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:19: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.47407890 * 81; perplexity = 87.71376974
-05/03/2016 22:13:19: Finished Epoch[ 4 of 100]: [Validate] CrossEntropyWithSoftmax = 4.47407890 * 81
-05/03/2016 22:13:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.4'
+05/05/2016 22:19:53: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.47407890 * 81; perplexity = 87.71376974
+05/05/2016 22:19:53: Finished Epoch[ 4 of 100]: [Validate] CrossEntropyWithSoftmax = 4.47407890 * 81
+05/05/2016 22:19:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.4'
 
-05/03/2016 22:13:20: Starting Epoch 5: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:53: Starting Epoch 5: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:20: Starting minibatch loop.
+05/05/2016 22:19:53: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Finished Epoch[ 5 of 100]: [Training] CrossEntropyWithSoftmax = 4.47407890 * 81; totalSamplesSeen = 405; learningRatePerSample = 0.1; epochTime=0.052944s
+05/05/2016 22:19:53: Finished Epoch[ 5 of 100]: [Training] CrossEntropyWithSoftmax = 4.47407890 * 81; totalSamplesSeen = 405; learningRatePerSample = 0.1; epochTime=0.20057s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 WARNING: The same matrix with dim [127, 120] has been transferred between different devices for 20 times.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.26949508 * 81; perplexity = 71.48553210
-05/03/2016 22:13:20: Finished Epoch[ 5 of 100]: [Validate] CrossEntropyWithSoftmax = 4.26949508 * 81
-05/03/2016 22:13:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.5'
+05/05/2016 22:19:53: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 4.26949508 * 81; perplexity = 71.48553210
+05/05/2016 22:19:53: Finished Epoch[ 5 of 100]: [Validate] CrossEntropyWithSoftmax = 4.26949508 * 81
+05/05/2016 22:19:53: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.5'
 
-05/03/2016 22:13:20: Starting Epoch 6: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:53: Starting Epoch 6: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:20: Starting minibatch loop.
+05/05/2016 22:19:53: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Finished Epoch[ 6 of 100]: [Training] CrossEntropyWithSoftmax = 4.26949508 * 81; totalSamplesSeen = 486; learningRatePerSample = 0.1; epochTime=0.053026s
+05/05/2016 22:19:54: Finished Epoch[ 6 of 100]: [Training] CrossEntropyWithSoftmax = 4.26949508 * 81; totalSamplesSeen = 486; learningRatePerSample = 0.1; epochTime=0.201411s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 3.97823758 * 81; perplexity = 53.42279759
-05/03/2016 22:13:20: Finished Epoch[ 6 of 100]: [Validate] CrossEntropyWithSoftmax = 3.97823758 * 81
-05/03/2016 22:13:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.6'
+05/05/2016 22:19:54: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 3.97823758 * 81; perplexity = 53.42279759
+05/05/2016 22:19:54: Finished Epoch[ 6 of 100]: [Validate] CrossEntropyWithSoftmax = 3.97823758 * 81
+05/05/2016 22:19:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.6'
 
-05/03/2016 22:13:20: Starting Epoch 7: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:54: Starting Epoch 7: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:20: Starting minibatch loop.
+05/05/2016 22:19:54: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Finished Epoch[ 7 of 100]: [Training] CrossEntropyWithSoftmax = 3.97823758 * 81; totalSamplesSeen = 567; learningRatePerSample = 0.1; epochTime=0.055538s
+05/05/2016 22:19:54: Finished Epoch[ 7 of 100]: [Training] CrossEntropyWithSoftmax = 3.97823758 * 81; totalSamplesSeen = 567; learningRatePerSample = 0.1; epochTime=0.200205s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 3.55474703 * 81; perplexity = 34.97897015
-05/03/2016 22:13:20: Finished Epoch[ 7 of 100]: [Validate] CrossEntropyWithSoftmax = 3.55474703 * 81
-05/03/2016 22:13:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.7'
+05/05/2016 22:19:54: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 3.55474703 * 81; perplexity = 34.97897015
+05/05/2016 22:19:54: Finished Epoch[ 7 of 100]: [Validate] CrossEntropyWithSoftmax = 3.55474703 * 81
+05/05/2016 22:19:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.7'
 
-05/03/2016 22:13:20: Starting Epoch 8: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:54: Starting Epoch 8: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:20: Starting minibatch loop.
+05/05/2016 22:19:54: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Finished Epoch[ 8 of 100]: [Training] CrossEntropyWithSoftmax = 3.55474703 * 81; totalSamplesSeen = 648; learningRatePerSample = 0.1; epochTime=0.056816s
+05/05/2016 22:19:55: Finished Epoch[ 8 of 100]: [Training] CrossEntropyWithSoftmax = 3.55474703 * 81; totalSamplesSeen = 648; learningRatePerSample = 0.1; epochTime=0.200871s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:20: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.96335894 * 81; perplexity = 19.36290143
-05/03/2016 22:13:20: Finished Epoch[ 8 of 100]: [Validate] CrossEntropyWithSoftmax = 2.96335894 * 81
-05/03/2016 22:13:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.8'
+05/05/2016 22:19:55: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.96335894 * 81; perplexity = 19.36290143
+05/05/2016 22:19:55: Finished Epoch[ 8 of 100]: [Validate] CrossEntropyWithSoftmax = 2.96335894 * 81
+05/05/2016 22:19:55: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.8'
 
-05/03/2016 22:13:21: Starting Epoch 9: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:55: Starting Epoch 9: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:21: Starting minibatch loop.
+05/05/2016 22:19:55: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Finished Epoch[ 9 of 100]: [Training] CrossEntropyWithSoftmax = 2.96335894 * 81; totalSamplesSeen = 729; learningRatePerSample = 0.1; epochTime=0.054349s
+05/05/2016 22:19:55: Finished Epoch[ 9 of 100]: [Training] CrossEntropyWithSoftmax = 2.96335894 * 81; totalSamplesSeen = 729; learningRatePerSample = 0.1; epochTime=0.200681s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.40280001 * 81; perplexity = 11.05408460
-05/03/2016 22:13:21: Finished Epoch[ 9 of 100]: [Validate] CrossEntropyWithSoftmax = 2.40280001 * 81
-05/03/2016 22:13:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9'
+05/05/2016 22:19:55: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.40280001 * 81; perplexity = 11.05408460
+05/05/2016 22:19:55: Finished Epoch[ 9 of 100]: [Validate] CrossEntropyWithSoftmax = 2.40280001 * 81
+05/05/2016 22:19:55: SGD: Saving checkpoint model '/tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9'
 
-05/03/2016 22:13:21: Starting Epoch 10: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:55: Starting Epoch 10: learning rate per sample = 0.100000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:21: Starting minibatch loop.
+05/05/2016 22:19:55: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.1; epochTime=0.054257s
+05/05/2016 22:19:55: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.1; epochTime=0.204726s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.55921672 * 81; perplexity = 12.92568895
-05/03/2016 22:13:21: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.55921672 * 81
-05/03/2016 22:13:21: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:21: learnRatePerSample reduced to 0.050000001
-05/03/2016 22:13:21: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:56: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.55921672 * 81; perplexity = 12.92568895
+05/05/2016 22:19:56: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.55921672 * 81
+05/05/2016 22:19:56: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:56: learnRatePerSample reduced to 0.050000001
+05/05/2016 22:19:56: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:21: Starting Epoch 10: learning rate per sample = 0.050000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:56: Starting Epoch 10: learning rate per sample = 0.050000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:21: Starting minibatch loop.
+05/05/2016 22:19:56: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.050000001; epochTime=0.057032s
+05/05/2016 22:19:56: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.050000001; epochTime=0.20046s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.53354127 * 81; perplexity = 12.59804026
-05/03/2016 22:13:21: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.53354127 * 81
-05/03/2016 22:13:21: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:21: learnRatePerSample reduced to 0.025
-05/03/2016 22:13:21: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:56: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.53354127 * 81; perplexity = 12.59804026
+05/05/2016 22:19:56: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.53354127 * 81
+05/05/2016 22:19:56: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:56: learnRatePerSample reduced to 0.025
+05/05/2016 22:19:56: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:21: Starting Epoch 10: learning rate per sample = 0.025000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:56: Starting Epoch 10: learning rate per sample = 0.025000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:21: Starting minibatch loop.
+05/05/2016 22:19:56: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:21: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.025; epochTime=0.052729s
+05/05/2016 22:19:57: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.025; epochTime=0.200512s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:22: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.52156067 * 81; perplexity = 12.44800873
-05/03/2016 22:13:22: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.52156067 * 81
-05/03/2016 22:13:22: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:22: learnRatePerSample reduced to 0.0125
-05/03/2016 22:13:22: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:57: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.52156067 * 81; perplexity = 12.44800873
+05/05/2016 22:19:57: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.52156067 * 81
+05/05/2016 22:19:57: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:57: learnRatePerSample reduced to 0.0125
+05/05/2016 22:19:57: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:22: Starting Epoch 10: learning rate per sample = 0.012500  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:57: Starting Epoch 10: learning rate per sample = 0.012500  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:22: Starting minibatch loop.
+05/05/2016 22:19:57: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:22: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0125; epochTime=0.055747s
+05/05/2016 22:19:57: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0125; epochTime=0.200733s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:22: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51578776 * 81; perplexity = 12.37635454
-05/03/2016 22:13:22: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51578776 * 81
-05/03/2016 22:13:22: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:22: learnRatePerSample reduced to 0.0062500001
-05/03/2016 22:13:22: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:57: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51578776 * 81; perplexity = 12.37635454
+05/05/2016 22:19:57: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51578776 * 81
+05/05/2016 22:19:57: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:57: learnRatePerSample reduced to 0.0062500001
+05/05/2016 22:19:57: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:22: Starting Epoch 10: learning rate per sample = 0.006250  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:57: Starting Epoch 10: learning rate per sample = 0.006250  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:22: Starting minibatch loop.
+05/05/2016 22:19:57: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:22: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0062500001; epochTime=0.055965s
+05/05/2016 22:19:58: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0062500001; epochTime=0.199962s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:22: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51295641 * 81; perplexity = 12.34136227
-05/03/2016 22:13:22: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51295641 * 81
-05/03/2016 22:13:22: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:22: learnRatePerSample reduced to 0.003125
-05/03/2016 22:13:22: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:58: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51295641 * 81; perplexity = 12.34136227
+05/05/2016 22:19:58: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51295641 * 81
+05/05/2016 22:19:58: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:58: learnRatePerSample reduced to 0.003125
+05/05/2016 22:19:58: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:23: Starting Epoch 10: learning rate per sample = 0.003125  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:58: Starting Epoch 10: learning rate per sample = 0.003125  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:23: Starting minibatch loop.
+05/05/2016 22:19:58: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:23: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.003125; epochTime=0.051524s
+05/05/2016 22:19:58: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.003125; epochTime=0.21198s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:23: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51155467 * 81; perplexity = 12.32407506
-05/03/2016 22:13:23: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51155467 * 81
-05/03/2016 22:13:23: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:23: learnRatePerSample reduced to 0.0015625
-05/03/2016 22:13:23: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:58: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51155467 * 81; perplexity = 12.32407506
+05/05/2016 22:19:58: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51155467 * 81
+05/05/2016 22:19:58: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:58: learnRatePerSample reduced to 0.0015625
+05/05/2016 22:19:58: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:23: Starting Epoch 10: learning rate per sample = 0.001563  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:59: Starting Epoch 10: learning rate per sample = 0.001563  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:23: Starting minibatch loop.
+05/05/2016 22:19:59: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:23: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0015625; epochTime=0.057369s
+05/05/2016 22:19:59: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0015625; epochTime=0.204038s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:23: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51085672 * 81; perplexity = 12.31547649
-05/03/2016 22:13:23: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51085672 * 81
-05/03/2016 22:13:23: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:24: learnRatePerSample reduced to 0.00078125001
-05/03/2016 22:13:24: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:59: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51085672 * 81; perplexity = 12.31547649
+05/05/2016 22:19:59: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51085672 * 81
+05/05/2016 22:19:59: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:19:59: learnRatePerSample reduced to 0.00078125001
+05/05/2016 22:19:59: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:24: Starting Epoch 10: learning rate per sample = 0.000781  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:19:59: Starting Epoch 10: learning rate per sample = 0.000781  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:24: Starting minibatch loop.
+05/05/2016 22:19:59: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.00078125001; epochTime=0.057041s
+05/05/2016 22:19:59: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.00078125001; epochTime=0.200595s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51050897 * 81; perplexity = 12.31119453
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51050897 * 81
-05/03/2016 22:13:24: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:24: learnRatePerSample reduced to 0.00039062501
-05/03/2016 22:13:24: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:19:59: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51050897 * 81; perplexity = 12.31119453
+05/05/2016 22:19:59: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51050897 * 81
+05/05/2016 22:19:59: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:00: learnRatePerSample reduced to 0.00039062501
+05/05/2016 22:20:00: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:24: Starting Epoch 10: learning rate per sample = 0.000391  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:01: Starting Epoch 10: learning rate per sample = 0.000391  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:24: Starting minibatch loop.
+05/05/2016 22:20:01: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.00039062501; epochTime=0.054383s
+05/05/2016 22:20:01: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.00039062501; epochTime=0.205685s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51033510 * 81; perplexity = 12.30905411
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51033510 * 81
-05/03/2016 22:13:24: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:24: learnRatePerSample reduced to 0.0001953125
-05/03/2016 22:13:24: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:01: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51033510 * 81; perplexity = 12.30905411
+05/05/2016 22:20:01: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51033510 * 81
+05/05/2016 22:20:01: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:01: learnRatePerSample reduced to 0.0001953125
+05/05/2016 22:20:01: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:24: Starting Epoch 10: learning rate per sample = 0.000195  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:01: Starting Epoch 10: learning rate per sample = 0.000195  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:24: Starting minibatch loop.
+05/05/2016 22:20:01: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0001953125; epochTime=0.05439s
+05/05/2016 22:20:01: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 0.0001953125; epochTime=0.201557s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:24: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51024863 * 81; perplexity = 12.30798984
-05/03/2016 22:13:24: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51024863 * 81
-05/03/2016 22:13:24: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:24: learnRatePerSample reduced to 9.7656251e-05
-05/03/2016 22:13:24: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:01: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51024863 * 81; perplexity = 12.30798984
+05/05/2016 22:20:01: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51024863 * 81
+05/05/2016 22:20:01: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:01: learnRatePerSample reduced to 9.7656251e-05
+05/05/2016 22:20:01: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:25: Starting Epoch 10: learning rate per sample = 0.000098  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:02: Starting Epoch 10: learning rate per sample = 0.000098  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:25: Starting minibatch loop.
+05/05/2016 22:20:02: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 9.7656251e-05; epochTime=0.054266s
+05/05/2016 22:20:02: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 9.7656251e-05; epochTime=0.200549s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51020512 * 81; perplexity = 12.30745425
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51020512 * 81
-05/03/2016 22:13:25: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:25: learnRatePerSample reduced to 4.8828126e-05
-05/03/2016 22:13:25: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:02: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51020512 * 81; perplexity = 12.30745425
+05/05/2016 22:20:02: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51020512 * 81
+05/05/2016 22:20:02: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:02: learnRatePerSample reduced to 4.8828126e-05
+05/05/2016 22:20:02: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:25: Starting Epoch 10: learning rate per sample = 0.000049  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:02: Starting Epoch 10: learning rate per sample = 0.000049  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:25: Starting minibatch loop.
+05/05/2016 22:20:02: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 4.8828126e-05; epochTime=0.052578s
+05/05/2016 22:20:02: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 4.8828126e-05; epochTime=0.201958s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51018345 * 81; perplexity = 12.30718763
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51018345 * 81
-05/03/2016 22:13:25: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:25: learnRatePerSample reduced to 2.4414063e-05
-05/03/2016 22:13:25: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:02: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51018345 * 81; perplexity = 12.30718763
+05/05/2016 22:20:02: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51018345 * 81
+05/05/2016 22:20:02: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:03: learnRatePerSample reduced to 2.4414063e-05
+05/05/2016 22:20:03: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:25: Starting Epoch 10: learning rate per sample = 0.000024  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:03: Starting Epoch 10: learning rate per sample = 0.000024  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:25: Starting minibatch loop.
+05/05/2016 22:20:03: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.4414063e-05; epochTime=0.053964s
+05/05/2016 22:20:03: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.4414063e-05; epochTime=0.201852s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:25: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51017253 * 81; perplexity = 12.30705316
-05/03/2016 22:13:25: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51017253 * 81
-05/03/2016 22:13:25: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:25: learnRatePerSample reduced to 1.2207031e-05
-05/03/2016 22:13:25: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:03: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51017253 * 81; perplexity = 12.30705316
+05/05/2016 22:20:03: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51017253 * 81
+05/05/2016 22:20:03: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:03: learnRatePerSample reduced to 1.2207031e-05
+05/05/2016 22:20:03: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:25: Starting Epoch 10: learning rate per sample = 0.000012  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:03: Starting Epoch 10: learning rate per sample = 0.000012  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:25: Starting minibatch loop.
+05/05/2016 22:20:03: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.2207031e-05; epochTime=0.053191s
+05/05/2016 22:20:03: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.2207031e-05; epochTime=0.201322s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016706 * 81; perplexity = 12.30698593
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016706 * 81
-05/03/2016 22:13:26: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:26: learnRatePerSample reduced to 6.1035157e-06
-05/03/2016 22:13:26: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:03: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016706 * 81; perplexity = 12.30698593
+05/05/2016 22:20:03: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016706 * 81
+05/05/2016 22:20:03: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:04: learnRatePerSample reduced to 6.1035157e-06
+05/05/2016 22:20:04: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:26: Starting Epoch 10: learning rate per sample = 0.000006  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:04: Starting Epoch 10: learning rate per sample = 0.000006  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:26: Starting minibatch loop.
+05/05/2016 22:20:04: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 6.1035157e-06; epochTime=0.053799s
+05/05/2016 22:20:04: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 6.1035157e-06; epochTime=0.201534s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016461 * 81; perplexity = 12.30695579
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016461 * 81
-05/03/2016 22:13:26: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:26: learnRatePerSample reduced to 3.0517579e-06
-05/03/2016 22:13:26: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:04: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016461 * 81; perplexity = 12.30695579
+05/05/2016 22:20:04: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016461 * 81
+05/05/2016 22:20:04: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:04: learnRatePerSample reduced to 3.0517579e-06
+05/05/2016 22:20:04: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:26: Starting Epoch 10: learning rate per sample = 0.000003  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:04: Starting Epoch 10: learning rate per sample = 0.000003  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:26: Starting minibatch loop.
+05/05/2016 22:20:04: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 3.0517579e-06; epochTime=0.054656s
+05/05/2016 22:20:04: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 3.0517579e-06; epochTime=0.201553s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016311 * 81; perplexity = 12.30693724
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016311 * 81
-05/03/2016 22:13:26: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:26: learnRatePerSample reduced to 1.5258789e-06
-05/03/2016 22:13:26: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:05: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016311 * 81; perplexity = 12.30693724
+05/05/2016 22:20:05: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016311 * 81
+05/05/2016 22:20:05: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:05: learnRatePerSample reduced to 1.5258789e-06
+05/05/2016 22:20:05: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:26: Starting Epoch 10: learning rate per sample = 0.000002  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:05: Starting Epoch 10: learning rate per sample = 0.000002  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:26: Starting minibatch loop.
+05/05/2016 22:20:05: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.5258789e-06; epochTime=0.053654s
+05/05/2016 22:20:05: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.5258789e-06; epochTime=0.20151s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:26: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016254 * 81; perplexity = 12.30693029
-05/03/2016 22:13:26: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016254 * 81
-05/03/2016 22:13:26: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:27: learnRatePerSample reduced to 7.6293946e-07
-05/03/2016 22:13:27: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:05: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016254 * 81; perplexity = 12.30693029
+05/05/2016 22:20:05: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016254 * 81
+05/05/2016 22:20:05: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:05: learnRatePerSample reduced to 7.6293946e-07
+05/05/2016 22:20:05: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:27: Starting Epoch 10: learning rate per sample = 0.000001  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:05: Starting Epoch 10: learning rate per sample = 0.000001  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:27: Starting minibatch loop.
+05/05/2016 22:20:05: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 7.6293946e-07; epochTime=0.053277s
+05/05/2016 22:20:06: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 7.6293946e-07; epochTime=0.212652s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016217 * 81; perplexity = 12.30692565
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016217 * 81
-05/03/2016 22:13:27: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:27: learnRatePerSample reduced to 3.8146973e-07
-05/03/2016 22:13:27: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:06: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016217 * 81; perplexity = 12.30692565
+05/05/2016 22:20:06: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016217 * 81
+05/05/2016 22:20:06: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:06: learnRatePerSample reduced to 3.8146973e-07
+05/05/2016 22:20:06: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:27: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:06: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:27: Starting minibatch loop.
+05/05/2016 22:20:06: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 3.8146973e-07; epochTime=0.053828s
+05/05/2016 22:20:06: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 3.8146973e-07; epochTime=0.207396s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:27: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:27: learnRatePerSample reduced to 1.9073487e-07
-05/03/2016 22:13:27: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:06: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:06: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:06: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:06: learnRatePerSample reduced to 1.9073487e-07
+05/05/2016 22:20:06: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:27: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:06: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:27: Starting minibatch loop.
+05/05/2016 22:20:06: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.9073487e-07; epochTime=0.054055s
+05/05/2016 22:20:07: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.9073487e-07; epochTime=0.20145s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:27: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:27: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:27: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:28: learnRatePerSample reduced to 9.5367433e-08
-05/03/2016 22:13:28: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:07: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:07: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:07: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:07: learnRatePerSample reduced to 9.5367433e-08
+05/05/2016 22:20:07: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:28: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:07: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:28: Starting minibatch loop.
+05/05/2016 22:20:07: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 9.5367433e-08; epochTime=0.05425s
+05/05/2016 22:20:07: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 9.5367433e-08; epochTime=0.201435s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:28: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:28: learnRatePerSample reduced to 4.7683717e-08
-05/03/2016 22:13:28: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:07: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:07: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:07: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:07: learnRatePerSample reduced to 4.7683717e-08
+05/05/2016 22:20:07: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:28: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:08: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:28: Starting minibatch loop.
+05/05/2016 22:20:08: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 4.7683717e-08; epochTime=0.052239s
+05/05/2016 22:20:08: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 4.7683717e-08; epochTime=0.204118s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:28: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:28: learnRatePerSample reduced to 2.3841858e-08
-05/03/2016 22:13:28: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:08: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:08: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:08: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:08: learnRatePerSample reduced to 2.3841858e-08
+05/05/2016 22:20:08: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:28: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:08: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:28: Starting minibatch loop.
+05/05/2016 22:20:08: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.3841858e-08; epochTime=0.052199s
+05/05/2016 22:20:08: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.3841858e-08; epochTime=0.211268s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:28: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:28: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:28: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:28: learnRatePerSample reduced to 1.1920929e-08
-05/03/2016 22:13:28: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:08: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:08: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:08: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:09: learnRatePerSample reduced to 1.1920929e-08
+05/05/2016 22:20:09: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:29: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:09: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:29: Starting minibatch loop.
+05/05/2016 22:20:09: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.1920929e-08; epochTime=0.053716s
+05/05/2016 22:20:09: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.1920929e-08; epochTime=0.201544s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:29: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:29: learnRatePerSample reduced to 5.9604646e-09
-05/03/2016 22:13:29: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:09: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:09: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:09: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:09: learnRatePerSample reduced to 5.9604646e-09
+05/05/2016 22:20:09: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:29: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:09: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:29: Starting minibatch loop.
+05/05/2016 22:20:09: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 5.9604646e-09; epochTime=0.052987s
+05/05/2016 22:20:09: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 5.9604646e-09; epochTime=0.20506s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:29: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:29: learnRatePerSample reduced to 2.9802323e-09
-05/03/2016 22:13:29: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:10: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:10: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:10: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:10: learnRatePerSample reduced to 2.9802323e-09
+05/05/2016 22:20:10: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:29: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:10: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:29: Starting minibatch loop.
+05/05/2016 22:20:10: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.9802323e-09; epochTime=0.054102s
+05/05/2016 22:20:10: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 2.9802323e-09; epochTime=0.201836s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:29: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:29: learnRatePerSample reduced to 1.4901161e-09
-05/03/2016 22:13:29: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:10: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:10: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:10: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:10: learnRatePerSample reduced to 1.4901161e-09
+05/05/2016 22:20:10: SGD: revoke back to and update checkpoint file for epoch 9
 
-05/03/2016 22:13:29: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
+05/05/2016 22:20:10: Starting Epoch 10: learning rate per sample = 0.000000  effective momentum = 0.000045  momentum as time constant = 1000.0 samples
 
-05/03/2016 22:13:29: Starting minibatch loop.
+05/05/2016 22:20:10: Starting minibatch loop.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.4901161e-09; epochTime=0.05261s
+05/05/2016 22:20:11: Finished Epoch[10 of 100]: [Training] CrossEntropyWithSoftmax = 2.40280001 * 81; totalSamplesSeen = 810; learningRatePerSample = 1.4901161e-09; epochTime=0.201611s
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 6 lines with a total of 81+6 tokens.
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
-05/03/2016 22:13:29: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
-05/03/2016 22:13:29: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
-05/03/2016 22:13:29: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160503215737.289017/Examples/Text/Miscellaneous_SLU@release_gpu/cntkdebug.dnn.9.
-05/03/2016 22:13:30: learnRatePerSample reduced to 7.4505807e-10
-05/03/2016 22:13:30: SGD: revoke back to and update checkpoint file for epoch 9
-05/03/2016 22:13:30: Learn Rate Per Sample for Epoch[10] = 7.4505807e-10 is less than minLearnRate 9.9999997e-10. Training complete.
-05/03/2016 22:13:30: CNTKCommandTrainEnd: LSTM
+05/05/2016 22:20:11: Final Results: Minibatch[1-1]: CrossEntropyWithSoftmax = 2.51016198 * 81; perplexity = 12.30692333
+05/05/2016 22:20:11: Finished Epoch[10 of 100]: [Validate] CrossEntropyWithSoftmax = 2.51016198 * 81
+05/05/2016 22:20:11: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160505220136.870944/Examples/Text/Miscellaneous_SLU@debug_gpu/cntkdebug.dnn.9.
+05/05/2016 22:20:11: learnRatePerSample reduced to 7.4505807e-10
+05/05/2016 22:20:11: SGD: revoke back to and update checkpoint file for epoch 9
+05/05/2016 22:20:11: Learn Rate Per Sample for Epoch[10] = 7.4505807e-10 is less than minLearnRate 9.9999997e-10. Training complete.
+05/05/2016 22:20:11: CNTKCommandTrainEnd: LSTM
 
-05/03/2016 22:13:30: Action "train" complete.
+05/05/2016 22:20:11: Action "train" complete.
 
 
-05/03/2016 22:13:30: ##############################################################################
-05/03/2016 22:13:30: #                                                                            #
-05/03/2016 22:13:30: # Action "write"                                                             #
-05/03/2016 22:13:30: #                                                                            #
-05/03/2016 22:13:30: ##############################################################################
+05/05/2016 22:20:11: ##############################################################################
+05/05/2016 22:20:11: #                                                                            #
+05/05/2016 22:20:11: # Action "write"                                                             #
+05/05/2016 22:20:11: #                                                                            #
+05/05/2016 22:20:11: ##############################################################################
 
 LUSequenceReader: Reading sequence file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.test.apos.pred.pos.head.IOB.simple
 BatchLUSequenceReader: Input file is /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SLU/atis.test.apos.pred.pos.head.IOB.simple
@@ -2277,171 +2277,171 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[AutoName0 Gradient[300 x 1 x *1]] [AutoName1 Gradient[300 x 1 x *1]] [AutoName10 Gradient[300 x 1 x *1]] [AutoName100 Gradient[300 x 1 x *1]] [AutoName101 Gradient[300 x 1 x *1]] [AutoName102 Gradient[300 x 1 x *1]] [AutoName103 Gradient[300 x 1 x *1]] [AutoName104 Gradient[300 x 1 x *1]] [AutoName105 Gradient[300 x 1 x *1]] [AutoName106 Gradient[300 x 1 x *1]] [AutoName107 Gradient[300 x 1 x *1]] [AutoName108 Gradient[300 x 1 x *1]] [AutoName109 Gradient[300 x 1 x *1]] [AutoName11 Gradient[300 x 1 x *1]] [AutoName110 Gradient[300 x 1 x *1]] [AutoName111 Gradient[300 x 1 x *1]] [AutoName112 Gradient[300 x 1 x *1]] [AutoName113 Gradient[300 x 1 x *1]] [AutoName114 Gradient[127 x 1 x *1]] [AutoName114 Value[127 x 1 x *1]] [AutoName12 Gradient[300 x 1 x *1]] [AutoName13 Gradient[300 x 1 x *1]] [AutoName14 Gradient[300 x 1 x *1]] [AutoName15 Gradient[300 x 1 x *1]] [AutoName16 Gradient[300 x *1]] [AutoName17 Gradient[300 x 1 x *1]] [AutoName18 Gradient[300 x 1 x *1]] [AutoName19 Gradient[300 x 1 x *1]] [AutoName2 Gradient[300 x 1 x *1]] [AutoName20 Gradient[300 x 1 x *1]] [AutoName21 Gradient[300 x 1 x *1]] [AutoName22 Gradient[300 x *1]] [AutoName23 Gradient[300 x 1 x *1]] [AutoName24 Gradient[300 x 1 x *1]] [AutoName25 Gradient[300 x 1 x *1]] [AutoName26 Gradient[300 x 1 x *1]] [AutoName27 Gradient[300 x 1 x *1]] [AutoName28 Gradient[300 x 1 x *1]] [AutoName29 Gradient[300 x 1 x *1]] [AutoName3 Gradient[300 x 1 x *1]] [AutoName30 Gradient[300 x 1 x *1]] [AutoName31 Gradient[300 x *1]] [AutoName32 Gradient[300 x 1 x *1]] [AutoName33 Gradient[300 x 1 x *1]] [AutoName34 Gradient[300 x 1 x *1]] [AutoName35 Gradient[300 x 1 x *1]] [AutoName36 Gradient[300 x 1 x *1]] [AutoName37 Gradient[300 x 1 x *1]] [AutoName38 Gradient[300 x 1 x *1]] [AutoName39 Gradient[300 x 1 x *1]] [AutoName4 Gradient[300 x 1 x *1]] [AutoName40 Gradient[300 x 1 x *1]] [AutoName41 Gradient[300 x 1 x *1]] [AutoName42 Gradient[300 x 1 x *1]] [AutoName43 Gradient[300 x 1 x *1]] [AutoName44 Gradient[300 x 1 x *1]] [AutoName45 Gradient[300 x 1 x *1]] [AutoName46 Gradient[300 x 1 x *1]] [AutoName47 Gradient[300 x 1 x *1]] [AutoName48 Gradient[300 x 1 x *1]] [AutoName49 Gradient[300 x 1 x *1]] [AutoName5 Gradient[300 x 1 x *1]] [AutoName50 Gradient[300 x 1 x *1]] [AutoName51 Gradient[300 x 1 x *1]] [AutoName52 Gradient[300 x 1 x *1]] [AutoName53 Gradient[300 x 1 x *1]] [AutoName54 Gradient[300 x 1 x *1]] [AutoName55 Gradient[300 x 1 x *1]] [AutoName56 Gradient[300 x 1 x *1]] [AutoName57 Gradient[300 x 1 x *1]] [AutoName58 Gradient[300 x 1 x *1]] [AutoName59 Gradient[300 x 1 x *1]] [AutoName6 Gradient[300 x 1 x *1]] [AutoName60 Gradient[300 x 1 x *1]] [AutoName61 Gradient[300 x 1 x *1]] [AutoName62 Gradient[300 x 1 x *1]] [AutoName63 Gradient[300 x 1 x *1]] [AutoName64 Gradient[300 x 1 x *1]] [AutoName65 Gradient[300 x 1 x *1]] [AutoName66 Gradient[300 x 1 x *1]] [AutoName67 Gradient[300 x 1 x *1]] [AutoName68 Gradient[300 x 1 x *1]] [AutoName69 Gradient[300 x 1 x *1]] [AutoName7 Gradient[300 x 1 x *1]] [AutoName70 Gradient[300 x 1 x *1]] [AutoName71 Gradient[300 x 1 x *1]] [AutoName72 Gradient[300 x 1 x *1]] [AutoName73 Gradient[300 x 1 x *1]] [AutoName74 Gradient[300 x 1 x *1]] [AutoName75 Gradient[300 x 1 x *1]] [AutoName76 Gradient[300 x 1 x *1]] [AutoName77 Gradient[300 x 1 x *1]] [AutoName78 Gradient[300 x 1 x *1]] [AutoName79 Gradient[300 x 1 x *1]] [AutoName8 Gradient[300 x 1 x *1]] [AutoName80 Gradient[300 x 1 x *1]] [AutoName81 Gradient[300 x 1 x *1]] [AutoName82 Gradient[300 x 1 x *1]] [AutoName83 Gradient[300 x 1 x *1]] [AutoName84 Gradient[300 x 1 x *1]] [AutoName85 Gradient[300 x 1 x *1]] [AutoName86 Gradient[300 x 1 x *1]] [AutoName87 Gradient[300 x 1 x *1]] [AutoName88 Gradient[300 x 1 x *1]] [AutoName89 Gradient[300 x 1 x *1]] [AutoName9 Gradient[300 x *1]] [AutoName90 Gradient[300 x 1 x *1]] [AutoName91 Gradient[300 x 1 x *1]] [AutoName92 Gradient[300 x 1 x *1]] [AutoName93 Gradient[300 x 1 x *1]] [AutoName94 Gradient[300 x 1 x *1]] [AutoName95 Gradient[300 x 1 x *1]] [AutoName96 Gradient[300 x 1 x *1]] [AutoName97 Gradient[300 x 1 x *1]] [AutoName98 Gradient[300 x 1 x *1]] [AutoName99 Gradient[300 x 1 x *1]] [CrossEntropyWithSoftmax Gradient[1]] [CrossEntropyWithSoftmax Value[1]] [E0 Gradient[50 x 944]] [LookupTable Gradient[150 x *1]] [PosteriorProb Gradient[127 x 1 x *1]] [PosteriorProb Value[127 x 1 x *1]] [W4 Gradient[127 x 300]] [WCF0 Gradient[300 x 1]] [WCF2 Gradient[300 x 1]] [WCF3 Gradient[300 x 1]] [WCI0 Gradient[300 x 1]] [WCI2 Gradient[300 x 1]] [WCI3 Gradient[300 x 1]] [WCO0 Gradient[300 x 1]] [WCO2 Gradient[300 x 1]] [WCO3 Gradient[300 x 1]] [WHC0 Gradient[300 x 300]] [WHC2 Gradient[300 x 300]] [WHC3 Gradient[300 x 300]] [WHF0 Gradient[300 x 300]] [WHF2 Gradient[300 x 300]] [WHF3 Gradient[300 x 300]] [WHI0 Gradient[300 x 300]] [WHI2 Gradient[300 x 300]] [WHI3 Gradient[300 x 300]] [WHO0 Gradient[300 x 300]] [WHO2 Gradient[300 x 300]] [WHO3 Gradient[300 x 300]] [WXC0 Gradient[300 x 150]] [WXC2 Gradient[300 x 300]] [WXC3 Gradient[300 x 300]] [WXF0 Gradient[300 x 150]] [WXF2 Gradient[300 x 300]] [WXF3 Gradient[300 x 300]] [WXI0 Gradient[300 x 150]] [WXI2 Gradient[300 x 300]] [WXI3 Gradient[300 x 300]] [WXO0 Gradient[300 x 150]] [WXO2 Gradient[300 x 300]] [WXO3 Gradient[300 x 300]] [bc0 Gradient[300 x 1]] [bc2 Gradient[300 x 1]] [bc3 Gradient[300 x 1]] [bf0 Gradient[300 x 1]] [bf2 Gradient[300 x 1]] [bf3 Gradient[300 x 1]] [bi0 Gradient[300 x 1]] [bi2 Gradient[300 x 1]] [bi3 Gradient[300 x 1]] [bo0 Gradient[300 x 1]] [bo2 Gradient[300 x 1]] [bo3 Gradient[300 x 1]] [features Gradient[2832 x *1]] [labels Gradient[127 x *1]] [outputs Gradient[127 x 1 x *1]] }
-0x7fc1ca8001e8: {[AutoName23 Value[300 x 1 x *1]] }
-0x7fc1ca800558: {[AutoName31 Value[300 x *1]] }
-0x7fc1ca8012f8: {[AutoName22 Value[300 x *1]] }
-0x7fc1ca801888: {[AutoName9 Value[300 x *1]] }
-0x7fc1ca8019e8: {[AutoName10 Value[300 x 1 x *1]] }
-0x7fc1ca801ba8: {[AutoName16 Value[300 x *1]] }
-0x7fc1ca801d68: {[AutoName30 Value[300 x 1 x *1]] }
-0x7fc1ca802a78: {[AutoName32 Value[300 x 1 x *1]] }
-0x7fc1ca803428: {[AutoName33 Value[300 x 1 x *1]] }
-0x7fc1ca8035e8: {[AutoName21 Value[300 x 1 x *1]] }
-0x7fc1ca8037a8: {[AutoName24 Value[300 x 1 x *1]] }
-0x7fc1ca803968: {[AutoName20 Value[300 x 1 x *1]] }
-0x7fc1ca803b28: {[AutoName25 Value[300 x 1 x *1]] }
-0x7fc1ca803ce8: {[AutoName26 Value[300 x 1 x *1]] }
-0x7fc1ca803ea8: {[AutoName27 Value[300 x 1 x *1]] }
-0x7fc1ca805058: {[AutoName8 Value[300 x 1 x *1]] }
-0x7fc1ca8051b8: {[AutoName11 Value[300 x 1 x *1]] }
-0x7fc1ca805318: {[AutoName7 Value[300 x 1 x *1]] }
-0x7fc1ca8054d8: {[AutoName12 Value[300 x 1 x *1]] }
-0x7fc1ca805698: {[AutoName13 Value[300 x 1 x *1]] }
-0x7fc1ca805858: {[AutoName14 Value[300 x 1 x *1]] }
-0x7fc1ca805a18: {[AutoName15 Value[300 x 1 x *1]] }
-0x7fc1ca805bd8: {[AutoName17 Value[300 x 1 x *1]] }
-0x7fc1ca805d98: {[AutoName18 Value[300 x 1 x *1]] }
-0x7fc1ca805f58: {[AutoName19 Value[300 x 1 x *1]] }
-0x7fc1ca806118: {[AutoName28 Value[300 x 1 x *1]] }
-0x7fc1ca8062d8: {[AutoName29 Value[300 x 1 x *1]] }
-0x7fc1ca806498: {[AutoName34 Value[300 x 1 x *1]] }
-0x7fc1ca806658: {[AutoName35 Value[300 x 1 x *1]] }
-0x7fc1ca806818: {[AutoName36 Value[300 x 1 x *1]] }
-0x7fc1ca8069d8: {[AutoName37 Value[300 x 1 x *1]] }
-0x7fc1ca806b98: {[AutoName69 Value[300 x 1 x *1]] }
-0x7fc1ca806d58: {[AutoName70 Value[300 x 1 x *1]] }
-0x7fc1ca806f18: {[AutoName60 Value[300 x 1 x *1]] }
-0x7fc1ca8070d8: {[AutoName61 Value[300 x 1 x *1]] }
-0x7fc1ca807298: {[AutoName47 Value[300 x 1 x *1]] }
-0x7fc1ca807458: {[AutoName48 Value[300 x 1 x *1]] }
-0x7fc1ca807618: {[AutoName54 Value[300 x 1 x *1]] }
-0x7fc1ca8077d8: {[AutoName68 Value[300 x 1 x *1]] }
-0x7fc1ca807998: {[AutoName71 Value[300 x 1 x *1]] }
-0x7fc1ca807b58: {[AutoName59 Value[300 x 1 x *1]] }
-0x7fc1ca807d18: {[AutoName62 Value[300 x 1 x *1]] }
-0x7fc1ca807ed8: {[AutoName58 Value[300 x 1 x *1]] }
-0x7fc1ca808098: {[AutoName63 Value[300 x 1 x *1]] }
-0x7fc1ca808258: {[AutoName64 Value[300 x 1 x *1]] }
-0x7fc1ca808418: {[AutoName65 Value[300 x 1 x *1]] }
-0x7fc1ca8085d8: {[AutoName46 Value[300 x 1 x *1]] }
-0x7fc1ca808798: {[AutoName49 Value[300 x 1 x *1]] }
-0x7fc1ca808958: {[AutoName45 Value[300 x 1 x *1]] }
-0x7fc1ca808b18: {[AutoName50 Value[300 x 1 x *1]] }
-0x7fc1ca808cd8: {[AutoName51 Value[300 x 1 x *1]] }
-0x7fc1ca808e98: {[AutoName52 Value[300 x 1 x *1]] }
-0x7fc1ca809058: {[AutoName53 Value[300 x 1 x *1]] }
-0x7fc1ca809218: {[AutoName55 Value[300 x 1 x *1]] }
-0x7fc1ca8093d8: {[AutoName56 Value[300 x 1 x *1]] }
-0x7fc1ca809598: {[AutoName57 Value[300 x 1 x *1]] }
-0x7fc1ca809758: {[AutoName66 Value[300 x 1 x *1]] }
-0x7fc1ca809918: {[AutoName67 Value[300 x 1 x *1]] }
-0x7fc1ca809ad8: {[AutoName72 Value[300 x 1 x *1]] }
-0x7fc1ca809c98: {[AutoName73 Value[300 x 1 x *1]] }
-0x7fc1ca809e58: {[AutoName74 Value[300 x 1 x *1]] }
-0x7fc1ca80a018: {[AutoName75 Value[300 x 1 x *1]] }
-0x7fc1ca80a1d8: {[AutoName107 Value[300 x 1 x *1]] }
-0x7fc1ca80a398: {[AutoName108 Value[300 x 1 x *1]] }
-0x7fc1ca80a558: {[AutoName98 Value[300 x 1 x *1]] }
-0x7fc1ca80a718: {[AutoName99 Value[300 x 1 x *1]] }
-0x7fc1ca80a8d8: {[AutoName85 Value[300 x 1 x *1]] }
-0x7fc1ca80aa98: {[AutoName86 Value[300 x 1 x *1]] }
-0x7fc1ca80ac58: {[AutoName92 Value[300 x 1 x *1]] }
-0x7fc1ca80ae18: {[AutoName106 Value[300 x 1 x *1]] }
-0x7fc1ca80afd8: {[AutoName109 Value[300 x 1 x *1]] }
-0x7fc1ca80b198: {[AutoName97 Value[300 x 1 x *1]] }
-0x7fc1ca80b358: {[AutoName100 Value[300 x 1 x *1]] }
-0x7fc1ca80b518: {[AutoName96 Value[300 x 1 x *1]] }
-0x7fc1ca80b6d8: {[AutoName101 Value[300 x 1 x *1]] }
-0x7fc1ca80b898: {[AutoName102 Value[300 x 1 x *1]] }
-0x7fc1ca80ba58: {[AutoName103 Value[300 x 1 x *1]] }
-0x7fc1ca80bc18: {[AutoName84 Value[300 x 1 x *1]] }
-0x7fc1ca80bdd8: {[AutoName87 Value[300 x 1 x *1]] }
-0x7fc1ca80bf98: {[AutoName83 Value[300 x 1 x *1]] }
-0x7fc1ca80c158: {[AutoName88 Value[300 x 1 x *1]] }
-0x7fc1ca80c318: {[AutoName89 Value[300 x 1 x *1]] }
-0x7fc1ca80c4d8: {[AutoName90 Value[300 x 1 x *1]] }
-0x7fc1ca80c698: {[AutoName91 Value[300 x 1 x *1]] }
-0x7fc1ca80c858: {[AutoName93 Value[300 x 1 x *1]] }
-0x7fc1ca80ca18: {[AutoName94 Value[300 x 1 x *1]] }
-0x7fc1ca80cbd8: {[AutoName95 Value[300 x 1 x *1]] }
-0x7fc1ca80cd98: {[AutoName104 Value[300 x 1 x *1]] }
-0x7fc1ca80cf58: {[AutoName105 Value[300 x 1 x *1]] }
-0x7fc1ca80d118: {[AutoName110 Value[300 x 1 x *1]] }
-0x7fc1ca80d2d8: {[AutoName111 Value[300 x 1 x *1]] }
-0x7fc1ca80d498: {[AutoName112 Value[300 x 1 x *1]] }
-0x7fc1ca80d658: {[AutoName113 Value[300 x 1 x *1]] }
-0x7fc1caa11a98: {[AutoName0 Value[300 x 1 x *1]] }
-0x7fc1caa8c2d8: {[AutoName1 Value[300 x 1 x *1]] }
-0x7fc1caa9b0c8: {[AutoName2 Value[300 x 1 x *1]] }
-0x7fc1caa9d718: {[AutoName3 Value[300 x 1 x *1]] }
-0x7fc1caa9f6d8: {[AutoName38 Value[300 x 1 x *1]] }
-0x7fc1caa9fd98: {[AutoName39 Value[300 x 1 x *1]] }
-0x7fc1caaa0468: {[AutoName4 Value[300 x 1 x *1]] }
-0x7fc1caaa0b48: {[AutoName40 Value[300 x 1 x *1]] }
-0x7fc1caaa1228: {[AutoName41 Value[300 x 1 x *1]] }
-0x7fc1caaa1908: {[AutoName42 Value[300 x 1 x *1]] }
-0x7fc1caaa1fe8: {[AutoName43 Value[300 x 1 x *1]] }
-0x7fc1caaa26c8: {[AutoName44 Value[300 x 1 x *1]] }
-0x7fc1caaa3d38: {[AutoName5 Value[300 x 1 x *1]] }
-0x7fc1caaa6388: {[AutoName6 Value[300 x 1 x *1]] }
-0x7fc1caaaa008: {[AutoName76 Value[300 x 1 x *1]] }
-0x7fc1caaaa6c8: {[AutoName77 Value[300 x 1 x *1]] }
-0x7fc1caaaada8: {[AutoName78 Value[300 x 1 x *1]] }
-0x7fc1caaab478: {[AutoName79 Value[300 x 1 x *1]] }
-0x7fc1caaabe78: {[AutoName80 Value[300 x 1 x *1]] }
-0x7fc1caaac558: {[AutoName81 Value[300 x 1 x *1]] }
-0x7fc1caaacc38: {[AutoName82 Value[300 x 1 x *1]] }
-0x7fc1caab0758: {[bc2 Value[300 x 1]] }
-0x7fc1caab0a68: {[bc0 Value[300 x 1]] }
-0x7fc1caab1b58: {[bf0 Value[300 x 1]] }
-0x7fc1caab1e68: {[bc3 Value[300 x 1]] }
-0x7fc1caab2ee8: {[bf3 Value[300 x 1]] }
-0x7fc1caab31f8: {[bf2 Value[300 x 1]] }
-0x7fc1caab45c8: {[bi0 Value[300 x 1]] }
-0x7fc1caab4d48: {[bi3 Value[300 x 1]] }
-0x7fc1caab5058: {[bi2 Value[300 x 1]] }
-0x7fc1caab6088: {[bo2 Value[300 x 1]] }
-0x7fc1caab6398: {[bo0 Value[300 x 1]] }
-0x7fc1caab7458: {[E0 Value[50 x 944]] }
-0x7fc1caab7768: {[bo3 Value[300 x 1]] }
-0x7fc1caab9248: {[features Value[2832 x *1]] }
-0x7fc1caaba0f8: {[labels Value[127 x *1]] }
-0x7fc1caabb0f8: {[W4 Value[127 x 300]] }
-0x7fc1caabb1a8: {[WCF0 Value[300 x 1]] }
-0x7fc1caabb958: {[WCF2 Value[300 x 1]] }
-0x7fc1caabc818: {[WCI0 Value[300 x 1]] }
-0x7fc1caabcb28: {[WCF3 Value[300 x 1]] }
-0x7fc1caabdeb8: {[WCI2 Value[300 x 1]] }
-0x7fc1caabe948: {[WCI3 Value[300 x 1]] }
-0x7fc1caabf038: {[WCO2 Value[300 x 1]] }
-0x7fc1caabf348: {[WCO0 Value[300 x 1]] }
-0x7fc1caac0688: {[WCO3 Value[300 x 1]] }
-0x7fc1caac0e08: {[WHC2 Value[300 x 300]] }
-0x7fc1caac1118: {[WHC0 Value[300 x 300]] }
-0x7fc1caac2178: {[WHC3 Value[300 x 300]] }
-0x7fc1caac39a8: {[WHF2 Value[300 x 300]] }
-0x7fc1caac3cb8: {[WHF0 Value[300 x 300]] }
-0x7fc1caac43a8: {[WHF3 Value[300 x 300]] }
-0x7fc1caac5258: {[WHI0 Value[300 x 300]] }
-0x7fc1caac5c18: {[WHI2 Value[300 x 300]] }
-0x7fc1caac7448: {[WHO0 Value[300 x 300]] }
-0x7fc1caac7758: {[WHI3 Value[300 x 300]] }
-0x7fc1caac8338: {[WHO2 Value[300 x 300]] }
-0x7fc1caac8cf8: {[WHO3 Value[300 x 300]] }
-0x7fc1caac9ba8: {[WXC0 Value[300 x 150]] }
-0x7fc1caaca568: {[WXC2 Value[300 x 300]] }
-0x7fc1caacaf28: {[WXC3 Value[300 x 300]] }
-0x7fc1caacbdd8: {[WXF0 Value[300 x 150]] }
-0x7fc1caacc798: {[WXF2 Value[300 x 300]] }
-0x7fc1caacd158: {[WXF3 Value[300 x 300]] }
-0x7fc1caace008: {[WXI0 Value[300 x 150]] }
-0x7fc1caacfb48: {[WXI2 Value[300 x 300]] }
-0x7fc1caad0678: {[WXO0 Value[300 x 150]] }
-0x7fc1caad0988: {[WXI3 Value[300 x 300]] }
-0x7fc1caad1078: {[WXO2 Value[300 x 300]] }
-0x7fc1caad2bb8: {[WXO3 Value[300 x 300]] }
-0x7fc1caade2f8: {[outputs Value[127 x 1 x *1]] }
-0x7fc1caaff958: {[LookupTable Value[150 x *1]] }
+0x7f63b70029f8: {[LookupTable Value[150 x *1]] }
+0x7f63b7003248: {[AutoName23 Value[300 x 1 x *1]] }
+0x7f63b70035b8: {[AutoName31 Value[300 x *1]] }
+0x7f63b7004358: {[AutoName22 Value[300 x *1]] }
+0x7f63b70048e8: {[AutoName9 Value[300 x *1]] }
+0x7f63b7004a48: {[AutoName10 Value[300 x 1 x *1]] }
+0x7f63b7004c08: {[AutoName16 Value[300 x *1]] }
+0x7f63b7004dc8: {[AutoName30 Value[300 x 1 x *1]] }
+0x7f63b7005ad8: {[AutoName32 Value[300 x 1 x *1]] }
+0x7f63b7006488: {[AutoName33 Value[300 x 1 x *1]] }
+0x7f63b7006648: {[AutoName21 Value[300 x 1 x *1]] }
+0x7f63b7006808: {[AutoName24 Value[300 x 1 x *1]] }
+0x7f63b70069c8: {[AutoName20 Value[300 x 1 x *1]] }
+0x7f63b7006b88: {[AutoName25 Value[300 x 1 x *1]] }
+0x7f63b7006d48: {[AutoName26 Value[300 x 1 x *1]] }
+0x7f63b7006f08: {[AutoName27 Value[300 x 1 x *1]] }
+0x7f63b70080b8: {[AutoName8 Value[300 x 1 x *1]] }
+0x7f63b7008218: {[AutoName11 Value[300 x 1 x *1]] }
+0x7f63b7008378: {[AutoName7 Value[300 x 1 x *1]] }
+0x7f63b7008538: {[AutoName12 Value[300 x 1 x *1]] }
+0x7f63b70086f8: {[AutoName13 Value[300 x 1 x *1]] }
+0x7f63b70088b8: {[AutoName14 Value[300 x 1 x *1]] }
+0x7f63b7008a78: {[AutoName15 Value[300 x 1 x *1]] }
+0x7f63b7008c38: {[AutoName17 Value[300 x 1 x *1]] }
+0x7f63b7008df8: {[AutoName18 Value[300 x 1 x *1]] }
+0x7f63b7008fb8: {[AutoName19 Value[300 x 1 x *1]] }
+0x7f63b7009178: {[AutoName28 Value[300 x 1 x *1]] }
+0x7f63b7009338: {[AutoName29 Value[300 x 1 x *1]] }
+0x7f63b70094f8: {[AutoName34 Value[300 x 1 x *1]] }
+0x7f63b70096b8: {[AutoName35 Value[300 x 1 x *1]] }
+0x7f63b7009878: {[AutoName36 Value[300 x 1 x *1]] }
+0x7f63b7009a38: {[AutoName37 Value[300 x 1 x *1]] }
+0x7f63b7009bf8: {[AutoName69 Value[300 x 1 x *1]] }
+0x7f63b7009db8: {[AutoName70 Value[300 x 1 x *1]] }
+0x7f63b7009f78: {[AutoName60 Value[300 x 1 x *1]] }
+0x7f63b700a138: {[AutoName61 Value[300 x 1 x *1]] }
+0x7f63b700a2f8: {[AutoName47 Value[300 x 1 x *1]] }
+0x7f63b700a4b8: {[AutoName48 Value[300 x 1 x *1]] }
+0x7f63b700a678: {[AutoName54 Value[300 x 1 x *1]] }
+0x7f63b700a838: {[AutoName68 Value[300 x 1 x *1]] }
+0x7f63b700a9f8: {[AutoName71 Value[300 x 1 x *1]] }
+0x7f63b700abb8: {[AutoName59 Value[300 x 1 x *1]] }
+0x7f63b700ad78: {[AutoName62 Value[300 x 1 x *1]] }
+0x7f63b700af38: {[AutoName58 Value[300 x 1 x *1]] }
+0x7f63b700b0f8: {[AutoName63 Value[300 x 1 x *1]] }
+0x7f63b700b2b8: {[AutoName64 Value[300 x 1 x *1]] }
+0x7f63b700b478: {[AutoName65 Value[300 x 1 x *1]] }
+0x7f63b700b638: {[AutoName46 Value[300 x 1 x *1]] }
+0x7f63b700b7f8: {[AutoName49 Value[300 x 1 x *1]] }
+0x7f63b700b9b8: {[AutoName45 Value[300 x 1 x *1]] }
+0x7f63b700bb78: {[AutoName50 Value[300 x 1 x *1]] }
+0x7f63b700bd38: {[AutoName51 Value[300 x 1 x *1]] }
+0x7f63b700bef8: {[AutoName52 Value[300 x 1 x *1]] }
+0x7f63b700c0b8: {[AutoName53 Value[300 x 1 x *1]] }
+0x7f63b700c278: {[AutoName55 Value[300 x 1 x *1]] }
+0x7f63b700c438: {[AutoName56 Value[300 x 1 x *1]] }
+0x7f63b700c5f8: {[AutoName57 Value[300 x 1 x *1]] }
+0x7f63b700c7b8: {[AutoName66 Value[300 x 1 x *1]] }
+0x7f63b700c978: {[AutoName67 Value[300 x 1 x *1]] }
+0x7f63b700cb38: {[AutoName72 Value[300 x 1 x *1]] }
+0x7f63b700ccf8: {[AutoName73 Value[300 x 1 x *1]] }
+0x7f63b700ceb8: {[AutoName74 Value[300 x 1 x *1]] }
+0x7f63b700d078: {[AutoName75 Value[300 x 1 x *1]] }
+0x7f63b700d238: {[AutoName107 Value[300 x 1 x *1]] }
+0x7f63b700d3f8: {[AutoName108 Value[300 x 1 x *1]] }
+0x7f63b700d5b8: {[AutoName98 Value[300 x 1 x *1]] }
+0x7f63b700d778: {[AutoName99 Value[300 x 1 x *1]] }
+0x7f63b700d938: {[AutoName85 Value[300 x 1 x *1]] }
+0x7f63b700daf8: {[AutoName86 Value[300 x 1 x *1]] }
+0x7f63b700dcb8: {[AutoName92 Value[300 x 1 x *1]] }
+0x7f63b700de78: {[AutoName106 Value[300 x 1 x *1]] }
+0x7f63b700e038: {[AutoName109 Value[300 x 1 x *1]] }
+0x7f63b700e1f8: {[AutoName97 Value[300 x 1 x *1]] }
+0x7f63b700e3b8: {[AutoName100 Value[300 x 1 x *1]] }
+0x7f63b700e578: {[AutoName96 Value[300 x 1 x *1]] }
+0x7f63b700e738: {[AutoName101 Value[300 x 1 x *1]] }
+0x7f63b700e8f8: {[AutoName102 Value[300 x 1 x *1]] }
+0x7f63b700eab8: {[AutoName103 Value[300 x 1 x *1]] }
+0x7f63b700ec78: {[AutoName84 Value[300 x 1 x *1]] }
+0x7f63b700ee38: {[AutoName87 Value[300 x 1 x *1]] }
+0x7f63b700eff8: {[AutoName83 Value[300 x 1 x *1]] }
+0x7f63b700f1b8: {[AutoName88 Value[300 x 1 x *1]] }
+0x7f63b700f378: {[AutoName89 Value[300 x 1 x *1]] }
+0x7f63b700f538: {[AutoName90 Value[300 x 1 x *1]] }
+0x7f63b700f6f8: {[AutoName91 Value[300 x 1 x *1]] }
+0x7f63b700f8b8: {[AutoName93 Value[300 x 1 x *1]] }
+0x7f63b700fa78: {[AutoName94 Value[300 x 1 x *1]] }
+0x7f63b700fc38: {[AutoName95 Value[300 x 1 x *1]] }
+0x7f63b700fdf8: {[AutoName104 Value[300 x 1 x *1]] }
+0x7f63b700ffb8: {[AutoName105 Value[300 x 1 x *1]] }
+0x7f63b7010178: {[AutoName110 Value[300 x 1 x *1]] }
+0x7f63b7010338: {[AutoName111 Value[300 x 1 x *1]] }
+0x7f63b70104f8: {[AutoName112 Value[300 x 1 x *1]] }
+0x7f63b70106b8: {[AutoName113 Value[300 x 1 x *1]] }
+0x7f63b7b30948: {[AutoName1 Value[300 x 1 x *1]] }
+0x7f63b7b7df78: {[AutoName0 Value[300 x 1 x *1]] }
+0x7f63b7b9e188: {[AutoName2 Value[300 x 1 x *1]] }
+0x7f63b7ba07f8: {[AutoName3 Value[300 x 1 x *1]] }
+0x7f63b7ba2798: {[AutoName38 Value[300 x 1 x *1]] }
+0x7f63b7ba2e78: {[AutoName39 Value[300 x 1 x *1]] }
+0x7f63b7ba3558: {[AutoName4 Value[300 x 1 x *1]] }
+0x7f63b7ba3c38: {[AutoName40 Value[300 x 1 x *1]] }
+0x7f63b7ba4318: {[AutoName41 Value[300 x 1 x *1]] }
+0x7f63b7ba49f8: {[AutoName42 Value[300 x 1 x *1]] }
+0x7f63b7ba50d8: {[AutoName43 Value[300 x 1 x *1]] }
+0x7f63b7ba57b8: {[AutoName44 Value[300 x 1 x *1]] }
+0x7f63b7ba6e68: {[AutoName5 Value[300 x 1 x *1]] }
+0x7f63b7ba9488: {[AutoName6 Value[300 x 1 x *1]] }
+0x7f63b7bad128: {[AutoName76 Value[300 x 1 x *1]] }
+0x7f63b7bad7e8: {[AutoName77 Value[300 x 1 x *1]] }
+0x7f63b7badec8: {[AutoName78 Value[300 x 1 x *1]] }
+0x7f63b7bae5a8: {[AutoName79 Value[300 x 1 x *1]] }
+0x7f63b7baefa8: {[AutoName80 Value[300 x 1 x *1]] }
+0x7f63b7baf688: {[AutoName81 Value[300 x 1 x *1]] }
+0x7f63b7bafd68: {[AutoName82 Value[300 x 1 x *1]] }
+0x7f63b7bb3868: {[bc2 Value[300 x 1]] }
+0x7f63b7bb3b78: {[bc0 Value[300 x 1]] }
+0x7f63b7bb4f38: {[bc3 Value[300 x 1]] }
+0x7f63b7bb59c8: {[bf0 Value[300 x 1]] }
+0x7f63b7bb60b8: {[bf3 Value[300 x 1]] }
+0x7f63b7bb63c8: {[bf2 Value[300 x 1]] }
+0x7f63b7bb7708: {[bi0 Value[300 x 1]] }
+0x7f63b7bb7e88: {[bi3 Value[300 x 1]] }
+0x7f63b7bb8198: {[bi2 Value[300 x 1]] }
+0x7f63b7bb94d8: {[bo0 Value[300 x 1]] }
+0x7f63b7bb9f68: {[bo2 Value[300 x 1]] }
+0x7f63b7bba658: {[E0 Value[50 x 944]] }
+0x7f63b7bba968: {[bo3 Value[300 x 1]] }
+0x7f63b7bbc3b8: {[features Value[2832 x *1]] }
+0x7f63b7bbd268: {[labels Value[127 x *1]] }
+0x7f63b7bbe268: {[W4 Value[127 x 300]] }
+0x7f63b7bbe318: {[WCF0 Value[300 x 1]] }
+0x7f63b7bbeac8: {[WCF2 Value[300 x 1]] }
+0x7f63b7bbf988: {[WCI0 Value[300 x 1]] }
+0x7f63b7bbfc98: {[WCF3 Value[300 x 1]] }
+0x7f63b7bc0d18: {[WCI3 Value[300 x 1]] }
+0x7f63b7bc1028: {[WCI2 Value[300 x 1]] }
+0x7f63b7bc23f8: {[WCO0 Value[300 x 1]] }
+0x7f63b7bc2e88: {[WCO2 Value[300 x 1]] }
+0x7f63b7bc3888: {[WCO3 Value[300 x 1]] }
+0x7f63b7bc3f78: {[WHC2 Value[300 x 300]] }
+0x7f63b7bc4288: {[WHC0 Value[300 x 300]] }
+0x7f63b7bc52e8: {[WHC3 Value[300 x 300]] }
+0x7f63b7bc5ca8: {[WHF0 Value[300 x 300]] }
+0x7f63b7bc74d8: {[WHF3 Value[300 x 300]] }
+0x7f63b7bc77e8: {[WHF2 Value[300 x 300]] }
+0x7f63b7bc83c8: {[WHI0 Value[300 x 300]] }
+0x7f63b7bc8d88: {[WHI2 Value[300 x 300]] }
+0x7f63b7bc9c38: {[WHI3 Value[300 x 300]] }
+0x7f63b7bca5f8: {[WHO0 Value[300 x 300]] }
+0x7f63b7bcb4a8: {[WHO2 Value[300 x 300]] }
+0x7f63b7bcbe68: {[WHO3 Value[300 x 300]] }
+0x7f63b7bccd18: {[WXC0 Value[300 x 150]] }
+0x7f63b7bcd6d8: {[WXC2 Value[300 x 300]] }
+0x7f63b7bce098: {[WXC3 Value[300 x 300]] }
+0x7f63b7bcef48: {[WXF0 Value[300 x 150]] }
+0x7f63b7bcf908: {[WXF2 Value[300 x 300]] }
+0x7f63b7bd02c8: {[WXF3 Value[300 x 300]] }
+0x7f63b7bd1178: {[WXI0 Value[300 x 150]] }
+0x7f63b7bd2cb8: {[WXI2 Value[300 x 300]] }
+0x7f63b7bd37c8: {[WXO0 Value[300 x 150]] }
+0x7f63b7bd3ad8: {[WXI3 Value[300 x 300]] }
+0x7f63b7bd41c8: {[WXO2 Value[300 x 300]] }
+0x7f63b7bd4b88: {[WXO3 Value[300 x 300]] }
+0x7f63b7be6548: {[outputs Value[127 x 1 x *1]] }
 
 BatchLUSequenceParser: Parsing input data...
 BatchLUSequenceParser: Parsed 5 lines with a total of 92+5 tokens.
@@ -2460,6 +2460,6 @@ BatchLUSequenceParser: Parsed 0 lines with a total of 0+0 tokens.
 EnsureDataAvailable: No more data.
 Total Samples Evaluated = 91
 
-05/03/2016 22:13:30: Action "write" complete.
+05/05/2016 22:20:11: Action "write" complete.
 
-05/03/2016 22:13:30: __COMPLETED__
+05/05/2016 22:20:11: __COMPLETED__
