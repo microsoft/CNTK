@@ -596,7 +596,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
         size_t mbStartSample = m_epoch * m_epochSize;
 
         size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
-        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long) m_epoch, (unsigned long) mbStartSample, (unsigned long) fileRecord);
+        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long) m_epoch+1, (unsigned long) mbStartSample, (unsigned long) fileRecord);
         size_t currentFileRecord = m_mbStartSample % m_totalSamples;
 
         // reset the next read sample

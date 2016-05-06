@@ -1439,29 +1439,31 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
+    size_t numElements = numRows * numCols;
+    if (numElements > GetSizeAllocated() ||                 // grow allocation
+        (!growOnly && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
+    {
+        // reallocate buffer if numElements > 0
+        ElemType* pArray = nullptr;
+        if (numElements > 0)
+            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+
+        // If the buffer exists, free it
+        if (Buffer())
+            TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+
+        SetBuffer(pArray, numElements * sizeof(ElemType));
+        SetSizeAllocated(numElements);
+    }
+    
+#ifdef _DEBUG
+        CUDA_CALL(cudaMemset(Buffer(), 0xff, sizeof(ElemType) * GetSizeAllocated()));
+#endif
+
+    // success
+    m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
-
-    size_t numElements = GetNumElements();
-    if (numElements > GetSizeAllocated() || (!growOnly && numElements != GetSizeAllocated()))
-    {
-        if (IsEmpty())
-        {
-            SetSizeAllocated(0);
-            SetBuffer(nullptr, 0);
-        }
-        else
-        {
-            if (Buffer())
-            {
-                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
-            }
-            SetSizeAllocated(numElements);
-            SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols), numElements * sizeof(ElemType));
-            CUDA_CALL(cudaMemset(Buffer(), 0, sizeof(ElemType) * GetSizeAllocated()));
-        }
-    }
-    m_sliceViewOffset = 0;
 }
 
 template <class ElemType>
