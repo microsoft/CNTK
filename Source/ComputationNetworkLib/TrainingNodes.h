@@ -718,10 +718,10 @@ public:
 			Matrix<ElemType> grdLocal = gradient.DeepClone();
 			size_t pairsCount = 0, idI;
 			ElemType logKi, logKj, gKi, gKij, g;
-			for (std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+			for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
 			{
 				ElemType irm0 = itqu->irm0;
-				for (std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
+				for (typename std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
 				{
 					Url& UrlI = *iturlI;
 					size_t K = UrlI.K;
@@ -729,7 +729,7 @@ public:
 					gKi = UrlI.gn;
 					idI = UrlI.id;
 					if (K == 0) continue;
-					for (std::vector<Url>::iterator iturlJ = iturlI + 1; iturlJ <= iturlI + K; iturlJ++)
+					for (typename std::vector<Url>::iterator iturlJ = iturlI + 1; iturlJ <= iturlI + K; iturlJ++)
 					{
 						Url& UrlJ = *iturlJ;
 						logKj = m_logWeights[UrlJ.rk];
@@ -795,7 +795,7 @@ public:
 		// prepared lookup table
 		m_logWeights.resize(maxNumofUrlsPerQuery);
 		size_t i = 0;
-		for (std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
+		for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
 		{
 			*it = (ElemType) log(2.0 + i);
 		}
@@ -856,9 +856,9 @@ public:
 
 		// calculate IRMetrics
 		size_t sampleCount = 0;
-		for (std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+		for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
 		{
-			for (std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
+			for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
 			{
 				Url& aUrl = *iturl;
 				(*m_perUrlGainsOrig)(0, sampleCount) = aUrl.gn;
@@ -882,13 +882,13 @@ public:
 		const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
 		ElemType IRMetricValue = 0.0;
 		size_t nValidQueries = 0;
-		for (std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+		for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
 		{
 			QueryUrls& qu = *itqu;
 			qu.irm0 = 0.0;
 			qu.irm = 0.0;
 
-			for (std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
+			for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
 			{
 				Url& url = *iturl;
 				qu.irm0 += perUrlGainOrig(0, url.id);
