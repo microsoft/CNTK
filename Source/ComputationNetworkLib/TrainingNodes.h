@@ -720,7 +720,7 @@ public:
 			ElemType logKi, logKj, gKi, gKij, g;
 			for (std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
 			{
-				ElemType irm = itqu->irm, irm0 = itqu->irm0;
+				ElemType irm0 = itqu->irm0;
 				for (std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
 				{
 					Url& UrlI = *iturlI;
@@ -738,7 +738,7 @@ public:
 						// update IR metric
 						g = gKij * (logKi - logKj);
 						g /= (logKi * logKj);
-						g = abs((irm + g) / irm0);
+						g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0));
 
 						// combined with log exp term
 						g = logExpTerm(0, pairsCount++) * g;
@@ -750,7 +750,9 @@ public:
 				}
 			}
 
+			//grdLocal.Print("grdLocal", 0, 0, 0, 100);
 			gradient.AssignDifferenceOf(grdLocal, 0.0);
+			//gradient.Print("gradient", 0, 0, 0, 100);
 		}
 	}
 
@@ -762,6 +764,12 @@ public:
 	virtual void UpdateFunctionMBSize() override
 	{
 		FrameRange fr(Input(0)->GetMBLayout());
+
+		// clean up first
+		if (!m_queryUrls.empty()) m_queryUrls.clear();
+		if (!m_urlSorter.empty()) m_urlSorter.clear();
+		if (!m_logWeights.empty()) m_logWeights.clear();
+
 		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
 		m_samples = pairIndeces.GetNumCols();
 		m_pairCounts = (size_t)pairIndeces.SumOfElements();
@@ -780,11 +788,12 @@ public:
 		m_maxPairValues->Resize(1, 1);
 		pairIndeces.VectorMax(*m_maxPairIndexIndex, *m_maxPairValues, false);
 
-		size_t maxSampleSize = (size_t)(*m_maxPairValues)(0, 0);
-		m_urlSorter.resize(maxSampleSize);
+		// TODO: Double check this part
+		size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
+		m_urlSorter.resize(maxNumofUrlsPerQuery);
 		
 		// prepared lookup table
-		m_logWeights.resize(maxSampleSize);
+		m_logWeights.resize(maxNumofUrlsPerQuery);
 		size_t i = 0;
 		for (std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
 		{
@@ -802,23 +811,23 @@ public:
 		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
 		size_t nCols = singleLabels.GetNumCols();
 		// iterate through all samples
-		size_t i = 0, totalK = 0, K = 0;
-		QueryUrls qu;
+		size_t i = 0, totalK = 0, K = 0, nUrls = 0;
+		QueryUrls aqu;
 
 		// Populate m_queryUrls
 		while (i < nCols)
 		{
-			K = (size_t)pairIndeces(0, i);
-			totalK += K;
+			nUrls = (size_t)pairIndeces(0, i) + 1;
+			totalK += nUrls;
 
-			m_queryUrls.push_back(qu);
+			m_queryUrls.push_back(aqu);
 			QueryUrls& qub = m_queryUrls.back();
-			qub.urls.resize(K);
+			qub.urls.resize(nUrls);
 
 			std::vector<Url>& urls = qub.urls;
 			std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
 			std::vector<Url>::iterator its0 = its;
-			int rk0 = 0, rk = 0; // rk0 is original rank, rk is the sorted rank 
+			int rk0 = 0; // rk0 is original rank, rk is the sorted rank 
 			for (; it != urls.end(); it++)
 			{
 				it->id = i;
@@ -834,6 +843,7 @@ public:
 
 			// set the sorted rk order to each url
 			// the urls are still in the original order
+			int rk = 0;
 			for (it = its0; it != its + 1; it++)
 				urls[it->rk0].rk = rk++;
 		}
@@ -871,6 +881,7 @@ public:
 		const Matrix<ElemType>& perUrlGainOrig = *m_perUrlGainsOrig;
 		const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
 		ElemType IRMetricValue = 0.0;
+		size_t nValidQueries = 0;
 		for (std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
 		{
 			QueryUrls& qu = *itqu;
@@ -884,10 +895,22 @@ public:
 				qu.irm += perUrlGainSort(0, url.id);
 			}
 
-			IRMetricValue += (qu.irm / qu.irm0);
+			//if (qu.irm0 != 0.0)
+			//{
+			//	IRMetricValue += (qu.irm / qu.irm0);
+			//	nValidQueries++;
+			//}
+
+			IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
+			nValidQueries++;
 		}
 
+		if (nValidQueries == 0)
+			LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
+		
+		IRMetricValue = IRMetricValue / nValidQueries * 100;
 		Value().SetValue(IRMetricValue);
+		//Value().Print("IRMetric", 0, 0, 0, 0);
 
 		// set for pairs
 		size_t k0, k1, j, pairsCount = 0;
@@ -965,7 +988,8 @@ public:
 		ReleaseMatrixToPool(m_perUrlGainsSort, matrixPool);
 		ReleaseMatrixToPool(m_perUrlWeightsOrig, matrixPool);
 		ReleaseMatrixToPool(m_perUrlWeightsSort, matrixPool);
-
+		
+		// is this the right place?  it was not called after bp.
 		m_queryUrls.clear();
 		m_urlSorter.clear();
 		m_logWeights.clear();
