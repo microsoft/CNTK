@@ -1126,6 +1126,29 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "G2P", "G2P", "{4AD12278-970
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Source\Extensibility\CPPEvalClient\CPPEvalClient.vcxproj", "{578D52A0-3928-4405-A016-F016E8B49031}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExperimentalHtkmlfReader", "ExperimentalHtkmlfReader", "{977ECCB7-598D-4548-B95B-BACA9CC7D98B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNN", "DNN", "{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{772A0DB3-4710-4281-8AA9-A9F1F7C543D3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{FE3592CF-3EB9-4502-BB95-E2AB974C0FB5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{BA6A65C5-92A2-4040-ADC3-0727A45694F6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUtterance", "{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{1141DC61-E014-4DEC-9157-F6B1FC055C7A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1526,5 +1549,12 @@ Global
 		{85A05261-41D0-41DF-80B5-ADB6ABB54632} = {A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}
 		{4AD12278-9705-4BBA-B2C3-D6D5856AADC3} = {85A05261-41D0-41DF-80B5-ADB6ABB54632}
 		{578D52A0-3928-4405-A016-F016E8B49031} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
+		{977ECCB7-598D-4548-B95B-BACA9CC7D98B} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{772A0DB3-4710-4281-8AA9-A9F1F7C543D3} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{FE3592CF-3EB9-4502-BB95-E2AB974C0FB5} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{BA6A65C5-92A2-4040-ADC3-0727A45694F6} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
+		{1141DC61-E014-4DEC-9157-F6B1FC055C7A} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
 	EndGlobalSection
 EndGlobal

@@ -549,8 +549,11 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     SyncGuard syncGuard;
 
     // do some optimization for reductions
+    //  - example: 30 GPU procs, warp size 32 --> 960 GPU cores
+    //  - NN elements must be computed, each involving a reduction over reductionDim elements
     // Cases:
-    //  - #output elements >= GPU procs  -->  use one proc per element, do reduction in inner loop
+    //  - #output elements NN >= GPU cores  -->  use one proc per element, do reduction in inner loop
+    //    E.g. if >960 elements are computed, each gets its own GPU thread.
     //  - reduction dimension fits into a single kernel  -->  launch it that way
     //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc
     //     - PlusNode: reducing to a bias for small matrices
