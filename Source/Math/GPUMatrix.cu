@@ -941,7 +941,7 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
     //CUDA_CALL(cudaMemcpy(const_cast<ElemType*>(m.Data()), buf, sizeof(ElemType) * n, cudaMemcpyHostToDevice));
 }
 
-#undef ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
+#define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
 
 template <class ElemType>
 __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
