@@ -393,7 +393,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
     }
 };
 
-//#define ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
+#define ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
 
 // specialization for k = -1 terminates the template recursion, and computes reductions in parallel
 template <class ElemType, C_size_t N, C_int M, C_int K>
