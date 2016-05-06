@@ -659,8 +659,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
-        auto jInF = idx(0, jOut); // this is the column we need to get
-        if (jInF < 0)           // negative index means gap
+        auto jInF = idx(0, jOut);         // this is the column we need to get
+        if (std::isnan(jInF) || jInF < 0) // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
@@ -691,8 +691,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
-        auto jOutF = idx(0, jIn); // this is the column we copy/add into
-        if (jOutF < 0)            // negative index means gap
+        auto jOutF = idx(0, jIn);           // this is the column we copy/add into
+        if (std::isnan(jOutF) || jOutF < 0) // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())

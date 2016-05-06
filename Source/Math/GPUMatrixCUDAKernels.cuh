@@ -43,6 +43,7 @@
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
 // CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
+// TODO: This may need to be guarded by CUDA version; newer devices may support this.
 static __inline__ __device__ double atomicAdd(double* address, double val)
 {
     unsigned long long int* address_as_ull = (unsigned long long int*) address;
@@ -3152,7 +3153,8 @@ __global__ void _scaleSparseBlockAndAddToDense(
     rhs[IDX2C(row, col, numRows)] += alpha * lhsValues[index];
 }
 
-// compute predictions in cross entory node
+#if 0
+// compute predictions in cross entropy node
 template <class ElemType>
 __global__ void _computePrediction(
     int nv,
@@ -3335,6 +3337,7 @@ __global__ void _computeGradientOfInput(
 
     atomicAdd(&grd[IDX2C(h, j, numrows)], sum);
 }
+#endif
 
 template <class ElemType>
 __global__ void computeNCEForwardProp(
@@ -3713,6 +3716,8 @@ __global__ void _assignNceDerivativeNew(
             atomicAdd(&c[wid], -er);
     }
 }
+
+#if 0
 // compute gradients of weights in cross entropy node
 template <class ElemType>
 __global__ void _computeGradientOfWeight(
@@ -3774,6 +3779,7 @@ __global__ void _computeGradientOfWeight(
         blockIds[ii] = i;
     }
 }
+#endif
 
 // used in clipping gradients
 template <class ElemType>

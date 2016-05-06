@@ -16,11 +16,7 @@
 #include "latticestorage.h"
 #include <limits>
 
-namespace msra { namespace cuda {
-
-class passtextureref;
-}
-}
+namespace msra { namespace cuda { class passtextureref; } }
 
 #ifdef CPUONLY
 #define __kernel_emulation__
@@ -34,7 +30,8 @@ using namespace std;
 #define __device__
 #endif
 #define CUDART_MIN_DENORM_F numeric_limits<float>::denorm_min()
-#define atomicAdd(address, value) (*(address) += (value)) // don't forget to #undef (#praga pop_macro)! Otherwise CUDA might compile with this...
+// renamed to x- so we make sure to not accidentally use these; rename back if ever needed again
+#define xatomicAdd(address, value) (*(address) += (value)) // don't forget to #undef (#praga pop_macro)! Otherwise CUDA might compile with this...
 #define atomicCAS(address, compare, val) \
     *address;                            \
     *address = *address == compare ? val : *address;
@@ -47,8 +44,8 @@ using namespace std;
 #if __CUDA_ARCH__ < 200
 //#warning Sequence training not supported on 1.x CUDA machines.
 #define force_crash() (*((int *) -1) = 0)         // TODO: this does not in fact seem to crash it...
-#define atomicAdd(a, v) (force_crash(), *(a) = v) // force a crash if used with 1.x devices
-#define atomicCAS(address, compare, val) (*(address) = compare + val, *((int *) -1) = 0)
+#define xatomicAdd(a, v) (force_crash(), *(a) = v) // force a crash if used with 1.x devices
+#define xatomicCAS(address, compare, val) (*(address) = compare + val, *((int *) -1) = 0)
 #define __double_as_longlong(in) (force_crash(), in)
 #define __longlong_as_double(in) (force_crash(), in)
 #define __float_as_int(in) (force_crash(), in)
@@ -956,8 +953,8 @@ struct latticefunctionskernels
         }
     }
 };
-};
-};
+
+}};
 
 #pragma pop_macro("atomicCAS")
 #pragma pop_macro("atomicAdd")
