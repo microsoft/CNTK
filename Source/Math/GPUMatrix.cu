@@ -1484,10 +1484,6 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         SetSizeAllocated(numElements);
     }
     
-#ifdef _DEBUG
-        CUDA_CALL(cudaMemset(Buffer(), 0xff, sizeof(ElemType) * GetSizeAllocated()));
-#endif
-
     // success
     m_sliceViewOffset = 0;
     m_numRows = numRows;
