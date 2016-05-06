@@ -450,222 +450,222 @@ template class MatrixL1RegNode<double>;
 template <class ElemType>
 class OrderedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
-	typedef ComputationNodeNonLooping<ElemType> Base;
-	UsingComputationNodeMembersBoilerplate;
-	static const std::wstring TypeName()
-	{
-		return L"OrderedCrossEntropyWithSoftmax";
-	}
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"OrderedCrossEntropyWithSoftmax";
+    }
 
 public:
-	DeclareConstructorFromConfigWithNumInputs(OrderedCrossEntropyWithSoftmaxNode);
-	OrderedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-		: Base(deviceId, name), m_sigma(1.0)
-	{
-	}
+    DeclareConstructorFromConfigWithNumInputs(OrderedCrossEntropyWithSoftmaxNode);
+    OrderedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_sigma(1.0)
+    {
+    }
 
-	virtual void BackpropToNonLooping(size_t inputIndex) override
-	{
-		FrameRange fr(Input(0)->GetMBLayout());
-		if (inputIndex == 1) // right derivative
-		{
-			auto gradient = Input(1)->GradientFor(fr);
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        if (inputIndex == 1) // right derivative
+        {
+            auto gradient = Input(1)->GradientFor(fr);
 
-			// 1/(1+exp(sigma*(si-sj)))
-			*m_rightGradientAll = (*m_logexptermInv + 1);
-			m_rightGradientAll->AssignElementInverseOf(*m_rightGradientAll);
-			m_rightGradientAll->AddWithScaleOf(-0.5, *m_pairwiseOneMinusLabels);
-			*m_rightGradientAll *= -m_sigma;
+            // 1/(1+exp(sigma*(si-sj)))
+            *m_rightGradientAll = (*m_logexptermInv + 1);
+            m_rightGradientAll->AssignElementInverseOf(*m_rightGradientAll);
+            m_rightGradientAll->AddWithScaleOf(-0.5, *m_pairwiseOneMinusLabels);
+            *m_rightGradientAll *= -m_sigma;
 
-			// sum and get the gradient, and add to gradient
-			const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-			Matrix<ElemType> grdLocal = gradient.DeepClone();
-			const Matrix<ElemType>& grdAllLocal = *m_rightGradientAll;
+            // sum and get the gradient, and add to gradient
+            const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+            Matrix<ElemType> grdLocal = gradient.DeepClone();
+            const Matrix<ElemType>& grdAllLocal = *m_rightGradientAll;
 
-			size_t nCols = Input(0)->ValueFor(fr).GetNumCols();
-			size_t pairCounts = 0;
-			for (size_t i = 0; i < nCols; i++)
-			{
-				size_t K = (size_t)pairIndeces(0, i);
-				if (K == 0) continue;
-				size_t k0 = i + 1;
-				size_t k1 = i + K;
-				for (size_t j = k0; j <= k1; j++)
-				{
-					//gradient(0, i) += *m_rightGradientAll(0, pairCounts++);
-					ElemType g = grdAllLocal(0, pairCounts++);
-					grdLocal(0, i) += g;
-					grdLocal(0, j) -= g;
-				}
-			}
-			gradient.AssignDifferenceOf(grdLocal, 0.0);
-		}
-	}
+            size_t nCols = Input(0)->ValueFor(fr).GetNumCols();
+            size_t pairCounts = 0;
+            for (size_t i = 0; i < nCols; i++)
+            {
+                size_t K = (size_t)pairIndeces(0, i);
+                if (K == 0) continue;
+                size_t k0 = i + 1;
+                size_t k1 = i + K;
+                for (size_t j = k0; j <= k1; j++)
+                {
+                    //gradient(0, i) += *m_rightGradientAll(0, pairCounts++);
+                    ElemType g = grdAllLocal(0, pairCounts++);
+                    grdLocal(0, i) += g;
+                    grdLocal(0, j) -= g;
+                }
+            }
+            gradient.AssignDifferenceOf(grdLocal, 0.0);
+        }
+    }
 
-	virtual bool OutputUsedInComputingInputNodesGradients() const override
-	{
-		return false;
-	}
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
-	virtual void UpdateFunctionMBSize() override
-	{
-		FrameRange fr(Input(0)->GetMBLayout());
-		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-		m_pairCounts = (size_t) pairIndeces.SumOfElements();
+    virtual void UpdateFunctionMBSize() override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+        m_pairCounts = (size_t) pairIndeces.SumOfElements();
 
-		m_pairwiseLabels->Resize(1, m_pairCounts);
-		m_pairwiseOneMinusLabels->Resize(1, m_pairCounts);
-		m_pairwiseDifferences->Resize(1, m_pairCounts);
-		m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
-		m_sigmaPairwiseNegDiff->Resize(1, m_pairCounts);
-		m_logexpterm->Resize(1, m_pairCounts);
-		m_logexptermInv->Resize(1, m_pairCounts);
-		m_everythingForward->Resize(1, m_pairCounts);
-		m_rightGradientAll->Resize(1, m_pairCounts);
-		m_leftGradientAll->Resize(1, m_pairCounts);
-	}
+        m_pairwiseLabels->Resize(1, m_pairCounts);
+        m_pairwiseOneMinusLabels->Resize(1, m_pairCounts);
+        m_pairwiseDifferences->Resize(1, m_pairCounts);
+        m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
+        m_sigmaPairwiseNegDiff->Resize(1, m_pairCounts);
+        m_logexpterm->Resize(1, m_pairCounts);
+        m_logexptermInv->Resize(1, m_pairCounts);
+        m_everythingForward->Resize(1, m_pairCounts);
+        m_rightGradientAll->Resize(1, m_pairCounts);
+        m_leftGradientAll->Resize(1, m_pairCounts);
+    }
 
-	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-	{
-		// Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
-		FrameRange fr(Input(0)->GetMBLayout());
-		// construct matrices for further computation
-		const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
-		const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
-		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-		size_t nCols = singleLabels.GetNumCols();
-		size_t pairCounts = 0;
-		ElemType bad = -1.0, good = 1.0, fair = 0.0;
-		// iterate through all samples
-		for (size_t i = 0; i < nCols; i++)
-		{
-			size_t K = (size_t)pairIndeces(0, i);
-			if (K == 0) continue;
-			size_t k0 = i + 1;
-			size_t k1 = i + K;
-			int l1 = (int) singleLabels(0, i);
-			for (size_t j = k0; j <= k1; j++)
-			{
-				int l2 = (int) singleLabels(0, j);
-				// i>j (1), i<j (-1), i=j (0)
-				ElemType& pl = (*m_pairwiseLabels)(0, pairCounts);
-				pl = l1 <= l2 ? bad : good;
-				pl = l1 == l2 ? fair : pl;
-				(*m_pairwiseDifferences)(0, pairCounts) = scores(0, i) - scores(0, j);
-				pairCounts++;
-			}
-		}
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        // Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
+        FrameRange fr(Input(0)->GetMBLayout());
+        // construct matrices for further computation
+        const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+        size_t nCols = singleLabels.GetNumCols();
+        size_t pairCounts = 0;
+        ElemType bad = -1.0, good = 1.0, fair = 0.0;
+        // iterate through all samples
+        for (size_t i = 0; i < nCols; i++)
+        {
+            size_t K = (size_t)pairIndeces(0, i);
+            if (K == 0) continue;
+            size_t k0 = i + 1;
+            size_t k1 = i + K;
+            int l1 = (int) singleLabels(0, i);
+            for (size_t j = k0; j <= k1; j++)
+            {
+                int l2 = (int) singleLabels(0, j);
+                // i>j (1), i<j (-1), i=j (0)
+                ElemType& pl = (*m_pairwiseLabels)(0, pairCounts);
+                pl = l1 <= l2 ? bad : good;
+                pl = l1 == l2 ? fair : pl;
+                (*m_pairwiseDifferences)(0, pairCounts) = scores(0, i) - scores(0, j);
+                pairCounts++;
+            }
+        }
 
-		if (m_pairCounts != pairCounts)
-		{
-			InvalidArgument("Pair count mis-match in %ls %ls operation, MBSize should be 1024xn.", NodeName().c_str(), OperationName().c_str());
-		}
+        if (m_pairCounts != pairCounts)
+        {
+            InvalidArgument("Pair count mis-match in %ls %ls operation, MBSize should be 1024xn.", NodeName().c_str(), OperationName().c_str());
+        }
 
-		// log(1+exp(-sigma*(si - sj)))
-		// -sigma*(si - sj)
-		m_sigmaPairwiseNegDiff->AssignProductOf(-m_sigma, *m_pairwiseDifferences);
-		// exp(-sigma*(si - sj))
-		m_logexpterm->AssignExpOf(*m_sigmaPairwiseNegDiff);
-		m_logexptermInv->AssignElementInverseOf(*m_logexpterm);
-		// 1+exp(-sigma*(si - sj))
-		*m_logexpterm += 1;
-		// log(1+exp(-sigma*(si - sj)))
-		m_logexpterm->InplaceLog();
+        // log(1+exp(-sigma*(si - sj)))
+        // -sigma*(si - sj)
+        m_sigmaPairwiseNegDiff->AssignProductOf(-m_sigma, *m_pairwiseDifferences);
+        // exp(-sigma*(si - sj))
+        m_logexpterm->AssignExpOf(*m_sigmaPairwiseNegDiff);
+        m_logexptermInv->AssignElementInverseOf(*m_logexpterm);
+        // 1+exp(-sigma*(si - sj))
+        *m_logexpterm += 1;
+        // log(1+exp(-sigma*(si - sj)))
+        m_logexpterm->InplaceLog();
 
-		// 1/2(1-lij)*sigma*(si-sj)
-		// 1-lij
-		m_pairwiseOneMinusLabels->AssignDifferenceOf(1, *m_pairwiseLabels);
-		// -(1-lij)*sigma*(si-sj)
-		m_everythingForward->AssignElementProductOf(*m_pairwiseOneMinusLabels, *m_sigmaPairwiseNegDiff);
-		// -1/2*(1-lij)*(-sigma)*(si-sj) + log(1+exp((-sigma)*(si - sj)))
-		m_logexpterm->AddWithScaleOf(-0.5, *m_everythingForward);
+        // 1/2(1-lij)*sigma*(si-sj)
+        // 1-lij
+        m_pairwiseOneMinusLabels->AssignDifferenceOf(1, *m_pairwiseLabels);
+        // -(1-lij)*sigma*(si-sj)
+        m_everythingForward->AssignElementProductOf(*m_pairwiseOneMinusLabels, *m_sigmaPairwiseNegDiff);
+        // -1/2*(1-lij)*(-sigma)*(si-sj) + log(1+exp((-sigma)*(si - sj)))
+        m_logexpterm->AddWithScaleOf(-0.5, *m_everythingForward);
 
-		// sum of all elements
-		Value().SetValue(m_logexpterm->SumOfElements());
-	}
+        // sum of all elements
+        Value().SetValue(m_logexpterm->SumOfElements());
+    }
 
-	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-	{
-		if (m_inputs.size() != 3)
-			InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() != 3)
+            InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
 
-		if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
-			InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
 
-		ValidateBinaryReduce(isFinalValidationPass);
-	}
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
 
-	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-	{
-		Base::CopyTo(nodeP, newName, flags);
-		if (flags & CopyNodeFlags::copyNodeValue)
-		{
-			auto node = dynamic_pointer_cast<OrderedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-			node->m_pairwiseLabels->SetValue(*m_pairwiseLabels);
-			node->m_pairwiseOneMinusLabels->SetValue(*m_pairwiseOneMinusLabels);
-			node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
-			node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
-			node->m_sigmaPairwiseNegDiff->SetValue(*m_pairwiseLabels);
-			node->m_logexpterm->SetValue(*m_pairwiseLabels);
-			node->m_logexptermInv->SetValue(*m_pairwiseLabels);
-			node->m_everythingForward->SetValue(*m_pairwiseLabels);
-			node->m_rightGradientAll->SetValue(*m_pairwiseLabels);
-			node->m_leftGradientAll->SetValue(*m_pairwiseLabels);
-		}
-	}
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<OrderedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
+            node->m_pairwiseLabels->SetValue(*m_pairwiseLabels);
+            node->m_pairwiseOneMinusLabels->SetValue(*m_pairwiseOneMinusLabels);
+            node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+            node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
+            node->m_sigmaPairwiseNegDiff->SetValue(*m_pairwiseLabels);
+            node->m_logexpterm->SetValue(*m_pairwiseLabels);
+            node->m_logexptermInv->SetValue(*m_pairwiseLabels);
+            node->m_everythingForward->SetValue(*m_pairwiseLabels);
+            node->m_rightGradientAll->SetValue(*m_pairwiseLabels);
+            node->m_leftGradientAll->SetValue(*m_pairwiseLabels);
+        }
+    }
 
-	// request matrices needed to do node function value evaluation
-	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
-	{
-		Base::RequestMatricesBeforeForwardProp(matrixPool);
-		RequestMatrixFromPool(m_pairwiseLabels, matrixPool);
-		RequestMatrixFromPool(m_pairwiseOneMinusLabels, matrixPool);
-		RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
-		RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
-		RequestMatrixFromPool(m_sigmaPairwiseNegDiff, matrixPool);
-		RequestMatrixFromPool(m_logexpterm, matrixPool);
-		RequestMatrixFromPool(m_logexptermInv, matrixPool);
-		RequestMatrixFromPool(m_everythingForward, matrixPool);
-		RequestMatrixFromPool(m_rightGradientAll, matrixPool);
-		RequestMatrixFromPool(m_leftGradientAll, matrixPool);
-	}
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_pairwiseLabels, matrixPool);
+        RequestMatrixFromPool(m_pairwiseOneMinusLabels, matrixPool);
+        RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+        RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
+        RequestMatrixFromPool(m_sigmaPairwiseNegDiff, matrixPool);
+        RequestMatrixFromPool(m_logexpterm, matrixPool);
+        RequestMatrixFromPool(m_logexptermInv, matrixPool);
+        RequestMatrixFromPool(m_everythingForward, matrixPool);
+        RequestMatrixFromPool(m_rightGradientAll, matrixPool);
+        RequestMatrixFromPool(m_leftGradientAll, matrixPool);
+    }
 
-	// release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-	virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-	{
-		Base::ReleaseMatricesAfterBackprop(matrixPool);
-		ReleaseMatrixToPool(m_pairwiseLabels, matrixPool);
-		ReleaseMatrixToPool(m_pairwiseOneMinusLabels, matrixPool);
-		ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
-		ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
-		ReleaseMatrixToPool(m_sigmaPairwiseNegDiff, matrixPool);
-		ReleaseMatrixToPool(m_logexpterm, matrixPool);
-		ReleaseMatrixToPool(m_logexptermInv, matrixPool);
-		ReleaseMatrixToPool(m_everythingForward, matrixPool);
-		ReleaseMatrixToPool(m_rightGradientAll, matrixPool);
-		ReleaseMatrixToPool(m_leftGradientAll, matrixPool);
-	}
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_pairwiseLabels, matrixPool);
+        ReleaseMatrixToPool(m_pairwiseOneMinusLabels, matrixPool);
+        ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+        ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
+        ReleaseMatrixToPool(m_sigmaPairwiseNegDiff, matrixPool);
+        ReleaseMatrixToPool(m_logexpterm, matrixPool);
+        ReleaseMatrixToPool(m_logexptermInv, matrixPool);
+        ReleaseMatrixToPool(m_everythingForward, matrixPool);
+        ReleaseMatrixToPool(m_rightGradientAll, matrixPool);
+        ReleaseMatrixToPool(m_leftGradientAll, matrixPool);
+    }
 
 protected:
 
-	size_t m_pairCounts;
-	// TODO: to make it a config?
-	ElemType m_sigma;
-	shared_ptr<Matrix<ElemType>> m_pairwiseLabels;
-	shared_ptr<Matrix<ElemType>> m_pairwiseOneMinusLabels;
-	shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
-	// -sigma(si-sj)
-	shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
-	shared_ptr<Matrix<ElemType>> m_sigmaPairwiseNegDiff;
-	// log(1+exp(-sigma(si-sj)))
-	shared_ptr<Matrix<ElemType>> m_logexpterm;
-	shared_ptr<Matrix<ElemType>> m_logexptermInv;
-	// everything forward
-	shared_ptr<Matrix<ElemType>> m_everythingForward;
-	// right gradient all
-	shared_ptr<Matrix<ElemType>> m_rightGradientAll;
-	// left gradient all
-	shared_ptr<Matrix<ElemType>> m_leftGradientAll;
+    size_t m_pairCounts;
+    // TODO: to make it a config?
+    ElemType m_sigma;
+    shared_ptr<Matrix<ElemType>> m_pairwiseLabels;
+    shared_ptr<Matrix<ElemType>> m_pairwiseOneMinusLabels;
+    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    // -sigma(si-sj)
+    shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
+    shared_ptr<Matrix<ElemType>> m_sigmaPairwiseNegDiff;
+    // log(1+exp(-sigma(si-sj)))
+    shared_ptr<Matrix<ElemType>> m_logexpterm;
+    shared_ptr<Matrix<ElemType>> m_logexptermInv;
+    // everything forward
+    shared_ptr<Matrix<ElemType>> m_everythingForward;
+    // right gradient all
+    shared_ptr<Matrix<ElemType>> m_rightGradientAll;
+    // left gradient all
+    shared_ptr<Matrix<ElemType>> m_leftGradientAll;
 };
 
 template class OrderedCrossEntropyWithSoftmaxNode<float>;
@@ -679,369 +679,369 @@ template class OrderedCrossEntropyWithSoftmaxNode<double>;
 template <class ElemType>
 class IRMetricNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
-	typedef ComputationNodeNonLooping<ElemType> Base;
-	UsingComputationNodeMembersBoilerplate;
-	static const std::wstring TypeName()
-	{
-		return L"IRMetric";
-	}
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"IRMetric";
+    }
 
 public:
-	DeclareConstructorFromConfigWithNumInputs(IRMetricNode);
-	IRMetricNode(DEVICEID_TYPE deviceId, const wstring& name)
-		: Base(deviceId, name), m_sigma(1.0)
-	{
-	}
+    DeclareConstructorFromConfigWithNumInputs(IRMetricNode);
+    IRMetricNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_sigma(1.0)
+    {
+    }
 
-	virtual void BackpropToNonLooping(size_t inputIndex) override
-	{
-		FrameRange fr(Input(0)->GetMBLayout());
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
 
-		if (inputIndex == 1) // right derivative
-		{
-			auto gradient = Input(1)->GradientFor(fr);
+        if (inputIndex == 1) // right derivative
+        {
+            auto gradient = Input(1)->GradientFor(fr);
 
-			// log(1+exp(sigma*(si - sj)))
-			// sigma*(si - sj)
-			m_sigmaPairwiseDiff->AssignProductOf(m_sigma, *m_pairwiseDifferences);
-			// exp(sigma*(si - sj))
-			m_logexpterm->AssignExpOf(*m_sigmaPairwiseDiff);
-			// 1+exp(sigma*(si - sj))
-			*m_logexpterm += 1;
-			// 1/(1+exp(sigma*(si - sj)))
-			m_logexpterm->AssignElementInverseOf(*m_logexpterm);
-			// -sigma/(1+exp(sigma*(si - sj)))
-			m_logexpterm->AssignProductOf(-m_sigma, *m_logexpterm);
+            // log(1+exp(sigma*(si - sj)))
+            // sigma*(si - sj)
+            m_sigmaPairwiseDiff->AssignProductOf(m_sigma, *m_pairwiseDifferences);
+            // exp(sigma*(si - sj))
+            m_logexpterm->AssignExpOf(*m_sigmaPairwiseDiff);
+            // 1+exp(sigma*(si - sj))
+            *m_logexpterm += 1;
+            // 1/(1+exp(sigma*(si - sj)))
+            m_logexpterm->AssignElementInverseOf(*m_logexpterm);
+            // -sigma/(1+exp(sigma*(si - sj)))
+            m_logexpterm->AssignProductOf(-m_sigma, *m_logexpterm);
 
-			// sum and get the gradient, and add to gradient
-			const Matrix<ElemType>& logExpTerm = *m_logexpterm;
-			Matrix<ElemType> grdLocal = gradient.DeepClone();
-			size_t pairsCount = 0, idI;
-			ElemType logKi, logKj, gKi, gKij, g;
-			for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
-			{
-				ElemType irm0 = itqu->irm0;
-				for (typename std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
-				{
-					Url& UrlI = *iturlI;
-					size_t K = UrlI.K;
-					logKi = m_logWeights[UrlI.rk];
-					gKi = UrlI.gn;
-					idI = UrlI.id;
-					if (K == 0) continue;
-					for (typename std::vector<Url>::iterator iturlJ = iturlI + 1; iturlJ <= iturlI + K; iturlJ++)
-					{
-						Url& UrlJ = *iturlJ;
-						logKj = m_logWeights[UrlJ.rk];
-						gKij = gKi - UrlJ.gn;
+            // sum and get the gradient, and add to gradient
+            const Matrix<ElemType>& logExpTerm = *m_logexpterm;
+            Matrix<ElemType> grdLocal = gradient.DeepClone();
+            size_t pairsCount = 0, idI;
+            ElemType logKi, logKj, gKi, gKij, g;
+            for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+            {
+                ElemType irm0 = itqu->irm0;
+                for (typename std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
+                {
+                    Url& UrlI = *iturlI;
+                    size_t K = UrlI.K;
+                    logKi = m_logWeights[UrlI.rk];
+                    gKi = UrlI.gn;
+                    idI = UrlI.id;
+                    if (K == 0) continue;
+                    for (typename std::vector<Url>::iterator iturlJ = iturlI + 1; iturlJ <= iturlI + K; iturlJ++)
+                    {
+                        Url& UrlJ = *iturlJ;
+                        logKj = m_logWeights[UrlJ.rk];
+                        gKij = gKi - UrlJ.gn;
 
-						// update IR metric
-						g = gKij * (logKi - logKj);
-						g /= (logKi * logKj);
-						g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0));
+                        // update IR metric
+                        g = gKij * (logKi - logKj);
+                        g /= (logKi * logKj);
+                        g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0));
 
-						// combined with log exp term
-						g = logExpTerm(0, pairsCount++) * g;
+                        // combined with log exp term
+                        g = logExpTerm(0, pairsCount++) * g;
 
-						// assign to gradient
-						grdLocal(0, idI) += g;
-						grdLocal(0, UrlJ.id) -= g;
-					}
-				}
-			}
+                        // assign to gradient
+                        grdLocal(0, idI) += g;
+                        grdLocal(0, UrlJ.id) -= g;
+                    }
+                }
+            }
 
-			//grdLocal.Print("grdLocal", 0, 0, 0, 100);
-			gradient.AssignDifferenceOf(grdLocal, 0.0);
-			//gradient.Print("gradient", 0, 0, 0, 100);
-		}
-	}
+            //grdLocal.Print("grdLocal", 0, 0, 0, 100);
+            gradient.AssignDifferenceOf(grdLocal, 0.0);
+            //gradient.Print("gradient", 0, 0, 0, 100);
+        }
+    }
 
-	virtual bool OutputUsedInComputingInputNodesGradients() const override
-	{
-		return false;
-	}
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
-	virtual void UpdateFunctionMBSize() override
-	{
-		FrameRange fr(Input(0)->GetMBLayout());
+    virtual void UpdateFunctionMBSize() override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
 
-		// clean up first
-		if (!m_queryUrls.empty()) m_queryUrls.clear();
-		if (!m_urlSorter.empty()) m_urlSorter.clear();
-		if (!m_logWeights.empty()) m_logWeights.clear();
+        // clean up first
+        if (!m_queryUrls.empty()) m_queryUrls.clear();
+        if (!m_urlSorter.empty()) m_urlSorter.clear();
+        if (!m_logWeights.empty()) m_logWeights.clear();
 
-		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-		m_samples = pairIndeces.GetNumCols();
-		m_pairCounts = (size_t)pairIndeces.SumOfElements();
+        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+        m_samples = pairIndeces.GetNumCols();
+        m_pairCounts = (size_t)pairIndeces.SumOfElements();
 
-		m_pairwiseDifferences->Resize(1, m_pairCounts);
-		m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
-		m_logexpterm->Resize(1, m_pairCounts);
+        m_pairwiseDifferences->Resize(1, m_pairCounts);
+        m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
+        m_logexpterm->Resize(1, m_pairCounts);
 
-		m_perUrlGainsOrig->Resize(1, m_samples);
-		m_perUrlGainsSort->Resize(1, m_samples);
-		m_perUrlWeightsOrig->Resize(1, m_samples);
-		m_perUrlWeightsSort->Resize(1, m_samples);
+        m_perUrlGainsOrig->Resize(1, m_samples);
+        m_perUrlGainsSort->Resize(1, m_samples);
+        m_perUrlWeightsOrig->Resize(1, m_samples);
+        m_perUrlWeightsSort->Resize(1, m_samples);
 
-		// prepare sorting buffer
-		m_maxPairIndexIndex->Resize(1, 1);
-		m_maxPairValues->Resize(1, 1);
-		pairIndeces.VectorMax(*m_maxPairIndexIndex, *m_maxPairValues, false);
+        // prepare sorting buffer
+        m_maxPairIndexIndex->Resize(1, 1);
+        m_maxPairValues->Resize(1, 1);
+        pairIndeces.VectorMax(*m_maxPairIndexIndex, *m_maxPairValues, false);
 
-		// TODO: Double check this part
-		size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
-		m_urlSorter.resize(maxNumofUrlsPerQuery);
-		
-		// prepared lookup table
-		m_logWeights.resize(maxNumofUrlsPerQuery);
-		size_t i = 0;
-		for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
-		{
-			*it = (ElemType) log(2.0 + i);
-		}
-	}
+        // TODO: Double check this part
+        size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
+        m_urlSorter.resize(maxNumofUrlsPerQuery);
+        
+        // prepared lookup table
+        m_logWeights.resize(maxNumofUrlsPerQuery);
+        size_t i = 0;
+        for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
+        {
+            *it = (ElemType) log(2.0 + i);
+        }
+    }
 
-	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-	{
-		// Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
-		FrameRange fr(Input(0)->GetMBLayout());
-		// construct matrices for further computation
-		const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
-		const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
-		const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-		size_t nCols = singleLabels.GetNumCols();
-		// iterate through all samples
-		size_t i = 0, totalK = 0, K = 0, nUrls = 0;
-		QueryUrls aqu;
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        // Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
+        FrameRange fr(Input(0)->GetMBLayout());
+        // construct matrices for further computation
+        const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+        size_t nCols = singleLabels.GetNumCols();
+        // iterate through all samples
+        size_t i = 0, totalK = 0, K = 0, nUrls = 0;
+        QueryUrls aqu;
 
-		// Populate m_queryUrls
-		while (i < nCols)
-		{
-			nUrls = (size_t)pairIndeces(0, i) + 1;
-			totalK += nUrls;
+        // Populate m_queryUrls
+        while (i < nCols)
+        {
+            nUrls = (size_t)pairIndeces(0, i) + 1;
+            totalK += nUrls;
 
-			m_queryUrls.push_back(aqu);
-			QueryUrls& qub = m_queryUrls.back();
-			qub.urls.resize(nUrls);
+            m_queryUrls.push_back(aqu);
+            QueryUrls& qub = m_queryUrls.back();
+            qub.urls.resize(nUrls);
 
-			std::vector<Url>& urls = qub.urls;
-			typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
-			typename std::vector<Url>::iterator its0 = its;
-			int rk0 = 0; // rk0 is original rank, rk is the sorted rank 
-			for (; it != urls.end(); it++)
-			{
-				it->id = i;
-				it->rk0 = rk0++;
-				it->sc = scores(0, i);
-				it->K = (int)pairIndeces(0, i);
-				it->gn = singleLabels(0, i++);
+            std::vector<Url>& urls = qub.urls;
+            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            typename std::vector<Url>::iterator its0 = its;
+            int rk0 = 0; // rk0 is original rank, rk is the sorted rank 
+            for (; it != urls.end(); it++)
+            {
+                it->id = i;
+                it->rk0 = rk0++;
+                it->sc = scores(0, i);
+                it->K = (int)pairIndeces(0, i);
+                it->gn = singleLabels(0, i++);
 
-				*its++ = *it;
-			}
+                *its++ = *it;
+            }
 
-			std::sort(its0, --its);
+            std::sort(its0, --its);
 
-			// set the sorted rk order to each url
-			// the urls are still in the original order
-			int rk = 0;
-			for (it = its0; it != its + 1; it++)
-				urls[it->rk0].rk = rk++;
-		}
+            // set the sorted rk order to each url
+            // the urls are still in the original order
+            int rk = 0;
+            for (it = its0; it != its + 1; it++)
+                urls[it->rk0].rk = rk++;
+        }
 
-		// the total number of samples should be the same as totalK and nCols
-		if (totalK != nCols)
-		{
-			InvalidArgument("In %ls %ls totalK != nCols.", NodeName().c_str(), OperationName().c_str());
-		}
+        // the total number of samples should be the same as totalK and nCols
+        if (totalK != nCols)
+        {
+            InvalidArgument("In %ls %ls totalK != nCols.", NodeName().c_str(), OperationName().c_str());
+        }
 
-		// calculate IRMetrics
-		size_t sampleCount = 0;
-		for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
-		{
-			for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
-			{
-				Url& aUrl = *iturl;
-				(*m_perUrlGainsOrig)(0, sampleCount) = aUrl.gn;
-				(*m_perUrlGainsSort)(0, sampleCount) = aUrl.gn;
-				(*m_perUrlWeightsOrig)(0, sampleCount) = (ElemType)aUrl.rk0;
-				(*m_perUrlWeightsSort)(0, sampleCount) = (ElemType)aUrl.rk;
-			}
-		}
-		
-		// log(2+rank)
-		*m_perUrlWeightsOrig += 2.0;
-		m_perUrlWeightsOrig->InplaceLog();
-		*m_perUrlWeightsSort += 2.0;
-		m_perUrlWeightsSort->InplaceLog();
-		// gain/log(2+rank)
-		m_perUrlGainsOrig->AssignElementDivisionOf(*m_perUrlGainsOrig, *m_perUrlWeightsOrig);
-		m_perUrlGainsSort->AssignElementDivisionOf(*m_perUrlGainsSort, *m_perUrlWeightsSort);
+        // calculate IRMetrics
+        size_t sampleCount = 0;
+        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        {
+            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
+            {
+                Url& aUrl = *iturl;
+                (*m_perUrlGainsOrig)(0, sampleCount) = aUrl.gn;
+                (*m_perUrlGainsSort)(0, sampleCount) = aUrl.gn;
+                (*m_perUrlWeightsOrig)(0, sampleCount) = (ElemType)aUrl.rk0;
+                (*m_perUrlWeightsSort)(0, sampleCount) = (ElemType)aUrl.rk;
+            }
+        }
+        
+        // log(2+rank)
+        *m_perUrlWeightsOrig += 2.0;
+        m_perUrlWeightsOrig->InplaceLog();
+        *m_perUrlWeightsSort += 2.0;
+        m_perUrlWeightsSort->InplaceLog();
+        // gain/log(2+rank)
+        m_perUrlGainsOrig->AssignElementDivisionOf(*m_perUrlGainsOrig, *m_perUrlWeightsOrig);
+        m_perUrlGainsSort->AssignElementDivisionOf(*m_perUrlGainsSort, *m_perUrlWeightsSort);
 
-		// per query aggregation
-		const Matrix<ElemType>& perUrlGainOrig = *m_perUrlGainsOrig;
-		const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
-		ElemType IRMetricValue = 0.0;
-		size_t nValidQueries = 0;
-		for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
-		{
-			QueryUrls& qu = *itqu;
-			qu.irm0 = 0.0;
-			qu.irm = 0.0;
+        // per query aggregation
+        const Matrix<ElemType>& perUrlGainOrig = *m_perUrlGainsOrig;
+        const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
+        ElemType IRMetricValue = 0.0;
+        size_t nValidQueries = 0;
+        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        {
+            QueryUrls& qu = *itqu;
+            qu.irm0 = 0.0;
+            qu.irm = 0.0;
 
-			for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
-			{
-				Url& url = *iturl;
-				qu.irm0 += perUrlGainOrig(0, url.id);
-				qu.irm += perUrlGainSort(0, url.id);
-			}
+            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
+            {
+                Url& url = *iturl;
+                qu.irm0 += perUrlGainOrig(0, url.id);
+                qu.irm += perUrlGainSort(0, url.id);
+            }
 
-			//if (qu.irm0 != 0.0)
-			//{
-			//	IRMetricValue += (qu.irm / qu.irm0);
-			//	nValidQueries++;
-			//}
+            //if (qu.irm0 != 0.0)
+            //{
+            //	IRMetricValue += (qu.irm / qu.irm0);
+            //	nValidQueries++;
+            //}
 
-			IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
-			nValidQueries++;
-		}
+            IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
+            nValidQueries++;
+        }
 
-		if (nValidQueries == 0)
-			LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
-		
-		IRMetricValue = IRMetricValue / nValidQueries * 100;
-		Value().SetValue(IRMetricValue);
-		//Value().Print("IRMetric", 0, 0, 0, 0);
+        if (nValidQueries == 0)
+            LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
+        
+        IRMetricValue = IRMetricValue / nValidQueries * 100;
+        Value().SetValue(IRMetricValue);
+        //Value().Print("IRMetric", 0, 0, 0, 0);
 
-		// set for pairs
-		size_t k0, k1, j, pairsCount = 0;
-		for (i = 0; i < nCols; i++)
-		{
-			K = (size_t)pairIndeces(0, i);
-			if (K == 0) continue;
-			k0 = i + 1;
-			k1 = i + K;
-			for (j = k0; j <= k1; j++)
-			{
-				(*m_pairwiseDifferences)(0, pairsCount++) = scores(0, i) - scores(0, j);
-			}
-		}
-	}
+        // set for pairs
+        size_t k0, k1, j, pairsCount = 0;
+        for (i = 0; i < nCols; i++)
+        {
+            K = (size_t)pairIndeces(0, i);
+            if (K == 0) continue;
+            k0 = i + 1;
+            k1 = i + K;
+            for (j = k0; j <= k1; j++)
+            {
+                (*m_pairwiseDifferences)(0, pairsCount++) = scores(0, i) - scores(0, j);
+            }
+        }
+    }
 
-	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-	{
-		if (m_inputs.size() != 3)
-			InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() != 3)
+            InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
 
-		if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
-			InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
 
-		ValidateBinaryReduce(isFinalValidationPass);
-	}
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
 
-	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-	{
-		Base::CopyTo(nodeP, newName, flags);
-		if (flags & CopyNodeFlags::copyNodeValue)
-		{
-			auto node = dynamic_pointer_cast<IRMetricNode<ElemType>>(nodeP);
-			node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
-			node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
-			node->m_logexpterm->SetValue(*m_logexpterm);
-			node->m_maxPairIndexIndex->SetValue(*m_maxPairIndexIndex);
-			node->m_maxPairValues->SetValue(*m_maxPairValues);
-			node->m_perUrlGainsOrig->SetValue(*m_perUrlGainsOrig);
-			node->m_perUrlGainsSort->SetValue(*m_perUrlGainsSort);
-			node->m_perUrlWeightsOrig->SetValue(*m_perUrlWeightsOrig);
-			node->m_perUrlWeightsSort->SetValue(*m_perUrlWeightsSort);
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<IRMetricNode<ElemType>>(nodeP);
+            node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+            node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
+            node->m_logexpterm->SetValue(*m_logexpterm);
+            node->m_maxPairIndexIndex->SetValue(*m_maxPairIndexIndex);
+            node->m_maxPairValues->SetValue(*m_maxPairValues);
+            node->m_perUrlGainsOrig->SetValue(*m_perUrlGainsOrig);
+            node->m_perUrlGainsSort->SetValue(*m_perUrlGainsSort);
+            node->m_perUrlWeightsOrig->SetValue(*m_perUrlWeightsOrig);
+            node->m_perUrlWeightsSort->SetValue(*m_perUrlWeightsSort);
 
-			node->m_queryUrls = m_queryUrls;
-			node->m_urlSorter = m_urlSorter;
-			node->m_logWeights = m_logWeights;
-		}
-	}
+            node->m_queryUrls = m_queryUrls;
+            node->m_urlSorter = m_urlSorter;
+            node->m_logWeights = m_logWeights;
+        }
+    }
 
-	// request matrices needed to do node function value evaluation
-	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
-	{
-		Base::RequestMatricesBeforeForwardProp(matrixPool);
-		RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
-		RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
-		RequestMatrixFromPool(m_logexpterm, matrixPool);
-		RequestMatrixFromPool(m_maxPairIndexIndex, matrixPool);
-		RequestMatrixFromPool(m_maxPairValues, matrixPool);
-		RequestMatrixFromPool(m_perUrlGainsOrig, matrixPool);
-		RequestMatrixFromPool(m_perUrlGainsSort, matrixPool);
-		RequestMatrixFromPool(m_perUrlWeightsOrig, matrixPool);
-		RequestMatrixFromPool(m_perUrlWeightsSort, matrixPool);
-	}
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+        RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
+        RequestMatrixFromPool(m_logexpterm, matrixPool);
+        RequestMatrixFromPool(m_maxPairIndexIndex, matrixPool);
+        RequestMatrixFromPool(m_maxPairValues, matrixPool);
+        RequestMatrixFromPool(m_perUrlGainsOrig, matrixPool);
+        RequestMatrixFromPool(m_perUrlGainsSort, matrixPool);
+        RequestMatrixFromPool(m_perUrlWeightsOrig, matrixPool);
+        RequestMatrixFromPool(m_perUrlWeightsSort, matrixPool);
+    }
 
-	// release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-	virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-	{
-		Base::ReleaseMatricesAfterBackprop(matrixPool);
-		ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
-		ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
-		ReleaseMatrixToPool(m_logexpterm, matrixPool);
-		ReleaseMatrixToPool(m_maxPairIndexIndex, matrixPool);
-		ReleaseMatrixToPool(m_maxPairValues, matrixPool);
-		ReleaseMatrixToPool(m_perUrlGainsOrig, matrixPool);
-		ReleaseMatrixToPool(m_perUrlGainsSort, matrixPool);
-		ReleaseMatrixToPool(m_perUrlWeightsOrig, matrixPool);
-		ReleaseMatrixToPool(m_perUrlWeightsSort, matrixPool);
-		
-		// is this the right place?  it was not called after bp.
-		m_queryUrls.clear();
-		m_urlSorter.clear();
-		m_logWeights.clear();
-	}
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+        ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
+        ReleaseMatrixToPool(m_logexpterm, matrixPool);
+        ReleaseMatrixToPool(m_maxPairIndexIndex, matrixPool);
+        ReleaseMatrixToPool(m_maxPairValues, matrixPool);
+        ReleaseMatrixToPool(m_perUrlGainsOrig, matrixPool);
+        ReleaseMatrixToPool(m_perUrlGainsSort, matrixPool);
+        ReleaseMatrixToPool(m_perUrlWeightsOrig, matrixPool);
+        ReleaseMatrixToPool(m_perUrlWeightsSort, matrixPool);
+        
+        // is this the right place?  it was not called after bp.
+        m_queryUrls.clear();
+        m_urlSorter.clear();
+        m_logWeights.clear();
+    }
 
 protected:
 
-	struct Url
-	{
-		int id; // sample id
-		int rk0; // original rank based on label
-		int rk; // rank based on s in the associated query
-		ElemType sc; // score
-		ElemType gn; // gain
-		int K; // the pair index
-		bool operator < (const Url &url) const{
-			return sc > url.sc;
-		}
-	};
+    struct Url
+    {
+        int id; // sample id
+        int rk0; // original rank based on label
+        int rk; // rank based on s in the associated query
+        ElemType sc; // score
+        ElemType gn; // gain
+        int K; // the pair index
+        bool operator < (const Url &url) const{
+            return sc > url.sc;
+        }
+    };
 
-	struct QueryUrls
-	{
-		ElemType irm0; // the ideal IR Metric
-		ElemType irm; // IR metric based on the current scores
+    struct QueryUrls
+    {
+        ElemType irm0; // the ideal IR Metric
+        ElemType irm; // IR metric based on the current scores
 
-		std::vector<Url> urls;
-	};
+        std::vector<Url> urls;
+    };
 
-	// master data structure
-	std::list<QueryUrls> m_queryUrls;
-	// buffer for sorting
-	std::vector<Url> m_urlSorter;
-	// lookup table for position based weights
-	std::vector<ElemType> m_logWeights;
+    // master data structure
+    std::list<QueryUrls> m_queryUrls;
+    // buffer for sorting
+    std::vector<Url> m_urlSorter;
+    // lookup table for position based weights
+    std::vector<ElemType> m_logWeights;
 
-	size_t m_samples;
-	size_t m_pairCounts;
-	// TODO: to make it a config?
-	ElemType m_sigma;
-	shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
-	// sigma*(si - sj)
-	shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
-	// 1/(1+exp(sigma*(si - sj)))
-	shared_ptr<Matrix<ElemType>> m_logexpterm;
-	// used to calculate the max number of urls per query
-	shared_ptr<Matrix<ElemType>> m_maxPairIndexIndex;
-	shared_ptr<Matrix<ElemType>> m_maxPairValues;
-	// store the gains and weights
-	shared_ptr<Matrix<ElemType>> m_perUrlGainsOrig;
-	shared_ptr<Matrix<ElemType>> m_perUrlGainsSort;
-	shared_ptr<Matrix<ElemType>> m_perUrlWeightsOrig;
-	shared_ptr<Matrix<ElemType>> m_perUrlWeightsSort;
+    size_t m_samples;
+    size_t m_pairCounts;
+    // TODO: to make it a config?
+    ElemType m_sigma;
+    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    // sigma*(si - sj)
+    shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
+    // 1/(1+exp(sigma*(si - sj)))
+    shared_ptr<Matrix<ElemType>> m_logexpterm;
+    // used to calculate the max number of urls per query
+    shared_ptr<Matrix<ElemType>> m_maxPairIndexIndex;
+    shared_ptr<Matrix<ElemType>> m_maxPairValues;
+    // store the gains and weights
+    shared_ptr<Matrix<ElemType>> m_perUrlGainsOrig;
+    shared_ptr<Matrix<ElemType>> m_perUrlGainsSort;
+    shared_ptr<Matrix<ElemType>> m_perUrlWeightsOrig;
+    shared_ptr<Matrix<ElemType>> m_perUrlWeightsSort;
 };
 
 template class IRMetricNode<float>;
