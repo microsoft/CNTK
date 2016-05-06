@@ -988,6 +988,12 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     else
         c.VerifySize(m, n); // Can't resize if beta != 0
 
+	cudaEvent_t cuStart, cuEnd;
+	float cuTime;
+	cudaEventCreate(&cuStart);
+	cudaEventCreate(&cuEnd);
+	cudaEventRecord(cuStart, 0);
+
     c.PrepareDevice();
     if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
@@ -1003,6 +1009,20 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     {
         NOT_IMPLEMENTED;
     }
+
+	cudaEventRecord(cuEnd, 0);
+	cudaEventSynchronize(cuEnd);
+	cudaEventElapsedTime(&cuTime, cuStart, cuEnd);
+	cudaEventDestroy(cuStart);
+	cudaEventDestroy(cuEnd);
+	GPUSparseMatrix<ElemType>::multimer += cuTime;
+	GPUSparseMatrix<ElemType>::mulcounter++;
+	if (GPUSparseMatrix<ElemType>::mulcounter % 2000 == 0) {
+		fprintf(stderr, "TotalGPUTime = %12.6f  MulCounter = %12ld\n",
+			GPUSparseMatrix<ElemType>::multimer, GPUSparseMatrix<ElemType>::mulcounter);
+		GPUSparseMatrix<ElemType>::multimer = 0.;
+		GPUSparseMatrix<ElemType>::mulcounter = 0L;
+	}
 }
 
 // dense X sparse = dense
