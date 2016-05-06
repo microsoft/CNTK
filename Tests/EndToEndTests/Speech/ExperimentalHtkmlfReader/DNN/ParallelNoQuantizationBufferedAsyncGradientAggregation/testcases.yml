@@ -19,7 +19,7 @@ testCases:
       - Finished Epoch[{{integer}} of {{integer}}]
       - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
       - EvalErrorPrediction = {{float,tolerance=0%}}
-      - learningRatePerSample  = {{float,tolerance=0%}}
+      - learningRatePerSample = {{float,tolerance=0%}}
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:

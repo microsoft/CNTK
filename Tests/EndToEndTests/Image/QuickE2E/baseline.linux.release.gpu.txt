@@ -1,9 +1,9 @@
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 21 2016 22:23:56
-		Last modified date: Wed Apr 20 14:45:12 2016
+		Built time: May  3 2016 17:56:15
+		Last modified date: Tue May  3 11:36:22 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -12,37 +12,37 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: HEAD
-		Build SHA1: 5016792195d54b61ee1ed837b2e99609567d083f
-		Built by philly on f3f64d5eed9a
+		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+		Built by philly on 18750d26eb32
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
 Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-04/22/2016 07:18:40: -------------------------------------------------------------------
-04/22/2016 07:18:40: Build info: 
+05/03/2016 18:07:56: -------------------------------------------------------------------
+05/03/2016 18:07:56: Build info: 
 
-04/22/2016 07:18:40: 		Built time: Apr 21 2016 22:23:56
-04/22/2016 07:18:40: 		Last modified date: Wed Apr 20 14:45:12 2016
-04/22/2016 07:18:40: 		Build type: release
-04/22/2016 07:18:40: 		Build target: GPU
-04/22/2016 07:18:40: 		With 1bit-SGD: no
-04/22/2016 07:18:40: 		Math lib: acml
-04/22/2016 07:18:40: 		CUDA_PATH: /usr/local/cuda-7.5
-04/22/2016 07:18:40: 		CUB_PATH: /usr/local/cub-1.4.1
-04/22/2016 07:18:40: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/22/2016 07:18:40: 		Build Branch: HEAD
-04/22/2016 07:18:40: 		Build SHA1: 5016792195d54b61ee1ed837b2e99609567d083f
-04/22/2016 07:18:40: 		Built by philly on f3f64d5eed9a
-04/22/2016 07:18:40: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-04/22/2016 07:18:40: -------------------------------------------------------------------
+05/03/2016 18:07:56: 		Built time: May  3 2016 17:56:15
+05/03/2016 18:07:56: 		Last modified date: Tue May  3 11:36:22 2016
+05/03/2016 18:07:56: 		Build type: release
+05/03/2016 18:07:56: 		Build target: GPU
+05/03/2016 18:07:56: 		With 1bit-SGD: no
+05/03/2016 18:07:56: 		Math lib: acml
+05/03/2016 18:07:56: 		CUDA_PATH: /usr/local/cuda-7.5
+05/03/2016 18:07:56: 		CUB_PATH: /usr/local/cub-1.4.1
+05/03/2016 18:07:56: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/03/2016 18:07:56: 		Build Branch: HEAD
+05/03/2016 18:07:56: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+05/03/2016 18:07:56: 		Built by philly on 18750d26eb32
+05/03/2016 18:07:56: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/03/2016 18:07:56: -------------------------------------------------------------------
 
-04/22/2016 07:18:40: Running on localhost at 2016/04/22 07:18:40
-04/22/2016 07:18:40: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true
+05/03/2016 18:07:56: Running on localhost at 2016/05/03 18:07:56
+05/03/2016 18:07:56: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true
 
 
 
-04/22/2016 07:18:40: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/22/2016 07:18:40: precision = "float"
+05/03/2016 18:07:56: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:56: precision = "float"
 command = train:test
 deviceId = $DeviceId$
 ndlMacros = "$ConfigDir$/Macros.ndl"
@@ -158,17 +158,17 @@ test = [
     ]    
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
-OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DeviceId=0
 timestamping=true
 
-04/22/2016 07:18:40: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:56: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/22/2016 07:18:40: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/22/2016 07:18:40: precision = "float"
+05/03/2016 18:07:56: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:56: precision = "float"
 command = train:test
 deviceId = 0
 ndlMacros = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Macros.ndl"
@@ -176,7 +176,7 @@ parallelTrain = false
 numCPUThreads = 8
 train = [
     action = "train"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
     BrainScriptNetworkBuilder = [
         // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
@@ -264,7 +264,7 @@ train = [
 ]
 test = [
     action = "test"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
         networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Convolution.ndl"
     ]
@@ -284,16 +284,16 @@ test = [
     ]    
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
-OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DeviceId=0
 timestamping=true
 
-04/22/2016 07:18:40: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:56: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/22/2016 07:18:40: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:56: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.cntk:command=train:test
 configparameters: cntk.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
 configparameters: cntk.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
@@ -301,13 +301,13 @@ configparameters: cntk.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Lin
 configparameters: cntk.cntk:deviceId=0
 configparameters: cntk.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Macros.ndl
 configparameters: cntk.cntk:numCPUThreads=8
-configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 configparameters: cntk.cntk:parallelTrain=false
 configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 configparameters: cntk.cntk:test=[
     action = "test"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
         networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Convolution.ndl"
     ]
@@ -330,7 +330,7 @@ configparameters: cntk.cntk:test=[
 configparameters: cntk.cntk:timestamping=true
 configparameters: cntk.cntk:train=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
     BrainScriptNetworkBuilder = [
         // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
@@ -417,24 +417,24 @@ configparameters: cntk.cntk:train=[
     ]    
 ]
 
-04/22/2016 07:18:40: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/22/2016 07:18:40: Commands: train test
-04/22/2016 07:18:40: Precision = "float"
-04/22/2016 07:18:40: Using 8 CPU threads.
-04/22/2016 07:18:40: CNTKModelPath: /tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn
-04/22/2016 07:18:40: CNTKCommandTrainInfo: train : 12
-04/22/2016 07:18:40: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+05/03/2016 18:07:56: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:56: Commands: train test
+05/03/2016 18:07:56: Precision = "float"
+05/03/2016 18:07:56: Using 8 CPU threads.
+05/03/2016 18:07:56: CNTKModelPath: /tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn
+05/03/2016 18:07:56: CNTKCommandTrainInfo: train : 12
+05/03/2016 18:07:56: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
 
-04/22/2016 07:18:40: ##############################################################################
-04/22/2016 07:18:40: #                                                                            #
-04/22/2016 07:18:40: # Action "train"                                                             #
-04/22/2016 07:18:40: #                                                                            #
-04/22/2016 07:18:40: ##############################################################################
+05/03/2016 18:07:56: ##############################################################################
+05/03/2016 18:07:56: #                                                                            #
+05/03/2016 18:07:56: # Action "train"                                                             #
+05/03/2016 18:07:56: #                                                                            #
+05/03/2016 18:07:56: ##############################################################################
 
-04/22/2016 07:18:40: CNTKCommandTrainBegin: train
+05/03/2016 18:07:56: CNTKCommandTrainBegin: train
 Reading UCI file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data/Train.txt
 
-04/22/2016 07:18:40: Creating virgin network.
+05/03/2016 18:07:56: Creating virgin network.
 SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
@@ -492,162 +492,199 @@ Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 
 
 Post-processing network complete.
 
-04/22/2016 07:18:41: Created model with 27 nodes on GPU 0.
+05/03/2016 18:07:56: Created model with 27 nodes on GPU 0.
 
-04/22/2016 07:18:41: Training criterion node(s):
-04/22/2016 07:18:41: 	ce = CrossEntropyWithSoftmax
+05/03/2016 18:07:56: Training criterion node(s):
+05/03/2016 18:07:56: 	ce = CrossEntropyWithSoftmax
 
-04/22/2016 07:18:41: Evaluation criterion node(s):
+05/03/2016 18:07:56: Evaluation criterion node(s):
 
-04/22/2016 07:18:41: 	err = ErrorPrediction
+05/03/2016 18:07:56: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-04/22/2016 07:18:41: No PreCompute nodes found, skipping PreCompute step.
 
-04/22/2016 07:18:41: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+Memory Sharing Structure:
+
+(nil): {[err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *]] [features Gradient[28 x 28 x 1 x *]] [labels Gradient[10 x *]] }
+0x2e46f28: {[conv1_act.convW Value[16 x 25]] }
+0x7f56eb253438: {[featScaled Value[28 x 28 x 1 x *]] }
+0x7f56eb253ae8: {[conv1_act.conv Value[24 x 24 x 16 x *]] }
+0x7f56eb253ec8: {[conv1_act.convPlusB Value[24 x 24 x 16 x *]] [conv1_act.convW Gradient[16 x 25]] }
+0x7f56eb25d3a8: {[conv1_act.conv Gradient[24 x 24 x 16 x *]] [conv1_act.out Value[24 x 24 x 16 x *]] }
+0x7f56eb25d508: {[conv1_act.convPlusB Gradient[24 x 24 x 16 x *]] [pool1 Value[12 x 12 x 16 x *]] }
+0x7f56eb25d6c8: {[conv2_act.conv Value[8 x 8 x 32 x *]] }
+0x7f56eb25d888: {[conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.out Gradient[24 x 24 x 16 x *]] }
+0x7f56eb25da48: {[conv2_act.convPlusB Value[8 x 8 x 32 x *]] [conv2_act.convW Gradient[32 x 400]] }
+0x7f56eb25dc08: {[conv2_act.conv Gradient[8 x 8 x 32 x *]] [conv2_act.out Value[8 x 8 x 32 x *]] }
+0x7f56eb25ddc8: {[conv2_act.convPlusB Gradient[8 x 8 x 32 x *]] [pool1 Gradient[12 x 12 x 16 x *]] [pool2 Value[4 x 4 x 32 x *]] }
+0x7f56eb25df88: {[conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.out Gradient[8 x 8 x 32 x *]] [h1.t Value[128 x *]] }
+0x7f56eb25e148: {[h1.W Gradient[128 x 4 x 4 x 32]] [h1.z Value[128 x *]] }
+0x7f56eb25e308: {[h1.out Value[128 x *]] [h1.t Gradient[128 x *]] }
+0x7f56eb25e4c8: {[h1.z Gradient[128 x *]] [ol.t Value[10 x *]] [pool2 Gradient[4 x 4 x 32 x *]] }
+0x7f56eb25e688: {[ol.W Gradient[10 x 128]] [ol.out Value[10 x 1 x *]] }
+0x7f56eb25f108: {[ce Gradient[1]] }
+0x7f56eb25f2c8: {[h1.b Gradient[128]] [h1.out Gradient[128 x *]] [ol.out Gradient[10 x 1 x *]] }
+0x7f56eb25f488: {[ol.t Gradient[10 x *]] }
+0x7f56eb25f648: {[ol.b Gradient[10 x 1]] }
+0x7f56f3e4ee78: {[features Value[28 x 28 x 1 x *]] }
+0x7f56f3e4f398: {[h1.b Value[128]] }
+0x7f56f3e4f4f8: {[featScale Value[1 x 1]] }
+0x7f56f3e50c18: {[conv1_act.convB Value[1 x 1 x 16]] }
+0x7f56f3e55698: {[conv2_act.convB Value[1 x 1 x 32]] }
+0x7f56f3e567a8: {[labels Value[10 x *]] }
+0x7f56f3e57868: {[conv2_act.convW Value[32 x 400]] }
+0x7f56f3e58ae8: {[h1.W Value[128 x 4 x 4 x 32]] }
+0x7f56f3e59f58: {[ol.b Value[10 x 1]] }
+0x7f56f3e5a6b8: {[ol.W Value[10 x 128]] }
+0x7f56f3e5d788: {[ce Value[1]] }
+0x7f56f3e8d568: {[err Value[1]] }
+
+05/03/2016 18:07:56: No PreCompute nodes found, skipping PreCompute step.
+
+05/03/2016 18:07:56: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 UCIFastReader: Starting at epoch 0, counting lines to determine record count...
  1000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
-04/22/2016 07:18:41:  Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  2.39150986; err = 0.94000000; TotalTime = 0.1370s; SamplesPerSecond = 730.1
-04/22/2016 07:18:41: Finished Epoch[ 1 of 12]: [Training] ce = 2.3915099 * 100; err = 0.94; learningRatePerSample = 0.0049999999; EpochTime=0.151003
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.1'
+05/03/2016 18:07:56:  Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.39150986 * 100; err = 0.94000000 * 100; time = 0.1333s; samplesPerSecond = 750.4
+05/03/2016 18:07:56: Finished Epoch[ 1 of 12]: [Training] ce = 2.39150986 * 100; err = 0.94000000 * 100; totalSamplesSeen = 100; learningRatePerSample = 0.0049999999; epochTime=0.147522s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.1'
 
-04/22/2016 07:18:41: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 1 at record count 100, and file position 100
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 1: 38, 46, ...
-04/22/2016 07:18:41:  Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  2.29544357; err = 0.87000000; TotalTime = 0.0127s; SamplesPerSecond = 7866.6
-04/22/2016 07:18:41: Finished Epoch[ 2 of 12]: [Training] ce = 2.2954436 * 200; err = 0.87; learningRatePerSample = 0.0049999999; EpochTime=0.012912
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.2'
+05/03/2016 18:07:56:  Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.29544357 * 100; err = 0.87000000 * 100; time = 0.0129s; samplesPerSecond = 7779.7
+05/03/2016 18:07:56: Finished Epoch[ 2 of 12]: [Training] ce = 2.29544357 * 100; err = 0.87000000 * 100; totalSamplesSeen = 200; learningRatePerSample = 0.0049999999; epochTime=0.013041s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.2'
 
-04/22/2016 07:18:41: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 2 at record count 200, and file position 200
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 30 retries for 100 elements (30.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 2: 34, 6, ...
-04/22/2016 07:18:41:  Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  2.11703644; err = 0.69000000; TotalTime = 0.0128s; SamplesPerSecond = 7838.8
-04/22/2016 07:18:41: Finished Epoch[ 3 of 12]: [Training] ce = 2.1170364 * 300; err = 0.69; learningRatePerSample = 0.0049999999; EpochTime=0.012942
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.3'
+05/03/2016 18:07:56:  Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.11703629 * 100; err = 0.69000000 * 100; time = 0.0130s; samplesPerSecond = 7696.5
+05/03/2016 18:07:56: Finished Epoch[ 3 of 12]: [Training] ce = 2.11703629 * 100; err = 0.69000000 * 100; totalSamplesSeen = 300; learningRatePerSample = 0.0049999999; epochTime=0.013179s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.3'
 
-04/22/2016 07:18:41: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 3 at record count 300, and file position 300
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 3: 35, 34, ...
-04/22/2016 07:18:41:  Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  1.99407211; err = 0.65000000; TotalTime = 0.0128s; SamplesPerSecond = 7811.9
-04/22/2016 07:18:41: Finished Epoch[ 4 of 12]: [Training] ce = 1.9940721 * 400; err = 0.65; learningRatePerSample = 0.0049999999; EpochTime=0.012988
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.4'
+05/03/2016 18:07:56:  Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.99407211 * 100; err = 0.65000000 * 100; time = 0.0130s; samplesPerSecond = 7694.7
+05/03/2016 18:07:56: Finished Epoch[ 4 of 12]: [Training] ce = 1.99407211 * 100; err = 0.65000000 * 100; totalSamplesSeen = 400; learningRatePerSample = 0.0049999999; epochTime=0.01318s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.4'
 
-04/22/2016 07:18:41: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 4 at record count 400, and file position 400
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 13 retries for 100 elements (13.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 4: 30, 23, ...
-04/22/2016 07:18:41:  Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  1.72756714; err = 0.45000000; TotalTime = 0.0128s; SamplesPerSecond = 7814.9
-04/22/2016 07:18:41: Finished Epoch[ 5 of 12]: [Training] ce = 1.7275671 * 500; err = 0.45; learningRatePerSample = 0.0049999999; EpochTime=0.012983
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.5'
+05/03/2016 18:07:56:  Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.72756714 * 100; err = 0.45000000 * 100; time = 0.0129s; samplesPerSecond = 7746.5
+05/03/2016 18:07:56: Finished Epoch[ 5 of 12]: [Training] ce = 1.72756714 * 100; err = 0.45000000 * 100; totalSamplesSeen = 500; learningRatePerSample = 0.0049999999; epochTime=0.0131s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.5'
 
-04/22/2016 07:18:41: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 5 at record count 500, and file position 500
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 25 retries for 100 elements (25.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 5: 33, 43, ...
-04/22/2016 07:18:41:  Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  1.51963303; err = 0.21000000; TotalTime = 0.0129s; SamplesPerSecond = 7747.1
-04/22/2016 07:18:41: Finished Epoch[ 6 of 12]: [Training] ce = 1.519633 * 600; err = 0.21; learningRatePerSample = 0.0049999999; EpochTime=0.013086
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.6'
+05/03/2016 18:07:56:  Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.51963303 * 100; err = 0.21000000 * 100; time = 0.0129s; samplesPerSecond = 7732.8
+05/03/2016 18:07:56: Finished Epoch[ 6 of 12]: [Training] ce = 1.51963303 * 100; err = 0.21000000 * 100; totalSamplesSeen = 600; learningRatePerSample = 0.0049999999; epochTime=0.013122s
+05/03/2016 18:07:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.6'
 
-04/22/2016 07:18:41: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:56: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 6 at record count 600, and file position 600
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:56: Starting minibatch loop.
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 6: 12, 17, ...
-04/22/2016 07:18:41:  Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  1.29057953; err = 0.20000000; TotalTime = 0.0134s; SamplesPerSecond = 7467.7
-04/22/2016 07:18:41: Finished Epoch[ 7 of 12]: [Training] ce = 1.2905795 * 700; err = 0.2; learningRatePerSample = 0.0049999999; EpochTime=0.013584
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.7'
+05/03/2016 18:07:57:  Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.29057953 * 100; err = 0.20000000 * 100; time = 0.0129s; samplesPerSecond = 7775.4
+05/03/2016 18:07:57: Finished Epoch[ 7 of 12]: [Training] ce = 1.29057953 * 100; err = 0.20000000 * 100; totalSamplesSeen = 700; learningRatePerSample = 0.0049999999; epochTime=0.013049s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.7'
 
-04/22/2016 07:18:41: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:57: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 7 at record count 700, and file position 700
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 14 retries for 100 elements (14.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 7: 40, 7, ...
-04/22/2016 07:18:41:  Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.97354034; err = 0.05000000; TotalTime = 0.0131s; SamplesPerSecond = 7637.7
-04/22/2016 07:18:41: Finished Epoch[ 8 of 12]: [Training] ce = 0.97354034 * 800; err = 0.05; learningRatePerSample = 0.0049999999; EpochTime=0.013273
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.8'
+05/03/2016 18:07:57:  Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.97354034 * 100; err = 0.05000000 * 100; time = 0.0126s; samplesPerSecond = 7948.5
+05/03/2016 18:07:57: Finished Epoch[ 8 of 12]: [Training] ce = 0.97354034 * 100; err = 0.05000000 * 100; totalSamplesSeen = 800; learningRatePerSample = 0.0049999999; epochTime=0.012771s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.8'
 
-04/22/2016 07:18:41: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:57: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 8 at record count 800, and file position 800
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 8: 8, 48, ...
-04/22/2016 07:18:41:  Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.73900391; err = 0.03000000; TotalTime = 0.0130s; SamplesPerSecond = 7688.2
-04/22/2016 07:18:41: Finished Epoch[ 9 of 12]: [Training] ce = 0.73900391 * 900; err = 0.03; learningRatePerSample = 0.0049999999; EpochTime=0.013198
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.9'
+05/03/2016 18:07:57:  Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.73900383 * 100; err = 0.03000000 * 100; time = 0.0126s; samplesPerSecond = 7939.0
+05/03/2016 18:07:57: Finished Epoch[ 9 of 12]: [Training] ce = 0.73900383 * 100; err = 0.03000000 * 100; totalSamplesSeen = 900; learningRatePerSample = 0.0049999999; epochTime=0.012801s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.9'
 
-04/22/2016 07:18:41: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 18:07:57: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 9 at record count 900, and file position 900
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 9: 14, 26, ...
-04/22/2016 07:18:41:  Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.57405853; err = 0.00000000; TotalTime = 0.0130s; SamplesPerSecond = 7709.5
-04/22/2016 07:18:41: Finished Epoch[10 of 12]: [Training] ce = 0.57405853 * 1000; err = 0; learningRatePerSample = 0.0049999999; EpochTime=0.013163
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.10'
+05/03/2016 18:07:57:  Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.57405849 * 100; err = 0.00000000 * 100; time = 0.0125s; samplesPerSecond = 7983.4
+05/03/2016 18:07:57: Finished Epoch[10 of 12]: [Training] ce = 0.57405849 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1000; learningRatePerSample = 0.0049999999; epochTime=0.012712s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.10'
 
-04/22/2016 07:18:41: Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+05/03/2016 18:07:57: Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
 starting epoch 10 at record count 1000, and file position 0
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 31 retries for 100 elements (31.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 10: 22, 4, ...
-04/22/2016 07:18:41:  Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.45112953; err = 0.00000000; TotalTime = 0.0129s; SamplesPerSecond = 7726.8
-04/22/2016 07:18:41: Finished Epoch[11 of 12]: [Training] ce = 0.45112953 * 1100; err = 0; learningRatePerSample = 0.0049999999; EpochTime=0.013166
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.11'
+05/03/2016 18:07:57:  Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.45112949 * 100; err = 0.00000000 * 100; time = 0.0125s; samplesPerSecond = 8029.5
+05/03/2016 18:07:57: Finished Epoch[11 of 12]: [Training] ce = 0.45112949 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1100; learningRatePerSample = 0.0049999999; epochTime=0.012658s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.11'
 
-04/22/2016 07:18:41: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+05/03/2016 18:07:57: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
 starting epoch 11 at record count 1100, and file position 100
 already there from last epoch
 
-04/22/2016 07:18:41: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 2, 40, ...
-04/22/2016 07:18:41:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.34545712; err = 0.00000000; TotalTime = 0.0128s; SamplesPerSecond = 7840.7
-04/22/2016 07:18:41: Finished Epoch[12 of 12]: [Training] ce = 0.34545712 * 1200; err = 0; learningRatePerSample = 0.0049999999; EpochTime=0.012948
-04/22/2016 07:18:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn'
-04/22/2016 07:18:41: CNTKCommandTrainEnd: train
+05/03/2016 18:07:57:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.34545712 * 100; err = 0.00000000 * 100; time = 0.0124s; samplesPerSecond = 8045.7
+05/03/2016 18:07:57: Finished Epoch[12 of 12]: [Training] ce = 0.34545712 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1200; learningRatePerSample = 0.0049999999; epochTime=0.012605s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn'
+05/03/2016 18:07:57: CNTKCommandTrainEnd: train
 
-04/22/2016 07:18:41: Action "train" complete.
+05/03/2016 18:07:57: Action "train" complete.
 
 
-04/22/2016 07:18:41: ##############################################################################
-04/22/2016 07:18:41: #                                                                            #
-04/22/2016 07:18:41: # Action "test"                                                              #
-04/22/2016 07:18:41: #                                                                            #
-04/22/2016 07:18:41: ##############################################################################
+05/03/2016 18:07:57: ##############################################################################
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: # Action "test"                                                              #
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: ##############################################################################
 
 
 Post-processing network...
@@ -709,23 +746,55 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+(nil): {[ce Gradient[1]] [conv1_act.conv Gradient[24 x 24 x 16 x *1]] [conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.convPlusB Gradient[24 x 24 x 16 x *1]] [conv1_act.convW Gradient[16 x 25]] [conv1_act.out Gradient[24 x 24 x 16 x *1]] [conv2_act.conv Gradient[8 x 8 x 32 x *1]] [conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.convPlusB Gradient[8 x 8 x 32 x *1]] [conv2_act.convW Gradient[32 x 400]] [conv2_act.out Gradient[8 x 8 x 32 x *1]] [err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *1]] [features Gradient[28 x 28 x 1 x *1]] [h1.W Gradient[128 x 4 x 4 x 32]] [h1.b Gradient[128]] [h1.out Gradient[128 x *1]] [h1.t Gradient[128 x *1]] [h1.z Gradient[128 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 128]] [ol.b Gradient[10 x 1]] [ol.out Gradient[10 x 1 x *1]] [ol.t Gradient[10 x *1]] [pool1 Gradient[12 x 12 x 16 x *1]] [pool2 Gradient[4 x 4 x 32 x *1]] }
+0x7f56e4c05348: {[conv2_act.convPlusB Value[8 x 8 x 32 x *1]] }
+0x7f56e4c054a8: {[conv2_act.out Value[8 x 8 x 32 x *1]] }
+0x7f56e4c05608: {[pool2 Value[4 x 4 x 32 x *1]] }
+0x7f56e4c05768: {[h1.t Value[128 x *1]] }
+0x7f56e4c05928: {[h1.z Value[128 x *1]] }
+0x7f56e4c05ae8: {[h1.out Value[128 x *1]] }
+0x7f56e4c05ca8: {[ol.t Value[10 x *1]] }
+0x7f56e4c05e68: {[ol.out Value[10 x 1 x *1]] }
+0x7f56e4e849e8: {[featScale Value[1 x 1]] }
+0x7f56e4e85548: {[features Value[28 x 28 x 1 x *1]] }
+0x7f56e4e85fd8: {[h1.b Value[128]] }
+0x7f56e4e86338: {[h1.W Value[128 x 4 x 4 x 32]] }
+0x7f56e4e87858: {[labels Value[10 x *1]] }
+0x7f56e4e87d78: {[ol.b Value[10 x 1]] }
+0x7f56e4e890c8: {[ol.W Value[10 x 128]] }
+0x7f56e4ec61c8: {[err Value[1]] }
+0x7f56e4ef48b8: {[ce Value[1]] }
+0x7f56e4ef9a58: {[featScaled Value[28 x 28 x 1 x *1]] }
+0x7f56e4ef9d08: {[conv1_act.conv Value[24 x 24 x 16 x *1]] }
+0x7f56e4efa108: {[conv1_act.convPlusB Value[24 x 24 x 16 x *1]] }
+0x7f56e4efa2c8: {[conv1_act.out Value[24 x 24 x 16 x *1]] }
+0x7f56e4efa488: {[pool1 Value[12 x 12 x 16 x *1]] }
+0x7f56e4efa648: {[conv2_act.conv Value[8 x 8 x 32 x *1]] }
+0x7f56eb247978: {[conv1_act.convW Value[16 x 25]] }
+0x7f56eb2607f8: {[conv2_act.convW Value[32 x 400]] }
+0x7f56eb2630a8: {[conv2_act.convB Value[1 x 1 x 32]] }
+0x7f56f3e5bef8: {[conv1_act.convB Value[1 x 1 x 16]] }
+
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
-Final Results: Minibatch[1-1]: * 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.3027158    perplexity = 1.3535297    
+05/03/2016 18:07:57: Final Results: Minibatch[1-1]: err = 0.00000000 * 100; ce = 0.30271572 * 100; perplexity = 1.35352963
 
-04/22/2016 07:18:41: Action "test" complete.
+05/03/2016 18:07:57: Action "test" complete.
 
-04/22/2016 07:18:41: __COMPLETED__
+05/03/2016 18:07:57: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true makeMode=true
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu DeviceId=0 timestamping=true makeMode=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 21 2016 22:23:56
-		Last modified date: Wed Apr 20 14:45:12 2016
+		Built time: May  3 2016 17:56:15
+		Last modified date: Tue May  3 11:36:22 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -734,37 +803,37 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: HEAD
-		Build SHA1: 5016792195d54b61ee1ed837b2e99609567d083f
-		Built by philly on f3f64d5eed9a
+		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+		Built by philly on 18750d26eb32
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
 Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-04/22/2016 07:18:41: -------------------------------------------------------------------
-04/22/2016 07:18:41: Build info: 
+05/03/2016 18:07:57: -------------------------------------------------------------------
+05/03/2016 18:07:57: Build info: 
 
-04/22/2016 07:18:41: 		Built time: Apr 21 2016 22:23:56
-04/22/2016 07:18:41: 		Last modified date: Wed Apr 20 14:45:12 2016
-04/22/2016 07:18:41: 		Build type: release
-04/22/2016 07:18:41: 		Build target: GPU
-04/22/2016 07:18:41: 		With 1bit-SGD: no
-04/22/2016 07:18:41: 		Math lib: acml
-04/22/2016 07:18:41: 		CUDA_PATH: /usr/local/cuda-7.5
-04/22/2016 07:18:41: 		CUB_PATH: /usr/local/cub-1.4.1
-04/22/2016 07:18:41: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/22/2016 07:18:41: 		Build Branch: HEAD
-04/22/2016 07:18:41: 		Build SHA1: 5016792195d54b61ee1ed837b2e99609567d083f
-04/22/2016 07:18:41: 		Built by philly on f3f64d5eed9a
-04/22/2016 07:18:41: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-04/22/2016 07:18:41: -------------------------------------------------------------------
+05/03/2016 18:07:57: 		Built time: May  3 2016 17:56:15
+05/03/2016 18:07:57: 		Last modified date: Tue May  3 11:36:22 2016
+05/03/2016 18:07:57: 		Build type: release
+05/03/2016 18:07:57: 		Build target: GPU
+05/03/2016 18:07:57: 		With 1bit-SGD: no
+05/03/2016 18:07:57: 		Math lib: acml
+05/03/2016 18:07:57: 		CUDA_PATH: /usr/local/cuda-7.5
+05/03/2016 18:07:57: 		CUB_PATH: /usr/local/cub-1.4.1
+05/03/2016 18:07:57: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/03/2016 18:07:57: 		Build Branch: HEAD
+05/03/2016 18:07:57: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+05/03/2016 18:07:57: 		Built by philly on 18750d26eb32
+05/03/2016 18:07:57: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/03/2016 18:07:57: -------------------------------------------------------------------
 
-04/22/2016 07:18:41: Running on localhost at 2016/04/22 07:18:41
-04/22/2016 07:18:41: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true  makeMode=true
+05/03/2016 18:07:57: Running on localhost at 2016/05/03 18:07:57
+05/03/2016 18:07:57: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E  OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true  makeMode=true
 
 
 
-04/22/2016 07:18:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/22/2016 07:18:41: precision = "float"
+05/03/2016 18:07:57: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:57: precision = "float"
 command = train:test
 deviceId = $DeviceId$
 ndlMacros = "$ConfigDir$/Macros.ndl"
@@ -880,18 +949,18 @@ test = [
     ]    
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
-OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DeviceId=0
 timestamping=true
 makeMode=true
 
-04/22/2016 07:18:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:57: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/22/2016 07:18:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/22/2016 07:18:41: precision = "float"
+05/03/2016 18:07:57: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:57: precision = "float"
 command = train:test
 deviceId = 0
 ndlMacros = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Macros.ndl"
@@ -899,7 +968,7 @@ parallelTrain = false
 numCPUThreads = 8
 train = [
     action = "train"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
     BrainScriptNetworkBuilder = [
         // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
@@ -987,7 +1056,7 @@ train = [
 ]
 test = [
     action = "test"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
         networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Convolution.ndl"
     ]
@@ -1007,17 +1076,17 @@ test = [
     ]    
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
-RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
-OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 DeviceId=0
 timestamping=true
 makeMode=true
 
-04/22/2016 07:18:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:57: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/22/2016 07:18:41: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:07:57: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.cntk:command=train:test
 configparameters: cntk.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E
 configparameters: cntk.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data
@@ -1026,13 +1095,13 @@ configparameters: cntk.cntk:deviceId=0
 configparameters: cntk.cntk:makeMode=true
 configparameters: cntk.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Macros.ndl
 configparameters: cntk.cntk:numCPUThreads=8
-configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 configparameters: cntk.cntk:parallelTrain=false
 configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu
 configparameters: cntk.cntk:test=[
     action = "test"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
         networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/QuickE2E/Convolution.ndl"
     ]
@@ -1055,7 +1124,7 @@ configparameters: cntk.cntk:test=[
 configparameters: cntk.cntk:timestamping=true
 configparameters: cntk.cntk:train=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn"
+    modelPath = "/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
     BrainScriptNetworkBuilder = [
         // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
@@ -1142,24 +1211,24 @@ configparameters: cntk.cntk:train=[
     ]    
 ]
 
-04/22/2016 07:18:41: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/22/2016 07:18:41: Commands: train test
-04/22/2016 07:18:41: Precision = "float"
-04/22/2016 07:18:41: Using 8 CPU threads.
-04/22/2016 07:18:41: CNTKModelPath: /tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn
-04/22/2016 07:18:41: CNTKCommandTrainInfo: train : 12
-04/22/2016 07:18:41: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+05/03/2016 18:07:57: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:07:57: Commands: train test
+05/03/2016 18:07:57: Precision = "float"
+05/03/2016 18:07:57: Using 8 CPU threads.
+05/03/2016 18:07:57: CNTKModelPath: /tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn
+05/03/2016 18:07:57: CNTKCommandTrainInfo: train : 12
+05/03/2016 18:07:57: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
 
-04/22/2016 07:18:41: ##############################################################################
-04/22/2016 07:18:41: #                                                                            #
-04/22/2016 07:18:41: # Action "train"                                                             #
-04/22/2016 07:18:41: #                                                                            #
-04/22/2016 07:18:41: ##############################################################################
+05/03/2016 18:07:57: ##############################################################################
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: # Action "train"                                                             #
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: ##############################################################################
 
-04/22/2016 07:18:41: CNTKCommandTrainBegin: train
+05/03/2016 18:07:57: CNTKCommandTrainBegin: train
 Reading UCI file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Image/Data/Train.txt
 
-04/22/2016 07:18:41: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn.11'.
+05/03/2016 18:07:57: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn.11'.
 
 Post-processing network...
 
@@ -1216,41 +1285,78 @@ Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 
 
 Post-processing network complete.
 
-04/22/2016 07:18:42: Loaded model with 27 nodes on GPU 0.
+05/03/2016 18:07:57: Loaded model with 27 nodes on GPU 0.
 
-04/22/2016 07:18:42: Training criterion node(s):
-04/22/2016 07:18:42: 	ce = CrossEntropyWithSoftmax
+05/03/2016 18:07:57: Training criterion node(s):
+05/03/2016 18:07:57: 	ce = CrossEntropyWithSoftmax
 
-04/22/2016 07:18:42: Evaluation criterion node(s):
+05/03/2016 18:07:57: Evaluation criterion node(s):
 
-04/22/2016 07:18:42: 	err = ErrorPrediction
+05/03/2016 18:07:57: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-04/22/2016 07:18:42: No PreCompute nodes found, skipping PreCompute step.
 
-04/22/2016 07:18:42: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+Memory Sharing Structure:
+
+(nil): {[err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *]] [features Gradient[28 x 28 x 1 x *]] [labels Gradient[10 x *]] }
+0x2233b38: {[conv1_act.convB Value[1 x 1 x 16]] }
+0x3111478: {[conv1_act.convW Value[16 x 25]] }
+0x3111a88: {[conv2_act.convB Value[1 x 1 x 32]] }
+0x3113b28: {[conv2_act.convW Value[32 x 400]] }
+0x3114668: {[featScale Value[1 x 1]] }
+0x3115308: {[features Value[28 x 28 x 1 x *]] }
+0x3115d58: {[h1.b Value[128]] }
+0x3116108: {[h1.W Value[128 x 4 x 4 x 32]] }
+0x3117e58: {[labels Value[10 x *]] }
+0x3118378: {[ol.b Value[10 x 1]] }
+0x31196c8: {[ol.W Value[10 x 128]] }
+0x311b878: {[err Value[1]] }
+0x314e718: {[conv1_act.convPlusB Value[24 x 24 x 16 x *]] [conv1_act.convW Gradient[16 x 25]] }
+0x314e8d8: {[conv1_act.conv Gradient[24 x 24 x 16 x *]] [conv1_act.out Value[24 x 24 x 16 x *]] }
+0x314f038: {[ce Value[1]] }
+0x75bf778: {[featScaled Value[28 x 28 x 1 x *]] }
+0x75bfe28: {[conv1_act.conv Value[24 x 24 x 16 x *]] }
+0x75c95a8: {[conv1_act.convPlusB Gradient[24 x 24 x 16 x *]] [pool1 Value[12 x 12 x 16 x *]] }
+0x75c9708: {[conv2_act.conv Value[8 x 8 x 32 x *]] }
+0x75c9868: {[conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.out Gradient[24 x 24 x 16 x *]] }
+0x75c99c8: {[conv2_act.convPlusB Value[8 x 8 x 32 x *]] [conv2_act.convW Gradient[32 x 400]] }
+0x75c9b28: {[conv2_act.conv Gradient[8 x 8 x 32 x *]] [conv2_act.out Value[8 x 8 x 32 x *]] }
+0x75c9ce8: {[conv2_act.convPlusB Gradient[8 x 8 x 32 x *]] [pool1 Gradient[12 x 12 x 16 x *]] [pool2 Value[4 x 4 x 32 x *]] }
+0x75c9ea8: {[conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.out Gradient[8 x 8 x 32 x *]] [h1.t Value[128 x *]] }
+0x75ca068: {[h1.W Gradient[128 x 4 x 4 x 32]] [h1.z Value[128 x *]] }
+0x75ca228: {[h1.out Value[128 x *]] [h1.t Gradient[128 x *]] }
+0x75ca3e8: {[h1.z Gradient[128 x *]] [ol.t Value[10 x *]] [pool2 Gradient[4 x 4 x 32 x *]] }
+0x75ca5a8: {[ol.W Gradient[10 x 128]] [ol.out Value[10 x 1 x *]] }
+0x75cb028: {[ce Gradient[1]] }
+0x75cb1e8: {[h1.b Gradient[128]] [h1.out Gradient[128 x *]] [ol.out Gradient[10 x 1 x *]] }
+0x75cb3a8: {[ol.t Gradient[10 x *]] }
+0x75cb568: {[ol.b Gradient[10 x 1]] }
+
+05/03/2016 18:07:57: No PreCompute nodes found, skipping PreCompute step.
+
+05/03/2016 18:07:57: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
 UCIFastReader: Starting at epoch 11, counting lines to determine record count...
  1000 records found.
 starting epoch 11 at record count 1100, and file position 100
 reading from record 0 to 100 to be positioned properly for epoch
 
-04/22/2016 07:18:42: Starting minibatch loop.
+05/03/2016 18:07:57: Starting minibatch loop.
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 2, 40, ...
-04/22/2016 07:18:42:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: * 100; ce =  0.34545712; err = 0.00000000; TotalTime = 0.1291s; SamplesPerSecond = 774.5
-04/22/2016 07:18:42: Finished Epoch[12 of 12]: [Training] ce = 0.34545712 * 1200; err = 0; learningRatePerSample = 0.0049999999; EpochTime=0.144309
-04/22/2016 07:18:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160422071643.725773/Image_QuickE2E@release_gpu/models/cntk.dnn'
-04/22/2016 07:18:42: CNTKCommandTrainEnd: train
+05/03/2016 18:07:57:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.34545712 * 100; err = 0.00000000 * 100; time = 0.1270s; samplesPerSecond = 787.5
+05/03/2016 18:07:57: Finished Epoch[12 of 12]: [Training] ce = 0.34545712 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1200; learningRatePerSample = 0.0049999999; epochTime=0.142451s
+05/03/2016 18:07:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160503180555.960884/Image_QuickE2E@release_gpu/models/cntk.dnn'
+05/03/2016 18:07:57: CNTKCommandTrainEnd: train
 
-04/22/2016 07:18:42: Action "train" complete.
+05/03/2016 18:07:57: Action "train" complete.
 
 
-04/22/2016 07:18:42: ##############################################################################
-04/22/2016 07:18:42: #                                                                            #
-04/22/2016 07:18:42: # Action "test"                                                              #
-04/22/2016 07:18:42: #                                                                            #
-04/22/2016 07:18:42: ##############################################################################
+05/03/2016 18:07:57: ##############################################################################
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: # Action "test"                                                              #
+05/03/2016 18:07:57: #                                                                            #
+05/03/2016 18:07:57: ##############################################################################
 
 
 Post-processing network...
@@ -1312,12 +1418,44 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+(nil): {[ce Gradient[1]] [conv1_act.conv Gradient[24 x 24 x 16 x *1]] [conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.convPlusB Gradient[24 x 24 x 16 x *1]] [conv1_act.convW Gradient[16 x 25]] [conv1_act.out Gradient[24 x 24 x 16 x *1]] [conv2_act.conv Gradient[8 x 8 x 32 x *1]] [conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.convPlusB Gradient[8 x 8 x 32 x *1]] [conv2_act.convW Gradient[32 x 400]] [conv2_act.out Gradient[8 x 8 x 32 x *1]] [err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *1]] [features Gradient[28 x 28 x 1 x *1]] [h1.W Gradient[128 x 4 x 4 x 32]] [h1.b Gradient[128]] [h1.out Gradient[128 x *1]] [h1.t Gradient[128 x *1]] [h1.z Gradient[128 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 128]] [ol.b Gradient[10 x 1]] [ol.out Gradient[10 x 1 x *1]] [ol.t Gradient[10 x *1]] [pool1 Gradient[12 x 12 x 16 x *1]] [pool2 Gradient[4 x 4 x 32 x *1]] }
+0x222a768: {[conv1_act.convB Value[1 x 1 x 16]] }
+0x2238538: {[featScale Value[1 x 1]] }
+0x22888a8: {[pool2 Value[4 x 4 x 32 x *1]] }
+0x2288a68: {[h1.t Value[128 x *1]] }
+0x2288c28: {[h1.z Value[128 x *1]] }
+0x2288ed8: {[h1.out Value[128 x *1]] }
+0x2289098: {[ol.t Value[10 x *1]] }
+0x2289258: {[ol.out Value[10 x 1 x *1]] }
+0x228a678: {[h1.W Value[128 x 4 x 4 x 32]] }
+0x22a7088: {[ce Value[1]] }
+0x22b4298: {[conv1_act.conv Value[24 x 24 x 16 x *1]] }
+0x22b6a38: {[conv1_act.convPlusB Value[24 x 24 x 16 x *1]] }
+0x22b8268: {[conv2_act.convW Value[32 x 400]] }
+0x22cf178: {[conv2_act.conv Value[8 x 8 x 32 x *1]] }
+0x22cf4f8: {[conv2_act.convPlusB Value[8 x 8 x 32 x *1]] }
+0x22cf6b8: {[conv2_act.out Value[8 x 8 x 32 x *1]] }
+0x22dd4c8: {[ol.b Value[10 x 1]] }
+0x22eae78: {[conv1_act.out Value[24 x 24 x 16 x *1]] }
+0x22eb038: {[pool1 Value[12 x 12 x 16 x *1]] }
+0x22eec58: {[ol.W Value[10 x 128]] }
+0x22efa38: {[featScaled Value[28 x 28 x 1 x *1]] }
+0x22f2e28: {[err Value[1]] }
+0x23159c8: {[labels Value[10 x *1]] }
+0x2315cd8: {[h1.b Value[128]] }
+0x3120a18: {[conv1_act.convW Value[16 x 25]] }
+0x75cfc88: {[features Value[28 x 28 x 1 x *1]] }
+0xa7dfa78: {[conv2_act.convB Value[1 x 1 x 32]] }
+
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 38, 46, ...
-Final Results: Minibatch[1-1]: * 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.3027158    perplexity = 1.3535297    
+05/03/2016 18:07:57: Final Results: Minibatch[1-1]: err = 0.00000000 * 100; ce = 0.30271570 * 100; perplexity = 1.35352960
 
-04/22/2016 07:18:42: Action "test" complete.
+05/03/2016 18:07:58: Action "test" complete.
 
-04/22/2016 07:18:42: __COMPLETED__
+05/03/2016 18:07:58: __COMPLETED__
