@@ -156,19 +156,6 @@ speechTrain = [
         z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
 
         // training
-        # vvv PROBABLY OUTDATED
-        # TODO: the following fails with useExplicitCriterion = true in FullUtterance mode:
-        # --> 'err' gets overwritten by crExplicit
-        # and with useExplicitCriterion = fals:
-        # --> 'err' comes out equal to 'ce'
-        # and the crExplicit value also comes out inaccurate (while it is totally fine with Truncated LSTM)
-        # so do it this way for now:
-        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
-        # ^^^ PROBABLY OUTDATED
-
-        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the objective, as a node
-        #err = ErrorPrediction(labels, z, tag='evaluation')       // this also gets tracked
-
         # this shows how both CE and frame error rate can be constructed as BS expressions
         # BUGBUG: The per-sample criterion will trigger a bug fix in momentum computation
         # which leads to a slightly better objective value than the baseline.
