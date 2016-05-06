@@ -490,7 +490,7 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
 }
 
 template <class ElemType>
-/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed)
+/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase)
 {
     if (dropoutRate != prevDropoutRate)
     {
@@ -501,11 +501,15 @@ template <class ElemType>
             fprintf(stderr, "WARNING: there is no dropout node.\n");
         else
         {
+            // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
+            // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
+            size_t randSeed = randSeedBase * dropoutNodes.size();
             for (auto& nodeIter: dropoutNodes)
             {
                 auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
                 node->SetDropoutRate(dropoutRate);
-                node->SetRandomSeed(dropOutSeed++);
+                node->SetRandomSeed(randSeed);
+                randSeed++;
             }
         }
 
@@ -1440,7 +1444,7 @@ template void ComputationNetwork::InitLearnableParameters<float>(const Computati
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
+template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
@@ -1450,7 +1454,7 @@ template void ComputationNetwork::InitLearnableParameters<double>(const Computat
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
+template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);

@@ -1271,21 +1271,22 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {
     PrepareDevice();
-    CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+
+    GPURNGHandle* gpuRNGHandle = dynamic_cast<GPURNGHandle*>(&rngHandle);
+    assert(gpuRNGHandle != nullptr);
 
     cudaEvent_t done = nullptr;
     CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateUniform((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<float*>(Data()), GetNumElements()));
+        CURAND_CALL(curandGenerateUniform(gpuRNGHandle->Generator(), reinterpret_cast<float*>(Data()), GetNumElements()));
     else
-        CURAND_CALL(curandGenerateUniformDouble((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<double*>(Data()), GetNumElements()));
+        CURAND_CALL(curandGenerateUniformDouble(gpuRNGHandle->Generator(), reinterpret_cast<double*>(Data()), GetNumElements()));
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     CUDA_CALL(cudaEventDestroy(done));
-    // CURAND_CALL(curandDestroyGenerator(gen));
 
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
