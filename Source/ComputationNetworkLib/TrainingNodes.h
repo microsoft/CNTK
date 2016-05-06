@@ -1490,6 +1490,9 @@ public:
     void SetRandomSeed(const unsigned long val)
     {
         m_randomSeed = (unsigned long) val;
+
+        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+        // during forward propagation
         m_RNGHandle = nullptr;
     }
 

@@ -501,6 +501,8 @@ template <class ElemType>
             fprintf(stderr, "WARNING: there is no dropout node.\n");
         else
         {
+            // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
+            // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
             size_t randSeed = randSeedBase * dropoutNodes.size();
             for (auto& nodeIter: dropoutNodes)
             {
