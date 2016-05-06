@@ -72,9 +72,9 @@ introduced, overloaded operators can be applied to them to form an operator grap
   x = C.input((2,3), name='features') # Input with shape [2,3,*]
   c = C.constant(2)
   w = C.parameter((2,3))         # Model parameter of shape [2,3], randomly initialized
-  op  = x * c                    # Elementwise product operation
+  op  = x * c                    # Elementwise multiplication operation
   op2 = x * 2                    # Same as above (2 will be converted to constant)
-  op3 = x * [[1,2],[3,4],[5,6]]  # Same as above (2 will be converted to constant)
+  op3 = x * [[1,2,3], [4,5,6]]  #  Elementwise multiplication of two 2x3 matrices 
   
 
 Broadcasting
@@ -83,12 +83,12 @@ Broadcasting
 For operations that require the tensor dimensions of their arguments to match, 
 *broadcasting*  is applied automatically whenever a tensor dimension is 1. 
 Examples are elementwise product or plus operations.
-E.g. the following are equivalent:
+E.g. the following are equivalent (the outermost brackets are for sequences, see later for more details):
 
->>> [2,3] * 2
-  [4,6]
->>> [2,3] * [2,2]
-  [4,6]
+>>> C.eval(C.element_times([2,3],2))
+  [array([[ 4.,  6.]])]
+>>> C.eval(C.element_times([2,3],[2,2]))
+  [array([[ 4.,  6.]])]
   
   
 A Note On Tensor Indices
@@ -129,7 +129,7 @@ There are two circumstances where you have to be aware of this ordering:
 
 1. When preparing input-files for CNTK. The values have to be provided in 
    column-major order.
-2. When changing the shape of a tensor. 
+2. When parsing data outputted by CNTK. 
 
 Computational Networks
 ----------------------
