@@ -479,22 +479,8 @@ public:
 public:
     void Validate(bool isFinalValidationPass) override
     {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-        if (m_imageLayout != ImageLayoutKind::CHW)
-        {
-            InvalidArgument(
-                "%ls %ls supports only cuDNN (CHW) data layout. "
-                "Please specify imageLayout=\"cudnn\" in %ls node in your script "
-                "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-        }
-
         auto inputShape = GetInputSampleLayout(0);
-        auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-        SetDims(outDims, HasMBLayout());
-
+        ValidatePooling(inputShape, isFinalValidationPass);
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
@@ -506,33 +492,52 @@ public:
             }
         }
     }
+
+protected:
+    void ValidatePooling(const TensorShape& inputShape, bool isFinalValidationPass)
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        if (m_imageLayout != ImageLayoutKind::CHW)
+        {
+            InvalidArgument(
+                "%ls %ls supports only cuDNN (CHW) data layout. "
+                "Please specify imageLayout=\"cudnn\" in %ls node in your script "
+                "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
+        }
+
+        auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        SetDims(outDims, HasMBLayout());
+    }
 };
 
 template <class ElemType>
-class MaxPoolingIndicesNode : public PoolingNode<ElemType>
+class MaxPoolingMaskNode : public PoolingNode<ElemType>
 {
     typedef PoolingNode<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName()
     {
-        return L"MaxPoolingIndices";
+        return L"MaxPoolingMask";
     }
 
 public:
-    MaxPoolingIndicesNode(DEVICEID_TYPE deviceId, const wstring& name)
+    MaxPoolingMaskNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
-    MaxPoolingIndicesNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
-                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                ImageLayoutKind imageLayout)
-                : Base(deviceId, name, PoolKind::Max, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout)
+    MaxPoolingMaskNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
+                       const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                       ImageLayoutKind imageLayout)
+                       : Base(deviceId, name, PoolKind::Max, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout)
     {
     }
-    MaxPoolingIndicesNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : MaxPoolingIndicesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"),
-                                configp->Get(L"strideShape"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    MaxPoolingMaskNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : MaxPoolingMaskNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"),
+                             configp->Get(L"strideShape"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+                             ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -545,12 +550,36 @@ public:
         UNUSED(fr);
     }
 
+    bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
     void ForwardProp(const FrameRange& fr) override
     {
         const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        auto inputShape = GetInputSampleLayout(0);
+        ValidatePooling(inputShape, isFinalValidationPass);
+        // We do not need to create engine in this node, just geometry.
+        // Implementation is the same regardless of the engine.
+        if (isFinalValidationPass)
+        {
+            if (m_geometry == nullptr)
+            {
+                m_geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            }
+        }
+    }
+
+private:
+    ConvolveGeometryPtr m_geometry;
 };
 
 // -----------------------------------------------------------------------

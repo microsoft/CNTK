@@ -294,7 +294,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == OperationNameOf(ConvolutionNode) ||
              cnNodeType == OperationNameOf(PoolingNode) ||
-             cnNodeType == OperationNameOf(MaxPoolingIndicesNode))
+             cnNodeType == OperationNameOf(MaxPoolingMaskNode))
     {
         if (parameter.size() != 3 && parameter.size() != 7)
         {

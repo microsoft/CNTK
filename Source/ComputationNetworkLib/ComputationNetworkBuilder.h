@@ -88,7 +88,7 @@ public:
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                ImageLayoutKind imageLayout,
                                const std::wstring nodeName = L"");
-    ComputationNodePtr MaxPoolingIndices(const ComputationNodePtr inputValues, 
+    ComputationNodePtr MaxPoolingMask(const ComputationNodePtr inputValues, 
                                          const TensorShape& kernelShape, const TensorShape& strideShape,
                                          const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                          ImageLayoutKind imageLayout,

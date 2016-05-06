@@ -495,6 +495,7 @@ public:
     void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                             const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
                             Matrix<ElemType>& grad) const;
+    void MaxPoolingMask(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
 
     void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
