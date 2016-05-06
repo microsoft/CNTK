@@ -511,14 +511,20 @@ Parameters =
     StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-            beta = Exp (BiasParam ((inputDim))) # init value is 0
+            #beta = Exp (BiasParam ((inputDim))) # init value is 0
+            #beta = ParameterTensor ((inputDim), init='fixedValue', value=1.0) # init value is 1
+            # or SoftPlus: ln(1+e^beta)
+            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), init='fixedValue', value=0.54132485/*ln (e-1)*/))) # init value is 1
+            f = ConstantTensor (4, (1))
+            fInv = Reciprocal (f)
+            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), init='fixedValue', value=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
 
             TraceDense (h, what) =
                 Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
 
             result = TraceDense (    beta,    'beta') .* x
         ].result
-    else x
+        else x
 
     # and the same with a scalar stabilizer shared across all components
     Stabilize (x, enabled=true) = if enabled then StabilizeElements (x, inputDim=1, enabled=true) else x

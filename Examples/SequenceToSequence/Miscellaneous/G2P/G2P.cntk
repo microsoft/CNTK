@@ -23,9 +23,9 @@ command = train
 makeMode = false
 
 # experiment id
-deviceId = 0
-ExpId = 30-$deviceId$-g2p
-#ExpId = 26-4-g2p # change to different id when decoding a different model
+deviceId = 1
+ExpId = 43-$deviceId$-g2p-2
+#ExpId = 30-0-g2p # change to different id when decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -38,8 +38,8 @@ traceLevel = 1
 modelPath  = "$ModelDir$/G2P.dnn"
 
 # decoding config  --used by the "write" command ("write" decodes and writes the result)
-beamDepth = 1                                      # 0=predict; 1=greedy; >1=beam
-decodeModel = 31
+beamDepth = 3                                      # 0=predict; 1=greedy; >1=beam
+decodeModel = 9
 decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended to the model path
 decodeOutputPath = "$decodeModelPath$.$beamDepth$" # results are written next to the model, with beamDepth appended
 
@@ -301,12 +301,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # training criteria
     #############################################################
 
-    ce   = Pass (ReduceLogSum (z) - ReduceSum (labelSequence .*          z ), tag='criterion')
-    errs = Pass (BS.Constants.One - ReduceSum (labelSequence .* Hardmax (z)), tag='evaluation')
-
+    #ce   = Pass (ReduceLogSum (z) - ReduceSum (labelSequence .*          z ), tag='criterion')
+    #errs = Pass (BS.Constants.One - ReduceSum (labelSequence .* Hardmax (z)), tag='evaluation')
     #ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
     #ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
     #errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+
+    ce   = Pass (ReduceLogSum (z) - TransposeTimes (labelSequence,          z),  tag='criterion')
+    errs = Pass (BS.Constants.One - TransposeTimes (labelSequence, Hardmax (z)), tag='evaluation')
 
     # score output for decoding
     scoreSequence = Pass (z)
