@@ -33,7 +33,8 @@ int _tmain(int argc, _TCHAR* argv[])
 {
     // Get the binary path (current working directory)
     argc = 0;
-    std::string app(argv[0]);
+    std::wstring wapp(argv[0]);
+    std::string app(wapp.begin(), wapp.end());
     std::string path = app.substr(0, app.rfind("\\"));
 
     // Load the eval library

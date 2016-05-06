@@ -24,8 +24,6 @@
     <RootNamespace>CPPEvalClient</RootNamespace>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -42,6 +40,10 @@
     <UseIntelMKL>No</UseIntelMKL>
     <UseIntelIPP>false</UseIntelIPP>
   </PropertyGroup>
+  <!--Importing CPP defaults must occur after declaring the desired toolset above
+  Otherwise, the build may default back to an previous toolset -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
