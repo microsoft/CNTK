@@ -23,9 +23,9 @@ command = train
 makeMode = false
 
 # experiment id
-deviceId = 1
-ExpId = 43-$deviceId$-g2p-2
-#ExpId = 30-0-g2p # change to different id when decoding a different model
+deviceId = 0
+ExpId = g2p-1-$deviceId$ # choose a meaningful id here. This is used for unique directory and filenames.
+#ExpId = g2p-1-0 # change to different id when decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
