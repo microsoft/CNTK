@@ -90,6 +90,14 @@ speechTrain = [
         featNorm = MeanVarNorm(feashift)
 
         // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+                beta = Exp (BS.Parameters.BiasParam ((1))) # init value is 0
+                result = beta .* x
+            ].result
+            else x
+
         LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
         [
             _privateInnards = [       // encapsulate the inner workings
@@ -99,9 +107,9 @@ speechTrain = [
                 // parameter macros--these carry their own weight matrices
                 B() = BS.Parameters.BiasParam (cellDim)
 
-                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * BS.Parameters.Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * BS.Parameters.Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
-                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* BS.Parameters.Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
                 // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
                 it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
@@ -121,7 +129,7 @@ speechTrain = [
             h = if outputDim != cellDim     // output/hidden state
                 then [                      // project
                     Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
-                    htp = Wmr * BS.Parameters.Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
                 ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
                 else _privateInnards.ht     // no projection
             dim = outputDim
@@ -135,7 +143,7 @@ speechTrain = [
         ].lstmState // we return the state record (h,c)
 
         // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
-        S(x) = BS.Parameters.Stabilize (x, enabled=useSelfStabilization)
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
         LSTMoutput[k:1..numLSTMLayers] =
             if k == 1
             then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
@@ -158,15 +166,19 @@ speechTrain = [
         #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion')
         # ^^^ PROBABLY OUTDATED
 
-        useExplicitCriterion = false
-        crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
-        crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
-        ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
+        #ce = CrossEntropyWithSoftmax(labels, z, tag='criterion') // this is the objective, as a node
+        #err = ErrorPrediction(labels, z, tag='evaluation')       // this also gets tracked
 
-        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
+        # this shows how both CE and frame error rate can be constructed as BS expressions
+        # BUGBUG: The per-sample criterion will trigger a bug fix in momentum computation
+        # which leads to a slightly better objective value than the baseline.
+        # For now, we will use SumElements() to neutralize this. Once we have a chance to update
+        # the baselines, we should remove SumElements() below.
+        ce  = /*Pass*/ SumElements (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = /*Pass*/ SumElements (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
 
         // decoding
         logPrior = LogPrior(labels)	 
-        ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
     ]
 ]

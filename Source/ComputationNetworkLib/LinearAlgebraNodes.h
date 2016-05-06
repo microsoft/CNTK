@@ -266,6 +266,8 @@ private:
         auto input = inputIndex < 0 ? this : Input(inputIndex).get();
         auto data = gradient ? input->GradientPtr() : input->ValuePtr();
         size_t rank = input->GetSampleLayout().GetRank();
+        if (inputIndex == 0 && m_transpose && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
+            rank = 2;
         if (!Input(0)->HasMBLayout()) // left input is no MB data: run normally
             return input->DataTensorFor(data, rank, fr);
         auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
@@ -323,15 +325,15 @@ public:
             // BUGBUG: This does not accumulate into the Input(0)->Gradient, which might cause problems elsewhere.
             if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
-            auto input0Gradient = OneSampleTensorFor(0, /*gradient=*/true,   fr.AllowBroadcast());
+            auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
             input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            auto input0         = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
-            auto input1Gradient = OneSampleTensorFor(1, /*gradient=*/true,  fr.AllowBroadcast());
+            auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+            auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
             input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
@@ -434,11 +436,6 @@ public:
                 std::swap(dimsA[0], dimsA[1]);
             // update if LearnableParameter
             Input(0)->ValidateInferInputDimsFrom(TensorShape(dimsA));
-#if 0 // Removed this, because the check is just wrong.
-            // and verify once again
-            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetDims() != dimsA)
-                InvalidArgument("%ls %ls operation: Left [%s] and right [%s] operands' shapes are not compatible.", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str(), dimsBstring.c_str());
-#endif
         }
     }
 
