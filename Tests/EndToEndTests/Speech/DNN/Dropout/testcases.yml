@@ -1,9 +1,9 @@
 dataDir: ../../Data
 tags:
-     # running for 1bitsgd build SKU on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-s  (build_sku == '1bitsgd') and ((flavor=='debug') ^ (device=='cpu'))
+     # running for gpu build SKU on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
      # running for 1bitsgd build SKU  on every Nightly job in 'S' leg
-     - nightly-s (build_sku == '1bitsgd')
+     - nightly-s (build_sku == 'gpu')
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:
@@ -17,8 +17,8 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CrossEntropyWithSoftmax = {{float,tolerance=0.2%}}
-      - EvalErrorPrediction = {{float,tolerance=0.2%}}
+      - CE = {{float,tolerance=0.2%}}
+      - Err = {{float,tolerance=0.2%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match for each MPI Rank:
@@ -26,8 +26,8 @@ testCases:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CrossEntropyWithSoftmax = {{float,tolerance=0.2%}}
-      - EvalErrorPrediction = {{float,tolerance=0.2%}}
+      - CE = {{float,tolerance=0.2%}}
+      - Err = {{float,tolerance=0.2%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:
@@ -36,5 +36,5 @@ testCases:
       - DataParallelSGD training
       - MyRank = {{integer}}
       - NumNodes = 2
-      - NumGradientBits = 1
+      - NumGradientBits = 32
       - distributed reading is ENABLED

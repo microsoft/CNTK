@@ -59,7 +59,7 @@ speechTrain = [
             distributedMBReading = true
             parallelizationStartEpoch = 2
             DataParallelSGD = [
-                gradientBits = 1
+                gradientBits = 32
             ]
         ]
     ]
