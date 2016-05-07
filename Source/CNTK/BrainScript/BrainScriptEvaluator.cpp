@@ -874,26 +874,47 @@ public:
     {
         let &config = *configp;
         double &us = *this; // we write to this
-        let arg = config[L"arg"];
         let whatArg = config[L"what"];
         wstring what = whatArg;
-        if (what == L"Floor")
-            us = floor((double) arg);
-        else if (what == L"Length")
+        if (what == L"Floor" || what == L"Length") // one-arg functions
         {
-            if (arg.Is<String>())
-                us = (double) ((wstring &) arg).size();
-            else // otherwise expect an array
+            let arg = config[L"arg"];
+            if (what == L"Floor")
             {
-                let & arr = arg.AsRef<ConfigArray>();
-                let range = arr.GetIndexRange();
-                us = (double) (range.second + 1 - range.first);
+                us = floor((double)arg);
             }
+            else if (what == L"Length")
+            {
+                if (arg.Is<String>())
+                    us = (double)((wstring &)arg).size();
+                else // otherwise expect an array
+                {
+                    let & arr = arg.AsRef<ConfigArray>();
+                    let range = arr.GetIndexRange();
+                    us = (double)(range.second + 1 - range.first);
+                }
+            }
+        }
+        else if (what == L"Mod" || what == L"IntDiv")  //two-arg int functions
+        {
+            let argsArg = config[L"args"];
+            let& args = argsArg.AsRef<ConfigArray>();
+            auto range = args.GetIndexRange();
+            if (range.second != range.first + 1)
+                argsArg.Fail(L"Mod/IntDiv expects two arguments");
+            let arg1 = (int)args.At(range.first);
+            let arg2 = (int)args.At(range.second);
+
+            if (what == L"Mod")
+                us = (int)(arg1 % arg2);
+            else if (what == L"IntDiv")
+                us = (int)(arg1 / arg2);
         }
         else
             whatArg.Fail(L"Unknown 'what' value to NumericFunction: " + what);
     }
 };
+
 
 // CompareFunctions
 //  - IsSameObject()
