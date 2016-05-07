@@ -564,6 +564,24 @@ protected:
 
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();
+    void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+
+    bool UseGradientAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UseModelAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
+                 GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
+                (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UseParallelTrain(size_t epochNumber)
+    {
+        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber);
+    }
 };
 
 }}}
