@@ -2079,13 +2079,6 @@ public:
         ValidateUnaryMap(isFinalValidationPass);
     }
 
-    // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-    // Hence dropout nodes with a non-zero dropout rate must always be considered out-of-date to force evaluation 
-    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const
-    {
-        return Base::IsOutOfDateWrtInputs() || (!Environment().IsInferring() && (m_dropoutRate > 0));
-    }
-
     // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
     void SetDropoutRate(const double val)
     {
@@ -2393,10 +2386,10 @@ public:
         }
 
         m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+                         sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
-            m_mbCount++;
-            }
+        m_mbCount++;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {

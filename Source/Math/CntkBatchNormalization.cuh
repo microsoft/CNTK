@@ -175,7 +175,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize, con
     assert(gridDim.y == 1);
     assert(gridDim.z == 1);
     assert(::isfinite(epsilon) && epsilon > 0);
-    assert(::isfinite(expAvgFactor) && expAvgFactor > 0);
+    assert(::isfinite(expAvgFactor) && expAvgFactor >= 0);
 
     int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
     if (irowSrcBase >= vectorSize)
