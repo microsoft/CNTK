@@ -3154,7 +3154,7 @@ void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const Te
     if (!m_RNNWrapper)
         m_RNNWrapper = std::make_unique<RNNWrapper>();
     if (!m_RNNWrapper->m_rnnExecutor)
-        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, shapeY, numLayers, hiddenSize);
+        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, hiddenSize, numLayers, true, cudnnRNNMode_t::CUDNN_LSTM);
     m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, shapeX, *this, shapeY, reserve, workspace);
 }
 

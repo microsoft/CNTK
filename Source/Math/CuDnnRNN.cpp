@@ -15,13 +15,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#if 0
-static bool IsGpu(DEVICEID_TYPE deviceId)
-{
-    return deviceId >= 0;
-}
-#endif
-
 template<class ElemType>
 class CuDnnTensorDescriptor
 {
@@ -51,10 +44,29 @@ public:
 };
 
 template <class ElemType>
-size_t CuDnnRNNExecutor<ElemType>::GetWSize(cudnnTensorDescriptor_t *xDesc)
+size_t CuDnnRNNExecutor<ElemType>::GetWSize()
 {
-    CuDnnFilter<ElemType> wFilter(*m_rnnT, xDesc);
+    TensorShape temp_x((int) m_inputSize, (int)m_miniBatchSize, (int)m_rnnT->GetLength());
+    SetXDesc(temp_x);
+    CuDnnFilter<ElemType> wFilter(*m_rnnT, xDesc.data());
     return wFilter.GetSize();
+}
+
+template <class ElemType>
+void CuDnnRNNExecutor<ElemType>::SetXDesc(const TensorShape& shapeX)
+{
+    // one time slice layout and stride
+    int dimX1[3] = { (int)shapeX[0], (int)shapeX[1], 1 };
+    int strideX[3] = { 1, dimX1[0], dimX1[0] * dimX1[1] };
+
+    // create descriptors for the time slices
+    while (xDesc.size() < shapeX[2])
+    {
+        size_t i = xDesc.size();
+        xDesc.push_back(cudnnTensorDescriptor_t());
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&xDesc[i]));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(xDesc[i], CUDNN_DATA_FLOAT, 3, dimX1, strideX));
+    }
 }
 
 template <class ElemType>
@@ -64,36 +76,18 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
-    // get input data layout
-    // source shape, stride is [inputSize, seqLength, miniBatch], [1, inputSize, inputSize*seqLength]
-    // target shape, stride is [inputsize, miniBatch, seqLength], [1, inputSize*seqLength, inputSize]
-
-    // check for  in.GetShape().GetRank() == 4
-    // check that in.getDim(3) == 1
+    // assume input, dims=[inputsize, miniBatch, seqLength], stride=[1, inputSize*seqLength, inputSize]
+    // assume output is equivalent
+    // n.b. we should test these assumptions
 
     // compute the transposed tensor shape (in-place)
-    size_t inputSize = shapeX.GetDim(0);
     size_t miniBatch = shapeX.GetDim(1);
     size_t seqLength = shapeX.GetDim(2);
     size_t T = shapeX.GetDim(3); // this is the number of time steps in each parallel sequence - make sure it is one
     if (T != 1)
         RuntimeError("RNN only works in frame mode");
 
-    int dimX[3] = { (int)inputSize, (int)miniBatch, 1 };
-    //int strideX[3] = { 1, dimX[0] * 31, dimX[0] };
-    int strideX[3] = { 1, dimX[0], dimX[0] * dimX[1] };
-
-    while (xDesc.size() < seqLength)
-    {
-        size_t i = xDesc.size();
-        xDesc.push_back(cudnnTensorDescriptor_t());
-        CUDNN_CALL(cudnnCreateTensorDescriptor(&xDesc[i]));
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(xDesc[i], CUDNN_DATA_FLOAT, 3, dimX, strideX));
-    }
-
-    // get output data layout
-    // source shape, stride is [outputSize, seqLength, miniBatch], [1, outputSize, outputSize*seqLength]
-    // target shape, stride is [outputSize, miniBatch, seqLength], [1, outputSize*seqLength, outputSize]
+    SetXDesc(shapeX);
 
     size_t outputSize = shapeY.GetDim(0);
     if (outputSize != 2 * m_rnnT->GetNumHidden())
@@ -104,7 +98,6 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
         RuntimeError("CuDnn ForwardCore: Output sequence length doesn't match input sequence length");
 
     int dimY[3] = { (int)outputSize, (int)miniBatch, 1 };
-    //int strideY[3] = { 1, dimY[0] * 31, dimY[0] };
     int strideY[3] = { 1, dimY[0], dimY[0] * dimY[1] };
 
     while (yDesc.size() < seqLength)

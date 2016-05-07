@@ -61,26 +61,25 @@ private:
     CuDnnDropout m_dropout;
     size_t m_numHidden;
     size_t m_numLayers;
+    size_t m_seqLength;
+    bool m_bidirectional;
+    cudnnRNNMode_t m_rnnMode;
 public:
-    CuDnnRNN(const size_t numLayers, const size_t numHidden)
+    CuDnnRNN(const size_t numLayers, const size_t numHidden, const size_t seqLength, bool bidirectional, cudnnRNNMode_t RNNMode)
         : m_rnnDesc(nullptr), m_dropout(0.0f), m_numHidden(numHidden), m_numLayers(numLayers),
+        m_seqLength(seqLength), m_bidirectional(bidirectional), m_rnnMode(RNNMode),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
 
-        // hard code these for now, expose other types later.
-        cudnnRNNMode_t RNNMode = CUDNN_LSTM;
-        int seqLength = 31;
-        bool bidirectional = true;
-
         CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
             (int)m_numHidden,
-            seqLength,
+            (int)m_seqLength,
             (int)m_numLayers,
             m_dropout,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            RNNMode,
+            m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+            m_rnnMode,
             m_dataType));
     }
 
@@ -93,6 +92,25 @@ public:
         }
     }
 
+    void SetLength(size_t len)
+    {
+        m_seqLength = len;
+        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
+            (int)m_numHidden,
+            (int)m_seqLength,
+            (int)m_numLayers,
+            m_dropout,
+            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
+            m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+            m_rnnMode,
+            m_dataType));
+    }
+
+    size_t GetLength()
+    {
+        return m_seqLength;
+    }
+
     operator cudnnRNNDescriptor_t() const
     {
         return m_rnnDesc;
@@ -103,6 +121,7 @@ public:
 
     DISABLE_COPY_AND_MOVE(CuDnnRNN);
 };
+
 template <class ElemType>
 class CuDnnFilter
 {
@@ -160,26 +179,34 @@ class CuDnnRNNExecutor
 {
     CuDnn::ptr_t m_cudnn;
     cudnnDataType_t m_dataType;
+    size_t m_inputSize;
+    size_t m_miniBatchSize;
 public:
-    CuDnnRNNExecutor(const TensorShape &/*inputShape*/, const TensorShape &/*outputShape*/, const size_t numRows, const size_t numHidden) :
+    CuDnnRNNExecutor(const TensorShape& shapeX, const size_t hiddenSize, const size_t numLayers, bool bidirectional=false, cudnnRNNMode_t RNNMode = cudnnRNNMode_t::CUDNN_LSTM ) :
         m_cudnn(CuDnn::Instance()),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
+        m_inputSize(shapeX[0]),
+        m_miniBatchSize(shapeX[1]),
         m_BackwardDataCalledYet(false)
     {
-        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(numRows, numHidden);
+        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(numLayers, hiddenSize, shapeX[2], bidirectional, RNNMode);
     }
 
-    size_t GetWSize(cudnnTensorDescriptor_t *xDesc);
+    size_t GetWSize();
 
     void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
+    void SetLength(int len)
+    {
+        m_rnnT->SetLength(len);
+    }
+
 protected:
     std::unique_ptr<CuDnnFilter<ElemType>> wDesc;
     vector<cudnnTensorDescriptor_t> xDesc;
     vector<cudnnTensorDescriptor_t> yDesc;
-
 
 private:
     static ElemType* ptr(GPUMatrix<ElemType>& src)
@@ -190,6 +217,8 @@ private:
     {
         return src.Data();
     }
+
+    void SetXDesc(const TensorShape& x);
 
 private:
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;
