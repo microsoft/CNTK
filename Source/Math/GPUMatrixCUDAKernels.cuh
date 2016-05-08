@@ -148,13 +148,18 @@ struct GridDim
         return props;
     }
 
+    static size_t GetDeviceId()
+    {
+        int deviceId;
+        cudaGetDevice(&deviceId);
+        return (size_t)deviceId;
+    }
+
     // get device properties of current device
     static const cudaDeviceProp& GetDeviceProps()
     {
         static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
-        int deviceId;
-        cudaGetDevice(&deviceId);
-        return props[deviceId];
+        return props[GetDeviceId()];
     }
 
     // compute our location on the grid
