@@ -890,7 +890,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
         MarkDropoutNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
-
         // node data was changed
         // TODO: move this to that function as well--just tired to pass everything as arguments
         // TODO: We should do this right after the GetMinibatch() call, since that's where these changed.
@@ -2300,6 +2299,111 @@ void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNet
     list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
     for (auto& nodeIter : dropoutNodes)
         nodeIter->SetEvalTimeStampOutdatedWrtAll();
+}
+
+template <class ElemType>
+void SGD<ElemType>::SynchronizeParallelWorkersState(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode)
+{
+    if (m_mpi != nullptr)
+    {
+        // Some of the state across different parallel workers may differ across epoch boundaries.
+        // This is not right and should be addressed to ensure precise restartability from checkpoints.
+        // The current known issues of the state of parallel workers diverging across epochs are
+        // a) Running mean and invStd parameters of BatchNormalization nodes
+        // b) Smoothed gradients for Momentum, AdaGrad, RMSProp etc in case of ModelAveraging and BlockMomentum
+
+        // The following temporarily addresses (a) above by synchronizing the running mean and invStd parameters of
+        // all BatchNormalization nodes across all parallel workers; Rank 0's parameter values are broadcast to all.
+
+        auto batchNormalizationNodes = net->GetNodesWithType(OperationNameOf(BatchNormalizationNode), criterionNode);
+        if (!batchNormalizationNodes.empty())
+        {
+            std::vector<Matrix<ElemType>*> runningMeanMatrices;
+            std::vector<Matrix<ElemType>*> runningInvStdDevMatrices;
+            for (auto& nodeIter : batchNormalizationNodes)
+            {
+                auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeIter);
+
+                // Only need to sync the params for nodes that are blending
+                if (node->IsBlendingCurrentlyEnabled())
+                {
+                    auto runningMeanAndInvStdDevParams = node->GetRunningMeanAndInvStdDevParams();
+                    runningMeanMatrices.push_back(&(runningMeanAndInvStdDevParams.first));
+                    runningInvStdDevMatrices.push_back(&(runningMeanAndInvStdDevParams.second));
+                }
+            }
+
+            size_t numBNNodesWithBlendingEnabled = runningMeanMatrices.size();
+            if (numBNNodesWithBlendingEnabled != 0)
+            {
+                int deviceId = runningMeanMatrices[0]->GetDeviceId();
+                std::unique_ptr<GPUDataTransferer<ElemType>> gpuDataTransferer;
+                std::vector<std::vector<ElemType>> runningMeanIntermediateGPUTransferBuffers;
+                std::vector<std::vector<ElemType>> runningInvStdDevIntermediateGPUTransferBuffers;
+                if (deviceId != CPUDEVICE)
+                {
+                    gpuDataTransferer.reset(new GPUDataTransferer<ElemType>(deviceId, false));
+
+                    for (size_t i = 0; i < numBNNodesWithBlendingEnabled; ++i)
+                    {
+                        runningMeanIntermediateGPUTransferBuffers.push_back(std::vector<ElemType>(runningMeanMatrices[i]->GetNumElements()));
+                        runningInvStdDevIntermediateGPUTransferBuffers.push_back(std::vector<ElemType>(runningInvStdDevMatrices[i]->GetNumElements()));
+
+                        if (m_mpi->IsMainNode())
+                        {
+                            gpuDataTransferer->CopyGPUToCPUAsync(runningMeanMatrices[i]->Data(), runningMeanMatrices[i]->GetNumElements(), runningMeanIntermediateGPUTransferBuffers[i].data());
+                            gpuDataTransferer->WaitForCopyGPUToCPUAsync();
+
+                            gpuDataTransferer->CopyGPUToCPUAsync(runningInvStdDevMatrices[i]->Data(), runningInvStdDevMatrices[i]->GetNumElements(), runningInvStdDevIntermediateGPUTransferBuffers[i].data());
+                            gpuDataTransferer->WaitForCopyGPUToCPUAsync();
+                        }
+                    }
+                }
+
+                std::vector<ElemType*> runningMeanMPITransferBuffers(numBNNodesWithBlendingEnabled, nullptr);
+                std::vector<ElemType*> runningInvStdDevMPITransferBuffers(numBNNodesWithBlendingEnabled, nullptr);
+                for (size_t i = 0; i < numBNNodesWithBlendingEnabled; ++i)
+                {
+                    if (deviceId == CPUDEVICE)
+                    {
+                        runningMeanMPITransferBuffers[i] = runningMeanMatrices[i]->Data();
+                        runningInvStdDevMPITransferBuffers[i] = runningInvStdDevMatrices[i]->Data();
+                    }
+                    else
+                    {
+                        runningMeanMPITransferBuffers[i] = runningMeanIntermediateGPUTransferBuffers[i].data();
+                        runningInvStdDevMPITransferBuffers[i] = runningInvStdDevIntermediateGPUTransferBuffers[i].data();
+                    }
+                }
+
+                // Now broadcast the running means and invStdDevs of each node from root to all parallel workers
+                std::vector<MPI_Request> bcastRequests(numBNNodesWithBlendingEnabled * 2);
+                for (size_t i = 0; i < numBNNodesWithBlendingEnabled; ++i)
+                {
+                    MPI_Ibcast(runningMeanMPITransferBuffers[i], runningMeanMatrices[i]->GetNumElements(), MPIWrapper::GetDataType(runningMeanMPITransferBuffers[i]), m_mpi->MainNodeRank(), m_mpi->Communicator(), &bcastRequests[i]) || MpiFail("MPI_Ibcast");
+                    MPI_Ibcast(runningInvStdDevMPITransferBuffers[i], runningInvStdDevMatrices[i]->GetNumElements(), MPIWrapper::GetDataType(runningInvStdDevMPITransferBuffers[i]), m_mpi->MainNodeRank(), m_mpi->Communicator(), &bcastRequests[numBNNodesWithBlendingEnabled + i]) || MpiFail("MPI_Ibcast");
+                }
+
+                // Wait for all BCasts to finish
+                MPI_Waitall(bcastRequests.size(), bcastRequests.data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
+
+                if (deviceId != CPUDEVICE)
+                {
+                    for (size_t i = 0; i < numBNNodesWithBlendingEnabled; ++i)
+                    {
+                        if (!m_mpi->IsMainNode())
+                        {
+                            gpuDataTransferer->CopyCPUToGPUAsync(runningMeanIntermediateGPUTransferBuffers[i].data(), runningMeanMatrices[i]->GetNumElements(), runningMeanMatrices[i]->Data());
+                            gpuDataTransferer->WaitForCopyCPUToGPUAsync();
+
+                            gpuDataTransferer->CopyCPUToGPUAsync(runningInvStdDevIntermediateGPUTransferBuffers[i].data(), runningInvStdDevMatrices[i]->GetNumElements(), runningInvStdDevMatrices[i]->Data());
+                            gpuDataTransferer->WaitForCopyCPUToGPUAsync();
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 template class SGD<float>;

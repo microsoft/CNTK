@@ -1,0 +1,61 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ ! -d $TEST_DATA_DIR  || ! -e $TEST_DATA_DIR/Train.txt || ! -e $TEST_DATA_DIR/Test.txt ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [ "$OS" == "Windows_NT" ]; then
+        ExternalDataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+    else
+        ExternalDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+    fi
+
+    echo Looking for data in: $ExternalDataSourceDir
+    if [[ -d "$ExternalDataSourceDir" ]]; then
+        DataSourceDir=$ExternalDataSourceDir/Image/CIFAR/v0
+
+        # Copy the test data to the test run directory
+        echo 'Copying test data to local directory'
+        DataDir=$TEST_RUN_DIR/TestData
+        mkdir $DataDir
+        cp -R $DataSourceDir/*.txt $DataDir || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/Miscellaneous/CIFAR-10/README.md for instructions to get it.
+        exit 1
+    fi
+fi
+
+LogFileName=stderr
+Instances=2
+NumCPUThreads=$(threadsPerInstance $Instances)
+
+# cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
+DeleteModelsAfterTest=0
+cntkmpirun "-n $Instances" 02_BatchNormConv.cntk "numCPUThreads=$NumCPUThreads command=Train parallelTrain=true keepCheckPointFiles=true numMBsToShowResult=4 batchNormalizationTimeConstant=512*2:1#INF batchNormalizationBlendTimeConstant=0*2:1#INF Train=[SGD=[maxEpochs=5]] Train=[SGD=[epochSize=512]]"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank1
+if [ "$ExitCode" != "0" ]; then
+    exit $ExitCode
+fi
+echo === Deleting last 2 epochs and restart
+rm $TEST_RUN_DIR/models/02_BatchNormConv || exit $?
+rm $TEST_RUN_DIR/models/02_BatchNormConv.4 || exit $?
+echo ==== Re-running from checkpoint
+DeleteExistingModels=0
+DeleteModelsAfterTest=1
+cntkmpirun "-n $Instances" 02_BatchNormConv.cntk "numCPUThreads=$NumCPUThreads command=Train parallelTrain=true keepCheckPointFiles=true numMBsToShowResult=4 batchNormalizationTimeConstant=512*2:1#INF batchNormalizationBlendTimeConstant=0*2:1#INF Train=[SGD=[maxEpochs=5]] Train=[SGD=[epochSize=512]]"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank1
+
+# Delete the test data if copied
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+
+exit $ExitCode

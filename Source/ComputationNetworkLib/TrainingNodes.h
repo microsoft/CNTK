@@ -1733,8 +1733,8 @@ public:
 
         const Matrix<ElemType>& scale = Input(1)->Value();
         const Matrix<ElemType>& bias = Input(2)->Value();
-        Matrix<ElemType>& runMean = Input(3)->Value();
-        Matrix<ElemType>& runInvStdDev = Input(4)->Value();
+        Matrix<ElemType>& runMean = GetRunningMeanAndInvStdDevParams().first;
+        Matrix<ElemType>& runInvStdDev = GetRunningMeanAndInvStdDevParams().second;
         assert(scale.GetNumRows() == bias.GetNumRows());
         assert(scale.GetNumCols() == bias.GetNumCols());
         assert(runMean.GetNumRows() == scale.GetNumRows());
@@ -1849,6 +1849,19 @@ public:
             m_normTimeConst = normalizationTimeConstant;
         if (blendTimeConstant != prevBlendTimeConstant)
             m_blendTimeConst = blendTimeConstant;
+    }
+
+    bool IsBlendingCurrentlyEnabled() const
+    {
+        return (m_blendTimeConst != 0);
+    }
+
+    std::pair<Matrix<ElemType>&, Matrix<ElemType>&> GetRunningMeanAndInvStdDevParams()
+    {
+        auto& runMean = Input(3)->Value();
+        auto& runInvStdDev = Input(4)->Value();
+
+        return { runMean, runInvStdDev };
     }
 
 private:

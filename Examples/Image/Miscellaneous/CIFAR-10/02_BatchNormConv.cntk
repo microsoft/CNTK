@@ -24,6 +24,8 @@ stderr = "$OutputDir$/02_BatchNormConv"
 traceLevel = 1
 numMBsToShowResult = 500
 
+parallelTrain = false
+
 Train = [
     action = "train"
     modelPath = "$ModelDir$/02_BatchNormConv"
@@ -40,6 +42,14 @@ Train = [
         maxEpochs = 10
         L2RegWeight = 0
         dropoutRate = 0
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
     ]
     
     reader = [

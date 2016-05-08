@@ -582,6 +582,8 @@ private:
     {
         return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber);
     }
+
+    void SynchronizeParallelWorkersState(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
 };
 
 }}}
