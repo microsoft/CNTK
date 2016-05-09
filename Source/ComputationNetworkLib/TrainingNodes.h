@@ -895,20 +895,22 @@ public:
                 qu.irm += perUrlGainSort(0, url.id);
             }
 
-            //if (qu.irm0 != 0.0)
-            //{
-            //	IRMetricValue += (qu.irm / qu.irm0);
-            //	nValidQueries++;
-            //}
+            if (qu.irm0 != 0.0)
+            {
+            	IRMetricValue += (qu.irm / qu.irm0);
+            	nValidQueries++;
+            }
 
-            IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
-            nValidQueries++;
+            //IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
+            //nValidQueries++;
         }
 
         if (nValidQueries == 0)
             LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
         
-        IRMetricValue = IRMetricValue / nValidQueries * 100;
+        // IRMetricValue = IRMetricValue / nValidQueries * 100;
+        // to make up the reporting
+        IRMetricValue = -IRMetricValue / nValidQueries * 100 * nCols;
         Value().SetValue(IRMetricValue);
         //Value().Print("IRMetric", 0, 0, 0, 0);
 
