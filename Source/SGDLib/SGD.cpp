@@ -792,7 +792,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool useGradientAggregation = UseGradientAggregation(epochNumber);
     bool useModelAggregation = UseModelAggregation(epochNumber);
-    bool useASGD = 
+    bool userAsyncGradientAggregation = UseAsyncGradientAggregation(epochNumber);
     bool useParallelTrain = UseParallelTrain(epochNumber);
 
     // MA-related variables
@@ -872,11 +872,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
     fprintf(stderr, ".\n");
 
-		double readTime = 0, computeTime = 0, commTime = 0;
-		Timer timer, readTimer, computeTimer, commTimer;
+    double readTime = 0, computeTime = 0, commTime = 0;
+    Timer timer, readTimer, computeTimer, commTimer;
 
     timer.Start();
-		readTimer.Start();
+    readTimer.Start();
 
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
@@ -1118,7 +1118,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // using parameter server for parameter update
-        if (useASGD && m_mpi->NumNodesInUse() > 1)
+        if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
             if (GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD && m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
             {
@@ -1208,13 +1208,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
             }
-            // TODO[qiwye]
             if (m_traceLevel > 2)
             {
-                string statcis_formatString = "\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+                fprintf(stderr, ("\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
                     GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n";
-                SGDTrace(stderr, false, statcis_formatString.c_str(), readTime, computeTime, commTime);
+                    GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n").c_str(), readTime, computeTime, commTime);
             }
 
             // progress tracing for compute cluster management
@@ -1264,7 +1262,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync = 0;
     }
 
-    if (useASGD && (m_mpi->NumNodesInUse() > 1))
+    if (userAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
       m_pMultiversoHelper->PushAndPullModel(learnableNodes);
       nSamplesSinceLastModelSync = 0;

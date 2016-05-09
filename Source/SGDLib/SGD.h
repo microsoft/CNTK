@@ -580,6 +580,8 @@ protected:
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+    MultiversoHelper<ElemType>* m_pMultiversoHelper;
+    bool m_pMultiversoHelperBarrier;
 
     bool UseGradientAggregation(size_t epochNumber)
     {
@@ -593,9 +595,13 @@ private:
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
 
+    bool UseAsyncGradientAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
     bool UseParallelTrain(size_t epochNumber)
     {
-        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber);
+        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber) || UseAsyncGradientAggregation(epochNumber);
     }
 };
 
