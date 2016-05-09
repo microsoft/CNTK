@@ -34,8 +34,11 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #if 1 // keep enabled once this works
 #if 1 // log the cases where this is needed
     if (m_needsGradient && !m_gradientInitialized)
-        //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
-        fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+    {
+        static size_t c = 0;
+        if (c++ < 100)
+            fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+    }
 #endif
     if (m_needsGradient)
         LazyZeroGradient(); // set gradient to 0 if this is the first time
@@ -70,6 +73,8 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
+
+            //child->DebugLogMinibatch(/*gradient*/true);
         }
 #ifdef DISPLAY_DEBUG
         else

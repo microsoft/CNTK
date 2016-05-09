@@ -17,17 +17,17 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0%}}
-      - EvalErrPerSample = {{float,tolerance=0%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - EvalErrorPrediction = {{float,tolerance=0%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0%}}
-      - EvalErr[0]PerSample = {{float,tolerance=0%}}
+      - " * {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - EvalErrorPrediction = {{float,tolerance=0%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:

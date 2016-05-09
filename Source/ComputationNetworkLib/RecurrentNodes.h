@@ -321,7 +321,7 @@ public:
                         inp = Input(0)->ValueFor(frDelayed.Sequence(id));
                     // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
-                    out.SetValue(inp);
+                    out.AssignValuesOf(inp);
                 }
             }
         }
@@ -358,7 +358,7 @@ public:
                 inp = Input(0)->ValueFor(frDelayed);
             // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
-            out.SetValue(inp);
+            out.AssignValuesOf(inp);
         }
     }
 

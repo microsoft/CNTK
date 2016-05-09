@@ -17,9 +17,9 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=2%}}
-      - EvalErrPerSample = {{float,tolerance=2%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=2%}}
+      - EvalErrorPrediction = {{float,tolerance=2%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
   BlockMomentumSGD training should have distributed reading enabled:
     patterns:
@@ -39,8 +39,8 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=2%}}
-      - EvalErr[0]PerSample = {{float,tolerance=2%}}
+      - "* {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=2%}}
+      - EvalErrorPrediction = {{float,tolerance=2%}}
 
 

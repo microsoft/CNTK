@@ -6,10 +6,8 @@
 
 import os
 import sys
-import collections
 import numpy as np
 import scipy.sparse
-
 
 def get_cntk_cmd():
     if "CNTK_EXECUTABLE_PATH" not in os.environ:
@@ -20,12 +18,12 @@ def get_cntk_cmd():
 
 
 # Indent model description by how many spaces
-MODEL_INDENTATION = 8
+MODEL_INDENTATION = 4
 
 
 def cntk_to_numpy_shape(shape):
     '''
-    Removes the dynamic axis and returns a tuple represneint the NumPy shape.
+    Removes the dynamic axis and returns a tuple representing the NumPy shape.
 
     Args:
         shape (tuple): CNTK shape iterable
@@ -157,88 +155,6 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
     return '\n'.join(lines)
 
 
-def serialize_input_data(lazy_inputs_def, filename):
-    '''
-    Generates a file readable with `cntk.readers.CNTKTextFormatReader` that
-    can be connected to the inputs of the network and fills in missing
-    information in the lazy input defs (shape, alias).
-
-    Args:
-        lazy_inputs_def (list of `LazyInputReader`s): a list of all the lazy
-        input readers that will be serialized in the filename
-        filename (str): name of the file
-
-    Returns:
-        dictionary of alias -> LazyInputReader that has shape determined and
-        input_alias filled in case it was None
-    '''
-
-    alias_lazy_map = {}
-
-    alias_counter = 0
-    sample_sizes = collections.defaultdict(list)
-    used_aliases = set()
-    for l in lazy_inputs_def:
-        # make sure all inputs have valid unique aliases
-        if l.input_alias is None or l.input_alias.startswith('_'):
-            new_alias = '_I_%i' % alias_counter
-            alias_counter += 1
-            while new_alias in used_aliases:
-                new_alias = '_I_%i' % alias_counter
-                alias_counter += 1
-
-            l.input_alias = new_alias
-            used_aliases.add(new_alias)
-
-        alias_lazy_map[l.input_alias] = l
-
-        # keep track of sample sizes
-        sample_sizes[len(l.batch)].append(l.input_alias)
-
-        shapes_in_tensor = set()
-
-        # make sure that modulo dynamic axis all tensors of one lazy input have
-        # the same shape
-        for tensor in l.batch:
-            if isinstance(tensor, list):
-                tensor = np.asarray(tensor)
-
-            if l.has_dynamic_axis:
-                # collecting the shapes ignoring the dynamic axis
-                shapes_in_tensor.add(tensor.shape[1:])
-            else:
-                shapes_in_tensor.add(tensor.shape)
-
-        # ignoring the dynamic axis, all shapes should be equal
-        if len(shapes_in_tensor) != 1:
-            raise ValueError('except for the sequence dimensions all shapes ' +
-                             'should be the same - instead we %s' %
-                             (", ".join(str(s) for s in shapes_in_tensor)))
-
-        # shapes_in_tensor now contains only one shape, which has the sequence
-        # dimension removed.
-        value_shape = shapes_in_tensor.pop()
-        l.shape = value_shape if value_shape else (1,)
-
-    # make sure all inputs have same sample size
-    if len(sample_sizes) != 1:
-        raise ValueError(
-            'LazyInputReaders have different sizes: %s' % str(sample_sizes))
-
-    sample_size = list(sample_sizes)[0]
-
-    # ready to serialize
-    with open(filename, 'w') as f:
-        for idx in range(sample_size):
-            alias_tensor_map = {}
-            for l in lazy_inputs_def:
-                if l.has_dynamic_axis:
-                    alias_tensor_map[l.input_alias] = l.batch[idx]
-                else:
-                    alias_tensor_map[l.input_alias] = [l.batch[idx]]
-            f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
-
-    return alias_lazy_map
 
 
 def is_tensor(data):

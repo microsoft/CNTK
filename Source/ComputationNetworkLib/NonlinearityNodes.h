@@ -448,8 +448,18 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+    {
+        Base::BeginForwardProp();
+        // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+        // TODO: This is a stopgap. Is this the right thing to do? It changes the matrix type in-place.
+        Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
+    }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -485,10 +495,8 @@ public:
         }
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
-    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
+    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return false; }
 };
 
 template class IfNode<float>;
