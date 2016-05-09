@@ -17,8 +17,8 @@ import numpy as np
 import cntk as C
 
 
-train_N = 5000
-test_N = 1000
+train_N = 1000
+test_N = 500
 
 # Mapping 2 numbers to 3 classes
 feature_dim = 2
@@ -68,6 +68,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
 
     my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25,
             learning_rates_per_mb=0.1, max_epochs=3)
+
     with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
         ctx.device_id = device_id
 
@@ -87,9 +88,9 @@ def test_logistic_regression_with_numpy(device_id):
 
     TOLERANCE_ABSOLUTE = 1E-06
     print(result)
-    assert np.allclose(result['perplexity'], 1.72316154, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 0.54416071, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 8.19754492, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['perplexity'], 2.33378225, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.84749023, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 2.69121655, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression_with_numpy())
