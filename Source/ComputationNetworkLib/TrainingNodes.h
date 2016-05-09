@@ -1702,8 +1702,11 @@ public:
             m_dScale->Resize(scale);
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, sliceInputGrad, scale,
-                                              *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
+            // If m_blendTimeConst is infinity then use running mean/var instead of saved ones as they
+            // might not be computed during forward pass.
+            const Matrix<ElemType>& m   = !isfinite(m_blendTimeConst) ? Input(3)->Value() : *m_saveMean;
+            const Matrix<ElemType>& isd = !isfinite(m_blendTimeConst) ? Input(4)->Value() : *m_saveInvStdDev;
+            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, sliceInputGrad, scale, m, isd, *m_dScale, *m_dBias);
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
@@ -1820,25 +1823,25 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-            RequestMatrixFromPool(m_saveMean, matrixPool);
-            RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
-        }
+        RequestMatrixFromPool(m_saveMean, matrixPool);
+        RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
+    }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-            RequestMatrixFromPool(m_dScale, matrixPool);
-            RequestMatrixFromPool(m_dBias, matrixPool);
-        }
+        RequestMatrixFromPool(m_dScale, matrixPool);
+        RequestMatrixFromPool(m_dBias, matrixPool);
+    }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-            ReleaseMatrixToPool(m_saveMean, matrixPool);
-            ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
-            ReleaseMatrixToPool(m_dScale, matrixPool);
-            ReleaseMatrixToPool(m_dBias, matrixPool);
-        }
+        ReleaseMatrixToPool(m_saveMean, matrixPool);
+        ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+        ReleaseMatrixToPool(m_dScale, matrixPool);
+        ReleaseMatrixToPool(m_dBias, matrixPool);
+    }
 
     void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
                                        double blendTimeConstant, double prevBlendTimeConstant)

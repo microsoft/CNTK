@@ -332,7 +332,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
     assert(gridDim.z == 1);
     assert((spatialSize % U) == 0);
     assert((vectorSize % spatialSize) == 0);
-    assert(::isfinite(expAvgFactor) && expAvgFactor > 0);
+    assert(::isfinite(expAvgFactor) && expAvgFactor >= 0);
     assert(::isfinite(epsilon) && epsilon > 0);
 
     int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
