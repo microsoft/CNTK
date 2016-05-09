@@ -120,7 +120,6 @@ struct ScopeLock
 //
 void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
 {
-    return;
     memset(&g_profilerState, 0, sizeof(g_profilerState));
 
     LockInit();
@@ -144,7 +143,6 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
 {
-    return 0;
     if (!g_profilerState.init) return 0;
 
     LOCK
@@ -166,7 +164,6 @@ int PERF_PROFILER_API ProfilerTimeBegin(const char* description)
 
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 {
-    return;
     long long endClock = GetClock();
     if (!g_profilerState.init) return;
 
@@ -195,7 +192,6 @@ void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 //
 int PERF_PROFILER_API ProfilerThroughputBegin(int eventId)
 {
-    return 0;
     if (!g_profilerState.init) return 0;
 
     LOCK
@@ -220,7 +216,6 @@ int PERF_PROFILER_API ProfilerThroughputBegin(const char* description)
 
 void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 {
-    return;
     long long endClock = GetClock();
     if (!g_profilerState.init) return;
 
@@ -250,7 +245,6 @@ void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 //
 void PERF_PROFILER_API ProfilerClose()
 {
-    return;
     if (!g_profilerState.init) return;
 
     LockClose();
@@ -278,7 +272,7 @@ void PERF_PROFILER_API ProfilerClose()
 //
 long long GetClockFrequency()
 {
-    long frequency;
+    long long frequency;
 
 #ifdef _WIN32
     QueryPerformanceFrequency((LARGE_INTEGER*)&frequency);
