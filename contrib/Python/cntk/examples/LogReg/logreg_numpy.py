@@ -25,9 +25,12 @@ feature_dim = 2
 num_classes = 3
 
 def synthetic_data(N, feature_dim, num_classes):
-    # create synthetic data using numpy
-    X = np.random.randn(N, feature_dim)
+    # Create synthetic data using NumPy. 
     Y = np.random.randint(size=(N, 1), low=0, high=num_classes)
+
+    # Make sure that the data is separable
+    X = (np.random.randn(N, feature_dim)+3) * (Y+1)
+
     # converting class 0 into the vector "1 0 0", 
     # class 1 into vector "0 1 0", ...
     class_ind = [Y==class_number for class_number in range(num_classes)]
@@ -63,8 +66,10 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
     eval.tag = 'eval'
     eval.name = eval_name
 
-    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-    with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
+    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25,
+            learning_rates_per_mb=0.1, max_epochs=3)
+
+    with C.LocalExecutionContext('logreg', clean_up=True) as ctx:
         ctx.device_id = device_id
 
         ctx.train(
@@ -81,10 +86,11 @@ def test_logistic_regression_with_numpy(device_id):
     result = train_eval_logistic_regression_with_numpy('crit_node',
             'eval_node', device_id)
 
-    TOLERANCE_ABSOLUTE = 1E-04
-    assert np.allclose(result['perplexity'], 3.00116189, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 1.09899951, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 1.01046753, atol=TOLERANCE_ABSOLUTE)
+    TOLERANCE_ABSOLUTE = 1E-06
+    print(result)
+    assert np.allclose(result['perplexity'], 2.33378225, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.84749023, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 2.69121655, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression_with_numpy())
