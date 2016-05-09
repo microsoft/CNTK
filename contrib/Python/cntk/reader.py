@@ -211,9 +211,9 @@ class CNTKTextFormatReader(AbstractReader):
         '''
 
         if input_map.has_unmapped():
+            assert len(input_map.node_map) == 0
             input_map._serialize_unmapped_nodes(
                 input_map.unmapped_nodes, self.filename)
-
 
         for node_or_name, param_dict in input_map.node_map.items():
             if (isinstance(node_or_name, ComputationNode)):
@@ -480,7 +480,9 @@ class InputMap(object):
             assert not self.node_map
             self._serialize_unmapped_nodes(filename)
             
-            r = CNTKTextFormatReader(filename)
+            # All the data we got, was through NumPy. In this case, we assume
+            # that all the required randomization has happened already.
+            r = CNTKTextFormatReader(filename, randomize=None)
 
             return r._to_config_description(self)
 

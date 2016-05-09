@@ -16,28 +16,47 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import numpy as np
 import cntk as C
 
+
+train_N = 5000
+test_N = 1000
+
+# Mapping 2 numbers to 3 classes
+feature_dim = 2
+num_classes = 3
+
+def synthetic_data(N, feature_dim, num_classes):
+    # Create synthetic data using NumPy. 
+    Y = np.random.randint(size=(N, 1), low=0, high=num_classes)
+
+    # Make sure that the data is separable
+    X = (np.random.randn(N, feature_dim)+3) * (Y+1)
+
+    # converting class 0 into the vector "1 0 0", 
+    # class 1 into vector "0 1 0", ...
+    class_ind = [Y==class_number for class_number in range(num_classes)]
+    Y = np.asarray(np.hstack(class_ind), dtype=int)
+
+    return X, Y
+
 def train_eval_logistic_regression_with_numpy(criterion_name=None,
         eval_name=None, device_id=-1):
 
     # for repro and tests :-)
     np.random.seed(1)
 
-    N = 500
-    d = 250
+    train_X, train_y = synthetic_data(train_N, feature_dim, num_classes)
+    test_X, test_y = synthetic_data(test_N, feature_dim, num_classes)
 
-    # create synthetic data using numpy
-    X = np.random.randn(N, d)
-    Y = np.random.randint(size=(N, 1), low=0, high=2)
-    Y = np.hstack((Y, 1-Y))
-
-    # set up the training data for CNTK
-    x = C.input_numpy(X)
-    y = C.input_numpy(Y)
+    # Set up the training data for CNTK. Before writing the CNTK configuration,
+    # the data will be attached to X.reader.batch and y.reader.batch and then
+    # serialized. 
+    X = C.input_numpy(train_X)
+    y = C.input_numpy(train_y)
 
     # define our network -- one weight tensor and a bias
-    W = C.parameter(value=np.zeros(shape=(2, d)))
-    b = C.parameter(value=np.zeros(shape=(2, 1)))
-    out = C.times(W, x) + b
+    W = C.parameter(value=np.zeros(shape=(num_classes, feature_dim)))
+    b = C.parameter(value=np.zeros(shape=(num_classes, 1)))
+    out = C.times(W, X) + b
 
     ce = C.cross_entropy_with_softmax(y, out)
     ce.tag = 'criterion'
@@ -47,14 +66,17 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
     eval.tag = 'eval'
     eval.name = eval_name
 
-    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-    with C.LocalExecutionContext('logreg') as ctx:
+    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25,
+            learning_rates_per_mb=0.1, max_epochs=3)
+    with C.LocalExecutionContext('logreg', clean_up=False) as ctx:
         ctx.device_id = device_id
 
         ctx.train(
                 root_nodes=[ce,eval], 
                 training_params=my_sgd)
 
+        # For testing, we attach the test data to the input nodes.
+        X.reader.batch, y.reader.batch = test_X, test_y
         result = ctx.test(root_nodes=[ce,eval])
         return result
 
@@ -63,10 +85,11 @@ def test_logistic_regression_with_numpy(device_id):
     result = train_eval_logistic_regression_with_numpy('crit_node',
             'eval_node', device_id)
 
-    TOLERANCE_ABSOLUTE = 1E-02
-    assert np.allclose(result['perplexity'], 1.55057073, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 0.43862308, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 1.16664551, atol=TOLERANCE_ABSOLUTE)
+    TOLERANCE_ABSOLUTE = 1E-06
+    print(result)
+    assert np.allclose(result['perplexity'], 1.72316154, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.54416071, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 8.19754492, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_logistic_regression_with_numpy())
