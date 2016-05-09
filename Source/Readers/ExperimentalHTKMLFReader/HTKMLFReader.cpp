@@ -105,7 +105,8 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         LogicError("Please specify at least a single input stream.");
     }
 
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
+    bool cleanse = readerConfig(L"checkData", false);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
     int verbosity = readerConfig(L"verbosity", 2);
     std::wstring readMethod = config.GetRandomizer();
 
