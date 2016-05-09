@@ -511,14 +511,24 @@ Parameters =
     StabilizeElements (x, inputDim=x.dim, enabled=true) =
         if enabled
         then [
-            beta = Exp (BiasParam ((inputDim))) # init value is 0
+            #beta = Exp (BiasParam ((inputDim))) # init value is 0
+            #beta = ParameterTensor ((inputDim), init='fixedValue', value=1.0) # init value is 1
+            # or SoftPlus: ln(1+e^beta)
+            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), init='fixedValue', value=0.54132485/*ln (e-1)*/))) # init value is 1
 
-            TraceDense (h, what) =
-                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
+            # sharpened Softplus: 1/f ln(1+e^{f*beta})
+            # this behaves linear for weights around 1, yet guarantees positiveness
+
+            f = ConstantTensor (4, (1))
+            fInv = Reciprocal (f)
+            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), init='fixedValue', value=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
+
+            TraceDense (h, what) = h  # delete h and uncomment Trace to trace the beta values. They are a valuable indicator.
+                //Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
 
             result = TraceDense (    beta,    'beta') .* x
         ].result
-    else x
+        else x
 
     # and the same with a scalar stabilizer shared across all components
     Stabilize (x, enabled=true) = if enabled then StabilizeElements (x, inputDim=1, enabled=true) else x
@@ -700,17 +710,16 @@ Seq2Seq =
         AugmentInputHook (input, prevState) =
         [
             # compute additional hidden state from attention
-            #outputDim = decoderDims[0]
             outputDim = prevState.dim
             W = Parameters.WeightParam (attentionDim, outputDim)
-            #projectedH = W * prevState.h                           # [outputDim] or [outputDim x D] in beam search
             projectedH = W * S(prevState.h)                           # [outputDim] or [outputDim x D] in beam search
             tanHOut = Tanh (projectedAttentionWindowBroadcast.projectedValue + projectedH) # [attentionDim x beamDepth x attentionSpan]
 
-            TraceDense (h, what) =
-                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".4" ])
-            TraceDenseTransposed (h, what) =
-                Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = true ; precisionFormat = ".4" ])
+            # You can enable (uncomment) these Trace macros to enable tracing of the attention weights, which is a useful indicator.
+            TraceDense (h, what) = h
+                //Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".4" ])
+            TraceDenseTransposed (h, what) = h
+                //Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = true ; precisionFormat = ".4" ])
 
             v = TraceDenseTransposed(    Parameters.WeightParam (1, attentionDim)     ,'v')                           # [1 x attentionDim]
             u = v * S(tanHOut .* projectedAttentionWindowBroadcast.valid) # [1 x beamDepth x attentionSpan]
@@ -718,7 +727,6 @@ Seq2Seq =
             uValid = u + Log (projectedAttentionWindowBroadcast.valid)    # [1 x beamDepth x attentionSpan]
 
             attentionWeights = Softmax (uValid, axis=3)                    # [1 x beamDepth x attentionSpan]
-            #attentionWeights = Softmax (uValid)                    # [1 x beamDepth x attentionSpan]
             weightedAttentionWindow = projectedAttentionWindowBroadcast.value .* TraceDense(  attentionWeights    ,'weights') # [encoderHiddenDim x beamDepth x attentionSpan]
             # TODO: use ReduceSum:
             # this is the auxiliary input to the LSTMP function

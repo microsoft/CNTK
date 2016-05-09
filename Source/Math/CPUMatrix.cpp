@@ -659,8 +659,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
-        auto jInF = idx(0, jOut); // this is the column we need to get
-        if (jInF < 0)           // negative index means gap
+        auto jInF = idx(0, jOut);         // this is the column we need to get
+        if (std::isnan(jInF) || jInF < 0) // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
@@ -691,8 +691,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
-        auto jOutF = idx(0, jIn); // this is the column we copy/add into
-        if (jOutF < 0)            // negative index means gap
+        auto jOutF = idx(0, jIn);           // this is the column we copy/add into
+        if (std::isnan(jOutF) || jOutF < 0) // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
@@ -1113,18 +1113,15 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {
     if (IsEmpty())
         LogicError("SetUniformRandomValue: Matrix is empty.");
 
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    assert(cpuRNGHandle != nullptr);
+
     auto& us = *this;
-#ifdef _MSC_VER // TODO: check if available under GCC/Linux
-    std::ranlux64_base_01 generator;
-    generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-#else
-    std::default_random_engine generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-#endif
     std::uniform_real_distribution<ElemType> r(0, 1);
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
@@ -1134,19 +1131,19 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 1, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 2, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 3, j) = v <= maskRate ? 0 : scaleValue;
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? 0 : scaleValue;
         }
     }

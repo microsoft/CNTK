@@ -247,7 +247,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
-    result.reserve(chunk.GetTotalFrames());
+    result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
     size_t offsetInChunk = 0;
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {

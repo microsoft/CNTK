@@ -1040,7 +1040,7 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& seed)
 {
 }
 
@@ -2197,6 +2197,19 @@ void GPUDataTransferer<ElemType>::WaitForCopyCPUToGPUAsync()
 }
 
 #pragma endregion GPUDataTransferer functions
+
+#pragma region GPURNGHandle functions
+
+GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
+    : RNGHandle(deviceId)
+{
+}
+
+/*virtual*/ GPURNGHandle::~GPURNGHandle()
+{
+}
+
+#pragma endregion GPURNGHandle functions
 
 template class GPUMatrix<char>;
 template class GPUMatrix<float>;

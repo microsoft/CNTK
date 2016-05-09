@@ -269,4 +269,4 @@ __global__ void kAveragePoolingBackward(int batchSize, const int* mpRowCol, cons
     }
 }
 
-} } }
+}}}

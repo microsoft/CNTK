@@ -4,8 +4,8 @@
 ############################################################################
 # G2P.cntk                                                                 #
 #                                                                          #
-# Example for sequence-to-sequence modeling for letter-to-sound conversion #
-# on the CMUDict                                                           #
+# Example for sequence-to-sequence modeling for grapheme-to-phoneme        #
+# (aka letter-to-sound) conversion on the CMUDict                          #
 ############################################################################
 
 # directory defaults (if not overridden)
@@ -23,9 +23,9 @@ command = train
 makeMode = false
 
 # experiment id
-deviceId = 0
-ExpId = 30-$deviceId$-g2p
-#ExpId = 26-4-g2p # change to different id when decoding a different model
+deviceId = 0             # set the GPU device here, or "auto" to auto-select; or override from the command line.
+ExpId = g2p-1-$deviceId$ # choose a meaningful id here. This is used for unique directory and filenames.
+#ExpId = g2p-1-0 # change to different id when decoding a different model
 
 # directories
 ExpDir    = "$ExpRootDir$/$ExpId$"
@@ -38,8 +38,8 @@ traceLevel = 1
 modelPath  = "$ModelDir$/G2P.dnn"
 
 # decoding config  --used by the "write" command ("write" decodes and writes the result)
-beamDepth = 1                                      # 0=predict; 1=greedy; >1=beam
-decodeModel = 31
+beamDepth = 3                                      # 0=predict; 1=greedy; >1=beam
+decodeModel = 9
 decodeModelPath = "$modelPath$.$decodeModel$"      # note: epoch to decode is appended to the model path
 decodeOutputPath = "$decodeModelPath$.$beamDepth$" # results are written next to the model, with beamDepth appended
 
@@ -52,6 +52,8 @@ maxLayer = 2
 isBidirectional = false
 
 # comment/uncomment this or the next block to switch between readers
+# Note: Currently this configuration cannot reach the same result with CNTKTextFormatReader.
+# This is being investigated. For now, please use the LMSequenceReader.
 # --- begin uncomment for LMSequenceReader ---
 readerType = "LMSequenceReader"
 useCNTKTextFormatReader = false
@@ -71,7 +73,7 @@ fileExt = "joint"
 # --- end uncomment ---
 
 # corpus
-maxLength = 20
+maxLength = 20           # 0 disables attention
 isAutoEncoder=false
 startSymbol = "<s>"
 trainFile = "g014b2b.train-dev-20-21.bsf.$fileExt$"
@@ -97,12 +99,12 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     labelVocabDim = $labelVocabSize$
 
     isAutoencoder = $isAutoEncoder$     # input is only one sequence, meant to reproduce itself
-    attentionSpan = $maxLength$         # attention window, must be large ebnough for largest input sequence. 0 to disable. Exactly 20 is needed for the g2p CMUDict task
+    attentionSpan = $maxLength$         # attention window, must be large enough for largest input sequence. 0 to disable. Exactly 20 is needed for the g2p CMUDict task
     useBidirectionalEncoder = $isBidirectional$ # bi-directional LSTM for encoder
 
     shareEmbeddings = $shareEmbeddings$
     hiddenDim       = $hiddenDim$
-    attentionDim    = 128 # dim of attention  projection
+    attentionDim    = 128               # dim of attention  projection
     maxLayer        = $maxLayer$        # e.g. 2 for 3 hidden layers
 
     useStabilizer = true
@@ -195,9 +197,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     #  3. attention
 
     # get the final encoder state for use as the initial state
+    # For beam decoding, we will also inject a second dimension.
     thoughtVector = [
-        h = BS.Sequences.Last (encoderOutput.h)
-        c = BS.Sequences.Last (encoderOutput.c)
+        h = ReshapeDimension (BS.Sequences.Last (encoderOutput.h), 1, (dim:1))
+        c = ReshapeDimension (BS.Sequences.Last (encoderOutput.c), 1, (dim:1))
         dim = encoderOutput.dim
     ]
 
@@ -229,7 +232,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     PreviousHCFromThoughtVectorWithReorderingHook (lstmState, layerIndex=0) =
         if layerIndex > 0 then PreviousHCWithReorderingHook (lstmState, layerIndex=1)
         else [ # with both thought vector and beam-search hook
-            isFirst = BS.Loop.IsFirst (initialState.h)
+            isFirst = BS.Loop.IsFirst (labelsEmbedded)
             h = BS.Boolean.If (isFirst, thoughtVectorBroadcast.h, BS.Loop.Previous (lstmState.h * beamSearchReorderHook))
             c = BS.Boolean.If (isFirst, thoughtVectorBroadcast.c, BS.Loop.Previous (lstmState.c * beamSearchReorderHook))
             dim = lstmState.dim
@@ -301,12 +304,14 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # training criteria
     #############################################################
 
-    ce   = Pass (ReduceLogSum (z) - ReduceSum (labelSequence .*          z ), tag='criterion')
-    errs = Pass (BS.Constants.One - ReduceSum (labelSequence .* Hardmax (z)), tag='evaluation')
-
+    #ce   = Pass (ReduceLogSum (z) - ReduceSum (labelSequence .*          z ), tag='criterion')
+    #errs = Pass (BS.Constants.One - ReduceSum (labelSequence .* Hardmax (z)), tag='evaluation')
     #ce2 = Negate (ReduceSum (labelSequence .* LogSoftmax (z)), tag='evaluation')
     #ce1 = CrossEntropyWithSoftmax (labelSequence, z, tag='evaluation')   // this is the training objective
     #errs = ErrorPrediction         (labelSequence, z, tag='evaluation')  // this also gets tracked
+
+    ce   = Pass (ReduceLogSum (z) - TransposeTimes (labelSequence,          z),  tag='criterion')
+    errs = Pass (BS.Constants.One - TransposeTimes (labelSequence, Hardmax (z)), tag='evaluation')
 
     # score output for decoding
     scoreSequence = Pass (z)

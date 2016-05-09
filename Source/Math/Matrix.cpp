@@ -1414,15 +1414,15 @@ void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemTyp
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {
     if (IsEmpty())
         return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->SetUniformRandomMask(maskRate, scaleValue, seed),
-                            m_GPUMatrix->SetUniformRandomMask(maskRate, scaleValue, seed),
+                            m_CPUMatrix->SetUniformRandomMask(maskRate, scaleValue, rngHandle),
+                            m_GPUMatrix->SetUniformRandomMask(maskRate, scaleValue, rngHandle),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

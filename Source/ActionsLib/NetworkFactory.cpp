@@ -89,7 +89,7 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
             L"precision = '%ls'\n"        // 'float' or 'double'
             L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
             (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
-        let expr = BS::ParseConfigDictFromString(sourceOfBS, move(includePaths));
+        let expr = BS::ParseConfigDictFromString(sourceOfBS, L"BrainScriptNetworkBuilder", move(includePaths));
 
         // the rest is done in a lambda that is only evaluated when a virgin network is needed
         // Note that evaluating the BrainScript *is* instantiating the network, so the evaluate call must be inside the lambda.

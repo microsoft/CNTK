@@ -147,6 +147,7 @@
     <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk" />
     <Text Include="Config\ImageReaderSimple_Config.cntk" />
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
+    <Text Include="Control\CNTKTextFormatReader\100x100x3_jagged_sequences_dense_sorted.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_1_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_2_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\10x1_MI_1_dense.txt" />
@@ -154,6 +155,7 @@
     <Text Include="Control\CNTKTextFormatReader\1x1_1_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\1x1_2_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\1x1_sparse.txt" />
+    <Text Include="Control\CNTKTextFormatReader\200x200x2_seq2seq_dense_sorted.txt" />
     <Text Include="Control\CNTKTextFormatReader\blank_lines.txt" />
     <Text Include="Control\CNTKTextFormatReader\empty_samples.txt" />
     <Text Include="Control\CNTKTextFormatReader\invalid_input_Control.txt" />
@@ -180,10 +182,12 @@
     <Text Include="Control\ImageReaderSimple_Control.txt" />
     <Text Include="Control\ImageReaderZip_Control.txt" />
     <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
+    <Text Include="Data\CNTKTextFormatReader\100x100x3_jagged_sequences_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\100x1_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\10x1_MI_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\1x1_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\1x1_sparse.txt" />
+    <Text Include="Data\CNTKTextFormatReader\200x200x2_seq2seq_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\contains_blank_lines.txt" />
     <Text Include="Data\CNTKTextFormatReader\duplicate_inputs.txt" />
     <Text Include="Data\CNTKTextFormatReader\empty_samples.txt" />
