@@ -265,8 +265,8 @@ struct TensorOps
 // function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
 
-//#define ReduceElemType double
-#define ReduceElemType ElemType
+#define ReduceElemType double
+//#define ReduceElemType ElemType
 
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorOpReduce
@@ -611,9 +611,11 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     GridDim grid(NN);
     let& props = GridDim::GetDeviceProps();
     // === simple case: NN large, one thread per output element
+    bool disableParallelReduction = false;                       // (for debugging)
     if (reductionDim == 1 ||                                     // no reduction
         grid.m_blocksPerGrid >= props.multiProcessorCount ||     // enough output elements to fill all multiprocs
         reductionDim * numElements <= 2 * props.warpSize ||      // trivial operation not worth the trouble (2* because the more complex one also needs 2 kernel launches)
+        disableParallelReduction ||                              // (for debugging)
         reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
