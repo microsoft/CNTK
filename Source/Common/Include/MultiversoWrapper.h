@@ -69,7 +69,6 @@ public:
         
 #ifndef CPUONLY
         //GPU asynchronous buffer
-        //m_gpuAsyncBuffer = new Matrix<ElemType>**[m_localCacheNumber];
         m_gpuAsyncBuffer.resize(m_localCacheNumber);
         //creat an communication stream for the data tranfer between GPU and CPU
         CudaErrorCheck(cudaStreamCreate(&_commStream));
