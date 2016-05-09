@@ -60,11 +60,13 @@ void CuDnnRNNExecutor<ElemType>::SetXDesc(const TensorShape& shapeX)
     int strideX[3] = { 1, dimX1[0], dimX1[0] * dimX1[1] };
 
     // create descriptors for the time slices
-    while (xDesc.size() < shapeX[2])
+    for (size_t i = 0; i < shapeX[2]; i++)
     {
-        size_t i = xDesc.size();
-        xDesc.push_back(cudnnTensorDescriptor_t());
-        CUDNN_CALL(cudnnCreateTensorDescriptor(&xDesc[i]));
+        if (xDesc.size() <= i)
+        {
+            xDesc.push_back(cudnnTensorDescriptor_t());
+            CUDNN_CALL(cudnnCreateTensorDescriptor(&xDesc[i]));
+        }
         CUDNN_CALL(cudnnSetTensorNdDescriptor(xDesc[i], CUDNN_DATA_FLOAT, 3, dimX1, strideX));
     }
 }
@@ -87,6 +89,9 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     if (T != 1)
         RuntimeError("RNN only works in frame mode");
 
+    if (m_rnnT->GetLength() != seqLength)
+        m_rnnT->SetLength(seqLength);
+
     SetXDesc(shapeX);
 
     size_t outputSize = shapeY.GetDim(0);
@@ -100,11 +105,13 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     int dimY[3] = { (int)outputSize, (int)miniBatch, 1 };
     int strideY[3] = { 1, dimY[0], dimY[0] * dimY[1] };
 
-    while (yDesc.size() < seqLength)
+    for (size_t i = 0; i < seqLength; i++)
     {
-        size_t i = yDesc.size();
-        yDesc.push_back(cudnnTensorDescriptor_t());
-        CUDNN_CALL(cudnnCreateTensorDescriptor(&yDesc[i]));
+        if (yDesc.size() <= seqLength)
+        {
+            yDesc.push_back(cudnnTensorDescriptor_t());
+            CUDNN_CALL(cudnnCreateTensorDescriptor(&yDesc[i]));
+        }
         CUDNN_CALL(cudnnSetTensorNdDescriptor(yDesc[i], CUDNN_DATA_FLOAT, 3, dimY, strideY));
     }
 
