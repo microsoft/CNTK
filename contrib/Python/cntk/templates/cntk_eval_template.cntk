@@ -1,10 +1,7 @@
-
-deviceId=%(DevideId)s
-precision="%(Precision)s"
-
 %(ActionName)s=[
     action="write"
-    nodeUnitTest=%(NodeUnitTest)s
+
+	nodeUnitTest=%(NodeUnitTest)s
     run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[

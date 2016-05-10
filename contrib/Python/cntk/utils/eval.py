@@ -27,7 +27,8 @@ def eval(node):
     
     from cntk.context import get_context        
     from cntk.ops import input_numpy, constant
-
+    from cntk.graph import ComputationNode
+    
     # call a helper method to get a context
     ctx = get_context()    
     first = True    
@@ -38,18 +39,19 @@ def eval(node):
         for p in node.params:
             if p in node.inputs:
                 val = getattr(node, p)
-                # One param needs to be an Input() node. This will being fixed in 
-                # CNTK soon, so that we can remove this workaround and evaluate a 
-                # network with no inputs.
-                if first:
-                    if not isinstance(val, list):                
-                        # inputs have the outmost dimension for sequences
-                        val = [val]
-
-                    ir = input_numpy([val], alias=p, name=p)
-                    setattr(node, p, ir)
-                    first = False
-                else:
-                    setattr(node, p, constant(getattr(node, p), name=p))
+                if not isinstance(val, ComputationNode):
+                    # One param needs to be an Input() node. This will being fixed in 
+                    # CNTK soon, so that we can remove this workaround and evaluate a 
+                    # network with no inputs.
+                    if first:
+                        if not isinstance(val, list):                
+                            # inputs have the outmost dimension for sequences
+                            val = [val]
+    
+                        ir = input_numpy([val], alias=p, name=p)
+                        setattr(node, p, ir)
+                        first = False
+                    else:
+                        setattr(node, p, constant(getattr(node, p), name=p))
 
     return ctx.eval(node)
