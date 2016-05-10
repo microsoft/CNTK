@@ -45,8 +45,8 @@ if [ "$ExitCode" != "0" ]; then
     exit $ExitCode
 fi
 echo === Deleting last 2 epochs and restart
-rm $TEST_RUN_DIR/models/02_BatchNormConv || exit $?
-rm $TEST_RUN_DIR/models/02_BatchNormConv.4 || exit $?
+rm $TEST_RUN_DIR/Models/02_BatchNormConv || exit $?
+rm $TEST_RUN_DIR/Models/02_BatchNormConv.4 || exit $?
 echo ==== Re-running from checkpoint
 DeleteExistingModels=0
 DeleteModelsAfterTest=1
