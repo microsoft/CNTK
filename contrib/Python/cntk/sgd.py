@@ -283,6 +283,19 @@ class SGDParams:
                                       use_zero_threshold_for_1bit = None,
                                       use_buffered_async_gradient_aggregation = None):
 
+        """
+        This function sets the parallel training to Data Paralllel SGD.
+                
+        Args:
+            parallelization_start_epoch: accepts integer value; default is 1
+            distributed_mb_reading: accepts boolean value:  True  or  False ; 
+            default is False It is recommended to turn distributed minibatch 
+            reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats: accepts integer value; default is 0
+            gradient_bits: the number of bits used to send gradient updates
+            use_zero_threshold_for_1bit: TBA
+            use_buffered_async_gradient_aggregation: TBA
+        """
         self._set_global_parallel_params('DataParallelSGD',
                                          parallelization_start_epoch,
                                          distributed_mb_reading,
@@ -299,7 +312,19 @@ class SGDParams:
                                       sync_perf_stats = None,
                                       sync_period = None,
                                       sync_frequency_in_frames = None):
-        
+        """
+        This function sets the parallel training to Model Averaging SGD.
+                
+        Args:
+            parallelization_start_epoch : accepts integer value; default is 1
+            distributed_mb_reading : accepts boolean value:  True  or  False ; 
+            default is False It is recommended to turn distributed minibatch 
+            reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats: accepts integer value; default is 0
+            sync_period: specifies the number of samples that each worker need 
+            to process before a model averaging is conducted. The default value is 40,000.
+            sync_frequency_in_frames: TBA       
+        """        
         self._set_global_parallel_params('ModelAveragingSGD',
                                          parallelization_start_epoch,
                                          distributed_mb_reading,
@@ -319,7 +344,31 @@ class SGDParams:
                                       block_learning_rate = None,
                                       block_momentum_per_sync = None,
                                       block_momentum_as_time_constant = None):
+        """
+        This function sets the parallel training to Block Momentum SGD.
+                
+        Args:
+            parallelization_start_epoch : accepts integer value; default is 1
+            distributed_mb_reading : accepts boolean value:  True  or  False ; 
+            default is False It is recommended to turn distributed minibatch 
+            reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats: accepts integer value; default is 0
+            sync_period: it specifies how frequent a model synchronization is performed. 
+            The default value is 120,000.
+            reset_sgd_momentum: This means after every synchronization point, 
+            the smoothed gradient used in local SGD will be set as 0. The default
+            value of this variable is True. 
+            use_nesterov_momentum: This means the Nestrov style block momentum 
+            is applied. The default value of this variable is True. 
+            block_learning_rate: specifies the block learning rate. 
+            block_momentum_per_sync: TBA
+            block_momentum_as_time_constant: specifies the time constant of the 
+            low-pass filter in block-level model update. It is calculated as: 
+            blockMomentumAsTimeConstant = -syncPeriod / log(block_momentum). 
+            Note that block_momentum_per_sync and block_momentum_as_time_constant 
+            are mutually exclusive
         
+        """        
         self._set_global_parallel_params('BlockMomentumSGD',
                                          parallelization_start_epoch,
                                          distributed_mb_reading,
