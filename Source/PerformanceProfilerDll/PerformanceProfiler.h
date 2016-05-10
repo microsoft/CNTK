@@ -38,6 +38,14 @@ enum ProfilerEvents
     profilerEvtMax,
 };
 
+//
+// Caller-maintained record to measure throughput events.
+//
+struct ThroughputEventRecord
+{
+    long long       beginClock;
+    int             eventId;
+};
 
 //
 // Initialize all resources to enable profiling.
@@ -48,19 +56,18 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir);
 
 //
 // Measure time for either a fixed or a custom event.
-// The *Begin calls return a stateId that is passed to ProfilerTimeEnd().
+// The *Begin call returns a stateId that is passed to ProfilerTimeEnd().
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId);
-int PERF_PROFILER_API ProfilerTimeBegin(const char* description);
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId);
 
 //
 // Measure throughput given a bytes in an *Begin/*End block.
+// The ThroughputEventRecord is meaintained by the caller.
 // Works with fixed or custom events.
 //
-int PERF_PROFILER_API ProfilerThroughputBegin(int eventId);
-int PERF_PROFILER_API ProfilerThroughputBegin(const char* description);
-void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes);
+void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ThroughputEventRecord* throughputEventRecord);
+void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ThroughputEventRecord* throughputEventRecord);
 
 //
 // Generate reports and release all resources.
@@ -98,11 +105,6 @@ public:
         m_stateId = ProfilerTimeBegin(eventId);
     }
 
-    ScopeProfile(const char* description)
-    {
-        m_stateId = ProfilerTimeBegin(description);
-    }
-
     ~ScopeProfile()
     {
         ProfilerTimeEnd(m_stateId);
@@ -112,7 +114,30 @@ public:
 //
 // Function scope profiling.
 //
-#define PROFILE_SCOPE(eventId)      ScopeProfile sp(eventId);
-#define PROFILE_FUNCTION            ScopeProfile sp(__FUNCTION__);
+#define PROFILE_SCOPE(eventId)      ScopeProfile __sp(eventId);
+
+
+//
+// Scoped throughput profiling.
+//
+class ScopeThroughput
+{
+    ThroughputEventRecord   m_throughputEventRecord;
+    long long               m_bytes;
+
+public:
+    ScopeThroughput(int eventId, long long bytes)
+    {
+        m_bytes = bytes;
+        ProfilerThroughputBegin(eventId, &m_throughputEventRecord);
+    }
+
+    ~ScopeThroughput()
+    {
+        ProfilerThroughputEnd(m_bytes, &m_throughputEventRecord);
+    }
+};
+
+#define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st(eventId, bytes);
 
 }}}

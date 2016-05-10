@@ -69,22 +69,12 @@ struct FixedEventRecord
     int             refCnt;
 };
 
-#define THROUGHPUT_EVENT_MAX   1024
-
-struct ThroughputEventRecord
-{
-    long long       beginClock;
-    int             eventId;
-};
-
 struct ProfilerState
 {
     bool                    init = false;
     char                    profilerDir[256];
     long long               clockFrequency;
     FixedEventRecord        fixedEvents[profilerEvtMax];
-    int                     throughputIdx;
-    ThroughputEventRecord   throughputEvents[THROUGHPUT_EVENT_MAX];
 };
 
 #define INVALID_STATE_ID    0xffffffff
@@ -134,14 +124,13 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
         strncpy(g_profilerState.profilerDir, PROFILER_DIR, sizeof(g_profilerState.profilerDir) - 1);
     }
     g_profilerState.clockFrequency = GetClockFrequency();
-    g_profilerState.throughputIdx = -1;
 
     g_profilerState.init = true;
 }
 
 //
 // Measure time for either a fixed or a custom event.
-// The *Begin calls return a stateId that is passed to ProfilerTimeEnd().
+// The *Begin call returns a stateId that is passed to ProfilerTimeEnd().
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
 {
@@ -156,12 +145,6 @@ int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
     g_profilerState.fixedEvents[eventId].refCnt++;
 
     return eventId;
-}
-
-int PERF_PROFILER_API ProfilerTimeBegin(const char* description)
-{
-    UNUSED(description);
-    return 0;
 }
 
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
@@ -190,47 +173,27 @@ void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 
 //
 // Measure throughput given a bytes in an *Begin/*End block.
+// The ThroughputEventRecord is meaintained by the caller.
 // Works with fixed or custom events.
 //
-int PERF_PROFILER_API ProfilerThroughputBegin(int eventId)
+void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ThroughputEventRecord* throughputEventRecord)
 {
-    if (!g_profilerState.init) return INVALID_STATE_ID;
+    if (!g_profilerState.init || throughputEventRecord == nullptr) return;
 
-    LOCK
-    
-    g_profilerState.throughputIdx++;
-    if (g_profilerState.throughputIdx >= THROUGHPUT_EVENT_MAX)
-    {
-        fprintf(stderr, "Error: ProfilerThroughputBegin: Out of profiler slots.\n");
-        return INVALID_STATE_ID;
-    }
-    int stateId = g_profilerState.throughputIdx;
-    g_profilerState.throughputEvents[stateId].eventId = eventId;
-    g_profilerState.throughputEvents[stateId].beginClock = GetClock();
-
-    return stateId;
+    throughputEventRecord->eventId = eventId;
+    throughputEventRecord->beginClock = GetClock();
 }
 
-int PERF_PROFILER_API ProfilerThroughputBegin(const char* description)
-{
-    UNUSED(description);
-    return 0;
-}
-
-void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
+void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ThroughputEventRecord* throughputEventRecord)
 {
     long long endClock = GetClock();
-    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
+    if (!g_profilerState.init || throughputEventRecord == nullptr) return;
 
     LOCK
 
-    if (stateId == g_profilerState.throughputIdx)
-    {
-        g_profilerState.throughputIdx--;
-    }
-    if (endClock == g_profilerState.throughputEvents[stateId].beginClock) return;
-    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - g_profilerState.throughputEvents[stateId].beginClock);
-    int eventId = g_profilerState.throughputEvents[stateId].eventId;
+    if (endClock == throughputEventRecord->beginClock) return;
+    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - throughputEventRecord->beginClock);
+    int eventId = throughputEventRecord->eventId;
     if (g_profilerState.fixedEvents[eventId].cnt == 0)
     {
         g_profilerState.fixedEvents[eventId].min = KBytesPerSec;
@@ -249,6 +212,7 @@ void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 void PERF_PROFILER_API ProfilerClose()
 {
     if (!g_profilerState.init) return;
+    g_profilerState.init = false;
 
     LockClose();
 
@@ -422,7 +386,7 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
 
         case profilerEvtThroughput:
             {
-                if (g_profilerState.throughputIdx == -1 && g_profilerState.fixedEvents[evtIdx].cnt > 0)
+                if (g_profilerState.fixedEvents[evtIdx].cnt > 0)
                 {
                     char str[32];
 

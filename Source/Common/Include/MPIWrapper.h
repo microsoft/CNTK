@@ -313,9 +313,8 @@ public:
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)totalnumelements * sizeof(size_t));
             MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-            ProfilerThroughputEnd(profilerStateId, (long long)totalnumelements * sizeof(size_t));
         }
     }
 
@@ -326,9 +325,8 @@ public:
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(size_t));
             MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
-            ProfilerThroughputEnd(profilerStateId, (long long)nData * sizeof(size_t));
         }
     }
 
@@ -338,9 +336,8 @@ public:
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            auto profilerStateId = ProfilerThroughputBegin(profilerEvtMPIThroughput);
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(size_t));
             MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
-            ProfilerThroughputEnd(profilerStateId, (long long)nData * sizeof(size_t));
         }
     }
 
