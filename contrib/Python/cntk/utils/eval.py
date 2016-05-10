@@ -53,5 +53,8 @@ def eval(node):
                         first = False
                     else:
                         setattr(node, p, constant(getattr(node, p), name=p))
-
+                else:
+                    if val.op_name == 'CNTK2.Input' and first:
+                        first = False
+                        
     return ctx.eval(node)
