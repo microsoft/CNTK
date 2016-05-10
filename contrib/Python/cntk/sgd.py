@@ -393,8 +393,8 @@ class SGDParams:
         for k,v in self.parallel_training_subblock.items():            
             if v:
                 config.append('\t\t{0} = {1}'.format(k, v))    
-        config.append['\t]']                
-        config.append[']']
+        config.append('\t]')
+        config.append(']')
         return '\n'.join(config)
         
     def _to_config_description(self):
@@ -403,7 +403,7 @@ class SGDParams:
         config = []
         auto_adjust_block = []
         for k, v in self.__dict__.items():
-            if  k[0] != '_' and v is not None:
+            if  not k.startswith('parallel_training') and k[0] != '_' and v is not None:
                 # this is a sub-block. 
                 #TODO: perhaps move this to a separete method (set_auto_adjust),
                 # but then the user would need to call it explicitly 
