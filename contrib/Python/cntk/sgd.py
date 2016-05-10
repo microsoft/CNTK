@@ -3,6 +3,8 @@
 # for full license information.
 # ==============================================================================
 
+
+
 class SGDParams:
     """
     This class encapsulates the training parameters of Stochastic Gradien
@@ -260,6 +262,76 @@ class SGDParams:
         self.trace_node_names_category = trace_node_names_category
         self.trace_node_names_sparse = trace_node_names_sparse
         self.gradient_check = gradient_check
+        self.parallel_training_ = None
+        
+    def _set_global_parallel_params(self, 
+                                    parallalization_method = 'none', 
+                                    parallelization_start_epoch = 0,
+                                    distributed_mb_reading = False,
+                                    sync_perf_stats = 0):
+        self.parallel_training = {
+            'parallelizationMethod':parallalization_method,
+            'parallelizationStartEpoch':parallelization_start_epoch,
+            'distributedMBReading':distributed_mb_reading,
+            'syncPerfStats':sync_perf_stats}
+            
+    def set_parallel_to_data_parallel(self, 
+                                      parallelization_start_epoch = 0,
+                                      distributed_mb_reading = False,
+                                      sync_perf_stats = 0,
+                                      gradient_bits = 8,
+                                      use_zero_threshold_for_1bit = True,
+                                      use_buffered_async_gradient_aggregation = False):
+
+        self._set_global_parallel_params('DataParallelSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'gradientBits':gradient_bits,        
+            'useZeroThresholdFor1BitQuantization':use_zero_threshold_for_1bit,
+            'useBufferedAsyncGradientAggregation':use_buffered_async_gradient_aggregation}
+            
+    def set_parallel_to_model_average(self, 
+                                      parallelization_start_epoch = 0,
+                                      distributed_mb_reading = False,
+                                      sync_perf_stats = 0,
+                                      sync_period = 40000,
+                                      sync_frequency_in_frames = None):
+        
+        self._set_global_parallel_params('ModelAveragingSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'syncPeriod':sync_period,                    
+            'syncFrequencyInFrames':sync_frequency_in_frames}
+                                              
+    def set_parallel_to_block_momentum(self, 
+                                      parallelization_start_epoch = 0,
+                                      distributed_mb_reading = False,
+                                      sync_perf_stats = 0,
+                                      sync_period = 120000,
+                                      reset_sgd_momentum = True,
+                                      use_nesterov_momentum = True,
+                                      block_learning_rate = 1.0,
+                                      block_momentum_per_sync = None,
+                                      block_momentum_as_time_constant = None):
+        
+        self._set_global_parallel_params('BlockMomentumSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'syncPeriod':sync_period,        
+            'resetSGDMomentum':reset_sgd_momentum,
+            'useNesterovMomentum':use_nesterov_momentum,
+            'blockLearningRate':block_learning_rate,
+            'blockMomentumPerSync':block_momentum_per_sync,
+            'blockMomentumAsTimeConstant':block_momentum_as_time_constant}
 
     def _to_config_description(self):
         """Generate the SGDParams configuration block
@@ -268,7 +340,9 @@ class SGDParams:
         auto_adjust_block = []
         for k, v in self.__dict__.items():
             if  k[0] != '_' and v is not None:
-                # this is a sub-block
+                # this is a sub-block. 
+                #TODO: perhaps move this to a separete method (set_auto_adjust),
+                # but then the user would need to call it explicitly 
                 if k in self._auto_adjust_params:
                     auto_adjust_block.append('\t{0} = {1}\n'.format(self._py_to_cntk[k], v))
                 else:
