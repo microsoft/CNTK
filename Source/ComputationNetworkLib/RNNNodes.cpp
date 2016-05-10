@@ -88,6 +88,12 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 
     TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
+    // ComputationNode derived classes are guaranteed to have a MBLayout
+    if (!this->HasMBLayout())
+    {
+        LogicError("RNNNode must operate on minibatches");
+    }
+
     // For windowed LSTM, CNTK is providing data with the second dimension being time-like and the third dimension
     // being minibatch index. CuDnn expects the second dimension to be minibatch index, and the third dimension
     // to be time-like. This sequence of operations creates a transposed copy of the data in m_transposedInput
