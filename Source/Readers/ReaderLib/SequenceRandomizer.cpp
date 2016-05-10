@@ -76,29 +76,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<RandomizedSequenceDescription> result;
         result.reserve(sampleCount);
 
-        size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
-        RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
-
-        result.push_back(*sequence);
-        samples -= (int)sequence->m_numberOfSamples;
-        m_currentSequenceCursor++;
-        m_currentSampleCursor += (int)sequence->m_numberOfSamples;
-
-        if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
-        {
-            // Moving to the next chunk.
-            MoveChunkCursor();
-        }
-
+        bool firstSequence = true;
         while (samples > 0 && m_currentChunkCursor < m_randomizedChunks.size())
         {
-            sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
-            sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
-            if (samples - sequence->m_numberOfSamples >= 0)
+            size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
+            RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
+
+            if (firstSequence || samples >= (int)sequence->m_numberOfSamples)
             {
+                firstSequence = false;
                 result.push_back(*sequence);
                 m_currentSequenceCursor++;
-                samples -= (int)sequence->m_numberOfSamples;
                 m_currentSampleCursor += (int)sequence->m_numberOfSamples;
 
                 if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
@@ -107,6 +95,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     MoveChunkCursor();
                 }
             }
+
+            // Always decrease the available number of samples.
+            samples -= (int)sequence->m_numberOfSamples;
         }
 
         return result;

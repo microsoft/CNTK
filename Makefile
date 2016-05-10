@@ -113,7 +113,7 @@ ifdef CUDA_PATH
 # Set up cuDNN if needed
   ifdef CUDNN_PATH
     INCLUDEPATH += $(CUDNN_PATH)/cuda/include
-    LIBPATH += $(CUDNN_PATH)/cuda/lib64
+    LIBPATH += $(CUDNN_PATH)/cuda/lib64 $(CUDA_PATH)/targets/x86_64-linux/lib/stubs
     LIBS += -lcudnn
     COMMON_FLAGS +=-DUSE_CUDNN
   endif
@@ -159,16 +159,23 @@ endif
 
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
 # In debug mode we will rely on JIT to create code "on the fly" for the underlying architecture
-GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
-GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
-GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
-GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
+
+GENCODE_TEMPLATE := -gencode arch=compute_XX,code=\"sm_XX,compute_XX\"
+
+ifndef CNTK_CUDA_GENCODE
+  ifeq ("$(BUILDTYPE)","debug")
+    CNTK_CUDA_GENCODE := 20 30
+  endif
+  ifeq ("$(BUILDTYPE)","release")
+    CNTK_CUDA_GENCODE := 20 30 35 50
+  endif
+endif
 
 ifeq ("$(BUILDTYPE)","debug")
   ifdef CNTK_CUDA_CODEGEN_DEBUG
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
   else
-    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\" $(GENCODE_SM30)
+    GENCODE_FLAGS := $(foreach CUDA_ARCH,$(CNTK_CUDA_GENCODE),$(subst XX,$(CUDA_ARCH),$(GENCODE_TEMPLATE)))
   endif
 
   CXXFLAGS += -g
@@ -181,7 +188,7 @@ ifeq ("$(BUILDTYPE)","release")
   ifdef CNTK_CUDA_CODEGEN_RELEASE
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_RELEASE)
   else
-    GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
+    GENCODE_FLAGS := $(foreach CUDA_ARCH,$(CNTK_CUDA_GENCODE),$(subst XX,$(CUDA_ARCH),$(GENCODE_TEMPLATE)))
   endif
 
   CXXFLAGS += -g -O4
