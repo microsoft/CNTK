@@ -4354,6 +4354,31 @@ void CPUMatrix<ElemType>::MaxPoolingMask(const CPUMatrix<int>& mpRowCol, const C
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
+                                       const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& mask,
+                                       CPUMatrix<ElemType>& input) const
+{
+//#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < input.GetNumRows());
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+            int i = (int)mask(row, sample);
+            assert(0 <= i && i < size);
+            int dcol = indices(i0 + i, 0);
+            assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            input(colBase + dcol, sample) = (*this)(row, sample);
+        }
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for

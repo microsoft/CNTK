@@ -57,10 +57,14 @@ public:
 
     void MaxPoolingMask(const Mat& in, Mat& mask);
 
+    void MaxUnpooling(const Mat& out, Mat& mask, Mat& in);
+
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                                                               size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
+                                                               size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, 
+                                                               ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
+                                                               std::wstring logPrefix = L"");
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
@@ -94,6 +98,8 @@ protected:
     virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
 
     virtual void MaxPoolingMaskCore(const Mat& in, Mat& mask) = 0;
+
+    virtual void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) = 0;
 
 protected:
     ConvolveGeometryPtr m_geometry;

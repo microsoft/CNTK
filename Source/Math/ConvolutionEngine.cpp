@@ -107,7 +107,6 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
     BackwardPoolingCore(out, srcGrad, in, grad);
 }
 
-
 template <class ElemType>
 void ConvolutionEngine<ElemType>::MaxPoolingMask(const Mat& in, Mat& mask)
 {
@@ -124,6 +123,26 @@ void ConvolutionEngine<ElemType>::MaxPoolingMask(const Mat& in, Mat& mask)
     EnsureCompatible();
     EnsurePoolingInitialized();
     MaxPoolingMaskCore(in, mask);
+}
+
+template <class ElemType>
+void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, Mat& mask, Mat& in)
+{
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == mask.GetNumRows());
+    size_t batchSize = in.GetNumCols();
+    assert(batchSize == out.GetNumCols());
+    assert(batchSize == mask.GetNumCols());
+#ifdef NDEBUG
+    UNUSED(g);
+    UNUSED(batchSize);
+#endif
+
+    EnsureCompatible();
+    EnsurePoolingInitialized();
+    MaxUnpoolingCore(out, mask, in);
 }
 
 //------------------------------------------------------------------
@@ -232,6 +251,11 @@ protected:
     void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
     {
         in.MaxPoolingMask(m_mpRowCol, *m_mpRowIndices, *m_indices, mask);
+    }
+
+    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    {
+        out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, mask, in);
     }
 
 protected:
@@ -530,6 +554,15 @@ protected:
         UNUSED(mask);
         // Not implemented but potentially can make a fallback to reference engine.
         LogicError("MaxPoolingMask is not implemented for legacy engine.");
+    }
+
+    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    {
+        UNUSED(out);
+        UNUSED(mask);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for legacy engine.");
     }
 
 private:
@@ -848,8 +881,11 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines)
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix)
 {
+    if (!logPrefix.empty())
+        logPrefix += L": ";
+
     auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
     // Note: in some cases do not throw exception even if parameters do not match as Create
     // can be called from places like MEL with default parameters and never be used. 
@@ -861,7 +897,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (!isEnabled(ConvolutionEngineKind::Legacy))
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
         // REVIEW alexeyk: should honor m_traceLevel here.
-        fprintf(stderr, "\nUsing legacy convolution engine for geometry: %s.\n", engStr.c_str());
+        fprintf(stderr, "\n%lsusing legacy convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
         return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
@@ -869,19 +905,19 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
         CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
     {
-        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
+        fprintf(stderr, "\n%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
     {
-        fprintf(stderr, "\nUsing GEMM convolution engine for geometry: %s.\n", engStr.c_str());
+        fprintf(stderr, "\n%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
         return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
+    fprintf(stderr, "\n%lsusing reference convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 

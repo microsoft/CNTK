@@ -248,6 +248,39 @@ __global__ void kMaxPoolingMask(int batchSize, const int* mpRowCol, const int* m
 }
 
 template <typename ElemType>
+__global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                              const ElemType* __restrict__ src, const ElemType* mask, int srcVecSize,
+                              ElemType* dst, int dstVecSize)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= srcVecSize)
+        return;
+
+    src  += blockIdx.y * srcVecSize;
+    mask += blockIdx.y * srcVecSize;
+    dst  += blockIdx.y * dstVecSize;
+
+    for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
+    {
+        int colBase = mpRowCol[row];
+        assert(0 <= colBase && colBase < dstVecSize);
+
+        int i0 = mpRowIndices[row];
+        int size = indices[i0++];
+        int i = (int)mask[row];
+        assert(0 <= i && i < size);
+        int dcol = indices[i0 + i];
+        assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+
+        dst[colBase + dcol] = src[row];
+
+        src  += blockIdx.y * srcVecSize;
+        mask += blockIdx.y * srcVecSize;
+        dst  += blockIdx.y * dstVecSize;
+    }
+}
+
+template <typename ElemType>
 __global__ void kAveragePoolingForward(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
                                        const ElemType* __restrict__ src, int srcVecSize,
                                        ElemType* dst, int dstVecSize)

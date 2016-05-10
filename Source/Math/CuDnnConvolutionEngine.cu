@@ -314,6 +314,15 @@ protected:
         LogicError("MaxPoolingMask is not implemented for cuDNN engine.");
     }
 
+    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    {
+        UNUSED(out);
+        UNUSED(mask);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for cuDNN engine.");
+    }
+
 private:
     using C = Consts<ElemType>;
 
