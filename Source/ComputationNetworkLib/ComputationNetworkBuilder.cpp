@@ -65,7 +65,8 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(IfNode))                               return New<IfNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
 	else if (nodeType == OperationNameOf(IRMetricNode))							return New<IRMetricNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(IRMetricEvalNode))						return New<IRMetricEvalNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogSoftmaxNode))                       return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LookupTableNode))                      return New<LookupTableNode<ElemType>>(forward<_Types>(_Args)...);
@@ -410,6 +411,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::IRMetric(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairindex, const std::wstring nodeName)
 {
 	return net.AddNodeToNetAndAttachInputs(New<IRMetricNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, pairindex });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::IRMetricEval(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairindex, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<IRMetricEvalNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, pairindex });
 }
 
 template <class ElemType>
