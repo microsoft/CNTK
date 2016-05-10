@@ -346,6 +346,7 @@ class SGDParams:
                 config.append('\t\t{0} = {1}'.format(k, v))    
         config.append['\t]']                
         config.append[']']
+        return '\n'.join(config)
         
     def _to_config_description(self):
         """Generate the SGDParams configuration block
@@ -366,4 +367,8 @@ class SGDParams:
             config.append("autoAdjust=[\n")
             config.extend(auto_adjust_block)
             config.append("\t]")
+            
+        if self.parallel_training:
+            config.append(self._generate_parallel_training_config())
+            
         return ''.join(config)
