@@ -2,12 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -48,6 +42,7 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="RNGHandle.cpp" />
+    <ClCompile Include="CommonMatrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />

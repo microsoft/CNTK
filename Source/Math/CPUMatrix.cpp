@@ -1415,6 +1415,48 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     m_numCols = numCols;
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols, bool growOnly /*true*/)
+{
+	VerifyResizable(__func__);
+
+	DEVICEID_TYPE deviceId = -1; // in pool, we use deviceId = -1 to indicate CPU matrix
+
+	if (GetNumRows() == numRows && GetNumCols() == numCols)
+		return;
+
+	if (growOnly && numRows * numCols < GetSizeAllocated()) {
+		m_numRows = numRows;
+		m_numCols = numCols;
+		return;
+	}
+
+	size_t numElements = numRows * numCols;
+
+	if (GetSizeAllocated()) {
+		// if using physicalRelease, the buffer pool will be disabled
+		BufferManager::GetManagerInstance()->LogicalReleaseBuffer(deviceId, Buffer(), GetSizeAllocated());
+		//BufferManager::GetManagerInstance()->PhysicalReleaseBuffer(deviceId, Buffer());
+	}
+
+	if (IsEmpty())
+	{
+		SetSizeAllocated(0);
+		SetBuffer(nullptr, 0);
+	}
+	else {
+		ElemType* pArray = nullptr;
+		pArray = BufferManager::GetManagerInstance()->RequestBuffer<ElemType>(deviceId, numElements);
+
+		SetBuffer(pArray, numElements * sizeof(ElemType));
+		SetSizeAllocated(numElements);
+	}
+
+	//success
+	m_numRows = numRows;
+	m_numCols = numCols;
+}
+
 // allocated by the callee but should be deleted by the caller
 // TODO: change to use STL vector instead
 template <class ElemType>
@@ -6312,6 +6354,7 @@ template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template void CPUMatrix<char>::CacheResize(const size_t numRows, const size_t numCols, bool growOnly);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 template CPUMatrix<int>::~CPUMatrix();
