@@ -69,7 +69,7 @@ struct FixedEventRecord
     int             refCnt;
 };
 
-#define THROUGHPUT_EVENT_MAX   (profilerEvtMax * 16)
+#define THROUGHPUT_EVENT_MAX   1024
 
 struct ThroughputEventRecord
 {
@@ -86,6 +86,8 @@ struct ProfilerState
     int                     throughputIdx;
     ThroughputEventRecord   throughputEvents[THROUGHPUT_EVENT_MAX];
 };
+
+#define INVALID_STATE_ID    0xffffffff
 
 // We support one global instance of the profiler
 static ProfilerState g_profilerState;
@@ -143,7 +145,7 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir)
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
 {
-    if (!g_profilerState.init) return 0;
+    if (!g_profilerState.init) return INVALID_STATE_ID;
 
     LOCK
     
@@ -165,7 +167,7 @@ int PERF_PROFILER_API ProfilerTimeBegin(const char* description)
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 {
     long long endClock = GetClock();
-    if (!g_profilerState.init) return;
+    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
 
     LOCK
     
@@ -192,14 +194,15 @@ void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
 //
 int PERF_PROFILER_API ProfilerThroughputBegin(int eventId)
 {
-    if (!g_profilerState.init) return 0;
+    if (!g_profilerState.init) return INVALID_STATE_ID;
 
     LOCK
     
     g_profilerState.throughputIdx++;
     if (g_profilerState.throughputIdx >= THROUGHPUT_EVENT_MAX)
     {
-        RuntimeError("Profiler error: Out of profiler slots.");
+        fprintf(stderr, "Error: ProfilerThroughputBegin: Out of profiler slots.\n");
+        return INVALID_STATE_ID;
     }
     int stateId = g_profilerState.throughputIdx;
     g_profilerState.throughputEvents[stateId].eventId = eventId;
@@ -217,7 +220,7 @@ int PERF_PROFILER_API ProfilerThroughputBegin(const char* description)
 void PERF_PROFILER_API ProfilerThroughputEnd(int stateId, long long bytes)
 {
     long long endClock = GetClock();
-    if (!g_profilerState.init) return;
+    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
 
     LOCK
 
