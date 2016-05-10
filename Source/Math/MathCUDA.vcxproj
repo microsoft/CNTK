@@ -120,6 +120,7 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="GPUDataTransferer.h" />
+    <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
@@ -138,6 +139,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CuDnnBatchNormalization.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
+    <CudaCompile Include="GPURNGHandle.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">

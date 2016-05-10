@@ -24,9 +24,6 @@ class AbstractReader(with_metaclass(ABCMeta)):
 
     def __ne__(self, x): return x is not self
 
-    def _to_aggregate_form():
-        pass
-
 
 class UCIFastReader(AbstractReader):
 
@@ -133,16 +130,29 @@ class CNTKTextFormatReader(AbstractReader):
         if randomize is None:
             randomize = 'none'
         self.randomize = randomize.lower()
-        assert self.randomize in ['auto', 'none']
+        if not self.randomize in ['auto', 'none']:
+            raise ValueError('parameter "randomize" can be only "auto", ' +
+                    '"none", or None. You gave: %s'%randomize)
         self.skip_sequence_ids = bool(skip_sequence_ids)
         self.max_errors = int(max_errors)
-        assert self.max_errors >= 0
+        if not self.max_errors >= 0:
+            raise ValueError('parameter "max_errors" has to be an integer ' +
+                    'greater than or equal to 0. You gave: %s'%max_errors)
         self.trace_level = int(trace_level)
-        assert self.trace_level in [0,1,2]
+        if not self.trace_level in [0,1,2]:
+            raise ValueError('parameter "trace_level" has to be an integer ' +
+                    'from [0, 1, 2]. You gave: %s'%str(trace_level))
+
         self.chunk_size_in_bytes = int(chunk_size_in_bytes)
-        assert self.chunk_size_in_bytes > 0
+        if not self.chunk_size_in_bytes > 0:
+            raise ValueError('parameter "chunk_size_in_bytes" has to be an integer ' +
+                    'greater than zero. You gave: %s'%str(chunk_size_in_bytes))
         self.num_chunks_to_cache = int(num_chunks_to_cache)
-        assert self.chunk_size_in_bytes >= 0
+        
+        if self.chunk_size_in_bytes < 0:
+            raise ValueError('parameter "chunk_size_in_bytes" has to be an integer ' +
+                    'greater than or equal to zero. You gave: %s'\
+                            %str(self.chunk_size_in_bytes))
 
     def map(self, node_or_name, **kw):
         '''
@@ -211,9 +221,13 @@ class CNTKTextFormatReader(AbstractReader):
         '''
 
         if input_map.has_unmapped():
+            if len(input_map.node_map) > 0:
+                raise ValueError('you cannot have inputs initialized with '+
+                        'NumPy arrays together with inputs that are ' +
+                        ' initialized with a custom reader')
+
             input_map._serialize_unmapped_nodes(
                 input_map.unmapped_nodes, self.filename)
-
 
         for node_or_name, param_dict in input_map.node_map.items():
             if (isinstance(node_or_name, ComputationNode)):
@@ -477,10 +491,16 @@ class InputMap(object):
             from .utils import get_temp_filename
             filename = get_temp_filename(get_context().directory)
 
-            assert not self.node_map
+            if len(self.node_map) > 0:
+                raise ValueError('you cannot have inputs initialized with '+
+                        'NumPy arrays together with inputs that are ' +
+                        ' initialized with a custom reader')
+
             self._serialize_unmapped_nodes(filename)
             
-            r = CNTKTextFormatReader(filename)
+            # All the data we got, was through NumPy. In this case, we assume
+            # that all the required randomization has happened already.
+            r = CNTKTextFormatReader(filename, randomize=None)
 
             return r._to_config_description(self)
 
@@ -509,8 +529,9 @@ class InputMap(object):
         sample_sizes = collections.defaultdict(list)
         used_aliases = set()
         for node in self.unmapped_nodes:
-            assert node._is_input()
-            assert isinstance(node.reader, LazyInputReader)
+            is_lazy_input = isinstance(node.reader, LazyInputReader)
+            if not (node._is_input() and is_lazy_input):
+                raise ValueError('expected NumPy input, but got "%s"'%str(node))
             
             l = node.reader
 
@@ -553,10 +574,7 @@ class InputMap(object):
             value_shape = shapes_in_tensor.pop()
             l.shape = value_shape if value_shape else (1,)
 
-            assert node not in self.node_map
-            self.node_map[node] = {
-                    'alias': l.input_alias, 
-                    }
+            self.node_map[node] = { 'alias': l.input_alias }
 
         # make sure all inputs have same sample size
         if len(sample_sizes) != 1:

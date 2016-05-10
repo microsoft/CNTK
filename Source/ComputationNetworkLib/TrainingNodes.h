@@ -7,6 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "BatchNormalizationEngine.h"
+#include "RNGHandle.h"
 
 #include <map>
 #include <string>
@@ -1460,8 +1461,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType) m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, m_randomSeed);
-            m_randomSeed += 1073807359; // 1073807359 is a very large prime number to avoid collision with other dropout nodes
+            sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
         }
@@ -1470,13 +1470,6 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateUnaryMap(isFinalValidationPass);
-    }
-
-    // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-    // Hence dropout nodes with a non-zero dropout rate must always be considered out-of-date to force evaluation 
-    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const
-    {
-        return Base::IsOutOfDateWrtInputs() || (!Environment().IsInferring() && (m_dropoutRate > 0));
     }
 
     // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
@@ -1490,6 +1483,18 @@ public:
     void SetRandomSeed(const unsigned long val)
     {
         m_randomSeed = (unsigned long) val;
+
+        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+        // during forward propagation
+        m_RNGHandle = nullptr;
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        if (m_RNGHandle == nullptr) 
+            m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
+
+        return *m_RNGHandle;
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1520,6 +1525,7 @@ public:
 private:
     double m_dropoutRate;
     unsigned long m_randomSeed;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
 
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
@@ -1773,10 +1779,10 @@ public:
         }
 
         m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+                         sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
-            m_mbCount++;
-            }
+        m_mbCount++;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {
