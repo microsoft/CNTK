@@ -1,9 +1,9 @@
 dataDir: .
 tags:
     # running on every BVT job in 'E' (Examples) leg
-    - bvt-e ((flavor=='release') & (device=='gpu') & (os=='linux'))
+    - bvt-e (build_sku=='gpu') & (os=='linux') & (flavor=='release') & (device=='gpu')
     # running every Nightly job in 'E' (Examples) leg
-    - nightly-e (os=='linux')
+    - nightly-e (build_sku=='gpu') & (os=='linux')
 
 testCases:
   CNTK Run must be completed:
