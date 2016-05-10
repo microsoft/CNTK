@@ -125,6 +125,9 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     size_t totalFrames = 0;
 
     auto& stringRegistry = corpus->GetStringRegistry();
+
+    // TODO resize m_keyToSequence with number of IDs from string registry
+
     for (const auto& l : labels)
     {
         // Currently the string registry contains only utterances described in scp.
@@ -167,30 +170,23 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         }
 
         description.m_numberOfSamples = numberOfFrames;
+        m_utteranceIndex.push_back(totalFrames);
         totalFrames += numberOfFrames;
-        m_utteranceIndex.push_back(m_frames.size());
-        m_keyToSequence[description.m_key.m_sequence] = m_utteranceIndex.size() - 1;
 
-        // TODO: Should be created by chunks only.
-        MLFFrame f;
-        f.m_chunkId = 0;
-        f.m_numberOfSamples = 1;
-        f.m_key.m_sequence = description.m_key.m_sequence;
-        f.m_isValid = description.m_isValid;
-        for (size_t k = 0; k < description.m_numberOfSamples; ++k)
+        if (m_keyToSequence.size() <= description.m_key.m_sequence)
         {
-            f.m_id = m_frames.size();
-            f.m_key.m_sample = k;
-            f.m_index = description.m_sequenceStart + k;
-            m_frames.push_back(f);
+            m_keyToSequence.resize(description.m_key.m_sequence + 1, SIZE_MAX);
         }
+        assert(m_keyToSequence[description.m_key.m_sequence] == SIZE_MAX);
+        m_keyToSequence[description.m_key.m_sequence] = m_utteranceIndex.size() - 1;
+        m_numberOfSequences++;
     }
-    m_utteranceIndex.push_back(m_frames.size());
+    m_utteranceIndex.push_back(totalFrames);
 
     m_totalNumberOfFrames = totalFrames;
 
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d sequences\n", (int)m_frames.size());
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_keyToSequence.size());
+    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d frames\n", (int)m_totalNumberOfFrames);
+    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_numberOfSequences);
 
     // Initializing array of labels.
     m_categories.reserve(dimension);
@@ -238,46 +234,16 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 {
     auto cd = make_shared<ChunkDescription>();
     cd->m_id = 0;
-    cd->m_numberOfSequences = m_frameMode ? m_frames.size() : m_keyToSequence.size();
-    cd->m_numberOfSamples = m_frames.size();
+    cd->m_numberOfSequences = m_frameMode ? m_totalNumberOfFrames : m_numberOfSequences;
+    cd->m_numberOfSamples = m_totalNumberOfFrames;
     return ChunkDescriptions{cd};
 }
 
 // Gets sequences for a particular chunk.
 void MLFDataDeserializer::GetSequencesForChunk(size_t, vector<SequenceDescription>& result)
 {
-    if (m_frameMode)
-    {
-        // Because it is a frame mode, creating a sequence for each frame.
-        result.reserve(m_frames.size());
-        for (size_t i = 0; i < m_frames.size(); ++i)
-        {
-            SequenceDescription f;
-            f.m_key.m_sequence = m_frames[i].m_key.m_sequence;
-            f.m_key.m_sample = m_frames[i].m_key.m_sample;
-            f.m_id = m_frames[i].m_id;
-            f.m_chunkId = m_frames[i].m_chunkId;
-            f.m_numberOfSamples = 1;
-            f.m_isValid = true;
-            result.push_back(f);
-        }
-    }
-    else
-    {
-        // Creating sequence description per utterance.
-        result.reserve(m_utteranceIndex.size());
-        for (size_t i = 0; i < m_utteranceIndex.size() - 1; ++i)
-        {
-            SequenceDescription f;
-            f.m_key.m_sequence = m_frames[m_utteranceIndex[i]].m_key.m_sequence;
-            f.m_key.m_sample = 0;
-            f.m_id = i;
-            f.m_chunkId = m_frames[m_utteranceIndex[i]].m_chunkId;
-            f.m_numberOfSamples = m_utteranceIndex[i + 1] - m_utteranceIndex[i];
-            f.m_isValid = true;
-            result.push_back(f);
-        }
-    }
+    UNUSED(result);
+    LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
 }
 
 ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
@@ -294,14 +260,14 @@ struct MLFSequenceData : SparseSequenceData
     vector<ElemType> m_values;
     unique_ptr<IndexType[]> m_indicesPtr;
 
-    MLFSequenceData(size_t numberOfSamples) : 
+    MLFSequenceData(size_t numberOfSamples) :
         m_values(numberOfSamples, 1),
         m_indicesPtr(new IndexType[numberOfSamples])
     {
         if (numberOfSamples > numeric_limits<IndexType>::max())
         {
             RuntimeError("Number of samples in an MLFSequence (%" PRIu64 ") "
-                "exceeds the maximum allowed value (%" PRIu64 ")\n", 
+                "exceeds the maximum allowed value (%" PRIu64 ")\n",
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());
         }
 
@@ -317,7 +283,7 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
 {
     if (m_frameMode)
     {
-        size_t label = m_classIds[m_frames[sequenceId].m_index];
+        size_t label = m_classIds[sequenceId];
         assert(label < m_categories.size());
         result.push_back(m_categories[label]);
     }
@@ -340,37 +306,41 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
         for (size_t i = 0; i < numberOfSamples; i++)
         {
             size_t frameIndex = startFrameIndex + i;
-            size_t label = m_classIds[m_frames[frameIndex].m_index];
+            size_t label = m_classIds[frameIndex];
             s->m_indices[i] = static_cast<IndexType>(label);
         }
         result.push_back(s);
     }
 }
 
-static SequenceDescription s_InvalidSequence { 0, 0, 0, false };
+static SequenceDescription s_InvalidSequence { 0, 0, 0, false, { 0, 0 } };
 
 void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
-    auto sequenceId = m_keyToSequence.find(key.m_sequence);
-    if (sequenceId == m_keyToSequence.end())
+
+    auto sequenceId = key.m_sequence < m_keyToSequence.size() ? m_keyToSequence[key.m_sequence] : SIZE_MAX;
+
+    if (sequenceId == SIZE_MAX)
     {
         result = s_InvalidSequence;
         return;
     }
 
+    result.m_chunkId = 0;
+    result.m_key = key;
+    result.m_isValid = true;
+
     if (m_frameMode)
     {
-        size_t index = m_utteranceIndex[sequenceId->second] + key.m_sample;
-        result = m_frames[index];
+        size_t index = m_utteranceIndex[sequenceId] + key.m_sample;
+        result.m_id = index;
+        result.m_numberOfSamples = 1;
     }
     else
     {
-        result.m_key.m_sequence = key.m_sequence;
-        result.m_key.m_sample = 0;
-        result.m_id = sequenceId->second;
-        result.m_chunkId = m_frames[m_utteranceIndex[sequenceId->second]].m_chunkId;
-        result.m_numberOfSamples = m_utteranceIndex[sequenceId->second + 1] - m_utteranceIndex[sequenceId->second];
-        result.m_isValid = true;
+        assert(result.m_key.m_sample == 0);
+        result.m_id = sequenceId;
+        result.m_numberOfSamples = m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId];
     }
 }
 
