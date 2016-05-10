@@ -12,7 +12,6 @@ TrainDNN=[
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
 
     NDLNetworkBuilder=[
         ndlMacros=$NdlDir$/default_macros.ndl	
@@ -98,7 +97,6 @@ TrainLSTM=[
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
     NDLNetworkBuilder=[
         ndlMacros=$NdlDir$/default_macros.ndl	
         networkDescription=$ndlfile$
@@ -183,7 +181,6 @@ TrainPACRNN=[
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
 
     NDLNetworkBuilder=[
 #        ndlMacros=$NdlDir$/default_macros.ndl	
@@ -286,7 +283,6 @@ write=[
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
 
     printValues=true
       
