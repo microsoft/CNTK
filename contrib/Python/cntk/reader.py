@@ -24,9 +24,6 @@ class AbstractReader(with_metaclass(ABCMeta)):
 
     def __ne__(self, x): return x is not self
 
-    def _to_aggregate_form():
-        pass
-
 
 class UCIFastReader(AbstractReader):
 
@@ -534,7 +531,7 @@ class InputMap(object):
         for node in self.unmapped_nodes:
             is_lazy_input = isinstance(node.reader, LazyInputReader)
             if not (node._is_input() and is_lazy_input):
-                raise ValueError('expected lazy input, but got "%s"'%str(node))
+                raise ValueError('expected NumPy input, but got "%s"'%str(node))
             
             l = node.reader
 
