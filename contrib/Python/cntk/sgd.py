@@ -262,7 +262,7 @@ class SGDParams:
         self.trace_node_names_category = trace_node_names_category
         self.trace_node_names_sparse = trace_node_names_sparse
         self.gradient_check = gradient_check
-        self.parallel_training_ = None
+        self.parallel_training = None
         
     def _set_global_parallel_params(self, 
                                     parallalization_method = None, 
