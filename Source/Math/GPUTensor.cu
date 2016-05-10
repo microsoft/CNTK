@@ -35,7 +35,7 @@
 // thread local storage to access the current stream, initalize to default stream
 __declspec(thread)
 #endif
-    extern cudaStream_t t_stream;
+extern cudaStream_t t_stream;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -61,10 +61,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //
 // The general algorithm is very straight forward:
 //
-//     for all output dimensions [...]:                                 // TensorOp()
-//         output[...] *= beta
+//     for all output dimensions [###]:                                 // TensorOp()
+//         output[###] *= beta
 //         for all reduction dimensions [***]:                          // TensorOpWithReduction()
-//             output[...] += op(input1[***], input1[***], ...) * alpha
+//             output[###] += op(input1[###,***], input1[###,***], ...) * alpha
 //
 // Indices and dimensions used throughout this code:
 //  - N = ariness; number of arguments *including output* (binary op: N=3)
@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - M = reduction rank, reducingOpDims.size(). M=0 means no reduction.
 //  - m = -1..M-1 = recursion index
 //
-// Other variables to know about:
+// Other frequently used variable names:
 //  - alpha, beta: BLAS-style weights: outVal = beta * outVal + alpha * f(inVals)
 //                 where beta=0 is an assignment (0 * outVal := 0, even e.g. if outVal = NaN)
 //  - pointers[N]:          pointer to first element, for each argument
@@ -265,8 +265,8 @@ struct TensorOps
 // function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
 
-#define ReduceElemType double
-//#define ReduceElemType ElemType
+//#define ReduceElemType double
+#define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
 
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorOpReduce
@@ -551,22 +551,33 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
 
 // helper function to provide a reduction buffer
 template <class ElemType>
-ElemType* GetReductionBuffer(size_t N, size_t deviceId)
+static shared_ptr<ElemType> AllocateReductionBuffer(size_t N)
 {
+    ElemType* deviceBufferPtr;
+    CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(ElemType) * N));
+    return shared_ptr<ElemType>(deviceBufferPtr, [](ElemType* deviceBufferPtr){ cudaFree((void*)deviceBufferPtr); });
+}
+
+template <class ElemType>
+static shared_ptr<ElemType> GetReductionBuffer(size_t N)
+{
+    bool dontCache = false;         // (for debugging only)
+    if (t_stream != 0 || dontCache) // we cache for the NULL stream but don't bother for others, since we only ever use the NULL stream currently
+        return AllocateReductionBuffer<ElemType>(N);
+
     static shared_ptr<ElemType> reductionBuffersCache[32]; // cache of objects    --TODO: Do we have a #define the the max somewhere? Then also use it in CPUMatrix.cu GetOnesTensor()
     static size_t reductionBuffersCacheSize[_countof(reductionBuffersCache)] = { 0 };
+    let deviceId = GridDim::GetCurrentDeviceId();
     if (deviceId >= _countof(reductionBuffersCache)) // index check w.r.t. our hard-coded dimensions
-        LogicError("GetReductionBuffer: reductionBuffersCache[] too small (%d entries), increase (you need %d) and recompile.", (int)_countof(reductionBuffersCache), (int)deviceId + 1);
+        return AllocateReductionBuffer<ElemType>(N); // out of bounds: don't cache
     if (!reductionBuffersCache[deviceId])
     {
-        ElemType* deviceBufferPtr;
-        CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(ElemType) * N));
-        reductionBuffersCache[deviceId] = shared_ptr<ElemType>(deviceBufferPtr, [](ElemType* deviceBufferPtr){ cudaFree((void*)deviceBufferPtr); });
+        reductionBuffersCache[deviceId] = AllocateReductionBuffer<ElemType>(N);
         reductionBuffersCacheSize[deviceId] = N;
     }
     if (N > reductionBuffersCacheSize[deviceId]) // buffer size check
         LogicError("GetReductionBuffer: Must be called with the number of multiprocs, which may not change.");
-    return reductionBuffersCache[deviceId].get();
+    return reductionBuffersCache[deviceId];
 }
 
 // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
@@ -693,7 +704,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             //  - total elements = NN * Floor(#multiprocs / NN) = <= #multiprocs
             let reductionBufferSize = props.multiProcessorCount;
             assert(reductionBufferSize >= NN * numBlocksZ);
-            auto* reductionBuffer = GetReductionBuffer<ElemType>(reductionBufferSize, GridDim::GetDeviceId());
+            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(reductionBufferSize);
 
             // 'pointers', 'regularOpStrides', and 'regularStrides' are set up to point to the target memory.
             // We need to reroute them to point to our reductionBuffer.
@@ -702,7 +713,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             //  - beta -> 0 since we write into temp memory
             //  - kernel must use block.z as second index into the output buffer; add (block.z * NN) to the pointer
             FixedArray<ElemType*, N> pointers1 = pointers;
-            pointers1[N - 1] = reductionBuffer;
+            pointers1[N - 1] = reductionBuffer.get();
             auto regularStrideVectors1 = regularStrideVectors;
             for (size_t k = 0; k < regularOpStrides.size(); k++)
                 regularStrideVectors1[N - 1][k] = (ptrdiff_t)regularOpStrideVector[k];
@@ -722,7 +733,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             //  - op dims/strides     = output elements
             //  - reduce dims/strides = numBlocksZ
             //  - op = opCopy
-            array<ElemType*, 2>                    pointerVector2{         reductionBuffer,              pointerVector[N - 1] };
+            array<ElemType*, 2>                    pointerVector2{         reductionBuffer.get(),        pointerVector[N - 1] };
             const array<SmallVector<ptrdiff_t>, 2> regularStrideVectors2{  regularStrideVectors1[N - 1], regularStrideVectors[N - 1] };
             const array<SmallVector<ptrdiff_t>, 2> reducingStrideVectors2{ SmallVector<ptrdiff_t>{ NN }, SmallVector<ptrdiff_t>{ 0 } };
             const SmallVector<size_t>              reducingOpDimVector2{ (size_t)numReductionChunks };
