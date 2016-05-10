@@ -1120,24 +1120,24 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // using parameter server for parameter update
         if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
-            if (GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD && m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
+            if (m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
             {
-              // simulating BSP
-              m_pMultiversoHelper->WaitAsyncBuffer();
-              m_pMultiversoHelper->WaitAll();
+                // simulating BSP
+                m_pMultiversoHelper->WaitAsyncBuffer();
+                m_pMultiversoHelper->WaitAll();
             }
 
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
             {
-              noMoreSamplesToProcess = !wasDataRead;
+                noMoreSamplesToProcess = !wasDataRead;
             }
 
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
             {
-              m_pMultiversoHelper->PushAndPullModel(learnableNodes);
-              nSamplesSinceLastModelSync = 0;
-        }
+                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                nSamplesSinceLastModelSync = 0;
+            }
         }
 
         commTimer.Stop();
@@ -1264,8 +1264,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     if (userAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
-      m_pMultiversoHelper->PushAndPullModel(learnableNodes);
-      nSamplesSinceLastModelSync = 0;
+        m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+        nSamplesSinceLastModelSync = 0;
     }
 
     // hoist the accumulated criterion value from GPU side to our 'out'  variables
