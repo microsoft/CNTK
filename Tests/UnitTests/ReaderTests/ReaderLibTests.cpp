@@ -87,12 +87,12 @@ public:
 
         for (size_t i = 0; i < numSequences; i++)
         {
-            m_descriptions.push_back(SequenceDescription {
+            m_descriptions.push_back(SequenceDescription{
                 i,
-                m_sequenceLength,
                 i / m_numSequencesPerChunk,
                 true,
-                { 0, i }
+                {0, i},
+                std::vector<size_t> { m_sequenceLength }
             });
         }
 
@@ -146,10 +146,10 @@ public:
         {
             descriptions.push_back(SequenceDescription{
                 i,
-                m_sequenceLength,
                 chunkId,
                 true,
-                { 0, i }
+                {0, i},
+                std::vector<size_t>{ m_sequenceLength }
             });
         }
     }

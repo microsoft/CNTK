@@ -87,7 +87,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     // Currently linear, happens only at the border of epochs.
     for (size_t i = 0; i < m_sequenceWindow.size(); ++i)
     {
-        size_t sequenceSize = m_sequenceWindow[i].m_numberOfSamples;
+        size_t sequenceSize = m_sequenceWindow[i].m_numberOfSamples.front();
         if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
         {
             // We have found our sequence.
@@ -106,8 +106,8 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 void NoRandomizer::MoveToNextSequence()
 {
     SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
-    m_samplePositionInEpoch += sequence.m_numberOfSamples;
-    m_globalSamplePosition += sequence.m_numberOfSamples;
+    m_samplePositionInEpoch += sequence.m_numberOfSamples.front();
+    m_globalSamplePosition += sequence.m_numberOfSamples.front();
 
     if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences)
     {
@@ -137,12 +137,12 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
     {
         const SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
         result.push_back(sequence);
-        samples -= (int)sequence.m_numberOfSamples;
+        samples -= (int)sequence.m_numberOfSamples.front();
 
         MoveToNextSequence();
     }
     // Check whether the next sequence fits into the sample count, if not, exit.
-    while (samples - (int)m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples >= 0);
+    while (samples - (int)m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples.front() >= 0);
     return result;
 }
 

@@ -186,7 +186,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
     std::string line;
     PathReaderMap knownReaders;
     ImageSequenceDescription description;
-    description.m_numberOfSamples = 1;
+    description.m_numberOfSamples.assign({1, 1});
     description.m_isValid = true;
 
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)

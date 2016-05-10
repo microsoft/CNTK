@@ -219,10 +219,10 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
         result.push_back(
         {
             s.m_id,
-            s.m_numberOfSamples,
             s.m_chunkId,
             s.m_isValid,
-            s.m_key
+            s.m_key,
+            s.m_numberOfSamples
         });
     }
 }
@@ -422,7 +422,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (stream.m_type == StorageType::dense)
         {
             sequence.push_back(make_unique<DenseInputStreamBuffer>(
-                stream.m_sampleDimension * sequenceDsc.m_numberOfSamples));
+                stream.m_sampleDimension * sequenceDsc.m_numberOfSamples.front()));
         }
         else
         {
@@ -430,7 +430,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         }
     }
 
-    size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples;
+    size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples.front();
     for (size_t i = 0; i < expectedRowCount; i++)
     {
         if ((TryReadRow(sequence, bytesToRead)))

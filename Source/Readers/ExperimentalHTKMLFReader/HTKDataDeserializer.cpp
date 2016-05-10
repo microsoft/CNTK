@@ -266,8 +266,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
                 f.m_key.m_sample = k;
                 f.m_id = offsetInChunk++;
                 f.m_isValid = true;
-                f.m_numberOfSamples = 1;
-                result.push_back(f);
+                f.m_numberOfSamples.assign({1});
+                result.push_back(std::move(f));
             }
         }
         else
@@ -279,7 +279,7 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             f.m_key.m_sample = 0;
             f.m_id = offsetInChunk++;
             f.m_isValid = true;
-            f.m_numberOfSamples = utterance->GetNumberOfFrames();
+            f.m_numberOfSamples.assign({utterance->GetNumberOfFrames()});
             result.push_back(f);
         }
     }
@@ -469,7 +469,7 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<Sequ
     r.push_back(result);
 }
 
-static SequenceDescription s_InvalidSequence{0, 0, 0, false};
+static SequenceDescription s_InvalidSequence{0, 0, false, {}, std::vector<size_t>(0)};
 
 // Gets sequence description by its key.
 void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
@@ -488,7 +488,7 @@ void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
         d.m_chunkId = sequence->GetChunkId();
         d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
         d.m_isValid = true;
-        d.m_numberOfSamples = m_frameMode ? 1 : sequence->GetNumberOfFrames();
+        d.m_numberOfSamples.assign({m_frameMode ? 1 : sequence->GetNumberOfFrames()});
     }
 }
 

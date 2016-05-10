@@ -169,7 +169,6 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             }
         }
 
-        description.m_numberOfSamples = numberOfFrames;
         m_utteranceIndex.push_back(totalFrames);
         totalFrames += numberOfFrames;
 
@@ -313,7 +312,7 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
     }
 }
 
-static SequenceDescription s_InvalidSequence { 0, 0, 0, false, { 0, 0 } };
+static SequenceDescription s_InvalidSequence { 0, 0, false, { 0, 0 }, std::vector<size_t>(0) };
 
 void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
@@ -334,13 +333,13 @@ void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     {
         size_t index = m_utteranceIndex[sequenceId] + key.m_sample;
         result.m_id = index;
-        result.m_numberOfSamples = 1;
+        result.m_numberOfSamples.assign({1});
     }
     else
     {
         assert(result.m_key.m_sample == 0);
         result.m_id = sequenceId;
-        result.m_numberOfSamples = m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId];
+        result.m_numberOfSamples.assign({m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId]});
     }
 }
 

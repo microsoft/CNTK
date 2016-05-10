@@ -98,7 +98,7 @@ void Bundler::CreateChunkDescriptions()
 
             if (isValid)
             {
-                numberOfSamples += sequence.m_numberOfSamples;
+                numberOfSamples += sequence.m_numberOfSamples.front();
                 numberOfSequences++;
             }
         }

@@ -65,7 +65,7 @@ void Indexer::AddSequence(SequenceDescriptor& sd)
     }
     chunk->m_byteSize += sd.m_byteSize;
     chunk->m_numberOfSequences++;
-    chunk->m_numberOfSamples += sd.m_numberOfSamples;
+    chunk->m_numberOfSamples += sd.m_numberOfSamples.front();
     sd.m_chunkId = chunk->m_id;
     chunk->m_sequences.push_back(sd);
 }
@@ -83,7 +83,7 @@ void Indexer::BuildFromLines()
         {
             SequenceDescriptor sd = {};
             sd.m_id = lines;
-            sd.m_numberOfSamples = 1;
+            sd.m_numberOfSamples.assign({1});
             sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
@@ -104,13 +104,12 @@ void Indexer::BuildFromLines()
         // add a sequence to the index, parser will have to deal with it.
         SequenceDescriptor sd = {};
         sd.m_id = lines;
-        sd.m_numberOfSamples = 1;
+        sd.m_numberOfSamples.assign({1});
         sd.m_isValid = true;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
         AddSequence(sd);
     }
-
 }
 
 void Indexer::Build()
@@ -164,25 +163,29 @@ void Indexer::Build()
     sd.m_fileOffsetBytes = offset;
     sd.m_isValid = true;
 
+    size_t numberOfSamples = 0;
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
         offset = GetFileOffset(); // a new line starts at this offset;
-        sd.m_numberOfSamples++;
+        numberOfSamples++;
 
         if (!m_done && TryGetSequenceId(id) && id != sd.m_id)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
+            sd.m_numberOfSamples.push_back(numberOfSamples);
             AddSequence(sd);
             sd = {};
             sd.m_id = id;
             sd.m_fileOffsetBytes = offset;
             sd.m_isValid = true;
+            numberOfSamples = 0;
         }
     }
 
     // calculate the byte size for the last sequence
+    sd.m_numberOfSamples.push_back(numberOfSamples);
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
     AddSequence(sd);
 }

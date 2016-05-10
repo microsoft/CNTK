@@ -316,7 +316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RandomizedSequenceDescription s;
             s.m_id = m_bufferOriginalSequences[k].m_id;
-            s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples;
+            s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples.front();
             s.m_chunk = &chunk;
             chunkSequences.push_back(s);
         }
