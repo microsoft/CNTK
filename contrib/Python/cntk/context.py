@@ -683,6 +683,10 @@ class LocalExecutionContext(AbstractContext):
             dictionary containing `SamplesSeen`, `Perplexity`, and values for
             objective and evaluation error indexed by their node names
         '''
+        
+        if root_nodes is None and input_map is None:
+            raise ValueError('If input_map is None, you have to specify root_nodes.')        
+        
         action_name = "Test"
         config_content = self._generate_test_config(root_nodes, input_map, 
                                                     action_name = action_name)
