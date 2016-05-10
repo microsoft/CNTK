@@ -252,26 +252,26 @@ public:
         const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
         ElemType IRMetricValue = 0.0;
         size_t nValidQueries = 0;
+        ElemType irm0 = 0.0, irm1 = 0.0;
+        // IRMetric @ 1
         for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
         {
             QueryUrls& qu = *itqu;
-            qu.irm0 = 0.0;
-            qu.irm = 0.0;
+            irm0 = perUrlGainOrig(0, qu.urls.begin()->id);
+            if (irm0 == 0.0) continue;
 
-            i = 0;
-            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end() && i < 1; iturl++, i++)
+            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
             {
                 Url& url = *iturl;
-                qu.irm0 += perUrlGainOrig(0, url.id);
-                qu.irm += perUrlGainSort(0, url.id);
+                if (url.rk == 0)
+                {
+                    irm1 = perUrlGainSort(0, url.id);
+                    break;
+                }
             }
 
-            if (qu.irm0 != 0.0)
-            {
-                IRMetricValue += (qu.irm / qu.irm0);
-                nValidQueries++;
-            }
-
+            IRMetricValue += (irm1 / irm0);
+            nValidQueries++;
         }
 
         if (nValidQueries == 0)

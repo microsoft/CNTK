@@ -910,7 +910,7 @@ public:
         
         // IRMetricValue = IRMetricValue / nValidQueries * 100;
         // to make up the reporting
-        IRMetricValue = -IRMetricValue / nValidQueries * 100 * nCols;
+        IRMetricValue = (1.0f-IRMetricValue / nValidQueries) * 100 * nCols;
         Value().SetValue(IRMetricValue);
         //Value().Print("IRMetric", 0, 0, 0, 0);
 
