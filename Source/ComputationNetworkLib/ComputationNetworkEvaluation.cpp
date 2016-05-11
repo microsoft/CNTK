@@ -41,9 +41,9 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
 
     // traverse all nodes in the pre-determined evaluation order
 	shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-	m_cacheNetwork = flowControlNode;
 	if (rootNode->GetName() == wstring(L"Err")) {
 		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_KEYRECORD);
+		m_cacheNetwork = flowControlNode;
 	}
 	else {
 		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_NORMAL);
@@ -141,24 +141,43 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
-{	// naive
+{	
+	// naive
+	int periodIndex = 0;
+	bool recordTrigger = false;
+	pair<wstring, wstring> curPeriod;
+
 	unordered_map<ComputationNodeBasePtr, int> dependency;
 	if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
 		for (auto& node : m_nestedNodes)
 		{
-			if (node->IsOutOfDateWrtInputs())
-			{
-				int numInputs = node->GetNumInputs();
-				for (int index = 0; index < numInputs; index++) {
-					auto& input = node->GetInputs()[index];
-					if (dependency.find(input) == dependency.end()) {
-						dependency[input] = 1;
-					}
-					else {
-						dependency[input]++;
-					}
+			int numInputs = node->GetNumInputs();
+			for (int index = 0; index < numInputs; index++) {
+				auto& input = node->GetInputs()[index];
+				if (dependency.find(input) == dependency.end()) {
+					dependency[input] = 1;
+				}
+				else {
+					dependency[input]++;
 				}
 			}
+		}
+
+		m_partialRecordPeriod.clear();
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"conv1.c.c.c",	L"rn1_6.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_6.y",		L"rn1_12.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_12.y",		L"rn1_18.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_18.y",		L"rn2_6.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_6.y",		L"rn2_12.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_12.y",		L"rn2_18.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_18.y",		L"rn3_6.y"));		
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_6.y",		L"rn3_12.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_12.y",		L"rn3_18.y"));
+	}
+	else if(m_forwardMethod == ForwardMethod::FORWARD_ALLRECORD){
+		if (m_partialRecordPeriod.size()) {
+			curPeriod.first = m_partialRecordPeriod.back().first;
+			curPeriod.second = m_partialRecordPeriod.back().second;
 		}
 	}
 
@@ -178,17 +197,28 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
 				node->EndForwardProp();
 
+				if (periodIndex < m_partialRecordPeriod.size() && node->GetName() == m_partialRecordPeriod[periodIndex].second) {
+					recordTrigger = false;
+					periodIndex++;
+				}
+
+				if (periodIndex < m_partialRecordPeriod.size() && node->GetName() == m_partialRecordPeriod[periodIndex].first)
+					recordTrigger = true;
+
 				if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
 					// naive
 					int numInputs = node->GetNumInputs();
 					for (int index = 0; index < numInputs; index++) {
 						auto& input = node->GetInputs()[index];
 						if (dependency.find(input) != dependency.end()) {
-							dependency[input]--;
-							if (dependency[input] || !input->IsValueSharable()) continue;
-							if (input->GetNumInputs()) {
+							dependency[input]--;// = max(dependency[input] - 1, 0);
+							if (recordTrigger) {
+								if (dependency[input] || !input->IsValueSharable() || !input->GetNumInputs() ||
+									input->GetName() == m_partialRecordPeriod[periodIndex].first) {
+									continue;
+								}
 								input->SetIsReserveInForward(ReserveInForward::Released);
-								//input->ReleaseBufferIntoPool();
+								input->ReleaseBufferIntoPool();
 							}
 						}
 					}
@@ -198,7 +228,15 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 			}
 		}
 		else {
-			if (node->IsReserveInForward() == ReserveInForward::Released) {
+			if (curPeriod.first == wstring(L"") || curPeriod.second == wstring(L"") || node->GetName() == curPeriod.second)
+				return;
+
+			if (node->GetName() == curPeriod.first) {
+				recordTrigger = true;
+				continue;
+			}
+
+			if (recordTrigger && node->IsReserveInForward() == ReserveInForward::Released) {
 				node->BeginForwardProp();
 				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
 				node->EndForwardProp();
@@ -213,14 +251,19 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
     // process nodes in pre-determined order
 
-	if (m_externalFlowControlNode != nullptr) {
-		m_externalFlowControlNode->SetForwardMethod(ForwardMethod::FORWARD_ALLRECORD);
-		m_externalFlowControlNode->ForwardProp(fr);
-	}
 
     for (auto pnode = m_nestedNodes.rbegin(); pnode != m_nestedNodes.rend(); pnode++) // iterate backwards over evaluation order
     {
         auto& node = *pnode;
+
+		if (m_externalFlowControlNode != nullptr && (int)m_externalFlowControlNode->GetRecordPeriodSize()) {
+			pair<wstring, wstring> recordPeriod = m_externalFlowControlNode->GetLastRecordPeriod();
+			if (node->GetName() == recordPeriod.second) {
+				m_externalFlowControlNode->SetForwardMethod(ForwardMethod::FORWARD_ALLRECORD);
+				m_externalFlowControlNode->ForwardProp(fr);
+				m_externalFlowControlNode->RemoveRecordPeriod();
+			}
+		}
 
         node->BeginBackprop();
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);

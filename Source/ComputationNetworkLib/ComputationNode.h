@@ -1872,6 +1872,14 @@ public:
 
 	virtual void AddRecordPeriod(wstring recordStart, wstring recordEnd) { m_partialRecordPeriod.push_back(pair<wstring, wstring>(recordStart, recordEnd)); }
 	virtual void RemoveRecordPeriod() { m_partialRecordPeriod.pop_back(); }
+	virtual pair<wstring, wstring> GetLastRecordPeriod() 
+	{
+		pair<wstring, wstring> period;
+		period.first = m_partialRecordPeriod.back().first;
+		period.second = m_partialRecordPeriod.back().second;
+		return period;
+	}
+	virtual size_t GetRecordPeriodSize() { return m_partialRecordPeriod.size(); }
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
