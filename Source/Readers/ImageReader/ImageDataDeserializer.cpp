@@ -246,6 +246,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
 
+    WStringToIdMap& corpusStringRegistry = corpus->GetStringRegistry();
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -254,6 +255,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         {
             // In case when the sequence key is not specified we set it to the line number inside the mapping file.
             sequenceKey = std::to_string(lineIndex);
+            ss.clear();
+            ss.str(line);
             if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
                 RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
         }
@@ -284,7 +287,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
             description.m_chunkId = curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = corpus->GetStringRegistry()[wsequenceKey];
+            description.m_key.m_sequence = corpusStringRegistry[wsequenceKey];
             description.m_key.m_sample = 0;
 
             m_imageSequences.push_back(description);
