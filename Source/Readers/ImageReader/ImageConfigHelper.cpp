@@ -112,7 +112,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     m_cpuThreadCount = config(L"numCPUThreads", 0);
 
-    m_multiViewCrop = AreEqualIgnoreCase((string)featureSection(L"cropType", ""), "multiview10");
+    m_cropType = ParseCropType(featureSection(L"cropType", ""));
 }
 
 std::vector<StreamDescriptionPtr> ImageConfigHelper::GetStreams() const
@@ -136,4 +136,25 @@ std::string ImageConfigHelper::GetMapPath() const
 {
     return m_mapPath;
 }
+
+CropType ImageConfigHelper::ParseCropType(const std::string &src)
+{
+    if (src.empty() || AreEqualIgnoreCase(src, "center"))
+    {
+        return CropType::Center;
+    }
+
+    if (AreEqualIgnoreCase(src, "random"))
+    {
+        return CropType::Random;
+    }
+
+    if (AreEqualIgnoreCase(src, "multiview10"))
+    {
+        return CropType::MultiView10;
+    }
+
+    RuntimeError("Invalid crop type: %s.", src.c_str());
+}
+
 }}}

@@ -10,7 +10,6 @@
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
-#include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ElementTypeUtils.h"
 
@@ -28,10 +27,11 @@ void ImageTransformerBase::Initialize(TransformerPtr next,
                                       const ConfigParameters &readerConfig)
 {
     Base::Initialize(next, readerConfig);
+    m_imageConfig = std::make_unique<ImageConfigHelper>(readerConfig);
+
     m_seed = readerConfig(L"seed", (unsigned int)0);
 
-    ImageConfigHelper config(readerConfig);
-    size_t featureStreamId = config.GetFeatureStreamId();
+    size_t featureStreamId = m_imageConfig->GetFeatureStreamId();
     m_appliedStreamIds.push_back(featureStreamId);
     if (m_appliedStreamIds.size() != 1)
     {
@@ -103,8 +103,6 @@ void CropTransformer::Initialize(TransformerPtr next,
 
 void CropTransformer::InitFromConfig(const ConfigParameters &config)
 {
-    m_cropType = ParseCropType(config(L"cropType", ""));
-
     floatargvector cropRatio = config(L"cropRatio", "1.0");
     m_cropRatioMin = cropRatio[0];
     m_cropRatioMax = cropRatio[1];
@@ -121,7 +119,7 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
 
     if (!config.ExistsCurrent(L"hflip"))
     {
-        m_hFlip = m_cropType == CropType::Random;
+        m_hFlip = m_imageConfig->GetCropType() == CropType::Random;
     }
     else
     {
@@ -166,9 +164,9 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
         RuntimeError("Jitter type currently not implemented.");
     }
 
-    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
+    int viewIndex = m_imageConfig->IsMultiViewCrop() ? (int)(id % 10) : 0;
 
-    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
+    mat = mat(GetCropRect(m_imageConfig->GetCropType(), viewIndex, mat.rows, mat.cols, ratio, *rng));
     if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
         viewIndex >= 5)
     {
@@ -178,29 +176,7 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     m_rngs.push(std::move(rng));
 }
 
-CropTransformer::CropType
-CropTransformer::ParseCropType(const std::string &src)
-{
-    if (src.empty() || AreEqualIgnoreCase(src, "center"))
-    {
-        return CropType::Center;
-    }
-
-    if (AreEqualIgnoreCase(src, "random"))
-    {
-        return CropType::Random;
-    }
-
-    if (AreEqualIgnoreCase(src, "multiview10"))
-    {
-        return CropType::MultiView10;
-    }
-
-    RuntimeError("Invalid crop type: %s.", src.c_str());
-}
-
-CropTransformer::RatioJitterType
-CropTransformer::ParseJitterType(const std::string &src)
+CropTransformer::RatioJitterType CropTransformer::ParseJitterType(const std::string &src)
 {
     if (src.empty() || AreEqualIgnoreCase(src, "none"))
     {

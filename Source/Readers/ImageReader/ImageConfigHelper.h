@@ -12,6 +12,13 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+enum class CropType
+{
+    Center = 0,
+    Random = 1,
+    MultiView10 = 2
+};
+
 // A helper class for image specific parameters.
 // A simple wrapper around CNTK ConfigParameters.
 class ImageConfigHelper
@@ -50,23 +57,30 @@ public:
     {
         return m_grayscale;
     }
-	
-	bool IsMultiViewCrop() const
+
+    CropType GetCropType() const
     {
-        return m_multiViewCrop;
+        return m_cropType;
+    }
+
+    bool IsMultiViewCrop() const
+    {
+        return m_cropType == CropType::MultiView10;
     }
 
 private:
     ImageConfigHelper(const ImageConfigHelper&) = delete;
     ImageConfigHelper& operator=(const ImageConfigHelper&) = delete;
 
+    CropType ParseCropType(const std::string &src);
+
     std::string m_mapPath;
     std::vector<StreamDescriptionPtr> m_streams;
     ImageLayoutKind m_dataFormat;
     int m_cpuThreadCount;
     bool m_randomize;
-    bool m_multiViewCrop;
     bool m_grayscale;
+    CropType m_cropType;
 };
 
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;
