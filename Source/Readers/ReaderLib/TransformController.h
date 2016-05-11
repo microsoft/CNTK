@@ -44,7 +44,7 @@ public:
     // Some transformers can change their config based on the epoch.
     virtual void StartEpoch(const EpochConfiguration &config) override
     {
-        assert(m_next != nullptr);
+        assert(m_sequenceProvider != nullptr);
         for (auto& t : m_transformations)
         {
             t.first.m_transformer->StartEpoch(config);
@@ -63,7 +63,7 @@ public:
     // applying transformers to particular streams.
     virtual Sequences GetNextSequences(size_t sampleCount) override
     {
-        assert(m_next != nullptr);
+        assert(m_sequenceProvider != nullptr);
         Sequences sequences = m_sequenceProvider->GetNextSequences(sampleCount);
         if (sequences.m_data.empty())
         {
