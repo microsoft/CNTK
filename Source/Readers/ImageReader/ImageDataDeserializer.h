@@ -29,17 +29,19 @@ public:
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    ChunkPtr GetChunk(size_t chunkId) override;
 
     // Gets chunk descriptions.
-    virtual ChunkDescriptions GetChunkDescriptions() override;
+    ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for the chunk.
-    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override;
+    void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override;
+
+    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
     // Creates a set of sequence descriptions.
-    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, bool isMultiCrop);
+    void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
     struct ImageSequenceDescription : public SequenceDescription
@@ -57,6 +59,7 @@ private:
 
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
+    std::map<size_t, size_t> m_keyToSequence;
 
     // Element type of the feature/label stream (currently float/double only).
     ElementType m_featureElementType;
