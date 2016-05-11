@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <vector>
 #include "Descriptors.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -23,7 +24,7 @@ public:
 
     // Reads the input file, building and index of chunks and corresponding
     // sequences.
-    void Build();
+    void Build(CorpusDescriptorPtr corpus);
 
     // Returns input data index (chunk and sequence metadata)
     const Index& GetIndex() const { return m_chunks; }

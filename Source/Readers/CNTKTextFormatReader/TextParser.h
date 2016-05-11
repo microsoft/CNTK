@@ -9,6 +9,7 @@
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
 #include "Indexer.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,10 +23,9 @@ class TextParser : public DataDeserializerBase {
 public:
     explicit TextParser(const TextConfigHelper& helper);
 
-    ~TextParser();
+    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper);
 
-    // Builds an index of the input data.
-    void Initialize();
+    ~TextParser();
 
     // Retrieves a chunk of data.
     ChunkPtr GetChunk(size_t chunkId) override;
@@ -37,6 +37,9 @@ public:
     void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
 
 private:
+    // Builds an index of the input data.
+    void Initialize(CorpusDescriptorPtr corpus);
+
     // A buffer to keep data for all samples in a (variable length) sequence 
     // from a single input stream.
     struct InputStreamBuffer

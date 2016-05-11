@@ -31,7 +31,7 @@ public:
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
         m_parser.SetChunkSize(SIZE_MAX);
         m_parser.SetNumRetries(0);
-        m_parser.Initialize();
+        m_parser.Initialize(std::make_shared<CorpusDescriptor>());
     }
     // Retrieves a chunk of data.
     void LoadChunk()
