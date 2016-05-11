@@ -13,6 +13,7 @@
 #include "ConcStack.h"
 #include "TransformerBase.h"
 #include "Config.h"
+#include "ImageConfigHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -55,6 +56,9 @@ protected:
     // The only function that should be redefined by the inherited classes.
     virtual void Apply(size_t id, cv::Mat &from) = 0;
 
+protected:
+    std::unique_ptr<ImageConfigHelper> m_imageConfig;
+
 private:
     std::vector<StreamDescriptionPtr> m_outputStreams;
     std::vector<StreamId> m_appliedStreamIds;
@@ -72,12 +76,6 @@ private:
     void Apply(size_t id, cv::Mat &mat) override;
 
 private:
-    enum class CropType
-    {
-        Center = 0,
-        Random = 1,
-        MultiView10 = 2
-    };
     enum class RatioJitterType
     {
         None = 0,
@@ -90,12 +88,10 @@ private:
 
     void StartEpoch(const EpochConfiguration &config) override;
 
-    CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
     cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
-    CropType m_cropType;
     double m_cropRatioMin;
     double m_cropRatioMax;
     RatioJitterType m_jitterType;
