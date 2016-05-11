@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
+#include <algorithm>
 #include <io.h>
 #include <cstdio>
 #include <boost/scope_exit.hpp>
@@ -22,7 +23,7 @@ class CNTKTextFormatReaderTestRunner
 public:
     ChunkPtr m_chunk;
 
-    CNTKTextFormatReaderTestRunner(const std::string& filename,
+    CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
         m_parser(wstring(filename.begin(), filename.end()), streams)
     {
@@ -41,6 +42,31 @@ public:
 };
 
 namespace Test {
+
+// identical to 'sort -o filename filename'
+void SortLinesInFile(string filename, size_t expectedNumLines = 1)
+{
+    vector<string> content;
+    content.reserve(expectedNumLines);
+    ifstream ifstream(filename);
+    
+    string line;
+    while (getline(ifstream, line))
+    {
+        content.push_back(line);
+    }
+
+    ifstream.close();
+
+    sort(content.begin(), content.end());
+
+    ofstream ofstream(filename);
+
+    copy(content.begin(), content.end(), ostream_iterator<string>(ofstream, "\n"));
+
+    ofstream.close();
+}
+
 
 struct CNTKTextFormatReaderFixture : ReaderFixture
 {
@@ -635,6 +661,64 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_input)
     auto control = testDataPath() + "/Control/CNTKTextFormatReader/invalid_input_Control.txt";
 
     CheckFilesEquivalent(control, output);
+};
+
+// 100 sequences with N samples for each of 3 inputs, where N is chosen at random
+// from [1, 100] for each sequence
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_100x100x3)
+{
+    string outputFile = testDataPath() + "/Control/CNTKTextFormatReader/100x100x3_jagged_sequences_dense_Output.txt";
+
+    HelperReadInAndWriteOut<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        outputFile,
+        "100x100x3_randomize_auto",
+        "reader",
+        5476,  // epoch size = number of samples in the input file
+        1000,  // mb size  
+        1,  // num epochs
+        3,
+        0,
+        0,
+        1, 
+        false, // dense features
+        false, 
+        false); // do not user shared layout
+
+    SortLinesInFile(outputFile, 5476 * 3);
+
+    auto controlFile = testDataPath() + "/Control/CNTKTextFormatReader/100x100x3_jagged_sequences_dense_sorted.txt";
+    
+    CheckFilesEquivalent(controlFile, outputFile);
+};
+
+// 200 sequences with N samples in an input, 
+// where N is chosen at random from [1, 200] for each input in a sequence.
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_200x200x2_seq2seq)
+{
+    string outputFile = testDataPath() + "/Control/CNTKTextFormatReader/200x200x2_seq2seq_dense_Output.txt";
+
+    HelperReadInAndWriteOut<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        outputFile,
+        "200x200x2_seq2seq",
+        "reader",
+        14237,  // epoch size = number of samples in the input file
+        5000,  // mb size  
+        1,  // num epochs
+        2,
+        0,
+        0,
+        1,
+        false, // dense features
+        false,
+        false); // do not user shared layout
+
+    SortLinesInFile(outputFile, 14237 * 2);
+
+    auto controlFile = testDataPath() + "/Control/CNTKTextFormatReader/200x200x2_seq2seq_dense_sorted.txt";
+
+   CheckFilesEquivalent(controlFile, outputFile);
 };
 
 BOOST_AUTO_TEST_SUITE_END()

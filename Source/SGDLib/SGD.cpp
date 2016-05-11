@@ -364,7 +364,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         timer.Start();
 
         // set dropout rate for this epoch
-        size_t parallelWorkerIdx = (m_mpi == nullptr) ? 0 : m_mpi->CurrentNodeRank();
+        // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
+        size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UseParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
         size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
@@ -770,13 +771,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     int numMBsRun = 0;
 
-    bool useGradientAggregation = ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) &&
-                                   (epochNumber >= m_parallelizationStartEpochNum));
-    bool useModelAggregation = ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD || 
-                                 GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) 
-                                &&
-                              (epochNumber >= m_parallelizationStartEpochNum));
-    bool useParallelTrain = useGradientAggregation || useModelAggregation;
+    bool useGradientAggregation = UseGradientAggregation(epochNumber);
+    bool useModelAggregation = UseModelAggregation(epochNumber);
+    bool useParallelTrain = UseParallelTrain(epochNumber);
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -888,6 +885,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             actualMBSize = 0; // (undefined if !wasDataRead)
 
         nSamplesSinceLastModelSync += actualMBSize;
+
+        // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
+        // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
+        // w.r.t. inputs to force evaluation in each minibatch
+        MarkDropoutNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
 
         // node data was changed
         // TODO: move this to that function as well--just tired to pass everything as arguments
@@ -1129,7 +1131,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
                 }
             }
-            else // TODO: What's the meaning of this? Some sort of extrapolation?
+            else // estimate epoch size
                 m_maxComputedEpochSize = numMBsRun * trainSamplesSinceLastLogged / m_numMBsToShowResult;
 
             // progress tracing for compute cluster management
@@ -2290,6 +2292,14 @@ void SGD<ElemType>::InitializeAndCheckBlockMomentumSGDParameters()
     m_blockMomentumAsTimeConstant = 0.0; 
     m_blockLearningRate= 1.0; 
 #endif 
+}
+
+template <class ElemType>
+void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode)
+{
+    list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
+    for (auto& nodeIter : dropoutNodes)
+        nodeIter->SetEvalTimeStampOutdatedWrtAll();
 }
 
 template class SGD<float>;
