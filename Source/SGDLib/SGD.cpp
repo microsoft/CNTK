@@ -952,8 +952,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // backprop
                 // ===========================================================
 
-                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                    net->Backprop(criterionNodes[0]);
+				if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+				{
+					net->Backprop(criterionNodes[0]);
+				}
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)

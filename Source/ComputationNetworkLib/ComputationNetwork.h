@@ -1031,6 +1031,8 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
+
+	shared_ptr<FlowControlNode> m_cacheNetwork;
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 

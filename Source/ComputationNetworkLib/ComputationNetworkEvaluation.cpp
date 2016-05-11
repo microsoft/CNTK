@@ -40,7 +40,15 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
-    GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+	shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+	m_cacheNetwork = flowControlNode;
+	if (rootNode->GetName() == wstring(L"Err")) {
+		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_KEYRECORD);
+	}
+	else {
+		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_NORMAL);
+	}
+    flowControlNode->ForwardProp(FrameRange(nullptr));
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -76,7 +84,10 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     ZeroInputGradients(rootNode);
 
     // backpropagate through the network
-    GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
+	shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+	flowControlNode->SetExternalFlowControlNode(m_cacheNetwork);
+    flowControlNode->Backprop(FrameRange(nullptr), true, true);
+	flowControlNode->SetExternalFlowControlNode(nullptr);
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -130,21 +141,70 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
-{
+{	// naive
+	unordered_map<ComputationNodeBasePtr, int> dependency;
+	if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
+		for (auto& node : m_nestedNodes)
+		{
+			if (node->IsOutOfDateWrtInputs())
+			{
+				int numInputs = node->GetNumInputs();
+				for (int index = 0; index < numInputs; index++) {
+					auto& input = node->GetInputs()[index];
+					if (dependency.find(input) == dependency.end()) {
+						dependency[input] = 1;
+					}
+					else {
+						dependency[input]++;
+					}
+				}
+			}
+		}
+	}
+
     for (auto& node : m_nestedNodes)
     {
 #if 0
         if (dynamic_pointer_cast<LearnableParameter<float>>(node))
             dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
 #endif
-        if (node->IsOutOfDateWrtInputs())
-        {
-            node->BeginForwardProp();
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-            node->EndForwardProp();
+		if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD || m_forwardMethod == ForwardMethod::FORWARD_NORMAL) {
+			if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD)
+				node->SetIsReserveInForward(ReserveInForward::Reserved);
 
-            node->BumpEvalTimeStamp();
-        }
+			if (node->IsOutOfDateWrtInputs())
+			{
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+
+				if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
+					// naive
+					int numInputs = node->GetNumInputs();
+					for (int index = 0; index < numInputs; index++) {
+						auto& input = node->GetInputs()[index];
+						if (dependency.find(input) != dependency.end()) {
+							dependency[input]--;
+							if (dependency[input] || !input->IsValueSharable()) continue;
+							if (input->GetNumInputs()) {
+								input->SetIsReserveInForward(ReserveInForward::Released);
+								//input->ReleaseBufferIntoPool();
+							}
+						}
+					}
+				}
+
+				node->BumpEvalTimeStamp();
+			}
+		}
+		else {
+			if (node->IsReserveInForward() == ReserveInForward::Released) {
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+				node->SetIsReserveInForward(ReserveInForward::Reverted);
+			}
+		}
     }
 }
 
@@ -152,6 +212,12 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
     // process nodes in pre-determined order
+
+	if (m_externalFlowControlNode != nullptr) {
+		m_externalFlowControlNode->SetForwardMethod(ForwardMethod::FORWARD_ALLRECORD);
+		m_externalFlowControlNode->ForwardProp(fr);
+	}
+
     for (auto pnode = m_nestedNodes.rbegin(); pnode != m_nestedNodes.rend(); pnode++) // iterate backwards over evaluation order
     {
         auto& node = *pnode;
