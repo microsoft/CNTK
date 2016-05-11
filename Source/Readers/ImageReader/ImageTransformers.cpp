@@ -29,6 +29,8 @@ ImageTransformerBase::ImageTransformerBase(const ConfigParameters& readerConfig)
     m_seed = readerConfig(L"seed", 0u);
 }
 
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Currently for image transformations we only support dense streams of type double or float.
 StreamDescription ImageTransformerBase::Transform(const StreamDescription& inputStream)
 {
     m_inputStream = inputStream;
@@ -55,6 +57,7 @@ StreamDescription ImageTransformerBase::Transform(const StreamDescription& input
     return m_outputStream;
 }
 
+// Transforms a single sequence as open cv dense image. Called once per sequence.
 SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 {
     auto inputSequence = static_cast<const DenseSequenceData&>(*sequence);
@@ -87,7 +90,6 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     floatargvector cropRatio = config(L"cropRatio", "1.0");
@@ -332,13 +334,14 @@ ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransf
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Scale transformer transforms the stream so that all samples are of the same size.
 StreamDescription ScaleTransformer::Transform(const StreamDescription& inputStream)
 {
     ImageTransformerBase::Transform(inputStream);
     m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(m_imgWidth, m_imgHeight, m_imgChannels).AsTensorShape(HWC));
     return m_outputStream;
 }
-
 
 void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
@@ -405,10 +408,8 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
     }
 }
 
-TransposeTransformer::TransposeTransformer(const ConfigParameters&)
-{
-}
-
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Transpose transformer expects the dense input stream with samples as HWC and outputs CHW.
 StreamDescription TransposeTransformer::Transform(const StreamDescription& inputStream)
 {
     m_inputStream = inputStream;

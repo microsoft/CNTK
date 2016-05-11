@@ -36,22 +36,21 @@ typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 struct EpochConfiguration;
 struct Minibatch;
 
-// The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
+// The whole CompositeReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
 // directly to the new Reader API. The example of the cntk configuration that this reader supports can be found at
 //     Tests/EndToEndTests/Speech/ExperimentalHtkmlfReader/LSTM/FullUtterance/cntk.cntk
-// CompositeDataReader is a factory for the new readers. Its main responsibility is to read the configuration and create the
+// CompositeReader is a factory for the new readers. Its main responsibility is to read the configuration and create the
 // corresponding set of deserializers, the corpus descriptor, transformers, randomizer and packer, providing the following functionality:
 //     - all input sequences are defined by the corpus descriptor
 //     - deserializers provide sequences according to the corpus descriptor
 //     - sequences can be transformed by the transformers applied on top of deserializer (TODO: not yet in place)
 //     - deserializers are bound together using the bundler - it bundles sequences with the same sequence id retrieved from different deserializers
 //     - packer is used to pack randomized sequences into the minibatch
-// The composite data reader is currently also responsible for asynchronous prefetching of the minibatch data.
+// The composite reader is currently also responsible for asynchronous prefetching of the minibatch data.
 
 // In order not to break existing configs and allow deserializers composition it exposes the same interface as the old readers, but it is not exposed
 // to external developers. The actual "reader developer" now has to provide deserializer(s) only.
 // TODO: Implement proper corpus descriptor.
-// TODO: Same code as in ReaderLib shim, the one in the ReaderLib will be deleted as the next step.
 // TODO: Change this interface when SGD is changed.
 class CompositeDataReader : public Reader, protected Plugin
 {

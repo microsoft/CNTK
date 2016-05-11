@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <vector>
 #include "DataDeserializer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -23,11 +22,12 @@ public:
     // based on the epoch.
     virtual void StartEpoch(const EpochConfiguration &config) = 0;
 
-    // Transforms input stream into output stream.
+    // Transformers are applied on a particular input stream - this method should describe
+    // how inputStream is transformed to the output stream (return value)
     virtual StreamDescription Transform(const StreamDescription& inputStream) = 0;
 
-    // Transforms input sequences into output sequence.
-    virtual SequenceDataPtr Transform(SequenceDataPtr sequence) = 0;
+    // This method should describe how input sequences is transformed to the output sequence.
+    virtual SequenceDataPtr Transform(SequenceDataPtr inputSequence) = 0;
 
     virtual ~Transformer()
     {

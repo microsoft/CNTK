@@ -14,6 +14,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: This class should go away eventually.
+// TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
+// TODO: Currently preserving this for backward compatibility with current configs.
 CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
     const ConfigParameters& config) :
     m_provider(provider)

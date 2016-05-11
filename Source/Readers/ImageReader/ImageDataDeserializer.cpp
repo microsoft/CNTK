@@ -117,12 +117,15 @@ public:
     }
 };
 
+// A new constructor to support new compositional configuration,
+// that allows composition of deserializers and transforms on inputs.
+// For a sample config please see AlexImage end-to-end test.
 // TODO: Provide only sequences specified in the corpus descriptor.
 ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigParameters& config)
 {
     ConfigParameters inputs = config("inputs");
-    std::vector<std::string> featureNames = GetSectionsWithParameter(inputs, "transforms");
-    std::vector<std::string> labelNames = GetSectionsWithParameter(inputs, "labelDim");
+    std::vector<std::string> featureNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "transforms");
+    std::vector<std::string> labelNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "labelDim");
 
     // TODO: currently support only one feature and label section.
     if (featureNames.size() != 1 || labelNames.size() != 1)
@@ -167,6 +170,8 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigPa
     CreateSequenceDescriptions(config(L"file"), labelDimension, multiViewCrop);
 }
 
+// TODO: Should be removed at some point.
+// Supports old type of ImageReader configuration.
 ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 {
     ImageConfigHelper configHelper(config);

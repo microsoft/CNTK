@@ -13,8 +13,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     : m_dataFormat(CHW)
 {
-    std::vector<std::string> featureNames = GetSectionsWithParameter(config, "width");
-    std::vector<std::string> labelNames = GetSectionsWithParameter(config, "labelDim");
+    std::vector<std::string> featureNames = GetSectionsWithParameter("ImageReader", config, "width");
+    std::vector<std::string> labelNames = GetSectionsWithParameter("ImageReader", config, "labelDim");
 
     // REVIEW alexeyk: currently support only one feature and label section.
     if (featureNames.size() != 1 || labelNames.size() != 1)

@@ -15,11 +15,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // A pair of a transformer and the stream name to which the transformer should be a applied.
 struct Transformation
 {
-    TransformerPtr m_transfromer;
+    TransformerPtr m_transformer;
     std::wstring m_streamName;
 };
 
 // A class responsible for applying a list of transformers to sequences and stream descriptions.
+// Delegates retrieving of sequences to another sequence provider(such as randomizer) and applies transformations after retrieving.
+// Usually used by the packer to get next set of sequences.
 class TransformController : public SequenceEnumerator
 {
 public:
@@ -27,13 +29,13 @@ public:
         : m_sequenceProvider(sequenceProvider)
     {
         // Applying transformations to stream descriptions,
-        // i.e. a transofrmation can change a stream from dense to sparse.
+        // i.e. a transformation can change a stream from dense to sparse.
         std::vector<StreamDescriptionPtr> transformedStreams = m_sequenceProvider->GetStreamDescriptions();
         for (auto& t : transformations)
         {
             size_t streamId = GetStreamId(t.m_streamName, transformedStreams);
             m_transformations.push_back(std::make_pair(t, streamId));
-            transformedStreams[streamId] = std::make_shared<StreamDescription>(t.m_transfromer->Transform(*transformedStreams[streamId]));
+            transformedStreams[streamId] = std::make_shared<StreamDescription>(t.m_transformer->Transform(*transformedStreams[streamId]));
         }
         m_outputStreams = transformedStreams;
     }
@@ -45,7 +47,7 @@ public:
         assert(m_next != nullptr);
         for (auto& t : m_transformations)
         {
-            t.first.m_transfromer->StartEpoch(config);
+            t.first.m_transformer->StartEpoch(config);
         }
 
         m_sequenceProvider->StartEpoch(config);
@@ -73,7 +75,7 @@ public:
         {
             for (auto& t : m_transformations)
             {
-                sequences.m_data[t.second][j] = t.first.m_transfromer->Transform(sequences.m_data[t.second][j]);
+                sequences.m_data[t.second][j] = t.first.m_transformer->Transform(sequences.m_data[t.second][j]);
             }
         }
 
@@ -92,7 +94,7 @@ private:
         }
 
         assert(false);
-        LogicError("Unexpected stream specifed for transformation.");
+        LogicError("Unexpected stream specified for transformation.");
     }
 
     SequenceEnumeratorPtr m_sequenceProvider;

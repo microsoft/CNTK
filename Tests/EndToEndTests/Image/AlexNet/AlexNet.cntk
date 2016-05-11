@@ -43,19 +43,19 @@ Train=[
     ]
 
     reader = [
-        verbosity = 0
-        randomize = true
+        verbosity=0
+        randomize=true
 
         # Currently for image reader a single sequence is a chunk
         # so setting randomization window to 1.
-        randomizationWindow =1
-        useLegacy = false
+        randomizationWindow=1
+        useLegacy=false
 
         # A list of deserializers to use.
-        deserializers = [
+        deserializers=[
             [   
-                type = "ImageDataDeserializer"
-                module = "ImageReader"
+                type="ImageDataDeserializer"
+                module="ImageReader"
 
                 # Map file which maps images to labels using the following format:
                 # <full path to image><tab><numerical label (0-based class id)>
@@ -64,7 +64,7 @@ Train=[
                 file=$ConfigDir$/train_map.txt
 
                 # Description of input streams
-                inputs = [
+                inputs=[
                     features=[
                         transforms=[
                             [
@@ -120,18 +120,18 @@ Test=[
     ]
     
     reader=[
-        verbosity = 0
-        randomize = false
+        verbosity=0
+        randomize=false
 
         # A list of deserializers to use.
-        deserializers = [
+        deserializers=[
             [
-                type = "ImageDataDeserializer"
-                module = "ImageReader"
+                type="ImageDataDeserializer"
+                module="ImageReader"
                 file=$ConfigDir$/val_map.txt
 
                 # Description of input streams
-                inputs = [
+                inputs=[
                     features=[
                         transforms=[
                             [

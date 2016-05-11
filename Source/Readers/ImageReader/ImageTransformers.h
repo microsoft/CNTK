@@ -130,7 +130,7 @@ private:
 class TransposeTransformer : public Transformer
 {
 public:
-    explicit TransposeTransformer(const ConfigParameters& config);
+    explicit TransposeTransformer(const ConfigParameters&) {}
 
     void StartEpoch(const EpochConfiguration&) override {}
 

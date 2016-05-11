@@ -3,8 +3,8 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="CompositeDataReader.cpp" />
     <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="CompositeDataReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

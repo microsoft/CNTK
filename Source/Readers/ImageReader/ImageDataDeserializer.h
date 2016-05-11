@@ -21,7 +21,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ImageDataDeserializer : public DataDeserializerBase
 {
 public:
-    // Constructor for compositional configuration.
+    // A new constructor to support new compositional configuration,
+    // that allows composition of deserializers and transforms on inputs.
     ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
 
     // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.

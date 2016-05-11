@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CompositeDataReader.cpp : Defines a reader that allows composing different deserializers.
+// CompositeReader.cpp : Defines a reader that allows composing different deserializers.
 // With this reader in place the users should only extend deserializers.
 //
 
@@ -10,8 +10,6 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
-
-#define DATAREADER_EXPORTS // creating the exports here
 
 #include "CompositeDataReader.h"
 #include "Bundler.h"
@@ -22,20 +20,17 @@
 #include "TruncatedBpttPacker.h"
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
-#include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
+// directly to the new Reader API. 
+// For more information please see its header file.
+// This method composes together packers + randomizer + a set of transformers and deserializers.
 CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryProviderPtr provider) : m_layout(make_shared<MBLayout>()),
     m_corpus(std::make_shared<CorpusDescriptor>()),
     m_provider(provider)
 {
-    int threadCount = config(L"numCPUThreads", 0);
-    if (threadCount > 0)
-    {
-        omp_set_num_threads(threadCount);
-    }
-
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", true);
     bool truncated = config(L"truncated", false);
@@ -70,7 +65,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     if (m_deserializers.empty())
     {
-        InvalidArgument("Could not fine deserializers in the reader config.");
+        InvalidArgument("Could not find deserializers in the reader config.");
     }
 
     IDataDeserializerPtr deserializer = m_deserializers.front();
@@ -86,7 +81,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     // Pick up the randomizer.
     bool randomize = config(L"randomize", false);
-    // By default do not use omp threads for deserialization.
+    // By default do not use omp threads for deserialization of sequences.
+    // It makes sense to put it to true for cases when deserialization is CPU intensive,
+    // i.e. decompression of images.
     bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", false);
     if (randomize)
     {
@@ -128,7 +125,10 @@ Minibatch CompositeDataReader::ReadMinibatch()
     return m_packer->ReadMinibatch();
 }
 
-// Create deserializers based on the specified configuration.
+// Create deserializers based on the specified configuration. 
+// deserializers = [
+//        [ type = "ImageDataDeserializer" module = "ImageReader" ...]
+//        [ type = "CNTKTextFormatDeserializer" module = "CNTKTextFormatReader" ...]
 void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
 {
     argvector<ConfigValue> deserializerConfigs =
@@ -149,7 +149,8 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     }
 }
 
-// Creates a particular deserializer based on the config.
+// Creates a particular deserializer based on the config: its loads the external module and calls CreateDeserializer
+// factory function for a particular deserializer type.
 IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
     typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
@@ -171,13 +172,23 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
     return IDataDeserializerPtr(d);
 }
 
-// Create transformers based on the configuration.
+// Create transformers based on the configuration, i.e.
+// deserializers = [
+//     [
+//         type = "ImageDataDeserializer"
+//         module = "ImageReader"
+//         inputs = [
+//               features = [
+//---->              transforms = [
+//                       [type = "Crop"]:[type = "Scale"]...
+
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
     argvector<ConfigParameters> inputs = deserializerConfig("inputs");
     for (size_t i = 0; i < inputs.size(); ++i)
     {
+        // Trying to find transfomers in a stream section of the config.
         auto inputSections = TryGetSectionsWithParameter(inputs[i], "transforms");
         if (inputSections.size() > 1)
         {
@@ -193,7 +204,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         ConfigParameters input = inputs[i](inputSections.front());
         std::wstring inputName = msra::strfun::utf16(input.ConfigName());
 
-        // Read tranformers in order.
+        // Read tranformers in order and appending them to the transformer pipeline.
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
@@ -204,7 +215,9 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
 
 }
 
-// Create a transformer for a particular configuration. Loading it from the default module if module is not specified.
+// Create a transformer for a particular configuration. Loading it from the module of the deserializer if module is not specified, i.e.
+//     transforms = [
+//         [type = "Scale" width=...]:...
 TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule)
 {
     typedef bool(*TransformerFactory) (Transformer** t, const std::wstring& type, const ConfigParameters& cfg);
@@ -216,7 +229,7 @@ TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& co
     Transformer* t;
     if (!f(&t, transformerType, config))
     {
-        RuntimeError("Cannot create transformer. Please check module and type in the configuration.");
+        RuntimeError("Cannot create transformer. Please check the module and type in the configuration.");
     }
 
     assert(t != nullptr);

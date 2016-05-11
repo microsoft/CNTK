@@ -17,6 +17,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: This class should go away eventually.
+// TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
+// TODO: Currently preserving this for backward compatibility with current configs.
 ImageReader::ImageReader(MemoryProviderPtr provider,
                          const ConfigParameters& config)
     : m_seed(0), m_provider(provider)
@@ -52,10 +55,10 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
         randomizer = std::make_shared<NoRandomizer>(deserializer, multithreadedGetNextSequences);
     }
 
+    // Create transformations for a single feature stream.
     std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()]->m_name;
     ConfigParameters featureStream = config(featureName);
 
-    // Create transformations.
     std::vector<Transformation> transformations;
     transformations.push_back(Transformation{ std::make_shared<CropTransformer>(featureStream), featureName });
     transformations.push_back(Transformation{ std::make_shared<ScaleTransformer>(featureStream), featureName });
