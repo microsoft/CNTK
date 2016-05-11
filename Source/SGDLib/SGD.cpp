@@ -1185,7 +1185,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
                 }
             }
-            else // TODO: What's the meaning of this? Some sort of extrapolation?
+            else // estimate epoch size
                 m_maxComputedEpochSize = numMBsRun * trainSamplesSinceLastLogged / m_numMBsToShowResult;
 
             // progress tracing for compute cluster management
