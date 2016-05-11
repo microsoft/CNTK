@@ -36,10 +36,10 @@ typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 struct EpochConfiguration;
 struct Minibatch;
 
-// The whole CompositeReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
+// The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
 // directly to the new Reader API. The example of the cntk configuration that this reader supports can be found at
 //     Tests/EndToEndTests/Speech/ExperimentalHtkmlfReader/LSTM/FullUtterance/cntk.cntk
-// CompositeReader is a factory for the new readers. Its main responsibility is to read the configuration and create the
+// CompositeDataReader is a factory for the new readers. Its main responsibility is to read the configuration and create the
 // corresponding set of deserializers, the corpus descriptor, transformers, randomizer and packer, providing the following functionality:
 //     - all input sequences are defined by the corpus descriptor
 //     - deserializers provide sequences according to the corpus descriptor
