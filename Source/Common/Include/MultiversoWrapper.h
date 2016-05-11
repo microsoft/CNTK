@@ -59,7 +59,7 @@ public:
             : m_modelSyncCount(0), m_adjustLearningRateAtBeginningType(adjusttype),
             m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
             m_totalClientNumber(MPINodeNum), m_isUseAsyncBuffered(isAsyncBuffered),
-            m_traceLevel(traceLevel), m_isAverage(false), m_isSycned(false),
+            m_traceLevel(traceLevel), m_isAverage(true), m_isSycned(false),
             m_pMPI(pMPI)
     {
         if (m_isAverage)
