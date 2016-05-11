@@ -12,7 +12,6 @@ write=[
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
 
     printValues=true
       

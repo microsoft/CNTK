@@ -31,7 +31,6 @@ train=[
     # which is 886 * 5000
     recurrentLayer=1
     defaultHiddenActivity=0.0
-    useValidation=true
     rnnType=CLASSLM
     # rnnType=LSTM
 
@@ -297,7 +296,6 @@ test=[
     # which is 886 * 5000
     recurrentLayer=1
     defaultHiddenActivity=0.1
-    useValidation=true
     rnnType=CLASSLM
 
     modelPath=$ExpFolder$\modelRnnCNTK
