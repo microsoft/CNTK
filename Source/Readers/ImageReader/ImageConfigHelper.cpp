@@ -112,7 +112,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     m_cpuThreadCount = config(L"numCPUThreads", 0);
 
-    m_multiViewCrop = AreEqualIgnoreCase((string)featureSection(L"cropType", ""), "multiview10");
+    m_multiViewCrop = AreEqualIgnoreCase((string)featureSection(L"cropType", "center"), "multiview10");
 }
 
 std::vector<StreamDescriptionPtr> ImageConfigHelper::GetStreams() const
