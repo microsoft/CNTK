@@ -36,6 +36,24 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageAndTextReaderSimple_Config.cntk",
+        testDataPath() + "/Control/ImageReaderSimple_Control.txt",
+        testDataPath() + "/Control/ImageReaderSimple_Output.txt",
+        "Simple_Test",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
+
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
 {
     BOOST_REQUIRE_EXCEPTION(

@@ -1,0 +1,75 @@
+RootDir = .
+ModelDir = "models"
+command = "Simple_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+
+Simple_Test = [
+
+# Parameter values for the reader
+reader = [
+        verbosity=0
+        randomize=true
+
+        # Currently for image reader a single sequence is a chunk
+        # so setting randomization window to 1.
+        randomizationWindow=1
+        useLegacy=false
+
+        # A list of deserializers to use.
+        deserializers=[
+            [   
+                type="ImageDataDeserializer"
+                module="ImageReader"
+                file = "$RootDir$/ImageAndReaderSimple_map.txt"
+
+                # Description of input streams
+                inputs=[
+                    features=[
+                        transforms=[
+                            [
+                                type="Crop"
+                                cropType=Center
+                                cropRatio=1.0
+                                jitterType=UniRatio
+                            ]:[
+                                type="Scale"
+                                width=4
+                                height=8
+                                channels=3
+                                interpolations=Linear
+                            ]:[
+                                type="Mean"
+                            ]:[
+                                type="Transpose"
+                            ]
+                        ]
+                    ]
+                    ignored=[
+                        labelDim=4
+                    ]
+                ]
+            ]:[
+                type="CNTKTextFormatDeserializer"
+                module="CNTKTextFormatReader"
+                file = "$RootDir$/ImageAndReaderSimple_labels.txt"
+
+                # Description of input streams
+                input=[
+                    labels=[
+                        dim=4
+                        format="sparse"
+                    ]
+                ]
+            ]
+        ]
+    ]
+]
