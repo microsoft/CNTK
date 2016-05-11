@@ -230,6 +230,10 @@ public:
     {
         m_evalTimeStamp = s_timeStampCounter;
     }
+    void SetEvalTimeStampOutdatedWrtAll()
+    {
+        m_evalTimeStamp = 0;
+    }
     int64_t GetEvalTimeStamp() const
     {
         return m_evalTimeStamp;
