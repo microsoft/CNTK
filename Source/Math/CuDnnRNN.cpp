@@ -133,7 +133,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 
     wDesc = make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc.data());
     if (wDesc->GetSize() != weightsW.GetNumRows())
-        InvalidArgument("RNN needs %d parameters, but %d were allocated", wDesc->GetSize(), weightsW.GetNumRows());
+        InvalidArgument("RNN needs %ld parameters, but %ld were allocated", wDesc->GetSize(), weightsW.GetNumRows());
 
     CUDNN_CALL(cudnnRNNForwardTraining(
         *m_cudnn, *m_rnnT,
