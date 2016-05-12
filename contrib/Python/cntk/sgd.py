@@ -287,12 +287,11 @@ class SGDParams:
         This function sets the parallel training to Data Paralllel SGD.
                 
         Args:
-            parallelization_start_epoch: accepts integer value; default is 1
-            distributed_mb_reading: accepts boolean value:  True  or  False ; 
-            default is False It is recommended to turn distributed minibatch 
-            reading on to minimize the I/O cost in each worker. 
-            sync_perf_stats: accepts integer value; default is 0
-            gradient_bits: the number of bits used to send gradient updates
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (bool): default is False It is recommended to 
+                turn distributed minibatch reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
+            gradient_bits (int): the number of bits used to send gradient updates
             use_zero_threshold_for_1bit: TBA
             use_buffered_async_gradient_aggregation: TBA
         """
@@ -316,13 +315,13 @@ class SGDParams:
         This function sets the parallel training to Model Averaging SGD.
                 
         Args:
-            parallelization_start_epoch : accepts integer value; default is 1
-            distributed_mb_reading : accepts boolean value:  True  or  False ; 
-            default is False It is recommended to turn distributed minibatch 
-            reading on to minimize the I/O cost in each worker. 
-            sync_perf_stats: accepts integer value; default is 0
-            sync_period: specifies the number of samples that each worker need 
-            to process before a model averaging is conducted. The default value is 40,000.
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (int): accepts boolean value:  True  or  False ; 
+                default is False It is recommended to turn distributed minibatch 
+                reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
+            sync_period (int): specifies the number of samples that each worker need 
+                to process before a model averaging is conducted. The default value is 40,000.
             sync_frequency_in_frames: TBA       
         """        
         self._set_global_parallel_params('ModelAveragingSGD',
@@ -348,25 +347,25 @@ class SGDParams:
         This function sets the parallel training to Block Momentum SGD.
                 
         Args:
-            parallelization_start_epoch : accepts integer value; default is 1
-            distributed_mb_reading : accepts boolean value:  True  or  False ; 
-            default is False It is recommended to turn distributed minibatch 
-            reading on to minimize the I/O cost in each worker. 
-            sync_perf_stats: accepts integer value; default is 0
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (bool): accepts boolean value:  True  or  False ; 
+                default is False It is recommended to turn distributed minibatch 
+                reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
             sync_period: it specifies how frequent a model synchronization is performed. 
-            The default value is 120,000.
-            reset_sgd_momentum: This means after every synchronization point, 
-            the smoothed gradient used in local SGD will be set as 0. The default
-            value of this variable is True. 
-            use_nesterov_momentum: This means the Nestrov style block momentum 
-            is applied. The default value of this variable is True. 
-            block_learning_rate: specifies the block learning rate. 
+                The default value is 120,000.
+            reset_sgd_momentum (bool): This means after every synchronization point, 
+                the smoothed gradient used in local SGD will be set as 0. The default
+                value of this variable is True. 
+            use_nesterov_momentum (bool): This means the Nestrov style block momentum 
+                is applied. The default value of this variable is True. 
+            block_learning_rate (float): specifies the block learning rate. 
             block_momentum_per_sync: TBA
-            block_momentum_as_time_constant: specifies the time constant of the 
-            low-pass filter in block-level model update. It is calculated as: 
-            blockMomentumAsTimeConstant = -syncPeriod / log(block_momentum). 
-            Note that block_momentum_per_sync and block_momentum_as_time_constant 
-            are mutually exclusive
+            block_momentum_as_time_constant (float): specifies the time constant of the 
+                low-pass filter in block-level model update. It is calculated as: 
+                blockMomentumAsTimeConstant = -syncPeriod / log(block_momentum). 
+                Note that block_momentum_per_sync and block_momentum_as_time_constant 
+                are mutually exclusive
         
         """        
         self._set_global_parallel_params('BlockMomentumSGD',
@@ -386,12 +385,12 @@ class SGDParams:
     def _generate_parallel_training_config(self):
         config = ['ParallelTrain=[']        
         for k,v in self.parallel_training.items():
-            if v:
+            if v is not None:
                 config.append('\t{0} = {1}'.format(k, v))    
         
         config.append('\t{0} = ['.format(self.parallel_training['parallelizationMethod']))    
         for k,v in self.parallel_training_subblock.items():            
-            if v:
+            if v is not None:
                 config.append('\t\t{0} = {1}'.format(k, v))    
         config.append('\t]')
         config.append(']')

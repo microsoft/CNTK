@@ -685,7 +685,7 @@ class LocalExecutionContext(AbstractContext):
         '''
         
         if root_nodes is None and input_map is None:
-            raise ValueError('If input_map is None, you have to specify root_nodes.')        
+            raise ValueError('if input_map is None, you have to specify root_nodes.')        
         
         action_name = "Test"
         config_content = self._generate_test_config(root_nodes, input_map, 
@@ -832,7 +832,7 @@ class DeferredExecutionContext(AbstractContext):
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
         if root_nodes is None and input_map is None:
-            raise ValueError('If input_map is None, you have to specify root_nodes.')
+            raise ValueError('if input_map is None, you have to specify root_nodes.')
 
         action_name = "Test"
         config_content = self._generate_test_config(root_nodes, input_map, action_name)
