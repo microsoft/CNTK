@@ -3612,20 +3612,15 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
 
             if (emptyTransfer)
             {
-                if (m_GPUSparseMatrix)
-                {
-                    m_GPUSparseMatrix->ChangeDeviceTo(to_id);
+                if (m_GPUSparseMatrix && m_GPUSparseMatrix->GetComputeDeviceId() == to_id)
                     m_GPUSparseMatrix->Resize(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount());
-                }
                 else
                     m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount(), to_id, m_CPUSparseMatrix->GetFormat());
             }
             else
             {
-                if (!m_GPUSparseMatrix)
+                if (!m_GPUSparseMatrix || m_GPUSparseMatrix->GetComputeDeviceId() != to_id)
                     m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(to_id);
-                else
-                    m_GPUSparseMatrix->ChangeDeviceTo(to_id);
                 m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
             }
 
@@ -3679,14 +3674,14 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 LogicError("Can't move from CPU because I'm not there!");
             if (emptyTransfer)
             {
-                if (m_GPUMatrix)
+                if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
                     m_GPUMatrix->Resize(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols());
                 else
                     m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id);
             }
             else
             {
-                if (m_GPUMatrix)
+                if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
                     m_GPUMatrix->SetValue(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
                 else
                     m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
