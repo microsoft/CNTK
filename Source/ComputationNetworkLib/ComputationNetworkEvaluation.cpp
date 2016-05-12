@@ -164,15 +164,21 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 		}
 
 		m_partialRecordPeriod.clear();
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"conv1.c.c.c",	L"rn1_6.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_6.y",		L"rn1_12.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_12.y",		L"rn1_18.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_18.y",		L"rn2_6.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_6.y",		L"rn2_12.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_12.y",		L"rn2_18.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_18.y",		L"rn3_6.y"));		
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_6.y",		L"rn3_12.y"));
-		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_12.y",		L"rn3_18.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"conv1.c.c.c",	L"rn1_3.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_3.y",		L"rn2_4.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_4.y",		L"rn2_8.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_8.y",		L"rn3_3.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_3.y",		L"rn3_6.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_6.y",		L"rn3_9.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_9.y",		L"rn3_12.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_12.y",		L"rn3_15.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_15.y",		L"rn3_18.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_18.y",		L"rn3_21.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_21.y",		L"rn3_24.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_24.y",		L"rn3_27.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_27.y",		L"rn3_30.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_30.y",		L"rn3_33.y"));
+		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_30.y",		L"rn3_36.y"));
 	}
 	else if(m_forwardMethod == ForwardMethod::FORWARD_ALLRECORD){
 		if (m_partialRecordPeriod.size()) {
