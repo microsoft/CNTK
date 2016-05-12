@@ -54,7 +54,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
     }
 
-    argvector<ConfigValue> inputs = cfg("inputs");
+    argvector<ConfigValue> inputs = cfg("input");
     if (inputs.size() != 1)
     {
         LogicError("MLFDataDeserializer supports a single input stream only.");

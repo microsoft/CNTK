@@ -36,7 +36,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
-    argvector<ConfigValue> inputs = cfg("inputs");
+    argvector<ConfigValue> inputs = cfg("input");
     if (inputs.size() != 1)
     {
         InvalidArgument("HTKDataDeserializer supports a single input stream only.");
