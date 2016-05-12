@@ -236,7 +236,9 @@ public:
 		}
 
 		if (deviceId >= 0) {
+#ifndef CPUONLY
 			bufferPtr = TracingGPUMemoryAllocator::Allocate<ElemType>(deviceId, size);
+#endif
 		}
 		else {
 			bufferPtr = new ElemType[size]();
@@ -269,7 +271,9 @@ public:
 	void PhysicalReleaseBuffer(DEVICEID_TYPE deviceId, ElemType* buffer)
 	{
 		if (deviceId >= 0) {
+#ifndef CPUONLY
 			TracingGPUMemoryAllocator::Free<ElemType>(deviceId, buffer, false);
+#endif
 		}
 		else {
 			delete[] buffer;
