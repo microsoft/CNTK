@@ -265,11 +265,11 @@ public:
 	}
 
 	// Release targeting buffer in buffer pool
-	template<class ELemType>
+	template<class ElemType>
 	void PhysicalReleaseBuffer(DEVICEID_TYPE deviceId, ElemType* buffer)
 	{
 		if (deviceId >= 0) {
-			TracingGPUMemoryAllocator::Free<ELemType>(deviceId, buffer, false);
+			TracingGPUMemoryAllocator::Free<ElemType>(deviceId, buffer, false);
 		}
 		else {
 			delete[] buffer;
