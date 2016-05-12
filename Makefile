@@ -271,7 +271,6 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
-	$(SOURCEDIR)/Math/CommonMatrix.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
