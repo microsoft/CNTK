@@ -672,7 +672,7 @@ template class OrderedCrossEntropyWithSoftmaxNode<float>;
 template class OrderedCrossEntropyWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
-// IRMetricNode (labels, prediction)
+// IRMetricNode (gain, score, pair number)
 // IRMetric for ranking
 // -----------------------------------------------------------------------
 
@@ -839,7 +839,7 @@ public:
                 *its++ = *it;
             }
 
-            std::sort(its0, --its);
+            std::sort(its0, --its, m_scoreComp);
 
             // set the sorted rk order to each url
             // the urls are still in the original order
@@ -1019,6 +1019,19 @@ protected:
 
         std::vector<Url> urls;
     };
+
+    // greater than (if equal, use gain less than)
+    struct {
+        bool operator()(Url a, Url b)
+        {
+            if (a.sc == b.sc)
+            {
+                return a.gn < b.gn;
+            }
+            
+            return a.sc > b.sc;
+        }
+    } m_scoreComp;
 
     // master data structure
     std::list<QueryUrls> m_queryUrls;
