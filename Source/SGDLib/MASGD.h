@@ -343,6 +343,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 totalSamplesProcessed = nTotalSamples;
             }
 
+            
             //----------------------------------------
             // 2. process for each individual node
             //----------------------------------------

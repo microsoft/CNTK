@@ -353,13 +353,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     //Multiverso Warpper for ASGD logic init
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
     {
-        m_pMultiversoHelper = new MultiversoHelper<ElemType>(learnableNodes,
-        m_mpi->NumNodesInUse(),
-        m_isPipeline,
-        m_adjustlearningrateatbeginning,
-        m_adjustcoefficient,
-        m_adjustnbminibatch,
-        m_traceLevel);
+        m_pMultiversoHelper =
+          new MultiversoHelper<ElemType>(learnableNodes,
+                                         m_mpi->NumNodesInUse(),
+                                         m_isPipeline,
+                                         m_adjustlearningrateatbeginning,
+                                         m_adjustcoefficient,
+                                         m_adjustnbminibatch,
+                                         m_traceLevel,
+                                         m_mpi);
         m_pMultiversoHelper->InitModel(learnableNodes);
         m_pMultiversoHelperBarrier = false;
         m_pMultiversoHelper->WaitAll();
@@ -2731,7 +2733,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (configParallelTrain.Exists(L"DataParallelASGD"))
         {
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-            m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
             m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
             m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", ConfigRecordType::Array(intargvector(vector<int>{0})));
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))

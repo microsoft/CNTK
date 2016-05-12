@@ -144,7 +144,8 @@ public:
 
         memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
-        std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
+        // because the parameter server will minus the delta on the server, so that we should send the minus initial model to the server.
+        std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), -factor));
 
         for (int widx = 0; widx < m_tableCount; widx++)
         {
@@ -152,13 +153,26 @@ public:
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
             multiversoMatrix->Add(px, m_tableLength[widx]);
         }
-        WaitAll(); // initial model for every client should be identical
+
+        // TODO[qiwye] remove this fake get when multiverso has fix the initial problem
         for (int widx = 0; widx < m_tableCount; widx++)
         {
             auto multiversoMatrix = m_matrixArray->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
             multiversoMatrix->Get(px, m_tableLength[widx]);
         }
+        // TODO[qiwye] doesn't work well in async model.
+        WaitAll(); // initial model for every client should be identical
+
+        for (int widx = 0; widx < m_tableCount; widx++)
+        {
+            auto multiversoMatrix = m_matrixArray->at(widx);
+            ElemType* px = m_deltaArray + m_tableOffsets[widx];
+            multiversoMatrix->Get(px, m_tableLength[widx]);
+        }
+
+        if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
+            multiverso::Log::Info("multiverso initial model loaded successful.\n");
     }
 
     //ASGD logic
@@ -326,8 +340,9 @@ public:
             // lr decay
             if (m_isAverage)
             {
+                multiverso::MV_Barrier();
                 factor = ModelAggregationCoefficient(sampleSinceLastSynced);
-                std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), 1 / m_totalClientNumber));
+                std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
             }
             else
             {
@@ -341,7 +356,6 @@ public:
                 multiversoMatrix->Add(px, m_tableLength[widx]);
                 multiversoMatrix->Get(py, m_tableLength[widx]);
             }
-
             i = 0;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
             {
@@ -458,7 +472,8 @@ private:
     {
         float factor = 0;
         int   nTotalSamples = samplesSinceLastSync;
-        m_pMPI->AllReduce(&nTotalSamples, 1);
+        // TODO[qiwye] will conflict with multiverso
+        //m_pMPI->AllReduce(&nTotalSamples, 1);
 
         if (nTotalSamples <= 0)
         {
@@ -469,6 +484,7 @@ private:
         {
             factor = (samplesSinceLastSync + 0.0f) / nTotalSamples;
         }
+        factor = 1.0f / m_pMPI->NumNodesInUse();
         return factor;
     }
 
