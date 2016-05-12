@@ -172,7 +172,7 @@ public:
         }
 
         if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
-            multiverso::Log::Info("multiverso initial model loaded successful.\n");
+            multiverso::Log::Info("multiverso initial model loaded.\n");
     }
 
     //ASGD logic
@@ -340,7 +340,6 @@ public:
             // lr decay
             if (m_isAverage)
             {
-                multiverso::MV_Barrier();
                 factor = ModelAggregationCoefficient(sampleSinceLastSynced);
                 std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
             }
