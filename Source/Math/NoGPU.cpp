@@ -1076,6 +1076,11 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols, bool growOnly)
+{
+}
+
+template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
     return 0;
