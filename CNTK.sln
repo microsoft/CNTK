@@ -1116,14 +1116,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelBM", "ParallelBM", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceToSequence", "SequenceToSequence", "{A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{85A05261-41D0-41DF-80B5-ADB6ABB54632}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "G2P", "G2P", "{4AD12278-9705-4BBA-B2C3-D6D5856AADC3}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\SequenceToSequence\Miscellaneous\G2P\G2P.cntk = Examples\SequenceToSequence\Miscellaneous\G2P\G2P.cntk
-		Examples\SequenceToSequence\Miscellaneous\G2P\README.txt = Examples\SequenceToSequence\Miscellaneous\G2P\README.txt
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Source\Extensibility\CPPEvalClient\CPPEvalClient.vcxproj", "{578D52A0-3928-4405-A016-F016E8B49031}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExperimentalHtkmlfReader", "ExperimentalHtkmlfReader", "{977ECCB7-598D-4548-B95B-BACA9CC7D98B}"
@@ -1148,6 +1140,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUttera
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{1141DC61-E014-4DEC-9157-F6B1FC055C7A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CMUDict", "CMUDict", "{EC7298E3-AAA9-4672-941F-0B342C494CB3}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\README.md = Examples\SequenceToSequence\CMUDict\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{ECED747C-86D7-4009-B2A9-0525FE5DF4EB}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\Config\G2P.cntk = Examples\SequenceToSequence\CMUDict\Config\G2P.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{25E144C1-0B7C-4CD4-811A-2E9F4943120D}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test.txt
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21 = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21.txt
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21 = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21.txt
+		Examples\SequenceToSequence\CMUDict\Data\README.txt = Examples\SequenceToSequence\CMUDict\Data\README.txt
+		Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md = Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1546,8 +1562,6 @@ Global
 		{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{36C42845-0D48-4A46-9C67-2B593A80A09C} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26} = {47755F2E-D674-4175-9E38-8EA053455072}
-		{85A05261-41D0-41DF-80B5-ADB6ABB54632} = {A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}
-		{4AD12278-9705-4BBA-B2C3-D6D5856AADC3} = {85A05261-41D0-41DF-80B5-ADB6ABB54632}
 		{578D52A0-3928-4405-A016-F016E8B49031} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
 		{977ECCB7-598D-4548-B95B-BACA9CC7D98B} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
@@ -1556,5 +1570,8 @@ Global
 		{BA6A65C5-92A2-4040-ADC3-0727A45694F6} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
 		{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
 		{1141DC61-E014-4DEC-9157-F6B1FC055C7A} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
+		{EC7298E3-AAA9-4672-941F-0B342C494CB3} = {A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}
+		{ECED747C-86D7-4009-B2A9-0525FE5DF4EB} = {EC7298E3-AAA9-4672-941F-0B342C494CB3}
+		{25E144C1-0B7C-4CD4-811A-2E9F4943120D} = {EC7298E3-AAA9-4672-941F-0B342C494CB3}
 	EndGlobalSection
 EndGlobal
