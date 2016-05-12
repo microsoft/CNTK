@@ -48,8 +48,6 @@ protected:
     virtual void Apply(size_t id, cv::Mat &from) = 0;
 
 protected:
-    std::unique_ptr<ImageConfigHelper> m_imageConfig;
-
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
     unsigned int m_seed;

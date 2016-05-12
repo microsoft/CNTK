@@ -25,7 +25,6 @@ struct ImageSequenceData : DenseSequenceData
 
 ImageTransformerBase::ImageTransformerBase(const ConfigParameters& readerConfig) : m_imageElementType(0)
 {
-    m_imageConfig = std::make_unique<ImageConfigHelper>(readerConfig);
     m_seed = readerConfig(L"seed", 0u);
 }
 
@@ -106,9 +105,11 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));
 
+    m_cropType = ImageConfigHelper::ParseCropType(config(L"cropType", ""));
+
     if (!config.ExistsCurrent(L"hflip"))
     {
-        m_hFlip = m_imageConfig->GetCropType() == CropType::Random;
+        m_hFlip = m_cropType == CropType::Random;
     }
     else
     {
@@ -152,9 +153,9 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
         RuntimeError("Jitter type currently not implemented.");
     }
 
-    int viewIndex = m_imageConfig->IsMultiViewCrop() ? (int)(id % 10) : 0;
+    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
 
-    mat = mat(GetCropRect(m_imageConfig->GetCropType(), viewIndex, mat.rows, mat.cols, ratio, *rng));
+    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
     if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
         viewIndex >= 5)
     {
