@@ -401,6 +401,11 @@ protected:
         ElemType gn; // gain
         int K; // the pair index
         bool operator < (const Url &url) const{
+            // tie breaking
+            if (sc == url.sc)
+            {
+                return gn < url.gn;
+            }
             return sc > url.sc;
         }
     };

@@ -689,7 +689,7 @@ class IRMetricNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemTy
 public:
     DeclareConstructorFromConfigWithNumInputs(IRMetricNode);
     IRMetricNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_sigma(10.0)
+        : Base(deviceId, name), m_sigma(1.0)
     {
     }
 
@@ -1008,6 +1008,11 @@ protected:
         ElemType gn; // gain
         int K; // the pair index
         bool operator < (const Url &url) const{
+            // tie breaking
+            if (sc == url.sc)
+            {
+                return gn < url.gn;
+            }
             return sc > url.sc;
         }
     };
