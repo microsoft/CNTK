@@ -164,6 +164,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     sd.m_fileOffsetBytes = offset;
     sd.m_isValid = true;
 
+    auto& stringRegistry = corpus->GetStringRegistry();
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
@@ -174,10 +175,10 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            auto key = msra::strfun::utf16(std::to_string(id));
+            auto key = msra::strfun::utf16(std::to_string(sd.m_id));
             if (corpus->IsIncluded(key))
             {
-                sd.m_key.m_sequence = corpus->GetStringRegistry()[key];
+                sd.m_key.m_sequence = stringRegistry[key];
                 sd.m_key.m_sample = 0;
                 AddSequence(sd);
             }
@@ -191,7 +192,13 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    AddSequence(sd);
+    auto key = msra::strfun::utf16(std::to_string(sd.m_id));
+    if (corpus->IsIncluded(key))
+    {
+        sd.m_key.m_sequence = stringRegistry[key];
+        sd.m_key.m_sample = 0;
+        AddSequence(sd);
+    }
 }
 
 

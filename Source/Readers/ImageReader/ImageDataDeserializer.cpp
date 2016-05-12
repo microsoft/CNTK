@@ -123,7 +123,7 @@ public:
 // TODO: Provide only sequences specified in the corpus descriptor.
 ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
 {
-    ConfigParameters inputs = config("inputs");
+    ConfigParameters inputs = config("input");
     std::vector<std::string> featureNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "transforms");
     std::vector<std::string> labelNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "labelDim");
 
@@ -290,8 +290,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
             description.m_key.m_sequence = corpusStringRegistry[wsequenceKey];
             description.m_key.m_sample = 0;
 
-            m_imageSequences.push_back(description);
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
+            m_imageSequences.push_back(description);
             RegisterByteReader(description.m_id, description.m_path, knownReaders);
         }
     }

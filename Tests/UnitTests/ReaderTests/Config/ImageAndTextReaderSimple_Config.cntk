@@ -19,20 +19,24 @@ reader = [
         verbosity=0
         randomize=true
 
-        # Currently for image reader a single sequence is a chunk
-        # so setting randomization window to 1.
-        randomizationWindow=1
-        useLegacy=false
-
-        # A list of deserializers to use.
         deserializers=[
-            [   
+            [
+                type="CNTKTextFormatDeserializer"
+                module="CNTKTextFormatReader"
+                file = "$RootDir$/ImageAndTextReaderSimple_labels.txt"
+
+                input=[
+                    labels=[
+                        dim=4
+                        format="sparse"
+                    ]
+                ]
+            ]:[
                 type="ImageDataDeserializer"
                 module="ImageReader"
-                file = "$RootDir$/ImageAndReaderSimple_map.txt"
+                file = "$RootDir$/ImageAndTextReaderSimple_map.txt"
 
-                # Description of input streams
-                inputs=[
+                input=[
                     features=[
                         transforms=[
                             [
@@ -53,20 +57,10 @@ reader = [
                             ]
                         ]
                     ]
+
+                    # Currently the image deserializer always has labels, we read but ignore them.
                     ignored=[
                         labelDim=4
-                    ]
-                ]
-            ]:[
-                type="CNTKTextFormatDeserializer"
-                module="CNTKTextFormatReader"
-                file = "$RootDir$/ImageAndReaderSimple_labels.txt"
-
-                # Description of input streams
-                input=[
-                    labels=[
-                        dim=4
-                        format="sparse"
                     ]
                 ]
             ]
