@@ -209,12 +209,12 @@ public:
                 *its++ = *it;
             }
 
-            std::sort(its0, --its, m_scoreComp);
+            std::sort(its0, its);
 
             // set the sorted rk order to each url
             // the urls are still in the original order
             int rk = 0;
-            for (it = its0; it != its + 1; it++)
+            for (it = its0; it != its; it++)
                 urls[it->rk0].rk = rk++;
         }
 
@@ -321,7 +321,8 @@ public:
 
         // TODO: Double check this part
         size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
-        m_urlSorter.resize(maxNumofUrlsPerQuery);
+        // keep one additional space to avoid pointer moving out
+        m_urlSorter.resize(maxNumofUrlsPerQuery + 1);
 
         // prepared lookup table
         m_logWeights.resize(maxNumofUrlsPerQuery);
@@ -400,7 +401,14 @@ protected:
         ElemType sc; // score
         ElemType gn; // gain
         int K; // the pair index
+
+        // less than (if equal, use reverse gain order)
         bool operator < (const Url &url) const{
+            if (sc == url.sc) 
+            {
+                return gn < url.gn;
+            }
+
             return sc > url.sc;
         }
     };
@@ -412,19 +420,6 @@ protected:
 
         std::vector<Url> urls;
     };
-
-    // greater than (if equal, use gain less than)
-    struct {
-        bool operator()(Url a, Url b)
-        {
-            if (a.sc == b.sc)
-            {
-                return a.gn < b.gn;
-            }
-
-            return a.sc > b.sc;
-        }
-    } m_scoreComp;
 
     // master data structure
     std::list<QueryUrls> m_queryUrls;
