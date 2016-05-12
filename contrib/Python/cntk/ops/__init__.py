@@ -980,6 +980,74 @@ def input(shape, dynamic_axis='', name=None):
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
 
 
+def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name=None):
+    '''
+    Creates an input node from a sparse input tensors described by a list of indices
+    and a list of values having a shape. The tensors represent one
+    sample and can have sequences of different lengths. 
+
+    Example:
+
+        >>>
+        # Creating a dense matrix 
+        # [[ 10, 20]
+        #  [ 30, 40]]
+        # Note that we need to specify a batch of samples of sequences (all
+        # having sequence length 1 in this example).
+
+        >>> dense = C.input_numpy([[[10,20], [30,40]]])
+        # Creating a sparse array 
+        # [0, 0.1]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(2,))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[ 2.,  4.]])]
+
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(2,1))
+        >>> C.eval(C.times(dense, sparse), clean_up=False)
+        [array([[[ 2.],
+                 [ 4.]]])]
+
+    Args:
+        indices (list): list (batch) of tuples (indices), which are positions of the values after flattening the tensor with `order='F'`
+        values (list): list (batch) of tuples of values corresponding to indices
+        shape (tuple): shape of the input
+        alias (str): alias to be used in the data file
+        dynamic_axis (str): whether the tensor has already the data
+        alias (str): optional the alias to be used when serializing the data into an intermediate file
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+
+    node = sparse_input(shape, dynamic_axis=dynamic_axis, name=name)
+    from ..reader import LazySparseInputReader
+    node.reader = LazySparseInputReader(
+        indices,
+        values,
+        shape,
+        input_alias=alias,
+        dynamic_axis=dynamic_axis,
+        node=node)
+
+    return node
+
+
+def sparse_input(shape, dynamic_axis='', name=None):
+    """
+    It creates a sparse input node. The graph requires a separate reader that will be
+    fed to this input.
+
+    Args:
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import SparseInput
+    return SparseInput(shape, dynamicAxis=dynamic_axis, name=name)
+
+
 def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
         init_from_file_path=None, name=None):
     """
