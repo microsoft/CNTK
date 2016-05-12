@@ -78,7 +78,6 @@ private:
 
     void StartEpoch(const EpochConfiguration &config) override;
 
-    CropType ParseCropType(const std::string &src);
     RatioJitterType ParseJitterType(const std::string &src);
     cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
 

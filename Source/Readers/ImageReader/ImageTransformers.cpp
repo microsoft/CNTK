@@ -164,27 +164,6 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     m_rngs.push(std::move(rng));
 }
 
-CropTransformer::CropType
-CropTransformer::ParseCropType(const std::string &src)
-{
-    if (src.empty() || AreEqualIgnoreCase(src, "center"))
-    {
-        return CropType::Center;
-    }
-
-    if (AreEqualIgnoreCase(src, "random"))
-    {
-        return CropType::Random;
-    }
-
-    if (AreEqualIgnoreCase(src, "multiview10"))
-    {
-        return CropType::MultiView10;
-    }
-
-    RuntimeError("Invalid crop type: %s.", src.c_str());
-}
-
 CropTransformer::RatioJitterType
 CropTransformer::ParseJitterType(const std::string &src)
 {
