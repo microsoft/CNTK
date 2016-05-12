@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
     HelperRunReaderTest<float>(
         testDataPath() + "/Config/ImageAndTextReaderSimple_Config.cntk",
         testDataPath() + "/Control/ImageReaderSimple_Control.txt",
-        testDataPath() + "/Control/ImageReaderSimple_Output.txt",
+        testDataPath() + "/Control/ImageAndTextReaderSimple_Output.txt",
         "Simple_Test",
         "reader",
         4,
