@@ -11,6 +11,7 @@ deviceId = -1
 
 outputNodeNames = "Dummy"
 traceLevel = 1
+frameMode=false
 
 Simple_Test = [
 
