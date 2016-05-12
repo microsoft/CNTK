@@ -305,9 +305,9 @@ public:
         m_samples = pairIndeces.GetNumCols();
         m_pairCounts = (size_t)pairIndeces.SumOfElements();
 
-        m_pairwiseDifferences->Resize(1, m_pairCounts);
-        m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
-        m_logexpterm->Resize(1, m_pairCounts);
+        // m_pairwiseDifferences->Resize(1, m_pairCounts);
+        // m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
+        // m_logexpterm->Resize(1, m_pairCounts);
 
         m_perUrlGainsOrig->Resize(1, m_samples);
         m_perUrlGainsSort->Resize(1, m_samples);
@@ -339,9 +339,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<IRMetricEvalNode<ElemType>>(nodeP);
-            node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
-            node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
-            node->m_logexpterm->SetValue(*m_logexpterm);
+            // node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+            // node->m_sigmaPairwiseDiff->SetValue(*m_sigmaPairwiseDiff);
+            // node->m_logexpterm->SetValue(*m_logexpterm);
             node->m_maxPairIndexIndex->SetValue(*m_maxPairIndexIndex);
             node->m_maxPairValues->SetValue(*m_maxPairValues);
             node->m_perUrlGainsOrig->SetValue(*m_perUrlGainsOrig);
@@ -359,9 +359,9 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
-        RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
-        RequestMatrixFromPool(m_logexpterm, matrixPool);
+        // RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+        // RequestMatrixFromPool(m_sigmaPairwiseDiff, matrixPool);
+        // RequestMatrixFromPool(m_logexpterm, matrixPool);
         RequestMatrixFromPool(m_maxPairIndexIndex, matrixPool);
         RequestMatrixFromPool(m_maxPairValues, matrixPool);
         RequestMatrixFromPool(m_perUrlGainsOrig, matrixPool);
@@ -374,9 +374,9 @@ public:
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
-        ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
-        ReleaseMatrixToPool(m_logexpterm, matrixPool);
+        // ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+        // ReleaseMatrixToPool(m_sigmaPairwiseDiff, matrixPool);
+        // ReleaseMatrixToPool(m_logexpterm, matrixPool);
         ReleaseMatrixToPool(m_maxPairIndexIndex, matrixPool);
         ReleaseMatrixToPool(m_maxPairValues, matrixPool);
         ReleaseMatrixToPool(m_perUrlGainsOrig, matrixPool);
@@ -428,12 +428,12 @@ protected:
     size_t m_samples;
     size_t m_pairCounts;
     // TODO: to make it a config?
-    ElemType m_sigma;
-    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    // ElemType m_sigma;
+    // shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
     // sigma*(si - sj)
-    shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
+    // shared_ptr<Matrix<ElemType>> m_sigmaPairwiseDiff;
     // 1/(1+exp(sigma*(si - sj)))
-    shared_ptr<Matrix<ElemType>> m_logexpterm;
+    // shared_ptr<Matrix<ElemType>> m_logexpterm;
     // used to calculate the max number of urls per query
     shared_ptr<Matrix<ElemType>> m_maxPairIndexIndex;
     shared_ptr<Matrix<ElemType>> m_maxPairValues;
