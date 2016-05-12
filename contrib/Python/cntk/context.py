@@ -44,7 +44,7 @@ CNTK_OUTPUT_FILENAME = "out"
 _CONTEXT = {}
 
 
-def get_context(handle='default'):
+def get_context(handle):
     # TODO: we need more sanity in the model handling here
     if handle not in _CONTEXT:
         _CONTEXT[handle] = LocalExecutionContext(handle)
@@ -249,7 +249,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl_dict = {
             'ActionName': action_name,
             'ModelDescription': description,            
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
             'SGD': training_params._to_config_description(),
         }
 
@@ -282,7 +282,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         tmpl_dict = {
             'ActionName': action_name,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -310,7 +310,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl_dict = {
             'ActionName': action_name,
             'OutputFile': self.output_filename_base,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -355,7 +355,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             'NodeUnitTest': node_unit_test,
             'OutputFile': self.output_filename_base,
             'ModelDescription': description,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -423,7 +423,7 @@ class LocalExecutionContext(AbstractContext):
 
         if not output:
             raise ValueError('no output returned')
-
+        
         return output
 
     '''

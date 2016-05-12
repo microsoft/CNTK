@@ -25,12 +25,12 @@ def eval(node):
         NumPy array containing the result
     """    
     
-    from cntk.context import get_context        
+    from cntk.context import get_new_context        
     from cntk.ops import input_numpy, constant
     from cntk.graph import ComputationNode
     
     # call a helper method to get a context
-    ctx = get_context()    
+    ctx = get_new_context()
     first = True    
     
     # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 

@@ -65,14 +65,3 @@ def test_serialize_unmapped_node(tmpdir):
 
     with open(tmpfile, 'r') as f:
         assert f.read() == expected
-
-def test_cntk_eval():
-
-    import cntk
-    import cntk.ops
-
-    result = cntk.eval(cntk.ops.floor([.4]))
-    np.allclose(result, [0])
-
-    result = cntk.eval(cntk.ops.floor([[.4]]))
-    np.allclose(result, [[0]])

@@ -493,7 +493,7 @@ class InputMap(object):
     def is_empty(self):
         return not self.has_mapped() and not self.has_unmapped()
 
-    def _to_config_description(self):
+    def _to_config_description(self, directory=None):
         if self.reader is None:
             if not self.unmapped_nodes:
                 # No inputs in the graph
@@ -504,8 +504,10 @@ class InputMap(object):
 
             from .context import get_context
             from .utils import get_temp_filename
-            filename = get_temp_filename(get_context().directory)
-
+            if not directory:
+                filename = get_temp_filename(get_context().directory)
+            else:
+                filename = get_temp_filename(directory)
             if len(self.node_map) > 0:
                 raise ValueError('you cannot have inputs initialized with '+
                         'NumPy arrays together with inputs that are ' +
