@@ -119,7 +119,8 @@ def seqcla():
     # add a softmax layer on top
     w = C.parameter((num_labels, output_dim), name='w')
     b = C.parameter((num_labels), name='b')
-    z = C.plus(C.times(w, L), b, name='z')
+    z = C.times(w, L) + b
+    z.name='z'
     z.tag = "output"
     
     # and reconcile the shared dynamic axis
