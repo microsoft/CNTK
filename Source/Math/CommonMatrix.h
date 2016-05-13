@@ -59,11 +59,11 @@ public:
     template <typename AllocatedElemType>
     static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
 
+	static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
+
 private:
     template <typename AllocatedElemType>
     static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
-
-    static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
 };
 
 // -----------------------------------------------------------------------
@@ -237,6 +237,14 @@ public:
 
 		if (deviceId >= 0) {
 #ifndef CPUONLY
+			auto freeAndTotalMemory = TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(deviceId);
+
+			float allocateRate = (float)freeAndTotalMemory.first / (float)freeAndTotalMemory.second;
+
+			if (allocateRate < 0.05 || freeAndTotalMemory.first <= ((size * sizeof(ElemType)) >> 20)) {
+				PhysicalReleaseAllBuffer<ElemType>();
+			}
+
 			bufferPtr = TracingGPUMemoryAllocator::Allocate<ElemType>(deviceId, size);
 #endif
 		}
@@ -284,12 +292,16 @@ public:
 	template<class ElemType>
 	void PhysicalReleaseAllBuffer()
 	{
-		auto deviceBufferList = BufferContainor<ElemType>();
-		for (auto deviceBufferList : deviceBufferList) {
-			for (auto sizeBufferList : deviceBufferList.second) {
-				for (auto bufferList : sizeBufferList.second) {
-					PhysicalReleaseBuffer<ElemType>(deviceBufferList.first, bufferList);
+		auto& bufferContainor = BufferContainor<ElemType>();
+
+		for (auto& deviceBufferList : bufferContainor) {
+			for (auto& sizeBufferList : deviceBufferList.second) {
+				vector<ElemType*>& bufferArray = sizeBufferList.second;
+				for (size_t i = 0; i < bufferArray.size(); i++) {
+					if (bufferArray[i] == nullptr) continue;
+					PhysicalReleaseBuffer(deviceBufferList.first, bufferArray[i]);
 				}
+				bufferArray.clear();
 			}
 		}
 	}
