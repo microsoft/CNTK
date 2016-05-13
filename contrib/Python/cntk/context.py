@@ -777,7 +777,7 @@ class DeferredExecutionContext(AbstractContext):
         self.device_id = device_id
         self.precision = precision
         self.input_nodes = set()        
-        
+        self.directory = None
         self.model_path = os.path.join("$ModelDir$", "model")
         self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
         self.config = []
