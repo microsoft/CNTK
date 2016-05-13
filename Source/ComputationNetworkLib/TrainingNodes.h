@@ -689,7 +689,7 @@ class IRMetricNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemTy
 public:
     DeclareConstructorFromConfigWithNumInputs(IRMetricNode);
     IRMetricNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_sigma(1.0)
+        : Base(deviceId, name), m_sigma(5.0)
     {
     }
 
