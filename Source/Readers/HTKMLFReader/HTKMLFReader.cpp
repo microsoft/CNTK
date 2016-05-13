@@ -324,7 +324,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
-    m_verbosity = readerConfig(L"verbosity", 2);
+    m_verbosity = readerConfig(L"verbosity", 0);
 
     if (m_frameMode && m_truncated)
     {
@@ -1947,7 +1947,7 @@ void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 }
 
 template <class ElemType>
-size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
+size_t HTKMLFReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     if (!m_frameMode)
         if (m_numSeqsPerMB != m_pMBLayout->GetNumParallelSequences())

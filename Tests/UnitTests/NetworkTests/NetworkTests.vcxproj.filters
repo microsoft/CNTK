@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Source\Common\CompositeDataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\Source\Common\DataWriter.cpp">
       <Filter>Common</Filter>
     </ClCompile>

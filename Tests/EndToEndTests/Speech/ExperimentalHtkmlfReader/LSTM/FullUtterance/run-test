@@ -3,7 +3,7 @@
 . $TEST_ROOT_DIR/run-test-common
 
 # TODO not yet: OriginalTestDir=../../../LSTM/FullUtterance
-ConfigDir=$TEST_DIR/../../../LSTM
+ConfigDir=$TEST_DIR/../../../ExperimentalHtkmlfReader/LSTM/FullUtterance
 
 # TODO not yet:
 #(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
@@ -13,4 +13,4 @@ ConfigDir=$TEST_DIR/../../../LSTM
 #fi
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk.cntk 'Truncated=false speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]] speechTrain=[reader=[nbruttsineachrecurrentiter=2]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?
+cntkrun cntk.cntk 'Truncated=false speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?

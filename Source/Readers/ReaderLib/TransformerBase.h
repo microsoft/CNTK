@@ -56,7 +56,7 @@ public:
             size_t streamId = appliedStreamIds[j];
             auto& allSamples = samples.m_data[streamId];
 
-#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
             for (int i = 0; i < allSamples.size(); ++i)
             {
                 allSamples[i] = Apply(allSamples[i], *m_inputStreams[streamId], *outputStreams[streamId]);

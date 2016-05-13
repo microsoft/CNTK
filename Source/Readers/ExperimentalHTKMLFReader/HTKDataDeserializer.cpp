@@ -24,6 +24,44 @@ using namespace std;
 
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
+    const ConfigParameters& cfg,
+    bool primary)
+    : m_ioFeatureDimension(0),
+    m_samplePeriod(0),
+    m_verbosity(0),
+    m_corpus(corpus),
+    m_totalNumberOfFrames(0),
+    m_primary(primary)
+{
+    // TODO: This should be read in one place, potentially given by SGD.
+    m_frameMode = (ConfigValue)cfg("frameMode", "true");
+
+    argvector<ConfigValue> inputs = cfg("inputs");
+    if (inputs.size() != 1)
+    {
+        InvalidArgument("HTKDataDeserializer supports a single input stream only.");
+    }
+
+    ConfigParameters input = inputs.front();
+    auto inputName = input.GetMemberIds().front();
+
+    ConfigParameters streamConfig = input(inputName);
+
+    ConfigHelper config(streamConfig);
+    auto context = config.GetContextWindow();
+
+    m_elementType = config.GetElementType();
+    m_dimension = config.GetFeatureDimension();
+    m_dimension = m_dimension * (1 + context.first + context.second);
+
+    InitializeChunkDescriptions(config);
+    InitializeStreams(inputName);
+    InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
+
+HTKDataDeserializer::HTKDataDeserializer(
+    CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
@@ -51,7 +89,11 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeChunkDescriptions(config);
     InitializeStreams(featureName);
     InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
 
+void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+{
     m_augmentationWindow = config.GetContextWindow();
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension
@@ -205,12 +247,13 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
-    result.reserve(chunk.GetTotalFrames());
+    result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
     size_t offsetInChunk = 0;
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {
         auto utterance = chunk.GetUtterance(i);
-        size_t major = utterance->GetId();
+        // Currently we do not support common prefix, so simply assign the minor to the key.
+        size_t sequence = utterance->GetId();
 
         if (m_frameMode)
         {
@@ -219,8 +262,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             {
                 SequenceDescription f;
                 f.m_chunkId = chunkId;
-                f.m_key.m_major = major;
-                f.m_key.m_minor = k;
+                f.m_key.m_sequence = sequence;
+                f.m_key.m_sample = k;
                 f.m_id = offsetInChunk++;
                 f.m_isValid = true;
                 f.m_numberOfSamples = 1;
@@ -232,8 +275,8 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             // Creating sequence description per utterance.
             SequenceDescription f;
             f.m_chunkId = chunkId;
-            f.m_key.m_major = major;
-            f.m_key.m_minor = 0;
+            f.m_key.m_sequence = sequence;
+            f.m_key.m_sample = 0;
             f.m_id = offsetInChunk++;
             f.m_isValid = true;
             f.m_numberOfSamples = utterance->GetNumberOfFrames();
@@ -432,7 +475,7 @@ static SequenceDescription s_InvalidSequence{0, 0, 0, false};
 void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
 {
     assert(!m_primary);
-    auto iter = m_keyToChunkLocation.find(key.m_major);
+    auto iter = m_keyToChunkLocation.find(key.m_sequence);
     if (iter == m_keyToChunkLocation.end())
     {
         // Unknown sequence. Return invalid.
@@ -443,7 +486,7 @@ void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
         const auto& chunk = m_chunks[iter->second.first];
         const auto& sequence = chunk.GetUtterance(iter->second.second);
         d.m_chunkId = sequence->GetChunkId();
-        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_minor : sequence->GetIndexInsideChunk();
+        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
         d.m_isValid = true;
         d.m_numberOfSamples = m_frameMode ? 1 : sequence->GetNumberOfFrames();
     }

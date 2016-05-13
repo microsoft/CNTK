@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Configuration;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
@@ -63,6 +62,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         {
             try
             {
+                string outputLayerName;
+
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
                 Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
@@ -70,22 +71,22 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    // Initialize model evaluator
-                    string config = GetFileContents(Path.Combine(Environment.CurrentDirectory, @"..\Config\01_OneHidden.cntk"));
-                    model.Init(config);
-
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    model.CreateNetwork(string.Format("deviceId=-1\nmodelPath=\"{0}\"", modelFilePath));
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId:-1);
 
                     // Generate random input values in the appropriate structure and size
-                    var inputs = GetDictionary("features", 28*28, 255);
+                    var inDims = model.GetNodeDimensions(NodeGroup.nodeInput);
+                    var inputs = GetDictionary(inDims.First().Key, inDims.First().Value, 255);
                     
+                    // We request the output layer names(s) and dimension, we'll use the first one.
+                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    outputLayerName = outDims.First().Key;
                     // We can call the evaluate method and get back the results (single layer)...
-                    outputs = model.Evaluate(inputs, "ol.z", 10);
+                    outputs = model.Evaluate(inputs, outputLayerName);
                 }
 
-                OutputResults("ol.z", outputs);
+                OutputResults(outputLayerName, outputs);
             }
             catch (CNTKException ex)
             {
@@ -112,20 +113,20 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    // Initialize model evaluator
-                    string config = GetFileContents(Path.Combine(Environment.CurrentDirectory, @"..\Config\01_OneHidden.cntk"));
-                    model.Init(config);
-
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    model.CreateNetwork(string.Format("deviceId=-1\nmodelPath=\"{0}\"", modelFilePath));
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId:-1);
 
                     // Generate random input values in the appropriate structure and size
-                    var inputs = GetDictionary("features", 28*28, 255);
+                    var inDims = model.GetNodeDimensions(NodeGroup.nodeInput);
+                    var inputs = GetDictionary(inDims.First().Key, inDims.First().Value, 255);
+
+                    // We request the output layer names(s) and dimension, we'll use the first one.
+                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    string outputLayerName = outDims.First().Key;
 
                     // We can preallocate the output structure and pass it in (multiple output layers)
-                    outputs = GetDictionary("ol.z", 10, 1);
-
+                    outputs = GetDictionary(outputLayerName, outDims[outputLayerName], 1);
                     model.Evaluate(inputs, outputs);
                 }
 
@@ -154,24 +155,26 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
+                string outputLayerName;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    // Initialize model evaluator
-                    model.Init("deviceId=-1");
-
                     // Create the network
-                    string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstant.cntk"));
-                    model.CreateNetwork(networkDescription);
+                    // This network (AddOperatorConstant.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // operating over a single input and a constant
+                    string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstant.cntk"));
+                    model.CreateNetwork(networkDescription, deviceId:-1);
 
-                    // Generate random input values in the appropriate structure and size
-                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { { 1.0f } } } };
+                    // Generate random input value in the appropriate structure and size
+                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { 1.0f } } };
 
                     // We can call the evaluate method and get back the results (single layer)...
-                    outputs = model.Evaluate(inputs, "ol", 1);
+                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    outputLayerName = outDims.First().Key;
+                    outputs = model.Evaluate(inputs, outputLayerName);
                 }
 
-                OutputResults("ol", outputs);
+                OutputResults(outputLayerName, outputs);
             }
             catch (CNTKException ex)
             {
@@ -199,12 +202,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    // Initialize model evaluator
-                    model.Init("deviceId=-1");
-
                     // Create the network
-                    string networkDescription = GetFileContents(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
-                    model.CreateNetwork(networkDescription);
+                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // operating over a two constants, therefore no input is necessary.
+                    string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
+                    model.CreateNetwork(networkDescription, deviceId:-1);
 
                     // We can call the evaluate method and get back the results (single layer)...
                     outputs = model.Evaluate("ol", 1);
@@ -271,16 +273,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
 
             return dict;
-        }
-
-        /// <summary>
-        /// Reads the configuration file and returns the contents as a string
-        /// </summary>
-        /// <returns>The content of the configuration file</returns>
-        static string GetFileContents(string filePath)
-        {
-            var lines = System.IO.File.ReadAllLines(filePath);
-            return string.Join("\n", lines);
         }
 
         /// <summary>

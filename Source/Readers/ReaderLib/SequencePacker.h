@@ -17,9 +17,8 @@ public:
     SequencePacker(
         MemoryProviderPtr memoryProvider,
         TransformerPtr transformer,
-        size_t minibatchSize,
         const std::vector<StreamDescriptionPtr>& streams) :
-        PackerBase(memoryProvider, transformer, minibatchSize, streams)
+        PackerBase(memoryProvider, transformer, streams)
     {
 
     }

@@ -47,6 +47,12 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         randomizer->Initialize(nullptr, config);
 
         m_transformer = randomizer;
+
+        // TODO: add "frameMode"  config paramter
+        m_packer = std::make_shared<SequencePacker>(
+            m_provider,
+            m_transformer,
+            GetStreamDescriptions());
     }
     catch (const std::runtime_error& e)
     {
@@ -61,18 +67,13 @@ std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
 
 void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
 {
-    if (config.m_totalEpochSizeInSamples <= 0)
+    if (config.m_totalEpochSizeInSamples == 0)
     {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Epoch size cannot be 0.");
     }
 
     m_transformer->StartEpoch(config);
-    // TODO: add "frameMode"  config paramter
-    m_packer = std::make_shared<SequencePacker>(
-        m_provider,
-        m_transformer,
-        config.m_minibatchSizeInSamples,
-        GetStreamDescriptions());
+    m_packer->StartEpoch(config);
 }
 
 Minibatch CNTKTextFormatReader::ReadMinibatch()

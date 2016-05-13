@@ -78,9 +78,9 @@ public:
     virtual const wchar_t* kind() const = 0; // e.g. "warning" or "error"
 
     // pretty-print this as an error message
-    void /*ScriptingException::*/ PrintError() const
+    void /*ScriptingException::*/ PrintError(const std::wstring& linePrefix) const
     {
-        TextLocation::PrintIssue(locations, L"error", kind(), msra::strfun::utf16(what()).c_str());
+        TextLocation::PrintIssue(locations, linePrefix.c_str(), kind(), msra::strfun::utf16(what()).c_str());
     }
     void AddLocation(TextLocation where)
     {
@@ -134,7 +134,7 @@ struct Expression
 typedef Expression::ExpressionPtr ExpressionPtr; // circumvent some circular definition problem
 
 // access the parser through one of these functions
-ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring>&& includePaths);          // parses a list of dictionary members, returns a dictionary expression
+ExpressionPtr ParseConfigDictFromString(wstring text, wstring location, vector<wstring>&& includePaths);          // parses a list of dictionary members, returns a dictionary expression
 // TODO: These rvalue references are no longer adding value, change to const<>&
 //ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths);              // likewise, but from a file path
 ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&& includePaths); // parses a single expression from sourceText, which is meant to contain an include statement, hence includePaths

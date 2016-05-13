@@ -54,7 +54,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ReaderLib.lib;Math.lib;kernel32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ReaderLib.lib;Common.lib;Math.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -87,7 +87,6 @@
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h" />
     <ClInclude Include="HTKChunkDescription.h" />
     <ClInclude Include="ConfigHelper.h" />
-    <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="HTKDataDeserializer.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="MLFDataDeserializer.h" />
@@ -96,25 +95,10 @@
     <ClInclude Include="UtteranceDescription.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\Config.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\TimerUtility.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="ConfigHelper.cpp" />
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
-      <PrecompiledHeader />
-    </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
       <PrecompiledHeader />
     </ClCompile>
     <ClCompile Include="HTKDataDeserializer.cpp" />

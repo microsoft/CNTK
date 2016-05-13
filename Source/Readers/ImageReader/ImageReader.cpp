@@ -38,13 +38,17 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     auto deserializer = std::make_shared<ImageDataDeserializer>(config);
 
     TransformerPtr randomizer;
+    // Request multi-threaded randomizer operation to speed up CPU-intensive image-decoding and transformations.
+    const bool multithreadedGetNextSequences = true;
     if (configHelper.ShouldRandomize())
     {
-        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, false);
+        // We do not use legacy randomization.
+        bool useLegacyRandomization = false;
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, BlockRandomizer::DecimationMode::sequence, useLegacyRandomization, multithreadedGetNextSequences);
     }
     else
     {
-        randomizer = std::make_shared<NoRandomizer>(deserializer);
+        randomizer = std::make_shared<NoRandomizer>(deserializer, multithreadedGetNextSequences);
     }
 
     randomizer->Initialize(nullptr, config);
@@ -55,8 +59,14 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     auto scaler = std::make_shared<ScaleTransformer>();
     scaler->Initialize(cropper, config);
 
+    auto color = std::make_shared<ColorTransformer>();
+    color->Initialize(scaler, config);
+
+    auto intensity = std::make_shared<IntensityTransformer>();
+    intensity->Initialize(color, config);
+
     auto mean = std::make_shared<MeanTransformer>();
-    mean->Initialize(scaler, config);
+    mean->Initialize(intensity, config);
 
     TransformerPtr last = mean;
     if (configHelper.GetDataFormat() == CHW)
@@ -66,6 +76,11 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     }
 
     m_transformer = last;
+
+    m_packer = std::make_shared<FramePacker>(
+        m_provider,
+        m_transformer,
+        m_streams);
 }
 
 std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
@@ -76,17 +91,13 @@ std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
 
 void ImageReader::StartEpoch(const EpochConfiguration& config)
 {
-    if (config.m_totalEpochSizeInSamples <= 0)
+    if (config.m_totalEpochSizeInSamples == 0)
     {
-        RuntimeError("Unsupported minibatch size '%u'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Epoch size cannot be 0.");
     }
 
     m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<FramePacker>(
-        m_provider,
-        m_transformer,
-        config.m_minibatchSizeInSamples,
-        m_streams);
+    m_packer->StartEpoch(config);
 }
 
 Minibatch ImageReader::ReadMinibatch()

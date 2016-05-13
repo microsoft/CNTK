@@ -71,7 +71,6 @@ write = [
 
     deviceId = $DeviceId$
     traceLevel = 1
-    useValidation=true
 
     printValues=true
       

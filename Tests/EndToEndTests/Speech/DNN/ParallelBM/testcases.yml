@@ -1,0 +1,46 @@
+dataDir: ../../Data
+tags:
+     # running for 1bitsgd build SKU on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-s  (build_sku == '1bitsgd') and ((flavor=='debug') ^ (device=='cpu'))
+     # running for 1bitsgd build SKU  on every Nightly job in 'S' leg
+     - nightly-s (build_sku == '1bitsgd')
+
+testCases:
+  Must train epochs in exactly same order and parameters for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - CrossEntropyWithSoftmax = {{float,tolerance=2%}}
+      - EvalErrorPrediction = {{float,tolerance=2%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
+
+  BlockMomentumSGD training should have distributed reading enabled:
+    patterns:
+      - distributed reading is ENABLED
+
+  BlockMomentumSGD training should have the expected parameters:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - block momentum = {{float,tolerance=0.1%}}
+      - block momentum time constant = {{float,tolerance=1%}}
+      - block learning rate = {{float,tolerance=0.1%}}
+      - sync period = {{integer}} samples
+      - resetting SGD momentum after sync
+      - using Nesterov style block momentum
+
+  Per-minibatch training results must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - "* {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=2%}}
+      - EvalErrorPrediction = {{float,tolerance=2%}}
+
+

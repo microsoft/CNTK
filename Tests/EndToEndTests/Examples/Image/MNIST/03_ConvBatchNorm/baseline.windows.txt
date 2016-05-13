@@ -375,10 +375,10 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 04/07/2016 14:51:05: Starting minibatch loop.
-04/07/2016 14:51:07:  Epoch[ 1 of 2]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.17553700; EvalErr[0]PerSample = 0.05406250; TotalTime = 1.5797s; SamplesPerSecond = 10128.8
-04/07/2016 14:51:08:  Epoch[ 1 of 2]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.07510864; EvalErr[0]PerSample = 0.02443750; TotalTime = 1.2863s; SamplesPerSecond = 12438.4
-04/07/2016 14:51:10:  Epoch[ 1 of 2]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.06946776; EvalErr[0]PerSample = 0.02143750; TotalTime = 1.2994s; SamplesPerSecond = 12313.4
-04/07/2016 14:51:11: Finished Epoch[ 1 of 2]: [Training Set] TrainLossPerSample = 0.096543156; TotalSamplesSeen = 60000; EvalErrPerSample = 0.03005; AvgLearningRatePerSample = 0.015625; EpochTime=5.72121
+04/07/2016 14:51:07:  Epoch[ 1 of 2]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.17553700; err = 0.05406250; TotalTime = 1.5797s; SamplesPerSecond = 10128.8
+04/07/2016 14:51:08:  Epoch[ 1 of 2]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.07510864; err = 0.02443750; TotalTime = 1.2863s; SamplesPerSecond = 12438.4
+04/07/2016 14:51:10:  Epoch[ 1 of 2]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.06946776; err = 0.02143750; TotalTime = 1.2994s; SamplesPerSecond = 12313.4
+04/07/2016 14:51:11: Finished Epoch[ 1 of 2]: [Training] ce = 0.096543156 * 60000; err = 0.03005; learningRatePerSample = 0.015625; EpochTime=5.72121
 04/07/2016 14:51:11: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160407154856.106529\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
 Setting batch normalization blend time constant to 1.#INF.
 
@@ -387,10 +387,10 @@ starting epoch 1 at record count 60000, and file position 0
 already there from last epoch
 
 04/07/2016 14:51:11: Starting minibatch loop.
-04/07/2016 14:51:12:  Epoch[ 2 of 2]-Minibatch[   1- 500, 26.67%]: SamplesSeen = 16000; TrainLossPerSample =  0.02842559; EvalErr[0]PerSample = 0.00812500; TotalTime = 1.3239s; SamplesPerSecond = 12085.6
-04/07/2016 14:51:13:  Epoch[ 2 of 2]-Minibatch[ 501-1000, 53.33%]: SamplesSeen = 16000; TrainLossPerSample =  0.01900919; EvalErr[0]PerSample = 0.00600000; TotalTime = 1.2822s; SamplesPerSecond = 12479.0
-04/07/2016 14:51:15:  Epoch[ 2 of 2]-Minibatch[1001-1500, 80.00%]: SamplesSeen = 16000; TrainLossPerSample =  0.02238147; EvalErr[0]PerSample = 0.00650000; TotalTime = 1.3364s; SamplesPerSecond = 11972.6
-04/07/2016 14:51:16: Finished Epoch[ 2 of 2]: [Training Set] TrainLossPerSample = 0.02144276; TotalSamplesSeen = 120000; EvalErrPerSample = 0.0062833335; AvgLearningRatePerSample = 0.003125; EpochTime=4.92934
+04/07/2016 14:51:12:  Epoch[ 2 of 2]-Minibatch[   1- 500, 26.67%]: * 16000; ce =  0.02842559; err = 0.00812500; TotalTime = 1.3239s; SamplesPerSecond = 12085.6
+04/07/2016 14:51:13:  Epoch[ 2 of 2]-Minibatch[ 501-1000, 53.33%]: * 16000; ce =  0.01900919; err = 0.00600000; TotalTime = 1.2822s; SamplesPerSecond = 12479.0
+04/07/2016 14:51:15:  Epoch[ 2 of 2]-Minibatch[1001-1500, 80.00%]: * 16000; ce =  0.02238147; err = 0.00650000; TotalTime = 1.3364s; SamplesPerSecond = 11972.6
+04/07/2016 14:51:16: Finished Epoch[ 2 of 2]: [Training] ce = 0.02144276 * 120000; err = 0.0062833335; learningRatePerSample = 0.003125; EpochTime=4.92934
 04/07/2016 14:51:16: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160407154856.106529\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
 04/07/2016 14:51:16: CNTKCommandTrainEnd: train
 
@@ -486,8 +486,8 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 1989 retries for 10000 elements (19.9%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 2334, 3830, ...
-Minibatch[1-313]: SamplesSeen = 10000    err: ErrorPrediction/Sample = 0.0077    ce: CrossEntropyWithSoftmax/Sample = 0.023818888    
-Final Results: Minibatch[1-313]: SamplesSeen = 10000    err: ErrorPrediction/Sample = 0.0077    ce: CrossEntropyWithSoftmax/Sample = 0.023818888    Perplexity = 1.0241048    
+Minibatch[1-313]: * 10000    err = 0.0077    ce = 0.023818888    
+Final Results: Minibatch[1-313]: * 10000    err = 0.0077    ce = 0.023818888    perplexity = 1.0241048    
 
 04/07/2016 14:51:16: Action "test" complete.
 
