@@ -104,7 +104,7 @@ CNTK2 = [
 	Power(_, y, tag='') = Exp(ElementTimes(y, Log(_)), tag=tag)
     Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
 	Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
-	Square(_, y, tag='') = ElementTimes(_, y, tag=tag)
+	Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions
