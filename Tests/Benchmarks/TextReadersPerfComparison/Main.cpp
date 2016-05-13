@@ -214,12 +214,13 @@ void compareParsingPerf(wstring uciFilename, wstring textFilename)
         cntk::CNTKTextFormatReaderTestRunner<float> textParser(textFilename, streams, 32*1024 *1024, 3);
 
         const auto& index = textParser.GetIndex();
+        std::vector<cntk::SequenceDataPtr> s;
+        s.reserve(2 * 10000);
         cout << "CNTKTextFormatReader : "
-            << benchmark([&textParser, &index]()
+            << benchmark([&textParser, &index, &s]()
         {
             size_t chunkId = 0;
             size_t records = 0;
-            std::vector<cntk::SequenceDataPtr> s;
             do
             {
                 const auto& chunkDescriptor = index[chunkId % index.size()];
@@ -228,16 +229,89 @@ void compareParsingPerf(wstring uciFilename, wstring textFilename)
                 for (const auto& iter : chunkDescriptor.m_sequences)
                 {
                     textParser.m_chunk->GetSequence(iter.m_id, s);
-                    records += (reinterpret_cast<cntk::DenseSequenceData*>(s[0].get()))->m_numberOfSamples;
-                    if (records >= 15000)
+                    records += s.back()->m_numberOfSamples;
+                    if (records >= 150000)
                     {
                         break;
                     }
+                    if (records % 10000 == 0)
+                    {
+                        s.clear();
+                    }
                 }
+                
                 chunkId++;
 
             } while (records < 150000);
             
+        })
+            << "ms" << endl;
+    }
+}
+
+
+void compareParsingPerf(wstring uciFilename, wstring textFilename, size_t num_records)
+{
+    cout << "Reading " << num_records << " sequences. " << endl;
+    {
+        UCIParser<float, int> uciParser(char(0), char(0));
+        size_t bufSize = 256 * 1024; // same buffer size as in CNTKTextFormatReader
+        // uci parser only counts the number of lines, so using the same file for both
+        uciParser.ParseInit(uciFilename.c_str(), 1, 784, 0, 1, bufSize);
+
+        vector<float> values;
+        vector<int> labels;
+
+        cout << "UCIFastReader : "
+            << benchmark([&uciParser, &values, &labels, &num_records]()
+        {
+            int records = 0;
+            do
+            {
+                int recordsRead = uciParser.Parse(10000, &values, &labels);
+                if (recordsRead < 10000)
+                    uciParser.SetFilePosition(0); // go around again
+                records += recordsRead;
+            } while (records < num_records);
+        })
+            << " ms" << endl;
+    }
+    {
+        vector<cntk::StreamDescriptor> streams(2);
+        streams[0].m_alias = "F";
+        streams[0].m_storageType = cntk::StorageType::dense;
+        streams[0].m_sampleDimension = 784;
+
+        streams[1].m_alias = "L";
+        streams[1].m_storageType = cntk::StorageType::dense;
+        streams[1].m_sampleDimension = 10;
+
+        // Using default chunking parameters;
+        cntk::CNTKTextFormatReaderTestRunner<float> textParser(textFilename, streams, 32 * 1024 * 1024, 32);
+
+        const auto& index = textParser.GetIndex();
+        std::vector<cntk::SequenceDataPtr> s;
+        cout << "CNTKTextFormatReader : "
+            << benchmark([&textParser, &index, &s, num_records]()
+        {
+            size_t chunkId = 0;
+            size_t records = 0;
+            do
+            {
+                const auto& chunkDescriptor = index[chunkId % index.size()];
+                textParser.LoadChunk(chunkDescriptor.m_id);
+
+                for (const auto& iter : chunkDescriptor.m_sequences)
+                {
+                    textParser.m_chunk->GetSequence(iter.m_id, s);
+                    records += s.back()->m_numberOfSamples;
+                }
+                s.clear();
+
+                chunkId++;
+
+            } while (records < num_records);
+
         })
             << "ms" << endl;
     }
@@ -259,7 +333,7 @@ int wmain(int argc, wchar_t *argv[])
     data_path /= "/";
 
     // In release mode the expected numbers are 500 ms for UCI and 150 for CNTKText
-    compareIndexingPerf(data_path.generic_wstring() + L"cntk_text_format_data");
+    compareIndexingPerf(data_path.generic_wstring() + L"cntk_text_format_data_x10");
 
     // In release mode the expected numbers are 5000 ms for UCI and 1500 ms for CNTKText
     //compareIndexingPerf(data_path.generic_wstring() + L"cntk_text_format_data_x10");
@@ -272,6 +346,10 @@ int wmain(int argc, wchar_t *argv[])
     // (1700 ms if the number of chunks to cache set to >= 4) ms for CNTKText
     compareParsingPerf(data_path.generic_wstring() + L"uci_data",
         data_path.generic_wstring() + L"cntk_text_format_data");
+
+
+    compareParsingPerf(data_path.generic_wstring() + L"uci_data_x10",
+        data_path.generic_wstring() + L"cntk_text_format_data_x10", 100000 * 10);
 
     cout << "Press any key to continue" << endl;
     std::cin.get();
