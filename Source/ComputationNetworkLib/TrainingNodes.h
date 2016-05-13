@@ -790,7 +790,8 @@ public:
 
         // TODO: Double check this part
         size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
-        m_urlSorter.resize(maxNumofUrlsPerQuery);
+        // keep one additional space to avoid pointer moving out
+        m_urlSorter.resize(maxNumofUrlsPerQuery + 1);
         
         // prepared lookup table
         m_logWeights.resize(maxNumofUrlsPerQuery);
@@ -839,12 +840,12 @@ public:
                 *its++ = *it;
             }
 
-            std::sort(its0, --its);
+            std::sort(its0, its);
 
             // set the sorted rk order to each url
             // the urls are still in the original order
             int rk = 0;
-            for (it = its0; it != its + 1; it++)
+            for (it = its0; it != its; it++)
                 urls[it->rk0].rk = rk++;
         }
 
