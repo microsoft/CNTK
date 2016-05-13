@@ -127,7 +127,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Abstract method to run the train action locally.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (dict): map from input nodes to :class:`cntk.reader.InputMap`
@@ -144,7 +144,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Abstract method for the action test.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
@@ -189,6 +189,10 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
     def _generate_config(self, root_nodes=None, input_map=None):
         '''
         Helper function to create a configuration incorporating all root nodes
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
 
         desc = []
@@ -235,7 +239,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Generates the configuration file for the train action.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             override_existing (bool): if the folder exists already override it
@@ -269,7 +273,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Generates the configuration file for the test action.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             action_name (str): the name of the action in cntk configuration file
 
@@ -328,7 +332,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Generates the configuration file for write action.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
             node_unit_test (bool): set to `True` if you want to output the gradient of a node (backward pass)
@@ -653,7 +657,7 @@ class LocalExecutionContext(AbstractContext):
         Run the train action locally.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
@@ -683,7 +687,7 @@ class LocalExecutionContext(AbstractContext):
         Run the test action locally.
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
 
         Returns:
@@ -811,7 +815,7 @@ class DeferredExecutionContext(AbstractContext):
         Prepare the training configuration to be run on a different environment 
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
             node (:class:`cntk.graph.ComputationNode`): the node to evaluate
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
@@ -833,7 +837,7 @@ class DeferredExecutionContext(AbstractContext):
         Prepare the testing configuration to be run on a different environment 
 
         Args:
-            root_nodes (list): the list of root nodes of the model
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
         if root_nodes is None and input_map is None:
@@ -849,7 +853,6 @@ class DeferredExecutionContext(AbstractContext):
         Prepare the write action configuration to be run on a different environment 
 
         Args:
-            node (:class:`cntk.graph.ComputationNode`): the node to evaluate.
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
         action_name = "Write"
