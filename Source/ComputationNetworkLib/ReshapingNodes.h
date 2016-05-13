@@ -656,6 +656,7 @@ public:
     WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
+        MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
@@ -696,6 +697,7 @@ public:
     PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
+        MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
