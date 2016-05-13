@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, constant, exp, log, sqrt, power, relu, sigmoid, softmax, tanh
+from .. import clip, cond, constant, exp, log, sqrt, square, power, relu, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -233,7 +233,7 @@ def test_op_log(tensor, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is exp()
+    # The expected results for the backward pass is log()
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
@@ -269,7 +269,43 @@ def test_op_sqrt(tensor, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is exp()
+    # The expected results for the backward pass is sqrt()
+    expected = [[numpy_op_grad(tensor)]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_square(tensor, device_id, precision):
+
+    def numpy_op(x):
+        return np.square(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = square(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad(x):
+        return np.multiply(2, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is square()
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
