@@ -1,3 +1,4 @@
+# Note: reader configuration comes from AlexNet.cntk or AlexNetComposite.cntk, depending on the test
 ModelDir = "$RunDir$/models"
 
 ndlMacros=$ConfigDir$/Macros.ndl
