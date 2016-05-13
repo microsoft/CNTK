@@ -417,7 +417,8 @@ public:
                     if (xpath.empty())
                         malformed(pathParam);
                     e = msra::strfun::toint(consume(xpath, L"]"));
-                    if (!xpath.empty())
+                    // TODO \r should be handled elsewhere; refine this
+                    if (!xpath.empty() && xpath != L"\r")
                         malformed(pathParam);
                     isarchive = true;
                 }

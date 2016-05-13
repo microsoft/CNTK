@@ -231,7 +231,7 @@ vector<wstring> ConfigHelper::GetSequencePaths()
     // post processing file list :
     //  - if users specified PrefixPath, add the prefix to each of path in filelist
     //  - else do the dotdotdot expansion if necessary
-    if (!rootPath.empty()) // use has specified a path prefix for this  feature
+    if (!rootPath.empty()) // user has specified a path prefix for this feature
     {
         // first make slash consistent (sorry for Linux users:this is not necessary for you)
         replace(rootPath.begin(), rootPath.end(), L'\\', L'/');

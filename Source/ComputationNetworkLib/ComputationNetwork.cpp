@@ -495,29 +495,28 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
 template <class ElemType>
 /*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase)
 {
+    list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
     if (dropoutRate != prevDropoutRate)
     {
         fprintf(stderr, "Setting dropout rate to %.8g.\n", dropoutRate);
         // TODO: Change this to use an interface that is independent of <ElemType>.
-        list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
             fprintf(stderr, "WARNING: there is no dropout node.\n");
-        else
-        {
-            // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
-            // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
-            size_t randSeed = randSeedBase * dropoutNodes.size();
-            for (auto& nodeIter: dropoutNodes)
-            {
-                auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
-                node->SetDropoutRate(dropoutRate);
-                node->SetRandomSeed(randSeed);
-                randSeed++;
-            }
-        }
-
-        prevDropoutRate = dropoutRate;
     }
+
+    // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
+    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
+    size_t randSeed = randSeedBase * dropoutNodes.size();
+    for (auto& nodeIter : dropoutNodes)
+    {
+        auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
+        if (dropoutRate != prevDropoutRate)
+            node->SetDropoutRate(dropoutRate);
+        node->SetRandomSeed(randSeed);
+        randSeed++;
+    }
+
+    prevDropoutRate = dropoutRate;
 }
 
 template <class ElemType>
