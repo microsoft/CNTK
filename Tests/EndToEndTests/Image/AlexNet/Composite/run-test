@@ -21,12 +21,23 @@ DataDir=$TEST_RUN_DIR/TestData
 mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
+OriginalTestDir=..
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test.
+  exit 1
+fi 
+
+ConfigDir=$TEST_DIR/..
+
+# Set the required parameters for the configuration
 if [ "$OS" == "Windows_NT" ]; then
     ConfigDir=$(cygpath -aw $ConfigDir)
-fi  
+fi 
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun AlexNetCommon.cntk "configFile=$ConfigDir/AlexNet.cntk"
+cntkrun AlexNetCommon.cntk "configFile=$ConfigDir/AlexNetComposite.cntk"
 ExitCode=$?
 
 # Delete the test data
