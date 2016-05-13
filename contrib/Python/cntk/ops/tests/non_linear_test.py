@@ -233,7 +233,7 @@ def test_op_log(tensor, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is log()
+    # The expected results for the backward pass is 1/x
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
@@ -269,7 +269,7 @@ def test_op_sqrt(tensor, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is sqrt()
+    # The expected results for the backward pass is 0.5/sqrt(x)
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
@@ -305,14 +305,78 @@ def test_op_square(tensor, device_id, precision):
 
     # Backward pass test
     # ==================
-    # The expected results for the backward pass is square()
+    # The expected results for the backward pass is 2x
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-@pytest.mark.parametrize("tensor", TENSORS)
+POWER_TUPLES = [ 
+                ([[-1,0,1,2,3,4]], [0]), 
+                ([[0,2], [3,5]], [[0,1], [2,3]]),
+                ([10], [3]),
+              ]
+              
+@pytest.mark.parametrize("tensor, exponent", POWER_TUPLES)
+def test_op_power(tensor, exponent, device_id, precision):
+
+    def numpy_op(x):
+        return np.power(AA(x, dtype=PRECISION_TO_TYPE[precision]), exponent)
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    #TODO: also test when one argument is a constant and the other is input
+    input_node = I([tensor])
+    expo = I([exponent])
+    op_node = power(input_node, expo)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad_expo(b,a):
+        l = np.log(AA(b, dtype=PRECISION_TO_TYPE[precision]))
+        p = np.power(AA(b, dtype=PRECISION_TO_TYPE[precision]),
+                     AA(a, dtype=PRECISION_TO_TYPE[precision]))
+        return np.multiply(l,p)
+
+    def numpy_op_grad_base(b,a):
+        s = np.subtract(AA(a, dtype=PRECISION_TO_TYPE[precision]), 1)        
+        p = np.power(AA(b, dtype=PRECISION_TO_TYPE[precision]),
+                     s)
+        return np.multiply(AA(a, dtype=PRECISION_TO_TYPE[precision]), p)
+        
+    # Backward pass test
+    # ==================
+    # The expected results for the backward of b^a w.r.t. a is log(b).b^a
+    expected = [[numpy_op_grad_expo(tensor, exponent)]]
+
+    #unittest_helper(op_node, None, expected, device_id=device_id,
+    #                precision=precision, clean_up=True, backward_pass=True,
+    #                input_node=expo)  
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward of b^a w.r.t. b is a.b^{a-1}
+    #expected = [[numpy_op_grad_base(tensor)]]
+
+    #unittest_helper(op_node, None, expected, device_id=device_id,
+    #                precision=precision, clean_up=True, backward_pass=True,
+    #                input_node=input_node)  
+
+
+
+@pytest.mark.parametrize("tensor", POWER_TUPLES)
 def test_op_tanh(tensor, device_id, precision):
 
     def numpy_op(x):
