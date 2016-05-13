@@ -29,9 +29,11 @@ class UCIFastReader(AbstractReader):
 
     """`Deprecated` - A UCIFastReader for one input node. Please switch to
     :class:`cntk.reader.CNTKTextFormatReader`.
+
     Note that the dimensions are not inferred from the input node's shape,
     because in case of a label node the dimension does not match the shape
     which would be (``numOfClasses``, 1).
+
     Args:
         filename (str): the name of the file where the data is stored
         custom_delimiter (str): what delimiter is used to separate columns, specify it in case it neither tab nor white spaces.
@@ -66,33 +68,43 @@ class CNTKTextFormatReader(AbstractReader):
     """A CNTKTextFormatReader for one input node that supports sequences. For a
     full format definition please see
     https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader.
+
     Example:
        The following example encodes two samples, one has a sequence of one
        scalar, while the second has a sequence of two scalars::
+
            0\t|I 60.0
            1\t|I 22.0
            1\t|I 24.0
+
        The ``I`` is the alias, which would be used to connect the data to the
        input node. Let's say the above data is stored in ``data.txt``, you would
        set up the reader as follows::
+
            r = CNTKTextFormatReader('data.txt')
+
        and then later use ``r`` to map the alias ``I`` to the input node. Let's say
        the input node is called ``in_node`` in your code, you would say::
            
            ctx.train(..., input_map=r.map(in_node, alias='I', dim=1, format='dense'))
+
        The alias is required, because using this format you can set up
        multiple inputs per sample::
+
            0\t|I 60.0 |W 1 2
            1\t|I 22.0 |W 0 0
            1\t|I 24.0
+
        In this example, the first sample has ``I`` and ``W`` defined, while
        the second sample has ``I`` for both sequence elements, while ``W`` is
        providing only one data point for the full sequence. This is useful, if
        e.g. a sentence being a sequence of varying number of words is tagged
        with a label.
+
        If your data is in matrix format (one column per feature), you can use
        `uci_to_cntk_text_format_converter.py <https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
        to convert it to the CNTKTextFormatReader format.
+
     Args:
         filename (str): path to the input file to read from
         randomize (str or int): whether the input should be randomized. `auto` (default): randomly shuffle the input data; integer value: shuffle within a window of that size; `none`: do not shuffle at all and take the input in the order it was read
@@ -101,6 +113,7 @@ class CNTKTextFormatReader(AbstractReader):
         trace_level (int): verbosity of output (``0``=only errors, ``1``=errors + warning, ``2``=all output)
         chunk_size_in_bytes (int): number of bytes to read from disk in a single read operation (default 32MB)
         num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
+
     """
 
     def __init__(self, 
@@ -145,9 +158,11 @@ class CNTKTextFormatReader(AbstractReader):
         '''
         Create a mapping from a :class:`cntk.graph.ComputationNode` or a node's name in the
         configuration file to a parameter dictionary. 
+
         Args:
             node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
+
         Returns:
             :class:`cntk.reader.InputMap` 
         '''
@@ -158,8 +173,10 @@ class CNTKTextFormatReader(AbstractReader):
         '''
         Write the reader configuration. For this, all previously registered
         :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
+
         Args:
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+
         Returns:
             string representation of the reader configuration
         '''
@@ -259,12 +276,15 @@ class LazyInputReader(object):
     Lazy reader that takes an NumPy array and serializes it to disk only when
     the complete graph is specified. This is necessary in case of multiple
     inputs, because they have to reside in the same file.
+
     Note:
         All readers of this type need to have the exact same number of samples,
         as they will be aligned by the first index.
+
     Note:
         This class will be deprecated once the reader bundlers have arrived in
         CNTK.
+
     Args:
         batch (ndarray): the data to be serialized.
         node (`InputComputationNodeBase`): node to which this lazy reader is
@@ -324,6 +344,7 @@ class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
 class UCIFastReaderAggregator(AbstractReaderAggregator):
 
     """This is the reader class the maps to UCIFastReader of CNTK
+
     Args:
         filename (str): data file path
         custom_delimiter (str): the default is space and tab, you can specify other delimiters to be used        
@@ -339,6 +360,7 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
 
     def add_input(self, node_or_name, input_start, input_dim, num_of_classes=None, label_mapping_file=None):
         """Add an input to the reader
+
         Args:
             node_or_name (str or ComputationNode): either name of the input in the network definition or the node itself
             input_start (int): the start column   
@@ -405,8 +427,10 @@ class InputMap(object):
     '''
     An instance of `InputMap` is return by the readers' `.map()` function, and
     binds input nodes to the aliases in a reader.
+
     Args:
         reader (:class:`cntk.reader.CNTKTextFormatReader`): the reader for which this instance defines the mapping. If ``None``, then the inputs are expected to be NumPy arrays, and an temporary reader will be set up automatically.
+
     Example::
     
        train_reader = CNTKTextFormatReader('file.txt')
@@ -434,9 +458,11 @@ class InputMap(object):
         '''
         Updates the input map by the additional mapping from `node_or_name`
         to the parameter settings in `kw`.
+
         Args:
             node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
+
         Returns:
             :class:`cntk.reader.InputMap`, such that you can chain multiple invocations of `map()`.
         '''
@@ -494,6 +520,7 @@ class InputMap(object):
         Generates a file readable with `cntk.readers.CNTKTextFormatReader` that
         can be connected to the inputs of the network and fills in missing
         information in the lazy input defs (shape, alias).
+
         Args:
             filename (str): name of the file
         '''
