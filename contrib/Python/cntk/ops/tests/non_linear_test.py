@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, constant, exp, relu, sigmoid, softmax, tanh
+from .. import clip, cond, constant, exp, log, sqrt, power, relu, sigmoid, softmax, tanh
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -71,6 +71,12 @@ TENSORS = [
       [0.001, 0.01], [0.1, 1], [10, 100]]),
 ]
 
+POSITIVE_TENSORS = [
+    ([[1, 2]])
+    ,
+    ([[100, 10], [1, 0.1], [0.01, 0.001],
+      [0.001, 0.01], [0.1, 1], [10, 100]]),
+]
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
@@ -198,6 +204,41 @@ def test_op_exp(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+@pytest.mark.parametrize("tensor", POSITIVE_TENSORS)
+def test_op_log(tensor, device_id, precision):
+
+    def numpy_op(x):
+        return np.log(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = log(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad(x):
+        return np.divide(1, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is exp()
+    expected = [[numpy_op_grad(tensor)]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_tanh(tensor, device_id, precision):
