@@ -586,9 +586,76 @@ def exp(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Exp
+    from cntk.ops.cntk2 import Exp
     return Exp(x, name=name)
 
+def log(x, name=None):
+    """
+    Log operation. Computes the element-wise the natural logarithm of `x`: 
+    
+    Example:
+        >>> C.eval(C.log([1., 2.]))
+        [array([[ 0.      ,  0.69314718056]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Log
+    return Log(x, name=name)
+
+def sqrt(x, name=None):
+    """
+    Sqrt operation. Computes the element-wise square-root of `x`: 
+
+    :math:`sqrt(x) = {\sqrt[2]{x}}`
+
+    Example:
+        >>> C.eval(C.sqrt([0., 4.]))
+        [array([[ 0.      ,  2.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Sqrt
+    return Sqrt(x, name=name)
+
+def square(x, name=None):
+    """
+    Square operation. Computes the element-wise square of `x`:     
+
+    Example:
+        >>> C.eval(C.square([1., 10.]))
+        [array([[ 1.      ,  100.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Square
+    return Square(x, name=name)
+
+def power(x, y, name=None):
+    """
+    Power operation. Computes the element-wise `x` to the power of 'y': 
+
+    :math:`power(x,y) = {x^y}`
+
+    Example:
+        >>> C.eval(C.power([1., 2.], 3))
+        [array([[ 1.      ,  8.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Power
+    return Power(x, y, name=name)
 
 def abs(x, name=None):
     """
