@@ -1,7 +1,6 @@
 Train=[
     reader=[
         readerType=ImageReader
-        numCPUThreads=1
         # Map file which maps images to labels using the following format:
         # <full path to image><tab><numerical label (0-based class id)>
         # Example:
