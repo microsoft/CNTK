@@ -5,6 +5,7 @@
 
 #pragma once
 
+//#include "CPUMatrix.h"
 #include "GPUMatrix.h"
 #include "CPUSparseMatrix.h"
 #include <functional>
@@ -281,11 +282,12 @@ public:
         return SecondaryIndexLocation();
     }
 
+    //void SetValue(const CPUMatrix<ElemType>& denseMatrix);
     void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix);
-    
+
     GPUSPARSE_INDEX_TYPE* GetCondensedVector() const;
     void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
 

@@ -150,12 +150,12 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).SetValue(Input(0)->ValueFor(fr));
+        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(inputIndex)->GradientFor(fr).SetValue(GradientFor(fr));
+        Input(inputIndex)->GradientFor(fr).AssignValuesOf(GradientFor(fr));
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -175,13 +175,16 @@ template class ReshapeNode<double>;
 // Reduces (e.g. sums up) all elements in each sample (column) of the input.
 // The optional axis can be 0 (meaning all elements) or a specific axis.
 // Allowed operations:
-//  - "Plus"
-//  - "LogPlus"   --not implemented yet
+//  - "Sum"
+//  - "LogSum"    --not implemented yet
 //  - "Mean"      --not implemented yet
 //  - "Max"       --not implemented yet
 //  - "Min"       --not implemented yet
 //  - "All"       --not implemented yet
 //  - "Any"       --not implemented yet
+// TODO:
+//  - move to a different header, since it's not really Reshaping
+//  - consider to change to pass in a set of axes instead of only one
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -216,7 +219,7 @@ public:
 
 private:
     int m_axis;
-    std::wstring m_operation; // the operation as a string, e.g. "Plus", see GetOpcode()
+    std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
     ElementWiseOperator m_op; // the operation mapped to our internal opCode
 };
 
@@ -252,7 +255,7 @@ public:
                             Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
         // copy the data from 'dataInput'
-        ValueFor(fr).SetValue(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
+        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
 
@@ -653,6 +656,7 @@ public:
     WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
+        MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
@@ -693,6 +697,7 @@ public:
     PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name)
     {
+        MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
@@ -1077,7 +1082,7 @@ public:
         // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
         if (!m_pMBLayout || factor() == 1)
         {
-            Value().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
+            Value().Reshaped(newCols * m_numTargetRows, 1).AssignValuesOf(Input(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
         }
         // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
         else
@@ -1371,7 +1376,7 @@ reductions
 ----------
 
  - these are/will be implemented as a node for samples, and as recurrences for sequences
- - ReducePlus
+ - ReduceSum
     - sum over all elements of a dimension, or over time
  - ReduceMax, ReduceMin
     - max

@@ -1,47 +1,4 @@
-ModelDir = "$RunDir$/models"
-
-ndlMacros=$ConfigDir$/Macros.ndl
-
-precision=float
-deviceId=Auto
-
-command=Train:AddTop5Eval:Test
-
-parallelTrain=false
-
-traceLevel=1
-numMBsToShowResult=100
-
 Train=[
-    action=train
-    modelPath=$ModelDir$/AlexNet
-
-    NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/AlexNet.ndl
-    ]
-    
-    SGD=[
-        epochSize=0
-        minibatchSize=16
-        learningRatesPerMB=0.01*20:0.003*12:0.001*28:0.0003
-        momentumPerMB=0.9
-        maxEpochs=3
-        gradUpdateType=None
-        L2RegWeight=0.0005
-        dropoutRate=0*5:0.5
-        
-        ParallelTrain=[
-            parallelizationMethod=DataParallelSGD
-            distributedMBReading=true
-            parallelizationStartEpoch=1
-            DataParallelSGD=[
-                gradientBits=1
-            ]
-        ]
-        
-        numMBsToShowResult=100
-    ]
-    
     reader=[
         readerType=ImageReader
         # Map file which maps images to labels using the following format:
@@ -78,23 +35,7 @@ Train=[
     ]    
 ]
 
-AddTop5Eval=[    
-    action=edit
-    CurModel=$ModelDir$/AlexNet
-    NewModel=$ModelDir$/AlexNet.Top5
-    editPath=$ConfigDir$/add_top5_layer.mel
-]
-
-Test=[
-    action=test
-    modelPath=$ModelDir$/AlexNet.Top5
-    # Set minibatch size for testing.
-    minibatchSize=16
-
-     NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/AlexNet.ndl
-    ]
-    
+Test=[    
     reader=[
         readerType=ImageReader
         file=$ConfigDir$/val_map.txt

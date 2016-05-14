@@ -6,15 +6,15 @@
 
 from ..context import get_new_context, _CONTEXT
 from ..graph import *
-from ..ops.cntk1 import Abs, Plus, Minus, ElementTimes, Times
-from ..ops import constant, input_reader, plus, times
+from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes
+from ..ops import constant, input_numpy, plus, times, past_value
 
 import pytest
 
 # keeping things short
 A = np.asarray
 C = constant
-I = input_reader
+I = input_numpy
 
 
 # testing whether operator overloads result in proper type
@@ -59,10 +59,11 @@ def _to_list(desc):
 def test_graph_with_same_node_twice():
     v0 = constant(1)
     root_node = ops.plus(v0, v0)
-    description, has_inputs, readers = root_node.to_config()
+    description, inputs = root_node._to_config_description()
     expected = ["v0 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='1.0000", "', initOnCPUOnly=true, randomSeed=-1)",
-                'v1 = Plus(v0, v0)']
-    assert _to_list(description) == expected
+                'v1 = CNTK2.Plus(v0, v0)']
+    result = _to_list(description) 
+    assert result == expected
 
 
 if False:
@@ -88,13 +89,12 @@ if False:
 
 
 def test_loose_coupling():
-    from cntk.ops.cntk1 import PastValue
-    dh = PastValue(1, 'outnode')
+    dh = past_value(1, 'outnode')
     out = times(dh, constant(2), name='outnode')
 
     expected = ['v0 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)',
                 "v1 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='2.0000", "', initOnCPUOnly=true, randomSeed=-1)",
-                'outnode = Times(v0, v1, outputRank=1)']
+                'outnode = CNTK2.Times(v0, v1, outputRank=1)']
 
-    description, has_inputs, readers = out.to_config()
+    description, inputs = out._to_config_description()
     assert _to_list(description) == expected

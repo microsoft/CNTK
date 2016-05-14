@@ -33,17 +33,17 @@ class SimpleEvaluator
 {
 public:
     SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-                    const size_t numSubminiBatches = 1)
-        : m_net(net), 
-          m_numMBsToShowResult(numMBsToShowResult), 
-          m_firstMBsToShowResult(firstMBsToShowResult),
-          m_traceLevel(traceLevel),
-          m_maxSamplesInRAM(maxSamplesInRAM), 
-          m_numSubminiBatches(numSubminiBatches), 
-          m_mpi(mpi), 
-          m_distGradAgg(nullptr),
-          m_gradHeader(nullptr),
-          m_enableDistributedMBReading(enableDistributedMBReading)
+                    const size_t numSubminiBatches = 1) :
+        m_net(net), 
+        m_numMBsToShowResult(numMBsToShowResult), 
+        m_firstMBsToShowResult(firstMBsToShowResult),
+        m_traceLevel(traceLevel),
+        m_maxSamplesInRAM(maxSamplesInRAM), 
+        m_numSubminiBatches(numSubminiBatches), 
+        m_mpi(mpi), 
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr),
+        m_enableDistributedMBReading(enableDistributedMBReading)
     {
     }
 
@@ -112,7 +112,7 @@ public:
         if (useDistributedMBReading)
             dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
         else
-            dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+        dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
@@ -146,28 +146,28 @@ public:
                 actualMBSize = 0; // (undefined if !wasDataRead)
 
             if (actualMBSize > 0)
+        {
+
+            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
-
-                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
-                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
-                {
-                    if (actualNumSubminibatches > 1)
-                    {
-                        smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
-                    }
-
-                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-
-                    m_net->ForwardProp(evalNodes);
-
-                    // house-keeping for sub-minibatching
-                    if (actualNumSubminibatches > 1)
-                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-                } // end sub-minibatch loop
-
                 if (actualNumSubminibatches > 1)
-                    smbDispatcher.DoneWithCurrentMinibatch();
+                {
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                }
+
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+                m_net->ForwardProp(evalNodes);
+
+                // house-keeping for sub-minibatching
+                if (actualNumSubminibatches > 1)
+                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+            } // end sub-minibatch loop
+
+            if (actualNumSubminibatches > 1)
+                smbDispatcher.DoneWithCurrentMinibatch();
             } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
@@ -210,8 +210,8 @@ public:
             {
                 if (actualMBSize != 0)
                 {
-                    for (int i = 0; i < evalNodes.size(); i++)
-                        evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                for (int i = 0; i < evalNodes.size(); i++)
+                    evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
                 }
             }
 
@@ -250,8 +250,7 @@ public:
         for (int i = 0; i < evalResultsLastLogged.size(); i++)
             evalResultsLastLogged[i] = EpochCriterion(0); // clear this since statistics display will subtract the previous value
 
-        fprintf(stderr, "Final Results: ");
-        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true);
+        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true, /*isFinal=*/true);
 
         return evalResults;
     }
@@ -265,14 +264,14 @@ protected:
     }
 
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
-                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false)
+                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false, bool isFinal = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastLogged);
+        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", startMBNum, endMBNum);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
-            double eresult = (evalResults[i] - evalResultsLastLogged[i]).Average(); // / numSamplesLastLogged;
-            fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+            EpochCriterion criterionSinceLastLogged = evalResults[i] - evalResultsLastLogged[i];
+            criterionSinceLastLogged.LogCriterion(evalNodes[i]->NodeName(), /*addSemicolon=*/false);
 
             if (displayConvertedValue)
             {
@@ -281,8 +280,11 @@ protected:
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                    fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
+                    fprintf(stderr, "; perplexity = %.8f", std::exp(criterionSinceLastLogged.Average()));
             }
+
+            if (i + 1 < evalResults.size())
+                fprintf(stderr, "; ");
         }
 
         fprintf(stderr, "\n");

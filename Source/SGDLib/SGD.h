@@ -325,7 +325,6 @@ public:
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
-          // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
           m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
           m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
@@ -561,7 +560,6 @@ public:
 protected:
     std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     std::wstring m_trainCriterionNodeName;
     std::wstring m_evalCriterionNodeName;
@@ -580,10 +578,31 @@ protected:
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
-    int SGDTrace(FILE* __restrict __stream, bool isPrependTimestamp, const char* __restrict __format, ...);
     void InitializeAndCheckBlockMomentumSGDParameters();
+    void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
     MultiversoHelper<ElemType>* m_pMultiversoHelper;
     bool m_pMultiversoHelperBarrier;
+
+    bool UseGradientAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UseModelAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
+                 GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
+                (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UseAsyncGradientAggregation(size_t epochNumber)
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+    bool UseParallelTrain(size_t epochNumber)
+    {
+        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber) || UseAsyncGradientAggregation(epochNumber);
+    }
 };
 
 }}}

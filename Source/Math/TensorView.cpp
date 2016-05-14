@@ -363,7 +363,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     //    which gets reinterpreted back as a [K x J x S x T] tensor
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
     let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
-    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != m_sob->GetNumCols();
+    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != numColumns;
 
     // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
     // As a consequence, some configurations will simply not work currently.

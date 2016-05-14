@@ -4,25 +4,25 @@
 //
 #pragma once
 
+#include "Basics.h"
 #include <chrono>
 #include "TimerUtility.h"
+#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// TODO: make this proper C++ functions with variadic templates and a name that reflects their difference to fprintf(stderr) which already implies printing to log
 // If the Tracing flag is set, print out a timestamp with no new line at the end
 #define PREPENDTS(stream) \
     do \
     { \
         if (ProgressTracing::GetTimestampingFlag()) \
         { \
-           std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); \
-           char mbstr[30]; \
-           if (std::strftime(mbstr, sizeof(mbstr), "%m/%d/%Y %H:%M:%S", std::localtime(&tt))) \
-               fprintf(stream, "%s: ", mbstr);  \
+            char mbstr[30]; \
+            fprintf(stream, "%s: ", ProgressTracing::Timestamp(mbstr));  \
         } \
     } while(0)
 
+// TODO: make this proper C++ functions with variadic templates and a name that reflects their difference to fprintf(stderr) which already implies printing to log
 // Print out a log message.  If the Tracing flag is set, prepend with a timestamp
 #define LOGPRINTF(stream, ...) \
     do \
@@ -78,6 +78,22 @@ public:
     {
         return GetStaticInstance().m_timestampFlag;
         // TODO: timestampFlag or timestampingFlag? (Or timeStampFlag?)
+    }
+
+    template<unsigned int N>
+    static const char* Timestamp(char(&buf)[N])
+    {
+        std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        if (!std::strftime(buf, _countof(buf), "%m/%d/%Y %H:%M:%S", std::localtime(&tt)))
+            LogicError("Timestamp: Buffer too small.");
+        return buf;
+    }
+
+    // helper to return a time-stamp prefix if time-stamping enabled, complete with ': ' at its end
+    static std::wstring GetTimeStampPrefix()
+    {
+        char mbstr[30];
+        return GetTimestampingFlag() ? msra::strfun::wstrprintf(L"%s: ", Timestamp(mbstr)) : L"";
     }
 
     static void SetTracingFlag()
@@ -167,4 +183,5 @@ public:
         return newNumItersSinceLastPrintOfProgress;
     }
 };
-} } }
+
+}}}

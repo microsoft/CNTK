@@ -128,16 +128,7 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        try
-        {
-            m_eval->Init(std::to_string(deviceId));
-        }
-        catch (const exception& ex)
-        {
-            throw GetCustomException(ex);
-        }
-
-        this->CreateNetwork(networkDescription);
+        this->CreateNetwork(String::Format("deviceId={0}\n{1}", deviceId, networkDescription));
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>

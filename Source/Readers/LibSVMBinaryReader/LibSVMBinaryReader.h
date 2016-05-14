@@ -34,6 +34,15 @@ private:
     std::deque<T> d_queue;
 
 public:
+    void release()
+    {
+        while (!d_queue.empty())
+            free(d_queue.pop_front());
+    }
+    size_t size()
+    {
+        return d_queue.size();
+    }
     void push(T const& value)
     {
         {

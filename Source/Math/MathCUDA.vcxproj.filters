@@ -31,6 +31,9 @@
     <CudaCompile Include="CuDnnBatchNormalization.cu">
       <Filter>GPU\BatchNormalization</Filter>
     </CudaCompile>
+    <CudaCompile Include="GPURNGHandle.cu">
+      <Filter>GPU</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudalattice.cpp">
@@ -121,6 +124,9 @@
     </ClInclude>
     <ClInclude Include="Convolution.cuh">
       <Filter>GPU\Convolution</Filter>
+    </ClInclude>
+    <ClInclude Include="GPURNGHandle.h">
+      <Filter>GPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

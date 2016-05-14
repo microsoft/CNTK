@@ -102,7 +102,7 @@ DNN=[
     h2_d = Dropout(h2)
     ol = DNNLastLayer(hiddenDim, labelDim, h2_d, fc3WScale, fc3BValue)
     
-    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
-    Err = ErrorPrediction(labels, ol, tag = Eval)
+    ce = CrossEntropyWithSoftmax(labels, ol, tag = "criterion")
+    err = ErrorPrediction(labels, ol, tag = "evaluation")
     OutputNodes = ol
 ]
