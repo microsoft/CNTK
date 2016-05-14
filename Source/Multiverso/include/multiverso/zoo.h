@@ -21,7 +21,7 @@ class NetInterface;
 class Zoo {
 public:
   ~Zoo();
-  static Zoo* Get() { static Zoo zoo; return &zoo; }
+  inline static Zoo* Get() { static Zoo zoo; return &zoo; }
 
   // Start all actors
   void Start(int* argc, char** argv);
@@ -36,27 +36,27 @@ public:
   int rank() const;
   int size() const;
 
-  int worker_rank() const { return nodes_[rank()].worker_id; }
-  int server_rank() const { return nodes_[rank()].server_id; }
+  inline int worker_rank() const { return nodes_[rank()].worker_id; }
+  inline int server_rank() const { return nodes_[rank()].server_id; }
 
-  int rank_to_worker_id(int rank) const {
+  inline int rank_to_worker_id(int rank) const {
     return nodes_[rank].worker_id;
   }
 
-  int rank_to_server_id(int rank) const {
+  inline int rank_to_server_id(int rank) const {
     return nodes_[rank].server_id;
   }
 
-  int worker_id_to_rank(int worker_id) const {
+  inline int worker_id_to_rank(int worker_id) const {
     return worker_id_to_rank_[worker_id];
   }
 
-  int server_id_to_rank(int server_id) const {
+  inline int server_id_to_rank(int server_id) const {
     return server_id_to_rank_[server_id];
   }
 
-  int num_workers() const { return num_workers_; }
-  int num_servers() const { return num_servers_; }
+  inline int num_workers() const { return num_workers_; }
+  inline int num_servers() const { return num_servers_; }
 
 
   int RegisterTable(WorkerTable* worker_table);
@@ -71,6 +71,7 @@ private:
   // private constructor
   Zoo();
   void RegisterNode();
+  void FinishTrain();
   void StartPS();
   void StopPS();
 

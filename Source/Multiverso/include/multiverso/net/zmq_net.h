@@ -170,7 +170,7 @@ public:
   }
 
 
-  void SendTo(int rank, const char* buf, int len) const override {
+  void SendTo(int rank, char* buf, int len) const override {
     int send_size = 0;
     while (send_size < len) {
       int cur_size = zmq_send(senders_[rank], buf + send_size, len - send_size, 0);
@@ -189,7 +189,7 @@ public:
     }
   }
 
-  void SendRecv(int send_rank, const char* send_buf, int send_len,
+  void SendRecv(int send_rank, char* send_buf, int send_len,
     int recv_rank, char* recv_buf, int recv_len) const override {
     // send first
     SendTo(send_rank, send_buf, send_len);

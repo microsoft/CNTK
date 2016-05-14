@@ -6,12 +6,16 @@
 
 namespace multiverso {
 
+#ifndef CHECK
 #define CHECK(condition)                                   \
   if (!(condition)) Log::Fatal("Check failed: " #condition \
      " at %s, line %d .\n", __FILE__,  __LINE__);
+#endif
 
+#ifndef CHECK_NOTNULL
 #define CHECK_NOTNULL(pointer)                             \
   if ((pointer) == nullptr) Log::Fatal(#pointer " Can't be NULL\n");
+#endif
 
 // A enumeration type of log message levels. The values are ordered:
 // Debug < Info < Error < Fatal.

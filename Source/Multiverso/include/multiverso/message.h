@@ -15,6 +15,7 @@ enum MsgType {
   Request_Add = 2,
   Reply_Get = -1,
   Reply_Add = -2,
+  Server_Finish_Train = 31,
   Control_Barrier = 33,  // 0x100001
   Control_Reply_Barrier = -33,
   Control_Register = 34,
@@ -29,30 +30,30 @@ public:
   ~Message() { }
 
   MsgType type() const { return static_cast<MsgType>(header_[2]); }
-  int src() const { return header_[0]; }
-  int dst() const { return header_[1]; }
-  int table_id() const { return header_[3]; }
-  int msg_id() const { return header_[4]; }
+  inline int src() const { return header_[0]; }
+  inline int dst() const { return header_[1]; }
+  inline int table_id() const { return header_[3]; }
+  inline int msg_id() const { return header_[4]; }
 
-  void set_type(MsgType type) { header_[2] = static_cast<int>(type); }
-  void set_src(int src) { header_[0] = src; }
-  void set_dst(int dst) { header_[1] = dst; }
-  void set_table_id(int table_id) { header_[3] = table_id; }
-  void set_msg_id(int msg_id) { header_[4] = msg_id; }
+  inline void set_type(MsgType type) { header_[2] = static_cast<int>(type); }
+  inline void set_src(int src) { header_[0] = src; }
+  inline void set_dst(int dst) { header_[1] = dst; }
+  inline void set_table_id(int table_id) { header_[3] = table_id; }
+  inline void set_msg_id(int msg_id) { header_[4] = msg_id; }
 
-  void set_data(const std::vector<Blob>& data) { data_ = std::move(data); }
-  std::vector<Blob>& data() { return data_; }
-  size_t size() const { return data_.size(); }
+  inline void set_data(const std::vector<Blob>& data) { data_ = std::move(data); }
+  inline std::vector<Blob>& data() { return data_; }
+  inline size_t size() const { return data_.size(); }
 
-  int* header() { return header_; }
-  const int* header() const { return header_; }
+  inline int* header() { return header_; }
+  inline const int* header() const { return header_; }
   static const int kHeaderSize = 8 * sizeof(int);
 
   // Deep Copy
   Message* CopyFrom(const Message& src);
   // Create a Message with only headers
   // The src/dst, type is opposite with src message
-  Message* CreateReplyMessage() {
+  inline Message* CreateReplyMessage() {
     Message* reply = new Message();
     reply->set_dst(this->src());
     reply->set_src(this->dst());
@@ -62,7 +63,7 @@ public:
     return reply;
   }
 
-  void Push(const Blob& blob) { data_.push_back(blob); }
+  inline void Push(const Blob& blob) { data_.push_back(blob); }
 
 private:
   int header_[8];

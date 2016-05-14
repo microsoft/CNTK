@@ -45,11 +45,11 @@ public:
   virtual size_t Recv(MessagePtr* msg) = 0;
 
   // Blocking, send raw data to rank
-  virtual void SendTo(int rank, const char* buf, int len) const = 0;
+  virtual void SendTo(int rank, char* buf, int len) const = 0;
   // Blocking, receive raw data from rank 
   virtual void RecvFrom(int rank, char* buf, int len) const = 0;
   // Blocking, send and recv at same time
-  virtual void SendRecv(int send_rank, const char* send_buf, int send_len,
+  virtual void SendRecv(int send_rank, char* send_buf, int send_len,
     int recv_rank, char* recv_buf, int recv_len) const = 0;
 
   virtual int thread_level_support() = 0;
