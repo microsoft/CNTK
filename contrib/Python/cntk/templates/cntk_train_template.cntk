@@ -1,10 +1,6 @@
-
-modelPath="%(ModelPath)s"
-deviceId=%(DevideId)s
-precision="%(Precision)s"
-
 %(ActionName)s=[
     action="train"
+
     run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[

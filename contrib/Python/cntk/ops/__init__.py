@@ -635,6 +635,9 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         else:
             cntk_shape = value[0].shape
 
+        if len(cntk_shape) == 0:
+            raise ValueError('value should be an array of input samples')
+            
         node = input(cntk_shape, dynamic_axis=dynamic_axis)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(

@@ -1223,32 +1223,32 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
     DISPATCH_MATRIX_ON_FLAG(this, this,
         { 
             // Set CPUMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(deepCopyFrom.m_GPUMatrix->GetNumRows(), deepCopyFrom.m_GPUMatrix->GetNumCols(), deepCopyFrom.m_GPUMatrix->CopyToArray()); },// //{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUMatrix is not yet implemented."); });//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(deepCopyFrom.m_CPUMatrix->GetNumRows(), deepCopyFrom.m_CPUMatrix->GetNumCols(), m_GPUMatrix->GetComputeDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },////{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a GPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a GPUMatrix is not yet implemented."); });//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set CPUSparseMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a CPUMatrix to a CPUSparseMatrix is not yet implemented."); },//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUSparseMatrix is not yet implemented."); },//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUSparseMatrix is not yet implemented."); });//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUSparseMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a CPUMatrix to a GPUSparseMatrix is not yet implemented."); },//{ m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
@@ -3610,13 +3610,17 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
             if (!m_CPUSparseMatrix)
                 LogicError("Can't move from CPU because I'm not there!");
 
-            if (!m_GPUSparseMatrix)
-                m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(to_id, m_CPUSparseMatrix->GetFormat());
-            else
-                m_GPUSparseMatrix->ChangeDeviceTo(to_id);
-
-            if (m_CPUSparseMatrix->GetNumElements() != 0 && !emptyTransfer)
+            if (emptyTransfer)
             {
+                if (m_GPUSparseMatrix && m_GPUSparseMatrix->GetComputeDeviceId() == to_id)
+                    m_GPUSparseMatrix->Resize(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount());
+                else
+                    m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount(), to_id, m_CPUSparseMatrix->GetFormat());
+            }
+            else
+            {
+                if (!m_GPUSparseMatrix || m_GPUSparseMatrix->GetComputeDeviceId() != to_id)
+                    m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(to_id);
                 m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
             }
 
@@ -3640,10 +3644,10 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 if (!m_CPUSparseMatrix)
                     m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(m_GPUSparseMatrix->GetFormat());
 
-                if (m_GPUSparseMatrix->GetNumElements() != 0 && !emptyTransfer)
-                {
+                if (emptyTransfer)
+                    m_CPUSparseMatrix->Resize(m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->NzCount(), true);
+                else
                     m_GPUSparseMatrix->CopyToCPUSparseMatrix(*m_CPUSparseMatrix);
-                }
 
                 if (isBeingMoved)
                 {
@@ -3668,13 +3672,19 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         {
             if (!m_CPUMatrix)
                 LogicError("Can't move from CPU because I'm not there!");
-            if (m_CPUMatrix->GetNumElements() != 0 && !emptyTransfer)
+            if (emptyTransfer)
             {
-                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Buffer(), matrixFlagNormal);
+                if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
+                    m_GPUMatrix->Resize(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols());
+                else
+                    m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id);
             }
             else
             {
-                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(to_id);
+                if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
+                    m_GPUMatrix->SetValue(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
+                else
+                    m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
             }
             if (isBeingMoved)
             {
@@ -3682,9 +3692,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 m_CPUMatrix = nullptr;
             }
             else
-            {
                 SetDataLocation(BOTH, DENSE);
-            }
         }
         else // from GPU
         {
@@ -3693,15 +3701,22 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
 
             if (to_id < 0) // to CPU
             {
-                if (m_GPUMatrix->GetNumElements() != 0 && !emptyTransfer)
+                if (emptyTransfer)
                 {
-                    ElemType* arr = m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
-                    m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
-                    delete[] arr;
+                    if (m_CPUMatrix)
+                        m_CPUMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
+                    else
+                        m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
                 }
                 else
                 {
-                    m_CPUMatrix = make_shared<CPUMatrix<ElemType>>();
+                    ElemType* arr = m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+                    if (m_CPUMatrix)
+                        m_CPUMatrix->SetValue(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr);
+                    else
+                        m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
+
+                    delete[] arr;
                 }
 
                 if (isBeingMoved)

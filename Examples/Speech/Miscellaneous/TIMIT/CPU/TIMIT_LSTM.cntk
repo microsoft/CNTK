@@ -20,7 +20,6 @@ speechTrainNDL=[
     deviceId=-1
 
     traceLevel=1
-    useValidation=true
 
     NDLNetworkBuilder=[
         networkDescription=$ConfigFolder$\LSTM_1layer.ndl
