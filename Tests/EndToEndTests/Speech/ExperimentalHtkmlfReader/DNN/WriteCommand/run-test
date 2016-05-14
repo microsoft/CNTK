@@ -2,10 +2,19 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-# cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk.cntk 'shareNodeValueMatrices=true' || exit $?
+OriginalTestDir=../../../DNN/WriteCommand
+ConfigDir=$TEST_DIR/$OriginalTestDir
 
-OUTPUT_BASELINE=$TEST_DIR/Output.ScaledLogLikelihood
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'shareNodeValueMatrices=true speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]] write=[reader=[readerType=ExperimentalHTKMLFReader]] write=[reader=[readMethod=none]]' || exit $?
+
+OUTPUT_BASELINE=$TEST_DIR/$OriginalTestDir/Output.ScaledLogLikelihood
 if [ "$OS" == "Windows_NT" ]; then
   OUTPUT_BASELINE=$OUTPUT_BASELINE.windows
 fi
