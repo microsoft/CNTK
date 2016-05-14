@@ -172,7 +172,7 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
         // now determine result dimensions
         auto dimsC = dimsB;
         // output dims - bugbug: this is hard-coded for bidirectional models
-        dimsC[0] = 2 * m_numHidden;
+        dimsC[0] = 1 * m_numHidden;
 
         // N.B. - this is the magical call, the reason for the function
         // dimensions would be outputRank * numSamples * minibatch * time.

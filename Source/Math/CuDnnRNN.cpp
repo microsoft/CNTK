@@ -95,7 +95,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     SetXDesc(shapeX);
 
     size_t outputSize = shapeY.GetDim(0);
-    if (outputSize != 2 * m_rnnT->GetNumHidden())
+    if (outputSize != (m_rnnT->isBidirectional()?2:1) * m_rnnT->GetNumHidden())
        InvalidArgument("CuDnn ForwardCore: Output leading dimension must be twice hidden size for bidirectional networks");
     if (shapeY.GetDim(1) != miniBatch)
         RuntimeError("CuDnn ForwardCore: Output minibatch size doesn't match input minibatch size");

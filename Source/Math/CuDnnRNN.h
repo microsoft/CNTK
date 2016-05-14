@@ -116,6 +116,8 @@ public:
         return m_rnnDesc;
     }
 
+    bool isBidirectional() const { return m_bidirectional; }
+
     size_t GetNumLayers() { return m_numLayers; }
     size_t GetNumHidden() { return m_numHidden; }
 
