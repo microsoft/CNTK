@@ -214,7 +214,7 @@ ReducePlus (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceEl
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
 #ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
-RNN(A, B, numHidden=100, numLayers=1, tag='') = new ComputationNode [ operation = 'RNN' ; inputs = ( A : B ) /*plus the function args*/ ]
+RNN(A, B, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='') = new ComputationNode [ operation = 'RNN' ; inputs = ( A : B ) /*plus the function args*/ ]
 Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 // TODO: Scale = ElementTimes

@@ -75,9 +75,14 @@ template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::ForwardCore(
     const GPUMatrix<ElemType>& weightsW,
     const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY,
+    const RnnParameters& rnnParameters,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
+    // test that the RNN shape is correct
+    if (!m_rnnT->IsCompatable(rnnParameters))
+        LogicError("RNN Layout has changed during processing");
+
     // assume input, dims=[inputsize, miniBatch, seqLength], stride=[1, inputSize*seqLength, inputSize]
     // assume output is equivalent
     // n.b. we should test these assumptions
@@ -152,9 +157,14 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
     const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& weightsW, GPUMatrix<ElemType>& dx,
+    const RnnParameters& rnnParameters,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
+    // test that the RNN shape is correct
+    if (!m_rnnT->IsCompatable(rnnParameters))
+        LogicError("RNN Layout has changed during processing");
+
     if (!m_BackwardDataCalledYet)
     {
         CUDNN_CALL(cudnnRNNBackwardData(
@@ -177,9 +187,13 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw,
+    const RnnParameters& rnnParameters,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
+    // test that the RNN shape is correct
+    if (!m_rnnT->IsCompatable(rnnParameters))
+        LogicError("RNN Layout has changed during processing");
     if (!m_BackwardDataCalledYet)
         LogicError("out of order calling you have been very bad");
     CUDNN_CALL(cudnnRNNBackwardWeights(

@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
+#include "RNNCommon.h"
 
 #include <unordered_set>
 #include <map>
@@ -99,9 +100,7 @@ private:
     TensorView<ElemType> TensorHelper(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr);
     void TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY);
 
-    size_t m_numLayers;
-    size_t m_numHidden;
-
+    RnnParameters m_rnnParameters;
 };
 
 } } }

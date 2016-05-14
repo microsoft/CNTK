@@ -28,15 +28,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template<class ElemType>
-RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name) 
-    : Base(deviceId, name), m_numLayers(7), m_numHidden(123)
+RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name)
+    : Base(deviceId, name),
+    m_rnnParameters(0, 0, 0, 0),
+    m_BackwardDataCalledYet(false)
 {
 }
 
 // This constructor helps with BrainScript integration
 template<class ElemType>
 RNNNode<ElemType>::RNNNode(const ScriptableObjects::IConfigRecordPtr configp)
-    : Base(configp->Get(L"deviceId"), L"<placeholder>"), m_numHidden(configp->Get(L"numHidden")), m_numLayers(configp->Get(L"numLayers")),
+    : Base(configp->Get(L"deviceId"), L"<placeholder>"), 
+    m_rnnParameters(configp->Get(L"bidirectional"), configp->Get(L"numLayers"), configp->Get(L"hiddenSize"), configp->Get(L"rnnMode")),
     m_BackwardDataCalledYet(false)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -46,18 +49,14 @@ template<class ElemType>
 void RNNNode<ElemType>::Save(File& fstream) const
 {
     Base::Save(fstream);
-    // todo: save RNN topology
-    fstream << m_numHidden;
-    fstream << m_numLayers;
+    m_rnnParameters.Write(fstream);
 }
 
 template<class ElemType>
 void RNNNode<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    // load RNN topology
-    fstream >> m_numHidden;
-    fstream >> m_numLayers;
+    m_rnnParameters.Read(fstream);
 }
 
 template<class ElemType>
@@ -114,7 +113,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     // this copy is necessary so that the strides are dense.
     shapeYT = TensorShape(shapeYT.GetDims());
 
-    m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_numLayers, m_numHidden, *m_reserve, *m_workspace);
+    m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_rnnParameters, *m_reserve, *m_workspace);
 
     // No one uses shapeY, but it is necessary
     TensorShape shapeY;
@@ -139,13 +138,13 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
         m_transposedDInput->Resize(Input(1)->Gradient());
 
         // Do the work
-        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT, m_rnnParameters, *m_reserve, *m_workspace);
         m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
         Matrix<ElemType>& paramDW = Input(1)->Gradient();
-        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, shapeXT, *m_transposedOutput, shapeYT, paramDW, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, shapeXT, *m_transposedOutput, shapeYT, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
     }
     else if (inputIndex == 0) // data
     {
@@ -172,7 +171,7 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
         // now determine result dimensions
         auto dimsC = dimsB;
         // output dims - bugbug: this is hard-coded for bidirectional models
-        dimsC[0] = 1 * m_numHidden;
+        dimsC[0] = (m_rnnParameters.m_bidirectional ? 2 : 1) * m_rnnParameters.m_hiddenSize;
 
         // N.B. - this is the magical call, the reason for the function
         // dimensions would be outputRank * numSamples * minibatch * time.

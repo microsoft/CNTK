@@ -168,6 +168,7 @@
     <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
+    <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
     <None Include="GPUWatcher.cu" />

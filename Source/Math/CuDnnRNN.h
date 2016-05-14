@@ -6,6 +6,7 @@
 #include <typeinfo>
 #include <typeindex>
 #include "CuDnnCommon.h"
+#include "RNNCommon.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -59,28 +60,29 @@ private:
     cudnnDataType_t m_dataType;
     cudnnRNNDescriptor_t m_rnnDesc;
     CuDnnDropout m_dropout;
-    size_t m_numHidden;
-    size_t m_numLayers;
     size_t m_seqLength;
-    bool m_bidirectional;
-    cudnnRNNMode_t m_rnnMode;
+    RnnParameters m_rnnParameters;
+
+    cudnnRNNMode_t GetMode()
+    {
+        if (m_rnnParameters.m_rnnMode == wstring(L"LSTM"))
+            return cudnnRNNMode_t::CUDNN_LSTM;
+        if (m_rnnParameters.m_rnnMode == wstring(L"GRU"))
+            return cudnnRNNMode_t::CUDNN_GRU;
+        if (m_rnnParameters.m_rnnMode == wstring(L"RNN_RELU"))
+            return cudnnRNNMode_t::CUDNN_RNN_RELU;
+        if (m_rnnParameters.m_rnnMode == wstring(L"RNN_TANH"))
+            return cudnnRNNMode_t::CUDNN_RNN_TANH;
+        InvalidArgument("RNN Mode set to %s, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnParameters.m_rnnMode.c_str());
+    }
+
 public:
-    CuDnnRNN(const size_t numLayers, const size_t numHidden, const size_t seqLength, bool bidirectional, cudnnRNNMode_t RNNMode)
-        : m_rnnDesc(nullptr), m_dropout(0.0f), m_numHidden(numHidden), m_numLayers(numLayers),
-        m_seqLength(seqLength), m_bidirectional(bidirectional), m_rnnMode(RNNMode),
+    CuDnnRNN(const RnnParameters& rnnParameters, const size_t seqLength)
+        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters), m_seqLength(seqLength),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
-
-        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_numHidden,
-            (int)m_seqLength,
-            (int)m_numLayers,
-            m_dropout,
-            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            m_rnnMode,
-            m_dataType));
+        SetLength(seqLength);
     }
 
     ~CuDnnRNN()
@@ -92,17 +94,22 @@ public:
         }
     }
 
+    bool IsCompatable(const RnnParameters& rnnParameters) const
+    {
+        return this->m_rnnParameters == rnnParameters;
+    }
+
     void SetLength(size_t len)
     {
         m_seqLength = len;
         CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_numHidden,
+            (int)m_rnnParameters.m_hiddenSize,
             (int)m_seqLength,
-            (int)m_numLayers,
+            (int)m_rnnParameters.m_numLayers,
             m_dropout,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            m_rnnMode,
+            m_rnnParameters.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+            GetMode(),
             m_dataType));
     }
 
@@ -116,10 +123,10 @@ public:
         return m_rnnDesc;
     }
 
-    bool isBidirectional() const { return m_bidirectional; }
+    bool isBidirectional() const { return m_rnnParameters.m_bidirectional; }
 
-    size_t GetNumLayers() { return m_numLayers; }
-    size_t GetNumHidden() { return m_numHidden; }
+    size_t GetNumLayers() { return m_rnnParameters.m_numLayers; }
+    size_t GetNumHidden() { return m_rnnParameters.m_hiddenSize; }
 
     DISABLE_COPY_AND_MOVE(CuDnnRNN);
 };
@@ -184,21 +191,21 @@ class CuDnnRNNExecutor
     size_t m_inputSize;
     size_t m_miniBatchSize;
 public:
-    CuDnnRNNExecutor(const TensorShape& shapeX, const size_t hiddenSize, const size_t numLayers, bool bidirectional=false, cudnnRNNMode_t RNNMode = cudnnRNNMode_t::CUDNN_LSTM ) :
+    CuDnnRNNExecutor(const TensorShape& shapeX, const RnnParameters& rnnParameters ) :
         m_cudnn(CuDnn::Instance()),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
         m_inputSize(shapeX[0]),
         m_miniBatchSize(shapeX[1]),
         m_BackwardDataCalledYet(false)
     {
-        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(numLayers, hiddenSize, shapeX[2], bidirectional, RNNMode);
+        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters, shapeX[2]);
     }
 
     size_t GetWSize();
 
-    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
     void SetLength(int len)
     {

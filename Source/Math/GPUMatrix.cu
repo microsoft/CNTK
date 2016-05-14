@@ -3148,26 +3148,26 @@ struct GPUMatrix<ElemType>::RNNWrapper
 };
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const size_t numLayers, const size_t hiddenSize, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
     // numLayers, hiddenSize are input parameters
     if (!m_RNNWrapper)
         m_RNNWrapper = std::make_unique<RNNWrapper>();
     if (!m_RNNWrapper->m_rnnExecutor)
-        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, hiddenSize, numLayers, false, cudnnRNNMode_t::CUDNN_LSTM);
-    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, shapeX, *this, shapeY, reserve, workspace);
+        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, rnnParameters);
+    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, shapeX, *this, shapeY, rnnParameters, reserve, workspace);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape /*shapeY*/, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape /*shapeDX*/, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape /*shapeY*/, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape /*shapeDX*/, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
-    m_RNNWrapper->m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, reserve, workspace);
+    m_RNNWrapper->m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, rnnParameters, reserve, workspace);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape /*shapeX*/, const GPUMatrix<ElemType>& outputY, const TensorShape /*shapeY*/, GPUMatrix<ElemType>& dw, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape /*shapeX*/, const GPUMatrix<ElemType>& outputY, const TensorShape /*shapeY*/, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
-    m_RNNWrapper->m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, reserve, workspace);
+    m_RNNWrapper->m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnParameters, reserve, workspace);
 }
 
 #pragma region Static BLAS Functions

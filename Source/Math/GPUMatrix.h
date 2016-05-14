@@ -450,9 +450,9 @@ public:
                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
 
     // RNN support functions
-    void RNNForward(const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, const GPUMatrix<ElemType>& paramW, const TensorShape shapeY, const size_t numRows, const size_t numHidden, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape shapeY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape shapeDX, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, const GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& dw, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void RNNForward(const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, const GPUMatrix<ElemType>& paramW, const TensorShape shapeY, const struct RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const TensorShape shapeY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const TensorShape shapeDX, const struct RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, const GPUMatrix<ElemType>& outputY, const TensorShape shapeY, GPUMatrix<ElemType>& dw, const struct RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
 public:
     // static BLAS functions

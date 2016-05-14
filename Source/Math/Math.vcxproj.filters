@@ -2,12 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -40,9 +34,6 @@
     </ClCompile>
     <ClCompile Include="MatrixQuantizerImpl.cpp">
       <Filter>1bitSGD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="BatchNormalizationEngine.cpp">
       <Filter>BatchNormalization</Filter>
@@ -106,6 +97,9 @@
     <ClInclude Include="BatchNormalizationEngine.h">
       <Filter>BatchNormalization</Filter>
     </ClInclude>
+    <ClInclude Include="RNNCommon.h">
+      <Filter>RNN</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -154,6 +148,9 @@
     </Filter>
     <Filter Include="BatchNormalization">
       <UniqueIdentifier>{8f982dac-298d-4e48-b060-8e6cba5ff554}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RNN">
+      <UniqueIdentifier>{ee6bf704-73f0-488d-8432-0d23f034de88}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
