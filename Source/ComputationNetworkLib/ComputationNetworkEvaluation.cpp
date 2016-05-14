@@ -144,13 +144,21 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {	
 	// naive
 	int periodIndex = 0;
+	int count = 0;
 	bool recordTrigger = false;
 	pair<wstring, wstring> curPeriod;
 
 	unordered_map<ComputationNodeBasePtr, int> dependency;
+	unordered_map<ComputationNodeBasePtr, int> order;
+
 	if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
+
+		vector<wstring> safeRecordNodeName;
+
 		for (auto& node : m_nestedNodes)
 		{
+			order.insert(pair<ComputationNodeBasePtr, int>(node, periodIndex++));
+
 			int numInputs = node->GetNumInputs();
 			for (int index = 0; index < numInputs; index++) {
 				auto& input = node->GetInputs()[index];
@@ -164,6 +172,41 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 		}
 
 		m_partialRecordPeriod.clear();
+		for (int i = 0; i < m_nestedNodes.size(); i++) {
+			if (!m_nestedNodes[i]->IsValueSharable()) continue;
+			count++;
+			bool isSafeReorde = true;
+			for (int j = i + 1; j < m_nestedNodes.size(); j++) {
+				int numInputs = m_nestedNodes[j]->GetNumInputs();
+				for (int index = 0; index < numInputs; index++) {
+					auto& input = m_nestedNodes[j]->GetInputs()[index];
+					if (!input->IsValueSharable()) continue;
+					int orderA = order.find(m_nestedNodes[i])->second;
+					int orderB = order.find(input)->second;
+					if (orderB < orderA) isSafeReorde = false;
+				}
+				if (!isSafeReorde) break;
+			}
+			if (isSafeReorde) safeRecordNodeName.push_back(m_nestedNodes[i]->GetName());
+		}
+
+		int recordSize = (int)sqrtf((float)count);
+		recordSize = safeRecordNodeName.size() / recordSize;
+
+		periodIndex = 0;
+		vector<wstring> recordNodeName;
+		for (int i = 0; i < safeRecordNodeName.size(); i++) {
+			if (!(i % recordSize)) {
+				recordNodeName.push_back(safeRecordNodeName[i]);
+			}
+		}
+
+		for (int i = 1; i < recordNodeName.size(); i++) {
+			m_partialRecordPeriod.push_back(pair<wstring, wstring>(recordNodeName[i - 1], recordNodeName[i]));
+		}
+
+		periodIndex = 0;
+		/*
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"conv1.c.c.c",	L"rn1_3.y"));
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn1_3.y",		L"rn2_4.y"));
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn2_4.y",		L"rn2_8.y"));
@@ -179,6 +222,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_27.y",		L"rn3_30.y"));
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_30.y",		L"rn3_33.y"));
 		m_partialRecordPeriod.push_back(pair<wstring, wstring>(L"rn3_30.y",		L"rn3_36.y"));
+		*/
 	}
 	else if(m_forwardMethod == ForwardMethod::FORWARD_ALLRECORD){
 		if (m_partialRecordPeriod.size()) {
