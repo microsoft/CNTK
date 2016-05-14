@@ -3,6 +3,8 @@
 # for full license information.
 # ==============================================================================
 
+
+
 class SGDParams:
     """
     This class encapsulates the training parameters of Stochastic Gradien
@@ -260,15 +262,150 @@ class SGDParams:
         self.trace_node_names_category = trace_node_names_category
         self.trace_node_names_sparse = trace_node_names_sparse
         self.gradient_check = gradient_check
+        self.parallel_training = None
+        
+    def _set_global_parallel_params(self, 
+                                    parallalization_method = None, 
+                                    parallelization_start_epoch = None,
+                                    distributed_mb_reading = None,
+                                    sync_perf_stats = None):
+        self.parallel_training = {
+            'parallelizationMethod':parallalization_method,
+            'parallelizationStartEpoch':parallelization_start_epoch,
+            'distributedMBReading':distributed_mb_reading,
+            'syncPerfStats':sync_perf_stats}
+            
+    def set_parallel_to_data_parallel(self, 
+                                      parallelization_start_epoch = None,
+                                      distributed_mb_reading = None,
+                                      sync_perf_stats = None,
+                                      gradient_bits = None,
+                                      use_zero_threshold_for_1bit = None,
+                                      use_buffered_async_gradient_aggregation = None):
 
+        """
+        This function sets the parallel training to Data Paralllel SGD.
+                
+        Args:
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (bool): default is False It is recommended to 
+                turn distributed minibatch reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
+            gradient_bits (int): the number of bits used to send gradient updates
+            use_zero_threshold_for_1bit: TBA
+            use_buffered_async_gradient_aggregation: TBA
+        """
+        self._set_global_parallel_params('DataParallelSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'gradientBits':gradient_bits,        
+            'useZeroThresholdFor1BitQuantization':use_zero_threshold_for_1bit,
+            'useBufferedAsyncGradientAggregation':use_buffered_async_gradient_aggregation}
+            
+    def set_parallel_to_model_average(self, 
+                                      parallelization_start_epoch = None,
+                                      distributed_mb_reading = None,
+                                      sync_perf_stats = None,
+                                      sync_period = None,
+                                      sync_frequency_in_frames = None):
+        """
+        This function sets the parallel training to Model Averaging SGD.
+                
+        Args:
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (int): accepts boolean value:  True  or  False ; 
+                default is False It is recommended to turn distributed minibatch 
+                reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
+            sync_period (int): specifies the number of samples that each worker need 
+                to process before a model averaging is conducted. The default value is 40,000.
+            sync_frequency_in_frames: TBA       
+        """        
+        self._set_global_parallel_params('ModelAveragingSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'syncPeriod':sync_period,                    
+            'syncFrequencyInFrames':sync_frequency_in_frames}
+                                              
+    def set_parallel_to_block_momentum(self, 
+                                      parallelization_start_epoch = None,
+                                      distributed_mb_reading = None,
+                                      sync_perf_stats = None,
+                                      sync_period = None,
+                                      reset_sgd_momentum = None,
+                                      use_nesterov_momentum = None,
+                                      block_learning_rate = None,
+                                      block_momentum_per_sync = None,
+                                      block_momentum_as_time_constant = None):
+        """
+        This function sets the parallel training to Block Momentum SGD.
+                
+        Args:
+            parallelization_start_epoch (int): accepts integer value; default is 1
+            distributed_mb_reading (bool): accepts boolean value:  True  or  False ; 
+                default is False It is recommended to turn distributed minibatch 
+                reading on to minimize the I/O cost in each worker. 
+            sync_perf_stats (int): accepts integer value; default is 0
+            sync_period: it specifies how frequent a model synchronization is performed. 
+                The default value is 120,000.
+            reset_sgd_momentum (bool): This means after every synchronization point, 
+                the smoothed gradient used in local SGD will be set as 0. The default
+                value of this variable is True. 
+            use_nesterov_momentum (bool): This means the Nestrov style block momentum 
+                is applied. The default value of this variable is True. 
+            block_learning_rate (float): specifies the block learning rate. 
+            block_momentum_per_sync: TBA
+            block_momentum_as_time_constant (float): specifies the time constant of the 
+                low-pass filter in block-level model update. It is calculated as: 
+                blockMomentumAsTimeConstant = -syncPeriod / log(block_momentum). 
+                Note that block_momentum_per_sync and block_momentum_as_time_constant 
+                are mutually exclusive
+        
+        """        
+        self._set_global_parallel_params('BlockMomentumSGD',
+                                         parallelization_start_epoch,
+                                         distributed_mb_reading,
+                                         sync_perf_stats)
+        
+        self.parallel_training_subblock = {
+            'syncPeriod':sync_period,        
+            'resetSGDMomentum':reset_sgd_momentum,
+            'useNesterovMomentum':use_nesterov_momentum,
+            'blockLearningRate':block_learning_rate,
+            'blockMomentumPerSync':block_momentum_per_sync,
+            'blockMomentumAsTimeConstant':block_momentum_as_time_constant}
+
+
+    def _generate_parallel_training_config(self):
+        config = ['ParallelTrain=[']        
+        for k,v in self.parallel_training.items():
+            if v is not None:
+                config.append('\t{0} = {1}'.format(k, v))    
+        
+        config.append('\t{0} = ['.format(self.parallel_training['parallelizationMethod']))    
+        for k,v in self.parallel_training_subblock.items():            
+            if v is not None:
+                config.append('\t\t{0} = {1}'.format(k, v))    
+        config.append('\t]')
+        config.append(']')
+        return '\n'.join(config)
+        
     def _to_config_description(self):
         """Generate the SGDParams configuration block
         """
         config = []
         auto_adjust_block = []
         for k, v in self.__dict__.items():
-            if  k[0] != '_' and v is not None:
-                # this is a sub-block
+            if  not k.startswith('parallel_training') and k[0] != '_' and v is not None:
+                # this is a sub-block. 
+                #TODO: perhaps move this to a separete method (set_auto_adjust),
+                # but then the user would need to call it explicitly 
                 if k in self._auto_adjust_params:
                     auto_adjust_block.append('\t{0} = {1}\n'.format(self._py_to_cntk[k], v))
                 else:
@@ -278,4 +415,8 @@ class SGDParams:
             config.append("autoAdjust=[\n")
             config.extend(auto_adjust_block)
             config.append("\t]")
+            
+        if self.parallel_training:
+            config.append(self._generate_parallel_training_config())
+            
         return ''.join(config)
