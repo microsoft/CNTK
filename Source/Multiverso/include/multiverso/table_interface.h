@@ -71,20 +71,10 @@ public:
                           std::vector<Blob>* result) = 0;
 };
 
-namespace trait {
-template<typename EleType, typename OptionType>
-struct OptionTrait;
-}
-
-#define DEFINE_TABLE_TRAIT_WITH_INIT_OPTION(init_option,  \
-  worker_table_type, server_table_type)                   \
-  namespace trait {                                       \
-   template<typename EleType>                             \
-    struct OptionTrait<EleType, init_option> {            \
-      typedef worker_table_type<EleType> WorkerTableType; \
-      typedef server_table_type<EleType> ServerTableType; \
-    };                                                    \
-  }
+#define DEFINE_TABLE_TYPE(template_type,                    \
+  worker_table_type,  server_table_type)                    \
+  typedef worker_table_type<template_type> WorkerTableType; \
+  typedef server_table_type<template_type> ServerTableType;
 
 }  // namespace multiverso
 

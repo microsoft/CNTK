@@ -122,17 +122,6 @@ private:
   std::unordered_map<Key, Val> table_;
 };
 
-template <typename Key, typename Val>
-class KVTableHelper : public TableHelper {
-protected:
-  WorkerTable* CreateWorkerTable() override{
-    return new KVWorkerTable<Key, Val>();
-  }
-  ServerTable* CreateServerTable() override{
-    return new KVServerTable<Key, Val>();
-  }
-};
-
 }
 
 #endif // MULTIVERSO_KV_TABLE_H_
