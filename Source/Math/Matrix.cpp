@@ -4204,7 +4204,7 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
 }
 
 template <class ElemType>
-void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const RnnParameters& rnnParameters, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorShape shapeX, const Matrix<ElemType> &paramW, const TensorShape shapeY, const RnnParameters& rnnParameters, const vector<size_t>& numSequencesForFrame, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
 {
     DecideAndMoveToRightDevice(*this, inputX, paramW);
     // move reserve/workspace to the consensus device
@@ -4213,7 +4213,7 @@ void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const TensorSh
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
         NOT_IMPLEMENTED,
-        m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, rnnParameters, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+        m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), shapeX, *(paramW.m_GPUMatrix), shapeY, rnnParameters, numSequencesForFrame, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }

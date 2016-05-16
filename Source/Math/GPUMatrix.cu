@@ -3148,14 +3148,14 @@ struct GPUMatrix<ElemType>::RNNWrapper
 };
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const TensorShape shapeX, const GPUMatrix<ElemType> &paramW, const TensorShape shapeY, const RnnParameters& rnnParameters, const vector<size_t>& numSequencesForFrame, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
     // numLayers, hiddenSize are input parameters
     if (!m_RNNWrapper)
         m_RNNWrapper = std::make_unique<RNNWrapper>();
     if (!m_RNNWrapper->m_rnnExecutor)
         m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(shapeX, rnnParameters);
-    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, shapeX, *this, shapeY, rnnParameters, reserve, workspace);
+    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, shapeX, *this, shapeY, rnnParameters, numSequencesForFrame, reserve, workspace);
 }
 
 template <class ElemType>

@@ -55,6 +55,7 @@ public:
         RequestMatrixFromPool(m_transposedOutput, matrixPool);
         RequestMatrixFromPool(m_reserve, matrixPool);
         RequestMatrixFromPool(m_workspace, matrixPool);
+        RequestMatrixFromPool(m_packingIndex, matrixPool);
     }
 
     // request matrices needed to do node derivative value evaluation
@@ -76,6 +77,7 @@ public:
 #if 0
         ReleaseMatrixToPool(m_reserve, matrixPool);
         ReleaseMatrixToPool(m_workspace, matrixPool);
+        ReleaseMatrixToPool(m_packingIndex, matrixPool);
 #endif
     }
 
@@ -95,10 +97,14 @@ protected:
     shared_ptr<Matrix<ElemType>> m_transposedDOutput;
     shared_ptr<Matrix<ElemType>> m_workspace;
     shared_ptr<Matrix<ElemType>> m_reserve;
+    shared_ptr<Matrix<ElemType>> m_packingIndex;
 
 private:
     TensorView<ElemType> TensorHelper(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr);
     void TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY);
+
+    void PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame);
+    void UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst);
 
     RnnParameters m_rnnParameters;
 };

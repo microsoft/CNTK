@@ -76,13 +76,14 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     const GPUMatrix<ElemType>& weightsW,
     const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY,
     const RnnParameters& rnnParameters,
+    const vector<size_t>& numSequencesForFrame, 
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     // test that the RNN shape is correct
     if (!m_rnnT->IsCompatable(rnnParameters))
         LogicError("RNN Layout has changed during processing");
-
+#if frame_mode
     // assume input, dims=[inputsize, miniBatch, seqLength], stride=[1, inputSize*seqLength, inputSize]
     // assume output is equivalent
     // n.b. we should test these assumptions
@@ -119,6 +120,49 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
         }
         CUDNN_CALL(cudnnSetTensorNdDescriptor(yDesc[i], CUDNN_DATA_FLOAT, 3, dimY, strideY));
     }
+#else
+    // assume input, dims=[inputsize, ???], stride=[1, inputSize, ???]
+    // assume output is equivalent
+    // n.b. we should test these assumptions
+
+    size_t seqLength = numSequencesForFrame.size();
+
+    if (m_rnnT->GetLength() != seqLength)
+        m_rnnT->SetLength(seqLength);
+
+    { // set up the input descriptors
+        for (size_t i = 0; i < numSequencesForFrame.size(); i++)
+        {
+            if (xDesc.size() <= i)
+            {
+                xDesc.push_back(cudnnTensorDescriptor_t());
+                CUDNN_CALL(cudnnCreateTensorDescriptor(&xDesc[i]));
+            }
+            int dimX[3] = { (int)shapeX[0], (int)numSequencesForFrame[i], 1 };
+            int strideX[3] = { 1, dimX[0], dimX[0] * dimX[1] };
+            CUDNN_CALL(cudnnSetTensorNdDescriptor(xDesc[i], CUDNN_DATA_FLOAT, 3, dimX, strideX));
+        }
+    }
+
+    size_t outputSize = shapeY.GetDim(0);
+    if (outputSize != (m_rnnT->isBidirectional() ? 2 : 1) * m_rnnT->GetNumHidden())
+        InvalidArgument("CuDnn ForwardCore: Output leading dimension must be twice hidden size for bidirectional networks");
+
+    { // set up the output descriptors
+        for (size_t i = 0; i < numSequencesForFrame.size(); i++)
+        {
+            if (yDesc.size() <= i)
+            {
+                yDesc.push_back(cudnnTensorDescriptor_t());
+                CUDNN_CALL(cudnnCreateTensorDescriptor(&yDesc[i]));
+            }
+            int dimY[3] = { (int)outputSize, (int)numSequencesForFrame[i], 1 };
+            int strideY[3] = { 1, dimY[0], dimY[0] * dimY[1] };
+            CUDNN_CALL(cudnnSetTensorNdDescriptor(yDesc[i], CUDNN_DATA_FLOAT, 3, dimY, strideY));
+        }
+    }
+
+#endif
 
     // ensure workspace and reserve are large enough
     size_t workSize;
