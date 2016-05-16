@@ -58,7 +58,7 @@ readerType = "LMSequenceReader"
 useCNTKTextFormatReader = false
 inputVocabSize = 69
 labelVocabSize = 69
-mbSizes = 144:144:288:576
+mbSizes = 144:144:288*5:576
 shareEmbeddings = true
 fileExt = "txt"
 # --- end uncomment ---
@@ -192,7 +192,7 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
 
     encoderFunction = if useBidirectionalEncoder then BS.RNNs.RecurrentBirectionalLSTMPStack else BS.RNNs.RecurrentLSTMPStack
     encoder = encoderFunction (encoderDims, cellDims=encoderDims, S(inputEmbedded), inputDim=inputEmbeddingDim,
-        previousHook=if useBidirectionalEncoder then BS.RNNs.NextHC else BS.RNNs.PreviousHC,
+        previousHook=if useBidirectionalEncoder then BS.RNNs.PreviousHC else BS.RNNs.NextHC,
         enableSelfStabilization=useStabilizer)
     encoderOutput = encoder[Length (encoderDims)-1]
 
