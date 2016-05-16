@@ -285,6 +285,7 @@ protected:
 									   //      note that, this will override m_nFramesBetweenASGDSync when set.
 	intargvector m_nFramesBetweenASGDSync;
 	bool m_isPipeline;
+	bool m_isSimulatingMA;
 	intargvector m_nEpochBarrier;
 	AdjustLearningRateatBeginning m_adjustlearningrateatbeginning;
 	double m_adjustcoefficient;

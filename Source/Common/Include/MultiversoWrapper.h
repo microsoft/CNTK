@@ -4,6 +4,8 @@
 #include <multiverso/multiverso.h>
 #include <multiverso/table/matrix_table.h>
 #include <multiverso/util/configure.h>
+#include <multiverso/table/sparse_matrix_table.h>
+#include <multiverso/updater/updater.h>
 
 #pragma comment(lib, "Multiverso.lib")
 
@@ -49,24 +51,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 			public:
 				MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
-					int MPINodeNum,
-					bool isAsyncBuffered = true,
-					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
-					double adjustcoef = 0.2,
-					size_t adjustnbmb = 600,
+					  int MPINodeNum,
+					  bool isAsyncBuffered = true,
+					  bool isSimulatingMA = false,
+					  AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
+					  double adjustcoef = 0.2,
+            size_t adjustnbmb = 600,
             int traceLevel = 0,
             const MPIWrapperPtr& pMPI = nullptr)
             : m_modelSyncCount(0), m_adjustLearningRateAtBeginningType(adjusttype),
             m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
             m_totalClientNumber(MPINodeNum), m_isUseAsyncBuffered(isAsyncBuffered),
-            m_traceLevel(traceLevel), m_isAverage(true), m_isSycned(false),
+            m_traceLevel(traceLevel), m_isAverage(isSimulatingMA), m_isSycned(false),
             m_pMPI(pMPI)
 				{
-        if (m_isAverage)
-        {
+          if (m_isAverage)
+          {
             m_isSycned = true;
             m_isUseAsyncBuffered = false;
-        }
+          }
 					//Pipeline releated variables
 					m_localCacheNumber = m_isUseAsyncBuffered ? 2 : 1;
 					m_cacheSwapIndex = new int[m_localCacheNumber];
@@ -74,6 +77,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					//CPU asynchronous buffer
 					m_cpuAsyncBuffer = new ElemType*[m_localCacheNumber];
         
+          //Get option used by multiverso sparse update
+          
+          m_getOptions.reserve(m_localCacheNumber);
+          m_addOptions.reserve(m_localCacheNumber);
 #ifndef CPUONLY
 					//GPU asynchronous buffer
           m_gpuAsyncBuffer.resize(m_localCacheNumber);
@@ -82,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 					m_bufferInUse = 0;
 					for (int i = 0; i < m_localCacheNumber; i++)
-						m_cacheSwapIndex[i] = (i + 1) % m_localCacheNumber;
+						  m_cacheSwapIndex[i] = (i + 1) % m_localCacheNumber;
 
 					m_prefetchThread = nullptr;
 
@@ -123,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				// upoload preCompute model to the parameter servers
 				void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
 				{
-        float factor =  1.0f / m_totalClientNumber;
+          float factor = 1.0f / m_totalClientNumber;
 
 					int i = 0; // indicate the index of learnable nodes
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -132,34 +139,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						Matrix<ElemType> &mat = node->Value();
 
 #ifndef CPUONLY
-						for (int j = 0; j < m_localCacheNumber; j++)
+            for (int j = 0; j < m_localCacheNumber; j++)
               m_gpuAsyncBuffer[j].push_back(mat.DeepClone());
 #endif
-						ElemType* px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
-						mat.CopyToArray(px, m_tableLength[i]);
-					}
+            ElemType* px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
+            mat.CopyToArray(px, m_tableLength[i]);
+          }
 
-					for (int i = 1; i < m_localCacheNumber; i++)
-						memcpy(m_cpuAsyncBuffer[i], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
+          for (int i = 1; i < m_localCacheNumber; i++)
+            memcpy(m_cpuAsyncBuffer[i], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
-					memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
-				
-        // because the parameter server will minus the delta on the server, so that we should send the minus initial model to the server.
-        std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), -factor));
+          memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
-					for (int widx = 0; widx < m_tableCount; widx++)
-					{
-						auto multiversoMatrix = m_matrixArray->at(widx);
+          // because the parameter server will minus the delta on the server, so that we should send the minus initial model to the server.
+          std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), -factor));
+
+          for (int widx = 0; widx < m_tableCount; widx++)
+          {
+            auto multiversoMatrix = m_matrixArray->at(widx);
 						ElemType* px = m_deltaArray + m_tableOffsets[widx];
-						multiversoMatrix->Add(px, m_tableLength[widx]);
-				}
+            multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+          }
 
         // TODO[qiwye] remove this fake get when multiverso has fix the initial problem
         for (int widx = 0; widx < m_tableCount; widx++)
         {
             auto multiversoMatrix = m_matrixArray->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx]);
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
         }
         // TODO[qiwye] doesn't work well in async model.
 					WaitAll(); // initial model for every client should be identical
@@ -168,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					{
 						auto multiversoMatrix = m_matrixArray->at(widx);
 						ElemType* px = m_deltaArray + m_tableOffsets[widx];
-						multiversoMatrix->Get(px, m_tableLength[widx]);
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
 					}
 
         if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
@@ -273,8 +280,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 								auto multiversoMatrix = m_matrixArray->at(widx);
 								ElemType* px = m_deltaArray + m_tableOffsets[widx];
 								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
-								multiversoMatrix->Add(px, m_tableLength[widx]);
-								multiversoMatrix->Get(py, m_tableLength[widx]);
+                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
+                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
 							}
                 threadTimer.Stop();
                 if (m_traceLevel > 3)
@@ -315,8 +322,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 								auto multiversoMatrix = m_matrixArray->at(widx);
 								ElemType* px = m_deltaArray + m_tableOffsets[widx];
 								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
-								multiversoMatrix->Add(px, m_tableLength[widx]);
-								multiversoMatrix->Get(py, m_tableLength[widx]);
+                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
+                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
 							}
 
 						});
@@ -352,8 +359,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 							auto multiversoMatrix = m_matrixArray->at(widx);
 							ElemType* px = m_deltaArray + m_tableOffsets[widx];
 							ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
-							multiversoMatrix->Add(px, m_tableLength[widx]);
-							multiversoMatrix->Get(py, m_tableLength[widx]);
+              multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+              multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[0]);
 						}
 						i = 0;
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -402,8 +409,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					multiverso::MV_Init();
           multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
 
-					m_matrixArray = new std::vector< multiverso::MatrixWorkerTable<ElemType>*>();
-					m_serverArray = new std::vector< multiverso::MatrixServerTable<ElemType>*>();
+
+					for (int i = 0; i < m_localCacheNumber; i++)
+          {
+              m_getOptions.push_back(new multiverso::GetOption());
+              m_getOptions.at(i)->set_worker_id(m_localCacheNumber * multiverso::MV_WorkerId() + i);
+              m_addOptions.push_back(new multiverso::AddOption());
+              m_addOptions.at(i)->set_worker_id(m_localCacheNumber * multiverso::MV_WorkerId() + i);
+          }
+
+					m_matrixArray = new std::vector< multiverso::SparseMatrixWorkerTable<ElemType>*>();
+					m_serverArray = new std::vector< multiverso::SparseMatrixServerTable<ElemType>*>();
 					//weights
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
 					{
@@ -413,8 +429,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						size_t layerRowSize = mat.GetNumRows();
 						size_t layerColSize = mat.GetNumCols();
 						
-						m_matrixArray->push_back(new multiverso::MatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
-						m_serverArray->push_back(new multiverso::MatrixServerTable<ElemType>(layerRowSize, layerColSize));
+						m_matrixArray->push_back(new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
+						m_serverArray->push_back(new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered));
 
 						m_tableLength.push_back(layerSize);
 					}
@@ -487,20 +503,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return factor;
     }
 
-				std::vector< multiverso::MatrixWorkerTable<ElemType>*>* m_matrixArray;
-				std::vector< multiverso::MatrixServerTable<ElemType>*>* m_serverArray;
+				std::vector< multiverso::SparseMatrixWorkerTable<ElemType>*>* m_matrixArray;
+				std::vector< multiverso::SparseMatrixServerTable<ElemType>*>* m_serverArray;
 				thread * m_prefetchThread;
 				bool m_isInitialized;
-    bool m_isSycned;
-    bool m_isAverage;
+        bool m_isSycned;
+        bool m_isAverage;
 
 				int m_totalClientNumber;
-    int m_traceLevel;
+        int m_traceLevel;
 
 				bool m_isUseAsyncBuffered;
 				int m_localCacheNumber;
 				int * m_cacheSwapIndex;
 				int m_bufferInUse;
+        std::vector< multiverso::GetOption*> m_getOptions; // used by sparse table
+        std::vector< multiverso::AddOption*> m_addOptions; // used by sparse table
 
 				size_t m_modelSyncCount;
 

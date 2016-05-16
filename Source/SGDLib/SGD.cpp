@@ -357,6 +357,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
           new MultiversoHelper<ElemType>(learnableNodes,
                                          m_mpi->NumNodesInUse(),
                                          m_isPipeline,
+                                         m_isSimulatingMA,
                                          m_adjustlearningrateatbeginning,
                                          m_adjustcoefficient,
                                          m_adjustnbminibatch,
@@ -2735,6 +2736,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
             m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
             m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
+            m_isSimulatingMA = configDataParallelASGD(L"SimModelAverage", false);
             m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", ConfigRecordType::Array(intargvector(vector<int>{0})));
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
             {
