@@ -32,7 +32,7 @@ public:
   MemoryBlock* next;
 private:
   char* data_;
-  std::atomic<int> ref_ = 0;
+  std::atomic<int> ref_;
   static const size_t header_size_ = (sizeof(MemoryBlock*) << 1);
 };
 

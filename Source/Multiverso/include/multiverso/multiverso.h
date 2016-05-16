@@ -28,10 +28,10 @@ int  MV_ServerIdToRank(int server_id);
 // \param option for table initiate
 // \return worker table pointer if this node is worker
 //  otherwise return nullptr
-template <typename EleType, typename OptionType>
-typename trait::OptionTrait<EleType, OptionType>::WorkerTableType*
-MV_CreateTable(const OptionType& option) {
-  auto table = table_factory::CreateTable<EleType>(option);
+template <typename TableOptionType>
+typename TableOptionType::WorkerTableType* 
+MV_CreateTable(const TableOptionType& option) {
+  auto table = table_factory::CreateTable(option);
   Zoo::Get()->Barrier();
   return table;
 }
