@@ -512,6 +512,27 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(ReduceElementsNode))
+    {
+        if (parameter.size() != 2)
+            RuntimeError("%ls should have 2 fixed parameters[a, operation].", cnNodeType.c_str());
+
+        // setup the parameter position of children so we can hook them up later
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            int id = 1; // skip a.
+            // evaluate only scalar parameters
+            vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+
+            std::wstring operation = ((NDLNode<ElemType>*)params[0])->GetValue();
+            int axis = node->GetOptionalParameter("axis", "0");
+
+            nodePtr = builder.ReduceElements(nullptr, operation, axis, name);
+        }
+    }
     else
     {
 

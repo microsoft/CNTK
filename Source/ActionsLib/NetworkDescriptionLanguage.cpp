@@ -217,6 +217,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReduceElementsNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
     // legacy names:

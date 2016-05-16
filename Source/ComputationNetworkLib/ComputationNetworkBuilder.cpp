@@ -734,6 +734,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
     return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runInvStdDev });
 }
 
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ReduceElements(const ComputationNodePtr a, const std::wstring& operation, int axis, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ReduceElementsNode<ElemType>>(net.GetDeviceId(), nodeName, operation, axis), { a });
+}
+
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;
 

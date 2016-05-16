@@ -20,6 +20,7 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -86,13 +87,16 @@ template <class ElemType>
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
-        // more coming
-
-        // "LogPlus": softmax
+        // "LogSum": softmax
         //   f(x) = log(sum_i exp x_i), hence gradient is:
         //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  – ReduceLogPlus(x))
         // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
         // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
+    case ElementWiseOperator::opLogSum:
+        //sliceInputGrad.AddCopyOf(sliceOutputGrad);
+        break;
+
+        // more coming
 
         // "Max": Copy the gradient only to the max value. targetGradient += gradientFromTop .* (outputValue == inputValue). Needs its own opcode. --TODO : verify
     }
@@ -103,8 +107,8 @@ template <class ElemType>
 {
     switch (m_op)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different e.g. for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
     }
     LogicError("Should not get here.");
 }
@@ -114,8 +118,8 @@ template <class ElemType>
 {
     switch (m_op)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
     }
     LogicError("Should not get here.");
 }
@@ -128,9 +132,10 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
+    if (AreEqualIgnoreCase(m_operation, L"Sum")) m_op = ElementWiseOperator::opSum;
+    else if (AreEqualIgnoreCase(m_operation, L"LogSum")) m_op = ElementWiseOperator::opLogSum;
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum' and 'LogSum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>

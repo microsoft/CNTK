@@ -6210,8 +6210,9 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
-        InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
+    // TODO: enable the other reduction ops
+    if (reductionOp != ElementWiseOperator::opSum && reductionOp != ElementWiseOperator::opLogSum)
+        InvalidArgument("TensorOp: Unary reduction operations other than opSum and opLogSum not yet implemented.");
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
