@@ -1,6 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+# TODO: The new CMUDict data do not match Kaisheng Yao's paper setup (e.g. IH/AH).
+#       Track down & reconcile before committing this to master.
+
 ############################################################################
 # G2P.cntk                                                                 #
 #                                                                          #
