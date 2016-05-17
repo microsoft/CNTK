@@ -936,6 +936,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
+				// memory compress setting
+				if (m_enableSublinearMemory) {
+					net->SetMemoryCompressMethod(m_enableSublinearMemory);
+				}
+
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================
@@ -2650,6 +2655,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             }
 #endif 
         }
+
+		m_enableSublinearMemory = configSGD(L"enableSublinearMemory", false);
     }
 }
 

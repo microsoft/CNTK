@@ -1400,8 +1400,8 @@ public:
     {
         Base::EndBackprop();
 		if (IsValueSharable() && IsReserveInForward() == ReserveInForward::Reverted) {
-			Value().Resize(1, 1);
-			Gradient().Resize(1, 1);
+			Value().Resize(1, 1, 0, false);
+			Gradient().Resize(1, 1, 0, false);
 		}
 #ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
@@ -1722,7 +1722,7 @@ public:
     }
 
 public:
-	virtual void ReleaseBufferIntoPool() override { Value().Resize(1, 1); }
+	virtual void ReleaseBufferIntoPool() override { Value().Resize(1, 1, 0, false); }
 
     // -----------------------------------------------------------------------
     // data members
@@ -1831,10 +1831,11 @@ public:
         : ComputationNodeBase(DEVICEID_NOTYETDETERMINED /*we don't own matrices*/, L"" /*name: we don't care*/)
     {
 		m_externalFlowControlNode = nullptr;
-		m_forwardMethod = FORWARD_ALLRECORD;
+		m_forwardMethod = ForwardMethod::NONE;
     }
 
 	enum ForwardMethod {
+		NONE,
 		FORWARD_NORMAL,
 		FORWARD_ALLRECORD,
 		FORWARD_KEYRECORD

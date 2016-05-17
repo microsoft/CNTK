@@ -40,15 +40,20 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
-	shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-	if (rootNode->GetName() == wstring(L"Err")) {
-		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_KEYRECORD);
-		m_cacheNetwork = flowControlNode;
+	if (m_enableSublinearMemory) {
+		shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+		if (rootNode->GetName() == wstring(L"Err")) {
+			flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_KEYRECORD);
+			m_cacheNetwork = flowControlNode;
+		}
+		else {
+			flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_NORMAL);
+		}
+		flowControlNode->ForwardProp(FrameRange(nullptr));
+		return;
 	}
-	else {
-		flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_NORMAL);
-	}
-    flowControlNode->ForwardProp(FrameRange(nullptr));
+
+	GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -84,10 +89,16 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     ZeroInputGradients(rootNode);
 
     // backpropagate through the network
-	shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-	flowControlNode->SetExternalFlowControlNode(m_cacheNetwork);
-    flowControlNode->Backprop(FrameRange(nullptr), true, true);
-	flowControlNode->SetExternalFlowControlNode(nullptr);
+
+	if (m_enableSublinearMemory) {
+		shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+		flowControlNode->SetExternalFlowControlNode(m_cacheNetwork);
+		flowControlNode->Backprop(FrameRange(nullptr), true, true);
+		flowControlNode->SetExternalFlowControlNode(nullptr);
+		return;
+	}
+
+	GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -141,8 +152,29 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
-{	
-	// naive
+{
+	if (m_forwardMethod == ForwardMethod::NONE) {
+		for (auto& node : m_nestedNodes)
+		{
+#if 0
+			if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+				dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+			if (node->IsOutOfDateWrtInputs())
+			{
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+
+				node->BumpEvalTimeStamp();
+			}
+		}
+		return;
+	}
+
+	// implementation of Sublinear Memory Cost algorithm,
+	// since the forward will be used twice in an iterator,
+	// we using ForwardMethod to mark it.
 	int periodIndex = 0;
 	int count = 0;
 	bool recordTrigger = false;

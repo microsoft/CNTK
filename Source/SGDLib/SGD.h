@@ -284,6 +284,10 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+
+	// for now, sublinear memory method only support on ResNet, which implements 
+	// "Training Deep Nets with Sublinear Memory Cost" partially.
+	bool m_enableSublinearMemory;
 };
 
 template <class ElemType>

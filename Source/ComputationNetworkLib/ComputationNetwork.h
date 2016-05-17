@@ -977,6 +977,18 @@ public:
         m_randomSeedOffset = value;
     }
 
+	// -----------------------------------------------------------------------
+	// memory compress method
+	// -----------------------------------------------------------------------
+	bool GetMemoryCompressMethod()
+	{
+		return m_enableSublinearMemory;
+	}
+	void SetMemoryCompressMethod(bool enableSublinearMemory)
+	{
+		m_enableSublinearMemory = enableSublinearMemory;
+	}
+
 private:
     DEVICEID_TYPE m_deviceId; // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
@@ -1033,6 +1045,8 @@ private:
     MatrixPool m_matrixPool;
 
 	shared_ptr<FlowControlNode> m_cacheNetwork;
+
+	bool m_enableSublinearMemory;
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
