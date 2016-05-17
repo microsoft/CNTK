@@ -134,6 +134,8 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     if (chunk->m_invalid.empty())
     {
         // Reindexing.
+        // TODO: This should be done on the level of deserializer, currently CNTKTextFormat
+        // TODO: exposes not sequencetion ids.
         for (int i = 0; i < sequences.size(); ++i)
         {
             sequences[i].m_id = i;
