@@ -991,7 +991,6 @@ def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name
         #  [ 30, 40]]
         # Note that we need to specify a batch of samples of sequences (all
         # having sequence length 1 in this example).
-
         >>> dense = C.input_numpy([[[10,20], [30,40]]])
         # Creating a sparse array 
         # [0, 0.1]
