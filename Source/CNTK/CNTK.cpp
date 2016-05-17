@@ -473,7 +473,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
     // Setup profiling
-    ProfilerContext profilerContext(config(L"profilerDirectory", "./profiler").c_str());
+    ProfilerContext profilerContext;
+    if (config(L"profilerEnabled", true))
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
@@ -641,7 +643,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     fprintf(stderr, "\n");
 
     // Setup profiling
-    ProfilerContext profilerContext(config(L"profilerDirectory", "./profiler").c_str());
+    ProfilerContext profilerContext;
+    if (config(L"profilerEnabled", true))
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
 
     // run commands
     std::string type = config(L"precision", "float");

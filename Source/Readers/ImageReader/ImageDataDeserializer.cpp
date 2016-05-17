@@ -10,6 +10,7 @@
 #include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
+#include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -279,7 +280,7 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path)
 cv::Mat FileByteReader::Read(size_t, const std::string& path)
 {
     assert(!path.empty());
-
+    PROFILE_SCOPE(profilerEvtImageDecoding);
     return cv::imread(path, cv::IMREAD_COLOR);
 }
 }}}

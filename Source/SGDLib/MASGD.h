@@ -202,6 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         int recvSignal = 0;
                         MPI_Status status;
+                        PROFILE_SCOPE(profilerEvtMPIProcessing);
                         MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
                         m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
 #if 0
@@ -215,6 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (dest != m_myRank)
                     {
+                        PROFILE_SCOPE(profilerEvtMPIWait);
                         MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                     }
                 }
@@ -244,6 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             int recvSignal = 0;
                             MPI_Status status;
+                            PROFILE_SCOPE(profilerEvtMPIProcessing);
                             MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
 #if 0 
                             // for debugging purpose, to be removed when mature 
@@ -258,6 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (dest != m_myRank)
                         {
+                            PROFILE_SCOPE(profilerEvtMPIWait);
                             MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                         }
                     }

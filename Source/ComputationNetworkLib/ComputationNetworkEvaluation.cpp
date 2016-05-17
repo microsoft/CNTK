@@ -10,7 +10,7 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
-#include "PerformanceProfiler.h"
+
 #include <string>
 #include <vector>
 #include <list>
@@ -38,8 +38,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - these little nested networks are defined in the execution network in the form of nested sentinel nodes of type SEQTraversalFlowControlNode
 void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
 {
-    PROFILE_SCOPE(profilerEvtForwardPass);
-
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
@@ -68,8 +66,6 @@ static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
-    PROFILE_SCOPE(profilerEvtBackwardPass);
-
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
 

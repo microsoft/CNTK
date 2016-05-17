@@ -28,9 +28,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //
 enum ProfilerEvents
 {
-    profilerEvtForwardPass = 0,
+    profilerEvtEpoch = 0,
+    profilerEvtForwardPass,
     profilerEvtBackwardPass,
+    profilerEvtGradientAggregation,
+    profilerEvtWeightUpdate,
     profilerEvtInputProcessing,
+    profilerEvtImageDecoding,
     profilerEvtMPIProcessing,
     profilerEvtMPIWait,
     profilerEvtMPIThroughput,
@@ -41,33 +45,49 @@ enum ProfilerEvents
 //
 // Caller-maintained record to measure throughput events.
 //
-struct ThroughputEventRecord
+struct ProfilerThroughputEventRecord
 {
     long long       beginClock;
     int             eventId;
 };
 
 //
-// Initialize all resources to enable profiling.
-// Optionally provide a directory path where profiling files are saved,
-// or nullptr to use the default.
+// Caller maintained record to measure custom events.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir);
+struct ProfilerCustomTimeEventRecord
+{
+    long long       beginClock;
+    unsigned int    threadId;
+    char*           eventDescription;
+};
+
+//
+// Initialize all resources to enable profiling.
+// profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
+// delaySeconds: Number of seconds since this call to wait to start profiling.
+// customEventBufferBytes: Bytes to allocate for the custom event buffer.
+//
+void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySeconds, const unsigned long long customEventBufferBytes);
 
 //
 // Measure time for either a fixed or a custom event.
 // The *Begin call returns a stateId that is passed to ProfilerTimeEnd().
+// If the event does not need to be recorded, call ProfilerTimeCancel().
 //
 int PERF_PROFILER_API ProfilerTimeBegin(int eventId);
 void PERF_PROFILER_API ProfilerTimeEnd(int stateId);
+void PERF_PROFILER_API ProfilerTimeCancel(int stateId);
+unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const char* eventDescription);
+void PERF_PROFILER_API ProfilerTimeEnd(unsigned long long stateId);
+
 
 //
 // Measure throughput given a bytes in an *Begin/*End block.
 // The ThroughputEventRecord is meaintained by the caller.
-// Works with fixed or custom events.
+// If ProfilerThroughputEnd is not called, the event is not recorded.
 //
-void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ThroughputEventRecord* throughputEventRecord);
-void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ThroughputEventRecord* throughputEventRecord);
+void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ProfilerThroughputEventRecord* throughputEventRecord);
+void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ProfilerThroughputEventRecord* throughputEventRecord);
 
 //
 // Generate reports and release all resources.
@@ -80,9 +100,9 @@ void PERF_PROFILER_API ProfilerClose();
 //
 struct ProfilerContext
 {
-    ProfilerContext(const char* profilerDir = nullptr)
+    void Init(const char* profilerDir = nullptr, const float delaySeconds = 0.0f, const unsigned long long customEventBufferBytes = (16 * 1024 * 1024))
     {
-        ProfilerInit(profilerDir);
+        ProfilerInit(profilerDir, delaySeconds, customEventBufferBytes);
     }
 
     ~ProfilerContext()
@@ -118,12 +138,37 @@ public:
 
 
 //
+// Scoped custom event profiling.
+//
+class CustomScopeProfile
+{
+    unsigned long long m_stateId;
+
+public:
+    CustomScopeProfile(const char* description)
+    {
+        m_stateId = ProfilerTimeBegin(description);
+    }
+
+    ~CustomScopeProfile()
+    {
+        ProfilerTimeEnd(m_stateId);
+    }
+};
+
+//
+// Function name scope profiling.
+//
+#define PROFILE_FUNCTION        CustomScopeProfile __csp(__FUNCTION__);
+
+
+//
 // Scoped throughput profiling.
 //
 class ScopeThroughput
 {
-    ThroughputEventRecord   m_throughputEventRecord;
-    long long               m_bytes;
+    ProfilerThroughputEventRecord   m_throughputEventRecord;
+    long long                       m_bytes;
 
 public:
     ScopeThroughput(int eventId, long long bytes)

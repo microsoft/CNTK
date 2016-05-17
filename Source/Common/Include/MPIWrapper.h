@@ -313,7 +313,7 @@ public:
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)totalnumelements * sizeof(size_t));
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)totalnumelements * sizeof(*dataptr));
             MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
         }
     }
@@ -325,7 +325,7 @@ public:
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(size_t));
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(ElemType));
             MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
         }
     }
@@ -336,7 +336,7 @@ public:
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
             PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(size_t));
+            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(ElemType));
             MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
         }
     }

@@ -7,7 +7,6 @@
 #include "ComputationNetwork.h"
 #include "MPIWrapper.h"
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
-#include "PerformanceProfiler.h"
 #include <string>
 #include <map>
 #include <set>
@@ -34,9 +33,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
-        // Profile this function
-        PROFILE_SCOPE(profilerEvtInputProcessing);
-
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers

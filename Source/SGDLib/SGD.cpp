@@ -15,6 +15,7 @@ static inline bool operator==(const std::pair<double,size_t>& a, double b) { ass
 #endif
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
+#include "PerformanceProfiler.h"
 
 #include <map>
 #include <set>
@@ -741,6 +742,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                     const std::string& prefixMsg)
 {
+    PROFILE_SCOPE(profilerEvtEpoch);
+    PROFILE_FUNCTION;
+
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     // bring our 'out' values into consistent state
@@ -858,10 +862,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
+
+        auto profilerScope = ProfilerTimeBegin(profilerEvtInputProcessing);
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
-                                                                                useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+            useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
+        {
+            ProfilerTimeCancel(profilerScope);
             break;                                                                // end of epoch
+        }
+        ProfilerTimeEnd(profilerScope);
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
         // Must not touch them.
@@ -922,20 +933,25 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
-                net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
+                {
+                    PROFILE_SCOPE(profilerEvtForwardPass);
+                    net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
 
-                // ===========================================================
-                // forward prop for training criterion
-                // ===========================================================
-
-                net->ForwardProp(criterionNodes[0]);
+                    // ===========================================================
+                    // forward prop for training criterion
+                    // ===========================================================
+                    net->ForwardProp(criterionNodes[0]);
+                }
 
                 // ===========================================================
                 // backprop
                 // ===========================================================
 
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                {
+                    PROFILE_SCOPE(profilerEvtBackwardPass);
                     net->Backprop(criterionNodes[0]);
+                }
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
@@ -1016,6 +1032,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
+            PROFILE_SCOPE(profilerEvtWeightUpdate);
             auto smoothedGradientIter = smoothedGradients.begin();
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {

@@ -208,6 +208,12 @@ private:
 
     void AggregateGradientsImpl(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool showSyncPerfStats)
     {
+        PROFILE_SCOPE(profilerEvtGradientAggregation);
+
+        long long totalMPIBytes = 0;
+        ProfilerThroughputEventRecord mpiThroughputEventRecord;
+        ProfilerThroughputBegin(profilerEvtMPIThroughput, &mpiThroughputEventRecord);
+
         Timer aggregationTimer;
         int deviceId = gradients[0]->GetDeviceId();
         if (showSyncPerfStats)
@@ -258,6 +264,7 @@ private:
                 int source = (j >= MyRank()) ? (j + 1) : j;
                 // We use a tag of 'numGradMatrices' for the pre-aggregation header
                 MPI_Irecv(m_recvHeaders[j], m_recvHeaders[j]->Size(), MPI_CHAR, source, numGradMatrices, m_mpi->Communicator(), &(recvHeaderRequests[j])) || MpiFail("MPI_Irecv");
+                totalMPIBytes += m_recvHeaders[j]->Size();
             }
         }
 
@@ -266,6 +273,7 @@ private:
         if (!m_mpi->IsMainNode())
         {
             MPI_Isend(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices, m_mpi->Communicator(), &sendHeaderRequest) || MpiFail("MPI_Isend");
+            totalMPIBytes += headerCPU->Size();
         }
 
         // Perform MPI async allreduce on the gradient data
@@ -281,6 +289,7 @@ private:
 
             // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
             MPI_Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(), MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
+            totalMPIBytes += (long long)gradients[i]->GetNumElements() * sizeof(ElemType);
         }
 
         // On the main node wait for the headers to arrive and aggregate
@@ -290,7 +299,10 @@ private:
             while (numNodesHeadersReceivedFrom < (NumProc() - 1))
             {
                 int idx = MPI_UNDEFINED;
-                MPI_Waitany(recvHeaderRequests.size(), recvHeaderRequests.data(), &idx, MPI_STATUS_IGNORE) || MpiFail("MPI_Waitany");
+                {
+                    PROFILE_SCOPE(profilerEvtMPIWait);
+                    MPI_Waitany(recvHeaderRequests.size(), recvHeaderRequests.data(), &idx, MPI_STATUS_IGNORE) || MpiFail("MPI_Waitany");
+                }
                 if (idx == MPI_UNDEFINED)
                 {
                     break;
@@ -309,6 +321,7 @@ private:
         if (!m_mpi->IsMainNode())
         {
             MPI_Irecv(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices + 1 + numGradMatrices, m_mpi->Communicator(), &recvAggHeaderRequest) || MpiFail("MPI_Irecv");
+            totalMPIBytes += headerCPU->Size();
         }
 
         // Intiate send of the aggregate header from main node
@@ -320,13 +333,18 @@ private:
                 int dest = (j >= MyRank()) ? (j + 1) : j;
                 // TODO: Should we use MPI_Bcast instead for better performance
                 MPI_Isend(headerCPU, headerCPU->Size(), MPI_CHAR, dest, numGradMatrices + 1 + numGradMatrices, m_mpi->Communicator(), &(sendAggHeaderRequests[j])) || MpiFail("MPI_Isend");
+                totalMPIBytes += headerCPU->Size();
             }
         }
 
         // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
         for (size_t i = 0; i < numGradMatrices; ++i)
         {
-            MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+            {
+                PROFILE_SCOPE(profilerEvtMPIWait);
+                MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+            }
+            
             if (deviceId >= 0)
             {
                 m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
@@ -336,6 +354,7 @@ private:
         // Wait to receive aggregate header
         if (!m_mpi->IsMainNode())
         {
+            PROFILE_SCOPE(profilerEvtMPIWait);
             MPI_Wait(&recvAggHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
         }
 
@@ -351,12 +370,16 @@ private:
         // Wait for completion of the async send requests
         if (!m_mpi->IsMainNode())
         {
+            PROFILE_SCOPE(profilerEvtMPIWait);
             MPI_Wait(&sendHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
         }
         else
         {
+            PROFILE_SCOPE(profilerEvtMPIWait);
             MPI_Waitall(sendAggHeaderRequests.size(), sendAggHeaderRequests.data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
         }
+
+        ProfilerThroughputEnd(totalMPIBytes, &mpiThroughputEventRecord);
 
         if (showSyncPerfStats)
         {
