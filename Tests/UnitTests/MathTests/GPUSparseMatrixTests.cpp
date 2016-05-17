@@ -155,12 +155,9 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTimesDense, RandomSeedFixture)
     BOOST_CHECK_EQUAL(6 + 1, ccpu(3, 4));
 }
 
-#if 0
-// TODO commented temporarily, this test (or underlying code) needs fixes
-
 BOOST_FIXTURE_TEST_CASE(GPUDenseTimesSparse, RandomSeedFixture)
 {
-    GPUSparseMatrix<float> sparseMatrixA(matrixFormatSparseCSR, 0);
+    GPUSparseMatrix<float> sparseMatrixA(c_deviceIdZero);
     BOOST_CHECK(sparseMatrixA.IsEmpty());
 
     sparseMatrixA.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
@@ -199,13 +196,13 @@ BOOST_FIXTURE_TEST_CASE(GPUDenseTimesSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(GPUSparseTimesSparse, RandomSeedFixture)
 {
-    GPUSparseMatrix<float> matrixA;
+    GPUSparseMatrix<float> matrixA(c_deviceIdZero);
     BOOST_CHECK(matrixA.IsEmpty());
     matrixA.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
 
     GPUSparseMatrix<float> transposeA = matrixA.Transpose();
 
-    GPUSparseMatrix<float> product;
+    GPUSparseMatrix<float> product(c_deviceIdZero);
     GPUSparseMatrix<float>::Multiply(transposeA, false, matrixA, false, product);
 
     const float expectedProduct[25] = { 26, 4, 0, 35, 40, 4, 20, 6, 0, 0, 0, 6, 90, 0, 54, 35, 0, 0, 49, 56, 40, 0, 54, 56, 100 };  // A * AT
@@ -214,8 +211,6 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTimesSparse, RandomSeedFixture)
 
     delete[] arr;
 }
-
-#endif
 
 BOOST_FIXTURE_TEST_CASE(GPUSparseElementWise, RandomSeedFixture)
 {
