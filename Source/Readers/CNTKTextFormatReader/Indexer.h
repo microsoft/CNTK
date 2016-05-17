@@ -60,6 +60,9 @@ private:
     // (except when a sequence size is greater than the maximum chunk size)
     void AddSequence(SequenceDescriptor& sd);
 
+    // Same function as above but with check that the sequence is included in the corpus descriptor.
+    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd);
+
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
     void RefillBuffer();

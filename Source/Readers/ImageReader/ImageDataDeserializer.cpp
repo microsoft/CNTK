@@ -246,11 +246,12 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     description.m_numberOfSamples = 1;
     description.m_isValid = true;
 
-    WStringToIdMap& corpusStringRegistry = corpus->GetStringRegistry();
+    auto& stringRegistry = corpus->GetStringRegistry();
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
         std::string imagePath, classId, sequenceKey;
+        // Try to parse sequence id, file path and label.
         if (!std::getline(ss, sequenceKey, '\t') || !std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
         {
             // In case when the sequence key is not specified we set it to the line number inside the mapping file.
@@ -261,9 +262,9 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
                 RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
         }
 
-        auto wsequenceKey = msra::strfun::utf16(sequenceKey);
         // Skipping sequences that are not included in corpus.
-        if (!corpus->IsIncluded(wsequenceKey))
+        auto key = msra::strfun::utf16(sequenceKey);
+        if (!corpus->IsIncluded(key))
         {
             continue;
         }
@@ -287,7 +288,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
             description.m_chunkId = curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = corpusStringRegistry[wsequenceKey];
+            description.m_key.m_sequence = stringRegistry[key];
             description.m_key.m_sample = 0;
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
@@ -357,14 +358,15 @@ cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }
 
-static SequenceDescription s_InvalidSequence{0, 0, 0, false};
+static SequenceDescription s_invalidSequence{0, 0, 0, false};
 
 void ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
     auto index = m_keyToSequence.find(key.m_sequence);
+    // Checks whether it is a known sequence for us.
     if (key.m_sample != 0 || index == m_keyToSequence.end())
     {
-        result = s_InvalidSequence;
+        result = s_invalidSequence;
         return;
     }
 

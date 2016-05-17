@@ -11,6 +11,7 @@
 #include "ReaderShim.h"
 #include "CNTKTextFormatReader.h"
 #include "HeapMemoryProvider.h"
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,20 +33,25 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 }
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
-// A factory method for creating image deserializers.
+// A factory method for creating text deserializers.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
 {
     string precision = deserializerConfig.Find("precision", "float");
+    if (!AreEqualIgnoreCase(precision, "float") && !AreEqualIgnoreCase(precision, "double"))
+    {
+        InvalidArgument("Unsupported precision '%s'", precision.c_str());
+    }
+
+    // TODO: Remove type from the parser. Current implementation does not support streams of different types.
     if (type == L"CNTKTextFormatDeserializer")
     {
         if (precision == "float")
             *deserializer = new TextParser<float>(corpus, TextConfigHelper(deserializerConfig));
-        else // Currently assume double, TODO: should change when support more types.
+        else // double
             *deserializer = new TextParser<double>(corpus, TextConfigHelper(deserializerConfig));
     }
     else
-        // Unknown type.
-        return false;
+        InvalidArgument("Unknown deserializer type '%ls'", type.c_str());
 
     // Deserializer created.
     return true;

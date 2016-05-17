@@ -124,7 +124,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     description.m_isValid = true;
     size_t totalFrames = 0;
 
-    auto& stringRegistry = corpus->GetStringRegistry();
+    const auto& stringRegistry = corpus->GetStringRegistry();
 
     // TODO resize m_keyToSequence with number of IDs from string registry
 
