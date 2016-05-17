@@ -126,20 +126,22 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
         // No one uses shapeY, but it is necessary
         TensorShape shapeY;
         TransposeHelper(m_transposedOutput, TensorShape(shapeYT.GetDims()), this->ValuePtr(), shapeY);
-        m_BackwardDataCalledYet = false;
     }
     else
     {
         vector<size_t> numSequencesForFrame;
-        // ensure enough storage - due to blank frames we don't need, this could be bigger than strictly necessary
-        m_transposedOutput->Resize(this->Value());
         shapeXT = TensorShape(Input(0)->GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
 
-        this->PackSequencesForCuDNN(Input(1)->Value(), *m_transposedInput, numSequencesForFrame);
+        this->PackSequencesForCuDNN(Input(0)->Value(), *m_transposedInput, numSequencesForFrame);
+
+        // ensure enough storage
+        m_transposedOutput->Resize(this->Value().GetNumRows(), m_transposedInput->GetNumCols());
+
         m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_rnnParameters, numSequencesForFrame, *m_reserve, *m_workspace);
         this->UnpackSequencesFromCuDNN(*m_transposedOutput, this->Value());
     }
+    m_BackwardDataCalledYet = false;
 }
 
 template<class ElemType>
@@ -152,11 +154,17 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
 
         // To obey the data layout constraints of CuDnn, we take the derivative we're given,
         // and transpose it before feeding to the interface.
-        m_transposedDOutput->Resize(this->Gradient());
+#if 0
+        // TODO: restore wlstm functionality
         TransposeHelper(this->GradientPtr(), this->GetTensorSliceFor(SIZE_MAX, fr), m_transposedDOutput, shapeYT);
+#else
+        // output should be automatically sized
+        // m_transposedOutput->Resize(this->Value());
+        m_transposedDOutput->DoGatherColumnsOf(0.0, *(this->m_packingIndex), this->Gradient(), 1.0);
+#endif
 
         // Ensure enough space for the result
-        m_transposedDInput->Resize(Input(1)->Gradient());
+        m_transposedDInput->Resize(Input(0)->Value().GetNumRows(), m_transposedDOutput->GetNumCols());
 
         // Do the work
         m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT, m_rnnParameters, *m_reserve, *m_workspace);
@@ -170,8 +178,13 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
     else if (inputIndex == 0) // data
     {
         // all of the work was done above, where RNNBackwardData is called. Now, just place a transposed result.
+#if 0
+        //TODO: Restore wlstm functionality
         TensorShape tmp;
         TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
+#else
+        Input(0)->Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
+#endif
     }
 }
 
