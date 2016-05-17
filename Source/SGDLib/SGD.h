@@ -561,8 +561,8 @@ protected:
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
-    IDistGradAggregator<ElemType>* m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
@@ -570,21 +570,21 @@ private:
     void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
 
-    bool UseGradientAggregation(size_t epochNumber)
+    bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
 
-    bool UseModelAggregation(size_t epochNumber)
+    bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
 
-    bool UseParallelTrain(size_t epochNumber)
+    bool UsingParallelTrain(size_t epochNumber) const
     {
-        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber);
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
     }
 };
 

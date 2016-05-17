@@ -1223,32 +1223,32 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
     DISPATCH_MATRIX_ON_FLAG(this, this,
         { 
             // Set CPUMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(deepCopyFrom.m_GPUMatrix->GetNumRows(), deepCopyFrom.m_GPUMatrix->GetNumCols(), deepCopyFrom.m_GPUMatrix->CopyToArray()); },// //{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUMatrix is not yet implemented."); });//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(deepCopyFrom.m_CPUMatrix->GetNumRows(), deepCopyFrom.m_CPUMatrix->GetNumCols(), m_GPUMatrix->GetComputeDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },////{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a GPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a GPUMatrix is not yet implemented."); });//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set CPUSparseMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                NOT_IMPLEMENTED,//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a CPUMatrix to a CPUSparseMatrix is not yet implemented."); },//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUSparseMatrix is not yet implemented."); },//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                NOT_IMPLEMENTED);//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUSparseMatrix is not yet implemented."); });//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUSparseMatrix from:
-            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, &deepCopyFrom,
-                NOT_IMPLEMENTED,//{ m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
+            DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
+                { LogicError("AssignValuesOf: Assigning a CPUMatrix to a GPUSparseMatrix is not yet implemented."); },//{ m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
