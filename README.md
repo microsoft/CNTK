@@ -1,6 +1,10 @@
 # CNTK
 
 ## Latest news
+*2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
+
+*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
+
 *2016-05-05.* CNTK now supports *BlockMomentum* Stochastic Gradient Descent (SGD) algorithm. 
 See the details in the [Multiple GPUs and machines Wiki section](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
 
@@ -9,8 +13,6 @@ See the description in the [Image Reader Wiki section](https://github.com/Micros
 
 *2016-04-25.* V 1.1 Binary release
 CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
-
-*2016-04-12.* CNTK is available as [Azure Virtual Machines](https://github.com/Microsoft/CNTK/wiki/CNTK-on-Azure) and [Docker Containers](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
