@@ -428,7 +428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						size_t layerSize = mat.GetNumElements();
 						size_t layerRowSize = mat.GetNumRows();
 						size_t layerColSize = mat.GetNumCols();
-            fprintf(stderr, "Layersize: %d, row size: %d, col size: %d.\n", layerSize, layerRowSize, layerColSize);
+            fprintf(stderr, "Layersize: %d, row size: %d, col size: %d.\n", (int)layerSize, (int)layerRowSize, (int)layerColSize);
             fflush(stderr);
 						
 						m_matrixArray->push_back(new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
