@@ -54,7 +54,7 @@
         xcopy /S /D /I /Y "$(CNTK_MKL_PATH)\x64\*.*" "$(OutDir)"
         </MathPostBuild>
         <MathPostBuildMessage>Copying CNTK MKL DLLs</MathPostBuildMessage>
-        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)lp64_parallel.dll;$(OutDir)libiomp5md.dll</UnitTestDlls>
+        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)lp64_parallel.dll;$(OutDir)libiomp5md.dll;$(OutDir)mkl_core.dll;$(OutDir)mkl_intel_thread.dll;$(OutDir)mkl_avx2.dll</UnitTestDlls>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
