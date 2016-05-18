@@ -601,6 +601,12 @@ def log(x, name=None):
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
+                
+    Note:
+        CNTK returns -85.1 for log(x) if x is negative or zero. The reason is that 
+        it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float 
+        number for log, becuase this is the only guaranteed precision accross 
+        platforms. This will be changed to return NaN and -inf.
     """
     from cntk.ops.cntk2 import Log
     return Log(x, name=name)
@@ -618,7 +624,11 @@ def sqrt(x, name=None):
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
-        :class:`cntk.graph.ComputationNode`
+        :class:`cntk.graph.ComputationNode`        
+        
+    Note:
+        CNTK returns zero for sqrt of negative nubmers, this will be changed to 
+        return NaN
     """
     from cntk.ops.cntk2 import Sqrt
     return Sqrt(x, name=name)
