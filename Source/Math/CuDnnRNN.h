@@ -78,7 +78,7 @@ private:
 
 public:
     CuDnnRNN(const RnnParameters& rnnParameters, const size_t seqLength)
-        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters), m_seqLength(seqLength),
+        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters), m_seqLength(0),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
@@ -99,19 +99,7 @@ public:
         return this->m_rnnParameters == rnnParameters;
     }
 
-    void SetLength(size_t len)
-    {
-        m_seqLength = len;
-        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_rnnParameters.m_hiddenSize,
-            (int)m_seqLength,
-            (int)m_rnnParameters.m_numLayers,
-            m_dropout,
-            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_rnnParameters.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            GetMode(),
-            m_dataType));
-    }
+    void SetLength(size_t len);
 
     size_t GetLength()
     {
@@ -188,22 +176,18 @@ class CuDnnRNNExecutor
 {
     CuDnn::ptr_t m_cudnn;
     cudnnDataType_t m_dataType;
-    size_t m_inputSize;
-    size_t m_miniBatchSize;
+    size_t m_xDim, m_yDim;
 public:
-    CuDnnRNNExecutor(const TensorShape& shapeX, const RnnParameters& rnnParameters ) :
+    CuDnnRNNExecutor(size_t xDim, size_t yDim, size_t seqLength, const RnnParameters& rnnParameters ) :
         m_cudnn(CuDnn::Instance()),
+        m_xDim(xDim), m_yDim(yDim),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
-        m_inputSize(shapeX[0]),
-        m_miniBatchSize(shapeX[1]),
         m_BackwardDataCalledYet(false)
     {
-        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters, shapeX[2]);
+        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters, seqLength);
     }
 
-    size_t GetWSize();
-
-    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, const TensorShape shapeX, GPUMatrix<ElemType>& outputY, const TensorShape shapeY, const RnnParameters& rnnParameters, const vector<size_t>& numSequencesForFrame, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, GPUMatrix<ElemType>& outputY, const vector<size_t>& numSequencesForFrame, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
@@ -227,7 +211,7 @@ private:
         return src.Data();
     }
 
-    void SetXDesc(const TensorShape& x);
+    void SetDescriptors(size_t dim, const vector<size_t>& numSequencesForFrame, vector<cudnnTensorDescriptor_t>& descriptors);
 
 private:
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;

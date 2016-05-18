@@ -98,19 +98,19 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     {
         TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
+        // ensure enough storage.
+        m_transposedOutput->Resize(this->Value());
+        m_transposedInput->Resize(Input(0)->Value());
+
         // For windowed LSTM, CNTK is providing data with the second dimension being time-like and the third dimension
         // being minibatch index. CuDnn expects the second dimension to be minibatch index, and the third dimension
         // to be time-like. This sequence of operations creates a transposed copy of the data in m_transposedInput
         // and shapeXT
 
-        m_transposedInput->Resize(Input(0)->Value());
         TransposeHelper(Input(0)->ValuePtr(), Input(0)->GetTensorSliceFor(SIZE_MAX, fr), m_transposedInput, shapeXT);
 
         // Similarly, we will eventually need to transpose the output. Generate the necessary shape here, and do
         // the transposition after RNNForward() returns.
-
-        // ensure enough storage.
-        m_transposedOutput->Resize(this->Value());
 
         // create the necessary shape.
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
@@ -119,9 +119,9 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
         // this copy is necessary so that the strides are dense.
         shapeYT = TensorShape(shapeYT.GetDims());
 
-        //TODO: make this work for numSequencesForFrame style call
-        //vector<size_t> numSequencesForFrame(1, mb->GetActualNumSamples());
-        //m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_rnnParameters, *m_reserve, *m_workspace);
+        // create a vector with the correct number of timesteps(shapeXT[2]) containing the sequence count (shapeXT[1])
+        vector<size_t> numSequencesForFrame(shapeXT[2], shapeXT[1]);
+        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
 
         // No one uses shapeY, but it is necessary
         TensorShape shapeY;
@@ -129,16 +129,17 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     }
     else
     {
-        vector<size_t> numSequencesForFrame;
         shapeXT = TensorShape(Input(0)->GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
 
+        // This changes the data from "minibatch paking" in Input(0)->Value() to "dense CuDNN packing" in m_transposedInput
+        vector<size_t> numSequencesForFrame;
         this->PackSequencesForCuDNN(Input(0)->Value(), *m_transposedInput, numSequencesForFrame);
 
         // ensure enough storage
         m_transposedOutput->Resize(this->Value().GetNumRows(), m_transposedInput->GetNumCols());
 
-        m_transposedOutput->RNNForward(*m_transposedInput, shapeXT, paramW, shapeYT, m_rnnParameters, numSequencesForFrame, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
         this->UnpackSequencesFromCuDNN(*m_transposedOutput, this->Value());
     }
     m_BackwardDataCalledYet = false;
@@ -147,44 +148,50 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 template<class ElemType>
 void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr)
 {
+    MBLayoutPtr mb = this->GetMBLayout();
+    bool frameMode = (mb->GetNumTimeSteps() == 1) ? true : false;
+
     // ensure BackwardData is the first method called, as required by CuDnn API
     if (!m_BackwardDataCalledYet)
     {
         Matrix<ElemType>& paramW = Input(1)->Value();
 
-        // To obey the data layout constraints of CuDnn, we take the derivative we're given,
-        // and transpose it before feeding to the interface.
-#if 0
-        // TODO: restore wlstm functionality
-        TransposeHelper(this->GradientPtr(), this->GetTensorSliceFor(SIZE_MAX, fr), m_transposedDOutput, shapeYT);
-#else
-        // output should be automatically sized
-        // m_transposedOutput->Resize(this->Value());
-        m_transposedDOutput->DoGatherColumnsOf(0.0, *(this->m_packingIndex), this->Gradient(), 1.0);
-#endif
+        if (frameMode)
+        {
+            // To obey the data layout constraints of CuDnn, we take the derivative we're given,
+            // and transpose it before feeding to the interface.
+            m_transposedDOutput->Resize(this->Gradient());
+            TransposeHelper(this->GradientPtr(), this->GetTensorSliceFor(SIZE_MAX, fr), m_transposedDOutput, shapeYT);
+        }
+        else
+        {
+            m_transposedDOutput->DoGatherColumnsOf(0.0, *(this->m_packingIndex), this->Gradient(), 1.0);
+        }
 
         // Ensure enough space for the result
         m_transposedDInput->Resize(Input(0)->Value().GetNumRows(), m_transposedDOutput->GetNumCols());
 
         // Do the work
-        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, shapeYT, paramW, *m_transposedDInput, shapeXT, m_rnnParameters, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnParameters, *m_reserve, *m_workspace);
         m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
         Matrix<ElemType>& paramDW = Input(1)->Gradient();
-        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, shapeXT, *m_transposedOutput, shapeYT, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
     }
     else if (inputIndex == 0) // data
     {
-        // all of the work was done above, where RNNBackwardData is called. Now, just place a transposed result.
-#if 0
-        //TODO: Restore wlstm functionality
-        TensorShape tmp;
-        TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
-#else
-        Input(0)->Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
-#endif
+        // all of the work was done above, where RNNBackwardData is called. Now, just unpack the result.
+        if (frameMode)
+        {
+            TensorShape tmp;
+            TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
+        }
+        else
+        {
+            Input(0)->Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
+        }
     }
 }
 
