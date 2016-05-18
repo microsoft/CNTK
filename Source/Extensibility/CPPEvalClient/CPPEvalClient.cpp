@@ -7,6 +7,8 @@
 
 #include "stdafx.h"
 #include "eval.h"
+#include <chrono>
+#include <fstream>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -56,8 +58,7 @@ int _tmain(int argc, _TCHAR* argv[])
     getEvalProc(&model);
 
     // This relative path assumes launching from CNTK's binary folder
-    const std::string modelWorkingDirectory = path + "\\..\\..\\Examples\\Image\\MNIST\\Data\\";
-    const std::string modelFilePath = modelWorkingDirectory + "..\\Output\\Models\\01_OneHidden";
+    const std::string modelFilePath = "\\\\amhpcfile02\\data\\users\\vadimma\\temp\\CNTKProfiling\\2500.sampling.se.67";
 
     // Load model
     model->CreateNetwork("modelPath=\"" + modelFilePath + "\"");
@@ -87,13 +88,20 @@ int _tmain(int argc, _TCHAR* argv[])
     outputLayer.insert(MapEntry(outputLayerName, &outputs));
 
     // We can call the evaluate method and get back the results (single layer)...
-    model->Evaluate(inputLayer, outputLayer);
+    for (int i = 0; i < 10; i++)
+    {
+        auto start_time = std::chrono::high_resolution_clock::now();
+        model->Evaluate(inputLayer, outputLayer);
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto time = end_time - start_time;
+        fprintf(stderr, "Total: %d\n", std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
+    }
 
     // Output the results
-    for each (auto& value in outputs)
+    /*for each (auto& value in outputs)
     {
         fprintf(stderr, "%f\n", value);
-    }
+    }*/
 
     return 0;
 }

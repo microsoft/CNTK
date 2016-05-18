@@ -409,10 +409,15 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     let  B = b.Reshaped(shapeB).AsMatrix();
     auto C =   Reshaped(shapeC).AsMatrix();
     // and go
+    auto start_time = std::chrono::high_resolution_clock::now();
     if (!transC)
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto time = end_time - start_time;
+    fprintf(stderr, "Matrix prod: %d\n", std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
+    
 }
 
 template class TensorView<float>;
