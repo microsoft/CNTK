@@ -29,7 +29,35 @@
 
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
+    <PropertyGroup Condition="Exists('$(ACML_PATH)')">
+        <MathMKLUse>No</MathMKLUse>
+        <MathInclude>$(ACML_PATH)\include</MathInclude>
+        <MathLib>$(ACML_PATH)\lib</MathLib>
+        <MathPreprocessor>USE_ACML</MathPreprocessor>
+        <USE_ACML>1</USE_ACML>
+        <MathLinkLib>libacml_mp_dll.lib</MathLinkLib>
+        <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
+        <MathPostBuild>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutDir)"</MathPostBuild>
+        <MathPostBuildMessage>Copying ACML DLLs</MathPostBuildMessage>
+        <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
+        <MathMKLUse>Parallel</MathMKLUse>
+        <MathInclude>$(CNTK_MKL_PATH)\include</MathInclude>
+        <MathLib>$(CNTK_MKL_PATH)\x64</MathLib>
+        <MathPreprocessor>USE_MKL</MathPreprocessor>
+        <USE_MKL>1</USE_MKL>
+        <MathLinkLib>lp64_parallel.lib</MathLinkLib>
+        <MathDelayLoad></MathDelayLoad>
+        <MathPostBuild>
+        xcopy /S /D /I /Y "$(CNTK_MKL_PATH)\x64\*.*" "$(OutDir)"
+        </MathPostBuild>
+        <MathPostBuildMessage>Copying CNTK MKL DLLs</MathPostBuildMessage>
+        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)lp64_parallel.dll;$(OutDir)libiomp5md.dll;$(OutDir)mkl_core.dll;$(OutDir)mkl_intel_thread.dll;$(OutDir)mkl_avx2.dll</UnitTestDlls>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
