@@ -255,10 +255,12 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         if (!std::getline(ss, sequenceKey, '\t') || !std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
         {
             // In case when the sequence key is not specified we set it to the line number inside the mapping file.
+            // Assume that only image path and class label is given (old format).
+            classId = imagePath;
+            imagePath = sequenceKey;
             sequenceKey = std::to_string(lineIndex);
-            ss.clear();
-            ss.str(line);
-            if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
+
+            if (classId.empty() || imagePath.empty())
                 RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
         }
 
