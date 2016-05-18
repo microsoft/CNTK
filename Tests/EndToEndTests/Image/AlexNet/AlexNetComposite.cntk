@@ -21,7 +21,7 @@ Train=[
                 file=$ConfigDir$/train_map.txt
 
                 # Description of input streams
-                inputs=[
+                input=[
                     features=[
                         transforms=[
                             [
@@ -72,7 +72,7 @@ Test=[
                 file=$ConfigDir$/val_map.txt
 
                 # Description of input streams
-                inputs=[
+                input=[
                     features=[
                         transforms=[
                             [

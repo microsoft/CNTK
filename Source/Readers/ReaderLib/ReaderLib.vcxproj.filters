@@ -67,6 +67,9 @@
     <ClInclude Include="ConfigUtil.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="ChunkCache.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
     <ClInclude Include="CorpusDescriptor.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -104,6 +107,9 @@
     </ClCompile>
     <ClCompile Include="TruncatedBpttPacker.cpp">
       <Filter>Packers</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkCache.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

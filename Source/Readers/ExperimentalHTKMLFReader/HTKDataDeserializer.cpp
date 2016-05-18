@@ -36,7 +36,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
-    argvector<ConfigValue> inputs = cfg("inputs");
+    argvector<ConfigValue> inputs = cfg("input");
     if (inputs.size() != 1)
     {
         InvalidArgument("HTKDataDeserializer supports a single input stream only.");
@@ -127,22 +127,12 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         }
 
         wstring key = description.GetKey();
-        size_t id = 0;
-        if (m_primary)
+        if (!m_corpus->IsIncluded(key))
         {
-            // TODO: Definition of the corpus should be moved to the CorpusDescriptor
-            // TODO: All keys should be added there. Currently, we add them in the driving deserializer.
-            id = stringRegistry.AddValue(key);
-        }
-        else
-        {
-            if (!stringRegistry.TryGet(key, id))
-            {
-                // Utterance is unknown, skipping it.
-                continue;
-            }
+            continue;
         }
 
+        size_t id = stringRegistry[key];
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;

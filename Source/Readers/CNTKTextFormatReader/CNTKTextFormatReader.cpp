@@ -7,10 +7,12 @@
 #include "CNTKTextFormatReader.h"
 #include "Config.h"
 #include "TextConfigHelper.h"
+#include "ChunkCache.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
 #include "SequencePacker.h"
+#include "FramePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -34,6 +36,11 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
         }
 
+        if (configHelper.ShouldKeepDataInMemory()) 
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
+        }
+
         size_t window = configHelper.GetRandomizationWindow();
         if (window > 0)
         {
@@ -46,11 +53,20 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
-        // TODO: add "frameMode"  config paramter
+        if (configHelper.IsInFrameMode()) 
+        {
+            m_packer = std::make_shared<FramePacker>(
+                m_provider,
+                m_randomizer,
+                GetStreamDescriptions());
+        }
+        else
+        {
         m_packer = std::make_shared<SequencePacker>(
             m_provider,
             m_randomizer,
             GetStreamDescriptions());
+        }
     }
     catch (const std::runtime_error& e)
     {

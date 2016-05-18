@@ -54,7 +54,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
     }
 
-    argvector<ConfigValue> inputs = cfg("inputs");
+    argvector<ConfigValue> inputs = cfg("input");
     if (inputs.size() != 1)
     {
         LogicError("MLFDataDeserializer supports a single input stream only.");
@@ -124,7 +124,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     description.m_isValid = true;
     size_t totalFrames = 0;
 
-    auto& stringRegistry = corpus->GetStringRegistry();
+    const auto& stringRegistry = corpus->GetStringRegistry();
 
     // TODO resize m_keyToSequence with number of IDs from string registry
 
