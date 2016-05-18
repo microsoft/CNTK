@@ -61,6 +61,18 @@ CNTK2 = [
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
     Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    Slice(_, beginIndex, endIndex, axis=1, tag='') =
+        if axis < 0 then [ # time axis: specify -1
+            beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, _)) else                 BS.Loop.IsLastN  (-beginIndex, _)
+            endFlags   = if endIndex   > 0 then                 BS.Loop.IsFirstN (endIndex,   _)  else BS.Boolean.Not (BS.Loop.IsLastN  (-endIndex,   _))
+            flags = if      beginIndex == 0 then endFlags
+                    else if endIndex   == 0 then beginFlags
+                    else                         BS.Boolean.And (beginFlags, endFlags)
+            out = if beginIndex == 0 && endIndex == 0
+                  then _
+                  else BS.Sequences.Gather (flags, _)
+        ].out
+        else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
