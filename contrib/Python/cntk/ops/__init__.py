@@ -334,10 +334,8 @@ def element_divide(left, right, name=None):
 def times(left, right, output_rank=1, name=None):
     """
     The output of this operation is the matrix product of the two input matrices.
-    It supports broadcasting. In case of scalars its backward pass to left propagates right
-    times the received gradient and vice versa.
-    The operator (@) has been overloaded and can equally be used instead of times().
-    However, it is supported in python versions 3.5 or above.
+    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
@@ -368,6 +366,7 @@ def times(left, right, output_rank=1, name=None):
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
+
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -947,6 +946,9 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         else:
             cntk_shape = value[0].shape
 
+        if len(cntk_shape) == 0:
+            raise ValueError('value should be an array of input samples')
+            
         node = input(cntk_shape, dynamic_axis=dynamic_axis, name=name)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(
@@ -991,17 +993,21 @@ def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name
         #  [ 30, 40]]
         # Note that we need to specify a batch of samples of sequences (all
         # having sequence length 1 in this example).
-        >>> dense = C.input_numpy([[[10,20], [30,40]]])
+        >>> dense = C.input_numpy([[[10,20,30], 
+                                    [40,50,60]]])
         # Creating a sparse array 
-        # [0, 0.1]
-        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(2,))
+        # [0, 0.1, 0]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,))
         >>> C.eval(C.times(dense, sparse))
-        [array([[ 2.,  4.]])]
-
-        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(2,1))
-        >>> C.eval(C.times(dense, sparse), clean_up=False)
+        [array([[ 2.,  5.]])]
+        #  Creating a sparse matrix
+        # [[0  ], 
+           [0.1],
+           [0  ]]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,1))
+        >>> C.eval(C.times(dense, sparse))
         [array([[[ 2.],
-                 [ 4.]]])]
+                 [ 5.]]])]
 
     Args:
         indices (list): list (batch) of tuples (indices), which are positions of the values after flattening the tensor with `order='F'`

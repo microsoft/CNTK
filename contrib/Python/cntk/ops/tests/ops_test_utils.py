@@ -114,13 +114,14 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
 
         t_indices = range(tensor.size)
         t_values = tensor.ravel(order='F')
+        mask = t_values!=0
 
-        batch_indices.append(list(t_indices))
-        batch_values.append(list(t_values))
+        batch_indices.append(list(np.asarray(t_indices)[mask]))
+        batch_values.append(list(np.asarray(t_values)[mask]))
 
     return batch_indices, batch_values, shapes_in_tensor.pop()
 
-def test_batch_dense_to_sparse():
+def test_batch_dense_to_sparse_full():
     i, v, s = batch_dense_to_sparse(
             [
                 [[1,2,3], [4,5,6]],
@@ -140,3 +141,20 @@ def test_batch_dense_to_sparse():
     assert i == [[0]]
     assert v == [[1]]
     assert s == (1,)
+
+def test_batch_dense_to_sparse_zeros():
+    i, v, s = batch_dense_to_sparse(
+            [
+                [[1,2,3], [4,0,6]],
+                [[0,0,0], [40,50,60]],
+            ])
+    assert i == [
+            [0, 1, 2, 4, 5],
+            [1, 3, 5],
+            ]
+    assert v == [
+            [1,4,2,3,6],
+            [40,50,60]
+            ]
+    assert s == (2,3)
+    
