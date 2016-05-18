@@ -119,8 +119,6 @@ public:
 
 // A new constructor to support new compositional configuration,
 // that allows composition of deserializers and transforms on inputs.
-// For a sample config please see AlexImage end-to-end test.
-// TODO: Provide only sequences specified in the corpus descriptor.
 ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
 {
     ConfigParameters inputs = config("input");

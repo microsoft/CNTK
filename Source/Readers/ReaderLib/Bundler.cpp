@@ -133,10 +133,8 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     // Can return because all sequences are clean.
     if (chunk->m_invalid.empty())
     {
-        // Reindexing.
-        // TODO: This should be done on the level of deserializer, currently CNTKTextFormat
-        // TODO: exposes not sequencetion ids.
-        for (int i = 0; i < sequences.size(); ++i)
+        // Reindexing, because currently m_ids provided by some deserializers (i.e. CNTKTextFormat) are not contiguous.
+        for (size_t i = 0; i < sequences.size(); ++i)
         {
             sequences[i].m_id = i;
         }
