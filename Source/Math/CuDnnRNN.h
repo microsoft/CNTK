@@ -73,7 +73,7 @@ private:
             return cudnnRNNMode_t::CUDNN_RNN_RELU;
         if (m_rnnParameters.m_rnnMode == wstring(L"RNN_TANH"))
             return cudnnRNNMode_t::CUDNN_RNN_TANH;
-        InvalidArgument("RNN Mode set to %s, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnParameters.m_rnnMode.c_str());
+        InvalidArgument("RNN Mode set to %ls, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnParameters.m_rnnMode.c_str());
     }
 
 public:
