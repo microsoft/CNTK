@@ -32,6 +32,9 @@
 |#
 |####	|A 4.0|####|B 4:4
 5|A 5.|# the only well-formed sequence in this file|B 5:5
+123 |A 123 |B 1:23
+123 |A 124
+123 |B 1:24 |# sequence length will be mis-calculated here (3 instead of 2).
 6 |A 6.0 |B 6:6
 |# sparse suffix in A (totally fine, but should print a warning anyways) |A |B 6:6
 |A 6.0 6.0 |B 6:6

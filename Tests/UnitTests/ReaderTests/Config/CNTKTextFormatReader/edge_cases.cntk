@@ -80,7 +80,7 @@ blank_lines_ignored = [
         readerType = "CNTKTextFormatReader"
         file = "contains_blank_lines.txt"
         maxErrors = 2
-        randomize = "none"
+        randomize = false
         input = [
              features = [
                 dim = 1 
@@ -117,7 +117,7 @@ empty_samples = [
         readerType = "CNTKTextFormatReader"
         # input contains a number of empty samples (both sparse and dense)
         file = "empty_samples.txt"
-        randomize="none"
+        randomize=false
         input = [
              features = [
                 alias = "F0"
@@ -140,7 +140,7 @@ ref_data_with_escape_sequences = [
         readerType = "CNTKTextFormatReader"
         # input contains escape sequences followed by comments/reference data
         file = "ref_data_with_escape_sequences.txt"
-        randomize="none"
+        randomize=false
         input = [
              features = [
                 alias = "F0"

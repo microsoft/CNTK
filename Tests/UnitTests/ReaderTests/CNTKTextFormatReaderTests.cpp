@@ -30,7 +30,6 @@ public:
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
         m_parser.SetChunkSize(SIZE_MAX);
-        m_parser.SetChunkCacheSize(1);
         m_parser.SetNumRetries(0);
         m_parser.Initialize();
     }
@@ -483,7 +482,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_missing_trailing_newline_ignored)
 {
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/edge_cases.cntk",
-        // the output file does not contain any samples from the ignored line
+        // the output file does not contain the last sample from the malformed line
         testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline.txt",
         testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline_Output.txt",
         "missing_trailing_newline_ignored",
