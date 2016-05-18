@@ -277,11 +277,3 @@ class Square(ComputationNode):
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']                
-
-class Power(ComputationNode):
-    def __init__(self, _, y, op_name='CNTK2.Power', name=None):
-        super(Power, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
-        self._ = _
-        self.y = y
-        self.params_with_defaults = []
-        self.inputs = ['_', 'y']        

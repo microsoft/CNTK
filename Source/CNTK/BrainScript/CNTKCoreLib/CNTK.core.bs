@@ -96,15 +96,14 @@ CNTK2 = [
     Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
     ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
     ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
-	Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _ /*plus the function args*/ ]
+    Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _ /*plus the function args*/ ]
     Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
-	Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _ /*plus the function args*/ ]
+    Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _ /*plus the function args*/ ]
     Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
-    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
-	Power(_, y, tag='') = Exp(ElementTimes(y, Log(_)), tag=tag)
+    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]    
     Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
-	Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
-	Square(_, tag='') = ElementTimes(_, _, tag=tag)
+    Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
+    Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions

@@ -16,6 +16,10 @@ from ...graph import *
 from ...reader import *
 from .. import clip, cond, constant, exp, log, sqrt, square, power, relu, sigmoid, softmax, tanh
 
+EPS_IN_LOG = 1e-37        # 1e-37 is the only guaranteed precision
+BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
+LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
+
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
     ([1.0], [2.0], [0.5]), # value should be clipped to 1.0; gradient is [0.0]
@@ -69,13 +73,6 @@ TENSORS = [
     ([[0, -0.1]]),
     ([[-100, -10], [-1, -0.1], [-0.01, -0.001],
       [0.001, 0.01], [0.1, 1], [10, 100]]),
-]
-
-POSITIVE_TENSORS = [
-    ([[-1, 0, -2]])
-    #,
-    #([[100, 10], [1, 0.1], [0.01, 0.001],
-    #  [0.001, 0.01], [0.1, 1], [10, 100]]),
 ]
 
 @pytest.mark.parametrize("tensor", TENSORS)
@@ -204,11 +201,19 @@ def test_op_exp(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-@pytest.mark.parametrize("tensor", POSITIVE_TENSORS)
+@pytest.mark.parametrize("tensor", TENSORS)
 def test_op_log(tensor, device_id, precision):
 
     def numpy_op(x):
-        return np.log(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        a = np.log(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        # CNTK returns -85.1 for log(x) if x is negative or zero.
+        # CNTK uses 1e-37f as the smallest float number for log
+        # becuase this is the only guaranteed precision accross platforms
+        # something to change in CNTK and perhapas return some standard symbols
+        # like (nan and -inf) for numpy
+        a[np.isnan(a)] = LOG_OF_EPS_IN_LOG
+        a[np.isneginf(a)] = LOG_OF_EPS_IN_LOG       
+        return a
 
     # Forward pass test
     # ==================
@@ -229,7 +234,10 @@ def test_op_log(tensor, device_id, precision):
 
 
     def numpy_op_grad(x):
-        return np.divide(1, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        a = np.divide(1, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        a[np.isinf(a)] = BACKWARD_RESULST_FOR_LOG_EPS
+        a[a<=0] = BACKWARD_RESULST_FOR_LOG_EPS
+        return a
 
     # Backward pass test
     # ==================
@@ -240,11 +248,15 @@ def test_op_log(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-@pytest.mark.parametrize("tensor", POSITIVE_TENSORS)
+@pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sqrt(tensor, device_id, precision):
 
     def numpy_op(x):
-        return np.sqrt(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        a = np.sqrt(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        # CNTK returns zero for sqrt of negative nubmers, perhaps it should be
+        # changed to return something linke nan for numpy
+        a[np.isnan(a)] = 0
+        return a
 
     # Forward pass test
     # ==================
@@ -312,71 +324,7 @@ def test_op_square(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-POWER_TUPLES = [ 
-                ([[-1,0,1,2,3,4]], [0]), 
-                ([[0,2], [3,5]], [[0,1], [2,3]]),
-                ([10], [3]),
-              ]
-              
-@pytest.mark.parametrize("tensor, exponent", POWER_TUPLES)
-def test_op_power(tensor, exponent, device_id, precision):
-
-    def numpy_op(x):
-        return np.power(AA(x, dtype=PRECISION_TO_TYPE[precision]), exponent)
-
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-
-    expected = [[numpy_op(tensor)]]
-
-    #TODO: also test when one argument is a constant and the other is input
-    input_node = I([tensor])
-    expo = I([exponent])
-    op_node = power(input_node, expo)
-
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-
-    def numpy_op_grad_expo(b,a):
-        l = np.log(AA(b, dtype=PRECISION_TO_TYPE[precision]))
-        p = np.power(AA(b, dtype=PRECISION_TO_TYPE[precision]),
-                     AA(a, dtype=PRECISION_TO_TYPE[precision]))
-        return np.multiply(l,p)
-
-    def numpy_op_grad_base(b,a):
-        s = np.subtract(AA(a, dtype=PRECISION_TO_TYPE[precision]), 1)        
-        p = np.power(AA(b, dtype=PRECISION_TO_TYPE[precision]),
-                     s)
-        return np.multiply(AA(a, dtype=PRECISION_TO_TYPE[precision]), p)
-        
-    # Backward pass test
-    # ==================
-    # The expected results for the backward of b^a w.r.t. a is log(b).b^a
-    expected = [[numpy_op_grad_expo(tensor, exponent)]]
-
-    #unittest_helper(op_node, None, expected, device_id=device_id,
-    #                precision=precision, clean_up=True, backward_pass=True,
-    #                input_node=expo)  
-
-    # Backward pass test
-    # ==================
-    # The expected results for the backward of b^a w.r.t. b is a.b^{a-1}
-    #expected = [[numpy_op_grad_base(tensor)]]
-
-    #unittest_helper(op_node, None, expected, device_id=device_id,
-    #                precision=precision, clean_up=True, backward_pass=True,
-    #                input_node=input_node)  
-
-
-
-@pytest.mark.parametrize("tensor", POWER_TUPLES)
+@pytest.mark.parametrize("tensor", TENSORS)
 def test_op_tanh(tensor, device_id, precision):
 
     def numpy_op(x):

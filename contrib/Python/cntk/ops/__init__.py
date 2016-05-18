@@ -639,24 +639,6 @@ def square(x, name=None):
     from cntk.ops.cntk2 import Square
     return Square(x, name=name)
 
-def power(x, y, name=None):
-    """
-    Power operation. Computes the element-wise `x` to the power of 'y': 
-
-    :math:`power(x,y) = {x^y}`
-
-    Example:
-        >>> C.eval(C.power([1., 2.], 3))
-        [array([[ 1.      ,  8.]])]
-
-    Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """
-    from cntk.ops.cntk2 import Power
-    return Power(x, y, name=name)
-
 def abs(x, name=None):
     """
     Abs operation. Computes the element-wise absolute of `x`: 
