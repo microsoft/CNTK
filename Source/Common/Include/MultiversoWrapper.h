@@ -406,8 +406,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					assert(!m_isInitialized);
 					m_isInitialized = true;
 
-					multiverso::MV_Init();
           multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
+					multiverso::MV_Init();
 
 
 					for (int i = 0; i < m_localCacheNumber; i++)
@@ -428,6 +428,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						size_t layerSize = mat.GetNumElements();
 						size_t layerRowSize = mat.GetNumRows();
 						size_t layerColSize = mat.GetNumCols();
+            fprintf(stderr, "Layersize: %d, row size: %d, col size: %d.\n", (int)layerSize, (int)layerRowSize, (int)layerColSize);
+            fflush(stderr);
 						
 						m_matrixArray->push_back(new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
 						m_serverArray->push_back(new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered));
