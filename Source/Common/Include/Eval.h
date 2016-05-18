@@ -29,7 +29,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType>
-class IEvaluateModelBase // Evaluate Model Interface
+class IEvaluateModelBase 
 {
 public:
     // 
@@ -39,6 +39,9 @@ public:
     // 
     virtual void Init(const std::string& config) = 0;
 
+    //
+    // Create a network based on an (NDL) network description.
+    //
     virtual void CreateNetwork(const std::string& networkDescription) = 0;
 
     //
@@ -46,9 +49,6 @@ public:
     //
     virtual void Destroy() = 0;
 
-    //
-    //
-    //
     virtual void ResetState() = 0;
 };
 
@@ -86,13 +86,15 @@ public:
     // Given a feature vector of dimension d, the inputs may contain n * d elements. The output will then be computed 
     // for n samples.
     // inputs - map from node name to array of input tensors, flattened to vector
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will
+    // happen during evaluation
     // 
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
 
     //
     // Evaluate - Evaluate using the network without input and provide the outputs
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
     //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
 };
@@ -129,6 +131,7 @@ public:
     // modelPath=c:\models\model.dnn (model path, if not specified, must call LoadModel() method before Evaluate()
     // minibatchSize=1024 (minibatch size used during evaluation if < passed data size)
     Eval(const std::string& config);
+
     virtual ~Eval();
 
     // CreateNetwork - create a network based on the network description
@@ -146,14 +149,17 @@ public:
 
     // Evaluate - Evaluate using the model with the given inputs and outputs
     // inputs - map from node name to input vector
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     // Evaluate - Evaluate using the network without input, and provide the outputs
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void Init(const std::string& config);
+
     virtual void ResetState();
 };
 
