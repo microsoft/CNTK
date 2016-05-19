@@ -30,7 +30,6 @@
   </PropertyGroup>
 
     <PropertyGroup Condition="Exists('$(ACML_PATH)')">
-        <MathMKLUse>No</MathMKLUse>
         <MathInclude>$(ACML_PATH)\include</MathInclude>
         <MathLib>$(ACML_PATH)\lib</MathLib>
         <MathPreprocessor>USE_ACML</MathPreprocessor>
@@ -43,18 +42,18 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
-        <MathMKLUse>Parallel</MathMKLUse>
-        <MathInclude>$(CNTK_MKL_PATH)\include</MathInclude>
-        <MathLib>$(CNTK_MKL_PATH)\x64</MathLib>
+		<MKLCustomVersion>1</MKLCustomVersion>
+        <MathInclude>$(CNTK_MKL_PATH)\$(MKLCustomVersion)\include</MathInclude>
+        <MathLib>$(CNTK_MKL_PATH)\$(MKLCustomVersion)\x64</MathLib>
         <MathPreprocessor>USE_MKL</MathPreprocessor>
         <USE_MKL>1</USE_MKL>
-        <MathLinkLib>lp64_parallel.lib</MathLinkLib>
+        <MathLinkLib>mkl_custom.lib</MathLinkLib>
         <MathDelayLoad></MathDelayLoad>
         <MathPostBuild>
-        xcopy /S /D /I /Y "$(CNTK_MKL_PATH)\x64\*.*" "$(OutDir)"
+        xcopy /S /D /I /Y "$(CNTK_MKL_PATH)\$(MKLCustomVersion)\x64\*.*" "$(OutDir)"
         </MathPostBuild>
         <MathPostBuildMessage>Copying CNTK MKL DLLs</MathPostBuildMessage>
-        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)lp64_parallel.dll;$(OutDir)libiomp5md.dll;$(OutDir)mkl_core.dll;$(OutDir)mkl_intel_thread.dll;$(OutDir)mkl_avx2.dll</UnitTestDlls>
+        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
