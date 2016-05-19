@@ -13,7 +13,6 @@ Simple_Test = [
     reader = [
         readerType = "ExperimentalHTKMLFReader"
         readMethod = "none"
-        miniBatchMode = "partial"
         verbosity = 0
 
         features = [

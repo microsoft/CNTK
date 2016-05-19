@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop3)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_Output.txt",
         "Simple_Test",
         "reader",
-        randomizeAuto,/* epoch size - all available */
+        randomizeAuto, // epoch size - all available
         250,
         2,
         1,
@@ -568,7 +568,7 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop3)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_Output.txt",
         "Simple_Test",
         "reader",
-        randomizeAuto,/* epoch size - all available */
+        randomizeAuto, // epoch size - all available
         1,
         2,
         1,
