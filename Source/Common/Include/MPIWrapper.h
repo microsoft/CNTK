@@ -1,11 +1,18 @@
 #pragma once
 
-// This uses mpi.h which requires the Microsoft MPI SDK to be installed on Windows
-// [cf. https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx]
-// download msmpisdk.msi at https://www.microsoft.com/en-us/download/details.aspx?id=49926 and run it
-// and the MPI dev package on Linux (sudo apt-get install libopenmpi-dev openmpi-bin openmpi-doc)
+// Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi or
+// https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi for setup instructions
+// of an MPI implementation on your platform.
+#ifdef _MSC_VER
+// Suppress warning for non-ASCII characters in MS-MPI headers
+#pragma warning(push)
+#pragma warning(disable : 4819) // The file contains a character that cannot be represented in the current code page (...). Save the file in Unicode format to prevent data loss
+#endif
 #include "mpi.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
 #pragma comment(lib, "msmpi.lib")
+#endif
 
 #include <string>
 #include <array>

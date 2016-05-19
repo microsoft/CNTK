@@ -12,7 +12,18 @@
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
+
+// TODO remove once up-stream (1bit-SGD repo) is fixed:
+#ifdef _MSC_VER
+// Suppress warning for non-ASCII characters (when using certain codepages, e.g., 936)
+#pragma warning(push)
+#pragma warning(disable : 4819) // The file contains a character that cannot be represented in the current code page (...). Save the file in Unicode format to prevent data loss
+#endif
 #include "BlockMomentumSGD.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #endif
 
 #include "SimpleDistGradAggregator.h"
@@ -2355,7 +2366,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_minibatchSearchCriterionErrorMargin = configAALR(L"minibatchSearchCriterionErrorMargin", (size_t) 1);
 
     // the number of minibatches used to search
-    // the learning rate. Its typically set to 10-20% of
+    // the learning rate. It's typically set to 10-20% of
     // the total minibatches in an epoch.
     m_numMiniBatch4LRSearch = configAALR(L"numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{500})));
 
