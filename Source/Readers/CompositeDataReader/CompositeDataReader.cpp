@@ -185,7 +185,7 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
-    argvector<ConfigParameters> inputs = deserializerConfig("inputs");
+    argvector<ConfigParameters> inputs = deserializerConfig("input");
     for (size_t i = 0; i < inputs.size(); ++i)
     {
         // Trying to find transfomers in a stream section of the config.
