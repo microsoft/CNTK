@@ -355,9 +355,9 @@ def times(left, right, name=None):
     from cntk.ops.cntk2 import Times
     return Times(left, right, name=name)
 
-def pass_tensor(x, name=None):
+def identity(x, name=None):
     """
-    It returns an identical tensor to the input tensor `x`: 
+    The identity function. It returns an identical tensor to the input tensor `x`: 
 
     :math:`pass_tensor(x) = x`
 
