@@ -4,6 +4,7 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <limits>
 #include "TextConfigHelper.h"
@@ -116,32 +117,36 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 
     m_filepath = msra::strfun::utf16(config(L"file"));
 
-    if (config.Exists(L"randomize"))
+    // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput.
+    wstring randomizeString = config(L"randomize", wstring());
+    if (!_wcsicmp(randomizeString.c_str(), L"none"))
     {
-        wstring randomizeString = config.CanBeString(L"randomize") ? config(L"randomize") : wstring();
-        if (!_wcsicmp(randomizeString.c_str(), L"none"))
-        {
-            m_randomizationWindow = randomizeNone;
-        }
-        else if (!_wcsicmp(randomizeString.c_str(), L"auto"))
-        {
-            m_randomizationWindow = randomizeAuto;
-        }
-        else
-        {
-            m_randomizationWindow = config(L"randomize");
-        }
+        m_randomizationWindow = randomizeNone;
     }
     else
     {
-        m_randomizationWindow = randomizeAuto;
+        bool randomize = config(L"randomize", true);
+
+        if (!randomize)
+        {
+            m_randomizationWindow = randomizeNone;
+        }
+        else if (config.Exists(L"randomizationWindow"))
+        {
+            m_randomizationWindow = config(L"randomizationWindow");
+        }
+        else
+        {
+            m_randomizationWindow = randomizeAuto;
+        }
     }
 
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
-    m_traceLevel = config(L"traceLevel", 0);
+    m_traceLevel = config(L"traceLevel", 1);
     m_chunkSizeBytes = config(L"chunkSizeInBytes", 32 * 1024 * 1024); // 32 MB by default
-    m_chunkCacheSize = config(L"numChunksToCache", 32); // 32 * 32 MB = 1 GB of memory in total
+    m_keepDataInMemory = config(L"keepDataInMemory", false);
+    m_frameMode = config(L"frameMode", false);
 }
 
 }}}

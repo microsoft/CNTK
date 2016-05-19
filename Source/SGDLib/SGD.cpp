@@ -365,7 +365,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // set dropout rate for this epoch
         // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
-        size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UseParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
+        size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
         size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
@@ -771,9 +771,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     int numMBsRun = 0;
 
-    bool useGradientAggregation = UseGradientAggregation(epochNumber);
-    bool useModelAggregation = UseModelAggregation(epochNumber);
-    bool useParallelTrain = UseParallelTrain(epochNumber);
+    bool useGradientAggregation = UsingGradientAggregation(epochNumber);
+    bool useModelAggregation = UsingModelAggregation(epochNumber);
+    bool useParallelTrain = UsingParallelTrain(epochNumber);
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -1024,7 +1024,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
 
-            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, epochNumber);
+            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), epochNumber);
             noMoreSamplesToProcess = !samplesProcessed;
 
             aggregateNumSamples          = m_gradHeader->numSamples;
@@ -1796,20 +1796,22 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
         if (m_distGradAgg == nullptr)
         {
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-            m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(m_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+            m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
 #else
             if (m_numGradientBits != (8 * sizeof(ElemType)))
             {
                 RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
             }
 
-            m_distGradAgg = new SimpleDistGradAggregator<ElemType>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
         }
 
         if (m_gradHeader == nullptr)
         {
-            m_gradHeader = DistGradHeader::Create(numEvalNodes);
+            m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) {
+                DistGradHeader::Destroy(ptr);
+            });
         }
     }
 }

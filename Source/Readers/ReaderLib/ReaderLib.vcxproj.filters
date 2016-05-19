@@ -28,9 +28,6 @@
     <ClInclude Include="ElementTypeUtils.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="TransformerBase.h">
-      <Filter>Transformers</Filter>
-    </ClInclude>
     <ClInclude Include="DataDeserializerBase.h">
       <Filter>Deserializers</Filter>
     </ClInclude>
@@ -64,8 +61,20 @@
     <ClInclude Include="TruncatedBpttPacker.h">
       <Filter>Packers</Filter>
     </ClInclude>
-    <ClInclude Include="..\ExperimentalHTKMLFReader\CorpusDescriptor.h">
+    <ClInclude Include="SequenceEnumerator.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigUtil.h">
       <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ChunkCache.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CorpusDescriptor.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformController.h">
+      <Filter>Transformers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -98,6 +107,9 @@
     </ClCompile>
     <ClCompile Include="TruncatedBpttPacker.cpp">
       <Filter>Packers</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkCache.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

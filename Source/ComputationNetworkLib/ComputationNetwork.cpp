@@ -498,7 +498,7 @@ template <class ElemType>
         fprintf(stderr, "Setting dropout rate to %.8g.\n", dropoutRate);
         // TODO: Change this to use an interface that is independent of <ElemType>.
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
-            fprintf(stderr, "WARNING: there is no dropout node.\n");
+            fprintf(stderr, "WARNING: Attempting to set dropout rate, but there is no dropout node in the network.\n");
     }
 
     // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
