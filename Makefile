@@ -29,8 +29,6 @@
 #     defaults to /usr/local/opencv-3.0.0
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
 #     defaults to /usr/local/
-#   OPENMPI_PATH= path to OpenMPI installation, so $(OPENMPI_PATH) exists
-#     defaults to /usr/local/openmpi-1.10.1
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 ARCH=$(shell uname)
@@ -59,7 +57,7 @@ endif
 
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
-CXX = $(OPENMPI_PATH)/bin/mpic++
+CXX = mpic++
 
 SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
@@ -123,6 +121,11 @@ else
   DEVICE = cpu
 
   COMMON_FLAGS +=-DCPUONLY
+endif
+
+ifdef OPENMPI_PATH
+  INCLUDEPATH += $(OPENMPI_PATH)/include
+  LIBPATH += $(OPENMPI_PATH)/lib
 endif
 
 ifeq ("$(MATHLIB)","acml")

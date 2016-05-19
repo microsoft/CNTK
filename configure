@@ -222,11 +222,8 @@ function show_help ()
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
-<<<<<<< HEAD
     echo "  --with-openmpi[=directory] $(show_default $(find_openmpi))"
-=======
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
->>>>>>> upstream/master
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -403,27 +400,27 @@ do
                 fi
             fi
             ;;
-        --with-openmpi*)
-            have_openmpi=yes
-            if test x$optarg = x
-            then
-                openmpi_path=$(find_openmpi)
-                if test x$openmpi_path = x
-		then
-                    echo "Cannot find OpenMPI directory"
-                    echo "Please specify a value for --with-openmpi"
-                    exit 1
-                fi
-            else
-		if test $(check_dir $optarg $openmpi_check) = yes
-		then
-		    openmpi_path=$optarg
-		else
-		    echo "Invalid OpenMPI directory $optarg"
-		    exit 1
-		fi
-	    fi
-	    ;;
+	--with-openmpi*)
+              have_openmpi=yes
+              if test x$optarg = x
+              then
+                  openmpi_path=$(find_openmpi)
+                  if test x$openmpi_path = x
+  		then
+                      echo "Cannot find OpenMPI directory"
+                      echo "Please specify a value for --with-openmpi"
+                      exit 1
+                  fi
+              else
+  		if test $(check_dir $optarg $openmpi_check) = yes
+ 		then
+ 		    openmpi_path=$optarg
+ 		else
+ 		    echo "Invalid OpenMPI directory $optarg"
+ 		    exit 1
+ 		fi
+ 	    fi
+ 	    ;;
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
@@ -579,19 +576,6 @@ then
     fi
 fi
 
-# If no cuda library specified, search for one
-if test x$enable_cuda = xyes && test x$cuda_path = x
-then
-    cuda_path=$(find_cuda)
-    if test x$cuda_path = x ; then
-        echo Cannot locate a cuda directory
-        echo GPU will be disabled
-        enable_cuda=no
-    else
-        echo Found cuda at $cuda_path
-    fi
-fi
-
 # If no OpenMPI library specifies, search for one
 if test x$have_openmpi = xno
 then
@@ -602,6 +586,19 @@ then
 	exit 1
     else
 	echo Found OpenMPI at $openmpi_path
+    fi
+fi
+
+# If no cuda library specified, search for one
+if test x$enable_cuda = xyes && test x$cuda_path = x
+then
+    cuda_path=$(find_cuda)
+    if test x$cuda_path = x ; then
+        echo Cannot locate a cuda directory
+        echo GPU will be disabled
+        enable_cuda=no
+    else
+        echo Found cuda at $cuda_path
     fi
 fi
 
@@ -708,13 +705,11 @@ fi
 if test $enable_1bitsgd = yes ; then
     echo CNTK_ENABLE_1BitSGD=true >> $config
 fi
-<<<<<<< HEAD
 if test x$openmpi_path != x ; then
     echo OPENMPI_PATH=$openmpi_path >> $config
-=======
+fi
 if test $enable_code_coverage = yes ; then
     echo CNTK_CODE_COVERAGE=true >> $config
->>>>>>> upstream/master
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
