@@ -485,6 +485,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
             lrControlCriterion = epochCriterion.Average();
 
+		// sync all workers here before proceeding for validation
+		if (m_mpi != nullptr)
+			m_mpi->WaitAll();
+
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
         epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 
