@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, constant, exp, log, sqrt, square, power, relu, sigmoid, softmax, tanh
+from .. import clip, cond, constant, exp, log, sqrt, square, relu, sigmoid, softmax, tanh
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the only guaranteed precision
 BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon

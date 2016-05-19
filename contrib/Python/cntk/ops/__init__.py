@@ -355,6 +355,23 @@ def times(left, right, name=None):
     from cntk.ops.cntk2 import Times
     return Times(left, right, name=name)
 
+def pass_tensor(x, name=None):
+    """
+    It returns an identical tensor to the input tensor `x`: 
+
+    :math:`pass_tensor(x) = x`
+
+    Example:
+        >>> C.eval(C.pass_tensor([0., 1.]))
+        [array([[ 0.      ,  1.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Pass
+    return Pass(x, name=name)
 
 ################################################################################
 # non_diff ops
