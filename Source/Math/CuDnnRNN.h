@@ -60,7 +60,6 @@ private:
     cudnnDataType_t m_dataType;
     cudnnRNNDescriptor_t m_rnnDesc;
     CuDnnDropout m_dropout;
-    size_t m_seqLength;
     RnnParameters m_rnnParameters;
 
     cudnnRNNMode_t GetMode()
@@ -77,12 +76,19 @@ private:
     }
 
 public:
-    CuDnnRNN(const RnnParameters& rnnParameters, const size_t seqLength)
-        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters), m_seqLength(0),
+    CuDnnRNN(const RnnParameters& rnnParameters)
+        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
-        SetLength(seqLength);
+        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
+            (int)m_rnnParameters.m_hiddenSize,
+            (int)m_rnnParameters.m_numLayers,
+            m_dropout,
+            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
+            m_rnnParameters.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+            GetMode(),
+            m_dataType));
     }
 
     ~CuDnnRNN()
@@ -98,8 +104,6 @@ public:
     {
         return this->m_rnnParameters == rnnParameters;
     }
-
-    void SetLength(size_t len);
 
     size_t GetLength()
     {
@@ -126,14 +130,14 @@ class CuDnnFilter
     CuDnn::ptr_t m_cudnn;
     size_t m_filterSize;
 public:
-    CuDnnFilter(const CuDnnRNN<ElemType>& rnn, const cudnnTensorDescriptor_t *xDesc) :
+    CuDnnFilter(const CuDnnRNN<ElemType>& rnn, const cudnnTensorDescriptor_t& xDesc) :
         m_cudnn(CuDnn::Instance()), m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filterDesc));
         try
         {
             size_t filterSize;
-            CUDNN_CALL(cudnnGetRNNParamsSize(*m_cudnn, rnn, xDesc, &filterSize));
+            CUDNN_CALL(cudnnGetRNNParamsSize(*m_cudnn, rnn, xDesc, &filterSize, m_dataType));
 
             size_t dataSize = 2; // CUDNN_DATA_HALF
 
@@ -178,23 +182,19 @@ class CuDnnRNNExecutor
     cudnnDataType_t m_dataType;
     size_t m_xDim, m_yDim;
 public:
-    CuDnnRNNExecutor(size_t xDim, size_t yDim, size_t seqLength, const RnnParameters& rnnParameters ) :
+    CuDnnRNNExecutor(size_t xDim, size_t yDim, const RnnParameters& rnnParameters ) :
         m_cudnn(CuDnn::Instance()),
         m_xDim(xDim), m_yDim(yDim),
+        m_seqLength(0),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
         m_BackwardDataCalledYet(false)
     {
-        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters, seqLength);
+        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters);
     }
 
     void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, GPUMatrix<ElemType>& outputY, const vector<size_t>& numSequencesForFrame, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
     void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-
-    void SetLength(int len)
-    {
-        m_rnnT->SetLength(len);
-    }
 
 protected:
     std::unique_ptr<CuDnnFilter<ElemType>> wDesc;
@@ -216,6 +216,7 @@ private:
 private:
     std::unique_ptr<CuDnnRNN<ElemType>> m_rnnT;
     bool m_BackwardDataCalledYet;
+    size_t m_seqLength;
 };
 
 } } }

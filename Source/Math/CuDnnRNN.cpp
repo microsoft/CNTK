@@ -43,24 +43,6 @@ public:
     DISABLE_COPY_AND_MOVE(CuDnnTensorDescriptor);
 };
 
-template<class ElemType>
-void CuDnnRNN<ElemType>::SetLength(size_t len)
-{
-    if (m_seqLength != len)
-    {
-        m_seqLength = len;
-        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_rnnParameters.m_hiddenSize,
-            (int)m_seqLength,
-            (int)m_rnnParameters.m_numLayers,
-            m_dropout,
-            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_rnnParameters.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            GetMode(),
-            m_dataType));
-    }
-}
-
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::SetDescriptors(size_t dim, const vector<size_t>& numSequencesForFrame, vector<cudnnTensorDescriptor_t>& descriptors)
 {
@@ -71,8 +53,8 @@ void CuDnnRNNExecutor<ElemType>::SetDescriptors(size_t dim, const vector<size_t>
             descriptors.push_back(cudnnTensorDescriptor_t());
             CUDNN_CALL(cudnnCreateTensorDescriptor(&descriptors[i]));
         }
-        int dims[3] = { (int)dim, (int)numSequencesForFrame[i], 1 };
-        int strides[3] = { 1, dims[0], dims[0] * dims[1] };
+        int dims[3] = { (int)numSequencesForFrame[i], (int)dim, 1 };
+        int strides[3] = { dims[2] * dims[1], dims[2], 1 };
         CUDNN_CALL(cudnnSetTensorNdDescriptor(descriptors[i], CUDNN_DATA_FLOAT, 3, dims, strides));
     }
 }
@@ -93,20 +75,19 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     if (m_yDim != (m_rnnT->isBidirectional() ? 2 : 1) * m_rnnT->GetNumHidden())
         InvalidArgument("CuDnn ForwardCore: Output leading dimension must be twice hidden size for bidirectional networks");
 
-    m_rnnT->SetLength(numSequencesForFrame.size());
-
     // set up the input and output descriptors
     SetDescriptors(m_xDim, numSequencesForFrame, xDesc);
     SetDescriptors(m_yDim, numSequencesForFrame, yDesc);
 
     // ensure workspace and reserve are large enough
+    m_seqLength = numSequencesForFrame.size();
     size_t workSize;
     size_t reserveSize;
 
     // Need for every pass
-    CUDNN_CALL(cudnnGetRNNWorkspaceSize(*m_cudnn, *m_rnnT, xDesc.data(), &workSize));
+    CUDNN_CALL(cudnnGetRNNWorkspaceSize(*m_cudnn, *m_rnnT, (int)m_seqLength, xDesc.data(), &workSize));
     // Only needed in training, can't be touched between passes.
-    CUDNN_CALL(cudnnGetRNNTrainingReserveSize(*m_cudnn, *m_rnnT, xDesc.data(), &reserveSize));
+    CUDNN_CALL(cudnnGetRNNTrainingReserveSize(*m_cudnn, *m_rnnT, (int)m_seqLength, xDesc.data(), &reserveSize));
 
     // convert from bytes to ElemType
     workSize = (workSize + sizeof(ElemType) - 1) / (sizeof(ElemType));
@@ -115,12 +96,13 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     reserve.Resize(reserveSize, 1);
     workspace.Resize(workSize, 1);
 
-    wDesc = make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc.data());
+    wDesc = make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc[0]);
     if (wDesc->GetSize() != weightsW.GetNumElements())
         InvalidArgument("RNN needs %ld parameters, but %ld were allocated", wDesc->GetSize(), weightsW.GetNumRows());
 
     CUDNN_CALL(cudnnRNNForwardTraining(
         *m_cudnn, *m_rnnT,
+        (int)m_seqLength,
         xDesc.data(), inputX.Data(),
         0, 0,
         0, 0,
@@ -148,6 +130,7 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
     {
         CUDNN_CALL(cudnnRNNBackwardData(
             *m_cudnn, *m_rnnT,
+            (int)m_seqLength,
             yDesc.data(), outputY.Data(),
             yDesc.data(), outputDY.Data(),
             0, 0,
@@ -177,6 +160,7 @@ void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& 
         LogicError("out of order calling you have been very bad");
     CUDNN_CALL(cudnnRNNBackwardWeights(
         *m_cudnn, *m_rnnT,
+        (int)m_seqLength,
         xDesc.data(), inputX.Data(),
         0, 0,
         yDesc.data(), outputY.Data(),
@@ -184,9 +168,6 @@ void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& 
         *wDesc, dw.Data(),
         reserve.Data(), reserve.GetNumElements()*sizeof(ElemType)));
 }
-
-template class CuDnnRNN<double>;
-template class CuDnnRNN<float>;
 
 template class CuDnnRNNExecutor<double>;
 template class CuDnnRNNExecutor<float>;
