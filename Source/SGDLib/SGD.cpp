@@ -1090,7 +1090,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         timer.Stop();
-        numMBsRun++;
+		if (actualMBSize > 0)
+			numMBsRun++;
 
         totalTimeInMBs += timer.ElapsedSeconds();
         //trainSamplesSinceLastLogged += (int)aggregateNumSamplesWithLabel; // now inside epochCriterionLastLogged
@@ -1140,9 +1141,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // progress tracing for regular log
             if (m_traceLevel > 0)
             {
+				std::string prefixStr(prefixMsg);
+				if (m_mpi != nullptr)
+				{
+					char RankStr[20];
+					sprintf(RankStr, "Rank %d: ", (int)m_mpi->CurrentNodeRank());
+					prefixStr += RankStr;
+				}
+
                 PREPENDTS(stderr);
                 fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
-                        prefixMsg.c_str(), epochNumber + 1, (int)m_maxEpochs,
+                        prefixStr.c_str(), epochNumber + 1, (int)m_maxEpochs,
                         (int)(numMBsRun - m_numMBsToShowResult + 1), numMBsRun);
                 if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
@@ -1153,6 +1162,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
+				fflush(stderr);
             }
 
             // progress tracing for compute cluster management
