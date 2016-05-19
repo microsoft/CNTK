@@ -70,7 +70,7 @@ To run the sample, navigate to the Data folder and run the following command:
 
 3. 03_ConvBatchNorm.ndl is almost identical to 02_Convolution.ndl 
 except that it uses batch normalization for the convolutional and fully connected layers.
-As a result, it achieves around 0.92% of error after training for just 2 epochs (and less than 30 seconds).
+As a result, it achieves around 0.8% of error after training for just 2 epochs (and less than 30 seconds).
 To run the sample, navigate to the Data folder and run the following command:  
 `cntk configFile=../Config/03_ConvBatchNorm.cntk`
 

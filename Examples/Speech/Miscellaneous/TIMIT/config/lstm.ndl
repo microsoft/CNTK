@@ -102,7 +102,7 @@ ndlCreateNetwork=[
     LSTMoutputW1 = Times(W1, LSTMoutput)
 
     cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion")
-    Err = ErrorPrediction(labels,LSTMoutputW1,tag="eval")
+    Err = ErrorPrediction(labels,LSTMoutputW1,tag="evaluation")
     
     logPrior = LogPrior(labels)	 
     ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag="output")

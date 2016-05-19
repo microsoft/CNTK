@@ -245,7 +245,7 @@ bool BinaryReader<ElemType>::CheckEndDataset(size_t actualmbsize)
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool BinaryReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool BinaryReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)

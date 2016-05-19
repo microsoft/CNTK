@@ -100,6 +100,11 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     {
     case nodeInput:
     {
+        if (outputNodes.size() == 0)
+        {
+            LogicError("No Output nodes found: Cannot determine Input node dimensions due to lack of Output nodes.\n(are 'outputNodeNames' and/or 'OutputNodes' properly defined in the configuration file?)");
+        }
+
         auto& nodes = m_net->InputNodes(outputNodes[0]);
         for (auto& node : nodes)
         {

@@ -148,47 +148,40 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
-#if WIN32
-    if (IsWindows8OrGreater())
+#ifdef _WIN32
+    // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
+    // TODO:
+    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it’s
+    // probably a good idea to do that anyway since I suspect that the '..' characters might
+    // confuse the other PathCch functions" [Larry Osterman]
+    // "Consider GetFullPathName both for canonicalization and last element finding." [Jay Krell]
+    path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\");
+
+    HRESULT hr;
+    if (IsWindows8OrGreater()) // PathCchRemoveFileSpec() only available on Windows 8+
     {
         typedef HRESULT(*PathCchRemoveFileSpecProc)(_Inout_updates_(_Inexpressible_(cchPath)) PWSTR, _In_ size_t);
+        HINSTANCE hinstLib = LoadLibrary(TEXT("api-ms-win-core-path-l1-1-0.dll"));
+        if (hinstLib == nullptr)
+            RuntimeError("DirectoryPathOf: LoadLibrary() unexpectedly failed.");
+        PathCchRemoveFileSpecProc PathCchRemoveFileSpec = reinterpret_cast<PathCchRemoveFileSpecProc>(GetProcAddress(hinstLib, "PathCchRemoveFileSpec"));
+        if (!PathCchRemoveFileSpec)
+            RuntimeError("DirectoryPathOf: GetProcAddress() unexpectedly failed.");
 
-        HINSTANCE hinstLib;
-        PathCchRemoveFileSpecProc ProcAdd;
-        BOOL fFreeResult = FALSE;
+        // this is the actual function call we care about
+        hr = PathCchRemoveFileSpec(&path[0], path.size());
 
-        hinstLib = LoadLibrary(TEXT("api-ms-win-core-path-l1-1-0.dll"));
-        if (hinstLib != nullptr)
-        {
-            ProcAdd = reinterpret_cast<PathCchRemoveFileSpecProc>(GetProcAddress(hinstLib, "PathCchRemoveFileSpec"));
-            if (NULL != ProcAdd)
-            {
-                auto hr = (ProcAdd)(&path[0], path.size());
+        FreeLibrary(hinstLib);
+    }
+    else // on Windows 7-, use older PathRemoveFileSpec() instead
+        hr = PathRemoveFileSpec(&path[0]);
+
                 if (hr == S_OK) // done
                     path.resize(wcslen(&path[0]));
                 else if (hr == S_FALSE) // nothing to remove: use .
                     path = L".";
-            }
-            else
-            {
-                LogicError("DirectoryPathOf: GetProcAddress() unexpectedly failed.");
-            }
-
-            fFreeResult = FreeLibrary(hinstLib);
-        }
         else
-        {
-            LogicError("DirectoryPathOf: LoadLibrary() unexpectedly failed.");
-        }
-    }
-    else
-    {
-        auto hr = PathRemoveFileSpec(&path[0]);
-        if (hr != 0) // done
-            path.resize(wcslen(&path[0]));
-        else
-            path = L".";
-    }
+        RuntimeError("DirectoryPathOf: Path(Cch)RemoveFileSpec() unexpectedly failed with 0x%08x.", (unsigned int)hr);
 #else
     auto pos = path.find_last_of(L"/");
     if (pos != path.npos)
@@ -203,7 +196,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::FileNameOf(wstring path)
 {
-#if WIN32
+#ifdef WIN32
     static const wstring delim = L"\\:/";
 #else
     static const wstring delim = L"/";
@@ -218,7 +211,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // get path of current executable
 /*static*/ wstring File::GetExecutablePath()
 {
-#if WIN32
+#ifdef WIN32
     wchar_t path[33000];
     if (GetModuleFileNameW(NULL, path, _countof(path)) == 0)
         LogicError("GetExecutablePath: GetModuleFileNameW() unexpectedly failed.");
@@ -835,24 +828,28 @@ void File::SetPosition(uint64_t pos)
     fsetpos(m_file, pos);
 }
 
-// Load matrix from file. The file is a simple text file consisting of one line per matrix row, where each line contains the elements of the row separated by white space.
-template <class ElemType>
-/*static*/ vector<ElemType> File::LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
+// helper to load a matrix from a stream (file or string literal)
+// The input string is expected to contain one line per matrix row (natural printing order for humans).
+// Inputs:
+//  - getLineFn: a lambda that fills a string with the next input line (=next matrix row)
+//               The lambda returns an empty string to denote the end.
+// Outputs:
+//  - numRows, numCols: matrix dimensions inferred from newlines
+//  - array: matrix values in column-major order (ready for SetValue())
+template<class ElemType, class F>
+static void LoadMatrixFromLambda(const F& getLineFn, const wstring& locationForMsg, vector<ElemType>& array, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
 {
+    // load matrix into vector of vectors (since we don't know the size in advance)
+    vector<ElemType> vec;
+    std::vector<std::vector<ElemType>> elements;
     size_t numColsInFirstRow = 0;
 
-    // load matrix into vector of vectors (since we don't know the size in advance)
-    std::vector<std::vector<ElemType>> elements;
-
-    File myfile(filePath, FileOptions::fileOptionsText | FileOptions::fileOptionsRead);
     std::string line;
-    vector<ElemType> vec;
-    while (!myfile.IsEOF())
+    for(;;)
     {
-        myfile.GetLine(line);
-
-        // end of file manifests as an empty line at the end
-        if (line == "" && myfile.IsEOF())
+        // get next input line
+        getLineFn(line);
+        if (line.empty())
             break;
 
         // tokenize and parse
@@ -867,7 +864,7 @@ template <class ElemType>
             char* ep; // will be set to point to first character that failed parsing
             double value = strtod(p, &ep);
             if (*ep != 0 && !isspace((unsigned char)*ep))
-                RuntimeError("LoadMatrixFromTextFile: Malformed number '%.15s...' in row %d of %ls", p, (int)elements.size(), filePath.c_str());
+                RuntimeError("LoadMatrixFromTextFile: Malformed number '%.15s...' in row %d of %ls", p, (int)elements.size(), locationForMsg.c_str());
             p = ep;
             vec.push_back((ElemType)value);
         }
@@ -876,7 +873,7 @@ template <class ElemType>
         if (elements.empty())
             numColsInFirstRow = numElementsInRow;
         else if (numElementsInRow != numColsInFirstRow)
-            RuntimeError("Row %d has column dimension %d, inconsistent with previous dimension %d: %ls", (int)elements.size(), (int)numElementsInRow, (int)numColsInFirstRow, filePath.c_str());
+            RuntimeError("Row %d has column dimension %d, inconsistent with previous dimension %d: %ls", (int)elements.size(), (int)numElementsInRow, (int)numColsInFirstRow, locationForMsg.c_str());
 
         elements.push_back(vec);
     }
@@ -886,17 +883,69 @@ template <class ElemType>
 
     // Perform transpose when copying elements from vectors to ElemType[],
     // in order to store in column-major format.
-    vector<ElemType> array(numRows * numCols);
+    array.resize(numRows * numCols);
     for (int i = 0; i < numCols; i++)
-    {
         for (int j = 0; j < numRows; j++)
             array[i * numRows + j] = elements[j][i];
-    }
+}
 
+// Load matrix from file. The file is a simple text file consisting of one line per matrix row, where each line contains the elements of the row separated by white space.
+template <class ElemType>
+/*static*/ vector<ElemType> File::LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
+{
+    File myfile(filePath, FileOptions::fileOptionsText | FileOptions::fileOptionsRead);
+
+    // LoadMatrixFromLambda() reads its input lines from the following lambda
+    // return the next input line, or empty string when the end is reached
+    auto getLineFn = [&](string& line)
+    {
+        while (!myfile.IsEOF())
+        {
+            myfile.GetLine(line);
+            if (!line.empty())
+                return; // got the next line to return
+            // End of file manifests as an empty line at the end.
+            // Also, we allow empty lines within the file, as that may help to visually structure matrices that really are >2D tensors.
+        }
+        line.clear(); // empty line indicates end of file
+    };
+
+    vector<ElemType> array;
+    LoadMatrixFromLambda(getLineFn, filePath, array, numRows, numCols);
+    return array;
+}
+
+// Load matrix from file. The file is a simple text file consisting of one line per matrix row, where each line contains the elements of the row separated by white space.
+template <class ElemType>
+/*static*/ vector<ElemType> File::LoadMatrixFromStringLiteral(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols)
+{
+    // LoadMatrixFromLambda() reads its input lines from the following lambda
+    // return the next input line, or empty string when the end is reached
+    size_t pos = 0; // cursor for traversing the string. The lambda takes this by reference and modifies it.
+    auto getLineFn = [&](string& line)
+    {
+        // find first non-blank character of line
+        pos = literal.find_first_not_of(" \r\n", pos); // skip previous line end and any leading spaces
+        if (pos == string::npos)
+            return line.clear(); // hit the end: return empty line
+        // find end of line
+        auto endPos = literal.find_first_of("\r\n", pos + 1); // find line end
+        if (endPos == string::npos)
+            endPos = literal.size(); // no LF required at very end, so that it looks pretty in BS source code
+        line = literal.substr(pos, endPos - pos);
+        pos = endPos; // and advance cursor (we position it on the LF, which is skipped in next round)
+        return;
+    };
+
+    vector<ElemType> array;
+    LoadMatrixFromLambda(getLineFn, L"string literal", array, numRows, numCols);
     return array;
 }
 
 template vector<float>  File::LoadMatrixFromTextFile<float> (const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+
+template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
 }}}

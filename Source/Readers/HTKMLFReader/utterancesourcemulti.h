@@ -153,6 +153,9 @@ class minibatchutterancesourcemulti : public minibatchsource
             try // this function supports retrying since we read from the unrealible network, i.e. do not return in a broken state
             {
                 msra::asr::htkfeatreader reader; // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
+                std::unique_ptr<auto_timer> pageintimer = nullptr;
+                if (verbosity > 2)
+                    pageintimer.reset(new auto_timer());
                 // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
                 if (featdim == 0)
                 {
@@ -173,16 +176,34 @@ class minibatchutterancesourcemulti : public minibatchsource
                     if (!latticesource.empty())
                         latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
-                // fprintf (stderr, "\n");
                 if (verbosity)
-                    fprintf(stderr, "requiredata: %d utterances read\n", (int) utteranceset.size());
+                {
+                    fprintf(stderr, "requiredata: %d utterances read\n", (int)utteranceset.size());
+                    if (verbosity > 2)
+                    {
+                        if (pageintimer != nullptr)
+                        {
+                            double pageintime = (double)(*pageintimer);
+#ifdef _MSC_VER
+                            fprintf(stderr, "Chunk read statistics; Total time = %.8g, Num Frames read = %Iu, Num bytes per frame = %Iu, Avg I/O bandwidth = %.2g MB/sec).\n",
+                              pageintime, totalframes, featdim * sizeof(float), (double)(featdim * sizeof(float) * totalframes / 1024 / 1024 / pageintime));
+#else
+                            fprintf(stderr, "Chunk read statistics; Total time = %.8g, Num Frames read = %zu, Num bytes per frame = %zu, Avg I/O bandwidth = %.2g MB/sec).\n",
+                              pageintime, totalframes, featdim * sizeof(float), (double)(featdim * sizeof(float) * totalframes / 1024 / 1024 / pageintime));
+#endif
+
+                        }
+                    }
+                }
             }
             catch (...)
             {
-                releasedata();
+                // Clean up in a non-throwable way in order not to hide the original exception.
+                cleandata();
                 throw;
             }
         }
+
         // page out data for this chunk
         void releasedata() const
         {
@@ -190,6 +211,12 @@ class minibatchutterancesourcemulti : public minibatchsource
                 LogicError("releasedata: cannot page out virgin block");
             if (!isinram())
                 LogicError("releasedata: called when data is not memory");
+            cleandata();
+        }
+
+    private:
+        void cleandata() const
+        {
             // release frames
             frames.resize(0, 0);
             // release lattice data

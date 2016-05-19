@@ -5,6 +5,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "Bundler.h"
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -132,13 +133,18 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     // Can return because all sequences are clean.
     if (chunk->m_invalid.empty())
     {
+        // Reindexing, because currently m_ids provided by some deserializers (i.e. CNTKTextFormat) are not contiguous.
+        for (size_t i = 0; i < sequences.size(); ++i)
+        {
+            sequences[i].m_id = i;
+        }
         return;
     }
 
     // Do cleansing.
     std::vector<SequenceDescription> result;
     result.reserve(sequences.size());
-    for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+    for (size_t sequenceIndex = 0, index = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
     {
         if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
         {
@@ -146,20 +152,24 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
         }
 
         result.push_back(sequences[sequenceIndex]);
+        result.back().m_id = index++;
     }
     std::swap(sequences, result);
 }
 
-// Represents a chunk that has pointers to the underlying deserialzer chunks.
+// Represents a chunk that has pointers to the underlying deserializer chunks.
 class Bundler::BundlingChunk : public Chunk
 {
     size_t m_numberOfInputs;
     Bundler* m_parent;
     size_t m_chunkId;
 
-    // A mapping between exposed sequence id and inner chunk for each deserialzier.
+    // A mapping between exposed sequence id and inner chunk for each deserializer.
+    // Index i of the vector maps to the chunk of inner sequence (i / number of deserializers) of
+    // deserializer (i % number of deserializers).
     std::vector<ChunkPtr> m_innerChunks;
     // A mapping between exposed sequence id and inner sequence id for each deserializer.
+    // Indices as above.
     std::vector<size_t> m_sequenceToSequence;
 
     DISABLE_COPY_AND_MOVE(BundlingChunk);
@@ -172,15 +182,14 @@ public:
         ChunkDescriptionPtr original = chunk->m_original;
 
         auto& deserializers = m_parent->m_deserializers;
-        assert(numberOfInputs == deserializers.size());
         std::vector<SequenceDescription> sequences;
         sequences.reserve(original->m_numberOfSequences);
 
         // Creating chunk mapping.
         m_parent->m_driver->GetSequencesForChunk(original->m_id, sequences);
         ChunkPtr drivingChunk = m_parent->m_driver->GetChunk(original->m_id);
-        m_sequenceToSequence.resize(m_numberOfInputs * sequences.size());
-        m_innerChunks.resize(m_numberOfInputs * sequences.size());
+        m_sequenceToSequence.resize(deserializers.size() * sequences.size());
+        m_innerChunks.resize(deserializers.size() * sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
             if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -188,7 +197,7 @@ public:
                 continue;
             }
 
-            size_t currentIndex = sequenceIndex * m_numberOfInputs;
+            size_t currentIndex = sequenceIndex * deserializers.size();
             m_sequenceToSequence[currentIndex] = sequences[sequenceIndex].m_id;
             m_innerChunks[currentIndex] = drivingChunk;
         }
@@ -197,6 +206,8 @@ public:
         SequenceDescription s;
         for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
         {
+            std::map<size_t, ChunkPtr> secondaryChunks;
+
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
                 if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -204,10 +215,23 @@ public:
                     continue;
                 }
 
-                size_t currentIndex = sequenceIndex * m_numberOfInputs + deserializerIndex;
+                size_t currentIndex = sequenceIndex * deserializers.size() + deserializerIndex;
                 deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex].m_key, s);
                 m_sequenceToSequence[currentIndex] = s.m_id;
-                m_innerChunks[currentIndex] = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+
+                ChunkPtr secondaryChunk;
+                auto it = secondaryChunks.find(s.m_chunkId);
+                if (it == secondaryChunks.end())
+                {
+                    secondaryChunk = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+                    secondaryChunks.insert(make_pair(s.m_chunkId, secondaryChunk));
+                }
+                else
+                {
+                    secondaryChunk = it->second;
+                }
+
+                m_innerChunks[currentIndex] = secondaryChunk;
             }
         }
     }
@@ -216,7 +240,7 @@ public:
     virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
         result.reserve(m_numberOfInputs);
-        size_t currentIndex = sequenceId * m_numberOfInputs;
+        size_t currentIndex = sequenceId * m_parent->m_deserializers.size();
         for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
         {
             size_t originalSequenceId = m_sequenceToSequence[currentIndex + i];

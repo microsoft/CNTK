@@ -9,6 +9,7 @@
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "ScriptableObjects.h"
+#include "Criterion.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -49,15 +50,17 @@ enum class GradientsUpdateType : int
     FSAdaGrad
 };
 
-// TODO: While currently combining these methods is not supported,
-// these are not mutually exclusive and we can/should support combinations of these
-// in the future
+// modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
+// but dataParallelSGD/modelAveragingSGD/blockMomentumSGD are mutually exclusive (at least at the moment)
+// we assign the lower 8 bits to the enumerate data parallelization methods 
+// and next 8 bits to model parallelization methods
 enum class ParallelizationMethod : int
 {
-    None = 0,
-    DataParallelSGD = 1,
-    ModelAveragingSGD = (1 << 1),
-    ModelParallelSGD = (1 << 2), // Currently unsupported
+    none = 0,
+    dataParallelSGD = 1,
+    modelAveragingSGD = 2,
+    blockMomentumSGD = 3,
+    modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
 // configuration parameters associated with RMSProp learning algorithm
@@ -125,7 +128,14 @@ protected:
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
         if (m_truncated && specifiedMBSize > 1)      // currently only happens in this mode
+        {
+            if (numParallelSequences == 0)
+            {
+                RuntimeError("Learning rate and momentum are not supported per minibatch, please specify them per sample.");
+            }
+
             specifiedMBSize *= numParallelSequences; // assume 'specifiedMBSize' refers to truncation size
+        }
         // end bug post-fix
         // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
 
@@ -146,7 +156,7 @@ protected:
     ParallelizationMethod GetParallelizationMethod() const
     {
         if (m_mpi == nullptr)
-            return ParallelizationMethod::None;
+            return ParallelizationMethod::none;
 
         return m_parallelizationMethod;
     }
@@ -213,7 +223,7 @@ protected:
 
     doubleargvector m_dropoutRates;
     doubleargvector m_batchNormalizationTimeConstant;
-    int m_setBNToEvalModeAfterEpochNumber;
+    doubleargvector m_batchNormalizationBlendTimeConstant;
     size_t m_maxTempMemSizeInSamplesForCNN;
 
     int m_traceLevel;
@@ -225,7 +235,8 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
 
-    int m_numMBsToShowResult;
+    size_t m_numMBsToShowResult = 0;
+    size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
 
     bool m_doGradientCheck;
@@ -253,8 +264,12 @@ protected:
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
-    // Parallel training related with MA
+    // Parallel training related with MA / BM
     size_t m_nFramesBetweenMASync;
+    bool   m_resetSGDMomentum; 
+    bool   m_useNesterovBlockMomentum;
+    double m_blockLearningRate; 
+    double m_blockMomentumAsTimeConstant;
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
@@ -295,11 +310,11 @@ public:
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
-          // m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
-          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
-          m_traceNodeNamesReal(configSGD(L"traceNodeNamesReal", ConfigRecordType::Array(stringargvector()))),
+          m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
           m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesSparse  (configSGD(L"traceNodeNamesSparse",   ConfigRecordType::Array(stringargvector()))),
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
@@ -320,7 +335,14 @@ public:
         m_mpi = mpi;
 
         if (m_mpi == nullptr)
-            m_parallelizationMethod = ParallelizationMethod::None;
+            m_parallelizationMethod = ParallelizationMethod::none;
+
+        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
+        {
+            // This is used to finish initializing BlockMomentumSGD parameter 
+            // since some of the parameter may not be specified by the users 
+            InitializeAndCheckBlockMomentumSGDParameters(); 
+        }
     }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
@@ -334,8 +356,8 @@ public:
 
 protected:
 
-    std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
-    std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
+    const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
     void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            bool networkLoadedFromCheckpoint,
@@ -349,8 +371,8 @@ protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader* trainSetDataReader,
-                    std::vector<ComputationNodeBasePtr>& featureNodes,
-                    std::vector<ComputationNodeBasePtr>& labelNodes,
+                    const std::vector<ComputationNodeBasePtr>& featureNodes,
+                    const std::vector<ComputationNodeBasePtr>& labelNodes,
                     StreamMinibatchInputs* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
@@ -382,9 +404,8 @@ protected:
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
-                                         /*out*/ double& epochCriterion,
-                                         /*out*/ std::vector<double>& epochEvalErrors,
-                                         /*out*/ size_t& totalSamplesSeen,
+                                         /*out*/ EpochCriterion& epochCriterion,
+                                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
@@ -447,13 +468,12 @@ protected:
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
-                         /*out*/ double& epochCriterion,
-                         /*out*/ std::vector<double>& epochEvalErrors,
-                         /*out*/ size_t& totalSamplesSeen,
-                         std::string prefixMsg = "");
+                         /*out*/ EpochCriterion& epochCriterion,
+                         /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
+                         const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
-    void InitModelAggregationHandler(int traceLevel);
+    void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
@@ -480,13 +500,19 @@ protected:
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
-    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
+    void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
-    bool LoadCheckPointInfo(const size_t epochNumber,
+    bool TryLoadCheckPointInfo(const size_t epochNumber,
+                               /*out*/ size_t& totalSamplesSeen,
+                               /*out*/ double& learnRatePerSample,
+                               std::list<Matrix<ElemType>>& smoothedGradients,
+                               /*out*/ double& prevCriterion,
+                               /*out*/ size_t& minibatchSize);
+    void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
@@ -517,27 +543,45 @@ public:
                        int npos);
 
 protected:
-    wstring m_modelPath;
+    std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    // bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
-    wstring m_trainCriterionNodeName;
-    wstring m_evalCriterionNodeName;
+    std::wstring m_trainCriterionNodeName;
+    std::wstring m_evalCriterionNodeName;
 
-    // enable tracing. Nodes listed here get their m_traceNodeValue and m_traceNodeValueAsCategoryLabel flags set
-    vector<wstring> m_traceNodeNamesReal;
-    vector<wstring> m_traceNodeNamesCategory;
+    // enable tracing. Nodes listed here get their m_traceNodeValueXXX flags set
+    std::vector<std::wstring> m_traceNodeNamesReal;
+    std::vector<std::wstring> m_traceNodeNamesCategory;
+    std::vector<std::wstring> m_traceNodeNamesSparse;
 
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
-    IDistGradAggregator<ElemType>* m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
-    int SGDTrace(FILE* __restrict __stream, const char* __restrict __format, ...);
+    void InitializeAndCheckBlockMomentumSGDParameters();
+    void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+
+    bool UsingGradientAggregation(size_t epochNumber) const
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UsingModelAggregation(size_t epochNumber) const
+    {
+        return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
+                 GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
+                (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UsingParallelTrain(size_t epochNumber) const
+    {
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
+    }
 };
 
 }}}

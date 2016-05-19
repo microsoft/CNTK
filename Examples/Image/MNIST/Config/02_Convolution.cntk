@@ -11,9 +11,9 @@ ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
 imageLayout = "cudnn"
-# override the above as follows when running on CPU:
+# Override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
+# Note: Compared to GPU, this runs very slow.
 
 command = train:test
 
@@ -26,7 +26,11 @@ ndlMacros = "$ConfigDir$/Macros.ndl"
 traceLevel=1
 numMBsToShowResult=500
 
-prefetch=true
+# Note: turn off prefetching; known to crash UCIFastReader occasionally.
+prefetch=false
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -42,11 +46,12 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.5
+        learningRatesPerMB = 0.1*5:0.3
         momentumPerMB = 0*10:0.7
         maxEpochs = 15
     ]
     
+    # Note: this reader crashes if randomization is turned on.
     reader = [
         readerType = "UCIFastReader"
         # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 

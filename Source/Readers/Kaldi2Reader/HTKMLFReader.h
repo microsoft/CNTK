@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-class HTKMLFReader : public IDataReader
+class HTKMLFReader : public DataReaderBase
 {
 private:
     msra::dbn::minibatchiterator* m_mbiter;
@@ -38,9 +38,10 @@ private:
         MBLayoutPtr pMBLayout;
         std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
         size_t currentMBSize;
-        MinibatchBufferUnit()
-            : pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
+        MinibatchBufferUnit() :
+            pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
         {
+            pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
         }
     };
     bool m_doMinibatchBuffering;
@@ -163,9 +164,10 @@ public:
     // set to true so that a current minibatch can uses state activities from the previous minibatch.
     // default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
-    HTKMLFReader()
-        : m_pMBLayout(make_shared<MBLayout>())
+    HTKMLFReader() :
+        m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"HTKMLFReader");
     }
 
     template <class ConfigRecordType>
@@ -184,11 +186,11 @@ public:
     }
     virtual ~HTKMLFReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
-    virtual size_t GetNumParallelSequences()
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_numberOfuttsPerMinibatch;
     }

@@ -1,23 +1,16 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+%(ActionName)s=[
+    action="train"
 
-command=Train
-
-modelPath="%(ModelPath)s"		
-deviceId=%(DevideId)s					   
-
-Train=[
-	action="train"
-	run=BrainScriptNetworkBuilder
+    run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
-		%(ModelDescription)s  
+%(ModelDescription)s
     ]
-	
-	SGD = [	
-		%(SGD)s
-	]
-	
-	%(Reader)s	
+    
+    SGD = [
+%(SGD)s
+    ]
+    
+%(Reader)s
 ]
 

@@ -21,8 +21,12 @@ DataDir=$TEST_RUN_DIR/TestData
 mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
+if [ "$OS" == "Windows_NT" ]; then
+    ConfigDir=$(cygpath -aw $ConfigDir)
+fi  
+
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun AlexNet.cntk 
+cntkrun AlexNetCommon.cntk "configFile=$ConfigDir/AlexNet.cntk"
 ExitCode=$?
 
 # Delete the test data

@@ -1,4 +1,4 @@
-modelPath=$RunDir$/models/dssm.net
+modelPath=$RunDir$/Models/dssm.net
 
 MBSize=4096
 LRate=0.0001
@@ -36,6 +36,8 @@ train = [
 		gradUpdateType=none
 		gradientClippingWithTruncation=true
 		clippingThresholdPerSample=1#INF
+		# We are testing checkpointing, keep all checkpoint (.ckp) files
+		keepCheckPointFiles = true
     ]
 
 ]

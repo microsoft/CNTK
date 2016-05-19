@@ -5,7 +5,6 @@ command = Add_Operator_Constant
 
 precision = "float"
 traceLevel = 1
-outputNodeNames = AddResult
 
 #######################################
 #  NETWORK CONFIG                     #

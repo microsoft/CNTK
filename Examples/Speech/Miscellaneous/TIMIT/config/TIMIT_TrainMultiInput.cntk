@@ -1,4 +1,6 @@
-stderr=$ExpDir$\TrainMultiInput\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainMultiInput
 
 precision=float
@@ -8,15 +10,15 @@ precision=float
 ################################################
 TIMIT_TrainMultiInput=[
     action=train
-    modelPath=$ExpDir$\TrainMultiInput\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainMultiInput/model/cntkSpeech.dnn
     #=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
 
     traceLevel=1
 
     NDLNetworkBuilder=[
-	ndlMacros=$NdlDir$\default_macros.ndl
-        networkDescription=$NdlDir$\mtl_fbank_mfcc.ndl
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/mtl_fbank_mfcc.ndl
     ]
 
     SGD=[
@@ -45,33 +47,32 @@ TIMIT_TrainMultiInput=[
 
         gradientClippingWithTruncation=true
         clippingThresholdPerSample=1#INF
-
     ]
       
     # Parameter values for the reader
     reader=[
-      readerType=HTKMLFReader
-#      readMethod=blockRandomize
-#      frameMode=true
-      readMethod=rollingWindow
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      features1=[
-	dim=792
-	scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-	type=Real
-      ]
-      features2=[
-	dim=39
-	scpFile=$ScpDir$\TIMIT.train.scp.mfcc.fullpath
-	type=Real
-      ]
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
- 	labelMappingFile=$MlfDir$\TIMIT.statelist
-   	 labelDim=183
-         labelType=Category
-      ]
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        # frameMode=true
+        readMethod=rollingWindow
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        features1=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath
+            type=Real
+        ]
+        features2=[
+            dim=39
+            scpFile=$ScpDir$/TIMIT.train.scp.mfcc.fullpath
+            type=Real
+        ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+            labelDim=183
+            labelType=Category
+        ]
     ]
 ]

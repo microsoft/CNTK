@@ -39,7 +39,7 @@ std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], Config
             wstring dir = str.substr(cdDescriptor.length());
             if (_wchdir(dir.c_str()) != 0)
                 InvalidArgument("Failed to set the current directory to '%ls'", dir.c_str());
-            fprintf(stderr, "Changed current directory to '%ls'\n", dir.c_str());
+            fprintf(stderr, "Changed current directory to %ls\n", dir.c_str());
         }
 
         // see if they are loading a config file

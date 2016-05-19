@@ -1,28 +1,28 @@
 DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
-    W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale) 
-    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale) 
+    W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
     t = Times(W, x)
     z = Plus(t, b)
     y = Sigmoid(z)
 ]
 
 DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
-    W = ImageParameter(outDim, inW, inH, inC, init="uniform", initValueScale=parmScale, imageLayout=$imageLayout$)
-    b = LearnableParameter(outDim, 1,         init="uniform", initValueScale=parmScale) 
+    W = ImageParameter(outDim, inW, inH, inC, init="uniform", initValueScale=parmScale, initOnCPUOnly=true, imageLayout=$imageLayout$)
+    b = LearnableParameter(outDim, 1,         init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
     t = Times(W, x)
     z = Plus(t, b)
     y = Sigmoid(z)
 ]
 
 DNNLayer(inDim, outDim, x, parmScale) = [
-    W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale)
-    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale)
+    W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
     t = Times(W, x)
     z = Plus(t, b)
 ]
 
 DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, bnTimeConst) = [
-    W = LearnableParameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
+    W = LearnableParameter(outDim, inDim, init = Gaussian, initValueScale = wScale, initOnCPUOnly=true) 
     b = LearnableParameter(outDim, 1, init = fixedValue, value = bValue) 
     sc = LearnableParameter(outDim, 1, init = fixedValue, value = scValue) 
     m = LearnableParameter(outDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
@@ -32,12 +32,36 @@ DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, bnTimeConst) = [
     y = RectifiedLinear(bn)
 ]
 
-ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
-    convW = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale)
-    convB = ImageParameter(1, 1, outMap, init="fixedValue", value=bValue, imageLayout=$imageLayout$)
-    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding=false, imageLayout=$imageLayout$)
-    convPlusB = Plus(conv, convB);
-    act = RectifiedLinear(convPlusB);
+ConvW(outMap, inWCount, wScale) = [
+    W = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
+]
+
+ConvB(outMap, bValue) = [
+    b = ImageParameter(1, 1, outMap, init="fixedValue", value=bValue, imageLayout=$imageLayout$)
+]
+
+Conv2D(w, inp, kW, kH, outMap, hStride, vStride) = [
+    c = Convolution(w, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true, imageLayout=$imageLayout$)
+]
+
+ConvND(w, inp, kW, kH, inMap, outMap, hStride, vStride) = [
+    c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+]
+
+Conv2DReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
+    w = ConvW(outMap, inWCount, wScale)
+    b = ConvB(outMap, bValue)
+    c = Conv2D(w, inp, kW, kH, outMap, hStride, vStride)
+    cpb = Plus(c, b);
+    out = RectifiedLinear(cpb);
+]
+
+ConvNDReLULayer(inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, wScale, bValue) = [
+    w = ConvW(outMap, inWCount, wScale)
+    b = ConvB(outMap, bValue)
+    c = ConvND(w, inp, kW, kH, inMap, outMap, hStride, vStride)
+    cpb = Plus(c, b);
+    out = RectifiedLinear(cpb);
 ]
 
 ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst) = [
@@ -51,11 +75,15 @@ ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeCo
 ]
 
 ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst) = [
-    W = LearnableParameter(outMap, inWCount, init=Gaussian, initValueScale=wScale)
+    W = LearnableParameter(outMap, inWCount, init=Gaussian, initValueScale=wScale, initOnCPUOnly=true)
     c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst)
 ]
 
 ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst) = [
     c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst)
     y = RectifiedLinear(c)
+]
+
+MaxNDPooling(inp, kW, kH, hStride, vStride) = [
+		p = Pooling(inp, "max", {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]

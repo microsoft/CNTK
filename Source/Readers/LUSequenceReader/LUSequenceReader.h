@@ -47,7 +47,7 @@ enum ReaderMode
 };
 
 template <class ElemType>
-class LUSequenceReader : public IDataReader
+class LUSequenceReader : public DataReaderBase
 {
 protected:
     bool m_idx2clsRead;
@@ -270,6 +270,7 @@ public:
     BatchLUSequenceReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"LUSequenceReader");
         mLastProcessedSentenceId = 0;
         mRequestedNumParallelSequences = 1;
         mLastPosInSentence = 0;
@@ -318,10 +319,10 @@ public:
     size_t GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    bool GetMinibatch(StreamMinibatchInputs& matrices);
+    bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     void SetNumParallelSequences(const size_t mz);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
@@ -410,13 +411,13 @@ public:
         }
     };
 
-    bool GetMinibatch(StreamMinibatchInputs& matrices);
+    bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
 
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);

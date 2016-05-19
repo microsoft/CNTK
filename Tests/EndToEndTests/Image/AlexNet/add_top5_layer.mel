@@ -1,6 +1,6 @@
 m1 = LoadModel("$curModel$", format="cntk")
 SetDefaultModel(m1)
 
-errTop5 = ErrorPrediction(labels, outputNodes.z, Const(5), tag="eval")
+errTop5 = ErrorPrediction(labels, outputNodes.z, Const(5), tag="evaluation")
 
 SaveModel(m1, "$newModel$", format="cntk")

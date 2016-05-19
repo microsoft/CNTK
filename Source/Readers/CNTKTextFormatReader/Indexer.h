@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <vector>
 #include "Descriptors.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -23,7 +24,7 @@ public:
 
     // Reads the input file, building and index of chunks and corresponding
     // sequences.
-    void Build();
+    void Build(CorpusDescriptorPtr corpus);
 
     // Returns input data index (chunk and sequence metadata)
     const Index& GetIndex() const { return m_chunks; }
@@ -59,6 +60,9 @@ private:
     // (except when a sequence size is greater than the maximum chunk size)
     void AddSequence(SequenceDescriptor& sd);
 
+    // Same function as above but with check that the sequence is included in the corpus descriptor.
+    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd);
+
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
     void RefillBuffer();
@@ -71,7 +75,7 @@ private:
     // EOF is reached without hitting the pipe character.
     // Returns false if no numerical characters are found preceding the pipe.
     // Otherwise, writes sequence id value to the provided reference, returns true.
-    bool GetNextSequenceId(size_t& id);
+    bool TryGetSequenceId(size_t& id);
 
     // Build a chunk/sequence index, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as 

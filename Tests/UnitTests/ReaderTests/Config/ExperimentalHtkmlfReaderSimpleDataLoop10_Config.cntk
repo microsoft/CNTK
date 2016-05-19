@@ -1,0 +1,35 @@
+RootDir = .
+DataDir = $RootDir$
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+precision = float
+
+Simple_Test = [
+    reader = [
+        readerType = "ExperimentalHTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 1
+        framemode = true
+
+        features1 = [
+	        dim = 363
+	        scpFile = "$DataDir$/glob_0000.scp"
+	        type = "real"
+        ]
+        features2 = [
+            dim = 363
+            scpFile = "$DataDir$/glob_0000.scp"
+            type = "real"
+        ]
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]

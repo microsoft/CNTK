@@ -324,7 +324,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
-    m_verbosity = readerConfig(L"verbosity", 2);
+    m_verbosity = readerConfig(L"verbosity", 0);
 
     if (m_frameMode && m_truncated)
     {
@@ -599,7 +599,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 }
 
 // Load all input and output data.
-// Note that the terms features imply be real-valued quanities and
+// Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
 // are inputs or targets for the network
 // TODO: lots of code dup with the other Prepare function
@@ -931,7 +931,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // returns - true if there are more minibatches, false if no more minibatchs remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool HTKMLFReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_trainOrTest)
     {
@@ -1354,7 +1354,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         if (reNewSucc) // we actually have another utterance to start here
                         {
                             const size_t startT = m_switchFrame[i];
-                            const size_t endT = m_mbNumTimeSteps;
+                            // Have to take the min, if the next sequence is shorted then truncation length.
+                            const size_t endT = min(m_mbNumTimeSteps, startT + m_numFramesToProcess[i]);
                             // Note: Don't confuse startT/endT with startFr/endFr above.
 
                             // add sequence to MBLayout
@@ -1420,6 +1421,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 fprintf(stderr, "GetMinibatchToTrainOrTest(): WARNING: Packing a second utterance did still not fill all time slots; filling slots from %d on as gaps.\n", (int) a);
                                 // declare the rest as a gap
                                 m_pMBLayout->AddGap(i, a, m_mbNumTimeSteps);
+
+                                // Have to renew, so that there is data for the next read.
+                                ReNewBufferForMultiIO(i);
                             }
                         }
                         else // we did have space for more, but no more data is available. BUGBUG: we should update actualmbsize[i] above and re-test here
@@ -1943,7 +1947,7 @@ void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 }
 
 template <class ElemType>
-size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
+size_t HTKMLFReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     if (!m_frameMode)
         if (m_numSeqsPerMB != m_pMBLayout->GetNumParallelSequences())

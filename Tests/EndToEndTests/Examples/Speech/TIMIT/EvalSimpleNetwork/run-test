@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# specific TIMIT variables
+. $TEST_DIR/../run-timit-test-common
+
+# Train:
+cntkrun TIMIT_TrainSimpleNetwork.cntk "$CntkArguments" || exit $?
+
+# Validate:
+cntkrun TIMIT_EvalSimpleNetwork.cntk "$CntkArguments" || exit $?

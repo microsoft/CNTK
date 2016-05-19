@@ -1,12 +1,18 @@
 # CNTK
 
 ## Latest news
-*2016-03-24.* New Text Reader (CNTKTextFormatReader) is available
-Read description here https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+*2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
 
-*2016-02-29.* Added ZIP files support to the ImageReader
-Examples: https://github.com/Microsoft/CNTK/wiki/Image-reader
-Updated build steps at https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine
+*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
+
+*2016-05-05.* CNTK now supports *BlockMomentum* Stochastic Gradient Descent (SGD) algorithm. 
+See the details in the [Multiple GPUs and machines Wiki section](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+
+*2016-05-03.* New transformations are implemented for **Image Reader**. 
+See the description in the [Image Reader Wiki section](https://github.com/Microsoft/CNTK/wiki/Image-reader)
+
+*2016-04-25.* V 1.1 Binary release
+CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

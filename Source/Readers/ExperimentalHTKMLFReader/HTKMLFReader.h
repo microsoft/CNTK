@@ -6,8 +6,9 @@
 #pragma once
 
 #include "Reader.h"
-#include "SampleModePacker.h"
-#include "BlockRandomizer.h"
+#include "Packer.h"
+#include "Config.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,11 +33,21 @@ public:
     Minibatch ReadMinibatch() override;
 
 private:
+    enum class PackingMode
+    {
+        sample,
+        sequence,
+        truncated
+    };
+
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
 
+    // TODO: Should be moved outside of the reader.
+    PackingMode m_packingMode;
+
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Seed for the random generator.
     unsigned int m_seed;
@@ -44,7 +55,13 @@ private:
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
 
-    std::shared_ptr<BlockRandomizer> m_randomizer;
+    SequenceEnumeratorPtr m_randomizer;
+
+    // Truncation length for BPTT mode.
+    size_t m_truncationLength;
+
+    // Parallel sequences, used for legacy configs.
+    intargvector m_numParallelSequencesForAllEpochs;
 };
 
 }}}

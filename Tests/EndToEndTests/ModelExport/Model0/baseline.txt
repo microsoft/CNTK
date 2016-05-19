@@ -1,2 +1,2 @@
 Post-processing network complete.
-COMPLETED
+__COMPLETED__

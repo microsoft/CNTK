@@ -64,7 +64,7 @@ public:
 };
 
 template <class ElemType>
-class DSSMReader : public IDataReader
+class DSSMReader : public DataReaderBase
 {
     // public:
     //    typedef std::string LabelType;
@@ -152,15 +152,16 @@ public:
     DSSMReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"DSSMReader");
         m_qfeaturesBuffer = NULL;
         m_dfeaturesBuffer = NULL;
         m_labelsBuffer = NULL;
     }
     virtual ~DSSMReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return 1;
     }

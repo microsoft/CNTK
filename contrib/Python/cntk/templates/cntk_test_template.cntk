@@ -1,15 +1,7 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-command=Test
-
-modelPath="%(ModelPath)s"		
-deviceId=%(DevideId)s					   		    
-
-Test=[
-	action="test"
-		
-	%(Reader)s	
+%(ActionName)s=[
+    action="test"
+	
+%(Reader)s
 ]
 
 

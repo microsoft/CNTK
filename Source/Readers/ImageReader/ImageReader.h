@@ -6,8 +6,8 @@
 #pragma once
 
 #include "Reader.h"
-#include "ImageTransformers.h"
-#include "SampleModePacker.h"
+#include "Packer.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -34,10 +34,10 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     // A head transformer in a list of transformers.
-    TransformerPtr m_transformer;
+    SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Seed for the random generator.
     unsigned int m_seed;

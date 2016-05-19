@@ -35,26 +35,24 @@ DNN=[
     cMap1 = 64
     conv1 = ConvBNReLULayer(features, cMap1, 147, 7, 7, 2, 2, conv1WScale, convBValue, scValue, bnTimeConst)
     # Max pooling
-    pool1W = 2
-    pool1H = 2
+    pool1W = 3
+    pool1H = 3
     pool1hs = 2
     pool1vs = 2
-    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hs, pool1vs, imageLayout = "cudnn")
+    pool1 = MaxNDPooling(conv1, pool1W, pool1H, pool1hs, pool1vs)
     
     rn1_1 = ResNetNode2A(pool1, cMap1, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn1_2 = ResNetNode2A(rn1_1, cMap1, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn1_3 = ResNetNode2A(rn1_2, cMap1, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap2 = 128
-    rn2_1_Wproj = Parameter(cMap2, cMap1, init = fromFile, initFromFilePath = "$Proj64to128Filename$", needGradient = false)
-    rn2_1 = ResNetNode2AInc(rn1_3, cMap2, 576, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn2_1_Wproj)
+    rn2_1 = ResNetNode2BInc(rn1_3, cMap2, cMap1, 576, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn2_2 = ResNetNode2A(rn2_1, cMap2, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn2_3 = ResNetNode2A(rn2_2, cMap2, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn2_4 = ResNetNode2A(rn2_3, cMap2, 1152, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     
     cMap3 = 256
-    rn3_1_Wproj = Parameter(cMap3, cMap2, init = fromFile, initFromFilePath = "$Proj128to256Filename$", needGradient = false)
-    rn3_1 = ResNetNode2AInc(rn2_4, cMap3, 1152, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn3_1_Wproj)
+    rn3_1 = ResNetNode2BInc(rn2_4, cMap3, cMap2, 1152, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn3_2 = ResNetNode2A(rn3_1, cMap3, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn3_3 = ResNetNode2A(rn3_2, cMap3, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn3_4 = ResNetNode2A(rn3_3, cMap3, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
@@ -62,8 +60,7 @@ DNN=[
     rn3_6 = ResNetNode2A(rn3_5, cMap3, 2304, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 
     cMap4 = 512
-    rn4_1_Wproj = Parameter(cMap4, cMap3, init = fromFile, initFromFilePath = "$Proj256to512Filename$", needGradient = false)
-    rn4_1 = ResNetNode2AInc(rn3_6, cMap4, 2304, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn4_1_Wproj)
+    rn4_1 = ResNetNode2BInc(rn3_6, cMap4, cMap3, 2304, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst, $stride1x1$, $stride3x3$)
     rn4_2 = ResNetNode2A(rn4_1, cMap4, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
     rn4_3 = ResNetNode2A(rn4_2, cMap4, 4608, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
 

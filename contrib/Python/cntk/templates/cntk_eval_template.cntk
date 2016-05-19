@@ -1,20 +1,24 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+%(ActionName)s=[
+    action="write"
 
-command=Eval
-deviceId=%(DevideId)s	
-				   
-Eval=[
-	action="write"
-	run=BrainScriptNetworkBuilder
+	nodeUnitTest=%(NodeUnitTest)s
+    run=BrainScriptNetworkBuilder
 
     BrainScriptNetworkBuilder=[
-		%(ModelDescription)s
-	]
-	
-	%(Reader)s	
-	
-	outputPath = "%(OutputFile)s"
+%(ModelDescription)s
+    ]
+    
+%(Reader)s
+    
+
+    format = [
+        # %%x = shape, %%d = sequenceId
+        sequencePrologue=%%d\t|w.shape %%x\n%%d\t|w\s
+        sampleSeparator=\n%%d\t|w\s
+        elementSeparator=\s
+    ]
+
+    outputPath = "%(OutputFile)s"
 ]
 
 

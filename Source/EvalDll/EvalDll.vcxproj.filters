@@ -32,6 +32,9 @@
     <ClCompile Include="..\CNTK\BrainScript\BrainScriptParser.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />

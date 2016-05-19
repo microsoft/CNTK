@@ -29,7 +29,7 @@ ndlTestCosDist=[
     CD = CosDistance(L4, labels);
     CDAll=SumElements(CD)
     NCD=Negate(CDALL, tag="criterion")
-    Err=ErrorPrediction(labels, L4, tag="eval")
+    Err=ErrorPrediction(labels, L4, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(L4)
@@ -233,7 +233,7 @@ ndlMacroUse2=[
     L2 = RBFF(L1, HDim, HDim)
     L3 = RBFF(L2, HDim, HDim)
     CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -290,7 +290,7 @@ ndlMacroUseCNNSubSample2ZeroPadding=[
     HDim=128
     L1 = SBFF(mp, HDim, mpoutputSizePerSample)
     CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -349,7 +349,7 @@ ndlMacroUseCNNSubSample2=[
     HDim=128
     L1 = SBFF(mp, HDim, mpoutputSizePerSample)
     CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -399,7 +399,7 @@ ndlMacroUseCNN=[
     HDim=128
     L1 = SBFF(mp, HDim, 0)
     CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -430,7 +430,7 @@ ndlMacroUseNoBase=[
     L2 = RFFD(L1, HDim, HDim)
     L3 = RFFD(L2, HDim, HDim)
     CE = SMFF(L3, LDim, SDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
     # rootNodes defined here
     OutputNodes=(CE.BFF)
 ]
@@ -463,7 +463,7 @@ ndlMacroUseMask=[
     L4=ElementTimes(L3, ML2)
     
     CE = SMBFF(L4, LDim, HDim, labels, tag="criterion")
-    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
+    Err=ErrorPrediction(labels, CE.BFF, tag="evaluation")
     
     # output nodes
     Prior=Mean(labels)

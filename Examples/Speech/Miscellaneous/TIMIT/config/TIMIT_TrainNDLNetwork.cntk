@@ -1,4 +1,6 @@
-stderr=$ExpDir$\TrainNDLNetwork\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainNDL
 
 precision=float
@@ -9,7 +11,7 @@ precision=float
 TIMIT_TrainNDL=[
     action=train
 
-    modelPath=$ExpDir$\TrainNDLNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainNDLNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -17,8 +19,8 @@ TIMIT_TrainNDL=[
     traceLevel=1
 
     NDLNetworkBuilder=[
-	ndlMacros=$NdlDir$\default_macros.ndl
-        networkDescription=$NdlDir$\classify.ndl
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/classify.ndl
     ]
 
     SGD=[
@@ -51,22 +53,20 @@ TIMIT_TrainNDL=[
     # Parameter values for the reader
     reader=[
       # reader to use
-      readerType=HTKMLFReader
-#      readMethod=blockRandomize
-      readMethod=rollingWindow
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-      myFeatures=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-      ]
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        myFeatures=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      myLabels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
-
+        myLabels=[
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+        ]
     ]
 ]

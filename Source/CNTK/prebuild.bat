@@ -44,6 +44,7 @@ echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h$$
 
 set build_type=Unknown
 set build_target=Unknown
+:: Configuration property provided by CNTK.vcxproj
 if /i "%~1" == "Debug" set build_type=Debug&set build_target=GPU
 if /i "%~1" == "Debug_CpuOnly" set build_type=Debug&set build_target=CPU-only
 if /i "%~1" == "Release" set build_type=Release&set build_target=GPU
@@ -59,10 +60,12 @@ if "%CNTK_ENABLE_1BitSGD%" == "true" (
 )
 
 if not %build_target% == CPU-only (
-    if "%cuda_path%" == "" (
+    :: CudaPath property provided by CNTK.vcxproj
+    if "%~2%" == "" (
         echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$
     ) else (
-        echo #define _CUDA_PATH_    "%cuda_path:\=\\%" >> buildinfo.h$$
+        set cudaPathTemp=%~2
+        echo #define _CUDA_PATH_    "!cudaPathTemp:\=\\!" >> buildinfo.h$$
     )
 
     if not "%cudnn_path%" == "" (

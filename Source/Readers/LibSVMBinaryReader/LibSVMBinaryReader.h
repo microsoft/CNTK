@@ -34,6 +34,15 @@ private:
     std::deque<T> d_queue;
 
 public:
+    void release()
+    {
+        while (!d_queue.empty())
+            free(d_queue.pop_front());
+    }
+    size_t size()
+    {
+        return d_queue.size();
+    }
     void push(T const& value)
     {
         {
@@ -226,7 +235,7 @@ private:
 };
 
 template <class ElemType>
-class LibSVMBinaryReader : public IDataReader
+class LibSVMBinaryReader : public DataReaderBase
 {
 public:
     virtual void Init(const ConfigParameters& config) override
@@ -247,13 +256,14 @@ public:
         : DSSMLabels(nullptr), DSSMCols(0)
     {
         m_pMBLayout = make_shared<MBLayout>();
+        m_pMBLayout->SetUniqueAxisName(L"LibSVMReader");
     };
 
     virtual ~LibSVMBinaryReader();
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     virtual bool SupportsDistributedMBRead() const override
     {
@@ -266,7 +276,7 @@ public:
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/){NOT_IMPLEMENTED};
     virtual bool DataEnd();
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_pMBLayout->GetNumParallelSequences();
     }

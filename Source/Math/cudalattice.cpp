@@ -94,7 +94,7 @@ public:
 
 matrixref<float> tomatrixref(const Microsoft::MSR::CNTK::Matrix<float> &m)
 {
-    return matrixref<float>(m.BufferPointer(), m.GetNumRows(), m.GetNumCols(), m.GetNumRows());
+    return matrixref<float>(m.Data(), m.GetNumRows(), m.GetNumCols(), m.GetNumRows());
 }
 
 class latticefunctionsimpl : public vectorbaseimpl<latticefunctions, latticefunctionsops>

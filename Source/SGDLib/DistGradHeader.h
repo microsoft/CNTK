@@ -6,12 +6,12 @@ struct DistGradHeader
 {
 public:
     size_t numSamples;
-    size_t numSamplesWithLabel;
+    size_t numSamplesWithLabel; // this is the denominator for 'criterion'
     double criterion;
 
     // variable-size array
     int numEvalNode;
-    double evalErrors[1];
+    pair<double,size_t> evalErrors[1];
 
     static DistGradHeader* Create(int numEvalNode)
     {
@@ -41,7 +41,8 @@ public:
             criterion += other->criterion;
             for (int i = 0; i < numEvalNode; i++)
             {
-                evalErrors[i] += other->evalErrors[i];
+                evalErrors[i].first  += other->evalErrors[i].first;  // numer
+                evalErrors[i].second += other->evalErrors[i].second; // denom
             }
         }
     }
@@ -58,7 +59,8 @@ public:
         criterion = 0;
         for (int i = 0; i < numEvalNode; i++)
         {
-            evalErrors[i] = 0;
+            evalErrors[i].first  = 0;
+            evalErrors[i].second = 0;
         }
     }
 
@@ -77,17 +79,19 @@ public:
     }
 
 private:
-    static size_t DistGradHeaderSize(size_t nEvalNode)
+    static size_t DistGradHeaderSize(size_t nEvalNodes)
     {
-        return sizeof(DistGradHeader) + (sizeof(double) * (nEvalNode - 1));
+        // BUGBUG: Should be sizeof(evalErrors[0]), but the compiler won't let me. This is only correct because evalErrors has 1 element.
+        return sizeof(DistGradHeader) + (sizeof(decltype(evalErrors)) * (nEvalNodes - 1));
     }
 
     // Disallow construction and destruction since this type contains a variable sized array member
     // and hence must be constructed through the create and destroy functions
-    DistGradHeader() = delete;
+    DistGradHeader()  = delete;
     ~DistGradHeader() = delete;
 
     // Disallow copy and move construction/assignment
     DISABLE_COPY_AND_MOVE(DistGradHeader);
 };
-} } }
+
+}}}

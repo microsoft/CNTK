@@ -14,6 +14,7 @@
 #include "cudalatticeops.h"
 #include <numeric> // for debug
 #include "cudalib.h"
+#include "Basics.h"
 
 #define TWO_CHANNEL // [v-hansu]
 using namespace msra::cuda;
@@ -618,21 +619,35 @@ struct parallelstateimpl
     }
 
     // check if gpumatrixstorage supports size of cpumatrix, if not allocate. set gpumatrix to part of gpumatrixstorage
+    // This function checks the size of errorsignalgpustorage, and then sets errorsignalgpu to a columnslice of the
+    // result, which encompases the entire matrix. Because this is a view of the underlying storage in 
+    // errorsignalgpustorage, we must clear errorsignalgpu before resizing errorsignalgpustorage. After we resize,
+    // we can then reset errorsignalgpu to be the result.
     void cacheerrorsignal(const msra::math::ssematrixbase& errorsignal, const bool cacheerrsignalneg)
     {
         if (errorsignalgpustorage->GetNumRows() != 0 && errorsignalgpustorage->GetNumRows() != errorsignal.rows())
-            throw ::logic_error("gpumatrixstorage->rows() shall be fixed once allocated");
+            LogicError("gpumatrixstorage->rows() shall be fixed once allocated");
         if (errorsignalgpustorage->GetNumCols() < errorsignal.cols())
+        {
+            // Note: This is required because otherwise errorsignalgpustorage will be a view of the storage object in
+            // errorsignalgpustorage, and thuse it can't resize. This is perhaps not the optimal way to do this, but
+            // how else? Why do these two matrices exist? Why not just one?
+            errorsignalgpu = nullptr;
             errorsignalgpustorage->Resize(errorsignal.rows(), errorsignal.cols());
-        *errorsignalgpu = errorsignalgpustorage->ColumnSlice(0, errorsignal.cols());
+        }
+        errorsignalgpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalgpustorage->ColumnSlice(0, errorsignal.cols()));
 
         if (cacheerrsignalneg)
         {
             if (errorsignalneggpustorage->GetNumRows() != 0 && errorsignalneggpustorage->GetNumRows() != errorsignal.rows())
-                throw ::logic_error("gpumatrixstorage->rows() shall be fixed once allocated");
+                LogicError("gpumatrixstorage->rows() shall be fixed once allocated");
             if (errorsignalneggpustorage->GetNumCols() < errorsignal.cols())
+            {
+                // Same as above.
+                errorsignalneggpu = nullptr;
                 errorsignalneggpustorage->Resize(errorsignal.rows(), errorsignal.cols());
-            *errorsignalneggpu = errorsignalneggpustorage->ColumnSlice(0, errorsignal.cols());
+            }
+            errorsignalneggpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalneggpustorage->ColumnSlice(0, errorsignal.cols()));
         }
     }
 

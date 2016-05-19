@@ -1,21 +1,16 @@
 # configuration file for CNTK ATIS for language understanding tasks
 
-stderr=$ExpDir$\ATIS\logd
-
+precision="float"
+deviceId = $DeviceId$
 command=LSTM:LSTMTest
-
-type=float
-
-deviceId=0  #"auto"   # use -1 for CPU. Note: due to a bug, testing only works on CPU
-
+traceLevel=1
 
 LSTM=[
     action=train
-
-    traceLevel=1
+	makeMode=true
 
     # output model path
-    modelPath=$ExpDir$\cntkdebug.dnn
+    modelPath=$ExpDir$/cntkdebug.dnn
 
     # uncomment NDLNetworkBuilder to use NDL
     # need to comment out SimpleNetworkBuilder section
@@ -100,7 +95,7 @@ LSTM=[
         # writerType=BinaryReader
 
         #### write definition
-        wfile=$ExpDir$\sequenceSentence.bin
+        wfile=$ExpDir$/sequenceSentence.bin
         #wsize - inital size of the file in MB
         # if calculated size would be bigger, that is used instead
         wsize=256
@@ -112,8 +107,8 @@ LSTM=[
         windowSize=10000
 
         unk="<unk>"
-          wordmap=$DataDir$\inputmap.txt
-          file=$DataDir$\atis.train.apos.pred.pos.head.IOB.simple
+          wordmap=$DataDir$/inputmap.txt
+          file=$DataDir$/atis.train.apos.pred.pos.head.IOB.simple
 
           #additional features sections
           #for now store as expanded category data (including label in)
@@ -137,14 +132,14 @@ LSTM=[
 
             # vocabulary size
             labelDim=10000
-            labelMappingFile=$ExpDir$\sentenceLabels.txt
+            labelMappingFile=$ExpDir$/sentenceLabels.txt
             labelType=Category
             beginSequence="BOS"
             endSequence="EOS"
             usewordmap=true
 
             # input word list
-            token=$DataDir$\input.txt
+            token=$DataDir$/input.txt
             
             #### Write definition ####
             # sizeof(unsigned) which is the label index type
@@ -169,9 +164,9 @@ LSTM=[
             labelType=Category
 
             # output token list
-            token=$DataDir$\output.txt
+            token=$DataDir$/output.txt
 
-            labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+            labelMappingFile=$ExpDir$/sentenceLabels.out.txt
             #### Write definition ####
             # sizeof(unsigned) which is the label index type
             sectionType=labels
@@ -200,7 +195,7 @@ LSTM=[
       equalLength = false
 
       #### write definition
-      wfile=$ExpDir$\sequenceSentence.valid.bin
+      wfile=$ExpDir$/sequenceSentence.valid.bin
       #wsize - inital size of the file in MB
       # if calculated size would be bigger, that is used instead
       wsize=256
@@ -212,8 +207,8 @@ LSTM=[
       windowSize=10000
 
       unk="<unk>"
-      wordmap=$DataDir$\inputmap.txt
-      file=$DataDir$\atis.dev.IOB.simple
+      wordmap=$DataDir$/inputmap.txt
+      file=$DataDir$/atis.dev.IOB.simple
 
       #additional features sections
       #for now store as expanded category data (including label in)
@@ -237,13 +232,13 @@ LSTM=[
 
         # vocabulary size
         labelDim=10000
-        labelMappingFile=$ExpDir$\sentenceLabels.in.txt
+        labelMappingFile=$ExpDir$/sentenceLabels.in.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
         usewordmap=true
 
-        token=$DataDir$\input.txt
+        token=$DataDir$/input.txt
 
         #### Write definition ####
         # sizeof(unsigned) which is the label index type
@@ -267,10 +262,10 @@ LSTM=[
         dim=1
         labelType=Category
 
-        token=$DataDir$\output.txt
+        token=$DataDir$/output.txt
 
         labelDim=10000
-        labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+        labelMappingFile=$ExpDir$/sentenceLabels.out.txt
         #### Write definition ####
         # sizeof(unsigned) which is the label index type
         elementSize=4
@@ -299,13 +294,12 @@ LSTM=[
 LSTMTest=[
     action=write
 
-    traceLevel=1
     epochSize=4430000
     # which is 886 * 5000
     #recurrentLayer=1
     defaultHiddenActivity=0.1
 
-    modelPath=$ExpDir$\cntkdebug.dnn
+    modelPath=$ExpDir$/cntkdebug.dnn
 
     outputNodeNames=outputs:labels
 
@@ -315,15 +309,15 @@ LSTMTest=[
       randomize=None
       wordContext=0:1:2
       unk="<unk>"
-      wordmap=$DataDir$\inputmap.txt
-      file=$DataDir$\atis.test.apos.pred.pos.head.IOB.simple
+      wordmap=$DataDir$/inputmap.txt
+      file=$DataDir$/atis.test.apos.pred.pos.head.IOB.simple
 
       # if writerType is set, we will cache to a binary file
       # if the binary file exists, we will use it instead of parsing this file
       # writerType=BinaryReader
 
       #### write definition
-      wfile=$ExpDir$\sequenceSentence.bin
+      wfile=$ExpDir$/sequenceSentence.bin
       #wsize - inital size of the file in MB
       # if calculated size would be bigger, that is used instead
       wsize=256
@@ -355,13 +349,13 @@ LSTMTest=[
 
         # vocabulary size
         labelDim=10000
-        labelMappingFile=$ExpDir$\sentenceLabels.txt
+        labelMappingFile=$ExpDir$/sentenceLabels.txt
         labelType=Category
         beginSequence="BOS"
         endSequence="EOS"
         usewordmap=true
 
-        token=$DataDir$\input.txt
+        token=$DataDir$/input.txt
 
         #### Write definition ####
         # sizeof(unsigned) which is the label index type
@@ -387,12 +381,12 @@ LSTMTest=[
         beginSequence="BOS"
         endSequence="EOS"
 
-        token=$DataDir$\output.txt
+        token=$DataDir$/output.txt
 
         # vocabulary size
         labelDim=127
 
-        labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+        labelMappingFile=$ExpDir$/sentenceLabels.out.txt
         #### Write definition ####
         # sizeof(unsigned) which is the label index type
         elementSize=4
@@ -416,13 +410,13 @@ LSTMTest=[
         writerType=LUSequenceWriter
 
         outputs=[
-            file=$OutDir$\output.rec.txt
-            token=$DataDir$\output.txt
+            file=$OutDir$/output.rec.txt
+            token=$DataDir$/output.txt
         ]
         
         labels=[
-            file=$OutDir$\output.lbl.txt
-            token=$DataDir$\output.txt
+            file=$OutDir$/output.lbl.txt
+            token=$DataDir$/output.txt
         ]
     ]
 ]

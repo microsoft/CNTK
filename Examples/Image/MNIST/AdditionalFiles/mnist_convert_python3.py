@@ -1,4 +1,4 @@
-import urllib
+import urllib.request
 import gzip
 import os
 import struct

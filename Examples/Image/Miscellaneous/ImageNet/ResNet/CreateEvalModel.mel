@@ -1,9 +1,6 @@
 m1=LoadModel($CurModel$, format=cntk)
 SetDefaultModel(m1)
 
-# Switch batch normalization to eval mode.
-SetPropertyForSubTree(CE, batchNormEvalMode, true)
-
 # Add top-5 error prediction node.
 ErrTop5 = ErrorPrediction(labels, OutputNodes.z, Const(5), tag = Eval)
 

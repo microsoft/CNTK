@@ -38,14 +38,16 @@ using namespace std;
 
 // main constructor (all constructors except the default one route through this)
 template <class ElemType>
-TensorView<ElemType>::TensorView(const Matrix<ElemType>& sob, const TensorShape& shape)
-    : m_sob(sob.AsReference()), m_shape(shape)
+TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& shape)
+    : m_sob(dynamic_pointer_cast<Matrix<ElemType>>(sob)), m_shape(shape)
 {
+    if (!m_sob)
+        LogicError("TensorView: Attempted to create a TensorView<ElemType> on a storage object of a different ElemType.");
 #ifdef _DEBUG
     // check bounds of TensorShape against underlying storage object
     // This is useful to detect errors like passing a matrix from the wrong input.
     const auto r = shape.GetLocationRange();
-    const auto n = m_sob.GetNumElements();
+    const auto n = m_sob->GetNumElements();
     if (r.first < 0 || (size_t)r.second > n)
         LogicError("TensorView: Shape bounds [%d,%d) exceed bounds of underlying storage object [0,%d).", (int) r.first, (int) r.second, (int) n);
 #endif
@@ -228,7 +230,7 @@ static bool CheckDifferentObject(const TensorView<ElemType>& a, const TensorView
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
@@ -244,11 +246,11 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
         CheckDifferentObject(a, *this);
 
     // now perform the operation
-    GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
@@ -262,11 +264,11 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
 
-    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op)
+void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
@@ -280,79 +282,7 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this);
 
-    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-}
-
-// simple test function for testing stuff
-// Call as: Microsoft::MSR::CNTK::TensorView<float>::Test();
-template <class ElemType>
-/*static*/ void TensorView<ElemType>::Test()
-{
-    const DEVICEID_TYPE deviceId = 0; // -1
-    Matrix<ElemType> m1(deviceId);
-    Matrix<ElemType> m2(deviceId);
-    Matrix<ElemType> m3(deviceId);
-    {
-        m1.SetValue(5, 3, {1, 2, 3,
-                           14, 15, 6,
-                           4, 5, 16,
-                           41, 5, 1,
-                           1.8, 4.5, 7});
-        m2.SetValue(5, 1, {42,
-                           13,
-                           1968,
-                           3.1415f,
-                           7});
-
-        m3.Resize(m1);
-
-        // regular zip  (just add m1 to itself)
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m1), 1);
-        m3.Print();
-
-        // unary op
-        TensorView(m3).DoSqrtOf(0, TensorView(m1), 1);
-        m3.Print();
-
-        // broadcasting of an input
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoMaxOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoGTOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        // reduction over columns
-        m3.Resize(5, 1);
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        // reduction over rows
-        m3.Resize(1, 3);
-        TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-
-        TensorView(m3).DoLogSumOf(0, TensorView(m1), TensorView(m2), 1);
-        m3.Print();
-    }
-    {
-        m1.Resize(1, 42);
-        m2.Resize(13, 1);
-        m3.Resize(13, 21);
-        TensorShape s1(1, 2, 21);
-        TensorShape s2(13, 1);
-        TensorShape s3(13, 1, 21);
-        let t1 = TensorView<ElemType>(m1, s1);
-        t1;
-        let t2 = TensorView<ElemType>(m2, s2);
-        t2;
-        auto t3 = TensorView<ElemType>(m3, s3);
-        t3;
-        t3.DoSumOf(0, t1, t2, 1);
-        m3.Print();
-    }
+    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // -------------------------------------------------------------------
@@ -386,7 +316,10 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
                 dimsToDrop[k - 1] = true;
     // handle case where last dimension missing, e.g. u'v where u and v are column vectors
     if (splitPoint == shape.GetRank())
+    {
         shape.PadRankInPlace(splitPoint + 1);
+        dimsToDrop.resize(splitPoint + 1, false);
+    }
     // flatten the dimensions
     for (size_t k = 1; k < shape.GetRank(); k++)
         if (dimsToDrop[k - 1])
@@ -406,19 +339,20 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 
 // convert tensor into a Matrix object
 template <class ElemType>
-Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
+shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 {
     assert(m_shape.GetRank() == 2);
-    if (m_shape.GetStrides()[0] != 1)
+    if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
+
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
-    let firstColumn = m_shape.GetOffset()      / m_sob.GetNumRows();
-    let numColumns  = m_shape.GetNumElements() / m_sob.GetNumRows();
-    if (firstColumn * m_sob.GetNumRows() != m_shape.GetOffset() || numColumns * m_sob.GetNumRows() != m_shape.GetNumElements())
+    let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
+    let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
+    if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
-    auto sob = m_sob.ColumnSlice(firstColumn, numColumns);
+
     // now reinterpret this slice according to the new tensor shape
     // Example:
     //  - each sob column contains a set of vectors stored as a 2D tensor [I x J], and [S x T] samples
@@ -428,12 +362,20 @@ Matrix/*ref*/<ElemType> TensorView<ElemType>::AsMatrix() const
     //  - which in turn yields a [K x (J * S x*T)] matrix
     //    which gets reinterpreted back as a [K x J x S x T] tensor
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
-    if (sob.GetMatrixType() == MatrixType::DENSE)
-        return sob.Reshaped(m_shape[0], m_shape[1]);
-    else if (m_shape[0] == sob.GetNumRows()) // SPARSE matrices cannot be reshaped, so we only support 1D and 2D tensors
-        return sob;
-    else
+    let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
+    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != numColumns;
+
+    // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
+    // As a consequence, some configurations will simply not work currently.
+    // We minimize the chance of this by using the original storage object whenever possible.
+    if (!needsSlicing && !needsReshaping)     // no need to mess with the storage object: pass it on as it is. Full support for moving devices.
+        return m_sob;
+    else if (needsSlicing && !needsReshaping) // slicing is supported for sparse as well
+        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns));
+    else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
+    else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
+        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape[1]));
 }
 
 template <class ElemType>
@@ -468,9 +410,9 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     auto C =   Reshaped(shapeC).AsMatrix();
     // and go
     if (!transC)
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, A, transA, B, transB, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, B, !transB, A, !transA, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
 }
 
 template class TensorView<float>;

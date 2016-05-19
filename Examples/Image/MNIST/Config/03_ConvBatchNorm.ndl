@@ -15,7 +15,7 @@ ndlMnistMacros = [
     labels = InputValue(labelDim)
 
     scValue = 1
-    # Batch normalization time constant.
+    # Batch normalization time constant (normalizationTimeConstant). blendTimeConstant is set through .cntk file.
     bnTimeConst = 1024
     
     convWScale = 10

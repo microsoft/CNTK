@@ -252,10 +252,10 @@ void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatri
     }
 
     // Do the quantization on compute sstream and insert event into stream
-    _QuantizeMatrix<ElemType>(inMatrix.BufferPointer(), inResidual.BufferPointer(),
+    _QuantizeMatrix<ElemType>(inMatrix.Data(), inResidual.Data(),
                               inMatrix.GetNumRows(), inMatrix.GetNumCols(),
-                              outQMatrixGPU.GetArray(), nBits, GetComputeStream(),
-                              outResidual.BufferPointer(), zeroThresholdFor1Bit);
+                              outQMatrixGPU.Buffer(), nBits, GetComputeStream(),
+                              outResidual.Data(), zeroThresholdFor1Bit);
 
     RecordQuantizeCompleteEvent(GetComputeStream());
 
@@ -263,7 +263,7 @@ void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatri
     m_quantizeOpIncludedFetch = false;
     if (outQMatrix.GetDeviceId() == CPUDEVICE)
     {
-        SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(outQMatrix.GetArray(), outQMatrixGPU.GetArray(), outQMatrixGPU.GetSize());
+        SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(outQMatrix.Buffer(), outQMatrixGPU.Buffer(), outQMatrixGPU.GetSize());
         m_quantizeOpIncludedFetch = true;
     }
 }
@@ -310,7 +310,7 @@ void MatrixQuantizerGPU<ElemType>::UnquantizeAsync(QuantizedMatrix<ElemType>& in
         }
 
         // schedule assign to GPU (on transfer stream)
-        cudaMemcpyAsync(inQMatrixGPU.GetArray(), inQMatrix.GetArray(), inQMatrix.GetSize(), cudaMemcpyHostToDevice, GetAssignStream()) || "cudaMemcpyAsync failed";
+        cudaMemcpyAsync(inQMatrixGPU.Buffer(), inQMatrix.Buffer(), inQMatrix.GetSize(), cudaMemcpyHostToDevice, GetAssignStream()) || "cudaMemcpyAsync failed";
 
         // schedule to flag the assign-complete event
         cudaEventRecord(m_assignCompleteEvent, GetAssignStream()) || "cudaEventRecord failed"; // for subsequent GPU operation to consume this buffer
@@ -325,8 +325,8 @@ void MatrixQuantizerGPU<ElemType>::UnquantizeAsync(QuantizedMatrix<ElemType>& in
     }
 
     // do the actually unquantization
-    _UnquantizeMatrix(inQMatrixGPU.GetArray(), inQMatrixGPU.GetSize(),
-                      outMatrix.BufferPointer(), outMatrix.GetNumRows(), outMatrix.GetNumCols(),
+    _UnquantizeMatrix(inQMatrixGPU.Buffer(), inQMatrixGPU.GetSize(),
+                      outMatrix.Data(), outMatrix.GetNumRows(), outMatrix.GetNumCols(),
                       nBits, add, GetComputeStream());
 
     // Record the event of unquantization

@@ -1,0 +1,9 @@
+%(ActionName)s=[
+	action="write"	
+	
+%(Reader)s
+	
+	outputPath = "%(OutputFile)s"		# dump the output as text
+]
+
+

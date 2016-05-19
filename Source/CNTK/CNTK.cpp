@@ -70,7 +70,7 @@ void TestCn(const ConfigParameters& config);
 
 void RedirectStdErr(wstring logpath)
 {
-    fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
+    LOGPRINTF(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
     {
@@ -165,7 +165,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 
     if (numCPUThreads > 0)
     {
-        std::cerr << "Using " << numCPUThreads << " CPU threads." << endl;
+        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
     }
 
     bool progressTracing = config(L"progressTracing", false);
@@ -187,14 +187,14 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 wstring modelPath = commandParams("modelPath");
-                std::wcerr << "CNTKModelPath: " << modelPath << endl;
+                LOGPRINTF(stderr, "CNTKModelPath: %ls\n", modelPath.c_str());
                 size_t maxEpochs = GetMaxEpochs(commandParams);
-                std::cerr << "CNTKCommandTrainInfo: " + command[i] << " : " << maxEpochs << endl;
+                LOGPRINTF(stderr, "CNTKCommandTrainInfo: %s : %d\n", command[i].c_str(), (int) maxEpochs);
                 fullTotalMaxEpochs += maxEpochs;
             }
         }
     }
-    std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
+    LOGPRINTF(stderr, "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : %d\n", (int) fullTotalMaxEpochs);
 
     // set up progress tracing for compute cluster management
     if (progressTracing && (!mpi || mpi->IsMainNode()))
@@ -225,19 +225,20 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             // print a banner to visually separate each action in the log
             const char* delim = "##############################################################################";
             const char* prefix = "Action ";
-            fprintf(stderr, "\n%s\n", delim);
-            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
-            fprintf(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
-            fprintf(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
-            fprintf(stderr, "%s\n\n", delim);
+            fprintf(stderr, "\n");
+            LOGPRINTF(stderr, "%s\n", delim);
+            LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
+            LOGPRINTF(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
+            LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
+            LOGPRINTF(stderr, "%s\n\n", delim);
 
             if ((mpi == nullptr) || (commandstoRunOnAllRanks.find(thisAction) != commandstoRunOnAllRanks.end()) || mpi->IsMainNode())
             {
                 if (thisAction == "train" || thisAction == "trainRNN")
                 {
-                    std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
+                    LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
                     DoTrain<ConfigParameters, ElemType>(commandParams);
-                    std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
+                    LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
                     fullEpochsOffset += GetMaxEpochs(commandParams);
                 }
                 else if (thisAction == "adapt")
@@ -298,7 +299,8 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 }
             }
 
-            fprintf(stderr, "\nAction \"%s\" complete.\n\n", thisAction.c_str());
+            fprintf(stderr, "\n");
+            LOGPRINTF(stderr, "Action \"%s\" complete.\n\n", thisAction.c_str());
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
@@ -321,51 +323,51 @@ std::string TimeDateStamp()
 
 void PrintBuiltInfo()
 {
-    fprintf(stderr, "-------------------------------------------------------------------\n");
-    fprintf(stderr, "Build info: \n\n");
-    fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
-    fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "Build info: \n\n");
+    LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+    LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
 #ifdef _BUILDTYPE_
-    fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+    LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
 #endif
 #ifdef _BUILDTARGET_
-    fprintf(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+    LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
 #endif
 #ifdef _WITH_1BITSGD_
-    fprintf(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+    LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _MATHLIB_
-    fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+    LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
-    fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+    LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
 #endif
 #ifdef _CUB_PATH_
-    fprintf(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+    LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
 #endif
 #ifdef _CUDNN_PATH_
-    fprintf(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+    LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
 #endif
 #ifdef _GIT_EXIST
-    fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
-    fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+    LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+    LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
 #endif
 #ifdef _BUILDER_
-    fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+    LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
 #endif
 #ifdef _BUILDPATH_
-    fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+    LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
-    fprintf(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
 void PrintUsageInfo()
 {
-    fprintf(stderr, "-------------------------------------------------------------------\n");
-    fprintf(stderr, "Usage: cntk configFile=yourConfigFile\n");
-    fprintf(stderr, "For detailed information please consult the CNTK book\n");
-    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");
-    fprintf(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "Usage: cntk configFile=yourConfigFile\n");
+    LOGPRINTF(stderr, "For detailed information please consult the CNTK book\n");
+    LOGPRINTF(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -414,7 +416,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     for (const auto& arg : args)
         startupMessage += L"  " + arg;
 
-    fprintf(stderr, "%ls\n", startupMessage.c_str());
+    LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
 
     // parse command-line options
     vector<wstring> sourceFiles;
@@ -443,6 +445,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // compile the BrainScript
     wstring bs = L"[\n";
     bs += L"include \'cntk.core.bs'"; // start with including the standard macros
+
     // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
     //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
@@ -451,7 +454,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     for (const auto& over : overrides)
         bs += L"with [ " + over + L" ]\n";
 
-    fprintf(stderr, "\n\nBrainScript -->\n\n%ls\n\n", bs.c_str());
+    fprintf(stderr, "\n\n");
+    LOGPRINTF(stderr, "BrainScript -->\n\n%ls\n\n", bs.c_str());
 
     let expr = BS::ParseConfigExpression(bs, move(includePaths)); // parse
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
@@ -460,8 +464,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
+
     if (config.Find(L"command")) // spelling error, should be plural. Using 'actions' instead to match the data type.
         InvalidArgument("Legacy spelling of 'command' no longer allowed. Use 'actions'.");
+
     if (config.Find(L"type"))
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
@@ -486,7 +492,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
             logpath += msra::strfun::wstrprintf(L"rank%d", (int) mpi->CurrentNodeRank());
 
         RedirectStdErr(logpath);
-        fprintf(stderr, "%ls\n", startupMessage.c_str());
+        LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
     }
 
     // echo config info to log
@@ -497,16 +503,18 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     int numCPUThreads = config(L"numCPUThreads", 0);
     numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
     if (numCPUThreads > 0)
-        fprintf(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
 
     bool progressTracing = config(L"progressTracing", false);
     size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
+
     // set up progress tracing for compute cluster management
     if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
 
     // MAIN LOOP that executes the actions
     auto actionsVal = config[L"actions"];
+
     // Note: weird behavior. If 'actions' is a scalar value (rather than an array) then it will have been resolved already after the above call. That means, it has already completed its action!
     //       Not pretty, but a direct consequence of the lazy evaluation. The only good solution would be to have a syntax for arrays including length 0 and 1.
     //       Since this in the end behaves indistinguishable from the array loop below, we will keep it for now.
@@ -532,7 +540,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
         fcloseOrDie(fp);
     }
-    fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+    // TODO: change this back to COMPLETED, double underscores don't look good in output
+    LOGPRINTF(stderr, "__COMPLETED__\n");
+    fflush(stderr);
 
     MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
@@ -541,11 +551,16 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 // ---------------------------------------------------------------------------
 // main() for old CNTK config language
 // ---------------------------------------------------------------------------
-
-int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & repots Win32 exceptions
+// called from wmain which is a wrapper that catches & repots Win32 exceptions
+int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
     ConfigParameters config;
-    std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
+    std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+    bool timestamping = config(L"timestamping", false);
+    if (timestamping)
+    {
+        ProgressTracing::SetTimestampingFlag();
+    }
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
@@ -586,8 +601,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     std::string timestamp = TimeDateStamp();
 
     // dump config info
-    fprintf(stderr, "\nRunning on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-    fprintf(stderr, "Command line: \n");
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, "Running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+    LOGPRINTF(stderr, "Command line: \n");
     for (int i = 0; i < argc; i++)
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
@@ -595,24 +611,27 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
 #if 1 //def _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
-    fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-    fprintf(stderr, "%s\n", rawConfigString.c_str());
-    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+    fprintf(stderr, "\n\n");
+    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+    LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
+    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-    // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+    // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
-    fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-    fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
-    fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
     config.dumpWithResolvedVariables();
-    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 #endif
 
-    fprintf(stderr, "Commands:");
+    LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
@@ -623,7 +642,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     if (config.Exists("type"))
         InvalidArgument("CNTK: Use of 'type' parameter is deprecated, it is called 'precision' now.");
 
-    fprintf(stderr, "Precision = \"%s\"\n", type.c_str());
+    LOGPRINTF(stderr, "Precision = \"%s\"\n", type.c_str());
+
     if (type == "float")
         DoCommands<float>(config, mpi);
     else if (type == "double")
@@ -638,7 +658,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
         fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
         fcloseOrDie(fp);
     }
-    fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+    // TODO: Change back to COMPLETED (no underscores)
+    LOGPRINTF(stderr, "__COMPLETED__\n");
+    fflush(stderr);
 
     MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
@@ -659,43 +681,52 @@ void AllocationFailureHandler()
 int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     std::set_new_handler(AllocationFailureHandler);
+
     try
-    {
+    {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+
         if (argc <= 1)
         {
-            fprintf(stderr, "No command-line argument given.\n");
+            LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
             return EXIT_FAILURE;
         }
+
         // detect legacy CNTK configuration
         bool isOldCNTKConfig = false;
         for (int i = 0; i < argc && !isOldCNTKConfig; i++)
             isOldCNTKConfig |= !_wcsnicmp(L"configFile=", argv[i], 11);
+
         if (isOldCNTKConfig)
             return wmainOldCNTKConfig(argc, argv);
+
         // run from BrainScript
         return wmainWithBS(argc, argv);
     }
     catch (const ScriptableObjects::ScriptingException& err)
     {
-        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
-        err.PrintError();
+        fprintf(stderr, "\n");
+        err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred");
         return EXIT_FAILURE;
     }
     catch (const IExceptionWithCallStackBase& err)
     {
-        fprintf(stderr, "\nEXCEPTION occurred: %s\n%s", dynamic_cast<const std::exception&>(err).what(), err.CallStack());
+        fprintf(stderr, "\n");
+        fprintf(stderr, "%s", err.CallStack());
+        LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
         return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
-        fprintf(stderr, "\nEXCEPTION occurred: %s\n", err.what());
+        fprintf(stderr, "\n");
+        LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", err.what());
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        fprintf(stderr, "\nUnknown ERROR occurred\n");
+        fprintf(stderr, "\n");
+        LOGPRINTF(stderr, "Unknown ERROR occurred\n");
         return EXIT_FAILURE;
     }
 }
@@ -703,7 +734,8 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
 #ifdef __WINDOWS__
 void TerminateThis()
 {
-    fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr);
+    LOGPRINTF(stderr, "terminate_this: aborting\n");
+    fflush(stderr);
     exit(EXIT_FAILURE);
 }
 
@@ -714,7 +746,7 @@ static void LogDelayLoadError(PEXCEPTION_POINTERS pExcPointers)
     if (pExcPointers->ExceptionRecord->ExceptionCode == EXCEPTION_DLL_NOT_FOUND)
     {
         const auto & pDelayLoadInfo = *PDelayLoadInfo(pExcPointers->ExceptionRecord->ExceptionInformation[0]);
-        fprintf(stderr, "CNTK: Failed to load DLL '%s'.\n", pDelayLoadInfo.szDll);
+        LOGPRINTF(stderr, "CNTK: Failed to load DLL '%s'.\n", pDelayLoadInfo.szDll);
     }
 }
 
@@ -736,7 +768,7 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
         else if (code == EXCEPTION_INT_DIVIDE_BY_ZERO) msg = ": Integer division by zero";
         else if (code == EXCEPTION_STACK_OVERFLOW)     msg = ": Stack overflow";
         else if (code == EXCEPTION_DLL_NOT_FOUND)      msg = ": Module not found";
-        fprintf(stderr, "CNTK: Caught Win32 exception 0x%08x%s.\n", (unsigned int)code, msg);
+        LOGPRINTF(stderr, "CNTK: Caught Win32 exception 0x%08x%s.\n", (unsigned int)code, msg);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }

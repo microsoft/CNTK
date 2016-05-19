@@ -846,7 +846,7 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool HTKMLFReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool HTKMLFReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_trainOrTest)
     {
@@ -2055,4 +2055,5 @@ void HTKMLFReader<ElemType>::GetDataNamesFromConfig(const ConfigRecordType& read
 
 template class HTKMLFReader<float>;
 template class HTKMLFReader<double>;
-} } }
+
+}}}

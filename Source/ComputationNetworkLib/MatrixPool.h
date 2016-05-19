@@ -17,9 +17,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// MatrixPool -- class to support memory sharing
+// Despite the gather general name of this class, it is specifically designed to support the memory sharing of ComputationNodes.
+// Note: see #define SUPRESS_MEMSHARING below as for how to temporarily disable memory sharing altogether, for debugging
 class MatrixPool
 {
-    vector<shared_ptr<Matrix<float>>> m_releasedFloatMatrices;
+    vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
     vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
 
     template <class ElemType>
@@ -30,9 +33,12 @@ public:
     template <class ElemType>
     void Release(shared_ptr<Matrix<ElemType>> freeMatrix)
     {
-        vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
         if (freeMatrix == nullptr || freeMatrix->GetMatrixType() == SPARSE)
-            RuntimeError("MatrixPool::Release: freeMatrix should not be null or sparse.");
+            LogicError("MatrixPool::Release: freeMatrix should not be null or sparse.");
+//#define SUPRESS_MEMSHARING // #define this to disable memory sharing through this structure
+        // TODO: Make this a runtime option.
+#ifndef SUPRESS_MEMSHARING
+        vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
 #ifdef _DEBUG
         for (int i = 0; i < releasedMatrices.size(); i++)
         {
@@ -42,6 +48,7 @@ public:
 
 #endif
         releasedMatrices.push_back(freeMatrix);
+#endif
     }
 
     template <class ElemType>
@@ -65,4 +72,5 @@ public:
         return matrixPtr;
     }
 };
-} } }
+
+}}}

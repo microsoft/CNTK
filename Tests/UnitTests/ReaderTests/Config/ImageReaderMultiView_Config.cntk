@@ -1,0 +1,40 @@
+RootDir = .
+ModelDir = "models"
+command = "MultiView_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderMultiView_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+
+MultiView_Test = [
+    # Parameter values for the reader
+    reader = [
+        # reader to use
+        readerType = "ImageReader"
+        file = "$RootDir$/ImageReaderMultiView_map.txt"
+
+        randomize = "none"
+        verbosity = 1
+
+		numCPUThreads = 1
+        features=[
+            width=2
+            height=2
+            channels=3
+            cropType=multiview10
+            cropRatio=0.5
+            jitterType=UniRatio
+            interpolations=Linear
+            #meanFile=$RootDir$/ImageReaderMultiView_mean.xml
+        ]
+        labels=[
+            labelDim=4
+        ]
+    ]
+]

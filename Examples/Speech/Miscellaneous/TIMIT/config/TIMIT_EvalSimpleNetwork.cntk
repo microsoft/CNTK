@@ -1,4 +1,6 @@
-stderr=$ExpDir$\EvalSimpleNetwork\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_EvalSimple
 
 precision=float
@@ -10,7 +12,7 @@ precision=float
 TIMIT_EvalSimple=[
     action=eval
 
-    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainSimpleNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -19,24 +21,22 @@ TIMIT_EvalSimple=[
 
      # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
-#     readMethod=blockRandomize
-      readMethod=rollingWindow
+        # reader to use
+        readerType=HTKMLFReader
+        miniBatchMode=Partial
+        readMethod=rollingWindow
+        randomize=None
+        verbosity=0
 
-      miniBatchMode=Partial
-      randomize=None
-      verbosity=1   
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.dev.scp.fbank.fullpath
+        ]
 
-      features=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.dev.scp.fbank.fullpath
-      ]
-
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.dev.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.dev.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+        ]
     ]
 ]

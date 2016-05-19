@@ -33,11 +33,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t& actualMBSize, 
                                         const MPIWrapperPtr& mpi)
     {
-        auto pMBLayout = net->GetMBLayoutPtr();
         // Reading consists of a sequence of Reader API calls:
-        //  - GetMinibatch() --fills the inputMatrices
+        //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
-        //  - CopyMBLayoutTo()   --copies the MBLayout from Reader to Network
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
@@ -62,18 +60,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
-        // get layout meta-data
-        trainSetDataReader.CopyMBLayoutTo(pMBLayout);
-
+        // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
+        // This is only allowed for old readers, which support a single layout for all inputs.
         if (!useDistributedMBReading && useParallelTrain)
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+        {
+            auto& pMBLayout = net->GetMBLayoutPtrOfNetwork();
+            
+            // Verify that there's indeed a single layout
+            for (const auto& iter : inputMatrices)
+            {
+                assert(iter.second.pMBLayout == pMBLayout);
+                // TODO: This must be a runtime check, not an assert().
+                UNUSED(iter);
+            }
+        
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
+        }
 
         // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
         // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
         std::set<MatrixBasePtr> matrices;
         for (const auto& iter : inputMatrices)
-            matrices.insert(iter.second);
+            matrices.insert(iter.second.matrix);
         for (auto& node : net->FeatureNodes())
             if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
@@ -84,6 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
         // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
+        // BUGBUG: We should discount gaps.
         actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
         return true;
@@ -97,8 +107,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <class ElemType>
     static pair<size_t, size_t> DecimateMinibatch(const StreamMinibatchInputs& MB,    // input matrices
                                                   StreamMinibatchInputs& decimatedMB, // output decimated matrices.
-                                                  MBLayoutPtr pMBLayout,                        // input MBLayout
-                                                  MBLayoutPtr& pDecimateMBLayout,               // output decimated MBLayout (note: cannot work in-place)
+                                                  MBLayoutPtr pMBLayout,              // input MBLayout
+                                                  MBLayoutPtr& pDecimateMBLayout,     // output decimated MBLayout (note: cannot work in-place)
                                                   size_t numProcs, size_t rank)
     {
         size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
@@ -117,6 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (const auto& it : MB)
         {
             const wstring& name = it.first;
+            const auto& input = it.second;
             auto& mat = MB.GetInputMatrix<ElemType>(name);
             size_t numRows = mat.GetNumRows();
             size_t numCols = mat.GetNumCols();
@@ -133,12 +144,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto matrixp = make_shared<Matrix<ElemType>>(deviceId);
             matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numParallelSequences, nT), st * numRows, (en - st) * numRows);
             matrixp->Reshape(numRows, numNewParallelSequence * nT);
-            decimatedMB.AddInputMatrix(name, matrixp);
+            decimatedMB.AddInput(name, matrixp, input.pMBLayout, input.sampleLayout);
             // If we had a RowSlice function, we would like to write in this way
             // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
         }
         // decimate MBLayout as well
-        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
+        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
+        pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 #if 1
         // now copy over all sequence info records that are inside the range, with adjusted 's'
         const auto& sequences = pMBLayout->GetAllSequences();
@@ -172,17 +184,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // no need to do inplace decimation if numproc == 1
 
         // allocate space for non-inplace decimation
-        MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
+        MBLayoutPtr pDecimatedMBLayout = make_shared<MBLayout>();
+        pDecimatedMBLayout->SetAxisName(pMBLayout->GetAxisName());
         StreamMinibatchInputs decimatedMB;
         // call in-place decimation
-        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMBLayout, numprocs, rank);
         // move the data
         for (auto k : mb)
         {
             const auto& name = k.first;
             mb.GetInputMatrix<ElemType>(name).SetValue(decimatedMB.GetInputMatrix<ElemType>(name)); // deep-copy our local one to the output location
         }
-        pMBLayout->MoveFrom(pDecimatedMB);
+        pMBLayout->MoveFrom(pDecimatedMBLayout);
         return selected;
     }
 
@@ -199,7 +212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // into how many pieces would we need to break the minibatch?
             // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = dataReader->GetNumParallelSequences();
+            size_t numParallelSequences = dataReader->GetNumParallelSequencesForFixingBPTTMode();
             size_t estimatedMBSize = tunedMBSize * numParallelSequences;
             return (estimatedMBSize + maxSamplesInRAM - 1) / maxSamplesInRAM;
         }
@@ -278,19 +291,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::map<wstring, shared_ptr<IStatefulNode>> m_netStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
 
     private:
-        void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulnode)
+        void EnumerateStatefulNodesForRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulNodes)
         {
-            const std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root);
-            for (auto& x : evalorder)
+            for (const auto& node : net.GetAllNodesForRoot(root))
             {
-                wstring name = x->GetName();
-                if (statefulnode.find(name) != statefulnode.end())
-                    continue; // already in the list
-                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(x);
-                if (pNode)
-                {
-                    statefulnode[name] = pNode;
-                }
+                const auto& name = node->GetName();
+                if (statefulNodes.find(name) != statefulNodes.end())
+                    continue; // already in the list  --TODO: use insert()
+                shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(node);
+                if (pNode) // if it is an IStatefulNode then report it
+                    statefulNodes[name] = pNode;
             }
         }
 
@@ -300,13 +310,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::map<wstring, shared_ptr<IStatefulNode>> statefulNodes;
             for (auto& root : criterionNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             for (auto& root : evaluationNode)
-            {
-                EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
-            }
+                EnumerateStatefulNodesForRoot(net, root, statefulNodes);
             return statefulNodes;
         }
 
@@ -351,7 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // for sequence training
-            if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+            if (!criterionNodes.empty() && criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
                 assert(node);
@@ -377,7 +383,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                      size_t requestedSubminibatches)
         {
             // first, remember interface to the net
-            m_netMBLayoutPtr = net.GetMBLayoutPtr();
+            // BUGBUG (Issue #95): This will no longer be correct once we have multiple input layouts.
+            m_netMBLayoutPtr = net.GetMBLayoutPtrOfNetwork();
             m_netInputMatrixPtr = inputMatrices;
 
             // second, get data from reader, stored it in cache
@@ -385,14 +392,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto& pa : inputMatrices)
             {
                 const wstring& name = pa.first;
-                auto& M = inputMatrices.GetInputMatrix<ElemType>(name);
+                const auto& input = pa.second;
+                auto& M = input.GetMatrix<ElemType>();
                 if (m_inputMatricesCache.find(name) == m_inputMatricesCache.end())
-                    m_inputMatricesCache.AddInputMatrix(name, make_shared<Matrix<ElemType>>(M, M.GetDeviceId())); // deep copy from M
+                    m_inputMatricesCache.AddInput(name, make_shared<Matrix<ElemType>>(M, M.GetDeviceId()), input.pMBLayout, input.sampleLayout); // deep copy from M
                 else
                     m_inputMatricesCache.GetInputMatrix<ElemType>(name).SetValue(M);
             }
             // 2. MBlayout
-            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtr());
+            m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtrOfNetwork());
             size_t nParallelSequences = m_MBLayoutCache->GetNumParallelSequences();
 
             // 3. for bits in seq. training
@@ -421,7 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (node->IsParameterUpdateRequired())
                 {
                     wstring nodeName = node->GetName();
-                    shared_ptr<ComputationNode<ElemType>> pLearnableNode = node;
+                    shared_ptr<ComputationNode<ElemType>> pLearnableNode = node; // TODO: what's this for?
                     const auto& funvalue = pLearnableNode->Value(); // gradient may not be allocated when this function is first called
                     size_t nrow = funvalue.GetNumRows();
                     size_t ncol = funvalue.GetNumCols();
@@ -430,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // not allocated yet
                         auto matrixp = make_shared<Matrix<ElemType>>(nrow, ncol, funvalue.GetDeviceId());
                         matrixp->SetValue(0);
-                        m_cachedGradient.AddInputMatrix(nodeName, matrixp);
+                        m_cachedGradient.AddInput(nodeName, matrixp, pLearnableNode->GetMBLayout()/*null*/, pLearnableNode->GetSampleLayout());
                     }
                 }
             }
@@ -535,18 +543,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
                 m_cachedGradient.GetInputMatrix<ElemType>(nodename) += pNode->Gradient();
-                pNode->Gradient().SetValue((ElemType) 0);
+                pNode->Gradient().SetValue(0);
             }
             // accumulate criterion value
-            Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
-                                                  *m_netCriterionAccumulator, 0, 0);
-            m_netCriterionNodes[0]->Value().SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                Matrix<ElemType>::AddElementToElement(m_netCriterionNodes[0]->Value(), 0, 0,
+                                                      *m_netCriterionAccumulator, 0, 0);
+                m_netCriterionNodes[0]->Value().SetValue(0);
+            }
             // accumulate evaluation value
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
                 Matrix<ElemType>::AddElementToElement(m_netEvaluationNodes[i]->Value(), 0, 0,
                                                       *m_netEvaluationAccumulator, 0, i);
-                m_netEvaluationNodes[i]->Value().SetValue((ElemType) 0);
+                m_netEvaluationNodes[i]->Value().SetValue(0);
             }
 
             // Export node state
@@ -572,10 +583,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // also revert net.m_MBLayoutPtr
             m_netMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
-            Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
-                                                  m_netCriterionNodes[0]->Value(), 0, 0);
-            m_netCriterionAccumulator->SetValue((ElemType) 0);
+            if (!m_netCriterionNodes.empty())
+            {
+                // m_netCriterionNodes[0]->Value().SetValue((ElemType)0);
+                Matrix<ElemType>::AddElementToElement(*m_netCriterionAccumulator, 0, 0,
+                                                      m_netCriterionNodes[0]->Value(), 0, 0);
+            }
+            m_netCriterionAccumulator->SetValue(0);
 
             for (size_t i = 0; i < m_netEvaluationNodes.size(); i++)
             {
@@ -583,7 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::AddElementToElement(*m_netEvaluationAccumulator, 0, i,
                                                       m_netEvaluationNodes[i]->Value(), 0, 0);
             }
-            m_netEvaluationAccumulator->SetValue((ElemType) 0);
+            m_netEvaluationAccumulator->SetValue(0);
         }
     };
 };

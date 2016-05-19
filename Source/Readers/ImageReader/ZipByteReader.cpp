@@ -56,7 +56,7 @@ void ZipByteReader::Register(size_t seqId, const std::string& path)
     m_zips.push(std::move(zipFile));
 }
 
-cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path)
+cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscale)
 {
     // Find index of the file in .zip file.
     auto r = m_seqIdToIndex.find(seqId);
@@ -99,7 +99,8 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path)
     }
     m_zips.push(std::move(zipFile));
 
-    cv::Mat img = cv::imdecode(cv::Mat(1, (int)size, CV_8UC1, contents.data()), cv::IMREAD_COLOR);
+    cv::Mat img; 
+    img = cv::imdecode(cv::Mat(1, (int)size, CV_8UC1, contents.data()), grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     assert(nullptr != img.data);
     m_workspace.push(std::move(contents));
     return img;

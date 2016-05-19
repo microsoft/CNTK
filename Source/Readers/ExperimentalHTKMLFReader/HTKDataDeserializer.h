@@ -19,7 +19,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class HTKDataDeserializer : public DataDeserializerBase
 {
 public:
-    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName);
+    // Expects new configuration.
+    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
+
+    // TODO: Should be removed, when legacy config goes away, expects configuration in a legacy mode.
+    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.
     virtual ChunkDescriptions GetChunkDescriptions() override;
@@ -30,6 +34,9 @@ public:
     // Retrieves data for a chunk.
     virtual ChunkPtr GetChunk(size_t chunkId) override;
 
+    // Gets sequence description by its key.
+    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+
 private:
     class HTKChunk;
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
@@ -38,6 +45,7 @@ private:
     void InitializeChunkDescriptions(ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
+    void InitializeAugmentationWindow(ConfigHelper& config);
 
     // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>&);
@@ -51,11 +59,6 @@ private:
     // Chunk descriptions.
     std::vector<HTKChunkDescription> m_chunks;
 
-    // Weak pointers on existing chunks.
-    // If randomizer asks the same chunk twice we do not need to recreate
-    // the chunk if we already uploaded it in memory.
-    std::vector<std::weak_ptr<Chunk>> m_weakChunks;
-
     // Augmentation window.
     std::pair<size_t, size_t> m_augmentationWindow;
 
@@ -65,6 +68,16 @@ private:
 
     // Total number of frames.
     size_t m_totalNumberOfFrames;
+
+    // Flag that indicates whether a single speech frames should be exposed as a sequence.
+    bool m_frameMode;
+
+    // Indicates, whether the deserializers is the "primary" one, the one that drives chunking.
+    bool m_primary;
+
+    // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
+    // Key -> <chunkid, offset inside chunk>
+    std::map<size_t, std::pair<size_t, size_t>> m_keyToChunkLocation;
 
     // Auxiliary data for checking against the data in the feature file.
     unsigned int m_samplePeriod;

@@ -1,4 +1,6 @@
-stderr=$ExpDir$\TrainAutoEncoder\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainAutoEncoder
 
 precision=float
@@ -10,7 +12,7 @@ precision=float
 TIMIT_TrainAutoEncoder=[
     action=train
 
-    modelPath=$ExpDir$\TrainAutoEncoder\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainAutoEncoder/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -20,12 +22,12 @@ TIMIT_TrainAutoEncoder=[
     # notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times, then zzz
     # example: 10:20*3:5 is equivalent to 10:20:20:20:5
     NDLNetworkBuilder=[
-	ndlMacros=$NdlDir$\default_macros.ndl
-        NetworkDescription=$NdlDir$\ae.ndl
-    ]	
-	
+        ndlMacros=$NdlDir$/default_macros.ndl
+        NetworkDescription=$NdlDir$/ae.ndl
+    ]
+
     SGD=[
-	# epochSize=0 means epochSize is the size of the training set
+        # epochSize=0 means epochSize is the size of the training set
         epochSize=0 
         minibatchSize=256
         learningRatesPerMB=0.1
@@ -36,24 +38,22 @@ TIMIT_TrainAutoEncoder=[
        
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
 
-#     readMethod=blockRandomize
-      readMethod=rollingWindow
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
 
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
+        featIn=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      featIn=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-      ]
-
-      featOut=[
-	scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-        dim=792
-      ]
+        featOut=[
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+            dim=792
+        ]
     ]
 ]

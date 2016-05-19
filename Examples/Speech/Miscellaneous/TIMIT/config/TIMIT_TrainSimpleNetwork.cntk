@@ -1,4 +1,6 @@
-stderr=$ExpDir$\TrainSimpleNetwork\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_TrainSimple
 
 precision=float
@@ -10,7 +12,7 @@ precision=float
 TIMIT_TrainSimple=[
     action=train
 
-    modelPath=$ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainSimpleNetwork/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -31,7 +33,7 @@ TIMIT_TrainSimple=[
     ]
 
     SGD=[
-	# epochSize=0 means epochSize is the size of the training set
+        # epochSize=0 means epochSize is the size of the training set
         epochSize=0 
         minibatchSize=256:1024
         learningRatesPerMB=0.8:3.2*14:0.08
@@ -39,28 +41,26 @@ TIMIT_TrainSimple=[
         dropoutRate=0.0
         maxEpochs=25
     ]
-       
+
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
+        # reader to use
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
 
-#     readMethod=blockRandomize
-      readMethod=rollingWindow
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
 
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+        ]
 
-      features=[
-	  dim=792
-	  scpFile=$ScpDir$\TIMIT.train.scp.fbank.fullpath
-      ]
-
-      labels=[
-	mlfFile=$MlfDir$\TIMIT.train.align_cistate.mlf.cntk
-        labelDim=183
-	labelMappingFile=$MlfDir$\TIMIT.statelist
-      ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelDim=183
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+        ]
     ]
 ]

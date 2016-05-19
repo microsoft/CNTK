@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+cntkrun globals.cntk+rnnlu.ndl.cntk || exit $?

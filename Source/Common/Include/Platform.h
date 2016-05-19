@@ -27,6 +27,9 @@
 #define noexcept throw() // noexcept not defined in VS2013, but needed for gcc to pick the correct overload for constructor/assignment from an rvalue ref
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
+#define __func__ __FUNCTION__
+#endif
 // ===========================================================================
 // emulation of some MSVC proprietary CRT
 // ===========================================================================

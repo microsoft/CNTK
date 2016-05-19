@@ -50,7 +50,7 @@ public:
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
-    virtual size_t GetNumParallelSequences() override;
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
 private:
     std::future<Minibatch> m_prefetchTask;
@@ -58,11 +58,13 @@ private:
     ReaderFactory m_factory;
     bool m_endOfEpoch;
 
-    MBLayoutPtr m_layout;
+    size_t m_numParallelSequences;
 
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
+
+    void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };
 
 }}}

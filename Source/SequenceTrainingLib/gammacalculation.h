@@ -8,6 +8,9 @@
 #include "Matrix.h"
 #include "CUDAPageLockedMemAllocator.h"
 
+#include <memory>
+#include <vector>
+
 #pragma warning(disable : 4127) // conditional expression is constant
 
 namespace msra { namespace lattices {
@@ -85,7 +88,7 @@ public:
     // Sec. 3 calculation functions
     // ========================================
     void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues,
-                       std::vector<shared_ptr<const msra::dbn::latticepair>>& lattices,
+                       std::vector<std::shared_ptr<const msra::dbn::latticepair>>& lattices,
                        const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
                        Microsoft::MSR::CNTK::Matrix<ElemType>& labels,
                        Microsoft::MSR::CNTK::Matrix<ElemType>& gammafromlattice,
@@ -317,7 +320,7 @@ private:
 
     // TODO: This function is duplicate of the one in HTLMLFReader.
     // This should be moved to a common utils library and removed from here as well as HTLMLFReader
-    unique_ptr<Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID)
+    std::unique_ptr<Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID)
     {
         if (m_cudaAllocator != nullptr)
         {
@@ -370,7 +373,7 @@ protected:
     float wp;
     float amf;
     msra::dbn::matrix gammasbuffer;
-    vector<size_t> boundary;
+    std::vector<size_t> boundary;
     float boostmmifactor;
     bool seqsMBRmode;
 
@@ -379,4 +382,5 @@ private:
     std::shared_ptr<ElemType> m_intermediateCUDACopyBuffer;
     size_t m_intermediateCUDACopyBufferSize;
 };
-} }
+
+}}

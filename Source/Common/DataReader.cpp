@@ -31,6 +31,34 @@ static const char* GetReaderName(const string& precision)
         InvalidArgument("DataReader: The 'precision' parameter must be 'float' or 'double'.");
 }
 
+void DataReaderBase::SetMinibatchLayout(StreamMinibatchInputs& minibatch)
+{
+    assert(minibatch.begin() != minibatch.end());
+
+    auto& pMBLayout = minibatch.begin()->second.pMBLayout;
+    // This is only allowed for old readers, which support a single layout for all inputs.
+    for (const auto& iter : minibatch)
+    {
+        assert(iter.second.pMBLayout == pMBLayout);
+        // TODO: This should be a runtime check, not an assert() that only runs in Debug.
+        UNUSED(iter);
+    }
+
+    CopyMBLayoutTo(pMBLayout);
+}
+
+bool DataReaderBase::GetMinibatch(StreamMinibatchInputs& minibatch)
+{
+    if (TryGetMinibatch(minibatch))
+    {
+        SetMinibatchLayout(minibatch);
+        return true;
+    }
+
+    return false;
+}
+
+
 template <class ConfigRecordType>
 void DataReader::InitFromConfig(const ConfigRecordType& /*config*/)
 {
@@ -61,6 +89,8 @@ DataReader::DataReader(const ConfigRecordType& config)
     string precision = config(L"precision", "float");
 
     bool hasMultipleReaders = config.Exists(L"readers");
+    // In case when deserializers are specified, use the new logic to compose them.
+    bool hasDeserializers = config.Exists(L"deserializers");
     if (hasMultipleReaders)
     {
         vector<wstring> ioNames = config(L"readers", ConfigRecordType::Array(stringargvector()));
@@ -74,6 +104,16 @@ DataReader::DataReader(const ConfigRecordType& config)
             assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
         }
+    }
+    else if (hasDeserializers)
+    {
+        // Creating Composite Data Reader that allow to combine deserializers.
+        // This should be changed to link statically when SGD uses the new interfaces.
+        wstring ioName = L"ioName";
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"CompositeDataReader"), GetReaderName(precision));
+        m_ioNames.push_back(ioName);
+        assert(getReaderProc != nullptr);
+        getReaderProc(&m_dataReaders[ioName]);
     }
     else // legacy
     {
@@ -174,7 +214,7 @@ bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
         if (nbr > 0)
             m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr); // the first one determines the param of all others --TODO: This is flimsy.
         bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch(matrices);
-        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
+        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequencesForFixingBPTTMode();
         if (nbr == 0)
             nbr = thisNbr;
         else if (thisNbr != nbr)
@@ -207,15 +247,15 @@ bool DataReader::GetHmmData(msra::asr::simplesenonehmm* hmm)
     return bRet;
 }
 
-size_t DataReader::GetNumParallelSequences()
+size_t DataReader::GetNumParallelSequencesForFixingBPTTMode()
 {
     size_t nNbr = 0;
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         IDataReader* ptr = m_dataReaders[m_ioNames[i]];
         if (nNbr == 0)
-            nNbr = ptr->GetNumParallelSequences();
-        else if (nNbr != ptr->GetNumParallelSequences())
+            nNbr = ptr->GetNumParallelSequencesForFixingBPTTMode();
+        else if (nNbr != ptr->GetNumParallelSequencesForFixingBPTTMode())
             LogicError("GetNumParallelSequences: number of slices in each minibatch not consistent for these streams");
     }
     return nNbr;

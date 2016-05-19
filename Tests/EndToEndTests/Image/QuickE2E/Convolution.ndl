@@ -53,6 +53,6 @@ DNN=[
     ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
     ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-    err = ErrorPrediction(labels, ol, tag="eval")
+    err = ErrorPrediction(labels, ol, tag="evaluation")
     outputNodes = ol
 ]

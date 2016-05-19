@@ -281,9 +281,9 @@ public:
     DeclareConstructorFromConfigWithNumInputs(InvStdDevNode);
     InvStdDevNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_mean(deviceId),
-          m_var(deviceId),
-          m_temp(deviceId)
+          m_mean(make_shared<Matrix<ElemType>>(deviceId)),
+          m_var (make_shared<Matrix<ElemType>>(deviceId)),
+          m_temp(make_shared<Matrix<ElemType>>(deviceId))
     {
     }
 
@@ -295,21 +295,21 @@ public:
         {
             // reset accumulators
             UpdateFunctionValuesSize();
-            m_mean.Resize(Value()); // mean accumulator normalized by #samples in it
-            m_var .Resize(Value()); // likewise the variance
-            m_temp.Resize(Value()); // and a temp
-            m_mean.SetValue(0);  // reset the mean and var accumulators
-            m_var .SetValue(0);
+            m_mean->Resize(Value()); // mean accumulator normalized by #samples in it
+            m_var ->Resize(Value()); // likewise the variance
+            m_temp->Resize(Value()); // and a temp
+            m_mean->SetValue(0);  // reset the mean and var accumulators
+            m_var ->SetValue(0);
             Value().SetValue(0); // and clear m_value as well: We must do this here already to avoid a NaN check to flag while this is being estimated.
         }
         else // finalize
         {
             // m_value <- 1/stddev
             ElemType sqrtFloor = 1e-10f;
-            m_var.InplaceTruncateBottom(sqrtFloor); // prevent too small variance (and negative square roots due to numeric inaccuracy)
-            m_var.InplaceSqrt();
-            m_var.ElementInverse();
-            Value().SetValue(m_var);
+            m_var->InplaceTruncateBottom(sqrtFloor); // prevent too small variance (and negative square roots due to numeric inaccuracy)
+            m_var->InplaceSqrt();
+            m_var->ElementInverse();
+            Value().SetValue(*m_var);
         }
     }
 
@@ -352,11 +352,7 @@ public:
         // var += (input - mean)^2
         var.DoSqrOfDifferenceOf(beta, input, mean, alpha); // this reduces as well
 
-#if 0   // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
         m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
-#else
-        m_numSamples += Input(0)->Value().GetNumCols(); // BUGBUG: Should be -> GetActualNumSamples().
-#endif
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -365,16 +361,16 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-            node->m_mean.SetValue(m_mean);
-            node->m_var.SetValue(m_var);
-            node->m_temp.SetValue(m_temp);
+            node->m_mean->SetValue(*m_mean);
+            node->m_var ->SetValue(*m_var);
+            node->m_temp->SetValue(*m_temp);
         }
     }
 
 private:
-    Matrix<ElemType> m_mean;
-    Matrix<ElemType> m_var;
-    Matrix<ElemType> m_temp;
+    shared_ptr<Matrix<ElemType>> m_mean;
+    shared_ptr<Matrix<ElemType>> m_var;
+    shared_ptr<Matrix<ElemType>> m_temp;
 };
 
 template class InvStdDevNode<float>;
@@ -426,7 +422,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
         Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
@@ -527,7 +523,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
         Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());

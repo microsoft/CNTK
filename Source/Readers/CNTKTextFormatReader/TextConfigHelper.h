@@ -25,7 +25,7 @@ public:
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
 
-    bool ShouldRandomize() const { return m_randomize; }
+    size_t GetRandomizationWindow() const { return m_randomizationWindow; }
 
     bool ShouldSkipSequenceIds() const { return m_skipSequenceIds; }
 
@@ -35,7 +35,9 @@ public:
 
     size_t GetChunkSize() const { return m_chunkSizeBytes; }
 
-    unsigned int GetNumChunksToCache() const { return m_chunkCacheSize; }
+    bool ShouldKeepDataInMemory() const { return m_keepDataInMemory; }
+
+    bool IsInFrameMode() const { return m_frameMode; }
 
     ElementType GetElementType() const { return m_elementType; }
 
@@ -44,13 +46,14 @@ public:
 private:
     std::wstring m_filepath;
     std::vector<StreamDescriptor> m_streams;
-    bool m_randomize;
+    size_t m_randomizationWindow;
     ElementType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
     size_t m_chunkSizeBytes; // chunks size in bytes
-    unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
+    bool m_keepDataInMemory; // if true the whole dataset is kept in memory
+    bool m_frameMode; // if true, the maximum expected sequence length in the dataset is one sample.
 };
 
 } } }

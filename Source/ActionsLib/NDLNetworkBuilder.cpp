@@ -14,6 +14,7 @@
 #include "ConvolutionalNodes.h"
 #include "NonlinearityNodes.h"
 #include "ReshapingNodes.h"
+#include "InputAndParamNodes.h"
 #include "TensorShape.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -72,14 +73,16 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t i = 0;
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
+            wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
+            // TODO: Map dynamicAxis from name to node at this point, where that node is memoized inside NDL.
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
             if (m_net->NodeNameExists(name))
                 nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
             else if (isSparse)
-                nodePtr = builder.CreateSparseInputNode(name, tensorShape);
+                nodePtr = builder.CreateSparseInputNode(name, tensorShape, dynamicAxis);
             else
-                nodePtr = builder.CreateInputNode(name, tensorShape);
+                nodePtr = builder.CreateInputNode(name, tensorShape, dynamicAxis);
         }
     }
     else if (cnNodeType == L"ImageInput" || cnNodeType == L"SparseImageInput")
@@ -96,11 +99,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t imageHeight   = ((NDLNode<ElemType>*) params[1])->GetScalar();
             size_t imageChannels = ((NDLNode<ElemType>*) params[2])->GetScalar();
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
+            wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
 
             if (isSparse)
-                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
+                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), dynamicAxis);
             else
-                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
+                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), dynamicAxis);
         }
     }
     else if (OperationNameOf(LearnableParameter) == cnNodeType || cnNodeType == L"ImageParameter")
@@ -185,7 +189,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr->Value().SetValue(val);
         }
     }
-    else if (cnNodeType == OperationNameOf(RowSliceNode))
+    else if (cnNodeType == L"RowSlice") // Note: This now maps onto SliceNode which specifies the end differently.
     {
         if (parameter.size() != 3)
             RuntimeError("RowSlice should have three parameters. Usage: RowSlice(startRowIndex, numRows, origNodeName.");
@@ -288,36 +292,135 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(ConvolutionNode))
+    else if (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(PoolingNode))
     {
-        if (parameter.size() != 7)
-            RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"].", cnNodeType.c_str());
+        if (parameter.size() != 3 && parameter.size() != 7)
+        {
+            if (cnNodeType == OperationNameOf(ConvolutionNode))
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls supports 2 modes: \n"
+                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] \n"
+                             "and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"]. \n"
+                             "2. ND convolution which takes 3 fixed parameters [weightNodeName, inputValueNodeName, kernelShape] and \n"
+                             "9 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+            else
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, poolKind, kernelShape] and \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+        }
 
         // setup the parameter position of children so we can hook them up later
-        nodeParamCount = 2;
         nodeParamStart = 0;
+        nodeParamCount = cnNodeType == OperationNameOf(ConvolutionNode) ? 2 : 1;
 
         if (pass == ndlPassInitial)
         {
-            int id = 2; // skip weightNode and inputValueNode
+            if (parameter.size() == 3)
+            {
+                auto reqParams = node->GetParameters(false);
+                auto optParams = node->GetParameters(true);
+                auto paramGetter = [reqParams, node](size_t index) -> TensorShape
+                {
+                    assert(index < reqParams.size());
+                    auto parm = reqParams[index];
+                    if (parm->GetType() != ndlTypeArray)
+                        return TensorShape((size_t)parm->GetScalar());
+                    auto parms = node->GetParentScript()->ParseVariable(parm->GetValue(), false)->GetParameters();
+                    vector<size_t> dims(parms.size());
+                    for (size_t i = 0; i < dims.size(); i++)
+                        dims[i] = parms[i]->GetValue();
+                    return TensorShape(dims);
+                };
+                auto paramResolver = [optParams, node](const char* name, size_t defaultVal) -> TensorShape
+                {
+                    auto res = std::find_if(begin(optParams), end(optParams), [name](const NDLNode<ElemType>* n) { return EqualCI(n->GetName(), name); });
+                    if (res == end(optParams))
+                        return TensorShape(defaultVal);
+                    auto parm = node->GetParentScript()->ParseVariable((*res)->GetValue(), false);
+                    if (parm->GetType() == ndlTypeConstant)
+                        return TensorShape((size_t)parm->GetValue());
+                    auto parms = parm->GetParameters();
+                    vector<size_t> dims(parms.size());
+                    for (size_t i = 0; i < dims.size(); i++)
+                        dims[i] = parms[i]->GetValue();
+                    return TensorShape(dims);
+                };
+                auto boolParamResolver = [&optParams, node](const char* name, bool defaultVal) -> vector<bool>
+                {
+                    auto res = std::find_if(begin(optParams), end(optParams), [name](const NDLNode<ElemType>* n) { return EqualCI(n->GetName(), name); });
+                    if (res == end(optParams))
+                        return vector<bool>{defaultVal};
+                    auto parm = node->GetParentScript()->ParseVariable((*res)->GetValue(), false);
+                    if (parm == nullptr)
+                        return vector<bool>{(*res)->GetValue()};
+                    if (parm->GetType() != ndlTypeArray)
+                        return vector<bool>{parm->GetValue()};
+                    auto parms = parm->GetParameters();
+                    vector<bool> dims(parms.size());
+                    for (size_t i = 0; i < dims.size(); i++)
+                        dims[i] = parms[i]->GetValue();
+                    return dims;
+                };
 
-            // evaluate only scalar parameters
-            vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
-            id = 0; // reset counter because the params array starts at zero
-            size_t kernelWidth = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            size_t kernelHeight = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            size_t outputChannels = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            size_t horizontalSubsample = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            size_t verticalSubsample = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            assert(id == 5);
+                auto kernelShape = paramGetter(reqParams.size() - 1);
+                auto mapCount = paramResolver("mapCount", 1);
+                auto stride = paramResolver("stride", 1);
+                auto sharing = boolParamResolver("sharing", true);
+                auto autoPad = boolParamResolver("autoPadding", true);
+                auto lowerPad = paramResolver("lowerPad", 0);
+                auto upperPad = paramResolver("upperPad", 0);
+                ImageLayoutKind imageLayout = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
+                size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
 
-            // optional
-            ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
-            bool zeroPadding = node->GetOptionalParameter("zeroPadding", "false");
-            size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
+                auto pool = PoolKind::None;
+                if (cnNodeType == OperationNameOf(PoolingNode))
+                {
+                    auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
+                    pool = PoolKindFrom(wstring(parm->GetValue()));
+                }
 
-            nodePtr = builder.Convolution(NULL, NULL, kernelWidth, kernelHeight, outputChannels,
-                                          horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding, maxTempMemSizeInSamples, name);
+                if (pool == PoolKind::None)
+                {
+                    nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
+                                                  autoPad, lowerPad, upperPad, imageLayout, maxTempMemSizeInSamples, name);
+                }
+                else
+                {
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                }
+
+            }
+            else if (parameter.size() == 7)
+            {
+                int id = 2; // skip weightNode and inputValueNode
+
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+                id = 0; // reset counter because the params array starts at zero
+                size_t kernelWidth = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+                size_t kernelHeight = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+                size_t outputChannels = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+                size_t horizontalSubsample = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+                size_t verticalSubsample = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+                assert(id == 5);
+
+                // optional
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
+                bool zeroPadding = node->GetOptionalParameter("zeroPadding", "false");
+                size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
+
+                nodePtr = builder.Convolution(NULL, NULL, kernelWidth, kernelHeight, outputChannels,
+                                              horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
+                                              maxTempMemSizeInSamples, name);
+            }
+            else
+                assert(false);
         }
     }
     else if (cnNodeType == OperationNameOf(MaxPoolingNode))
@@ -392,9 +495,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
             // Optional parameters
-            bool eval = node->GetOptionalParameter("eval", "false");
             bool spatial = node->GetOptionalParameter("spatial", "false");
             double normTimeConst = node->GetOptionalParameter("normalizationTimeConstant", "0");
+            double blendTimeConst = node->GetOptionalParameter("blendTimeConstant", "0");
             double epsilon = node->GetOptionalParameter("epsilon", "0.00001");
             std::wstring bnEngineS = node->GetOptionalParameter("engine", "cntk");
             bool useCntkEngine;
@@ -406,7 +509,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, normTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
     else
@@ -444,6 +547,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         }
         else
         {
+#if 1
+            vector<ComputationNodeBasePtr> inputNodes;
+            for (let& in : inputs)
+                inputNodes.push_back(ComputationNode<ElemType>::FromVoidPtr(in));
+            nodePtr->AttachInputs(inputNodes);
+#else       // TODO: delete this
             switch (inputs.size())
             {
             // TODO: just use a vector attach
@@ -470,6 +579,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     RuntimeError("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
                 break;
             }
+#endif
         }
         // process common optional parameters (currently only "tag");
         ProcessOptionalParameters(node);

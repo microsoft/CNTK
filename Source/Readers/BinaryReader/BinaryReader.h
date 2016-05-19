@@ -541,7 +541,7 @@ public:
 };
 
 template <class ElemType>
-class BinaryReader : public IDataReader
+class BinaryReader : public DataReaderBase
 {
     size_t m_mbSize;           // size of minibatch requested
     size_t m_mbStartSample;    // starting sample # of the next minibatch
@@ -583,12 +583,13 @@ public:
     BinaryReader()
         : m_pMBLayout(make_shared<MBLayout>())
     {
+        m_pMBLayout->SetUniqueAxisName(L"BinaryReader");
     }
     virtual ~BinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return 1;
     }

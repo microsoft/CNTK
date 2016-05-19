@@ -7,7 +7,8 @@
 
 #include "TextParser.h"
 #include "Reader.h"
-#include "SampleModePacker.h"
+#include "Packer.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,11 +33,11 @@ public:
 private:
     IDataDeserializerPtr m_deserializer;
 
-    // A head transformer in a list of transformers.
-    TransformerPtr m_transformer;
+    // Randomizer.
+    SequenceEnumeratorPtr m_randomizer;
 
     // Packer.
-    SampleModePackerPtr m_packer;
+    PackerPtr m_packer;
 
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;

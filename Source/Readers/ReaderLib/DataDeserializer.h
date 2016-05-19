@@ -10,11 +10,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Sequence key, used for correlations between sequences between different deserializers.
+// Sequence key, used for correlations of sequences between different deserializers.
+// TODO: In many cases sequence keys share the same prefix. Splitting the sequence key on
+// sequence prefix and suffix will allow us to store keys more efficiently.
+
+// The sample identifies a particular sample inside the sequence. In the future it will be hidden, so that deserializers won't know about
+// sequence or sample mode, exposing only sequences.
 struct KeyType
 {
-    size_t m_major;
-    size_t m_minor;
+    // Possible sequence common prefix.
+    // size_t m_prefix;
+
+    // Identifies sequence between different deserializers.
+    size_t m_sequence;
+
+    // Sample id.
+    size_t m_sample;
 };
 
 class Chunk;
@@ -40,13 +51,15 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
 // data deserializer or transformer can provide provides.
+// TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_data(nullptr) { }
+    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_data(nullptr) {}
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
     size_t m_id;
+    size_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
@@ -61,10 +74,7 @@ typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct DenseSequenceData : SequenceDataBase
 {
-    DenseSequenceData() : m_numberOfSamples(0) { }
-
     TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
-    size_t m_numberOfSamples;      // Number of samples in the sequence
 };
 typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 
@@ -74,7 +84,11 @@ typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 // All samples in the sequence should have the same layout.
 struct SparseSequenceData : SequenceDataBase
 {
-    std::vector<std::vector<size_t>> m_indices;
+    IndexType* m_indices; // an index for every value in the m_data array
+    std::vector<IndexType> m_nnzCounts; // nnz count for each sample in the sequence
+    IndexType m_totalNnzCount; // sum of all nzzCounts of all samples
+    // Using IndexType for both properties above since the nnzCount should fit inside
+    // the index type (in CSC format, the last value in the column index array == nnzCount)
 };
 typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;
 

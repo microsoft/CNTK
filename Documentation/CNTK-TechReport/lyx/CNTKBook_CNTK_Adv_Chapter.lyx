@@ -1280,7 +1280,7 @@ CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag="eval")
+Err=ErrorPrediction(labels, CE.F, tag="evaluation")
 \end_layout
 
 \end_inset
@@ -4059,7 +4059,7 @@ CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag="eval")
+Err=ErrorPrediction(labels, CE.F, tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout

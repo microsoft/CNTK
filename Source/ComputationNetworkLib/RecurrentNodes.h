@@ -91,13 +91,8 @@ protected:
 template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
 class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
-    static const std::wstring TypeName()
-    {
-        return L"DelayedValue";
-    }
 
 private:
     void Init(const TensorShape& sampleLayout, ElemType initialActivationValue)
@@ -188,6 +183,10 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: change below accesses to TensorView, then this is no longer needed.
+        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+
         assert(inputIndex == 0);
         inputIndex;
 
@@ -322,7 +321,7 @@ public:
                         inp = Input(0)->ValueFor(frDelayed.Sequence(id));
                     // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
-                    out.SetValue(inp);
+                    out.AssignValuesOf(inp);
                 }
             }
         }
@@ -359,7 +358,7 @@ public:
                 inp = Input(0)->ValueFor(frDelayed);
             // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
-            out.SetValue(inp);
+            out.AssignValuesOf(inp);
         }
     }
 

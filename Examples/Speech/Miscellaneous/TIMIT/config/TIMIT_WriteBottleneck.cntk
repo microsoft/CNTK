@@ -1,4 +1,6 @@
-stderr=$ExpDir$\WriteBottleneck\log\log
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
 command=TIMIT_WriteBottleneck
 
 precision=float
@@ -9,7 +11,7 @@ precision=float
 TIMIT_WriteBottleneck=[
     action=write
 
-    modelPath=$ExpDir$\TrainAutoEncoder\model\cntkSpeech.dnn
+    modelPath=$ExpDir$/TrainAutoEncoder/model/cntkSpeech.dnn
 
     # deviceId=-1 for CPU, >=0 for GPU devices 
     deviceId=$DeviceNumber$
@@ -21,20 +23,21 @@ TIMIT_WriteBottleneck=[
 
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=HTKMLFReader
-      featIn=[
-	dim=792
-     	scpFile=$ScpDir$\TIMIT.core.scp.fbank.fullpath
-	type=Real
-      ]
+        # reader to use
+        readerType=HTKMLFReader
+        featIn=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.core.scp.fbank.fullpath
+            type=Real
+        ]
     ]
+
     writer=[
-	writerType=HTKMLFWriter	
-	L2.BFF.FF.P = [
-	   dim=64
-	   scpFile=$ScpDir$\TIMIT.core.scp.bottleneck.fullpath
-	   type=Real
-	]
-   ]
+        writerType=HTKMLFWriter	
+        L2.BFF.FF.P = [
+            dim=64
+            scpFile=$ScpDir$/TIMIT.core.scp.bottleneck.fullpath
+            type=Real
+        ]
+    ]
 ]

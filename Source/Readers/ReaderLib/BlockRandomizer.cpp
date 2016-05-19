@@ -21,16 +21,19 @@ BlockRandomizer::BlockRandomizer(
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
     DecimationMode decimationMode,
-    bool useLegacyRandomization)
+    bool useLegacyRandomization,
+    bool multithreadedGetNextSequence)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_decimationMode(decimationMode),
       m_sweep(SIZE_MAX),
       m_epochSize(SIZE_MAX),
       m_globalSamplePosition(SIZE_MAX),
+      m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
       m_lastSeenChunkId(SIZE_MAX),
-      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization))
+      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
+      m_multithreadedGetNextSequences(multithreadedGetNextSequence)
 {
     assert(deserializer != nullptr);
 
@@ -48,6 +51,8 @@ BlockRandomizer::BlockRandomizer(
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
+    m_lastSeenChunkId = SIZE_MAX;
+
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
@@ -58,13 +63,15 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
-    // Calculates global sample position.
-    m_globalSamplePosition = m_epochSize * config.m_epochIndex;
-    PrepareNewSweepIfNeeded(m_globalSamplePosition);
+    // Calculates starts of the epoch, prepares a new sweep if needed.
+    m_epochStartPosition = m_epochSize * config.m_epochIndex;
+    PrepareNewSweepIfNeeded(m_epochStartPosition);
 
-    // Sets sequence cursor to the sequence that corresponds to the global sample position.
+    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
     // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
-    m_sequenceRandomizer->SetSequencePositionTo(m_globalSamplePosition % m_sweepTotalNumberOfSamples, m_sweep);
+    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
+    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
+    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 }
 
 // Prepares a new sweep if needed.
@@ -111,11 +118,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(decimated.size()));
 
-    // TODO: This will be changed, when we move transformers under the randomizer.
-    // TODO: Randomizer won't should not deal with multithreading.
-#pragma omp parallel for ordered schedule(dynamic)
-    for (int i = 0; i < decimated.size(); ++i)
-    {
+    auto process = [&](int i) -> void {
         const auto& description = decimated[i];
         std::vector<SequenceDataPtr> sequence;
         auto it = m_chunks.find(description.m_chunk->m_chunkId);
@@ -129,8 +132,22 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         {
             result.m_data[j][i] = sequence[j];
         }
+    };
+
+    // TODO: This will be changed, when we move transformers under the randomizer, should not deal with multithreading here.
+    if (m_multithreadedGetNextSequences)
+    {
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < decimated.size(); ++i)
+            process(i);
+    }
+    else
+    {
+        for (int i = 0; i < decimated.size(); ++i)
+            process(i);
     }
 
+    m_sequenceRandomizer->ReleaseChunks();
     return result;
 }
 
@@ -138,26 +155,21 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 // Returns true if epoch end is reached.
 bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result)
 {
+    assert(sampleCount != 0);
+
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
-    // Check epoch.
-    size_t epochStart = m_config.m_epochIndex * m_epochSize;
-    if (m_globalSamplePosition - epochStart + sampleCount >= m_epochSize)
-    {
-        sampleCount = epochStart + m_epochSize - m_globalSamplePosition;
-    }
-
-    if (sampleCount <= 0)
+    // Check epoch end.
+    if (m_globalSamplePosition >= m_epochSize + m_epochStartPosition)
     {
         return true;
     }
 
+    sampleCount = std::min(sampleCount, m_epochSize + m_epochStartPosition - m_globalSamplePosition);
+    assert(sampleCount != 0);
+
     // Check that we do not go over the sweep.
-    size_t sweepPosition = m_globalSamplePosition % m_sweepTotalNumberOfSamples;
-    if (sweepPosition + sampleCount >= m_sweepTotalNumberOfSamples)
-    {
-        sampleCount = m_sweepTotalNumberOfSamples - sweepPosition;
-    }
+    sampleCount = std::min(sampleCount, (long)m_sweepTotalNumberOfSamples - m_globalSamplePosition % m_sweepTotalNumberOfSamples);
     assert(sampleCount != 0);
 
     // Randomizing sequences
@@ -201,7 +213,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
     }
 }
 
-// Retrives chunk data based on the window information provided by SequenceRandomizer
+// Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
     const auto& window = m_sequenceRandomizer->GetChunkWindow();
@@ -213,7 +225,7 @@ void BlockRandomizer::RetrieveDataChunks()
     m_lastSeenChunkId = window.back().m_chunkId;
 
     // in the loop we are building a new map of currently loaded chunks:
-    // we are iterating thru all chunks in the window and if they are not in m_chunks map - 
+    // we are iterating thru all chunks in the window and if they are not in m_chunks map -
     // they get requested from the deserializer.
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;

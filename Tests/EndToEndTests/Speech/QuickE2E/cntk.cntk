@@ -10,6 +10,7 @@ speechTrain = [
     modelPath = "$RunDir$/models/cntkSpeech.dnn"
     deviceId = $DeviceId$
     traceLevel = 1
+
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
@@ -21,7 +22,7 @@ speechTrain = [
         needPrior = true
     ]
 
-    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+    BrainScriptNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
         layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
@@ -45,7 +46,7 @@ speechTrain = [
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
         CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='eval')
+        Err = evalCriterion(labels, outZ, tag='evaluation')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')

@@ -178,7 +178,7 @@ void SomeTests()
         {
             fprintf(stderr, "\n### Test %d ###\n\n", (int) i), fflush(stderr);
             let parserTest = parserTests[i];
-            let expr = ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + parserTest, vector<wstring>());
+            let expr = ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + parserTest, L"Test", vector<wstring>());
             //expr->Dump();
             Do(expr);
             if (oneOnly)
@@ -187,7 +187,8 @@ void SomeTests()
     }
     catch (const ConfigException& err)
     {
-        err.PrintError();
+        err.PrintError(L"error");
     }
 }
-} } } // namespaces
+
+}}} // namespaces

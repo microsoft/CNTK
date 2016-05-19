@@ -11,11 +11,11 @@ ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
 imageLayout = "cudnn"
-# override the above as follows when running on CPU:
+# Note: Batch normalization training on CPU is not yet implemented.
+# When it is, override the above as follows when running on CPU:
 # deviceId = -1
-# imageLayout = "legacy"
 
-command = train:CreateEvalModel:test
+command = train:test
 
 precision = "float"
 modelPath = "$ModelDir$/03_ConvBatchNorm"
@@ -23,6 +23,12 @@ ndlMacros = "$ConfigDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file 
 # stderr = "$OutputDir$/03_ConvBatchNorm_out"
+
+traceLevel=1
+numMBsToShowResult=500
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -38,11 +44,14 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.5
-        momentumPerMB = 0*10:0.7
+        learningRatesPerMB = 0.5:0.1
+        momentumPerMB = 0.9
         maxEpochs = 2
+        #batchNormalizationTimeConstant=0 # Set through NDL
+        batchNormalizationBlendTimeConstant=0:1#INF
     ]
     
+    # Note: this reader crashes if randomization is turned on.
     reader = [
         readerType = "UCIFastReader"
         # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
@@ -64,17 +73,6 @@ train = [
 ]
 
 #######################################
-#  Edit model                         #
-#######################################
-
-CreateEvalModel=[    
-    action=edit
-    CurModel=$ModelDir$/03_ConvBatchNorm
-    NewModel=$ModelDir$/03_ConvBatchNorm.Eval
-    editPath=$ConfigDir$/03_ConvBatchNorm.mel
-]
-
-#######################################
 #  TEST CONFIG                        #
 #######################################
 
@@ -82,7 +80,7 @@ test = [
     action = "test"
     minibatchSize = 32
 
-    modelPath=$ModelDir$/03_ConvBatchNorm.Eval
+    modelPath=$ModelDir$/03_ConvBatchNorm
 
     NDLNetworkBuilder = [
         networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"

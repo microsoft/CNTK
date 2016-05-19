@@ -51,7 +51,7 @@ L1 = SBFF2(featInput1, HiddenDim, FeatDim1, featInput2, FeatDim2)
 L2 = SBFF(L1, HiddenDim, HiddenDim)
 L3 = SBFF(L2, HiddenDim, HiddenDim)
 CE = SMBFF(L3, LabelDim1, HiddenDim, labels,tag="criterion") # do I need a tag? 
-FER = ErrorPrediction(labels,CE.BFF.FF.P,tag="eval")
+FER = ErrorPrediction(labels,CE.BFF.FF.P,tag="evaluation")
 
 # outputNodes
 Prior=Mean(labels)

@@ -7,40 +7,71 @@
 #include "CNTKTextFormatReader.h"
 #include "Config.h"
 #include "TextConfigHelper.h"
+#include "ChunkCache.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 #include "TextParser.h"
+#include "SequencePacker.h"
+#include "FramePacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: This class should go away eventually.
+// TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
+// TODO: Currently preserving this for backward compatibility with current configs.
 CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
     const ConfigParameters& config) :
     m_provider(provider)
 {
     TextConfigHelper configHelper(config);
-    
-    if (configHelper.GetElementType() == ElementType::tfloat) 
-    {
-        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
-    }
-    else 
-    {
-        m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
-    }
 
-    TransformerPtr randomizer;
-    if (configHelper.ShouldRandomize())
+    try
     {
-        randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, m_deserializer);
+        if (configHelper.GetElementType() == ElementType::tfloat)
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<float>(configHelper));
+        }
+        else
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new TextParser<double>(configHelper));
+        }
+
+        if (configHelper.ShouldKeepDataInMemory()) 
+        {
+            m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
+        }
+
+        size_t window = configHelper.GetRandomizationWindow();
+        if (window > 0)
+        {
+            // Verbosity is a general config parameter, not specific to the text format reader.
+            int verbosity = config(L"verbosity", 2);
+            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
+        }
+        else
+        {
+            m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+        }
+
+        if (configHelper.IsInFrameMode()) 
+        {
+            m_packer = std::make_shared<FramePacker>(
+                m_provider,
+                m_randomizer,
+                GetStreamDescriptions());
+        }
+        else
+        {
+        m_packer = std::make_shared<SequencePacker>(
+            m_provider,
+            m_randomizer,
+            GetStreamDescriptions());
+        }
     }
-    else
+    catch (const std::runtime_error& e)
     {
-        randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+        RuntimeError("CNTKTextFormatReader: While reading '%ls': %s", configHelper.GetFilePath().c_str(), e.what());
     }
-
-    randomizer->Initialize(nullptr, config);
-
-    m_transformer = randomizer;
 }
 
 std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
@@ -50,17 +81,13 @@ std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
 
 void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
 {
-    if (config.m_totalEpochSizeInSamples <= 0)
+    if (config.m_totalEpochSizeInSamples == 0)
     {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Epoch size cannot be 0.");
     }
 
-    m_transformer->StartEpoch(config);
-    m_packer = std::make_shared<SampleModePacker>(
-        m_provider,
-        m_transformer,
-        config.m_minibatchSizeInSamples,
-        GetStreamDescriptions());
+    m_randomizer->StartEpoch(config);
+    m_packer->StartEpoch(config);
 }
 
 Minibatch CNTKTextFormatReader::ReadMinibatch()

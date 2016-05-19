@@ -122,7 +122,7 @@ speechTrain = new TrainAction [
 
         // training
         cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        Err = ErrorPrediction(labels, LSTMoutputW, tag='evaluation')              // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 

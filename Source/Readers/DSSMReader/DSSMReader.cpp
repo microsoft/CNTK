@@ -320,7 +320,7 @@ void DSSMReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& lab
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
-bool DSSMReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+bool DSSMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     if (m_readNextSample >= m_totalSamples)
     {

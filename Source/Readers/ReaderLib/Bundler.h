@@ -8,7 +8,6 @@
 #include "DataDeserializer.h"
 #include "DataDeserializerBase.h"
 #include "Config.h"
-#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

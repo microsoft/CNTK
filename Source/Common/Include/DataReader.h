@@ -51,43 +51,78 @@ const size_t requestDataSize = randomizeAuto;
 // this class contains the input data structures to be filled in by the GetMinibatch() call
 class StreamMinibatchInputs
 {
-    typedef map<std::wstring, MatrixBasePtr> MapType;
-    MapType matrices;
 public:
-    void AddInput(const std::wstring& nodeName, const MatrixBasePtr& matrix) { AddInputMatrix(nodeName, matrix); } // use this where entire entry is copied (UCIFastReader::GetMinibatch() async)
-    // TODO: GetInput() will return a struct
-    // access to matrix entries
-    void AddInputMatrix(const std::wstring& nodeName, const MatrixBasePtr& matrix) { matrices[nodeName] = matrix; }
-    bool HasInput(const std::wstring& nodeName) const { return matrices.find(nodeName) != matrices.end(); }
-    template<class ElemType>
-    Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName) const
+    struct Input
     {
-        auto iter = matrices.find(nodeName);
-        if (iter == matrices.end())
-            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
-        assert(iter->second);
-        auto* matrixp = dynamic_cast<Matrix<ElemType>*>(iter->second.get());
+        /*const*/ MatrixBasePtr matrix;
+        /*const*/ MBLayoutPtr pMBLayout;
+        /*const*/ TensorShape sampleLayout;
+
+        // constructor
+        Input(MatrixBasePtr matrix, MBLayoutPtr pMBLayout, TensorShape sampleLayout) : 
+            matrix(matrix), pMBLayout(pMBLayout), sampleLayout(sampleLayout)
+        {
+            assert(matrix);
+        }
+        Input() {} // some STL classes need this for general happiness
+
+        // helper for typecasting the matrix pointer
+    template<class ElemType>
+        Matrix<ElemType>& GetMatrix(const wchar_t* name/*for debugging only*/ = L"(unknown)") const
+    {
+            assert(matrix);
+            auto* matrixp = dynamic_cast<Matrix<ElemType>*>(matrix.get());
         if (!matrixp)
         {
             // print a rather rich error to track down a regression failure
-            auto isFloat  = !!dynamic_cast<Matrix<float>*>(iter->second.get());
-            auto isDouble = !!dynamic_cast<Matrix<double>*>(iter->second.get());
-            LogicError("GetInputMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
-                        typeid(ElemType).name(), nodeName.c_str(), typeid(iter->second.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+                auto isFloat  = !!dynamic_cast<Matrix<float>*> (matrix.get());
+                auto isDouble = !!dynamic_cast<Matrix<double>*>(matrix.get());
+                LogicError("GetMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
+                    typeid(ElemType).name(), name, typeid(matrix.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
         }
         return *matrixp;
     }
+    };
+
+private:
+    typedef map<std::wstring, Input> MapType;
+    MapType inputs;
+
+public:
+    void AddInput(const std::wstring& nodeName, const Input& input)
+    {
+        assert(input.matrix);
+        inputs[nodeName] = input;
+    }
+    void AddInput(const std::wstring& nodeName, const MatrixBasePtr& matrix, const MBLayoutPtr& pMBLayout, const TensorShape& sampleLayout)
+    {
+        AddInput(nodeName, Input(matrix, pMBLayout, sampleLayout));
+    }
+    bool HasInput(const std::wstring& nodeName) const { return inputs.find(nodeName) != inputs.end(); }
+    const Input& GetInput(const std::wstring& nodeName) const
+    {
+        auto iter = inputs.find(nodeName);
+        if (iter == inputs.end())
+            LogicError("GetInputMatrix: Attempted to access non-existent input stream '%ls'", nodeName.c_str());
+        return iter->second;
+    }
+    template<class ElemType>
+    Matrix<ElemType>& GetInputMatrix(const std::wstring& nodeName) const
+    {
+        const auto& input = GetInput(nodeName);
+        return input.GetMatrix<ElemType>(nodeName.c_str());
+    }
     // iterating
     // TODO: Abstract this.
-    MapType::iterator begin() { return matrices.begin(); }
-    MapType::iterator end()   { return matrices.end(); }
-    MapType::iterator find(const std::wstring& nodeName) { return matrices.find(nodeName); }
-    MapType::const_iterator begin() const { return matrices.begin(); }
-    MapType::const_iterator end()   const { return matrices.end(); }
-    MapType::const_iterator find(const std::wstring& nodeName) const { return matrices.find(nodeName); }
-    void clear() { matrices.clear(); }
+    MapType::iterator begin() { return inputs.begin(); }
+    MapType::iterator end()   { return inputs.end(); }
+    MapType::iterator find(const std::wstring& nodeName) { return inputs.find(nodeName); }
+    MapType::const_iterator begin() const { return inputs.begin(); }
+    MapType::const_iterator end()   const { return inputs.end(); }
+    MapType::const_iterator find(const std::wstring& nodeName) const { return inputs.find(nodeName); }
+    void clear() { inputs.clear(); }
     // only used by test code:
-    void insert(std::pair<wstring, shared_ptr<MatrixBase>> pair) { matrices.insert(pair); }
+    void insert(std::pair<wstring, Input> pair) { inputs.insert(pair); }
 };
 
 // Data Reader interface
@@ -133,7 +168,10 @@ public:
     {
         NOT_IMPLEMENTED;
     };
-    virtual size_t GetNumParallelSequences() = 0;
+
+    // TODO: Should be removed when BPTT follows proper minibatch size.
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() = 0;
+
     //virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz)
     {
@@ -212,6 +250,21 @@ typedef std::shared_ptr<IDataReader> IDataReaderPtr;
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader);
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader);
 
+// The sole purpose of this base class is to provide backwards compatibility for (old)
+// readers that do not support multiple mb layouts.
+class DataReaderBase : public IDataReader
+{
+protected:
+    // Verifies that all inputs share the same layout (have the same layout pointer) 
+    // and copies the provided layout into the minibatch layout.
+    // This method is needed for backwards-compatibility and only meant to be used by old readers!
+    void SetMinibatchLayout(StreamMinibatchInputs& minibatch);
+
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) = 0;
+public:
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+};
+
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
@@ -258,7 +311,6 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
     // NOTE: this destroys the object, and it can't be used past this point.
     // The reason why this is not just a destructor is that it goes across a DLL boundary.
     virtual void Destroy() override;
-
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader
@@ -288,7 +340,7 @@ public:
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     //int GetSentenceEndIdFromOutputLabel();
     //bool RequireSentenceSeg() const override;
 
