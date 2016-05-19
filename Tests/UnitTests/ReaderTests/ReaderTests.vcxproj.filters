@@ -49,6 +49,9 @@
     <Filter Include="Linked Source">
       <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Config\ExperimentalHTKMLF">
+      <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\ImageReaderSimple_map.txt">
@@ -363,6 +366,42 @@
     </None>
     <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
       <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
