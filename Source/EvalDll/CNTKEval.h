@@ -22,7 +22,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
+template <typename ElemType>
 class CNTKEvalBase : public IEvaluateModelBase<ElemType>
 {
 protected:
@@ -39,13 +39,12 @@ public:
     virtual void CreateNetwork(const std::string& networkDescription);
     virtual void Init(const std::string& config);
     virtual void Destroy();
-    virtual void ResetState() {};
 };
 
 // ------------------------------------------------------------------------
 // Basic interface
 // ------------------------------------------------------------------------
-template <class ElemType>
+template <typename ElemType>
 class CNTKEval : public CNTKEvalBase<ElemType>, public IEvaluateModel<ElemType>
 {
     EvalReader<ElemType>* m_reader;
@@ -87,7 +86,7 @@ public:
 // ------------------------------------------------------------------------
 // Extended interface
 // ------------------------------------------------------------------------
-template <class ElemType>
+template <typename ElemType>
 class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExtended<ElemType>
 {
     virtual VariableSchema GetOutputSchema() const override;
@@ -109,8 +108,6 @@ class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExt
     {
         CNTKEvalBase<ElemType>::Init(config);
     }
-
-    virtual void ResetState() override { }
 private:
     static VariableLayout ToVariableLayout(const ComputationNodeBasePtr n);
     std::vector<ComputationNodeBasePtr> m_outputNodes;

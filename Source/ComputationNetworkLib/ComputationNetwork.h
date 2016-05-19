@@ -498,9 +498,8 @@ public:
         return outputNodes;
     }
 
-    // collect all input nodes that outputNodes depend on
-    // TODO: This is rather generic, we should move this to a shared place. DataReaderHelpers.h?
-    std::vector<ComputationNodeBasePtr> InputNodesFor(const std::vector<std::wstring>& outputNodeNames) 
+    // Collect all input nodes that outputNodes depend on.
+    std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<std::wstring>& outputNodeNames)
     {
         // use map to remove duplicated items
         auto outputNodes = OutputNodesByName(outputNodeNames);

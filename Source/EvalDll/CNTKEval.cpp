@@ -32,7 +32,7 @@ bool g_shareNodeValueMatrices = false;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
-template <class ElemType>
+template <typename ElemType>
 void CNTKEvalBase<ElemType>::Init(const std::string& config)
 {
     m_config.Parse(config);
@@ -44,7 +44,7 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
 
 // CreateNetwork - create a network based on the network description
 // networkDescription - network description
-template <class ElemType>
+template <typename ElemType>
 void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription)
 {
     ConfigParameters config;
@@ -62,7 +62,7 @@ void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
-template <class ElemType>
+template <typename ElemType>
 void CNTKEvalBase<ElemType>::Destroy()
 {
     // cleanup everything
@@ -74,7 +74,7 @@ void CNTKEvalBase<ElemType>::Destroy()
 // Basic interface
 // ----------------------------------------------------------------------------
 
-template <class ElemType>
+template <typename ElemType>
 void EVAL_API GetEval(IEvaluateModel<ElemType>** peval)
 {
     *peval = new CNTKEval<ElemType>();
@@ -93,7 +93,7 @@ extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval)
 // dimensions - map from name of node to dimension of the node, will be appended to for Input/Output scenarios
 // nodeGroup - type of node we are requesting (input/output/specified)
 // NOTE: when nodeGroup==specified the dimensions map is expected to be populated with the string names of the nodes requested, dimensions will be modified return the current value.
-template <class ElemType>
+template <typename ElemType>
 void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)
 {
     if (m_net == NULL)
@@ -145,7 +145,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
 
 // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
 // ouputNodeName - name of node that will be evaluated
-template <class ElemType>
+template <typename ElemType>
 void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNodeName)
 {
     m_net->StartEvaluateMinibatchLoop(m_net->GetNodeFromName(outputNodeName));
@@ -154,7 +154,7 @@ void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNo
 // Evaluate - Evalute using the model with the given inputs and outputs
 // inputs - map from node name to input vector
 // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
-template <class ElemType>
+template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     size_t minibatchSize = m_config(L"minibatchSize", (size_t) 10240);
@@ -191,7 +191,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
 
 // Evaluate - Evalute using the model with the given inputs and outputs
 // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
-template <class ElemType>
+template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     // get the evaluation names from the output string
@@ -215,7 +215,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
 }
 
 
-template <class ElemType>
+template <typename ElemType>
 void CNTKEval<ElemType>::Destroy()
 {
     CNTKEvalBase<ElemType>::Destroy();
@@ -256,7 +256,7 @@ void CNTKEvalExtended<ElemType>::StartForwardEvaluation(std::vector<wstring> out
     m_scopedNetworkOperationMode = make_shared<ScopedNetworkOperationMode>(m_net, NetworkOperationMode::inferring);
     // allocate memory for forward computation
     m_outputNodes  = m_net->OutputNodesByName(outputNodeNames);
-    m_inputNodes = m_net->InputNodesFor(outputNodeNames);
+    m_inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
     // allocate memory for forward computation
     m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
     m_net->StartEvaluateMinibatchLoop(m_outputNodes);
@@ -282,7 +282,7 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
     if (nodes.size() == 0)
     {
         // Default to all nodes
-        nodes = m_net->InputNodesFor({});
+        nodes = m_net->InputNodesForOutputs({});
     }
 
     for (const auto& n : nodes)
@@ -354,14 +354,14 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, 
     }
 }
 
-template <class ElemType>
+template <typename ElemType>
 void CNTKEvalExtended<ElemType>::Destroy()
 {
     CNTKEvalBase<ElemType>::Destroy();
     delete this;
 }
 
-template <class ElemType>
+template <typename ElemType>
 void EVAL_API GetEvalExtended(IEvaluateModelExtended<ElemType>** peval)
 {
     *peval = new CNTKEvalExtended<ElemType>();

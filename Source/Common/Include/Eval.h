@@ -48,8 +48,6 @@ public:
     // Free resources
     //
     virtual void Destroy() = 0;
-
-    virtual void ResetState() = 0;
 };
 
 // ------------------------------------------------------------------------
@@ -97,6 +95,8 @@ public:
     // happen during evaluation
     //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+
+    virtual void ResetState() = 0;
 };
 
 

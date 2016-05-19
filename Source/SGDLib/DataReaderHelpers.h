@@ -15,12 +15,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 /*static*/ struct DataReaderHelpers
 {
-    // -------------------------------------------------------------------
-    // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
-    // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
-    // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
-    // -------------------------------------------------------------------
-
     template <class ElemType>
     static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
     {
@@ -37,6 +31,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->NotifyFunctionValuesMBSizeModified();
     }
 
+    // -------------------------------------------------------------------
+    // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
+    // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
+    // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
+    // -------------------------------------------------------------------
     // Note: This will go away with the redesigned reader interface.
     // TODO: callers of this often do ComputationNetwork::BumpEvalTimeStamp(featureNodes) and also for labels; we should eliminate the need for this.
     template <class ElemType>
