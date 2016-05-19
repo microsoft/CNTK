@@ -11,7 +11,7 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import _check_broadcasting, unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from .. import *
 from ...reader import *
@@ -29,14 +29,13 @@ TENSOR_PAIRS = [
     # [[10., 20.], [30., 40.], [1., 2.]]),
     # Test with broadcast
     # TODO: fix the expected output
-    ([5], [[10, 20], [30,40], [1,2]]),
+    ([5], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
     #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_plus(left_operand, right_operand, device_id, precision):
@@ -60,19 +59,23 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=False)
 
     unittest_helper(a + b, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, clean_up=False, backward_pass=False)
 
     # Backward pass test
     #==================
     # the expected results for the backward pass is all ones
+
     expected = [[[np.ones_like(x) for x in left_operand]]]
-    unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
-    unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
+    if (_check_broadcasting(AA(left_operand),AA(right_operand))):
+        expected = [[[np.sum(expected)]]]
+    #unittest_helper(left_as_input, None, expected, device_id=device_id,
+    #                precision=precision, clean_up=True, backward_pass=True, input_node=a)
+    
+    expected = [[[np.ones_like(x) for x in right_operand]]]
+    #unittest_helper(right_as_input, None, expected, device_id=device_id,
+    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 # -- minus operation tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_minus(left_operand, right_operand, device_id, precision):
@@ -112,7 +115,6 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
 
 # -- element times tests --
 
-
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
 
@@ -151,7 +153,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 # -- element divide tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_divide(left_operand, right_operand, device_id, precision):
@@ -197,6 +198,8 @@ TENSORS = [
     ([[100., 200.], [300., 400.], [10., 20.]]),
     ([[30,40], [1,2], [0.1, 0.2]])
 ]
+
+# -- identity function tests --
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_identity(tensor, device_id, precision):
