@@ -36,6 +36,24 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageAndTextReaderSimple_Config.cntk",
+        testDataPath() + "/Control/ImageAndTextReaderSimple_Control.txt",
+        testDataPath() + "/Control/ImageAndTextReaderSimple_Output.txt",
+        "Simple_Test",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
+
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
 {
     BOOST_REQUIRE_EXCEPTION(
@@ -53,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 or 3 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadLabel)

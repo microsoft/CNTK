@@ -68,11 +68,11 @@ public:
         return m_cropType == CropType::MultiView10;
     }
 
+    static CropType ParseCropType(const std::string &src);
+
 private:
     ImageConfigHelper(const ImageConfigHelper&) = delete;
     ImageConfigHelper& operator=(const ImageConfigHelper&) = delete;
-
-    CropType ParseCropType(const std::string &src);
 
     std::string m_mapPath;
     std::vector<StreamDescriptionPtr> m_streams;

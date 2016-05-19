@@ -47,21 +47,20 @@ SimpleMultiGPU = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/SimpleDataTrain.txt"
 
-        miniBatchMode = "partial"
-        randomize = "none"
-        traceLevel = 1   
-	input = [
-        features = [
-	    alias = "F"
-            dim = 2
-            format = "dense"
-        ]
+        randomize = false
+   
+        input = [
+            features = [
+                alias = "F"
+                dim = 2
+                format = "dense"
+            ]
 
-        labels = [
-            alias = "L"
-            dim = 2        # One label dimension
-	    format = "dense"
+            labels = [
+                alias = "L"
+                dim = 2
+                format = "dense"
+            ]
         ]
-	]
     ]
 ]

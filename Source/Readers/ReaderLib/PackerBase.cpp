@@ -34,13 +34,13 @@ void PackerBase::StartEpoch(const EpochConfiguration& config)
 }
 
 PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
-    TransformerPtr transformer,
+    SequenceEnumeratorPtr sequenceEnumerator,
     const std::vector<StreamDescriptionPtr>& streams) :
-    m_transformer(transformer),
+    m_sequenceEnumerator(sequenceEnumerator),
     m_minibatchSize(0),
     m_outputStreamDescriptions(streams)
 {
-    m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
+    m_inputStreamDescriptions = sequenceEnumerator->GetStreamDescriptions();
     assert(m_inputStreamDescriptions.size() != 0);
     assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 

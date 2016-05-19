@@ -36,11 +36,11 @@ speechTrain = [
         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
+        ce = trainingCriterion(labels, outZ, tag='criterion')
+        err = evalCriterion(labels, outZ, tag='evaluation')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
+        scaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
 
     SGD = [

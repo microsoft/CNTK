@@ -40,17 +40,20 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigUtil.h" />
     <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="Bundler.h" />
+    <ClInclude Include="ChunkCache.h" />
     <ClInclude Include="ChunkRandomizer.h" />
+    <ClInclude Include="TransformController.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
     <ClInclude Include="Packer.h" />
     <ClInclude Include="PackerBase.h" />
+    <ClInclude Include="SequenceEnumerator.h" />
     <ClInclude Include="SequencePacker.h" />
     <ClInclude Include="SequenceRandomizer.h" />
     <ClInclude Include="StringToIdMap.h" />
-    <ClInclude Include="TransformerBase.h" />
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />
@@ -65,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bundler.cpp" />
+    <ClCompile Include="ChunkCache.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />

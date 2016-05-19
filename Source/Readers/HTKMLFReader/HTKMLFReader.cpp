@@ -599,7 +599,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 }
 
 // Load all input and output data.
-// Note that the terms features imply be real-valued quanities and
+// Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
 // are inputs or targets for the network
 // TODO: lots of code dup with the other Prepare function

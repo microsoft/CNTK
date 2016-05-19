@@ -1,0 +1,52 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+OriginalTestDir=../../../DNN/WriteCommand
+ConfigDir=$TEST_DIR/$OriginalTestDir
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'shareNodeValueMatrices=true speechTrain=[reader=[readerType=ExperimentalHTKMLFReader]] write=[reader=[readerType=ExperimentalHTKMLFReader]] write=[reader=[readMethod=none]]' || exit $?
+
+OUTPUT_BASELINE=$TEST_DIR/$OriginalTestDir/Output.ScaledLogLikelihood
+if [ "$OS" == "Windows_NT" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.windows
+fi
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.cpu
+elif [ "$TEST_DEVICE" == "gpu" ]; then
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.gpu
+else
+  echo "Error: Unknown TEST_DEVICE specified!"
+  exit 3
+fi
+
+OUTPUT_CURRENT=$TEST_RUN_DIR/Output.ScaledLogLikelihood
+
+if [ ! -e $OUTPUT_BASELINE ]; then
+  echo "Error: Cannot find write command's output baseline file $OUTPUT_BASELINE!"
+  exit 3
+fi
+
+if [ ! -e $OUTPUT_CURRENT ]; then
+  echo "Error: Cannot find write command's output file $OUTPUT_CURRENT!"
+  exit 3
+fi
+
+# Check for each line that the space-separated floats match the baseline with a tolerance of 0.03 %
+OUTPUT_DIFF=$TEST_RUN_DIR/Output.ScaledLogLikelihood.diff
+awk '{FS=" "} function abs(x) {return ((x < 0.0) ? -x : x)} NR==FNR {for (i=1; i<=NF; i++) a[FNR][i]=$i;} NR!=FNR {for (i=1; i<=NF; i++) {if ((abs($i - a[FNR][i])/abs($i)) > 0.03) printf("Line %d, Field %d: Baseline = %f, Current = %f\n", NR, i, a[FNR][i], $i);}}' $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF || exit $?
+
+if [ -s $OUTPUT_DIFF ]; then
+  echo "Error: Output of write command does not match baseline output within specified tolerance. See $OUTPUT_DIFF"
+  exit 1
+fi
+
+exit 0
