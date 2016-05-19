@@ -156,36 +156,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
           for (int widx = 0; widx < m_tableCount; widx++)
           {
-            auto multiversoMatrix = m_matrixArray->at(widx);
-						ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+            if (m_isSparseArray[widx])
+            {
+                auto multiversoMatrix = m_sparseMatrixMap->at(widx);
+                ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+            }
+            else
+            {
+                auto multiversoMatrix = m_matrixMap->at(widx);
+                ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                multiversoMatrix->Add(px, m_tableLength[widx]);
+            }
           }
 
-        // TODO[qiwye] remove this fake get when multiverso has fix the initial problem
-        for (int widx = 0; widx < m_tableCount; widx++)
-        {
-            auto multiversoMatrix = m_matrixArray->at(widx);
-            ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
+          // TODO[qiwye] remove this fake get when multiverso has fix the initial problem
+          for (int widx = 0; widx < m_tableCount; widx++)
+          {
+            if (m_isSparseArray[widx])
+            {
+              auto multiversoMatrix = m_sparseMatrixMap->at(widx);
+              ElemType* px = m_deltaArray + m_tableOffsets[widx];
+              multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
+            }
+            else
+            {
+              auto multiversoMatrix = m_matrixMap->at(widx);
+              ElemType* px = m_deltaArray + m_tableOffsets[widx];
+              multiversoMatrix->Get(px, m_tableLength[widx]);
+            }
+          }
+
+          // TODO[qiwye] doesn't work well in async model.
+          WaitAll(); // initial model for every client should be identical
+
+          for (int widx = 0; widx < m_tableCount; widx++)
+          {
+            if (m_isSparseArray[widx])
+            {
+              auto multiversoMatrix = m_sparseMatrixMap->at(widx);
+              ElemType* px = m_deltaArray + m_tableOffsets[widx];
+              multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
+            }
+            else
+            {
+              auto multiversoMatrix = m_matrixMap->at(widx);
+              ElemType* px = m_deltaArray + m_tableOffsets[widx];
+              multiversoMatrix->Get(px, m_tableLength[widx]);
+            }
+          }
+
+          if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
+              multiverso::Log::Info("multiverso initial model loaded.\n");
         }
-        // TODO[qiwye] doesn't work well in async model.
-					WaitAll(); // initial model for every client should be identical
-
-					for (int widx = 0; widx < m_tableCount; widx++)
-					{
-						auto multiversoMatrix = m_matrixArray->at(widx);
-						ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
-					}
-
-        if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
-            multiverso::Log::Info("multiverso initial model loaded.\n");
-				}
 
 				//ASGD logic
-    bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0)
-				{
-					//Note: maybe overflow.
+        bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0)
+        {
+          //Note: maybe overflow.
 					m_modelSyncCount++;
 
 					Timer timer;
@@ -193,11 +221,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					WaitAsyncBuffer();
         timer.Stop();
 
-        if (m_traceLevel > 3)
-        {
-            double time = timer.ElapsedSeconds();
-            fprintf(stderr, "\t\t -- pullAndRequest, asyncBuffer time %lf \n", time);
-        }
 
 					m_bufferInUse = m_cacheSwapIndex[m_bufferInUse];
 
@@ -275,14 +298,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 threadTimer.Restart();
 							// lr decay
 							std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
+
 							for (int widx = 0; widx < m_tableCount; widx++)
 							{
-								auto multiversoMatrix = m_matrixArray->at(widx);
-								ElemType* px = m_deltaArray + m_tableOffsets[widx];
-								ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
-                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
-                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
-							}
+                if (m_isSparseArray[widx])
+                { 
+                    auto multiversoMatrix = m_sparseMatrixMap->at(widx);
+                    ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                    ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+                    multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
+                    multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
+                }
+                else
+                {
+                    auto multiversoMatrix = m_matrixMap->at(widx);
+                    ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                    ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+                    multiversoMatrix->Add(px, m_tableLength[widx]);
+                    multiversoMatrix->Get(py, m_tableLength[widx]);
+                }
+              }
                 threadTimer.Stop();
                 if (m_traceLevel > 3)
                 {
@@ -354,14 +389,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
             }
-						for (int widx = 0; widx < m_tableCount; widx++)
-						{
-							auto multiversoMatrix = m_matrixArray->at(widx);
-							ElemType* px = m_deltaArray + m_tableOffsets[widx];
-							ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
-              multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
-              multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[0]);
-						}
+
+            for (int widx = 0; widx < m_tableCount; widx++)
+            {
+              if (m_isSparseArray[widx])
+              {
+                auto multiversoMatrix = m_sparseMatrixMap->at(widx);
+                ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
+                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[0]);
+              }
+              else
+              {
+                auto multiversoMatrix = m_matrixMap->at(widx);
+                ElemType* px = m_deltaArray + m_tableOffsets[widx];
+                ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
+                multiversoMatrix->Add(px, m_tableLength[widx]);
+                multiversoMatrix->Get(py, m_tableLength[widx]);
+              }
+            }
+
 						i = 0;
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
@@ -418,21 +466,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               m_addOptions.at(i)->set_worker_id(m_localCacheNumber * multiverso::MV_WorkerId() + i);
           }
 
-					m_matrixArray = new std::vector< multiverso::SparseMatrixWorkerTable<ElemType>*>();
-					m_serverArray = new std::vector< multiverso::SparseMatrixServerTable<ElemType>*>();
+					//m_matrixArray = new std::vector< multiverso::SparseMatrixWorkerTable<ElemType>*>();
+					//m_serverArray = new std::vector< multiverso::SparseMatrixServerTable<ElemType>*>();
+          m_matrixMap = new std::unordered_map<int, multiverso::MatrixWorkerTable<ElemType>*>();
+          m_serverMap = new std::unordered_map<int, multiverso::MatrixServerTable<ElemType>*>();
+
+          m_sparseMatrixMap = new std::unordered_map<int, multiverso::SparseMatrixWorkerTable<ElemType>*>();
+          m_sparseServerMap = new std::unordered_map<int, multiverso::SparseMatrixServerTable<ElemType>*>();
 					//weights
-					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+          std::wstring sparse_tag {L"Sparse"};
+          int i = 0;
+					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 					{
-						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-						Matrix<ElemType> &mat = node->Value();
-						size_t layerSize = mat.GetNumElements();
-						size_t layerRowSize = mat.GetNumRows();
-						size_t layerColSize = mat.GetNumCols();
-            fprintf(stderr, "Layersize: %d, row size: %d, col size: %d.\n", (int)layerSize, (int)layerRowSize, (int)layerColSize);
-            fflush(stderr);
+              ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+              Matrix<ElemType> &mat = node->Value();
+              size_t layerSize = mat.GetNumElements();
+              size_t layerRowSize = mat.GetNumRows();
+              size_t layerColSize = mat.GetNumCols();
+              std::wstring nodeName = node->NodeName();
+              auto found = nodeName.find(sparse_tag);
+              m_isSparseArray.push_back(false);
+
+              fprintf(stderr, "Layer %ls, size: %d, row size: %d, col size: %d.\n", node->NodeName().c_str(), (int)layerSize, (int)layerRowSize, (int)layerColSize);
+              fflush(stderr);
+              if (found != std::string::npos)
+              {
+                  m_isSparseArray[i] = true;
+                  fprintf(stderr, "Layer %ls using sparseMatrix.\n", nodeName.c_str());
+                  fflush(stderr);
+                  m_sparseMatrixMap->insert({i, new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize)});
+                  m_sparseServerMap->insert({i, new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered)});
+              } 
+              else
+              {
+                  m_isSparseArray[i] = false;
+                  m_matrixMap->insert({i, new multiverso::MatrixWorkerTable<ElemType>(layerRowSize, layerColSize)});
+                  m_serverMap->insert({i, new multiverso::MatrixServerTable<ElemType>(layerRowSize, layerColSize)});
+              }
 						
-						m_matrixArray->push_back(new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
-						m_serverArray->push_back(new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered));
+						//m_matrixArray->push_back(new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize));
+						//m_serverArray->push_back(new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered));
 
 						m_tableLength.push_back(layerSize);
 					}
@@ -505,8 +578,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return factor;
     }
 
-				std::vector< multiverso::SparseMatrixWorkerTable<ElemType>*>* m_matrixArray;
-				std::vector< multiverso::SparseMatrixServerTable<ElemType>*>* m_serverArray;
+				std::unordered_map<int, multiverso::MatrixWorkerTable<ElemType>*>* m_matrixMap;
+				std::unordered_map<int, multiverso::MatrixServerTable<ElemType>*>* m_serverMap;
+
+				std::unordered_map<int, multiverso::SparseMatrixWorkerTable<ElemType>*>* m_sparseMatrixMap;
+				std::unordered_map<int, multiverso::SparseMatrixServerTable<ElemType>*>* m_sparseServerMap;
+        std::vector<bool> m_isSparseArray;
+
+
+
 				thread * m_prefetchThread;
 				bool m_isInitialized;
         bool m_isSycned;
