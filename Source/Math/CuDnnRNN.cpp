@@ -116,7 +116,7 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     workspace.Resize(workSize, 1);
 
     wDesc = make_unique<CuDnnFilter<ElemType>>(*m_rnnT, xDesc.data());
-    if (wDesc->GetSize() != weightsW.GetNumRows())
+    if (wDesc->GetSize() != weightsW.GetNumElements())
         InvalidArgument("RNN needs %ld parameters, but %ld were allocated", wDesc->GetSize(), weightsW.GetNumRows());
 
     CUDNN_CALL(cudnnRNNForwardTraining(
