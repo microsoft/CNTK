@@ -1505,7 +1505,8 @@ void GPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols
 	if (GetNumRows() == numRows && GetNumCols() == numCols)
 		return;
 
-	if (growOnly && numRows * numCols < GetSizeAllocated()) {
+	if (growOnly && numRows * numCols <= GetSizeAllocated()) {
+		m_sliceViewOffset = 0;
 		m_numRows = numRows;
 		m_numCols = numCols;
 		return;
@@ -1518,6 +1519,7 @@ void GPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols
 
 	m_numRows = numRows;
 	m_numCols = numCols;
+	m_sliceViewOffset = 0;
 
 	size_t numElements = GetNumElements();
 
@@ -1532,7 +1534,6 @@ void GPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols
 		SetBuffer(BufferManager::GetManagerInstance()->RequestBuffer<ElemType>(GetComputeDeviceId(), GetSizeAllocated()),
 			numElements * sizeof(ElemType));
 	}
-	m_sliceViewOffset = 0;
 }
 
 template <class ElemType>
