@@ -23,7 +23,8 @@ Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
     m_pos(nullptr),
     m_done(false),
     m_hasSequenceIds(!skipSequenceIds),
-    m_maxChunkSize(chunkSize)
+    m_maxChunkSize(chunkSize),
+    m_index(chunkSize)
 {
     if (m_file == nullptr)
     {
@@ -53,23 +54,6 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::AddSequence(SequenceDescriptor& sd)
-{
-    assert(!m_chunks.empty());
-    ChunkDescriptor* chunk = &m_chunks.back();
-    if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
-    {
-        m_chunks.push_back({});
-        chunk = &m_chunks.back();
-        chunk->m_id = m_chunks.size() - 1;
-    }
-    chunk->m_byteSize += sd.m_byteSize;
-    chunk->m_numberOfSequences++;
-    chunk->m_numberOfSamples += sd.m_numberOfSamples;
-    sd.m_chunkId = chunk->m_id;
-    chunk->m_sequences.push_back(sd);
-}
-
 void Indexer::BuildFromLines()
 {
     assert(m_pos == m_bufferStart);
@@ -88,7 +72,7 @@ void Indexer::BuildFromLines()
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            AddSequence(sd);
+            m_index.AddSequence(sd);
             ++m_pos;
             ++lines;
         }
@@ -108,25 +92,19 @@ void Indexer::BuildFromLines()
         sd.m_isValid = true;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-        AddSequence(sd);
+        m_index.AddSequence(sd);
     }
 
 }
 
 void Indexer::Build(CorpusDescriptorPtr corpus)
 {
-    if (!m_chunks.empty())
+    if (!m_index.IsEmpty())
     {
         return;
     }
 
-    if (m_maxChunkSize > 0)
-    {
-        auto fileSize = filesize(m_file);
-        m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
-    }
-
-    m_chunks.push_back({});
+    m_index.Reserve(filesize(m_file));
 
     RefillBuffer(); // read the first block of data
     if (m_done)
@@ -196,7 +174,7 @@ void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescript
     {
         sd.m_key.m_sequence = stringRegistry[key];
         sd.m_key.m_sample = 0;
-        AddSequence(sd);
+        m_index.AddSequence(sd);
     }
 }
 

@@ -27,7 +27,7 @@ public:
     void Build(CorpusDescriptorPtr corpus);
 
     // Returns input data index (chunk and sequence metadata)
-    const Index& GetIndex() const { return m_chunks; }
+    const Index& GetIndex() const { return m_index; }
 
     // True, when input does not have the sequence id column
     // or when sequence id column was ignored during indexing
@@ -52,13 +52,11 @@ private:
 
     const size_t m_maxChunkSize; // maximum permitted chunk size;
 
-    std::vector<ChunkDescriptor> m_chunks; // a collection of chunk descriptors
+    // a collection of chunk descriptors and sequence keys.
+    Index m_index;
 
-    // Adds sequence (metadata) to the index. Additionally, it
-    // assigns an appropriate chunk id to the sequence descriptor,
-    // ensures that chunks do not exceed the maximum allowed size
-    // (except when a sequence size is greater than the maximum chunk size)
-    void AddSequence(SequenceDescriptor& sd);
+    // Mapping of keys into <chunk, sequence>
+    std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;
 
     // Same function as above but with check that the sequence is included in the corpus descriptor.
     void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd);

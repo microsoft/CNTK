@@ -720,6 +720,46 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_200x200x2_seq2seq)
    CheckFilesEquivalent(controlFile, outputFile);
 };
 
+// 50 sequences with up to 20 samples each (508 samples in total)
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences_dense)
+{
+    // This simply writes. Test control is the same as the output file.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
+        "5x10_and_5x5_jagged",
+        "reader",
+        40,     // epoch size
+        10,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output2.txt",
+        "5x10_and_5x5_jagged_composite",
+        "reader",
+        40,     // epoch size
+        10,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+};
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } } } }

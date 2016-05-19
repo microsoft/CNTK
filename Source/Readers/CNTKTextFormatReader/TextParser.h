@@ -36,6 +36,8 @@ public:
     // Get information about particular chunk.
     void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
 
+    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+
 private:
     // Builds an index of the input data.
     void Initialize(CorpusDescriptorPtr corpus);

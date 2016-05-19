@@ -188,6 +188,9 @@
     <Text Include="Data\CNTKTextFormatReader\1x1_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\1x1_sparse.txt" />
     <Text Include="Data\CNTKTextFormatReader\200x200x2_seq2seq_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x10_and_5x5_jagged.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x5_jagged.txt" />
     <Text Include="Data\CNTKTextFormatReader\contains_blank_lines.txt" />
     <Text Include="Data\CNTKTextFormatReader\duplicate_inputs.txt" />
     <Text Include="Data\CNTKTextFormatReader\empty_samples.txt" />

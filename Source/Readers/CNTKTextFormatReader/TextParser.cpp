@@ -193,8 +193,8 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
     const auto& index = m_indexer->GetIndex();
 
     ChunkDescriptions result;
-    result.reserve(index.size());
-    for (auto const& chunk : index)
+    result.reserve(index.m_chunks.size());
+    for (auto const& chunk : index.m_chunks)
     {
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
@@ -211,7 +211,7 @@ template <class ElemType>
 void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
 {
     const auto& index = m_indexer->GetIndex();
-    const auto& chunk = index[chunkId];
+    const auto& chunk = index.m_chunks[chunkId];
     result.reserve(chunk.m_sequences.size());
 
     for (auto const& s : chunk.m_sequences)
@@ -276,7 +276,7 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 {
-    const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
+    const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
     auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, this);
 
     attempt(m_numRetries, [this, &textChunk, &chunkDescriptor]()
@@ -1199,6 +1199,22 @@ std::wstring TextParser<ElemType>::GetFileInfo()
     std::wstringstream info;
     info << L"at offset " << GetFileOffset() << L" in the input file (" << m_filename << L")";
     return info.str();
+}
+
+static SequenceDescription s_InvalidSequence{0, 0, 0, false, {0, 0}};
+
+template <class ElemType>
+void TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+{
+    const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;
+    auto sequenceLocation = keys.find(key.m_sequence);
+    if (sequenceLocation == keys.end())
+    {
+        result = s_InvalidSequence;
+        return;
+    }
+
+    result = m_indexer->GetIndex().m_chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
 }
 
 template class TextParser<float>;
