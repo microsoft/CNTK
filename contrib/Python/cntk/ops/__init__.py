@@ -232,6 +232,7 @@ def plus(left, right, name=None):
     """
     The output of this operation is the sum of the two input tensors. It supports broadcasting. 
     In case of scalars its backward pass propagates the received gradient. 
+    The operator (+) has been overloaded and can equally be used instead of plus()
 
     Example:
         >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
@@ -255,6 +256,7 @@ def minus(left, right, name=None):
     """
     The output of this operation is left minus right tensor. It supports broadcasting. 
     In case of scalars its backward pass propagates the received gradient. 
+    The operator (-) has been overloaded and can equally be used instead of minus()
 
     Example:
         >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
@@ -281,6 +283,7 @@ def element_times(left, right, name=None):
     The output of this operation is the element-wise product of the two input 
     tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right 
     times the received gradient and vice versa.
+    The operator (*) has been overloaded and can equally be used instead of element_times().    
     
     Example:
         >>> C.eval(C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
@@ -305,8 +308,10 @@ def element_divide(left, right, name=None):
     The output of this operation is the element-wise division of the two input 
     tensors. It supports broadcasting. In case of scalars its backward pass to 
     left propagates :math:`1/right` times the received gradient, and the backward 
-    pass to right propagates 
+    pass to right propagates. 
+    The operator (/) has been overloaded and can equally be used instead of element_divide().
     :math:`(-left/right^2)` times the received gradient. 
+    
 
     Example:
         >>> C.eval(C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
@@ -331,6 +336,8 @@ def times(left, right, name=None):
     The output of this operation is the tensor product of the two input tensors.
     It supports broadcasting. In case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
+    The operator (@) has been overloaded and can equally be used instead of times().
+    However, it is supported in python versions 3.5 or above.
 
     Example:
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
