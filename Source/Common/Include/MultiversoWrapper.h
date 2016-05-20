@@ -23,7 +23,9 @@
 #include <thread>
 #include <unordered_map>
 #include <numeric>
+#include <algorithm>
 
+#define MULTIVERSO_DEBUG
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifndef CPUONLY
@@ -375,6 +377,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 							ElemType * px = m_deltaArray + m_tableOffsets[i];
 							mat.CopyToArray(px, m_tableLength[i]);
+#pragma warning( push )
+#pragma warning( disable : 4244)
+
+              if (m_traceLevel > 2)
+              {
+                int countnum = std::count(px, px + m_tableLength[i], 0.0f);
+                fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
+                fflush(stderr);
+              }
+#pragma warning( pop ) 
+              if (m_isSparseArray[i])
+              {
+                size_t layerRowSize = mat.GetNumRows();
+                size_t layerColSize = mat.GetNumCols();
+                size_t layerSize = mat.GetNumElements();
+                ElemType * py = new ElemType[layerColSize * layerRowSize];
+                transpose(px, py, layerRowSize, layerColSize);
+                memcpy(px, py, layerSize* sizeof(ElemType));
+                delete[] py;
+              }
 						}
 
             std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
@@ -499,8 +521,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                   m_isSparseArray[i] = true;
                   fprintf(stderr, "Layer %ls using sparseMatrix.\n", nodeName.c_str());
                   fflush(stderr);
-                  m_sparseMatrixMap->insert({i, new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize)});
-                  m_sparseServerMap->insert({i, new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered)});
+                  //m_sparseMatrixMap->insert({i, new multiverso::SparseMatrixWorkerTable<ElemType>(layerRowSize, layerColSize)});
+                  //m_sparseServerMap->insert({i, new multiverso::SparseMatrixServerTable<ElemType>(layerRowSize, layerColSize, m_isUseAsyncBuffered)});
+                  m_sparseMatrixMap->insert({i, new multiverso::SparseMatrixWorkerTable<ElemType>(layerColSize, layerRowSize)});
+                  m_sparseServerMap->insert({i, new multiverso::SparseMatrixServerTable<ElemType>(layerColSize, layerRowSize, m_isUseAsyncBuffered)});
               } 
               else
               {
@@ -581,6 +605,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         factor = 1.0f / m_pMPI->NumNodesInUse();
         return factor;
+    }
+
+    inline void transpose(ElemType *src, ElemType *dst, const int N, const int M) 
+    {
+        for (auto n = 0; n < N*M; n++) {
+            auto i = n / N;
+            auto j = n%N;
+            dst[n] = src[M*j + i];
+        }
     }
 
 				std::unordered_map<int, multiverso::MatrixWorkerTable<ElemType>*>* m_matrixMap;
