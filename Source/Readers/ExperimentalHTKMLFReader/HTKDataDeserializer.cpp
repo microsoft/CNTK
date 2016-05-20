@@ -24,6 +24,44 @@ using namespace std;
 
 HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
+    const ConfigParameters& cfg,
+    bool primary)
+    : m_ioFeatureDimension(0),
+    m_samplePeriod(0),
+    m_verbosity(0),
+    m_corpus(corpus),
+    m_totalNumberOfFrames(0),
+    m_primary(primary)
+{
+    // TODO: This should be read in one place, potentially given by SGD.
+    m_frameMode = (ConfigValue)cfg("frameMode", "true");
+
+    argvector<ConfigValue> inputs = cfg("input");
+    if (inputs.size() != 1)
+    {
+        InvalidArgument("HTKDataDeserializer supports a single input stream only.");
+    }
+
+    ConfigParameters input = inputs.front();
+    auto inputName = input.GetMemberIds().front();
+
+    ConfigParameters streamConfig = input(inputName);
+
+    ConfigHelper config(streamConfig);
+    auto context = config.GetContextWindow();
+
+    m_elementType = config.GetElementType();
+    m_dimension = config.GetFeatureDimension();
+    m_dimension = m_dimension * (1 + context.first + context.second);
+
+    InitializeChunkDescriptions(config);
+    InitializeStreams(inputName);
+    InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
+
+HTKDataDeserializer::HTKDataDeserializer(
+    CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
@@ -51,7 +89,11 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeChunkDescriptions(config);
     InitializeStreams(featureName);
     InitializeFeatureInformation();
+    InitializeAugmentationWindow(config);
+}
 
+void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+{
     m_augmentationWindow = config.GetContextWindow();
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension
@@ -85,22 +127,12 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         }
 
         wstring key = description.GetKey();
-        size_t id = 0;
-        if (m_primary)
+        if (!m_corpus->IsIncluded(key))
         {
-            // TODO: Definition of the corpus should be moved to the CorpusDescriptor
-            // TODO: All keys should be added there. Currently, we add them in the driving deserializer.
-            id = stringRegistry.AddValue(key);
-        }
-        else
-        {
-            if (!stringRegistry.TryGet(key, id))
-            {
-                // Utterance is unknown, skipping it.
-                continue;
-            }
+            continue;
         }
 
+        size_t id = stringRegistry[key];
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;
@@ -205,7 +237,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
-    result.reserve(chunk.GetTotalFrames());
+    result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
     size_t offsetInChunk = 0;
     for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {

@@ -19,7 +19,7 @@ from ..reader import *
 """ 
 # keeping things short
 C = constant
-I = input_reader
+I = input_numpy
 AA = np.asarray
 
 def _test(root_node, expected, clean_up=True, backward_pass = False, input_node = None):

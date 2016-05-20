@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/..
+LogFileName=stderr
+Instances=2
+NumCPUThreads=$(threadsPerInstance $Instances)
+
+# cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
+cntkmpirun "-n $Instances" ParallelBM/cntk.cntk "numCPUThreads=$NumCPUThreads precision=double speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
+exit $ExitCode

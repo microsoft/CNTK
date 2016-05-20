@@ -8,6 +8,7 @@
 #include "Reader.h"
 #include "Packer.h"
 #include "Config.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -54,8 +55,7 @@ private:
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
 
-    // TODO: Randomizer won't implement transformer interface in the near future.
-    TransformerPtr m_randomizer;
+    SequenceEnumeratorPtr m_randomizer;
 
     // Truncation length for BPTT mode.
     size_t m_truncationLength;

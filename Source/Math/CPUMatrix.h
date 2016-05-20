@@ -8,10 +8,15 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "CPURNGHandle.h"
 #include <vector>
 #include <stdio.h>
 #include <ctime>
 #include <limits.h>
+
+//#include "GPUMatrix.h"
+//#include "CPUSparseMatrix.h"
+//#include "GPUSparseMatrix.h"
 
 // NOTE NOTE NOTE:
 // use CPUSingleMatrix and CPUDoubleMatrix instead of using the template directly
@@ -127,6 +132,9 @@ public:
 
     void SetValue(const ElemType v);
     void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
+    //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
@@ -139,7 +147,7 @@ public:
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
-    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
     CPUMatrix<ElemType> Transpose();

@@ -1,1 +1,611 @@
-__COMPLETED__
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/LSTM-NDL.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu DeviceId=0 timestamping=true speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=64]] parallelTrain=false
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  3 2016 13:15:46
+		Last modified date: Tue Apr 26 23:35:31 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: c:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on cntk-muc01
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+05/03/2016 13:22:41: -------------------------------------------------------------------
+05/03/2016 13:22:41: Build info: 
+
+05/03/2016 13:22:41: 		Built time: May  3 2016 13:15:46
+05/03/2016 13:22:41: 		Last modified date: Tue Apr 26 23:35:31 2016
+05/03/2016 13:22:41: 		Build type: Release
+05/03/2016 13:22:41: 		Build target: GPU
+05/03/2016 13:22:41: 		With 1bit-SGD: no
+05/03/2016 13:22:41: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 13:22:41: 		CUB_PATH: c:\src\cub-1.4.1
+05/03/2016 13:22:41: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 13:22:41: 		Build Branch: HEAD
+05/03/2016 13:22:41: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 13:22:41: 		Built by svcphil on cntk-muc01
+05/03/2016 13:22:41: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 13:22:41: -------------------------------------------------------------------
+
+05/03/2016 13:22:41: Running on DPHAIM-22 at 2016/05/03 13:22:41
+05/03/2016 13:22:41: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/LSTM-NDL.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu  DeviceId=0  timestamping=true  speechTrain=[SGD=[maxEpochs=1]]  speechTrain=[SGD=[epochSize=64]]  parallelTrain=false
+
+
+
+05/03/2016 13:22:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 13:22:41: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+deviceId = -1
+command = speechTrain
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/cntkSpeechLSTM.dnn"
+parallelTrain = true
+frameMode = false
+truncated = true
+speechTrain = [
+    action = "train"
+    nbrUttsIneachRecurrentIter = 16
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/lstmp-3layer-opt.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 16
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+DeviceId=0
+timestamping=true
+speechTrain=[SGD=[maxEpochs=1]]
+speechTrain=[SGD=[epochSize=64]]
+parallelTrain=false
+
+05/03/2016 13:22:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 13:22:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 13:22:41: RootDir = ".."
+ConfigDir = "../Config"
+DataDir = "../Data"
+OutputDir = "../Output"
+ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models"
+deviceId = -1
+command = speechTrain
+precision = "float"
+traceLevel = 1
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models/cntkSpeechLSTM.dnn"
+parallelTrain = true
+frameMode = false
+truncated = true
+speechTrain = [
+    action = "train"
+    nbrUttsIneachRecurrentIter = 16
+    NDLNetworkBuilder = [
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/lstmp-3layer-opt.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 16
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+DeviceId=0
+timestamping=true
+speechTrain=[SGD=[maxEpochs=1]]
+speechTrain=[SGD=[epochSize=64]]
+parallelTrain=false
+
+05/03/2016 13:22:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 13:22:41: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: LSTM-NDL.cntk:command=speechTrain
+configparameters: LSTM-NDL.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config
+configparameters: LSTM-NDL.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+configparameters: LSTM-NDL.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data
+configparameters: LSTM-NDL.cntk:deviceId=0
+configparameters: LSTM-NDL.cntk:frameMode=false
+configparameters: LSTM-NDL.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models
+configparameters: LSTM-NDL.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models/cntkSpeechLSTM.dnn
+configparameters: LSTM-NDL.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+configparameters: LSTM-NDL.cntk:parallelTrain=false
+configparameters: LSTM-NDL.cntk:precision=float
+configparameters: LSTM-NDL.cntk:RootDir=..
+configparameters: LSTM-NDL.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu
+configparameters: LSTM-NDL.cntk:speechTrain=[
+    action = "train"
+    nbrUttsIneachRecurrentIter = 16
+    NDLNetworkBuilder = [
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Config/lstmp-3layer-opt.ndl"
+    ]
+    SGD = [
+        epochSize = 0
+        minibatchSize = 16
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+] [SGD=[maxEpochs=1]] [SGD=[epochSize=64]]
+
+configparameters: LSTM-NDL.cntk:timestamping=true
+configparameters: LSTM-NDL.cntk:traceLevel=1
+configparameters: LSTM-NDL.cntk:truncated=true
+05/03/2016 13:22:41: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 13:22:41: Commands: speechTrain
+05/03/2016 13:22:41: Precision = "float"
+05/03/2016 13:22:41: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models/cntkSpeechLSTM.dnn
+05/03/2016 13:22:41: CNTKCommandTrainInfo: speechTrain : 1
+05/03/2016 13:22:41: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+
+05/03/2016 13:22:41: ##############################################################################
+05/03/2016 13:22:41: #                                                                            #
+05/03/2016 13:22:41: # Action "train"                                                             #
+05/03/2016 13:22:41: #                                                                            #
+05/03/2016 13:22:41: ##############################################################################
+
+05/03/2016 13:22:41: CNTKCommandTrainBegin: speechTrain
+NDLBuilder Using GPU 0
+reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.scp ... 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Speech\AN4\Data/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+
+05/03/2016 13:22:42: Creating virgin network.
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+6 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+	featNorm.xMean = Mean()
+	featNorm.xStdDev = InvStdDev()
+	logPrior.prior = Mean()
+	scaledLogLikelihood = Minus()
+
+Loop[0] --> Loop_LSTMoutput1.output -> 24 nodes
+
+	LSTMoutput1.dh	LSTMoutput1.whh	LSTMoutput1.wxxpbpwhh
+	LSTMoutput1.G4	LSTMoutput1.G3	LSTMoutput1.dc
+	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed151	LSTMoutput1.ft
+	LSTMoutput1.bft	LSTMoutput1.G1	LSTMoutput1.Wcidc
+	LSTMoutput1.unnamed149	LSTMoutput1.it	LSTMoutput1.G2
+	LSTMoutput1.unnamed150	LSTMoutput1.bit	LSTMoutput1.ct
+	LSTMoutput1.Wcoct	LSTMoutput1.unnamed152	LSTMoutput1.ot
+	LSTMoutput1.unnamed153	LSTMoutput1.mt	LSTMoutput1.output
+
+Loop[1] --> Loop_LSTMoutput2.output -> 24 nodes
+
+	LSTMoutput2.dh	LSTMoutput2.whh	LSTMoutput2.wxxpbpwhh
+	LSTMoutput2.G4	LSTMoutput2.G3	LSTMoutput2.dc
+	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed159	LSTMoutput2.ft
+	LSTMoutput2.bft	LSTMoutput2.G1	LSTMoutput2.Wcidc
+	LSTMoutput2.unnamed157	LSTMoutput2.it	LSTMoutput2.G2
+	LSTMoutput2.unnamed158	LSTMoutput2.bit	LSTMoutput2.ct
+	LSTMoutput2.Wcoct	LSTMoutput2.unnamed160	LSTMoutput2.ot
+	LSTMoutput2.unnamed161	LSTMoutput2.mt	LSTMoutput2.output
+
+Loop[2] --> Loop_LSTMoutput3.output -> 24 nodes
+
+	LSTMoutput3.dh	LSTMoutput3.whh	LSTMoutput3.wxxpbpwhh
+	LSTMoutput3.G4	LSTMoutput3.G3	LSTMoutput3.dc
+	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed167	LSTMoutput3.ft
+	LSTMoutput3.bft	LSTMoutput3.G1	LSTMoutput3.Wcidc
+	LSTMoutput3.unnamed165	LSTMoutput3.it	LSTMoutput3.G2
+	LSTMoutput3.unnamed166	LSTMoutput3.bit	LSTMoutput3.ct
+	LSTMoutput3.Wcoct	LSTMoutput3.unnamed168	LSTMoutput3.ot
+	LSTMoutput3.unnamed169	LSTMoutput3.mt	LSTMoutput3.output
+
+Validating network. 113 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [132 x *]
+Validating --> W = LearnableParameter() :  -> [132 x 512]
+Validating --> LSTMoutput3.Wmr = LearnableParameter() :  -> [512 x 1024]
+Validating --> LSTMoutput3.wx = LearnableParameter() :  -> [4096 x 512]
+Validating --> LSTMoutput2.Wmr = LearnableParameter() :  -> [512 x 1024]
+Validating --> LSTMoutput2.wx = LearnableParameter() :  -> [4096 x 512]
+Validating --> LSTMoutput1.Wmr = LearnableParameter() :  -> [512 x 1024]
+Validating --> LSTMoutput1.wx = LearnableParameter() :  -> [4096 x 363]
+Validating --> features = InputValue() :  -> [363 x *]
+Validating --> featNorm.xMean = Mean (features) : [363 x *] -> [363]
+Validating --> featNorm.xStdDev = InvStdDev (features) : [363 x *] -> [363]
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization (features, featNorm.xMean, featNorm.xStdDev) : [363 x *], [363], [363] -> [363 x *]
+Validating --> LSTMoutput1.wxx = Times (LSTMoutput1.wx, featNorm.xNorm) : [4096 x 363], [363 x *] -> [4096 x *]
+Validating --> LSTMoutput1.b = LearnableParameter() :  -> [4096 x 1]
+Validating --> LSTMoutput1.wxxpb = Plus (LSTMoutput1.wxx, LSTMoutput1.b) : [4096 x *], [4096 x 1] -> [4096 x 1 x *]
+Validating --> LSTMoutput1.Wh = LearnableParameter() :  -> [4096 x 512]
+Validating --> LSTMoutput1.Wco = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput1.Wcf = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput1.Wci = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput1.whh = Times (LSTMoutput1.Wh, LSTMoutput1.dh) : [4096 x 512], [512] -> [4096]
+Validating --> LSTMoutput1.wxxpbpwhh = Plus (LSTMoutput1.wxxpb, LSTMoutput1.whh) : [4096 x 1 x *], [4096] -> [4096 x 1 x *]
+Validating --> LSTMoutput1.G4 = Slice (LSTMoutput1.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.G3 = Slice (LSTMoutput1.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.Wcfdc = DiagTimes (LSTMoutput1.Wcf, LSTMoutput1.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput1.unnamed151 = Plus (LSTMoutput1.G3, LSTMoutput1.Wcfdc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.ft = Sigmoid (LSTMoutput1.unnamed151) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.bft = ElementTimes (LSTMoutput1.ft, LSTMoutput1.dc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.G1 = Slice (LSTMoutput1.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.Wcidc = DiagTimes (LSTMoutput1.Wci, LSTMoutput1.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput1.unnamed149 = Plus (LSTMoutput1.G1, LSTMoutput1.Wcidc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.it = Sigmoid (LSTMoutput1.unnamed149) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.G2 = Slice (LSTMoutput1.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.unnamed150 = Tanh (LSTMoutput1.G2) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.bit = ElementTimes (LSTMoutput1.it, LSTMoutput1.unnamed150) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.ct = Plus (LSTMoutput1.bft, LSTMoutput1.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.Wcoct = DiagTimes (LSTMoutput1.Wco, LSTMoutput1.ct) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.unnamed152 = Plus (LSTMoutput1.G4, LSTMoutput1.Wcoct) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.ot = Sigmoid (LSTMoutput1.unnamed152) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.unnamed153 = Tanh (LSTMoutput1.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.mt = ElementTimes (LSTMoutput1.ot, LSTMoutput1.unnamed153) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.output = Times (LSTMoutput1.Wmr, LSTMoutput1.mt) : [512 x 1024], [1024 x 1 x *] -> [512 x 1 x *]
+Validating --> LSTMoutput2.wxx = Times (LSTMoutput2.wx, LSTMoutput1.output) : [4096 x 512], [512 x 1 x *] -> [4096 x 1 x *]
+Validating --> LSTMoutput2.b = LearnableParameter() :  -> [4096 x 1]
+Validating --> LSTMoutput2.wxxpb = Plus (LSTMoutput2.wxx, LSTMoutput2.b) : [4096 x 1 x *], [4096 x 1] -> [4096 x 1 x *]
+Validating --> LSTMoutput2.Wh = LearnableParameter() :  -> [4096 x 512]
+Validating --> LSTMoutput2.Wco = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput2.Wcf = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput2.Wci = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput2.whh = Times (LSTMoutput2.Wh, LSTMoutput2.dh) : [4096 x 512], [512] -> [4096]
+Validating --> LSTMoutput2.wxxpbpwhh = Plus (LSTMoutput2.wxxpb, LSTMoutput2.whh) : [4096 x 1 x *], [4096] -> [4096 x 1 x *]
+Validating --> LSTMoutput2.G4 = Slice (LSTMoutput2.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.G3 = Slice (LSTMoutput2.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.Wcfdc = DiagTimes (LSTMoutput2.Wcf, LSTMoutput2.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput2.unnamed159 = Plus (LSTMoutput2.G3, LSTMoutput2.Wcfdc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.ft = Sigmoid (LSTMoutput2.unnamed159) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.bft = ElementTimes (LSTMoutput2.ft, LSTMoutput2.dc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.G1 = Slice (LSTMoutput2.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.Wcidc = DiagTimes (LSTMoutput2.Wci, LSTMoutput2.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput2.unnamed157 = Plus (LSTMoutput2.G1, LSTMoutput2.Wcidc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.it = Sigmoid (LSTMoutput2.unnamed157) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.G2 = Slice (LSTMoutput2.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.unnamed158 = Tanh (LSTMoutput2.G2) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.bit = ElementTimes (LSTMoutput2.it, LSTMoutput2.unnamed158) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.ct = Plus (LSTMoutput2.bft, LSTMoutput2.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.Wcoct = DiagTimes (LSTMoutput2.Wco, LSTMoutput2.ct) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.unnamed160 = Plus (LSTMoutput2.G4, LSTMoutput2.Wcoct) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.ot = Sigmoid (LSTMoutput2.unnamed160) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.unnamed161 = Tanh (LSTMoutput2.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.mt = ElementTimes (LSTMoutput2.ot, LSTMoutput2.unnamed161) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.output = Times (LSTMoutput2.Wmr, LSTMoutput2.mt) : [512 x 1024], [1024 x 1 x *] -> [512 x 1 x *]
+Validating --> LSTMoutput3.wxx = Times (LSTMoutput3.wx, LSTMoutput2.output) : [4096 x 512], [512 x 1 x *] -> [4096 x 1 x *]
+Validating --> LSTMoutput3.b = LearnableParameter() :  -> [4096 x 1]
+Validating --> LSTMoutput3.wxxpb = Plus (LSTMoutput3.wxx, LSTMoutput3.b) : [4096 x 1 x *], [4096 x 1] -> [4096 x 1 x *]
+Validating --> LSTMoutput3.Wh = LearnableParameter() :  -> [4096 x 512]
+Validating --> LSTMoutput3.Wco = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput3.Wcf = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput3.Wci = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput3.whh = Times (LSTMoutput3.Wh, LSTMoutput3.dh) : [4096 x 512], [512] -> [4096]
+Validating --> LSTMoutput3.wxxpbpwhh = Plus (LSTMoutput3.wxxpb, LSTMoutput3.whh) : [4096 x 1 x *], [4096] -> [4096 x 1 x *]
+Validating --> LSTMoutput3.G4 = Slice (LSTMoutput3.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.G3 = Slice (LSTMoutput3.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.Wcfdc = DiagTimes (LSTMoutput3.Wcf, LSTMoutput3.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput3.unnamed167 = Plus (LSTMoutput3.G3, LSTMoutput3.Wcfdc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.ft = Sigmoid (LSTMoutput3.unnamed167) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.bft = ElementTimes (LSTMoutput3.ft, LSTMoutput3.dc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.G1 = Slice (LSTMoutput3.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.Wcidc = DiagTimes (LSTMoutput3.Wci, LSTMoutput3.dc) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput3.unnamed165 = Plus (LSTMoutput3.G1, LSTMoutput3.Wcidc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.it = Sigmoid (LSTMoutput3.unnamed165) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.G2 = Slice (LSTMoutput3.wxxpbpwhh) : [4096 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.unnamed166 = Tanh (LSTMoutput3.G2) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.bit = ElementTimes (LSTMoutput3.it, LSTMoutput3.unnamed166) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.ct = Plus (LSTMoutput3.bft, LSTMoutput3.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.Wcoct = DiagTimes (LSTMoutput3.Wco, LSTMoutput3.ct) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.unnamed168 = Plus (LSTMoutput3.G4, LSTMoutput3.Wcoct) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.ot = Sigmoid (LSTMoutput3.unnamed168) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.unnamed169 = Tanh (LSTMoutput3.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.mt = ElementTimes (LSTMoutput3.ot, LSTMoutput3.unnamed169) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.output = Times (LSTMoutput3.Wmr, LSTMoutput3.mt) : [512 x 1024], [1024 x 1 x *] -> [512 x 1 x *]
+Validating --> unnamed174 = Times (W, LSTMoutput3.output) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
+Validating --> b = LearnableParameter() :  -> [132 x 1]
+Validating --> LSTMoutputW = Plus (unnamed174, b) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> logPrior.prior = Mean (labels) : [132 x *] -> [132]
+Validating --> logPrior.logPrior = Log (logPrior.prior) : [132] -> [132]
+Validating --> scaledLogLikelihood = Minus (LSTMoutputW, logPrior.logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
+
+Validating network. 88 nodes to process in pass 2.
+
+Validating --> LSTMoutput1.dh = PastValue (LSTMoutput1.output) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> LSTMoutput1.whh = Times (LSTMoutput1.Wh, LSTMoutput1.dh) : [4096 x 512], [512 x 1 x *] -> [4096 x 1 x *]
+Validating --> LSTMoutput1.dc = PastValue (LSTMoutput1.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.Wcfdc = DiagTimes (LSTMoutput1.Wcf, LSTMoutput1.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput1.Wcidc = DiagTimes (LSTMoutput1.Wci, LSTMoutput1.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.dh = PastValue (LSTMoutput2.output) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> LSTMoutput2.whh = Times (LSTMoutput2.Wh, LSTMoutput2.dh) : [4096 x 512], [512 x 1 x *] -> [4096 x 1 x *]
+Validating --> LSTMoutput2.dc = PastValue (LSTMoutput2.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.Wcfdc = DiagTimes (LSTMoutput2.Wcf, LSTMoutput2.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput2.Wcidc = DiagTimes (LSTMoutput2.Wci, LSTMoutput2.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.dh = PastValue (LSTMoutput3.output) : [512 x 1 x *] -> [512 x 1 x *]
+Validating --> LSTMoutput3.whh = Times (LSTMoutput3.Wh, LSTMoutput3.dh) : [4096 x 512], [512 x 1 x *] -> [4096 x 1 x *]
+Validating --> LSTMoutput3.dc = PastValue (LSTMoutput3.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.Wcfdc = DiagTimes (LSTMoutput3.Wcf, LSTMoutput3.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput3.Wcidc = DiagTimes (LSTMoutput3.Wci, LSTMoutput3.dc) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+
+Validating network. 15 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+
+
+29 out of 113 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+05/03/2016 13:22:43: Created model with 113 nodes on GPU 0.
+
+05/03/2016 13:22:43: Training criterion node(s):
+05/03/2016 13:22:43: 	ce = CrossEntropyWithSoftmax
+
+05/03/2016 13:22:43: Evaluation criterion node(s):
+
+05/03/2016 13:22:43: 	err = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[err Gradient[1]] [featNorm.xMean Gradient[363]] [featNorm.xNorm Gradient[363 x *]] [featNorm.xStdDev Gradient[363]] [features Gradient[363 x *]] [labels Gradient[132 x *]] [logPrior.logPrior Gradient[132]] [logPrior.prior Gradient[132]] [scaledLogLikelihood Gradient[132 x 1 x *]] }
+000000B262848730: {[features Value[363 x *]] }
+000000B279FE85B0: {[LSTMoutput1.wx Value[4096 x 363]] }
+000000B279FE88D0: {[LSTMoutput1.Wh Value[4096 x 512]] }
+000000B279FE8C90: {[featNorm.xMean Value[363]] }
+000000B279FE8DD0: {[LSTMoutput1.Wci Value[1024]] }
+000000B279FE8FB0: {[LSTMoutput1.dh Value[512 x 1 x *]] [LSTMoutput1.wxx Gradient[4096 x *]] }
+000000B279FE9190: {[LSTMoutput1.Wcf Value[1024]] }
+000000B279FE9730: {[labels Value[132 x *]] }
+000000B279FE9910: {[featNorm.xStdDev Value[363]] }
+000000B279FE9C30: {[LSTMoutput1.b Value[4096 x 1]] }
+000000B279FE9E10: {[LSTMoutput1.Wco Value[1024]] }
+000000B279FE9EB0: {[LSTMoutput1.dc Value[1024 x 1 x *]] }
+000000B27C949D30: {[LSTMoutput1.Wco Gradient[1024]] [LSTMoutput2.dc Value[1024 x 1 x *]] }
+000000B27C94A730: {[LSTMoutput2.wx Value[4096 x 512]] }
+000000B27C94A870: {[LSTMoutput2.Wci Value[1024]] }
+000000B27C94A9B0: {[LSTMoutput1.mt Gradient[1024 x 1 x *]] [LSTMoutput2.dh Value[512 x 1 x *]] [LSTMoutput2.wxx Gradient[4096 x 1 x *]] }
+000000B27C94ACD0: {[LSTMoutput2.Wcf Value[1024]] }
+000000B27C94AD70: {[LSTMoutput2.Wco Value[1024]] }
+000000B27C94B450: {[LSTMoutput1.Wmr Value[512 x 1024]] }
+000000B27C94B4F0: {[LSTMoutput2.b Value[4096 x 1]] }
+000000B27C94B630: {[LSTMoutput2.Wh Value[4096 x 512]] }
+000000B27C952120: {[LSTMoutput3.b Value[4096 x 1]] }
+000000B27C9521C0: {[LSTMoutput3.Wcf Value[1024]] }
+000000B27C952260: {[LSTMoutput2.Wmr Value[512 x 1024]] }
+000000B27C952440: {[LSTMoutput3.wx Value[4096 x 512]] }
+000000B27C9529E0: {[LSTMoutput3.Wci Value[1024]] }
+000000B27C952BC0: {[LSTMoutput3.Wco Value[1024]] }
+000000B27C952C60: {[LSTMoutput2.mt Gradient[1024 x 1 x *]] [LSTMoutput3.dh Value[512 x 1 x *]] [LSTMoutput3.wxx Gradient[4096 x 1 x *]] }
+000000B27C9532A0: {[LSTMoutput3.Wh Value[4096 x 512]] }
+000000B27C9535C0: {[LSTMoutput2.Wco Gradient[1024]] [LSTMoutput3.dc Value[1024 x 1 x *]] }
+000000B27C959BB0: {[logPrior.logPrior Value[132]] }
+000000B27C959C50: {[featNorm.xNorm Value[363 x *]] }
+000000B27C959CF0: {[ce Value[1]] }
+000000B27C959D90: {[LSTMoutput1.wxx Value[4096 x *]] }
+000000B27C959E30: {[LSTMoutput1.wx Gradient[4096 x 363]] [LSTMoutput1.wxxpb Value[4096 x 1 x *]] }
+000000B27C959F70: {[scaledLogLikelihood Value[132 x 1 x *]] }
+000000B27C95A510: {[LSTMoutput1.whh Value[4096 x 1 x *]] }
+000000B27C95A5B0: {[LSTMoutput1.wxxpbpwhh Value[4096 x 1 x *]] }
+000000B27C95A650: {[LSTMoutput1.G4 Value[1024 x 1 x *]] }
+000000B27C95A6F0: {[LSTMoutput1.G3 Value[1024 x 1 x *]] }
+000000B27C95A790: {[err Value[1]] }
+000000B27C95AAB0: {[W Value[132 x 512]] }
+000000B27C95B050: {[logPrior.prior Value[132]] }
+000000B27C95B230: {[LSTMoutput3.Wmr Value[512 x 1024]] }
+000000B27C95B370: {[b Value[132 x 1]] }
+000000B27C966360: {[LSTMoutput1.Wh Gradient[4096 x 512]] [LSTMoutput2.G2 Gradient[1024 x 1 x *]] [LSTMoutput3.Wcfdc Gradient[1024 x 1 x *]] }
+000000B27C966540: {[LSTMoutput3.Wh Gradient[4096 x 512]] }
+000000B27C9667C0: {[LSTMoutput1.wxxpb Gradient[4096 x 1 x *]] [LSTMoutput2.it Gradient[1024 x 1 x *]] }
+000000B27C966900: {[LSTMoutput3.Wcf Gradient[1024]] }
+000000B27C9669A0: {[LSTMoutput2.output Gradient[512 x 1 x *]] [LSTMoutput3.wxxpb Gradient[4096 x 1 x *]] }
+000000B27C966A40: {[LSTMoutput2.unnamed157 Gradient[1024 x 1 x *]] [LSTMoutput3.unnamed167 Gradient[1024 x 1 x *]] }
+000000B27C966E00: {[LSTMoutput3.b Gradient[4096 x 1]] [LSTMoutput3.dh Gradient[512 x 1 x *]] }
+000000B27C966EA0: {[LSTMoutput2.unnamed161 Gradient[1024 x 1 x *]] [LSTMoutput3.whh Gradient[4096 x 1 x *]] }
+000000B27C967580: {[LSTMoutput2.bit Gradient[1024 x 1 x *]] }
+000000B27C967620: {[LSTMoutput3.G3 Gradient[1024 x 1 x *]] }
+000000B27CD98E20: {[LSTMoutput1.unnamed151 Value[1024 x 1 x *]] }
+000000B27CD98EC0: {[LSTMoutput1.ct Value[1024 x 1 x *]] }
+000000B27CD98F60: {[LSTMoutput2.G3 Value[1024 x 1 x *]] }
+000000B27CD99000: {[LSTMoutput1.G1 Gradient[1024 x 1 x *]] [LSTMoutput2.ft Value[1024 x 1 x *]] }
+000000B27CD990A0: {[LSTMoutput2.Wmr Gradient[512 x 1024]] [LSTMoutput3.wxx Value[4096 x 1 x *]] }
+000000B27CD99140: {[LSTMoutput2.unnamed158 Gradient[1024 x 1 x *]] [LSTMoutput3.Wcfdc Value[1024 x 1 x *]] }
+000000B27CD991E0: {[LSTMoutput1.unnamed152 Gradient[1024 x 1 x *]] [LSTMoutput2.wxxpbpwhh Gradient[4096 x 1 x *]] [LSTMoutput3.unnamed167 Value[1024 x 1 x *]] }
+000000B27CD99280: {[LSTMoutput2.output Value[512 x 1 x *]] }
+000000B27CD99320: {[LSTMoutput1.unnamed150 Gradient[1024 x 1 x *]] [LSTMoutput2.Wcfdc Value[1024 x 1 x *]] }
+000000B27CD993C0: {[LSTMoutput1.b Gradient[4096 x 1]] [LSTMoutput1.dh Gradient[512 x 1 x *]] [LSTMoutput2.unnamed158 Value[1024 x 1 x *]] }
+000000B27CD99460: {[LSTMoutput1.Wci Gradient[1024]] [LSTMoutput2.G1 Value[1024 x 1 x *]] }
+000000B27CD99500: {[LSTMoutput1.unnamed152 Value[1024 x 1 x *]] }
+000000B27CD995A0: {[LSTMoutput1.ot Gradient[1024 x 1 x *]] [LSTMoutput2.whh Value[4096 x 1 x *]] }
+000000B27CD99640: {[LSTMoutput1.G1 Value[1024 x 1 x *]] }
+000000B27CD996E0: {[LSTMoutput1.G3 Gradient[1024 x 1 x *]] [LSTMoutput2.Wcidc Value[1024 x 1 x *]] }
+000000B27CD99780: {[LSTMoutput2.bit Value[1024 x 1 x *]] }
+000000B27CD99820: {[LSTMoutput2.ct Value[1024 x 1 x *]] }
+000000B27CD998C0: {[LSTMoutput2.Wcoct Value[1024 x 1 x *]] }
+000000B27CD99960: {[LSTMoutput1.whh Gradient[4096 x 1 x *]] [LSTMoutput2.G2 Value[1024 x 1 x *]] }
+000000B27CD99A00: {[LSTMoutput2.ot Gradient[1024 x 1 x *]] [LSTMoutput3.whh Value[4096 x 1 x *]] }
+000000B27CD99AA0: {[LSTMoutput1.Wmr Gradient[512 x 1024]] [LSTMoutput2.wxx Value[4096 x 1 x *]] }
+000000B27CD99B40: {[LSTMoutput2.wx Gradient[4096 x 512]] [LSTMoutput2.wxxpb Value[4096 x 1 x *]] }
+000000B27CD99BE0: {[LSTMoutput1.Wcfdc Value[1024 x 1 x *]] }
+000000B27CD99C80: {[LSTMoutput1.mt Value[1024 x 1 x *]] }
+000000B27CD99D20: {[LSTMoutput1.Wcidc Value[1024 x 1 x *]] }
+000000B27CD99DC0: {[LSTMoutput1.G2 Value[1024 x 1 x *]] }
+000000B27CD99E60: {[LSTMoutput1.G4 Gradient[1024 x 1 x *]] [LSTMoutput2.G4 Value[1024 x 1 x *]] }
+000000B27CD99F00: {[LSTMoutput1.unnamed153 Value[1024 x 1 x *]] }
+000000B27CD99FA0: {[LSTMoutput2.bft Value[1024 x 1 x *]] }
+000000B27CD9A040: {[LSTMoutput1.unnamed150 Value[1024 x 1 x *]] }
+000000B27CD9A0E0: {[LSTMoutput1.ct Gradient[1024 x 1 x *]] [LSTMoutput2.wxxpbpwhh Value[4096 x 1 x *]] }
+000000B27CD9A180: {[LSTMoutput1.Wcf Gradient[1024]] [LSTMoutput2.it Value[1024 x 1 x *]] }
+000000B27CD9A220: {[LSTMoutput1.Wcoct Value[1024 x 1 x *]] }
+000000B27CD9A2C0: {[LSTMoutput1.it Value[1024 x 1 x *]] }
+000000B27CD9A360: {[LSTMoutput1.ot Value[1024 x 1 x *]] }
+000000B27CD9A400: {[LSTMoutput1.output Value[512 x 1 x *]] }
+000000B27CD9A4A0: {[LSTMoutput1.ft Value[1024 x 1 x *]] }
+000000B27CD9A540: {[LSTMoutput1.wxxpbpwhh Gradient[4096 x 1 x *]] [LSTMoutput2.unnamed159 Value[1024 x 1 x *]] }
+000000B27CD9A5E0: {[LSTMoutput2.unnamed160 Value[1024 x 1 x *]] }
+000000B27CD9A680: {[LSTMoutput2.unnamed161 Value[1024 x 1 x *]] }
+000000B27CD9A720: {[LSTMoutput2.mt Value[1024 x 1 x *]] }
+000000B27CD9A7C0: {[LSTMoutput2.ct Gradient[1024 x 1 x *]] [LSTMoutput3.wxxpbpwhh Value[4096 x 1 x *]] }
+000000B27CD9A860: {[LSTMoutput1.Wcoct Gradient[1024 x 1 x *]] [LSTMoutput2.G4 Gradient[1024 x 1 x *]] [LSTMoutput3.G4 Value[1024 x 1 x *]] }
+000000B27CD9A900: {[LSTMoutput3.G3 Value[1024 x 1 x *]] }
+000000B27CD9A9A0: {[LSTMoutput1.bit Value[1024 x 1 x *]] }
+000000B27CD9AA40: {[LSTMoutput2.unnamed157 Value[1024 x 1 x *]] }
+000000B27CD9AAE0: {[LSTMoutput2.ot Value[1024 x 1 x *]] }
+000000B27CD9AB80: {[LSTMoutput1.unnamed149 Value[1024 x 1 x *]] }
+000000B27CD9AC20: {[LSTMoutput3.wx Gradient[4096 x 512]] [LSTMoutput3.wxxpb Value[4096 x 1 x *]] }
+000000B27CD9ACC0: {[LSTMoutput1.bft Value[1024 x 1 x *]] }
+000000B27CD9CF80: {[LSTMoutput2.G3 Gradient[1024 x 1 x *]] [LSTMoutput3.Wcidc Value[1024 x 1 x *]] }
+000000B27CD9D0C0: {[LSTMoutput2.Wcf Gradient[1024]] [LSTMoutput3.it Value[1024 x 1 x *]] }
+000000B27CD9D160: {[LSTMoutput1.ft Gradient[1024 x 1 x *]] [LSTMoutput3.bft Gradient[1024 x 1 x *]] }
+000000B27CD9D200: {[LSTMoutput2.bft Gradient[1024 x 1 x *]] [LSTMoutput3.dc Gradient[1024 x 1 x *]] }
+000000B27CD9D2A0: {[LSTMoutput1.Wcfdc Gradient[1024 x 1 x *]] [LSTMoutput2.Wcidc Gradient[1024 x 1 x *]] [LSTMoutput3.ft Gradient[1024 x 1 x *]] }
+000000B27CD9D340: {[LSTMoutput3.unnamed168 Value[1024 x 1 x *]] }
+000000B27CD9D520: {[LSTMoutput3.mt Value[1024 x 1 x *]] }
+000000B27CD9D5C0: {[LSTMoutput1.output Gradient[512 x 1 x *]] [LSTMoutput2.wxxpb Gradient[4096 x 1 x *]] [LSTMoutput3.it Gradient[1024 x 1 x *]] }
+000000B27CD9D660: {[LSTMoutput3.Wmr Gradient[512 x 1024]] [unnamed174 Value[132 x 1 x *]] }
+000000B27CD9D700: {[LSTMoutput3.ct Value[1024 x 1 x *]] }
+000000B27CD9D7A0: {[LSTMoutput1.dc Gradient[1024 x 1 x *]] [LSTMoutput2.G1 Gradient[1024 x 1 x *]] [LSTMoutput3.ft Value[1024 x 1 x *]] }
+000000B27CD9D840: {[LSTMoutput3.bit Value[1024 x 1 x *]] }
+000000B27CD9D8E0: {[LSTMoutput3.output Value[512 x 1 x *]] }
+000000B27CD9D980: {[LSTMoutput3.unnamed169 Gradient[1024 x 1 x *]] }
+000000B27CD9DA20: {[LSTMoutput3.ct Gradient[1024 x 1 x *]] }
+000000B27CD9DB60: {[LSTMoutput3.Wcoct Value[1024 x 1 x *]] }
+000000B27CD9DC00: {[LSTMoutput1.it Gradient[1024 x 1 x *]] [LSTMoutput3.unnamed165 Value[1024 x 1 x *]] }
+000000B27CD9DCA0: {[LSTMoutput3.ot Value[1024 x 1 x *]] }
+000000B27CD9DD40: {[b Gradient[132 x 1]] }
+000000B27CD9DDE0: {[LSTMoutput3.unnamed168 Gradient[1024 x 1 x *]] }
+000000B27CD9DE80: {[LSTMoutput3.Wcoct Gradient[1024 x 1 x *]] }
+000000B27CD9DF20: {[LSTMoutput3.bit Gradient[1024 x 1 x *]] }
+000000B27CD9DFC0: {[LSTMoutput1.unnamed153 Gradient[1024 x 1 x *]] [LSTMoutput2.whh Gradient[4096 x 1 x *]] [LSTMoutput3.G2 Value[1024 x 1 x *]] }
+000000B27CD9E060: {[LSTMoutput3.output Gradient[512 x 1 x *]] [LSTMoutputW Gradient[132 x 1 x *]] }
+000000B27CD9E100: {[LSTMoutput3.unnamed169 Value[1024 x 1 x *]] }
+000000B27CD9E1A0: {[LSTMoutput3.ot Gradient[1024 x 1 x *]] }
+000000B27CD9E240: {[LSTMoutput2.Wcoct Gradient[1024 x 1 x *]] [LSTMoutput3.G4 Gradient[1024 x 1 x *]] }
+000000B27CD9E2E0: {[LSTMoutput3.unnamed166 Gradient[1024 x 1 x *]] }
+000000B27CD9E380: {[LSTMoutput1.unnamed151 Gradient[1024 x 1 x *]] [LSTMoutput3.bft Value[1024 x 1 x *]] }
+000000B27CD9E420: {[LSTMoutput3.Wco Gradient[1024]] }
+000000B27CD9E4C0: {[LSTMoutput2.unnamed160 Gradient[1024 x 1 x *]] [LSTMoutput3.wxxpbpwhh Gradient[4096 x 1 x *]] }
+000000B27CD9E560: {[ce Gradient[1]] }
+000000B27CD9E600: {[LSTMoutput1.bit Gradient[1024 x 1 x *]] [LSTMoutput3.unnamed165 Gradient[1024 x 1 x *]] }
+000000B27CD9E6A0: {[LSTMoutputW Value[132 x 1 x *]] [W Gradient[132 x 512]] }
+000000B27CD9E740: {[LSTMoutput3.mt Gradient[1024 x 1 x *]] [unnamed174 Gradient[132 x 1 x *]] }
+000000B27CD9E7E0: {[LSTMoutput2.b Gradient[4096 x 1]] [LSTMoutput2.dh Gradient[512 x 1 x *]] [LSTMoutput3.unnamed166 Value[1024 x 1 x *]] }
+000000B27CD9E880: {[LSTMoutput1.bft Gradient[1024 x 1 x *]] [LSTMoutput2.dc Gradient[1024 x 1 x *]] [LSTMoutput3.G1 Gradient[1024 x 1 x *]] }
+000000B27CD9E9C0: {[LSTMoutput1.G2 Gradient[1024 x 1 x *]] [LSTMoutput2.Wcfdc Gradient[1024 x 1 x *]] [LSTMoutput3.Wcidc Gradient[1024 x 1 x *]] }
+000000B27CD9EA60: {[LSTMoutput1.unnamed149 Gradient[1024 x 1 x *]] [LSTMoutput2.unnamed159 Gradient[1024 x 1 x *]] }
+000000B27CD9EB00: {[LSTMoutput1.Wcidc Gradient[1024 x 1 x *]] [LSTMoutput2.ft Gradient[1024 x 1 x *]] }
+000000B27CD9EBA0: {[LSTMoutput2.Wh Gradient[4096 x 512]] [LSTMoutput3.G2 Gradient[1024 x 1 x *]] }
+000000B27CD9EC40: {[LSTMoutput3.Wci Gradient[1024]] }
+000000B27CD9ECE0: {[LSTMoutput2.Wci Gradient[1024]] [LSTMoutput3.G1 Value[1024 x 1 x *]] }
+
+
+05/03/2016 13:22:43: Precomputing --> 3 PreCompute nodes found.
+
+05/03/2016 13:22:43: 	featNorm.xMean = Mean()
+05/03/2016 13:22:43: 	featNorm.xStdDev = InvStdDev()
+05/03/2016 13:22:43: 	logPrior.prior = Mean()
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+05/03/2016 13:22:44: Precomputing --> Completed.
+
+
+05/03/2016 13:22:45: Starting Epoch 1: learning rate per sample = 0.001953  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+minibatchiterator: epoch 0: frames [0..64] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+05/03/2016 13:22:45: Starting minibatch loop.
+05/03/2016 13:22:46:  Epoch[ 1 of 1]-Minibatch[   1-  10, 250.00%]: ce = 4.87486229 * 160; err = 0.93125000 * 160; time = 0.8826s; samplesPerSecond = 181.3
+05/03/2016 13:22:47:  Epoch[ 1 of 1]-Minibatch[  11-  20, 500.00%]: ce = 4.86032641 * 148; err = 0.88513514 * 148; time = 0.7859s; samplesPerSecond = 188.3
+05/03/2016 13:22:47: Finished Epoch[ 1 of 1]: [Training] ce = 4.86787751 * 308; err = 0.90909091 * 308; totalSamplesSeen = 308; learningRatePerSample = 0.001953125; epochTime=1.67138s
+05/03/2016 13:22:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_LSTM@release_gpu/Models/cntkSpeechLSTM.dnn'
+05/03/2016 13:22:48: CNTKCommandTrainEnd: speechTrain
+
+05/03/2016 13:22:48: Action "train" complete.
+
+05/03/2016 13:22:48: __COMPLETED__

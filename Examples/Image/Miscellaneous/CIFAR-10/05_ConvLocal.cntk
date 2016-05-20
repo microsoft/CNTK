@@ -13,7 +13,8 @@ imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
-prefetch = "true"
+# Note: turn off prefetching; known to crash UCIFastReader occasionally.
+prefetch = "false"
 
 command = Train:Test
 

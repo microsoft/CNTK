@@ -1,0 +1,42 @@
+1 |A 1.0 |B 1:1     |# one of the samples in each sequence has to be valid,
+1 |A 1.0 |B 11:1    |# otherwise the sequence would be empty and the reader
+1 |A 1.0 1.0 |B 1:1 |# will raise an exception
+2 |A 2.0 |B 2:2
+2 |A 2,0 |B 2:2
+2 |A 2.0 |B 2::2
+2 |A 20. |B 2:2
+2 |A 2:0 |B 2:2
+2 |A 2.0 |B 2 
+2 |A 2.0 |B 2.2
+2 |A 2.0 |B 2;2
+2 |A 2#0 |B 2:2
+2 |#AAAA 20 |B 2:2
+2 |A 2.0f |B 2:2
+2 |A 02.0 |B 2.2
+2 |A 2.0 |B 2.0:2.0
+2 |A 2.0 |B -2:2.0
+3 |A 3.0 |B 3:3
+3 | A 3.0 |B 3:3
+|A 3.0 |B 3:3
+| A 3.0 |B 3:3
+ |A 3.0 |B 3:3
+3	|A 3.0 |B 3:3
+|B 3:3
+|A 3.0
+|C 3.0
+4 |A 4.0 |B 4:4
+4| 
+|A 4.0 |B 4:4
+
+|
+|#
+|####	|A 4.0|####|B 4:4
+5|A 5.|# the only well-formed sequence in this file|B 5:5
+123 |A 123 |B 1:23
+123 |A 124
+123 |B 1:24 |# sequence length will be mis-calculated here (3 instead of 2).
+6 |A 6.0 |B 6:6
+|# sparse suffix in A (totally fine, but should print a warning anyways) |A |B 6:6
+|A 6.0 6.0 |B 6:6
+|A 6.0 |B 6:6
+|A 6.0 |B 6:6

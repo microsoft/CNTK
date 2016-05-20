@@ -38,6 +38,10 @@
     <ClCompile Include="BatchNormalizationEngine.cpp">
       <Filter>BatchNormalization</Filter>
     </ClCompile>
+    <ClCompile Include="CPURNGHandle.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="RNGHandle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -97,6 +101,9 @@
     <ClInclude Include="BatchNormalizationEngine.h">
       <Filter>BatchNormalization</Filter>
     </ClInclude>
+    <ClInclude Include="RNGHandle.h" />
+    <ClInclude Include="CPURNGHandle.h">
+      <Filter>CPU</Filter>
     <ClInclude Include="RNNCommon.h">
       <Filter>RNN</Filter>
     </ClInclude>

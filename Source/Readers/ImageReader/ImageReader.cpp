@@ -13,9 +13,13 @@
 #include "ImageDataDeserializer.h"
 #include "FramePacker.h"
 #include <omp.h>
+#include "TransformController.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: This class should go away eventually.
+// TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
+// TODO: Currently preserving this for backward compatibility with current configs.
 ImageReader::ImageReader(MemoryProviderPtr provider,
                          const ConfigParameters& config)
     : m_seed(0), m_provider(provider)
@@ -37,7 +41,7 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
 
     auto deserializer = std::make_shared<ImageDataDeserializer>(config);
 
-    TransformerPtr randomizer;
+    SequenceEnumeratorPtr randomizer;
     // Request multi-threaded randomizer operation to speed up CPU-intensive image-decoding and transformations.
     const bool multithreadedGetNextSequences = true;
     if (configHelper.ShouldRandomize())
@@ -51,29 +55,27 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
         randomizer = std::make_shared<NoRandomizer>(deserializer, multithreadedGetNextSequences);
     }
 
-    randomizer->Initialize(nullptr, config);
+    // Create transformations for a single feature stream.
+    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()]->m_name;
+    ConfigParameters featureStream = config(featureName);
 
-    auto cropper = std::make_shared<CropTransformer>();
-    cropper->Initialize(randomizer, config);
+    std::vector<Transformation> transformations;
+    transformations.push_back(Transformation{ std::make_shared<CropTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<ScaleTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<ColorTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<IntensityTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{ std::make_shared<MeanTransformer>(featureStream), featureName });
 
-    auto scaler = std::make_shared<ScaleTransformer>();
-    scaler->Initialize(cropper, config);
-
-    auto mean = std::make_shared<MeanTransformer>();
-    mean->Initialize(scaler, config);
-
-    TransformerPtr last = mean;
     if (configHelper.GetDataFormat() == CHW)
     {
-        last = std::make_shared<TransposeTransformer>();
-        last->Initialize(mean, config);
+        transformations.push_back(Transformation{ std::make_shared<TransposeTransformer>(featureStream), featureName });
     }
 
-    m_transformer = last;
+    m_sequenceEnumerator = std::make_shared<TransformController>(transformations, randomizer);
 
     m_packer = std::make_shared<FramePacker>(
         m_provider,
-        m_transformer,
+        m_sequenceEnumerator,
         m_streams);
 }
 
@@ -90,7 +92,7 @@ void ImageReader::StartEpoch(const EpochConfiguration& config)
         RuntimeError("Epoch size cannot be 0.");
     }
 
-    m_transformer->StartEpoch(config);
+    m_sequenceEnumerator->StartEpoch(config);
     m_packer->StartEpoch(config);
 }
 

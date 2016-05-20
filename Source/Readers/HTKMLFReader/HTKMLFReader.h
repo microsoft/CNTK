@@ -117,7 +117,7 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     void SetNumParallelSequences(const size_t){};
 
     template <class ConfigRecordType>

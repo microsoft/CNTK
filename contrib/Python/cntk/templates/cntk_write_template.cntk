@@ -1,18 +1,9 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-command=Predict
-
-modelPath="%(ModelPath)s"
-deviceId=%(DevideId)s
-precision="%(Precision)s"
-
-Predict=[
-	action="write"
+%(ActionName)s=[
+	action="write"	
 	
 %(Reader)s
 	
-	outputPath = "%(PredictOutputFile)s"		# dump the output as text
+	outputPath = "%(OutputFile)s"		# dump the output as text
 ]
 
 

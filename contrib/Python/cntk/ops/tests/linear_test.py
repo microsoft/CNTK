@@ -11,9 +11,9 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, C, AA, I, precision
+from .ops_test_utils import unittest_helper, AA, I, precision
 from ...graph import *
-from ..variables_and_parameters import *
+from .. import *
 from ...reader import *
 import numpy as np
 
@@ -44,12 +44,12 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     #==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
     expected = [[AA(left_operand) + AA(right_operand)]]
 
-    a = I([left_operand], has_dynamic_axis=False)
-    b = I([right_operand], has_dynamic_axis=False)
+    a = I([left_operand])
+    b = I([right_operand])
 
     left_as_input = a + right_operand
     unittest_helper(left_as_input, None, expected, device_id=device_id,
@@ -81,12 +81,12 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
     #==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
     expected = [[AA(left_operand) - AA(right_operand)]]
 
-    a = I([left_operand], has_dynamic_axis=False)
-    b = I([right_operand], has_dynamic_axis=False)
+    a = I([left_operand])
+    b = I([right_operand])
 
     left_as_input = a - right_operand
     unittest_helper(left_as_input, None, expected, device_id=device_id,
@@ -120,12 +120,12 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
     #==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
     expected = [[AA(left_operand) * AA(right_operand)]]
 
-    a = I([left_operand], has_dynamic_axis=False)
-    b = I([right_operand], has_dynamic_axis=False)
+    a = I([left_operand])
+    b = I([right_operand])
 
     left_as_input = a * right_operand
     unittest_helper(left_as_input, None, expected, device_id=device_id,
@@ -160,12 +160,12 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
     #==================
     # we compute the expected output for the forward pass
     # we need two surrounding brackets
-    # the first for sequences (length=1, since we have has_dynamic_axis=False)
+    # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
     expected = [[AA(left_operand) / AA(right_operand)]]
 
-    a = I([left_operand], has_dynamic_axis=False)
-    b = I([right_operand], has_dynamic_axis=False)
+    a = I([left_operand])
+    b = I([right_operand])
 
     left_as_input = a / right_operand
     unittest_helper(left_as_input, None, expected, device_id=device_id,

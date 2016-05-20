@@ -1,6 +1,7 @@
 dataDir: ../../../Data
 tags:
-     # TODO consider BVT
+     # running targetting GPU on every BVT job in 'L' leg
+     - bvt-l (build_sku == 'gpu')
      # running unconditionally on every Nightly job in 'L' leg
      - nightly-l (build_sku == 'gpu')
 
@@ -18,14 +19,14 @@ testCases:
 #  Epochs must be finished with expected results:
 #    patterns:
 #      - ^Finished Epoch[{{integer}} of {{integer}}]
-#      - TrainLossPerSample = {{float,tolerance=.1%}}
-#      - EvalErrPerSample = {{float,tolerance=.1%}}
-#      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+#      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
+#      - EvalErrorPrediction = {{float,tolerance=.1%}}
+#      - learningRatePerSample = {{float,tolerance=0.001%}}
 #
 #  Per-minibatch training results must match:
 #    patterns:
 #      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-#      - SamplesSeen = {{integer}}
-#      - TrainLossPerSample = {{float,tolerance=.1%}}
-#      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
+#      - " * {{integer}}; "
+#      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
+#      - EvalErrorPrediction = {{float,tolerance=.1%}}
 #
