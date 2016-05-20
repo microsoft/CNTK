@@ -1103,20 +1103,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         commTimer.Start();
         // aggregation by model averaging or block momentum 
-        if (m_traceLevel > 2)
-          fprintf(stderr, "\t\t --trying communicating\n");
         if (useModelAggregation)
         {
-            
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
             {
-              if (m_traceLevel > 2)
-                fprintf(stderr, "\t\t --trying MA\n");
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)
                 {
-                    if (m_traceLevel > 2)
-                      fprintf(stderr, "\t\t --comunicated\n");
                     nSamplesSinceLastModelSync = 0;
                 }
             }
@@ -1130,20 +1123,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // using parameter server for parameter update
         if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
-            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
-            {
-              if (m_traceLevel > 2)
-                fprintf(stderr, "\t\t --trying Sim-MA\n");
-                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
-                nSamplesSinceLastModelSync = 0;
-                if (m_traceLevel > 2)
-                  fprintf(stderr, "\t\t --comunicated\n");
-            }
 
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
+            }
+
+            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
+            {
+                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                nSamplesSinceLastModelSync = 0;
             }
         }
 
