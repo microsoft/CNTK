@@ -833,7 +833,9 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
-    return TransposeDimensions(x, axis1, axis2, name = name)
+    cntk_axis1 = axis1+1
+    cntk_axis2 = axis2+1
+    return TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
     '''

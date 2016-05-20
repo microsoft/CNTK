@@ -12,19 +12,19 @@ from ...reader import *
 import cntk as C
 
 RESHAPE_TEST_CASES = [
-    #(inputShape, outputShape, expectedOutputShape)
+    #(input_shape, output_shape, expected_output_shape)
     ([2, 3],    [3, 2], [3, 2]),
     ([2, 3],    [6, 1], [6, 1]),
     ([2, 3],    [6, 1], [6, 1]),
     ([6, 1],    [2, 3], [2, 3]),
     ([2, 3, 5], [5, 6], [5, 6]),
-    # now we test the feature that we can set one dimension of the outputShape to 0 meaning that it's value is inferred
+    # now we test the feature that we can set one dimension of the output_shape to 0 meaning that it's value is inferred
     ([2, 3, 5], [0, 6], [5, 6]), 
     ([2, 3, 5], [5, 0], [5, 6]),
 ]
 
-@pytest.mark.parametrize("inputShape, outputShape, expectedOutputShape", RESHAPE_TEST_CASES)
-def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, precision):
+@pytest.mark.parametrize("input_shape, output_shape, expected_output_shape", RESHAPE_TEST_CASES)
+def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id, precision):
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -32,15 +32,16 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
                         
-    num_tensor_elements = np.multiply.reduce(inputShape)
-    input_tensor = np.arange(num_tensor_elements).reshape(inputShape)
+    num_tensor_elements = np.multiply.reduce(input_shape)
+    input_tensor = np.arange(num_tensor_elements).reshape(input_shape)
         
-    expected_tensor = input_tensor.reshape(expectedOutputShape, order='F')
+    expected_tensor = input_tensor.reshape(expected_output_shape, order='F')
 
     a = I([input_tensor])
 
     # reshape into output shape
-    reshaped_input = C.reshape(a, outputShape)
+
+    reshaped_input = C.reshape(a, output_shape)
 
     unittest_helper(reshaped_input, None, [[expected_tensor]], device_id=device_id, 
                 precision=precision, clean_up=True, backward_pass=False)
@@ -57,7 +58,7 @@ def test_op_reshape(inputShape, outputShape, expectedOutputShape, device_id, pre
     a = I([input_tensor])
 
     # reshape into output shape
-    reshaped_input = C.reshape(a, outputShape)
+    reshaped_input = C.reshape(a, output_shape)
 
     some_factor = 100
     weight =  expected_tensor * some_factor
@@ -189,3 +190,62 @@ def test_op_slice_overload(device_id, precision):
 
     with pytest.raises(IndexError):
         result = a[1,object(),2]
+
+
+TRANSPOSE_DIMS_TEST_CASES = [
+    #(input_shape, axis1, axis2, expected_output_shape)
+    ([2, 3],     0, 1, [3, 2]),
+    ([2, 3],    1, 0, [3, 2]),    
+    ([2, 3, 5], 0, 2, [5, 3, 2]), 
+    ([2, 2, 2], 0, 1, [2, 2, 2]),
+]
+
+@pytest.mark.parametrize("input_shape, axis1, axis2, expected_output_shape", TRANSPOSE_DIMS_TEST_CASES)
+def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shape, device_id, precision):
+    # Forward pass test
+    #==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+                        
+    num_tensor_elements = np.multiply.reduce(input_shape)
+    input_tensor = np.arange(num_tensor_elements).reshape(input_shape)
+    
+    permutated_axes = np.arange(len(input_shape))
+    axis1_idx = permutated_axes[axis1]
+    permutated_axes[axis1] = permutated_axes[axis2]
+    permutated_axes[axis2] = axis1_idx    
+    expected_tensor = input_tensor.transpose(*permutated_axes)
+    
+    a = I([input_tensor])
+
+    # swap two axes
+    reshaped_input = C.transpose_dimensions(a, axis1, axis2)
+
+    unittest_helper(reshaped_input, None, [[expected_tensor]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # Reshaping is just moving the input values to different indexes of the result tensor.
+    # If we would compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
+    # For testing the gradients we want to have different gradients for each input index otherwise we can't
+    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with some weight tensor. 
+    # For convienience choose '100 * expected_tensor' as weight.
+    # The expected gradient is identical to this weight tensor reshaped according the input shape.
+
+    a = I([input_tensor])
+
+    # swap two axes
+    reshaped_input = C.transpose_dimensions(a, axis1, axis2)
+
+    some_factor = 100
+    weight =  expected_tensor
+    output = reshaped_input * weight
+        
+    expected_gradient = weight.transpose(*permutated_axes)
+    
+    unittest_helper(output, None, [[input_tensor]], device_id = device_id,
+                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+

@@ -34,8 +34,11 @@ def unittest_helper(root_node, input_numpy, expected, device_id=-1, precision="f
         ctx.precision = precision
         assert not ctx.input_nodes
         result = ctx.eval(root_node, input_numpy, backward_pass, input_node)
-
+        
         assert len(result) == len(expected)
         for res, exp in zip(result, expected):
+            print(res)
+            print(exp)
+            print('====')
             assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
             assert res.shape == AA(exp).shape
