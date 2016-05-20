@@ -1123,17 +1123,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // using parameter server for parameter update
         if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
+            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
+            {
+                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                nSamplesSinceLastModelSync = 0;
+            }
 
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
-            }
-
-            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
-            {
-                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
-                nSamplesSinceLastModelSync = 0;
             }
         }
 
