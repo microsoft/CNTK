@@ -386,7 +386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
                 if (m_traceLevel > 2)
                 {  
-                    fprintf(stderr, "\t\t(model averaging) sampleSinceLastSynced = %d, factor = %f.\n", sampleSinceLastSynced, factor);
+                    fprintf(stderr, "\t\t(model averaging) sampleSinceLastSynced = %d, factor = %f.\n", (int)sampleSinceLastSynced, factor);
                     fflush(stderr);
                 }
             }
