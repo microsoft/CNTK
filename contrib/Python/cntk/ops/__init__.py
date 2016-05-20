@@ -230,9 +230,8 @@ def less_equal(left, right, name=None):
 
 def plus(left, right, name=None):
     """
-    Tensor addition operation. The output of this operation is the sum of the 
-    two input tensors. It supports broadcasting. In case of scalars its backward
-    pass propagates the received gradient. 
+    The output of this operation is the sum of the two input tensors. It supports broadcasting. 
+    In case of scalars its backward pass propagates the received gradient. 
 
     Example:
         >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
@@ -254,9 +253,8 @@ def plus(left, right, name=None):
 
 def minus(left, right, name=None):
     """
-    Tensor subtraction operation. The output of this operation is left minus
-    right tensor. It supports broadcasting. In case of scalars its backward
-    pass propagates the received gradient. 
+    The output of this operation is left minus right tensor. It supports broadcasting. 
+    In case of scalars its backward pass propagates the received gradient. 
 
     Example:
         >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
@@ -280,9 +278,8 @@ def minus(left, right, name=None):
 
 def element_times(left, right, name=None):
     """
-    Element-wise multiplication operation. The output of this operation is the
-    element-wise product of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates right 
+    The output of this operation is the element-wise product of the two input 
+    tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right 
     times the received gradient and vice versa.
     
     Example:
@@ -305,10 +302,10 @@ def element_times(left, right, name=None):
 
 def element_divide(left, right, name=None):
     """
-    Element-wise division operation. The output of this operation is the
-    element-wise division of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates :math:`1/right` 
-    times the received gradient, and the backward pass to right propagates 
+    The output of this operation is the element-wise division of the two input 
+    tensors. It supports broadcasting. In case of scalars its backward pass to 
+    left propagates :math:`1/right` times the received gradient, and the backward 
+    pass to right propagates 
     :math:`(-left/right^2)` times the received gradient. 
 
     Example:
@@ -331,9 +328,8 @@ def element_divide(left, right, name=None):
 
 def times(left, right, name=None):
     """
-    Tensor times operation. The output of this operation is the
-    tensor product of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates right
+    The output of this operation is the tensor product of the two input tensors.
+    It supports broadcasting. In case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
 
     Example:
@@ -380,9 +376,8 @@ def identity(x, name=None):
 
 def floor(arg, name=None):
     """
-    Floor operation. The output of this operation is the
-    element wise value rounded to the largest integer less than
-    or equal to the input.
+    The output of this operation is the element wise value rounded to the largest 
+    integer less than or equal to the input.
 
     Example:
         >>> C.eval(C.floor([0.2, 1.3, 4., 5.5, 0.0]))
@@ -411,9 +406,8 @@ def floor(arg, name=None):
 
 def ceil(arg, name=None):
     """
-    Ceil operation. The output of this operation is the
-    element wise value rounded to the smallest integer greater than
-    or equal to the input.
+    The output of this operation is the element wise value rounded to the smallest 
+    integer greater than or equal to the input.
 
     Example:
         >>> C.eval(C.ceil([0.2, 1.3, 4., 5.5, 0.0]))
@@ -435,9 +429,8 @@ def ceil(arg, name=None):
 
 def round(arg, name=None):
     """
-    Round operation. The output of this operation is the
-    element wise value rounded to the nearest integer. In case
-    of tie, where element can have exact fractional part of 0.5
+    The output of this operation is the element wise value rounded to the nearest integer. 
+    In case of tie, where element can have exact fractional part of 0.5
     this operation follows "round half-up" tie breaking strategy.
     This is different from the round operation of numpy which follows
     round half to even.
@@ -474,7 +467,7 @@ def round(arg, name=None):
 
 def clip(x, min_value, max_value, name=None):
     """
-    Clip operation. Computes a tensor with all of its values clipped to fall
+    Computes a tensor with all of its values clipped to fall
     between `min_value` and `max_value`, i.e.
     ``min(max(x, min_value), max_value)``.
 
@@ -524,7 +517,7 @@ def relu(x, name=None):
 
 def sigmoid(x, name=None):
     """
-    Sigmoid operation. Computes the element-wise sigmoid of `x`: 
+    Computes the element-wise sigmoid of `x`: 
 
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
 
@@ -545,7 +538,7 @@ def sigmoid(x, name=None):
 
 def tanh(x, name=None):
     """
-    Tanh operation. Computes the element-wise tanh of `x`: 
+    Computes the element-wise tanh of `x`: 
 
     The output tensor has the same shape as `x`.
     
@@ -565,7 +558,7 @@ def tanh(x, name=None):
 
 def softmax(x, name=None):
     """
-    Softmax operation. Squashes the input values `x` such that they add up to 1: 
+    Squashes the input values `x` such that they add up to 1: 
 
     :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
 
@@ -590,7 +583,7 @@ def softmax(x, name=None):
 
 def exp(x, name=None):
     """
-    Exp operation. Computes the element-wise exponential of `x`: 
+    Computes the element-wise exponential of `x`: 
 
     :math:`exp(x) = {e^x}`
 
@@ -608,7 +601,7 @@ def exp(x, name=None):
 
 def log(x, name=None):
     """
-    Log operation. Computes the element-wise the natural logarithm of `x`: 
+    Computes the element-wise the natural logarithm of `x`: 
     
     Example:
         >>> C.eval(C.log([1., 2.]))
@@ -620,17 +613,17 @@ def log(x, name=None):
         :class:`cntk.graph.ComputationNode`
                 
     Note:
-        CNTK returns -85.1 for log(x) if x is negative or zero. The reason is that 
+        CNTK returns -85.1 for log(x) if `x` is negative or zero. The reason is that 
         it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float 
-        number for log, becuase this is the only guaranteed precision accross 
-        platforms. This will be changed to return NaN and -inf.
+        number for `log`, because this is the only guaranteed precision accross 
+        platforms. This will be changed to return `NaN` and `-inf`.
     """
     from cntk.ops.cntk2 import Log
     return Log(x, name=name)
 
 def sqrt(x, name=None):
     """
-    Sqrt operation. Computes the element-wise square-root of `x`: 
+    Computes the element-wise square-root of `x`: 
 
     :math:`sqrt(x) = {\sqrt[2]{x}}`
 
@@ -652,7 +645,7 @@ def sqrt(x, name=None):
 
 def square(x, name=None):
     """
-    Square operation. Computes the element-wise square of `x`:     
+    Computes the element-wise square of `x`:     
 
     Example:
         >>> C.eval(C.square([1., 10.]))
@@ -668,7 +661,7 @@ def square(x, name=None):
 
 def abs(x, name=None):
     """
-    Abs operation. Computes the element-wise absolute of `x`: 
+    Computes the element-wise absolute of `x`: 
 
     :math:`abs(x) = |x|`
 

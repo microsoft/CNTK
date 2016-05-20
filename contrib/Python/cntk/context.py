@@ -45,6 +45,15 @@ _CONTEXT = {}
 
 
 def get_context(handle):
+    '''
+    If the context for the current handle is already built it returns it. Otherwise,
+    it will build new context and return it.
+    Args:
+        handle (str): context name
+    Returns:
+        :class:`cntk.context.LocalExecutionContext`
+    '''    
+    
     # TODO: we need more sanity in the model handling here
     if handle not in _CONTEXT:
         _CONTEXT[handle] = LocalExecutionContext(handle)
@@ -767,7 +776,7 @@ class DeferredExecutionContext(AbstractContext):
         
     Args:        
         device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
-        precision (str): either float or double            
+        precision (str): either 'float' or 'double'
     '''
     
     def __init__(self, 

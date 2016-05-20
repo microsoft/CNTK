@@ -14,9 +14,9 @@ import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, constant, exp, log, sqrt, square, relu, sigmoid, softmax, tanh
+from .. import constant
 
-EPS_IN_LOG = 1e-37        # 1e-37 is the only guaranteed precision
+EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
 LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
 
@@ -44,7 +44,8 @@ CLIP_TUPLES = [
 # -- clip operation tests --
 @pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
 def test_op_clip(min_value, max_value, x, device_id, precision):    
-
+    from .. import clip
+    
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -77,6 +78,8 @@ TENSORS = [
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
+
+    from .. import sigmoid
 
     def numpy_op(x):
         return 1.0 / (1.0 + np.exp(-AA(x, dtype=PRECISION_TO_TYPE[precision])))
@@ -117,7 +120,8 @@ def test_op_sigmoid(tensor, device_id, precision):
                              ],
                          ])
 def test_op_softmax(batch, device_id, precision):
-
+    from .. import softmax
+    
     def numpy_op(x):
         x = AA(x, dtype=PRECISION_TO_TYPE[precision])
         # Expecting classes of one sample
@@ -171,6 +175,7 @@ def test_op_softmax(batch, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_exp(tensor, device_id, precision):
+    from .. import exp
 
     def numpy_op(x):
         return np.exp(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -203,6 +208,8 @@ def test_op_exp(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_log(tensor, device_id, precision):
+
+    from .. import log
 
     def numpy_op(x):
         a = np.log(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -250,6 +257,7 @@ def test_op_log(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sqrt(tensor, device_id, precision):
+    from .. import sqrt
 
     def numpy_op(x):
         a = np.sqrt(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -290,6 +298,7 @@ def test_op_sqrt(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_square(tensor, device_id, precision):
+    from .. import square
 
     def numpy_op(x):
         return np.square(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -327,6 +336,8 @@ def test_op_square(tensor, device_id, precision):
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_tanh(tensor, device_id, precision):
 
+    from .. import tanh
+
     def numpy_op(x):
         return np.tanh(AA(x, dtype=PRECISION_TO_TYPE[precision]))
 
@@ -359,6 +370,8 @@ def test_op_tanh(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_relu(tensor, device_id, precision):
+
+    from .. import relu
 
     def numpy_op(x):
         npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
@@ -398,7 +411,7 @@ def test_op_relu(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_abs(tensor, device_id, precision):
-
+    from .. import abs
     np_tensor = AA(tensor, dtype=PRECISION_TO_TYPE[precision])
 
     # Forward pass test
@@ -441,6 +454,8 @@ COND_TUPLES = [
 # -- cond operation tests --
 @pytest.mark.parametrize("flag, value_a, value_b", COND_TUPLES)
 def test_op_cond(flag, value_a, value_b, device_id, precision):    
+
+    from .. import cond
 
     #Forward pass test
     #==================

@@ -11,9 +11,8 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import _check_broadcasting, unittest_helper, AA, I, precision, 
-PRECISION_TO_TYPE,_broadcast_col_major, _check_broadcasting_and_get_reduce_axes,
-_reduce_sum_on_multiple_axes
+from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
+
 from ...graph import *
 from .. import *
 from ...reader import *

@@ -76,18 +76,3 @@ def _reduce_sum_on_multiple_axes(tensor, axes):
         
     return res
     
-a = np.asarray([[[1,2,3]],[[4,5,6]]])
-print (a.shape)
-b = np.asarray([[7,8]])
-print (b.shape)
-c = _broadcast_col_major(a,b,np.add)
-print (c)
-print (c.shape)
-
-flag, axes_a, axes_b = _check_broadcasting_and_get_reduce_axes(a,b)
-print (axes_a)
-print (axes_b)
-if flag == 1:
-    print (_reduce_sum_on_multiple_axes(np.ones_like(c),axes_a))
-    print (_reduce_sum_on_multiple_axes(np.ones_like(c),axes_b))
-    

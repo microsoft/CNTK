@@ -27,7 +27,7 @@ def eval(node):
     
     from cntk.context import get_new_context        
     from cntk.ops import input_numpy, constant
-    from cntk.graph import ComputationNode
+    from cntk.graph import ComputationNode, _InputComputationNodeBase
     
     # call a helper method to get a context
     with get_new_context() as ctx:
@@ -40,7 +40,7 @@ def eval(node):
                 if p in node.inputs:
                     val = getattr(node, p)
                     if not isinstance(val, ComputationNode):
-                        # One param needs to be an Input() node. This will being fixed in 
+                        # One param needs to be an Input() node. This will be fixed in 
                         # CNTK soon, so that we can remove this workaround and evaluate a 
                         # network with no inputs.
                         if first:
@@ -54,7 +54,7 @@ def eval(node):
                         else:
                             setattr(node, p, constant(getattr(node, p), name=p))
                     else:
-                        if val.op_name == 'CNTK2.Input' and first:
+                        if isinstance(val, _InputComputationNodeBase) and first:
                             first = False
                             
         return ctx.eval(node)
