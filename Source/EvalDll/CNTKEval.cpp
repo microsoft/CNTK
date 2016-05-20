@@ -238,14 +238,14 @@ VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNod
     auto matrix = dynamic_pointer_cast<Matrix<ElemType>>(n->ValuePtr());
     return VariableLayout
     {
-        /* name */ n->GetName(),
-        /* type */ sizeof(ElemType) == sizeof(float) ? VariableLayout::Float32 : VariableLayout::Float64,
-        /* storage */  matrix ? matrix->GetMatrixType() == MatrixType::DENSE ? VariableLayout::Dense :
+        /* name */          n->GetName(),
+        /* type */          sizeof(ElemType) == sizeof(float) ? VariableLayout::Float32 : VariableLayout::Float64,
+        /* storage */       matrix ? matrix->GetMatrixType() == MatrixType::DENSE ? VariableLayout::Dense :
                                 matrix->GetMatrixType() == MatrixType::SPARSE ? VariableLayout::Sparse : 
                                 VariableLayout::Undetermined :
                                 VariableLayout::Undetermined,
-        /* dimension */ n->GetSampleLayout().GetNumElements(),
-        /* dynamic axis */ wstring(n->GetMBLayout()->GetAxisName())
+        /* dimension */     n->GetSampleLayout().GetNumElements(),
+        /* dynamic axis */  wstring(n->GetMBLayout() ? n->GetMBLayout()->GetAxisName() : L"*")
     };
 }
 
