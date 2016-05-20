@@ -11,7 +11,9 @@ the forward and the backward pass
 
 import numpy as np
 import pytest
-from .ops_test_utils import _check_broadcasting, unittest_helper, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import _check_broadcasting, unittest_helper, AA, I, precision, 
+PRECISION_TO_TYPE,_broadcast_col_major, _check_broadcasting_and_get_reduce_axes,
+_reduce_sum_on_multiple_axes
 from ...graph import *
 from .. import *
 from ...reader import *
@@ -22,17 +24,17 @@ import numpy as np
 
 # TODO: perhaps include some rand() testing; and
 TENSOR_PAIRS = [
-    #([30.], [10.]),
-    #([[30.]], [[10.]]),
-    #([[1.5, 2.1]], [[10., 20.]]),
-    #([[100., 200.], [300., 400.], [10., 20.]],
-    # [[10., 20.], [30., 40.], [1., 2.]]),
+    ([30.], [10.]),
+    ([[30.]], [[10.]]),
+    ([[1.5, 2.1]], [[10., 20.]]),
+    ([[100., 200.], [300., 400.], [10., 20.]],
+     [[10., 20.], [30., 40.], [1., 2.]]),
     # Test with broadcast
-    # TODO: fix the expected output
-    ([5], [[10, 20], [30,40], [1,2]]),     
+    # TODO: adjust the broadcast according to the decision on col/row major
+    #([5], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
-    #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
