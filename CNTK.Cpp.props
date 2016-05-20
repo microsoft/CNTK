@@ -29,34 +29,37 @@
 
   </PropertyGroup>
 
-    <PropertyGroup Condition="Exists('$(ACML_PATH)')">
-        <MathInclude>$(ACML_PATH)\include</MathInclude>
-        <MathLib>$(ACML_PATH)\lib</MathLib>
-        <MathPreprocessor>USE_ACML</MathPreprocessor>
-        <USE_ACML>1</USE_ACML>
-        <MathLinkLib>libacml_mp_dll.lib</MathLinkLib>
-        <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
-        <MathPostBuild>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutDir)"</MathPostBuild>
-        <MathPostBuildMessage>Copying ACML DLLs</MathPostBuildMessage>
-        <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
-    </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(ACML_PATH)')">
+	<MathLibrayName>ACML</MathLibrayName>
+    <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
+    <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
+    <MathLinkLibrary>libacml_mp_dll.lib</MathLinkLibrary>
+    <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
+    <MathPostBuildPath>$(ACML_PATH)\lib\*.dll</MathPostBuildPath>
+    <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
+    <MathDefine>USE_ACML</MathDefine>
+	<!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
+  </PropertyGroup>
 
-    <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
-		<MKLCustomVersion>1</MKLCustomVersion>
-        <MathInclude>$(CNTK_MKL_PATH)\$(MKLCustomVersion)\include</MathInclude>
-        <MathLib>$(CNTK_MKL_PATH)\$(MKLCustomVersion)\x64</MathLib>
-        <MathPreprocessor>USE_MKL</MathPreprocessor>
-        <USE_MKL>1</USE_MKL>
-        <MathLinkLib>mkl_custom.lib</MathLinkLib>
-        <MathDelayLoad></MathDelayLoad>
-        <MathPostBuild>
-        xcopy /S /D /I /Y "$(CNTK_MKL_PATH)\$(MKLCustomVersion)\x64\*.*" "$(OutDir)"
-        </MathPostBuild>
-        <MathPostBuildMessage>Copying CNTK MKL DLLs</MathPostBuildMessage>
-        <UnitTestDlls>$(OutDir)svml_dispmd.dll;$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
-    </PropertyGroup>
+  <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
+    <MKLCustomVersion>1</MKLCustomVersion>
+    <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
+	<!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
+	<!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
+	<!-- this allows for multiple version of the custom DLLs present on the machine -->
+	<!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
+    <MathLibrayName>CNTK-Custom MKL (Version: $(MKLCustomVersion))</MathLibrayName>
+    <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
+    <MathLibraryPath>$(MKLDropDirectory)\x64</MathLibraryPath>
+    <MathLinkLibrary>mkl_custom.lib</MathLinkLibrary>
+    <MathDelayLoad>mkl_custom.dll</MathDelayLoad>
+	<!-- mkl custom dll, lib, header files not yet added to build/jenkins machines -->
+    <MathPostBuildPath>$(MKLDropDirectory)\x64\*.dll</MathPostBuildPath>
+    <UnitTestDlls>$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+    <MathDefine>USE_MKL</MathDefine>
+  </PropertyGroup>
 
-    <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
+  <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
