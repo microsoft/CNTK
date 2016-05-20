@@ -29,17 +29,17 @@
 
   </PropertyGroup>
 
-    <PropertyGroup Condition="Exists('$(ACML_PATH)')">
-        <MathInclude>$(ACML_PATH)\include</MathInclude>
-        <MathLib>$(ACML_PATH)\lib</MathLib>
-        <MathPreprocessor>USE_ACML</MathPreprocessor>
-        <USE_ACML>1</USE_ACML>
-        <MathLinkLib>libacml_mp_dll.lib</MathLinkLib>
-        <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
-        <MathPostBuild>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutDir)"</MathPostBuild>
-        <MathPostBuildMessage>Copying ACML DLLs</MathPostBuildMessage>
-        <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
-    </PropertyGroup>
+	<PropertyGroup Condition="Exists('$(ACML_PATH)')">
+		<MathInclude>$(ACML_PATH)\include</MathInclude>
+		<MathLib>$(ACML_PATH)\lib</MathLib>
+		<MathPreprocessor>USE_ACML</MathPreprocessor>
+		<USE_ACML>1</USE_ACML>
+		<MathLinkLib>libacml_mp_dll.lib</MathLinkLib>
+		<MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
+		<MathPostBuild>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutDir)"</MathPostBuild>
+		<MathPostBuildMessage>Copying ACML DLLs</MathPostBuildMessage>
+		<UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
+	</PropertyGroup>
 
     <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
 		<MKLCustomVersion>1</MKLCustomVersion>
