@@ -105,11 +105,6 @@ public:
         return this->m_rnnParameters == rnnParameters;
     }
 
-    size_t GetLength()
-    {
-        return m_seqLength;
-    }
-
     operator cudnnRNNDescriptor_t() const
     {
         return m_rnnDesc;
