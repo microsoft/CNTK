@@ -66,15 +66,13 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     #==================
     # the expected results for the backward pass is all ones
 
-    expected = [[[np.ones_like(x) for x in left_operand]]]
-    if (_check_broadcasting(AA(left_operand),AA(right_operand))):
-        expected = [[[np.sum(expected)]]]
-    #unittest_helper(left_as_input, None, expected, device_id=device_id,
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=a)
+    expected = [[[np.ones_like(x) for x in left_operand]]]    
+    unittest_helper(left_as_input, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
     
     expected = [[[np.ones_like(x) for x in right_operand]]]
-    #unittest_helper(right_as_input, None, expected, device_id=device_id,
-    #                precision=precision, clean_up=True, backward_pass=True, input_node=b)
+    unittest_helper(right_as_input, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 # -- minus operation tests --
 
