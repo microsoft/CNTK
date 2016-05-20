@@ -564,6 +564,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
+    // If the number of commands is long, we must truncate the log path.
+    // The default of 260 is windows max path length.
+    size_t maxLogPathLength = config(L"maxLogPathLength", 260);
 
     //  [1/26/2015 erw, add done file so that it can be used on HPC]
     wstring DoneFile = config(L"DoneFile", L"");
@@ -586,12 +589,20 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
             logpath += L"_";
             logpath += (wstring) command[i];
         }
+        if (logpath.length() > maxLogPathLength - 4)
+            logpath = logpath.substr(0, maxLogPathLength - 4);
         logpath += L".log";
 
         if (paralleltrain)
         {
             std::wostringstream oss;
             oss << mpi->CurrentNodeRank();
+            // Assume that we're using < 1000 GPUs
+            if (logpath.length() > maxLogPathLength - 8)
+            {
+                // Note we need to subtract 12, because we have to re-add the ".log" suffix
+                logpath = logpath.substr(0, maxLogPathLength - 12) + L".log";
+            }
             logpath += L"rank" + oss.str();
         }
         RedirectStdErr(logpath);
