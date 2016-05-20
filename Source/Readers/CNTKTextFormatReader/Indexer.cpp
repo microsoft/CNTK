@@ -53,7 +53,7 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::BuildFromLines()
+void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
 {
     assert(m_pos == m_bufferStart);
     m_hasSequenceIds = false;
@@ -65,13 +65,12 @@ void Indexer::BuildFromLines()
         if (m_pos)
         {
             SequenceDescriptor sd = {};
-            sd.m_id = lines;
             sd.m_numberOfSamples = 1;
             sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            m_index.AddSequence(sd);
+            AddSequenceIfIncluded(corpus, lines, sd);
             ++m_pos;
             ++lines;
         }
@@ -86,14 +85,12 @@ void Indexer::BuildFromLines()
         // There's a number of characters, not terminated by a newline,
         // add a sequence to the index, parser will have to deal with it.
         SequenceDescriptor sd = {};
-        sd.m_id = lines;
         sd.m_numberOfSamples = 1;
         sd.m_isValid = true;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-        m_index.AddSequence(sd);
+        AddSequenceIfIncluded(corpus, lines, sd);
     }
-
 }
 
 void Indexer::Build(CorpusDescriptorPtr corpus)
@@ -124,7 +121,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     if (!m_hasSequenceIds || m_bufferStart[0] == NAME_PREFIX)
     {
         // skip sequence id parsing, treat lines as individual sequences
-        BuildFromLines();
+        BuildFromLines(corpus);
         return;
     }
 
@@ -137,38 +134,38 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     }
 
     SequenceDescriptor sd = {};
-    sd.m_id = id;
     sd.m_fileOffsetBytes = offset;
     sd.m_isValid = true;
 
+    size_t currentKey = id;
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
         offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
-        if (!m_done && TryGetSequenceId(id) && id != sd.m_id)
+        if (!m_done && TryGetSequenceId(id) && id != currentKey)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            AddSequenceIfIncluded(corpus, sd);
+            AddSequenceIfIncluded(corpus, currentKey, sd);
 
             sd = {};
-            sd.m_id = id;
             sd.m_fileOffsetBytes = offset;
             sd.m_isValid = true;
+            currentKey = id;
         }
     }
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    AddSequenceIfIncluded(corpus, sd);
+    AddSequenceIfIncluded(corpus, currentKey, sd);
 }
 
-void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd)
+void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd)
 {
     auto& stringRegistry = corpus->GetStringRegistry();
-    auto key = msra::strfun::utf16(std::to_string(sd.m_id));
+    auto key = msra::strfun::utf16(std::to_string(sequenceKey));
     if (corpus->IsIncluded(key))
     {
         sd.m_key.m_sequence = stringRegistry[key];

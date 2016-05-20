@@ -25,13 +25,13 @@ public:
 
     CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(wstring(filename.begin(), filename.end()), streams)
+        m_parser(std::make_shared<CorpusDescriptor>(), wstring(filename.begin(), filename.end()), streams)
     {
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
         m_parser.SetChunkSize(SIZE_MAX);
         m_parser.SetNumRetries(0);
-        m_parser.Initialize(std::make_shared<CorpusDescriptor>());
+        m_parser.Initialize();
     }
     // Retrieves a chunk of data.
     void LoadChunk()
@@ -761,7 +761,7 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch
 };
 
 // 5 sequences with up to 10 samples each
-BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_40)
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_21)
 {
     // Using one file with two streams inside to write the output file.
     HelperRunReaderTest<double>(
@@ -770,8 +770,8 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch
         testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
         "5x10_and_5x5_jagged",
         "reader",
-        400,     // epoch size
-        40,     // mb size
+        413,     // epoch size
+        21,     // mb size
         3,      // num epochs
         2,
         0,
@@ -788,8 +788,8 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch
         testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_composite_Output.txt",
         "5x10_and_5x5_jagged_composite",
         "reader",
-        400,     // epoch size
-        40,     // mb size
+        413,     // epoch size
+        21,     // mb size
         3,      // num epochs
         2,
         0,

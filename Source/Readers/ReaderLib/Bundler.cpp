@@ -107,7 +107,7 @@ void Bundler::CreateChunkDescriptions()
                 numberOfSequences++;
 
                 // Check whether the primary stream has the longest sequence.
-                // If yes, we can optimize exposed sequence descirptions in GetSequencesByChunk.
+                // If yes, we can optimize exposed sequence descriptions in GetSequencesByChunk.
                 m_takePrimarySequenceLength = m_takePrimarySequenceLength && (sequenceSamples == sequence.m_numberOfSamples);
             }
         }
@@ -145,17 +145,12 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
         // Can return because all sequences are clean.
         if (chunk->m_invalid.empty())
         {
-            // Reindexing, because currently m_ids provided by some deserializers (i.e. CNTKTextFormat) are not contiguous.
-            for (size_t i = 0; i < sequences.size(); ++i)
-            {
-                sequences[i].m_id = i;
-            }
             return;
         }
 
         // Do cleansing.
         result.reserve(sequences.size());
-        for (size_t sequenceIndex = 0, index = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+        for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
             if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
             {
@@ -163,7 +158,6 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
             }
 
             result.push_back(sequences[sequenceIndex]);
-            result.back().m_id = index++;
         }
     }
     else // need to get the max sequence length from other deserializers.

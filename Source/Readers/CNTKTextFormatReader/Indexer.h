@@ -54,7 +54,7 @@ private:
     Index m_index;
 
     // Same function as above but with check that the sequence is included in the corpus descriptor.
-    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd);
+    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd);
 
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
@@ -73,7 +73,7 @@ private:
     // Build a chunk/sequence index, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as 
     // the corresponding sequence id.
-    void BuildFromLines();
+    void BuildFromLines(CorpusDescriptorPtr corpus);
 
     // Returns current offset in the input file (in bytes). 
     int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }

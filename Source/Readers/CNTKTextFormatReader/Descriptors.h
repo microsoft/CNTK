@@ -57,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // A collection of chunk descriptors, each containing
     // a collection of sequence descriptors for the corresponding
     // chunk of the input data.
+    // It also stores a mapping of keys into sequence descriptors.
     struct Index
     {
         std::vector<ChunkDescriptor> m_chunks;                                  // chunks
@@ -82,12 +83,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 chunk->m_id = m_chunks.size() - 1;
             }
 
-            auto location = std::make_pair<size_t, size_t>(m_chunks.size() - 1, chunk->m_sequences.size());
+            auto location = std::make_pair(chunk->m_id, chunk->m_sequences.size());
             m_keyToSequenceInChunk.insert(std::make_pair(sd.m_key.m_sequence, location));
             chunk->m_byteSize += sd.m_byteSize;
             chunk->m_numberOfSequences++;
             chunk->m_numberOfSamples += sd.m_numberOfSamples;
             sd.m_chunkId = chunk->m_id;
+            sd.m_id = chunk->m_sequences.size();
             chunk->m_sequences.push_back(sd);
         }
 
