@@ -720,10 +720,10 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_200x200x2_seq2seq)
    CheckFilesEquivalent(controlFile, outputFile);
 };
 
-// 50 sequences with up to 20 samples each (508 samples in total)
-BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences_dense)
+// 5 sequences with up to 10 samples each
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_10)
 {
-    // This simply writes. Test control is the same as the output file.
+    // Using one file with two streams inside to write the output file.
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
         testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
@@ -741,6 +741,7 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences
         false,
         false);
 
+    // Using two files with a stream per file to combine and check against the output written above.
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
         testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
@@ -759,6 +760,45 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences
         false);
 };
 
+// 5 sequences with up to 10 samples each
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_40)
+{
+    // Using one file with two streams inside to write the output file.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        "5x10_and_5x5_jagged",
+        "reader",
+        400,     // epoch size
+        40,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+
+    // Using two files with a stream per file to combine and check against the output written above.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_composite_Output.txt",
+        "5x10_and_5x5_jagged_composite",
+        "reader",
+        400,     // epoch size
+        40,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+};
 
 BOOST_AUTO_TEST_SUITE_END()
 

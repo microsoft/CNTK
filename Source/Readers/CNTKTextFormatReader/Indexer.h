@@ -50,13 +50,8 @@ private:
     bool m_hasSequenceIds; // true, when input contains one sequence per line 
                            // or when sequence id column was ignored during indexing.
 
-    const size_t m_maxChunkSize; // maximum permitted chunk size;
-
     // a collection of chunk descriptors and sequence keys.
     Index m_index;
-
-    // Mapping of keys into <chunk, sequence>
-    std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;
 
     // Same function as above but with check that the sequence is included in the corpus descriptor.
     void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd);

@@ -23,7 +23,6 @@ Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
     m_pos(nullptr),
     m_done(false),
     m_hasSequenceIds(!skipSequenceIds),
-    m_maxChunkSize(chunkSize),
     m_index(chunkSize)
 {
     if (m_file == nullptr)

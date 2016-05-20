@@ -59,9 +59,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // chunk of the input data.
     struct Index
     {
-        std::vector<ChunkDescriptor> m_chunks;
-        std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;
-        size_t m_maxChunkSize;
+        std::vector<ChunkDescriptor> m_chunks;                                  // chunks
+        std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;     // sequence key -> sequence location in chunk
+        const size_t m_maxChunkSize;                                            // maximum chunk size in bytes
 
         explicit Index(size_t chunkSize) : m_maxChunkSize(chunkSize)
         {}
@@ -76,6 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ChunkDescriptor* chunk = &m_chunks.back();
             if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
             {
+                // Creating a new chunk if the size is exceeded.
                 m_chunks.push_back({});
                 chunk = &m_chunks.back();
                 chunk->m_id = m_chunks.size() - 1;
@@ -90,6 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             chunk->m_sequences.push_back(sd);
         }
 
+        // Reserves inner structures for the specified number of bytes.
         void Reserve(size_t sizeInBytes)
         {
             if (m_maxChunkSize > 0)
@@ -100,9 +102,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_chunks.push_back({});
         }
 
+        // Checks if the index is empty.
         bool IsEmpty() const
         {
             return m_chunks.empty();
         }
+
+        DISABLE_COPY_AND_MOVE(Index);
     };
 }}}

@@ -107,11 +107,8 @@ void Bundler::CreateChunkDescriptions()
                 numberOfSequences++;
 
                 // Check whether the primary stream has the longest sequence.
-                // If yes, we can optimize creation of chunks later.
-                if (sequenceSamples != sequence.m_numberOfSamples)
-                {
-                    m_takePrimarySequenceLength = false;
-                }
+                // If yes, we can optimize exposed sequence descirptions in GetSequencesByChunk.
+                m_takePrimarySequenceLength = m_takePrimarySequenceLength && (sequenceSamples == sequence.m_numberOfSamples);
             }
         }
 
@@ -170,6 +167,7 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
         }
     }
     else // need to get the max sequence length from other deserializers.
+         // TODO: This will change when the sequence length will be exposed per stream.
     {
         result.reserve(sequences.size());
         SequenceDescription s;
