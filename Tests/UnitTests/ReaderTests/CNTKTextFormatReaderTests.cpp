@@ -726,8 +726,8 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences
     // This simply writes. Test control is the same as the output file.
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
         "5x10_and_5x5_jagged",
         "reader",
         40,     // epoch size
@@ -743,8 +743,8 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_sequences
 
     HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
-        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_output2.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_composite_Output.txt",
         "5x10_and_5x5_jagged_composite",
         "reader",
         40,     // epoch size
