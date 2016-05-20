@@ -171,9 +171,6 @@ void TextParser<ElemType>::Initialize()
         m_indexer->Build(m_corpus);
     });
 
-    // it's still possible that the actual input data does not have sequence id column.
-    m_skipSequenceIds = !m_indexer->HasSequenceIds();
-
     assert(m_indexer != nullptr);
 
     int64_t position = _ftelli64(m_file);
