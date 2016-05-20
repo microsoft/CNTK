@@ -380,7 +380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma warning( push )
 #pragma warning( disable : 4244)
 
-              if (m_traceLevel > 2)
+              if (m_traceLevel > 3)
               {
                 int countnum = std::count(px, px + m_tableLength[i], 0.0f);
                 fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
