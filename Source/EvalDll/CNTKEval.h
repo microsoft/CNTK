@@ -19,6 +19,7 @@
 #include "EvalWriter.h"
 
 #include "ComputationNetwork.h"
+#include "StreamOutputWriter.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -51,8 +52,9 @@ class CNTKEval : public CNTKEvalBase<ElemType>, public IEvaluateModel<ElemType>
     EvalWriter<ElemType>* m_writer;
     std::map<std::wstring, size_t> m_dimensions;
     size_t m_start;
+    StreamOutputWriter<ElemType>* m_outputWriter;
 public:
-    CNTKEval() : CNTKEvalBase<ElemType>(), m_reader(nullptr), m_writer(nullptr) {}
+    CNTKEval() : CNTKEvalBase<ElemType>(), m_reader(nullptr), m_writer(nullptr), m_outputWriter(nullptr){}
 
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
 
@@ -61,6 +63,10 @@ public:
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
+
+    virtual void PrepareForStreamMode();
+
+    virtual void EvaluateStreamMode(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void Destroy() override;
 
@@ -79,6 +85,8 @@ public:
     {
         m_start = 1 - m_start;
     }
+private:
+    void InitializeEvaluate();
 };
 
 

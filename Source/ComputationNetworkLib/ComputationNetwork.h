@@ -504,6 +504,14 @@ public:
         // use map to remove duplicated items
         auto outputNodes = OutputNodesByName(outputNodeNames);
 
+        auto inputNodes = InputNodesForOutputs(outputNodes);
+
+        return inputNodes;
+    }
+
+    // Collect all input nodes that outputNodes depend on.
+    std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<ComputationNodeBasePtr>& outputNodes)
+    {
         std::set<ComputationNodeBasePtr> inputNodesMap;
         for (auto& onode : outputNodes)
         {
@@ -517,7 +525,6 @@ public:
 
         return inputNodes;
     }
-
 
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }

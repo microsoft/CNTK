@@ -96,6 +96,18 @@ public:
     //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
 
+    //
+    // Do preallocation/initialization for streaming mode evaluation (one minibatch of fixed size at a time) 
+    // Should be called after the network is created.
+    //
+    virtual void PrepareForStreamMode() = 0;
+
+    //
+    // Same as Evaluate(inputs, outputs) above, but optimized for streaming mode.
+    // Requires a prior call to PrepareForStreamMode()
+    //
+    virtual void EvaluateStreamMode(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+
     virtual void ResetState() = 0;
 };
 
@@ -159,6 +171,14 @@ public:
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void Init(const std::string& config);
+
+    // Do preallocation/initialization for streaming mode evaluation (one minibatch of fixed size at a time) 
+    // Should be called after the network is created.
+    virtual void PrepareForStreamMode();
+
+    // Same as Evaluate(inputs, outputs) above, but optimized for streaming mode.
+    // Requires a prior call to PrepareForStreamMode()
+    virtual void EvaluateStreamMode(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void ResetState();
 };

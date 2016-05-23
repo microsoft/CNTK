@@ -104,6 +104,20 @@ void Eval<ElemType>::CreateNetwork(const std::string& networkDescription)
     m_eval->CreateNetwork(networkDescription);
 }
 
+// Do preallocation/initialization for streaming mode evaluation (one input at a time) 
+// Should be called after the network is created.
+// TODO: refactor, since this is currently empty to comply with the interface
+template <class ElemType>
+void Eval<ElemType>::PrepareForStreamMode()
+{
+}
+
+template <class ElemType>
+void Eval<ElemType>::EvaluateStreamMode(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    Evaluate(inputs, outputs);
+}
+
 // GetNodeDimensions - Get the node dimensions of the specified nodes
 // dimensions - map from name of node to dimension of the node
 // nodeGroup - type of node we are requesting (input/output/specified)

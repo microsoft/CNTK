@@ -67,21 +67,21 @@ public:
         Input() {} // some STL classes need this for general happiness
 
         // helper for typecasting the matrix pointer
-    template<class ElemType>
+        template<class ElemType>
         Matrix<ElemType>& GetMatrix(const wchar_t* name/*for debugging only*/ = L"(unknown)") const
-    {
-            assert(matrix);
-            auto* matrixp = dynamic_cast<Matrix<ElemType>*>(matrix.get());
-        if (!matrixp)
         {
-            // print a rather rich error to track down a regression failure
-                auto isFloat  = !!dynamic_cast<Matrix<float>*> (matrix.get());
-                auto isDouble = !!dynamic_cast<Matrix<double>*>(matrix.get());
-                LogicError("GetMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
-                    typeid(ElemType).name(), name, typeid(matrix.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+                assert(matrix);
+                auto* matrixp = dynamic_cast<Matrix<ElemType>*>(matrix.get());
+            if (!matrixp)
+            {
+                // print a rather rich error to track down a regression failure
+                    auto isFloat  = !!dynamic_cast<Matrix<float>*> (matrix.get());
+                    auto isDouble = !!dynamic_cast<Matrix<double>*>(matrix.get());
+                    LogicError("GetMatrix<%s>: Attempted to access input stream '%ls' with wrong precision, got %s {%d,%d} instead of %s.",
+                        typeid(ElemType).name(), name, typeid(matrix.get()).name(), (int)isFloat, (int)isDouble, typeid(Matrix<ElemType>*).name());
+            }
+            return *matrixp;
         }
-        return *matrixp;
-    }
     };
 
 private:

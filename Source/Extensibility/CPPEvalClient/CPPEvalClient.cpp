@@ -29,14 +29,24 @@ typedef std::map<std::wstring, std::vector<float>*> Layer;
 /// first run the example in <CNTK>/Examples/Image/MNIST. Once the model file 01_OneHidden is created,
 /// you can run this client.
 /// This program demonstrates the usage of the Evaluate method requiring the input and output layers as parameters.
+/// This client can evaluate in two modes:
+///     -batchMode (default) - input samples are evaluated in batches. This evaluation has some overhead because:
+///             The size of the batch is not known.
+///             Network nodes timestamps are reset for each batch that forces CNTK to recompute all nodes, even those that haven't changed.
+///             Certain checks are performed for each batch, e.g. whether matrices have been allocated, etc.
+///     -streamMode - input samples are evaluated in minibatche of fixed size. The network is initialized prior to evaluation and the overhead of processing each minibatch is minimized.
+/// 
+/// To run the client in stream mode, set STREAM_MODE to true.
 int _tmain(int argc, _TCHAR* argv[])
 {
+    bool STREAM_MODE = true;
+
     // Get the binary path (current working directory)
     argc = 0;
     std::wstring wapp(argv[0]);
     std::string app(wapp.begin(), wapp.end());
     std::string path = app.substr(0, app.rfind("\\"));
-
+    
     // Load the eval library
     auto hModule = LoadLibrary(L"evaldll.dll");
     if (hModule == nullptr)
@@ -86,8 +96,21 @@ int _tmain(int argc, _TCHAR* argv[])
     auto outputLayerName = outDims.begin()->first;
     outputLayer.insert(MapEntry(outputLayerName, &outputs));
 
-    // We can call the evaluate method and get back the results (single layer)...
-    model->Evaluate(inputLayer, outputLayer);
+    // We can call the evaluate method and get back the results...
+    if (STREAM_MODE) {
+        //Evaluation in stream mode
+        //Prepare the network
+        model->PrepareForStreamMode();
+        // For simpliciy, evaluate the same input sample
+        for (int i = 0; i < 10; i++)
+        {
+            model->EvaluateStreamMode(inputLayer, outputLayer);
+        }
+    }
+    else
+    {
+        model->Evaluate(inputLayer, outputLayer);
+    }
 
     // Output the results
     for each (auto& value in outputs)
