@@ -237,5 +237,5 @@ def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shap
     output = reshaped_input * expected_tensor            
     
     unittest_helper(output, None, [[input_tensor]], device_id = device_id,
-                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
 

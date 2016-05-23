@@ -37,8 +37,5 @@ def unittest_helper(root_node, input_numpy, expected, device_id=-1, precision="f
         
         assert len(result) == len(expected)
         for res, exp in zip(result, expected):
-            print(res)
-            print(exp)
-            print('====')
             assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
             assert res.shape == AA(exp).shape
