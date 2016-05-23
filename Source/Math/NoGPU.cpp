@@ -1069,7 +1069,10 @@ template <class ElemType>
 void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly)
 {
 }
-
+template <class ElemType>
+void GPUMatrix<ElemType>::CacheRequireSize(const size_t numRows, const size_t numCols, bool growOnly)
+{
+}
 template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
