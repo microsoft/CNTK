@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{b34d649b-468d-454e-a5e5-b39ad6be3fe0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{062e2b8f-c0b4-4328-98a4-32f6c99a53ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Zlib">
+      <UniqueIdentifier>{d2a197f2-7b1b-425e-8f45-fcad9fb91cd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="7z">
+      <UniqueIdentifier>{9c4d26f4-6379-46a9-97de-afc459e2bd9a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataWriter.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="..\..\Common\Config.cpp" />
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="adler32.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="compress.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="crc32.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="deflate.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="gzclose.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="gzlib.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="gzread.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="gzwrite.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="infback.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="inffast.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="inflate.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="inftrees.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="trees.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="uncompr.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zutil.c">
+      <Filter>Zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="CDenseReader.cpp" />
+    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="LzmaDec.c">
+      <Filter>7z</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="crc32.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="deflate.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="gzguts.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="inffast.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="inffixed.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="inflate.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="inftrees.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="trees.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zconf.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zutil.h">
+      <Filter>Zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="CDenseReader.h" />
+    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="7zTypes.h">
+      <Filter>7z</Filter>
+    </ClInclude>
+    <ClInclude Include="LzmaDec.h">
+      <Filter>7z</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
