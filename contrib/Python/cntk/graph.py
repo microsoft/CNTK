@@ -132,8 +132,11 @@ class ComputationNode(object):
             # Case 2: e.g. data[2:4] -> key will be a slice object
             if key.step is not None:
                 raise TypeError('step argument is not supported')
-            if isinstance(so.start, int) and isinstance(so.stop, int):
-                if so.stop<=so.start:
+            if not isinstance(key.stop, int):
+                raise TypeError('end index has to be of type int, not "%s"'%type(key.stop))
+
+            if isinstance(key.start, int):
+                if key.stop<=key.start:
                     raise ValueError('end index has to be greater than start index')
             return ops.slice(self, key.start or 0, key.stop or 0, axis=0)
 
