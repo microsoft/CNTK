@@ -92,6 +92,137 @@ def error_prediction(target_vector, output_vector, name=None):
     from cntk.ops.cntk2 import ErrorPrediction
     return ErrorPrediction(target_vector, output_vector, name = name)
 
+################################################################################
+# comparison ops
+################################################################################
+
+def less(left, right, name=None):
+    """
+    Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0. 
+
+    Example:
+       >>> C.eval(C.less([41., 42., 43.], [42., 42., 42.]))
+         [array([[1., 0., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Less
+    return Less(left, right, name=name)
+
+
+def equal(left, right, name=None):
+    """
+    Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise. 
+
+    Example:
+        >>> C.eval(C.equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [1]))
+        [array([[0., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Equal
+    return Equal(left, right, name=name)
+
+def greater(left, right, name=None):
+    """
+    Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0. 
+
+    Example:
+        >>> C.eval(C.greater([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 0., 1.]])]
+        
+        >>> C.eval(C.greater([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Greater
+    return Greater(left, right, name=name)
+
+
+def greater_equal(left, right, name=None):
+    """
+    Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0. 
+
+    Example:
+        >>> C.eval(C.greater_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 1.]])]
+        
+        >>> C.eval(C.greater_equal([-1,0,1], [0]))
+        [array([[0., 1., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import GreaterEqual
+    return GreaterEqual(left, right, name=name)
+
+def not_equal(left, right, name=None):
+    """
+    Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0. 
+
+    Example:
+        >>> C.eval(C.not_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 0., 1.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import NotEqual
+    return NotEqual(left, right, name=name)
+
+def less_equal(left, right, name=None):
+    """
+    Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0. 
+
+    Example:
+        >>> C.eval(C.less_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import LessEqual
+    return LessEqual(left, right, name=name)
 
 ################################################################################
 # linear ops
@@ -635,6 +766,9 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         else:
             cntk_shape = value[0].shape
 
+        if len(cntk_shape) == 0:
+            raise ValueError('value should be an array of input samples')
+            
         node = input(cntk_shape, dynamic_axis=dynamic_axis)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(

@@ -21,6 +21,20 @@ Min(a,b) = if a < b then a else b
 Max(a,b) = if a > b then a else b 
 Fac(n) = if n > 1 then Fac(n-1) * n else 1 
 IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
+Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
+IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
+
+
+##############################################################################
+# comparison functions
+##############################################################################
+
+Less         = CNTK2.Less
+Equal        = CNTK2.Equal
+Greater      = CNTK2.Greater
+GreaterEqual = CNTK2.GreaterEqual
+NotEqual     = CNTK2.NotEqual
+LessEqual    = CNTK2.LessEqual
 
 ##############################################################################
 # ComputationNodes
@@ -102,7 +116,15 @@ CNTK2 = [
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
 
-    // 12. Others
+    // 13. Comparison nodes
+    Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
+	Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
+	Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
+	GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
+	NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
+	LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
+
+    // 13. Others
     // None so far.
 ]
 

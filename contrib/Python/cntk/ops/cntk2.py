@@ -127,6 +127,54 @@ class Plus(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['_', 'y']
 
+class Less(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Less', name=None):
+        super(Less, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class Equal(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Equal', name=None):
+        super(Equal, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class Greater(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Greater', name=None):
+        super(Greater, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class GreaterEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.GreaterEqual', name=None):
+        super(GreaterEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class NotEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.NotEqual', name=None):
+        super(NotEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class LessEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.LessEqual', name=None):
+        super(LessEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
 class Tanh(ComputationNode):
     def __init__(self, _, op_name='CNTK2.Tanh', name=None):
         super(Tanh, self).__init__(params=['_'], op_name=op_name, name=name)
