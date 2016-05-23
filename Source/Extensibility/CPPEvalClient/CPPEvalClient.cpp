@@ -5,6 +5,7 @@
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
 
+
 #include "stdafx.h"
 #include "eval.h"
 
@@ -16,6 +17,7 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
+
 
 /// <summary>
 /// Program for demonstrating how to run model evaluations using the native evaluation interface

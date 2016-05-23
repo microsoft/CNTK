@@ -41,7 +41,7 @@ public:
 
     //
     // Create a network based on an (NDL) network description.
-    //
+    // networkDescription - network description
     virtual void CreateNetwork(const std::string& networkDescription) = 0;
 
     //
@@ -69,6 +69,7 @@ template <typename ElemType>
 class IEvaluateModel : public IEvaluateModelBase<ElemType> // Evaluate Model Interface
 {
 public:
+    
     //
     // Retrieves the (flattened) dimensions 
     //
