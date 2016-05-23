@@ -204,13 +204,13 @@ class CNTKTextFormatReader(AbstractReader):
         configuration = {
                 'readerType': self.reader_type,
                 'file': self.filename,
-                'randomize': self.randomize,
+                'randomize': str(self.randomize).lower(),
                 'skipSequenceIds': str(self.skip_sequence_ids).lower(),
                 'maxErrors': self.max_errors,
                 'traceLevel': self.trace_level,
                 'chunkSizeInBytes': self.chunk_size_in_bytes,
-                'keepDataInMemory': self.keepDataInMemory,
-                'frameMode': self.frameMode
+                'keepDataInMemory': str(self.keepDataInMemory).lower(),
+                'frameMode': str(self.frameMode).lower()
                 }
 
         template = ''' 
