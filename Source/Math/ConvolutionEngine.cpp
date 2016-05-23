@@ -833,23 +833,23 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
-    // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
-    if (isEnabled(ConvolutionEngineKind::CuDnn) &&
-        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
-    {
-        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
-    }
+    //// Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
+    //if (isEnabled(ConvolutionEngineKind::CuDnn) &&
+    //    CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
+    //{
+    //    fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
+    //    return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+    //}
 
-    if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
-    {
-        fprintf(stderr, "\nUsing GEMM convolution engine for geometry: %s.\n", engStr.c_str());
-        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
-    }
+    //if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
+    //{
+    //    fprintf(stderr, "\nUsing GEMM convolution engine for geometry: %s.\n", engStr.c_str());
+    //    return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+    //}
 
-    if (!isEnabled(ConvolutionEngineKind::Reference))
-        RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
+    //if (!isEnabled(ConvolutionEngineKind::Reference))
+    //    RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
+    //fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 
