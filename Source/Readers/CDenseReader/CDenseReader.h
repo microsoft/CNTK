@@ -192,7 +192,7 @@ namespace Microsoft {
 				int32_t m_dIndex;				
 				size_t m_blockCntBeenCopied;
 				size_t m_batchCntBeenCopied;
-				std::thread m_unzipThreads[20];
+				std::thread m_unzipThreads[1000];
 				DenseBlockingQueue<void*> m_zipedDataToProduce; //read zip data to this queue
 				DenseBlockingQueue<void*> m_zipedDataToConsume; //read zip data to this queue
 				
