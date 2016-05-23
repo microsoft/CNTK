@@ -21,9 +21,6 @@ Min(a,b) = if a < b then a else b
 Max(a,b) = if a > b then a else b 
 Fac(n) = if n > 1 then Fac(n-1) * n else 1 
 IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
-Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
-IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
-
 
 ##############################################################################
 # comparison functions
