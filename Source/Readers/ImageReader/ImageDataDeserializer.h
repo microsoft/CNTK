@@ -8,8 +8,8 @@
 #include "DataDeserializerBase.h"
 #include "Config.h"
 #include "ByteReader.h"
-#include "ImageConfigHelper.h"
 #include <unordered_map>
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -21,6 +21,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ImageDataDeserializer : public DataDeserializerBase
 {
 public:
+    // A new constructor to support new compositional configuration,
+    // that allows composition of deserializers and transforms on inputs.
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+
+    // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
@@ -32,9 +37,12 @@ public:
     // Gets sequence descriptions for the chunk.
     virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override;
 
+    // Gets sequence description by key.
+    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+
 private:
     // Creates a set of sequence descriptions.
-    void CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, const ImageConfigHelper& config);
+    void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
     struct ImageSequenceDescription : public SequenceDescription
@@ -53,13 +61,19 @@ private:
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
 
+    // Mapping of logical sequence key into sequence description.
+    std::map<size_t, size_t> m_keyToSequence;
+
     // Element type of the feature/label stream (currently float/double only).
     ElementType m_featureElementType;
+
+    // whether images shall be loaded in grayscale 
+    bool m_grayscale;
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
     void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
-    cv::Mat ReadImage(size_t seqId, const std::string& path);
+    cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
     using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;

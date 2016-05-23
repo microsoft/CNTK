@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 #include "CPUMatrix.h"
+//#include "GPUMatrix.h"
+//#include "GPUSparseMatrix.h"
 #include <map>
 #include <unordered_map>
 
@@ -82,7 +84,12 @@ public:
 public:
 
     void SetValue(const size_t row, const size_t col, ElemType val);
+    //void SetValue(const CPUMatrix<ElemType>& /*val*/);
+    //void SetValue(const GPUMatrix<ElemType>& /*val*/);
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
+    //void SetValue(const GPUSparseMatrix<ElemType>& /*val*/);
+
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
     size_t BufferSize() const
     {
@@ -97,6 +104,7 @@ public:
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    void AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
     CPUMatrix<ElemType> DiagonalToDense() const;
 

@@ -7,6 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "BatchNormalizationEngine.h"
+#include "RNGHandle.h"
 
 #include <map>
 #include <string>
@@ -177,6 +178,7 @@ public:
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
+        // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
@@ -780,7 +782,7 @@ private:
                 case 3:
                 {
                     Matrix<ElemType> grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
-                    grd_t.SetValue(Input(CLASSPROBINDATA)->DataFor(m_clsSoftmax, fr));
+                    grd_t.AssignValuesOf(Input(CLASSPROBINDATA)->DataFor(m_clsSoftmax, fr));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
                 }
@@ -811,7 +813,7 @@ private:
                 size_t idx_in_class = y_t - lft_bnd;
                 ComputeCEPartialToSoftmaxInputs(softMax, Gradient(), idx_in_class);
 
-                m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd).SetValue(softMax);
+                m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd).AssignValuesOf(softMax);
             });
 
             m_needRecomputeGradientToSoftmaxInput = false;
@@ -1451,18 +1453,17 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (m_dropoutRate > 0)
+        if (Environment().IsInferring() || m_dropoutRate <= 0)
         {
-            // determine drop-out mask for this minibatch
-            auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType) m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, m_randomSeed);
-            m_randomSeed += 1073807359; // 1073807359 is a very large prime number to avoid collision with other dropout nodes
-            // apply dropout mask
-            sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
+            sliceOutputValue.SetValue(sliceInput0Value);
         }
         else
         {
-            sliceOutputValue.SetValue(sliceInput0Value);
+            // determine drop-out mask for this minibatch
+            auto sliceMask = DataFor(*m_maskOfDropout, fr);
+            sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
+            // apply dropout mask
+            sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
         }
     }
 
@@ -1482,6 +1483,18 @@ public:
     void SetRandomSeed(const unsigned long val)
     {
         m_randomSeed = (unsigned long) val;
+
+        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+        // during forward propagation
+        m_RNGHandle = nullptr;
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        if (m_RNGHandle == nullptr) 
+            m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
+
+        return *m_RNGHandle;
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1512,6 +1525,7 @@ public:
 private:
     double m_dropoutRate;
     unsigned long m_randomSeed;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
 
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
@@ -1765,10 +1779,10 @@ public:
         }
 
         m_bnEng->Forward(sliceInputValue, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev,
-                                      sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
+                         sliceOutputValue, m_epsilon, *m_saveMean, *m_saveInvStdDev);
 
-            m_mbCount++;
-        }
+        m_mbCount++;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {

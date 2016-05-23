@@ -7,6 +7,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include <numeric>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "SequencePacker.h"
 #include "ElementTypeUtils.h"
@@ -37,7 +38,7 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
-    auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
+    auto sequences = m_sequenceEnumerator->GetNextSequences(m_minibatchSize);
     const auto& batch = sequences.m_data;
 
     Minibatch minibatch(sequences.m_endOfEpoch);

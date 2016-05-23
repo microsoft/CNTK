@@ -61,6 +61,12 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     size_t numSubsets,
     size_t requestedEpochSamples /*= requestDataSize*/)
 {
+    // For adaptive minibatch, make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+    {
+        m_prefetchTask.wait();
+    }
+
     EpochConfiguration config;
     config.m_workerRank = subsetNum;
     config.m_numberOfWorkers = numSubsets;
@@ -71,12 +77,9 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     m_reader->StartEpoch(config);
     m_endOfEpoch = false;
 
-    // For adaptive minibatch, make sure there are no outstanding reads.
-    if (m_prefetchTask.valid())
-    {
-        m_prefetchTask.wait();
-    }
-
+    // Starting the prefetch task. There is always a single async read in flight.
+    // When the network requests a new minibatch, we wait for the current async to finish,
+    // return the result and kick off a new one.
     m_prefetchTask = std::async(m_launchType, [this]()
     {
         return m_reader->ReadMinibatch();
@@ -186,6 +189,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     if (!m_endOfEpoch)
     {
+        // Starting the prefetch task. There is always a single async read in flight.
+        // When the network requests a new minibatch, we wait for the current async to finish,
+        // return the result and kick off a new one.
         m_prefetchTask = std::async(m_launchType, [this]()
         {
             return m_reader->ReadMinibatch();
@@ -232,8 +238,10 @@ void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
     NOT_IMPLEMENTED;
 }
 
+// TODO: We should return 0 here.
+// This forbids the use of learning-rate and momentum per MB if truncation is enabled.
 template <class ElemType>
-size_t ReaderShim<ElemType>::GetNumParallelSequences()
+size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
     // parallel sequences. Thus this property doesn't make sense anymore.

@@ -18,10 +18,14 @@ stderr="$OutputDir$/ResNet_18"
 traceLevel=1
 numMBsToShowResult=500
 
+# Strides for increasing layers. Defaults (paper) are 2 for 1x1 and 1 for 3x3.
+stride1x1=1
+stride3x3=2
+
 Train=[
     action="train"
     modelPath="$ModelDir$/ResNet_18"
-
+    
      NDLNetworkBuilder=[
         networkDescription="$ConfigDir$/ResNet_18.ndl"
     ]
@@ -31,7 +35,7 @@ Train=[
         minibatchSize=256
         # Note that learning rates are 10x more than in the paper due to a different
         # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
-        learningRatesPerMB=1.0*35:0.1*35:0.01
+        learningRatesPerMB=1.0*30:0.1*30:0.01*30:0.001
         momentumPerMB=0.9
         maxEpochs=125
         gradUpdateType="None"
@@ -74,8 +78,21 @@ Train=[
             jitterType="UniRatio"
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
-            interpolations="Linear"
-            # Stores mean values for each pixel in OpenCV matrix XML format.
+            interpolations="cubic"
+            # Aspect ratio jitter radius. Default is 0 (disabled).
+            aspectRatioRadius=0:0.2
+            # Brightness, contrast and color jittering. Default is 0 (disabled).
+            # Using 0 in the first epoch so the network can process original images.
+            brightnessRadius=0:0.2
+            contrastRadius=0:0.2
+            saturationRadius=0:0.4
+            # Intensity jittering: enabled if file is specified and intensityStdDev > 0. 
+            # The file stores 1x3 vector (eigenvalues) and 3x3 matrix (eigenvectors) in OpenCV XML format.
+            intensityFile="$ConfigDir$/ImageNet1K_intensity.xml"
+            # StdDev for intensity jittering. Start from the second epoch.
+            intensityStdDev=0:0.1
+            # Mean subtraction: enabled if file is specified.
+            # The file stores mean values for each pixel in OpenCV matrix XML format.
             meanFile="$ConfigDir$/ImageNet1K_mean.xml"
         ]
         labels=[

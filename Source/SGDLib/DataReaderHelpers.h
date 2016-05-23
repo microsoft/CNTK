@@ -15,12 +15,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 /*static*/ struct DataReaderHelpers
 {
+    template <class ElemType>
+    static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
+    {
+        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+        std::set<MatrixBasePtr> matrices;
+        for (const auto& iter : inputMatrices)
+            matrices.insert(iter.second.matrix);
+        for (auto& node : net->FeatureNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+        for (auto& node : net->LabelNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+    }
+
     // -------------------------------------------------------------------
     // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
     // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
     // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
     // -------------------------------------------------------------------
-
     // Note: This will go away with the redesigned reader interface.
     // TODO: callers of this often do ComputationNetwork::BumpEvalTimeStamp(featureNodes) and also for labels; we should eliminate the need for this.
     template <class ElemType>
@@ -78,25 +93,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
         }
 
-        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
-        std::set<MatrixBasePtr> matrices;
-        for (const auto& iter : inputMatrices)
-            matrices.insert(iter.second.matrix);
-        for (auto& node : net->FeatureNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
-                node->NotifyFunctionValuesMBSizeModified();
-        for (auto& node : net->LabelNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
-                node->NotifyFunctionValuesMBSizeModified();
+        NotifyChangedNodes<ElemType>(net, inputMatrices);
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
         // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
+        // BUGBUG: We should discount gaps.
         actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
         return true;
     }
+
+    // get StreamMinibatchInputs for a given set of input nodes
+    static StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    {
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : inputNodes)
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+        return inputMatrices;
+    }
+
 
     // -------------------------------------------------------------------
     // DecimateMinibatch - decimate minibatch for parallelization
@@ -211,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // into how many pieces would we need to break the minibatch?
             // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = dataReader->GetNumParallelSequences();
+            size_t numParallelSequences = dataReader->GetNumParallelSequencesForFixingBPTTMode();
             size_t estimatedMBSize = tunedMBSize * numParallelSequences;
             return (estimatedMBSize + maxSamplesInRAM - 1) / maxSamplesInRAM;
         }

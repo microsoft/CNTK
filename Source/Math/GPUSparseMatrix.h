@@ -5,6 +5,7 @@
 
 #pragma once
 
+//#include "CPUMatrix.h"
 #include "GPUMatrix.h"
 #include "CPUSparseMatrix.h"
 #include <functional>
@@ -281,10 +282,14 @@ public:
         return SecondaryIndexLocation();
     }
 
+    //void SetValue(const CPUMatrix<ElemType>& denseMatrix);
     void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix);
+
+    GPUSPARSE_INDEX_TYPE* GetCondensedVector() const;
+    void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
 
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
@@ -303,6 +308,7 @@ public:
 
     GPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     GPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    void AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
     GPUMatrix<ElemType> DiagonalToDense() const;
 

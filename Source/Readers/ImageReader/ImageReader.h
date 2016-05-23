@@ -6,8 +6,8 @@
 #pragma once
 
 #include "Reader.h"
-#include "ImageTransformers.h"
 #include "Packer.h"
+#include "SequenceEnumerator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -34,7 +34,7 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
 
     // A head transformer in a list of transformers.
-    TransformerPtr m_transformer;
+    SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Packer.
     PackerPtr m_packer;

@@ -1,0 +1,158 @@
+space_separated = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "space_separated.txt"
+
+        input = [
+             features1 = [
+                alias = "F1"
+                dim = 15 
+                format = "dense"
+            ]
+
+            features2 = [
+                alias = "F2"         
+                dim = 12
+                format = "dense"
+            ]
+
+            features3 = [
+                alias = "F3"           
+                dim = 1
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+missing_trailing_newline = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "missing_trailing_newline.txt"
+
+        input = [
+             features = [
+                dim = 1 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+missing_trailing_newline_ignored = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "missing_trailing_newline.txt"
+
+        maxErrors = 2 # a missing newline will trigger 2 errors
+
+        input = [
+             features = [
+                dim = 1 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+blank_lines = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "contains_blank_lines.txt"
+        skipSequenceIds = true
+        input = [
+             features = [
+                dim = 1 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+blank_lines_ignored = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "contains_blank_lines.txt"
+        maxErrors = 2
+        randomize = false
+        input = [
+             features = [
+                dim = 1 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+duplicate_inputs = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "duplicate_inputs.txt"
+        input = [
+             features1 = [
+                alias = "F1"
+                dim = 1
+                format = "dense"
+            ]
+
+            features2 = [
+                alias = "F2"         
+                dim = 1
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+empty_samples = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # input contains a number of empty samples (both sparse and dense)
+        file = "empty_samples.txt"
+        randomize=false
+        input = [
+             features = [
+                alias = "F0"
+                dim = 10
+                format = "dense"
+            ]
+
+            labels = [
+                alias = "F1"         
+                dim = 10
+                format = "sparse"
+            ]
+        ]
+    ]
+]
+
+ref_data_with_escape_sequences = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # input contains escape sequences followed by comments/reference data
+        file = "ref_data_with_escape_sequences.txt"
+        randomize=false
+        input = [
+             features = [
+                alias = "F0"
+                dim = 100
+                format = "sparse"
+            ]
+
+            labels = [
+                alias = "F1"         
+                dim = 3
+                format = "dense"
+            ]
+        ]
+    ]
+]

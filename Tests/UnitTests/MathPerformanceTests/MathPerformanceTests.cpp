@@ -120,7 +120,7 @@ void oldRNNForwardPropSRP(const size_t timeIdxInSeq, const int delay, const bool
             inp = pastActivity.ColumnSlice(d + indexInBatch, 1);
         else
             inp = inputFunctionValues.ColumnSlice(d + indexInBatch, 1);
-        out.SetValue(inp);
+        out.AssignValuesOf(inp);
     }
 }
 

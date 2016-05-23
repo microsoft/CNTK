@@ -7,13 +7,37 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    const char COLUMN_DELIMITER = '\t';
+    const char SPACE_CHAR = ' ';
+    const char TAB_CHAR = '\t';
+
     const char NAME_PREFIX = '|';
-    const char VALUE_DELIMITER = ' ';
+    
     const char INDEX_DELIMITER = ':';
+
     const char ROW_DELIMITER = '\n';
-    const char CARRIAGE_RETURN = '\r';
+    
+    const char ESCAPE_SYMBOL = '#';
 
     const auto BUFFER_SIZE = 256 * 1024;
+
+    inline bool isPrintable(char c)
+    {
+        return c >= SPACE_CHAR;
+    }
+
+    inline bool isNonPrintable(char c)
+    {
+        return !isPrintable(c);
+    }
+
+    inline bool isValueDelimiter(char c)
+    {
+        return c == SPACE_CHAR || c == TAB_CHAR;
+    }
+
+    inline bool isColumnDelimiter(char c)
+    {
+        return isValueDelimiter(c) || (isNonPrintable(c) && c != ROW_DELIMITER);
+    }
 
 }}}

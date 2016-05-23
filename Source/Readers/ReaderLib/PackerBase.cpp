@@ -24,22 +24,25 @@ void PackerBase::StreamBuffer::Resize(size_t newSize)
     });
 }
 
-PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
-    TransformerPtr transformer,
-    size_t minibatchSize,
-    const std::vector<StreamDescriptionPtr>& streams) :
-    m_transformer(transformer),
-    m_minibatchSize(minibatchSize),
-    m_outputStreamDescriptions(streams)
+void PackerBase::StartEpoch(const EpochConfiguration& config)
 {
-    m_inputStreamDescriptions = m_transformer->GetStreamDescriptions();
-    assert(m_inputStreamDescriptions.size() != 0);
-    assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
-
+    m_minibatchSize = config.m_minibatchSizeInSamples;
     if (m_minibatchSize == 0)
     {
         LogicError("Minibatch size cannot be zero.");
     }
+}
+
+PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
+    SequenceEnumeratorPtr sequenceEnumerator,
+    const std::vector<StreamDescriptionPtr>& streams) :
+    m_sequenceEnumerator(sequenceEnumerator),
+    m_minibatchSize(0),
+    m_outputStreamDescriptions(streams)
+{
+    m_inputStreamDescriptions = sequenceEnumerator->GetStreamDescriptions();
+    assert(m_inputStreamDescriptions.size() != 0);
+    assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 
     m_streamBuffers.reserve(m_outputStreamDescriptions.size());
 

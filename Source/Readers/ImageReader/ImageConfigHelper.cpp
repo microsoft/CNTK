@@ -6,33 +6,15 @@
 #include "stdafx.h"
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
+#include "ConfigUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-std::vector<std::string> GetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName)
-{
-    std::vector<std::string> sectionNames;
-    for (const std::pair<std::string, ConfigParameters>& section : config)
-    {
-        if (section.second.ExistsCurrent(parameterName))
-        {
-            sectionNames.push_back(section.first);
-        }
-    }
-
-    if (sectionNames.empty())
-    {
-        RuntimeError("ImageReader requires %s parameter.", parameterName.c_str());
-    }
-
-    return sectionNames;
-}
 
 ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     : m_dataFormat(CHW)
 {
-    std::vector<std::string> featureNames = GetSectionsWithParameter(config, "width");
-    std::vector<std::string> labelNames = GetSectionsWithParameter(config, "labelDim");
+    std::vector<std::string> featureNames = GetSectionsWithParameter("ImageReader", config, "width");
+    std::vector<std::string> labelNames = GetSectionsWithParameter("ImageReader", config, "labelDim");
 
     // REVIEW alexeyk: currently support only one feature and label section.
     if (featureNames.size() != 1 || labelNames.size() != 1)
@@ -77,6 +59,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     m_mapPath = config(L"file");
 
+    m_grayscale = config(L"grayscale", c == 1);
     std::string rand = config(L"randomize", "auto");
 
     if (AreEqualIgnoreCase(rand, "auto"))
@@ -111,7 +94,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     m_cpuThreadCount = config(L"numCPUThreads", 0);
 
-    m_multiViewCrop = AreEqualIgnoreCase((string)featureSection(L"cropType", ""), "multiview10");
+    m_cropType = ParseCropType(featureSection(L"cropType", ""));
 }
 
 std::vector<StreamDescriptionPtr> ImageConfigHelper::GetStreams() const
@@ -135,4 +118,25 @@ std::string ImageConfigHelper::GetMapPath() const
 {
     return m_mapPath;
 }
+
+CropType ImageConfigHelper::ParseCropType(const std::string &src)
+{
+    if (src.empty() || AreEqualIgnoreCase(src, "center"))
+    {
+        return CropType::Center;
+    }
+
+    if (AreEqualIgnoreCase(src, "random"))
+    {
+        return CropType::Random;
+    }
+
+    if (AreEqualIgnoreCase(src, "multiview10"))
+    {
+        return CropType::MultiView10;
+    }
+
+    RuntimeError("Invalid crop type: %s.", src.c_str());
+}
+
 }}}

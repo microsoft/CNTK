@@ -22,7 +22,7 @@ public:
     virtual ~ByteReader() = default;
 
     virtual void Register(size_t seqId, const std::string& path) = 0;
-    virtual cv::Mat Read(size_t seqId, const std::string& path) = 0;
+    virtual cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) = 0;
 
     DISABLE_COPY_AND_MOVE(ByteReader);
 };
@@ -31,7 +31,7 @@ class FileByteReader : public ByteReader
 {
 public:
     void Register(size_t, const std::string&) override {}
-    cv::Mat Read(size_t seqId, const std::string& path) override;
+    cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 };
 
 #ifdef USE_ZIP
@@ -41,7 +41,7 @@ public:
     ZipByteReader(const std::string& zipPath);
 
     void Register(size_t seqId, const std::string& path) override;
-    cv::Mat Read(size_t seqId, const std::string& path) override;
+    cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
 private:
     using ZipPtr = std::unique_ptr<zip_t, void(*)(zip_t*)>;

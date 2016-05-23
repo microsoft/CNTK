@@ -15,13 +15,10 @@ class FramePacker : public SequencePacker
 public:
     FramePacker(
         MemoryProviderPtr memoryProvider,
-        TransformerPtr transformer,
-        size_t minibatchSize,
+        SequenceEnumeratorPtr sequenceEnumerator,
         const std::vector<StreamDescriptionPtr>& streams) :
-        SequencePacker(memoryProvider, transformer, minibatchSize, streams)
-    {
-
-    }
+        SequencePacker(memoryProvider, sequenceEnumerator, streams)
+    {}
 
 private:
 

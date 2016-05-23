@@ -42,7 +42,6 @@
     <ClInclude Include="ConfigHelper.h" />
     <ClInclude Include="HTKDataDeserializer.h" />
     <ClInclude Include="MLFDataDeserializer.h" />
-    <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h">
       <Filter>Common\Include</Filter>

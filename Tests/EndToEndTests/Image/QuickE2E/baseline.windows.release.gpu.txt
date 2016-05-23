@@ -1,20 +1,46 @@
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Dec 18 2015 14:55:05
-		Last modified date: Wed Dec 16 11:33:30 2015
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-		Build Branch: 
-		Build SHA1: 
-		Built by alexeyk on z840-01           
-		Build Path: C:\src\cntk\Source\CNTK\
+		Built time: May  3 2016 13:23:06
+		Last modified date: Mon Apr 18 00:00:12 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on LIANA-09-w
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-running on z840-01 at 2015/12/18 14:58:21
-command line: 
-C:\src\cntk\x64\Release\CNTK.exe configFile=QuickE2E\cntk.config ConfigDir=QuickE2E RunDir=_out DataDir=Data DeviceId=Auto stderr=_out\gpu.txt 
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+05/03/2016 14:12:21: -------------------------------------------------------------------
+05/03/2016 14:12:21: Build info: 
 
->>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-precision = "float"
+05/03/2016 14:12:21: 		Built time: May  3 2016 13:23:06
+05/03/2016 14:12:21: 		Last modified date: Mon Apr 18 00:00:12 2016
+05/03/2016 14:12:21: 		Build type: Release
+05/03/2016 14:12:21: 		Build target: GPU
+05/03/2016 14:12:21: 		With 1bit-SGD: no
+05/03/2016 14:12:21: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 14:12:21: 		CUB_PATH: C:\src\cub-1.4.1
+05/03/2016 14:12:21: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 14:12:21: 		Build Branch: HEAD
+05/03/2016 14:12:21: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 14:12:21: 		Built by svcphil on LIANA-09-w
+05/03/2016 14:12:21: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 14:12:21: -------------------------------------------------------------------
+
+05/03/2016 14:12:21: Running on DPHAIM-25 at 2016/05/03 14:12:21
+05/03/2016 14:12:21: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true
+
+
+
+05/03/2016 14:12:21: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:12:21: precision = "float"
 command = train:test
 deviceId = $DeviceId$
 ndlMacros = "$ConfigDir$/Macros.ndl"
@@ -24,8 +50,66 @@ train = [
     action = "train"
     modelPath = "$RunDir$/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -33,6 +117,7 @@ train = [
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
@@ -70,27 +155,87 @@ test = [
         ]
     ]    
 ]
-ConfigDir=QuickE2E
-RunDir=_out
-DataDir=Data
-DeviceId=Auto
-stderr=_out\gpu.txt
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
 
-<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:21: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
->>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-precision = "float"
+05/03/2016 14:12:21: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:12:21: precision = "float"
 command = train:test
-deviceId = Auto
-ndlMacros = "QuickE2E/Macros.ndl"
+deviceId = 0
+ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Macros.ndl"
 parallelTrain = false
 numCPUThreads = 8
 train = [
     action = "train"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -98,10 +243,11 @@ train = [
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Train.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt"
         features = [
             dim = 784
             start = 1
@@ -110,19 +256,19 @@ train = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 test = [
     action = "test"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Convolution.ndl"
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Test.txt"
         features = [
             dim = 784
             start = 1
@@ -131,38 +277,41 @@ test = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
-ConfigDir=QuickE2E
-RunDir=_out
-DataDir=Data
-DeviceId=Auto
-stderr=_out\gpu.txt
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
 
-<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:21: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
->>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: cntk.config:command=train:test
-configparameters: cntk.config:ConfigDir=QuickE2E
-configparameters: cntk.config:DataDir=Data
-configparameters: cntk.config:deviceId=Auto
-configparameters: cntk.config:ndlMacros=QuickE2E/Macros.ndl
-configparameters: cntk.config:numCPUThreads=8
-configparameters: cntk.config:parallelTrain=false
-configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=_out
-configparameters: cntk.config:stderr=_out\gpu.txt
-configparameters: cntk.config:test=[
+05/03/2016 14:12:21: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.cntk:command=train:test
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Macros.ndl
+configparameters: cntk.cntk:numCPUThreads=8
+configparameters: cntk.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:test=[
     action = "test"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Convolution.ndl"
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Test.txt"
         features = [
             dim = 784
             start = 1
@@ -171,17 +320,76 @@ configparameters: cntk.config:test=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 
-configparameters: cntk.config:train=[
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:train=[
     action = "train"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -189,10 +397,11 @@ configparameters: cntk.config:train=[
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Train.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt"
         features = [
             dim = 784
             start = 1
@@ -201,735 +410,426 @@ configparameters: cntk.config:train=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 
-<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-command: train test 
-precision = float
-Using 8 CPU threads
-CNTKModelPath: _out/models/cntk.dnn
-CNTKCommandTrainInfo: train : 12
-CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
-CNTKCommandTrainBegin: train
-LockDevice: Locked GPU 0 to test availability.
-LockDevice: Unlocked GPU 0 after testing.
-LockDevice: Locked GPU 1 to test availability.
-LockDevice: Unlocked GPU 1 after testing.
-LockDevice: Locked GPU 2 to test availability.
-LockDevice: Unlocked GPU 2 after testing.
-LockDevice: Locked GPU 0 for exclusive use.
-NDLBuilder Using GPU 0
-Reading UCI file Data/Train.txt
+05/03/2016 14:12:21: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:21: Commands: train test
+05/03/2016 14:12:21: Precision = "float"
+05/03/2016 14:12:21: Using 8 CPU threads.
+05/03/2016 14:12:21: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn
+05/03/2016 14:12:21: CNTKCommandTrainInfo: train : 12
+05/03/2016 14:12:21: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+
+05/03/2016 14:12:21: ##############################################################################
+05/03/2016 14:12:21: #                                                                            #
+05/03/2016 14:12:21: # Action "train"                                                             #
+05/03/2016 14:12:21: #                                                                            #
+05/03/2016 14:12:21: ##############################################################################
+
+05/03/2016 14:12:21: CNTKCommandTrainBegin: train
+Reading UCI file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt
+
+05/03/2016 14:12:22: Creating virgin network.
 Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
 
-3 roots:
-	err = ErrorPrediction
-	outputNodes.z = Plus
-	ce = CrossEntropyWithSoftmax
-FormNestedNetwork: WARNING: Was called twice for err ErrorPrediction operation
-FormNestedNetwork: WARNING: Was called twice for outputNodes.z Plus operation
-FormNestedNetwork: WARNING: Was called twice for ce CrossEntropyWithSoftmax operation
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *], [1 x 1 x 16] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *] -> [24 x 24 x 16 x *]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *] -> [12 x 12 x 16 x *]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *], [1 x 1 x 32] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *] -> [8 x 8 x 32 x *]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *] -> [4 x 4 x 32 x *]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *] -> [128 x *]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *] -> [128 x *]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
 
 
-Validating for node err. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err. 15 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
 
 
-Validating for node outputNodes.z. 24 nodes to process in pass 1.
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating for node outputNodes.z. 13 nodes to process in pass 2.
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z, final verification.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-9 out of 24 nodes do not share the minibatch layout with the input data.
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
-Validating for node ce. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce. 14 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 1]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 1]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 1]) -> [784, MBSize 1]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 1]) -> [9216, MBSize 1]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 1], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 1], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+11 out of 27 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-SGD using GPU 0.
+05/03/2016 14:12:23: Created model with 27 nodes on GPU 0.
 
-Training criterion node(s):
-	ce = CrossEntropyWithSoftmax
+05/03/2016 14:12:23: Training criterion node(s):
+05/03/2016 14:12:23: 	ce = CrossEntropyWithSoftmax
 
-Evaluation criterion node(s):
-	err = ErrorPrediction
+05/03/2016 14:12:23: Evaluation criterion node(s):
+
+05/03/2016 14:12:23: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-No PreCompute nodes found, skipping PreCompute step
-Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-starting at epoch 0 counting lines to determine record count
 
- 1000 records found
+Memory Sharing Structure:
+
+0000000000000000: {[err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *]] [features Gradient[28 x 28 x 1 x *]] [labels Gradient[10 x *]] }
+00000021AD55BB60: {[conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.out Gradient[24 x 24 x 16 x *]] }
+00000021AD55BE80: {[ol.b Value[10 x 1]] }
+00000021AD55CC40: {[ol.W Value[10 x 128]] }
+00000021AD55D1E0: {[labels Value[10 x *]] }
+00000021AD55DCB0: {[conv2_act.convB Value[1 x 1 x 32]] }
+00000021AD55E930: {[conv2_act.convW Value[32 x 400]] }
+00000021AD56C0B0: {[conv1_act.convW Value[16 x 25]] }
+00000021C55C5510: {[conv1_act.convB Value[1 x 1 x 16]] }
+00000021C55C6550: {[h1.W Value[128 x 4 x 4 x 32]] }
+00000021C55C7270: {[h1.b Value[128]] }
+00000021C55C8170: {[featScale Value[1 x 1]] }
+00000021C55C8C10: {[features Value[28 x 28 x 1 x *]] }
+00000021CA147F20: {[ce Value[1]] }
+00000021CA148060: {[conv1_act.conv Value[24 x 24 x 16 x *]] }
+00000021CA148100: {[conv1_act.conv Gradient[24 x 24 x 16 x *]] [conv1_act.out Value[24 x 24 x 16 x *]] }
+00000021CA148740: {[conv1_act.convPlusB Value[24 x 24 x 16 x *]] [conv1_act.convW Gradient[16 x 25]] }
+00000021CA1487E0: {[conv1_act.convPlusB Gradient[24 x 24 x 16 x *]] [pool1 Value[12 x 12 x 16 x *]] }
+00000021CA148920: {[conv2_act.conv Value[8 x 8 x 32 x *]] }
+00000021CA148B00: {[err Value[1]] }
+00000021CA148BA0: {[featScaled Value[28 x 28 x 1 x *]] }
+00000021CB899600: {[conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.out Gradient[8 x 8 x 32 x *]] [h1.t Value[128 x *]] }
+00000021CB899B00: {[h1.out Value[128 x *]] [h1.t Gradient[128 x *]] }
+00000021CB899BA0: {[conv2_act.convPlusB Gradient[8 x 8 x 32 x *]] [pool1 Gradient[12 x 12 x 16 x *]] [pool2 Value[4 x 4 x 32 x *]] }
+00000021CB899CE0: {[ol.b Gradient[10 x 1]] }
+00000021CB899D80: {[h1.z Gradient[128 x *]] [ol.t Value[10 x *]] [pool2 Gradient[4 x 4 x 32 x *]] }
+00000021CB899EC0: {[ol.t Gradient[10 x *]] }
+00000021CB89AAA0: {[h1.W Gradient[128 x 4 x 4 x 32]] [h1.z Value[128 x *]] }
+00000021CB89AD20: {[conv2_act.conv Gradient[8 x 8 x 32 x *]] [conv2_act.out Value[8 x 8 x 32 x *]] }
+00000021CB89B900: {[ol.W Gradient[10 x 128]] [ol.out Value[10 x 1 x *]] }
+00000021CB89B9A0: {[h1.b Gradient[128]] [h1.out Gradient[128 x *]] [ol.out Gradient[10 x 1 x *]] }
+00000021CB89BA40: {[ce Gradient[1]] }
+00000021CB89BAE0: {[conv2_act.convPlusB Value[8 x 8 x 32 x *]] [conv2_act.convW Gradient[32 x 400]] }
+
+05/03/2016 14:12:23: No PreCompute nodes found, skipping PreCompute step.
+
+05/03/2016 14:12:23: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+UCIFastReader: Starting at epoch 0, counting lines to determine record count...
+ 1000 records found.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 11 retries for 100 elements (11.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 15, 33, ...
- Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.34708694; EvalErr[0]PerSample = 0.92000000; TotalTime = 0.4657s; SamplesPerSecond = 214.7
-Finished Epoch[ 1 of 12]: [Training Set] TrainLossPerSample = 2.3470869; EvalErrPerSample = 0.91999996; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.484419
-Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 1 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.34708694 * 100; err = 0.92000000 * 100; time = 0.3132s; samplesPerSecond = 319.2
+05/03/2016 14:12:23: Finished Epoch[ 1 of 12]: [Training] ce = 2.34708694 * 100; err = 0.92000000 * 100; totalSamplesSeen = 100; learningRatePerSample = 0.0049999999; epochTime=0.326796s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.1'
+
+05/03/2016 14:12:23: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 1 at record count 100, and file position 100
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 26 retries for 100 elements (26.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 1: 20, 26, ...
- Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.29444092; EvalErr[0]PerSample = 0.85000000; TotalTime = 0.0227s; SamplesPerSecond = 4400.1
-Finished Epoch[ 2 of 12]: [Training Set] TrainLossPerSample = 2.294441; EvalErrPerSample = 0.84999996; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.024503
-Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 2 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.29444092 * 100; err = 0.85000000 * 100; time = 0.0218s; samplesPerSecond = 4595.4
+05/03/2016 14:12:23: Finished Epoch[ 2 of 12]: [Training] ce = 2.29444092 * 100; err = 0.85000000 * 100; totalSamplesSeen = 200; learningRatePerSample = 0.0049999999; epochTime=0.021986s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.2'
+
+05/03/2016 14:12:23: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 2 at record count 200, and file position 200
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 28 retries for 100 elements (28.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 2: 4, 35, ...
- Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.13786591; EvalErr[0]PerSample = 0.73000000; TotalTime = 0.0224s; SamplesPerSecond = 4464.7
-Finished Epoch[ 3 of 12]: [Training Set] TrainLossPerSample = 2.1378658; EvalErrPerSample = 0.72999996; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.024125
-Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 3 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.13786575 * 100; err = 0.73000000 * 100; time = 0.0219s; samplesPerSecond = 4561.4
+05/03/2016 14:12:23: Finished Epoch[ 3 of 12]: [Training] ce = 2.13786575 * 100; err = 0.73000000 * 100; totalSamplesSeen = 300; learningRatePerSample = 0.0049999999; epochTime=0.022115s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.3'
+
+05/03/2016 14:12:23: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 3 at record count 300, and file position 300
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 17 retries for 100 elements (17.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 3: 28, 7, ...
- Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  2.03929321; EvalErr[0]PerSample = 0.75000000; TotalTime = 0.0230s; SamplesPerSecond = 4355.8
-Finished Epoch[ 4 of 12]: [Training Set] TrainLossPerSample = 2.0392931; EvalErrPerSample = 0.75; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.024759
-Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 4 of 12]-Minibatch[   1-  10, 100.00%]: ce = 2.03929337 * 100; err = 0.75000000 * 100; time = 0.0222s; samplesPerSecond = 4512.8
+05/03/2016 14:12:23: Finished Epoch[ 4 of 12]: [Training] ce = 2.03929337 * 100; err = 0.75000000 * 100; totalSamplesSeen = 400; learningRatePerSample = 0.0049999999; epochTime=0.022355s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.4'
+
+05/03/2016 14:12:23: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 4 at record count 400, and file position 400
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 15 retries for 100 elements (15.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 4: 5, 36, ...
- Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.77985336; EvalErr[0]PerSample = 0.53000000; TotalTime = 0.0193s; SamplesPerSecond = 5174.4
-Finished Epoch[ 5 of 12]: [Training Set] TrainLossPerSample = 1.7798533; EvalErrPerSample = 0.52999997; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.020804
-Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 5 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.77985336 * 100; err = 0.53000000 * 100; time = 0.0225s; samplesPerSecond = 4451.6
+05/03/2016 14:12:23: Finished Epoch[ 5 of 12]: [Training] ce = 1.77985336 * 100; err = 0.53000000 * 100; totalSamplesSeen = 500; learningRatePerSample = 0.0049999999; epochTime=0.022646s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.5'
+
+05/03/2016 14:12:23: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 5 at record count 500, and file position 500
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 13 retries for 100 elements (13.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 5: 11, 48, ...
- Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.49362656; EvalErr[0]PerSample = 0.14000000; TotalTime = 0.0194s; SamplesPerSecond = 5161.0
-Finished Epoch[ 6 of 12]: [Training Set] TrainLossPerSample = 1.4936265; EvalErrPerSample = 0.14; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.020921
-Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 6 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.49362686 * 100; err = 0.14000000 * 100; time = 0.0224s; samplesPerSecond = 4456.7
+05/03/2016 14:12:23: Finished Epoch[ 6 of 12]: [Training] ce = 1.49362686 * 100; err = 0.14000000 * 100; totalSamplesSeen = 600; learningRatePerSample = 0.0049999999; epochTime=0.022631s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.6'
+
+05/03/2016 14:12:23: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 6 at record count 600, and file position 600
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 13 retries for 100 elements (13.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 6: 15, 3, ...
- Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  1.17570114; EvalErr[0]PerSample = 0.14000000; TotalTime = 0.0207s; SamplesPerSecond = 4830.0
-Finished Epoch[ 7 of 12]: [Training Set] TrainLossPerSample = 1.1757011; EvalErrPerSample = 0.14; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.02243
-Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 7 of 12]-Minibatch[   1-  10, 100.00%]: ce = 1.17570114 * 100; err = 0.14000000 * 100; time = 0.0225s; samplesPerSecond = 4438.9
+05/03/2016 14:12:23: Finished Epoch[ 7 of 12]: [Training] ce = 1.17570114 * 100; err = 0.14000000 * 100; totalSamplesSeen = 700; learningRatePerSample = 0.0049999999; epochTime=0.022711s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.7'
+
+05/03/2016 14:12:23: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 7 at record count 700, and file position 700
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 22 retries for 100 elements (22.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 7: 9, 19, ...
- Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.98662323; EvalErr[0]PerSample = 0.05000000; TotalTime = 0.0202s; SamplesPerSecond = 4952.7
-Finished Epoch[ 8 of 12]: [Training Set] TrainLossPerSample = 0.98662323; EvalErrPerSample = 0.049999997; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.021894
-Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 8 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.98662338 * 100; err = 0.05000000 * 100; time = 0.0224s; samplesPerSecond = 4461.7
+05/03/2016 14:12:23: Finished Epoch[ 8 of 12]: [Training] ce = 0.98662338 * 100; err = 0.05000000 * 100; totalSamplesSeen = 800; learningRatePerSample = 0.0049999999; epochTime=0.022622s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.8'
+
+05/03/2016 14:12:23: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 8 at record count 800, and file position 800
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 16 retries for 100 elements (16.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 8: 8, 5, ...
- Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.72003899; EvalErr[0]PerSample = 0.01000000; TotalTime = 0.0202s; SamplesPerSecond = 4960.1
-Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 0.72003895; EvalErrPerSample = 0.0099999998; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.021856
-Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+05/03/2016 14:12:23:  Epoch[ 9 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.72003914 * 100; err = 0.01000000 * 100; time = 0.0223s; samplesPerSecond = 4482.1
+05/03/2016 14:12:23: Finished Epoch[ 9 of 12]: [Training] ce = 0.72003914 * 100; err = 0.01000000 * 100; totalSamplesSeen = 900; learningRatePerSample = 0.0049999999; epochTime=0.022509s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.9'
+
+05/03/2016 14:12:23: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 starting epoch 9 at record count 900, and file position 900
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 16 retries for 100 elements (16.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 9: 7, 10, ...
- Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.60043072; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.0222s; SamplesPerSecond = 4494.4
-Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 0.60043073; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023996
-Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+05/03/2016 14:12:23:  Epoch[10 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.60043076 * 100; err = 0.00000000 * 100; time = 0.0224s; samplesPerSecond = 4457.5
+05/03/2016 14:12:23: Finished Epoch[10 of 12]: [Training] ce = 0.60043076 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1000; learningRatePerSample = 0.0049999999; epochTime=0.022626s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.10'
+
+05/03/2016 14:12:23: Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
 starting epoch 10 at record count 1000, and file position 0
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 22 retries for 100 elements (22.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 10: 13, 22, ...
- Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.42560429; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.0216s; SamplesPerSecond = 4639.5
-Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 0.42560428; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.023399
-Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+05/03/2016 14:12:23:  Epoch[11 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.42560425 * 100; err = 0.00000000 * 100; time = 0.0220s; samplesPerSecond = 4538.2
+05/03/2016 14:12:23: Finished Epoch[11 of 12]: [Training] ce = 0.42560425 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1100; learningRatePerSample = 0.0049999999; epochTime=0.022236s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.11'
+
+05/03/2016 14:12:23: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
 starting epoch 11 at record count 1100, and file position 100
 already there from last epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:23: Starting minibatch loop.
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.33292500; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.0197s; SamplesPerSecond = 5079.5
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.33292499; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.021406
-CNTKCommandTrainEnd: train
+05/03/2016 14:12:23:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.33292492 * 100; err = 0.00000000 * 100; time = 0.0222s; samplesPerSecond = 4499.4
+05/03/2016 14:12:23: Finished Epoch[12 of 12]: [Training] ce = 0.33292492 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1200; learningRatePerSample = 0.0049999999; epochTime=0.022417s
+05/03/2016 14:12:23: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn'
+05/03/2016 14:12:23: CNTKCommandTrainEnd: train
+
+05/03/2016 14:12:23: Action "train" complete.
+
+
+05/03/2016 14:12:23: ##############################################################################
+05/03/2016 14:12:23: #                                                                            #
+05/03/2016 14:12:23: # Action "test"                                                              #
+05/03/2016 14:12:23: #                                                                            #
+05/03/2016 14:12:23: ##############################################################################
+
 
 Post-processing network...
 
-3 roots:
-	outputNodes.z = Plus
-	ce = CrossEntropyWithSoftmax
-	err = ErrorPrediction
-FormNestedNetwork: WARNING: Was called twice for outputNodes.z Plus operation
-FormNestedNetwork: WARNING: Was called twice for ce CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for err ErrorPrediction operation
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *1] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *1], [1 x 1 x 16] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *1] -> [24 x 24 x 16 x *1]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *1] -> [12 x 12 x 16 x *1]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *1] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *1], [1 x 1 x 32] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *1] -> [8 x 8 x 32 x *1]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *1] -> [4 x 4 x 32 x *1]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *1] -> [128 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *1], [128] -> [128 x *1]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *1] -> [128 x *1]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
 
 
-Validating for node outputNodes.z. 24 nodes to process in pass 1.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z. 14 nodes to process in pass 2.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z, final verification.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-9 out of 24 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
 
 
-Validating for node ce. 26 nodes to process in pass 1.
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating for node ce. 14 nodes to process in pass 2.
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
-Validating for node err. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err. 14 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+11 out of 27 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
+
 evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
 
 
 Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[ce Gradient[1]] [conv1_act.conv Gradient[24 x 24 x 16 x *1]] [conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.convPlusB Gradient[24 x 24 x 16 x *1]] [conv1_act.convW Gradient[16 x 25]] [conv1_act.out Gradient[24 x 24 x 16 x *1]] [conv2_act.conv Gradient[8 x 8 x 32 x *1]] [conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.convPlusB Gradient[8 x 8 x 32 x *1]] [conv2_act.convW Gradient[32 x 400]] [conv2_act.out Gradient[8 x 8 x 32 x *1]] [err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *1]] [features Gradient[28 x 28 x 1 x *1]] [h1.W Gradient[128 x 4 x 4 x 32]] [h1.b Gradient[128]] [h1.out Gradient[128 x *1]] [h1.t Gradient[128 x *1]] [h1.z Gradient[128 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 128]] [ol.b Gradient[10 x 1]] [ol.out Gradient[10 x 1 x *1]] [ol.t Gradient[10 x *1]] [pool1 Gradient[12 x 12 x 16 x *1]] [pool2 Gradient[4 x 4 x 32 x *1]] }
+00000021CB8994C0: {[conv2_act.convW Value[32 x 400]] }
+00000021CB899A60: {[conv1_act.convB Value[1 x 1 x 16]] }
+00000021CB89A280: {[h1.b Value[128]] }
+00000021CB89A780: {[h1.W Value[128 x 4 x 4 x 32]] }
+00000021CB89A8C0: {[conv1_act.convW Value[16 x 25]] }
+00000021CB89AFA0: {[features Value[28 x 28 x 1 x *1]] }
+00000021CB89B360: {[featScale Value[1 x 1]] }
+00000021CB89B7C0: {[conv2_act.convB Value[1 x 1 x 32]] }
+00000021CB89BCC0: {[labels Value[10 x *1]] }
+00000021CB89BD60: {[conv1_act.convPlusB Value[24 x 24 x 16 x *1]] }
+00000021CB89BE00: {[conv1_act.out Value[24 x 24 x 16 x *1]] }
+00000021CB89C1C0: {[err Value[1]] }
+00000021CB89C260: {[pool1 Value[12 x 12 x 16 x *1]] }
+00000021CB89C3A0: {[conv2_act.convPlusB Value[8 x 8 x 32 x *1]] }
+00000021CB89C440: {[pool2 Value[4 x 4 x 32 x *1]] }
+00000021CB89C4E0: {[h1.z Value[128 x *1]] }
+00000021CB89C620: {[h1.out Value[128 x *1]] }
+00000021CB89C6C0: {[ol.out Value[10 x 1 x *1]] }
+00000021CB89C8A0: {[conv2_act.conv Value[8 x 8 x 32 x *1]] }
+00000021CB89CB20: {[ol.b Value[10 x 1]] }
+00000021CB89CBC0: {[conv1_act.conv Value[24 x 24 x 16 x *1]] }
+00000021CB89CDA0: {[ce Value[1]] }
+00000021CB89CE40: {[ol.t Value[10 x *1]] }
+00000021CB89CF80: {[ol.W Value[10 x 128]] }
+00000021CB89D0C0: {[conv2_act.out Value[8 x 8 x 32 x *1]] }
+00000021CB89D160: {[featScaled Value[28 x 28 x 1 x *1]] }
+00000021CB89D200: {[h1.t Value[128 x *1]] }
+
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 11 retries for 100 elements (11.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 15, 33, ...
-Final Results: Minibatch[1-1]: Samples Seen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.29111847    Perplexity = 1.3379231    
-__COMPLETED__
+05/03/2016 14:12:24: Final Results: Minibatch[1-1]: err = 0.00000000 * 100; ce = 0.29111841 * 100; perplexity = 1.33792300
+
+05/03/2016 14:12:24: Action "test" complete.
+
+05/03/2016 14:12:24: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu DeviceId=0 timestamping=true makeMode=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Dec 18 2015 14:55:05
-		Last modified date: Wed Dec 16 11:33:30 2015
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-		Build Branch: 
-		Build SHA1: 
-		Built by alexeyk on z840-01           
-		Build Path: C:\src\cntk\Source\CNTK\
+		Built time: May  3 2016 13:23:06
+		Last modified date: Mon Apr 18 00:00:12 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+		Built by svcphil on LIANA-09-w
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-running on z840-01 at 2015/12/18 15:06:14
-command line: 
-C:\src\cntk\x64\Release\CNTK.exe configFile=QuickE2E\cntk.config ConfigDir=QuickE2E RunDir=_out DataDir=Data DeviceId=Auto stderr=_out\gpu.txt 
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+05/03/2016 14:12:24: -------------------------------------------------------------------
+05/03/2016 14:12:24: Build info: 
 
->>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-precision = "float"
+05/03/2016 14:12:24: 		Built time: May  3 2016 13:23:06
+05/03/2016 14:12:24: 		Last modified date: Mon Apr 18 00:00:12 2016
+05/03/2016 14:12:24: 		Build type: Release
+05/03/2016 14:12:24: 		Build target: GPU
+05/03/2016 14:12:24: 		With 1bit-SGD: no
+05/03/2016 14:12:24: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+05/03/2016 14:12:24: 		CUB_PATH: C:\src\cub-1.4.1
+05/03/2016 14:12:24: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+05/03/2016 14:12:24: 		Build Branch: HEAD
+05/03/2016 14:12:24: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
+05/03/2016 14:12:24: 		Built by svcphil on LIANA-09-w
+05/03/2016 14:12:24: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+05/03/2016 14:12:24: -------------------------------------------------------------------
+
+05/03/2016 14:12:24: Running on DPHAIM-25 at 2016/05/03 14:12:24
+05/03/2016 14:12:24: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu  DeviceId=0  timestamping=true  makeMode=true
+
+
+
+05/03/2016 14:12:24: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:12:24: precision = "float"
 command = train:test
 deviceId = $DeviceId$
 ndlMacros = "$ConfigDir$/Macros.ndl"
@@ -939,8 +839,66 @@ train = [
     action = "train"
     modelPath = "$RunDir$/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -948,6 +906,7 @@ train = [
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
@@ -985,27 +944,88 @@ test = [
         ]
     ]    
 ]
-ConfigDir=QuickE2E
-RunDir=_out
-DataDir=Data
-DeviceId=Auto
-stderr=_out\gpu.txt
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+makeMode=true
 
-<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:24: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
->>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-precision = "float"
+05/03/2016 14:12:24: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 14:12:24: precision = "float"
 command = train:test
-deviceId = Auto
-ndlMacros = "QuickE2E/Macros.ndl"
+deviceId = 0
+ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Macros.ndl"
 parallelTrain = false
 numCPUThreads = 8
 train = [
     action = "train"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -1013,10 +1033,11 @@ train = [
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Train.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt"
         features = [
             dim = 784
             start = 1
@@ -1025,19 +1046,19 @@ train = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 test = [
     action = "test"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Convolution.ndl"
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Test.txt"
         features = [
             dim = 784
             start = 1
@@ -1046,38 +1067,43 @@ test = [
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
-ConfigDir=QuickE2E
-RunDir=_out
-DataDir=Data
-DeviceId=Auto
-stderr=_out\gpu.txt
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+DeviceId=0
+timestamping=true
+makeMode=true
 
-<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:24: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
->>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: cntk.config:command=train:test
-configparameters: cntk.config:ConfigDir=QuickE2E
-configparameters: cntk.config:DataDir=Data
-configparameters: cntk.config:deviceId=Auto
-configparameters: cntk.config:ndlMacros=QuickE2E/Macros.ndl
-configparameters: cntk.config:numCPUThreads=8
-configparameters: cntk.config:parallelTrain=false
-configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=_out
-configparameters: cntk.config:stderr=_out\gpu.txt
-configparameters: cntk.config:test=[
+05/03/2016 14:12:24: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.cntk:command=train:test
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:makeMode=true
+configparameters: cntk.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Macros.ndl
+configparameters: cntk.cntk:numCPUThreads=8
+configparameters: cntk.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu
+configparameters: cntk.cntk:test=[
     action = "test"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\QuickE2E/Convolution.ndl"
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Test.txt"
         features = [
             dim = 784
             start = 1
@@ -1086,17 +1112,76 @@ configparameters: cntk.config:test=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 
-configparameters: cntk.config:train=[
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:train=[
     action = "train"
-    modelPath = "_out/models/cntk.dnn"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn"
     traceLevel = 1
-    NDLNetworkBuilder = [
-        networkDescription = "QuickE2E/Convolution.ndl"
+    BrainScriptNetworkBuilder = [
+        // HACK to enforce same evaluation order or LearnableParameters as for NDL, as to get same radomization
+        // Nodes are evaluated in sorting order.
+        A1 = conv1_act; A2 = conv2_act; A3 = h1 ; A5 = ol
+        // macros
+        ConvReLULayer(inp, outMap, inMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [  // ReLU non-linearity
+            convW = Parameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=false)
+            conv = Convolution(convW, inp, (kW : kH : inMap), mapDims=outMap, stride=(hStride : vStride : inMap), autoPadding=false, imageLayout="cudnn")
+            convB = ParameterTensor((1 : 1 : outMap), init="fixedValue", value=bValue)
+            convPlusB = Plus(conv, convB);
+            out = RectifiedLinear(convPlusB);
+        ]
+        DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
+            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=false) 
+            t = Times(W, x)
+            z = Plus(t, b)
+            out = Sigmoid(z)
+        ]
+        DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
+            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=false)
+            t = Times(W, x)
+            out = Plus(t, b)
+        ]
+        imageW = 28
+        imageH = 28
+        labelDim = 10
+        features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = Input(labelDim, tag="label")
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 16
+        hStride1 = 1
+        vStride1 = 1
+        conv1_act = ConvReLULayer(featScaled, cMap1, 1, 25, kW1, kH1, hStride1, vStride1, 10, 1).out
+        pool1W = 2
+        pool1H = 2
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout="cudnn")
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        conv2_act = ConvReLULayer(pool1, cMap2, cMap1, 400, kW2, kH2, hStride2, vStride2, 10, 1).out
+        pool2W = 2
+        pool2H = 2
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
+        h1Dim = 128
+        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        ol = DNNLayer(h1Dim, labelDim, h1, 1).out
+        ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
+        err = ErrorPrediction(labels, ol, tag="evaluation")
+        outputNodes = ol
     ]
     SGD = [
         epochSize = 100
@@ -1104,10 +1189,11 @@ configparameters: cntk.config:train=[
         learningRatesPerMB = 0.05
         momentumPerMB = 0*10:0.7
         maxEpochs = 12
+        keepCheckPointFiles = true
     ]
     reader = [
         readerType = "UCIFastReader"
-        file = "Data/Train.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt"
         features = [
             dim = 784
             start = 1
@@ -1116,615 +1202,256 @@ configparameters: cntk.config:train=[
             dim = 1
             start = 0
             labelDim = 10
-            labelMappingFile = "Data/labelsmap.txt"
+            labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/labelsmap.txt"
         ]
     ]    
 ]
 
-<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-command: train test 
-precision = float
-Using 8 CPU threads
-CNTKModelPath: _out/models/cntk.dnn
-CNTKCommandTrainInfo: train : 12
-CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
-CNTKCommandTrainBegin: train
-LockDevice: Locked GPU 0 to test availability.
-LockDevice: Unlocked GPU 0 after testing.
-LockDevice: Locked GPU 1 to test availability.
-LockDevice: Unlocked GPU 1 after testing.
-LockDevice: Locked GPU 2 to test availability.
-LockDevice: Unlocked GPU 2 after testing.
-LockDevice: Locked GPU 0 for exclusive use.
-NDLBuilder Using GPU 0
-Reading UCI file Data/Train.txt
-Starting from checkpoint. Load Network From File _out/models/cntk.dnn.11.
+05/03/2016 14:12:24: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 14:12:24: Commands: train test
+05/03/2016 14:12:24: Precision = "float"
+05/03/2016 14:12:24: Using 8 CPU threads.
+05/03/2016 14:12:24: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn
+05/03/2016 14:12:24: CNTKCommandTrainInfo: train : 12
+05/03/2016 14:12:24: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
+
+05/03/2016 14:12:24: ##############################################################################
+05/03/2016 14:12:24: #                                                                            #
+05/03/2016 14:12:24: # Action "train"                                                             #
+05/03/2016 14:12:24: #                                                                            #
+05/03/2016 14:12:24: ##############################################################################
+
+05/03/2016 14:12:24: CNTKCommandTrainBegin: train
+Reading UCI file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Image\Data/Train.txt
+
+05/03/2016 14:12:24: Starting from checkpoint. Loading network from 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn.11'.
 
 Post-processing network...
 
-3 roots:
-	ce = CrossEntropyWithSoftmax
-	outputNodes.z = Plus
-	err = ErrorPrediction
-FormNestedNetwork: WARNING: Was called twice for ce CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for outputNodes.z Plus operation
-FormNestedNetwork: WARNING: Was called twice for err ErrorPrediction operation
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *], [1 x 1 x 16] -> [24 x 24 x 16 x *]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *] -> [24 x 24 x 16 x *]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *] -> [12 x 12 x 16 x *]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *], [1 x 1 x 32] -> [8 x 8 x 32 x *]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *] -> [8 x 8 x 32 x *]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *] -> [4 x 4 x 32 x *]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *] -> [128 x *]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *] -> [128 x *]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
 
 
-Validating for node ce. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce. 15 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
 
 
-Validating for node outputNodes.z. 24 nodes to process in pass 1.
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating for node outputNodes.z. 13 nodes to process in pass 2.
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z, final verification.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-9 out of 24 nodes do not share the minibatch layout with the input data.
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
-Validating for node err. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err. 14 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+11 out of 27 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-SGD using GPU 0.
+05/03/2016 14:12:25: Loaded model with 27 nodes on GPU 0.
 
-Training criterion node(s):
-	ce = CrossEntropyWithSoftmax
+05/03/2016 14:12:25: Training criterion node(s):
+05/03/2016 14:12:25: 	ce = CrossEntropyWithSoftmax
 
-Evaluation criterion node(s):
-	err = ErrorPrediction
+05/03/2016 14:12:25: Evaluation criterion node(s):
+
+05/03/2016 14:12:25: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-No PreCompute nodes found, skipping PreCompute step
-Warning: checkpoint file is missing. learning parameters will be initialized from 0
-Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
-starting at epoch 11 counting lines to determine record count
 
- 1000 records found
+Memory Sharing Structure:
+
+0000000000000000: {[err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *]] [features Gradient[28 x 28 x 1 x *]] [labels Gradient[10 x *]] }
+00000095462643E0: {[features Value[28 x 28 x 1 x *]] }
+00000095462647A0: {[h1.b Value[128]] }
+0000009546264980: {[ol.b Value[10 x 1]] }
+0000009546264B60: {[ol.W Value[10 x 128]] }
+0000009546264D40: {[featScale Value[1 x 1]] }
+0000009546264DE0: {[labels Value[10 x *]] }
+0000009546264F20: {[conv2_act.convW Value[32 x 400]] }
+00000095462651A0: {[h1.W Value[128 x 4 x 4 x 32]] }
+000000954629C740: {[conv2_act.convB Value[1 x 1 x 32]] }
+000000954629DE60: {[conv1_act.convW Value[16 x 25]] }
+00000095462C8DE0: {[conv1_act.convB Value[1 x 1 x 16]] }
+000000956700B930: {[conv2_act.conv Value[8 x 8 x 32 x *]] }
+000000956700BA70: {[conv2_act.conv Gradient[8 x 8 x 32 x *]] [conv2_act.out Value[8 x 8 x 32 x *]] }
+000000956700BB10: {[h1.W Gradient[128 x 4 x 4 x 32]] [h1.z Value[128 x *]] }
+000000956700BC50: {[conv1_act.conv Value[24 x 24 x 16 x *]] }
+000000956700C0B0: {[conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.out Gradient[24 x 24 x 16 x *]] }
+000000956700C3D0: {[featScaled Value[28 x 28 x 1 x *]] }
+000000956700C830: {[conv2_act.convPlusB Value[8 x 8 x 32 x *]] [conv2_act.convW Gradient[32 x 400]] }
+000000956700CB50: {[conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.out Gradient[8 x 8 x 32 x *]] [h1.t Value[128 x *]] }
+000000956700CDD0: {[h1.z Gradient[128 x *]] [ol.t Value[10 x *]] [pool2 Gradient[4 x 4 x 32 x *]] }
+000000956700D050: {[conv1_act.convPlusB Gradient[24 x 24 x 16 x *]] [pool1 Value[12 x 12 x 16 x *]] }
+000000956700D0F0: {[h1.out Value[128 x *]] [h1.t Gradient[128 x *]] }
+000000956700D190: {[ol.W Gradient[10 x 128]] [ol.out Value[10 x 1 x *]] }
+000000956700D410: {[err Value[1]] }
+000000956700D4B0: {[conv2_act.convPlusB Gradient[8 x 8 x 32 x *]] [pool1 Gradient[12 x 12 x 16 x *]] [pool2 Value[4 x 4 x 32 x *]] }
+000000956700DA50: {[ce Value[1]] }
+000000956700DEB0: {[conv1_act.convPlusB Value[24 x 24 x 16 x *]] [conv1_act.convW Gradient[16 x 25]] }
+000000956700DF50: {[conv1_act.conv Gradient[24 x 24 x 16 x *]] [conv1_act.out Value[24 x 24 x 16 x *]] }
+000000956700EB30: {[ol.t Gradient[10 x *]] }
+000000956700F0D0: {[ol.b Gradient[10 x 1]] }
+000000956700F2B0: {[ce Gradient[1]] }
+000000956700F710: {[h1.b Gradient[128]] [h1.out Gradient[128 x *]] [ol.out Gradient[10 x 1 x *]] }
+
+05/03/2016 14:12:25: No PreCompute nodes found, skipping PreCompute step.
+
+05/03/2016 14:12:25: Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000  momentum as time constant = 28.0 samples
+UCIFastReader: Starting at epoch 11, counting lines to determine record count...
+ 1000 records found.
 starting epoch 11 at record count 1100, and file position 100
 reading from record 0 to 100 to be positioned properly for epoch
 
-Starting minibatch loop.
+05/03/2016 14:12:25: Starting minibatch loop.
 RandomOrdering: 21 retries for 100 elements (21.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: SamplesSeen = 100; TrainLossPerSample =  0.33976151; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.7157s; SamplesPerSecond = 139.7
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.3397615; EvalErrPerSample = 0; AvgLearningRatePerSample = 0.0049999999; EpochTime=0.736517
-CNTKCommandTrainEnd: train
+05/03/2016 14:12:25:  Epoch[12 of 12]-Minibatch[   1-  10, 100.00%]: ce = 0.33292492 * 100; err = 0.00000000 * 100; time = 0.2044s; samplesPerSecond = 489.3
+05/03/2016 14:12:25: Finished Epoch[12 of 12]: [Training] ce = 0.33292492 * 100; err = 0.00000000 * 100; totalSamplesSeen = 1200; learningRatePerSample = 0.0049999999; epochTime=0.219049s
+05/03/2016 14:12:25: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503141032.133212\Image_QuickE2E@release_gpu/models/cntk.dnn'
+05/03/2016 14:12:25: CNTKCommandTrainEnd: train
+
+05/03/2016 14:12:25: Action "train" complete.
+
+
+05/03/2016 14:12:25: ##############################################################################
+05/03/2016 14:12:25: #                                                                            #
+05/03/2016 14:12:25: # Action "test"                                                              #
+05/03/2016 14:12:25: #                                                                            #
+05/03/2016 14:12:25: ##############################################################################
+
 
 Post-processing network...
 
-3 roots:
-	outputNodes.z = Plus
-	ce = CrossEntropyWithSoftmax
-	err = ErrorPrediction
-FormNestedNetwork: WARNING: Was called twice for outputNodes.z Plus operation
-FormNestedNetwork: WARNING: Was called twice for ce CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for err ErrorPrediction operation
+2 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
+
+Validating network. 27 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 4 x 4 x 32]
+Validating --> conv2_act.convW = LearnableParameter() :  -> [32 x 400]
+Validating --> conv1_act.convW = LearnableParameter() :  -> [16 x 25]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> conv1_act.conv = Convolution (conv1_act.convW, featScaled) : [16 x 25], [28 x 28 x 1 x *1] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.convB = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> conv1_act.convPlusB = Plus (conv1_act.conv, conv1_act.convB) : [24 x 24 x 16 x *1], [1 x 1 x 16] -> [24 x 24 x 16 x *1]
+Validating --> conv1_act.out = RectifiedLinear (conv1_act.convPlusB) : [24 x 24 x 16 x *1] -> [24 x 24 x 16 x *1]
+Validating --> pool1 = MaxPooling (conv1_act.out) : [24 x 24 x 16 x *1] -> [12 x 12 x 16 x *1]
+Validating --> conv2_act.conv = Convolution (conv2_act.convW, pool1) : [32 x 400], [12 x 12 x 16 x *1] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.convB = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> conv2_act.convPlusB = Plus (conv2_act.conv, conv2_act.convB) : [8 x 8 x 32 x *1], [1 x 1 x 32] -> [8 x 8 x 32 x *1]
+Validating --> conv2_act.out = RectifiedLinear (conv2_act.convPlusB) : [8 x 8 x 32 x *1] -> [8 x 8 x 32 x *1]
+Validating --> pool2 = AveragePooling (conv2_act.out) : [8 x 8 x 32 x *1] -> [4 x 4 x 32 x *1]
+Validating --> h1.t = Times (h1.W, pool2) : [128 x 4 x 4 x 32], [4 x 4 x 32 x *1] -> [128 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *1], [128] -> [128 x *1]
+Validating --> h1.out = Sigmoid (h1.z) : [128 x *1] -> [128 x *1]
+Validating --> ol.t = Times (ol.W, h1.out) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.out = Plus (ol.t, ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+
+Validating network. 16 nodes to process in pass 2.
 
 
-Validating for node outputNodes.z. 24 nodes to process in pass 1.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z. 14 nodes to process in pass 2.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-Validating for node outputNodes.z, final verification.
-
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-
-9 out of 24 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
 
 
-Validating for node ce. 26 nodes to process in pass 1.
+Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 24 x 24 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
+Using cuDNN convolution engine for geometry: Input: 24 x 24 x 16, Output: 12 x 12 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating for node ce. 14 nodes to process in pass 2.
+Using cuDNN convolution engine for geometry: Input: 12 x 12 x 16, Output: 8 x 8 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node ce, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> ce = CrossEntropyWithSoftmax(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+Using cuDNN convolution engine for geometry: Input: 8 x 8 x 32, Output: 4 x 4 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
-Validating for node err. 26 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err. 14 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-Validating for node err, final verification.
-
-Validating --> labels = InputValue -> [10, MBSize 0]
-Validating --> outputNodes.W = LearnableParameter -> [10, 128]
-Validating --> h1.W = LearnableParameter -> [128, 512]
-Validating --> conv2_act.convW = LearnableParameter -> [32, 400]
-Validating --> conv1_act.convW = LearnableParameter -> [16, 25]
-Validating --> featScale = LearnableParameter -> [1, 1]
-Validating --> features = InputValue -> [784, MBSize 0]
-Validating --> featScaled = Scale(featScale[1, 1], features[784 {W=28, H=28, C=1}, MBSize 0]) -> [784, MBSize 0]
-Validating --> conv1_act.conv = Convolution(conv1_act.convW[16, 25], featScaled[784 {W=28, H=28, C=1}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> conv1_act.convB = LearnableParameter -> [16, 1]
-Validating --> conv1_act.convPlusB = Plus(conv1_act.conv[9216 {W=24, H=24, C=16}, MBSize 0], conv1_act.convB[16, 1]) -> [9216, MBSize 0]
-Validating --> conv1_act.act = RectifiedLinear(conv1_act.convPlusB[9216 {W=24, H=24, C=16}, MBSize 0]) -> [9216, MBSize 0]
-Validating --> pool1 = MaxPooling(conv1_act.act[9216 {W=24, H=24, C=16}, MBSize 0]) -> [2304, MBSize 0]
-Validating --> conv2_act.conv = Convolution(conv2_act.convW[32, 400], pool1[2304 {W=12, H=12, C=16}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> conv2_act.convB = LearnableParameter -> [32, 1]
-Validating --> conv2_act.convPlusB = Plus(conv2_act.conv[2048 {W=8, H=8, C=32}, MBSize 0], conv2_act.convB[32, 1]) -> [2048, MBSize 0]
-Validating --> conv2_act.act = RectifiedLinear(conv2_act.convPlusB[2048 {W=8, H=8, C=32}, MBSize 0]) -> [2048, MBSize 0]
-Validating --> pool2 = AveragePooling(conv2_act.act[2048 {W=8, H=8, C=32}, MBSize 0]) -> [512, MBSize 0]
-Validating --> h1.t = Times(h1.W[128, 512], pool2[512 {W=4, H=4, C=32}, MBSize 0]) -> [128, MBSize 0]
-Validating --> h1.b = LearnableParameter -> [128, 1]
-Validating --> h1.z = Plus(h1.t[128, MBSize 0], h1.b[128, 1]) -> [128, MBSize 0]
-Validating --> h1.y = Sigmoid(h1.z[128, MBSize 0]) -> [128, MBSize 0]
-Validating --> outputNodes.t = Times(outputNodes.W[10, 128], h1.y[128, MBSize 0]) -> [10, MBSize 0]
-Validating --> outputNodes.b = LearnableParameter -> [10, 1]
-Validating --> outputNodes.z = Plus(outputNodes.t[10, MBSize 0], outputNodes.b[10, 1]) -> [10, MBSize 0]
-Validating --> err = ErrorPrediction(labels[10, MBSize 0], outputNodes.z[10, MBSize 0]) -> [1, 1]
-
-10 out of 26 nodes do not share the minibatch layout with the input data.
+11 out of 27 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
+
 evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
 
 
 Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[ce Gradient[1]] [conv1_act.conv Gradient[24 x 24 x 16 x *1]] [conv1_act.convB Gradient[1 x 1 x 16]] [conv1_act.convPlusB Gradient[24 x 24 x 16 x *1]] [conv1_act.convW Gradient[16 x 25]] [conv1_act.out Gradient[24 x 24 x 16 x *1]] [conv2_act.conv Gradient[8 x 8 x 32 x *1]] [conv2_act.convB Gradient[1 x 1 x 32]] [conv2_act.convPlusB Gradient[8 x 8 x 32 x *1]] [conv2_act.convW Gradient[32 x 400]] [conv2_act.out Gradient[8 x 8 x 32 x *1]] [err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *1]] [features Gradient[28 x 28 x 1 x *1]] [h1.W Gradient[128 x 4 x 4 x 32]] [h1.b Gradient[128]] [h1.out Gradient[128 x *1]] [h1.t Gradient[128 x *1]] [h1.z Gradient[128 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 128]] [ol.b Gradient[10 x 1]] [ol.out Gradient[10 x 1 x *1]] [ol.t Gradient[10 x *1]] [pool1 Gradient[12 x 12 x 16 x *1]] [pool2 Gradient[4 x 4 x 32 x *1]] }
+00000095462643E0: {[featScaled Value[28 x 28 x 1 x *1]] }
+0000009546264480: {[conv2_act.conv Value[8 x 8 x 32 x *1]] }
+0000009546264520: {[conv1_act.out Value[24 x 24 x 16 x *1]] }
+00000095462645C0: {[h1.t Value[128 x *1]] }
+0000009546264660: {[ol.t Value[10 x *1]] }
+0000009546264700: {[ol.out Value[10 x 1 x *1]] }
+00000095462647A0: {[pool2 Value[4 x 4 x 32 x *1]] }
+00000095462648E0: {[conv1_act.conv Value[24 x 24 x 16 x *1]] }
+0000009546264980: {[conv2_act.convPlusB Value[8 x 8 x 32 x *1]] }
+0000009546264A20: {[pool1 Value[12 x 12 x 16 x *1]] }
+0000009546264AC0: {[ce Value[1]] }
+0000009546264B60: {[h1.out Value[128 x *1]] }
+0000009546264C00: {[conv2_act.out Value[8 x 8 x 32 x *1]] }
+0000009546264CA0: {[err Value[1]] }
+0000009546265060: {[conv1_act.convPlusB Value[24 x 24 x 16 x *1]] }
+0000009546265100: {[h1.z Value[128 x *1]] }
+000000956700BB10: {[conv1_act.convB Value[1 x 1 x 16]] }
+000000956700C830: {[conv2_act.convB Value[1 x 1 x 32]] }
+000000956700D190: {[conv2_act.convW Value[32 x 400]] }
+000000956700D4B0: {[featScale Value[1 x 1]] }
+000000956700DA50: {[conv1_act.convW Value[16 x 25]] }
+000000956700E270: {[ol.W Value[10 x 128]] }
+000000956700E9F0: {[h1.b Value[128]] }
+000000956700EE50: {[h1.W Value[128 x 4 x 4 x 32]] }
+000000956700F030: {[ol.b Value[10 x 1]] }
+000000956700F3F0: {[labels Value[10 x *1]] }
+000000956700F710: {[features Value[28 x 28 x 1 x *1]] }
+
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 RandomOrdering: 11 retries for 100 elements (11.0%) to ensure window condition
 RandomOrdering: recached sequence for seed 0: 15, 33, ...
-Final Results: Minibatch[1-1]: Samples Seen = 100    err: ErrorPrediction/Sample = 0    ce: CrossEntropyWithSoftmax/Sample = 0.30440022    Perplexity = 1.3558116    
-__COMPLETED__
+05/03/2016 14:12:25: Final Results: Minibatch[1-1]: err = 0.00000000 * 100; ce = 0.29111826 * 100; perplexity = 1.33792280
+
+05/03/2016 14:12:25: Action "test" complete.
+
+05/03/2016 14:12:25: __COMPLETED__
