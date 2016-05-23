@@ -79,8 +79,8 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-        <Command>xcopy /D /I /Y "$(MathPostBuildPath)" "$(OutDir)"</Command>
-        <Message>Copying $(MathLibraryName) DLLs</Message>
+      <Command>xcopy /D /I /Y "$(MathPostBuildPath)" "$(OutDir)"</Command>
+      <Message>Copying $(MathLibraryName) DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>

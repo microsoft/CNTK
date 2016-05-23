@@ -54,7 +54,7 @@
     <MathLinkLibrary>mkl_custom.lib</MathLinkLibrary>
     <MathDelayLoad>mkl_custom.dll</MathDelayLoad>
 	<!-- mkl custom dll, lib, header files not yet added to build/jenkins machines -->
-    <MathPostBuildPath>$(MKLDropDirectory)\x64\*.dll</MathPostBuildPath>
+    <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
     <UnitTestDlls>$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
     <MathDefine>USE_MKL</MathDefine>
   </PropertyGroup>
