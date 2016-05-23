@@ -43,7 +43,7 @@ public:
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
 
         std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes  = m_net->InputNodesForOutputs(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodes);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
@@ -156,7 +156,7 @@ public:
         ScopedNetworkOperationMode modeGuard(m_net, nodeUnitTest ? NetworkOperationMode::training : NetworkOperationMode::inferring);
 
         std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodes);
         std::vector<ComputationNodePtr> gradientNodes;
         std::vector<ComputationNodeBasePtr> allOutputNodes = outputNodes;
 

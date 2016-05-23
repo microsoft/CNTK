@@ -12,6 +12,7 @@
 #include "CNTKEval.h"
 #include "CPUMatrix.h" // for SetNumThreads()
 #include "SimpleOutputWriter.h"
+#include "StreamOutputWriter.h"
 #include "NDLNetworkBuilder.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
@@ -59,6 +60,24 @@ void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription
     }
 }
 
+// Do preallocation/initialization for streaming mode evaluation (one input at a time) 
+// Should be called after the network is created.
+template <typename ElemType>
+void CNTKEval<ElemType>::PrepareForStreamMode()
+{
+    if (m_net == nullptr)
+    {
+        LogicError("PrepareNetworkForStreamEvaluation should be called after the network is created");
+    }
+
+    if (m_outputWriter == nullptr)
+    {
+        m_outputWriter = new StreamOutputWriter<ElemType>(m_net);
+    }
+
+    m_outputWriter->PrepareForEvaluation();
+    InitializeEvaluate();
+}
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
@@ -151,16 +170,9 @@ void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNo
     m_net->StartEvaluateMinibatchLoop(m_net->GetNodeFromName(outputNodeName));
 }
 
-// Evaluate - Evalute using the model with the given inputs and outputs
-// inputs - map from node name to input vector
-// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
 template <typename ElemType>
-void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
+void CNTKEval<ElemType>::InitializeEvaluate()
 {
-    size_t minibatchSize = m_config(L"minibatchSize", (size_t) 10240);
-    // get the evaluation names from the output string
-    vector<wstring> outNodeNames;
-
     ConfigParameters config;
     // config["deviceId"] = to_string(m_net->GetDeviceId());
 
@@ -172,9 +184,8 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
 
     // now set the data in the reader
     GetNodeDimensions(m_dimensions, nodeInput);
-    m_reader->SetData(&inputs, &m_dimensions);
     m_reader->SetBoundary(m_start);
-    
+
     // create the writer if necessary
     if (m_writer == nullptr)
     {
@@ -182,11 +193,37 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     }
     // now set the data in the writer
     GetNodeDimensions(m_dimensions, nodeOutput);
+}
+// Evaluate - Evalute using the model with the given inputs and outputs
+// inputs - map from node name to input vector
+// outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+template <typename ElemType>
+void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    size_t minibatchSize = m_config(L"minibatchSize", (size_t) 10240);
+    // get the evaluation names from the output string
+    vector<wstring> outNodeNames;
+
+    InitializeEvaluate();
+    m_reader->SetData(&inputs, &m_dimensions);
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
     SimpleOutputWriter<ElemType> eval(m_net);
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
+}
+
+template <typename ElemType>
+void CNTKEval<ElemType>::EvaluateStreamMode(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
+{
+    // now set the data in the reader
+    m_reader->SetData(&inputs, &m_dimensions);
+    m_reader->SetMBSizeToRecordCount();
+    // now set the data in the writer
+    m_writer->SetData(&outputs, &m_dimensions);
+
+    // call the evaluator
+    m_outputWriter->WriteOutput(*m_reader, *m_writer);
 }
 
 // Evaluate - Evalute using the model with the given inputs and outputs
@@ -221,6 +258,7 @@ void CNTKEval<ElemType>::Destroy()
     CNTKEvalBase<ElemType>::Destroy();
     delete m_reader;
     delete m_writer;
+    delete m_outputWriter;
     delete this;
 }
 
@@ -282,7 +320,8 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
     if (nodes.size() == 0)
     {
         // Default to all nodes
-        nodes = m_net->InputNodesForOutputs({});
+        std::vector<wstring> outputNodeNames;
+        nodes = m_net->InputNodesForOutputs(outputNodeNames);
     }
 
     for (const auto& n : nodes)

@@ -51,6 +51,11 @@ public:
         }
     }
 
+    void SetMBSizeToRecordCount()
+    {
+        m_mbSize = m_recordCount;
+    }
+
     void SetBoundary(size_t newSig)
     {
         if (m_switchFrame.size() == 0)

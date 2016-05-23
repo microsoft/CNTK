@@ -5,6 +5,7 @@
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
 
+
 #include "stdafx.h"
 #include "eval.h"
 
@@ -16,6 +17,7 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
+
 
 /// <summary>
 /// Program for demonstrating how to run model evaluations using the native evaluation interface
@@ -29,14 +31,21 @@ typedef std::map<std::wstring, std::vector<float>*> Layer;
 /// first run the example in <CNTK>/Examples/Image/MNIST. Once the model file 01_OneHidden is created,
 /// you can run this client.
 /// This program demonstrates the usage of the Evaluate method requiring the input and output layers as parameters.
+/// This client can evaluate in two modes:
+///     -batchMode (default) - input samples are evaluated in batches. Each evaluation has some overhead
+///     -streamMode - input samples are evaluated one by one. The network is initialized and the overhead of processing each sample is minimized.
+/// 
+/// To run the client in stream mode, STREAM_MODE to true.
 int _tmain(int argc, _TCHAR* argv[])
 {
+    bool STREAM_MODE = true;
+
     // Get the binary path (current working directory)
     argc = 0;
     std::wstring wapp(argv[0]);
     std::string app(wapp.begin(), wapp.end());
     std::string path = app.substr(0, app.rfind("\\"));
-
+    
     // Load the eval library
     auto hModule = LoadLibrary(L"evaldll.dll");
     if (hModule == nullptr)
@@ -86,8 +95,20 @@ int _tmain(int argc, _TCHAR* argv[])
     auto outputLayerName = outDims.begin()->first;
     outputLayer.insert(MapEntry(outputLayerName, &outputs));
 
-    // We can call the evaluate method and get back the results (single layer)...
-    model->Evaluate(inputLayer, outputLayer);
+    // We can call the evaluate method and get back the results...
+    if (STREAM_MODE) {
+        //Evaluation in stream mode
+        model->PrepareForStreamMode();
+        // For simpliciy, evaluate the same sample
+        for (int i = 0; i < 10; i++)
+        {
+            model->EvaluateStreamMode(inputLayer, outputLayer);
+        }
+    }
+    else
+    {
+        model->Evaluate(inputLayer, outputLayer);
+    }
 
     // Output the results
     for each (auto& value in outputs)
