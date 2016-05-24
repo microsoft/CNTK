@@ -291,7 +291,10 @@ public:
             if (!m_transpose)
                 m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
             else
+            {
+                // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
                 m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+            }
         }
     }
 
@@ -303,7 +306,12 @@ public:
         if (!m_transpose)
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
         else
+        {
+            // BackwardData adds results to the output so need to zero them out first.
+            // REVIEW alexeyk: should be rolled into BackwardData itself.
+            sliceOutputValue.SetValue(0);
             m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        }
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -627,6 +635,7 @@ public:
 
         auto sliceOutputGrad = GradientFor(fr);
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        // REVIEW alexeyk: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
         m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
     }
 

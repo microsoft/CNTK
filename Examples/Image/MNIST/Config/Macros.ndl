@@ -89,18 +89,17 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
 ]
 
 DeconvReLULayer(inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, lpad, upad, wScale, bValue) = [
+    # No bias here.
     w = ConvW(outMap, inWCount, wScale)
-    b = ConvB(inMap, bValue)
-    dc = DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
-    cpb = Plus(dc, b);
-    out = RectifiedLinear(dc);
+    act = RectifiedLinear(inp)
+    out = DeConv(w, act, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
 ]
 
 MaxNDPooling(inp, kW, kH, hStride, vStride) = [
-		p = Pooling(inp, "max", {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+    p = Pooling(inp, "max", {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]
 
 MaxNDUnpooling(inp, poolInp, kW, kH, hStride, vStride) = [
     mask = MaxPoolingMask(poolInp, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
-		up = MaxUnpooling(inp, mask, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={false, false, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+    up = MaxUnpooling(inp, mask, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={false, false, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]

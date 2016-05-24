@@ -23,8 +23,8 @@ DNN=[
     cMap1 = 16
     hStride1 = 2
     vStride1 = 2
-    wScale1 = 10
-    bValue1 = 1
+    wScale1 = 0.1
+    bValue1 = 0
     # weight[cMap1, kW1 * kH1 * inputChannels]
     # Conv2DReLULayer is defined in Macros.ndl
     conv1 = Conv2DReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, wScale1, bValue1)
@@ -43,7 +43,7 @@ DNN=[
     # deconv1
     lpad1 = 2
     upad1 = 1
-    # weight[cMap2, kW2 * kH2 * cMap1]
+    # weight[cMap1, kW1 * kH1 * inputChannels]
     # DeconvReLULayer is defined in Macros.ndl
     deconv1 = DeconvReLULayer(unpool1, kW1, kH1, imageC, 25, cMap1, hStride1, vStride1, lpad1, upad1, wScale1, bValue1)
  
@@ -55,6 +55,6 @@ DNN=[
     #LabelNodes = (labels)
     CriterionNodes = (mse)
     #EvalNodes = (err)
-    OutputNodes = (deconv1)
+    #OutputNodes = (deconv1)
 ]
 

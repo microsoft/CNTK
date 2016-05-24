@@ -13,7 +13,6 @@ deviceId = 0
 imageLayout = "cudnn"
 # Override the above as follows when running on CPU:
 # deviceId = -1
-# Note: Compared to GPU, this runs very slow.
 
 command = train:test
 
@@ -45,9 +44,9 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 1*5:0.03
-        momentumPerMB = 0*10:0.7
-        maxEpochs = 15
+        learningRatesPerMB = 0.001
+        momentumPerMB = 0.9
+        maxEpochs = 10
     ]
     
     # Note: this reader crashes if randomization is turned on.
