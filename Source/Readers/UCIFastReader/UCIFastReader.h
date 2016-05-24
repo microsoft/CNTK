@@ -134,7 +134,7 @@ public:
     virtual void Destroy();
     UCIFastReader()
     {
-        fprintf(stderr, "********** DEPRECATED ********** \n" 
+        fprintf(stderr, "********** DEPRECATED **********\n" 
             "UCIFastReader is no longer actively maintained.\n"
             "It is known to have defects, proceed with caution (better yet, switch to CNTKTextFormatReader)!\n"
             "For more details please see https://github.com/Microsoft/CNTK/wiki \n");

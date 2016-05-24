@@ -4,7 +4,7 @@ OutputDir = "$RootDir$/Output"
 
 command=Predict
 
-deviceId=-1                            
+deviceId=-1
 FeatureDimension=1
 
 Predict=[
@@ -18,20 +18,21 @@ Predict=[
   
         FeatureNodes=(features)
         OutputNodes=(v2)
-      ]   
+      ]
     ]
 
     reader = [
-        readerType = "UCIFastReader"
+        readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Network_Operator_Plus_Data.txt"
-        randomize = "none"
-        verbosity = 1
-        
-        features=[
-            start = 0
-            dim = $FeatureDimension$
+        randomize = false
+        input = [
+            features=[
+                alias = "X"
+                format = "dense"
+                dim = $FeatureDimension$
+            ]
         ]
     ]
-    
+
     outputPath = "$OutputDir$/out.txt"        # dump the output as text
 ]

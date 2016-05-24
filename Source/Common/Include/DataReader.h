@@ -275,25 +275,22 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
-    // Sample format below for UCIReader:
+    // Sample format below for CNTKTextFormatReader:
     // # Parameter values for the reader
     // reader=[
     //  # reader to use
-    //  readerType="UCIFastReader"
-    //  miniBatchMode="partial"
-    //  randomize=None
-    //  features=[
-    //    dim=784
-    //    start=1
-    //    file="c:\speech\mnist\mnist_test.txt"
-    //  ]
-    //  labels=[
-    //    dim=1
-    //      start=0
-    //      file="c:\speech\mnist\mnist_test.txt"
-    //      labelMappingFile="c:\speech\mnist\labels.txt"
-    //      labelDim=10
-    //      labelType="category"
+    //  readerType="CNTKTextFormatReader"
+    //  randomize=false
+    //  file="c:\speech\mnist\mnist_test_cntk_text.txt"
+    //  input=[
+    //    features=[
+    //      dim=784
+    //      format="dense"
+    //    ]
+    //    labels=[
+    //      dim=10
+    //      format="dense"
+    //    ]
     //  ]
     //]
     template <class ConfigRecordType>
