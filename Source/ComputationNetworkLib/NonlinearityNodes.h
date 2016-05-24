@@ -630,6 +630,7 @@ class ClassName : public ComparisonNode<ElemType, compType, polarity>   \
     UsingComputationNodeMembersBoilerplate;                             \
                                                                         \
 public:                                                                 \
+    static const std::wstring TypeName() { return Base::TypeName(); }   \
     DeclareConstructorFromConfigWithNumInputs(ClassName);               \
     ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
             : Base(deviceId, name)                                      \
