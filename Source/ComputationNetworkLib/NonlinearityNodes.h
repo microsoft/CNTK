@@ -638,8 +638,8 @@ public:                                                                 \
         }                                                               \
 };                                                                      \
                                                                         \
-template ClassName<float>;                                              \
-template ClassName<double>;
+template class ClassName<float>;                                        \
+template class ClassName<double>;
 
 DefineComparisonNode(ComparsionLessNode,         -1, 0)
 DefineComparisonNode(ComparisonEqualNode,         0, 0)
