@@ -17,7 +17,6 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include <chrono>
 #include <thread>
-#include <set>
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -571,27 +570,21 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
     int32_t curMBSize;
 
     int64_t buffer_offset = 0;
-    std::set<int32_t> unique_set;
 
     curMBSize = *(int32_t*) ((char*) data_buffer + buffer_offset);
     buffer_offset += sizeof(int32_t);
 
     for (int32_t c = 0; c < m_features.size(); c++)
     {
-        unique_set.clear();
         nnz = *(int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t);
+        fprintf(stderr, "read features %d nnz = %d.\n", c, nnz);
 
         ElemType* vals = (ElemType*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(ElemType) * nnz;
 
         int32_t* rowIndices = (int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t) * nnz;
-        for (auto i = 0; i < nnz; i++)
-        {
-            unique_set.insert(*(rowIndices + i));
-        }
-        fprintf(stderr, "read features %d nnz = %d, unique_nnz = %d.\n", c, nnz, (int)unique_set.size());
 
         int32_t* colIndices = (int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t) * (curMBSize + 1);
