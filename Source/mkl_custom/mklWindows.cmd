@@ -1,7 +1,6 @@
-@echo off
+rem @echo off
 echo.
 echo This batch file will build a custom MKL dynamic link library for usage by CNTK.
-echo It has to be executed under elevated access rights
 echo.
 echo Requirements:
 echo  - Intel MKL SDK installed on the machine
