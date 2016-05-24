@@ -546,7 +546,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
 template <class ElemType>
 UCIFastReader<ElemType>::~UCIFastReader()
 {
-    ReleaseMemory();
+    RuntimeError("Long live the Reader!");
     delete m_cachingReader;
     delete m_cachingWriter;
 }
