@@ -576,9 +576,9 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
 
     for (int32_t c = 0; c < m_features.size(); c++)
     {
+        // fprintf(stderr, "read features %d.\n", c);
         nnz = *(int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t);
-        fprintf(stderr, "read features %d nnz = %d.\n", c, nnz);
 
         ElemType* vals = (ElemType*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(ElemType) * nnz;
