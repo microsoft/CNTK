@@ -60,7 +60,6 @@ class If(ComputationNode):
         self.thenVal = thenVal
         self.elseVal = elseVal
         self.params_with_defaults = []
-        self.inputs = ['cond', 'thenVal', 'elseVal']
 
 class Sign(ComputationNode):
     def __init__(self, x, op_name='Sign', name=None):
@@ -635,9 +634,9 @@ class RectifiedLinear(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['z']
 
-class ReducePlus(ComputationNode):
-    def __init__(self, z, axis=0, op_name='ReducePlus', name=None):
-        super(ReducePlus, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+class ReduceSum(ComputationNode):
+    def __init__(self, z, axis=0, op_name='ReduceSum', name=None):
+        super(ReduceSum, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
         self.z = z
         self.axis = axis
         self.params_with_defaults = ['axis']
@@ -670,13 +669,6 @@ class Sigmoid(ComputationNode):
 class Sin(ComputationNode):
     def __init__(self, z, op_name='Sin', name=None):
         super(Sin, self).__init__(params=['z'], op_name=op_name, name=name)
-        self.z = z
-        self.params_with_defaults = []
-        self.inputs = ['z']
-
-class Softmax(ComputationNode):
-    def __init__(self, z, op_name='Softmax', name=None):
-        super(Softmax, self).__init__(params=['z'], op_name=op_name, name=name)
         self.z = z
         self.params_with_defaults = []
         self.inputs = ['z']

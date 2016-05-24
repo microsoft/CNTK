@@ -36,9 +36,11 @@ public:
     // Get information about particular chunk.
     void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
 
+    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+
 private:
     // Builds an index of the input data.
-    void Initialize(CorpusDescriptorPtr corpus);
+    void Initialize();
 
     // A buffer to keep data for all samples in a (variable length) sequence 
     // from a single input stream.
@@ -116,6 +118,9 @@ private:
     unsigned int m_numRetries; // specifies the number of times an unsuccessful 
     // file operation should be repeated (default value is 5).
 
+    // Corpus descriptor.
+    CorpusDescriptorPtr m_corpus;
+
     // throws runtime exception when number of parsing errors is 
     // greater than the specified threshold
     void IncrementNumberOfErrorsOrDie();
@@ -164,12 +169,12 @@ private:
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
 
     // Given a descriptor, retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
+    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor);
 
     // Given a descriptor, retrieves the data for the corresponding chunk from the file.
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
-    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
+    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -182,6 +187,8 @@ private:
     void SetNumRetries(unsigned int numRetries);
 
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
+
+    const std::wstring& GetSequenceKey(const SequenceDescriptor& s) const;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };

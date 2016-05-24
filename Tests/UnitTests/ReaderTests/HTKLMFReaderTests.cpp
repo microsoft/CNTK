@@ -577,10 +577,7 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop3)
         1);
 };
 
-
-
 BOOST_AUTO_TEST_SUITE_END()
-
 }
 
 }}}
