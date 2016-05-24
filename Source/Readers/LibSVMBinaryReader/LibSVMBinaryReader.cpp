@@ -338,6 +338,8 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
     m_fileSize = (size_t) m_inFile.tellg();
     
     m_maxMBSize = 0;
+    m_unique_sets.resize(numFeatures);
+    m_debugCount = 0;
 }
 
 template <class ElemType>
@@ -571,14 +573,22 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
     int32_t curMBSize;
 
     int64_t buffer_offset = 0;
-    std::set<int32_t> unique_set;
 
     curMBSize = *(int32_t*) ((char*) data_buffer + buffer_offset);
     buffer_offset += sizeof(int32_t);
 
+    m_debugCount += 1;
     for (int32_t c = 0; c < m_features.size(); c++)
     {
-        unique_set.clear();
+      if (m_debugCount == 2 || m_debugCount == 4 
+        || m_debugCount == 8 || m_debugCount == 12
+        || m_debugCount == 18 || m_debugCount == 24
+        || m_debugCount == 32 || m_debugCount == 40
+        || (m_debugCount > 40 && m_debugCount % 8 ==0)
+        ){
+        m_unique_sets[c].clear();
+      }
+        //unique_set.clear();
         nnz = *(int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t);
 
@@ -589,9 +599,9 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
         buffer_offset += sizeof(int32_t) * nnz;
         for (auto i = 0; i < nnz; i++)
         {
-            unique_set.insert(*(rowIndices + i));
+            m_unique_sets[c].insert(*(rowIndices + i));
         }
-        fprintf(stderr, "read features %d nnz = %d, unique_nnz = %d, curMBSize = %d.\n", c, nnz, (int)unique_set.size(), curMBSize);
+        fprintf(stderr, "read features %d nnz = %d, unique_nnz = %d, curMBSize = %d, debug = %d\n", c, nnz, (int)m_unique_sets[c].size(), curMBSize,m_debugCount);
 
         int32_t* colIndices = (int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t) * (curMBSize + 1);
