@@ -215,8 +215,6 @@ private:
     size_t* m_readOrder; // array to shuffle to reorder the dataset
     size_t m_readOrderLength;
     size_t m_maxMBSize;
-    std::vector<std::set<int32_t>> m_unique_sets;
-    size_t m_debugCount;
 
     std::vector<std::wstring> m_features;
     std::vector<std::wstring> m_labels;
