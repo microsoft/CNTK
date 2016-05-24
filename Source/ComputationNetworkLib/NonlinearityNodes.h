@@ -620,28 +620,30 @@ public:
     }
 };
 
-template <class ElemType> using ComparsionLessNode = ComparisonNode<ElemType, -1, 0>;
-template ComparsionLessNode<float>;
-template ComparsionLessNode<double>;
+// Define macro that defines and instantiates different comparison nodes.
+// Unfortuanately the C++ 11 type alias syntax doesn't work for mpic++ so we use this more ugly way.
+#define DefineComparisonNode(ClassName, compType, polarity)             \
+template <class ElemType>                                               \
+class ClassName : public ComparisonNode<ElemType, compType, polarity>   \
+{                                                                       \
+    typedef ComparisonNode<ElemType, compType, polarity> Base;          \
+    UsingComputationNodeMembersBoilerplate;                             \
+                                                                        \
+public:                                                                 \
+    DeclareConstructorFromConfigWithNumInputs(ClassName);               \
+    ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
+            : Base(deviceId, name)                                      \
+        {                                                               \
+        }                                                               \
+};                                                                      \
+                                                                        \
+template ClassName<float>;                                              \
+template ClassName<double>;
 
-template <class ElemType> using ComparisonEqualNode = ComparisonNode<ElemType, 0, 0>;
-template ComparisonEqualNode<float>;
-template ComparisonEqualNode<double>;
-
-template <class ElemType> using ComparisonGreaterNode = ComparisonNode<ElemType, 1, 0>;
-template ComparisonGreaterNode<float>;
-template ComparisonGreaterNode<double>;
-
-template <class ElemType> using ComparisonGreaterEqualNode = ComparisonNode<ElemType, -1, 1>;
-template ComparisonGreaterEqualNode<float>;
-template ComparisonGreaterEqualNode<double>;
-
-template <class ElemType> using ComparisonNotEqualNode = ComparisonNode<ElemType, 0, 1>;
-template ComparisonNotEqualNode<float>;
-template ComparisonNotEqualNode<double>;
-
-template <class ElemType> using ComparisonLessEqualNode = ComparisonNode<ElemType, 1, 1>;
-template ComparisonLessEqualNode<float>;
-template ComparisonLessEqualNode<double>;
-
+DefineComparisonNode(ComparsionLessNode,         -1, 0)
+DefineComparisonNode(ComparisonEqualNode,         0, 0)
+DefineComparisonNode(ComparisonGreaterNode,       1, 0)
+DefineComparisonNode(ComparisonGreaterEqualNode, -1, 1)
+DefineComparisonNode(ComparisonNotEqualNode,      0, 1)
+DefineComparisonNode(ComparisonLessEqualNode,     1, 1)
 }}}
