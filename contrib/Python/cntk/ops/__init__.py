@@ -998,7 +998,7 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
     param_shape = value.shape if value.shape else (1,)
     literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
 
-    literal_array = np.reshape(value, literal_shape)
+    literal_array = np.reshape(value, literal_shape, order = 'F')
 
     from io import BytesIO
     s = BytesIO()

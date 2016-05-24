@@ -51,22 +51,17 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # Reshaping is just moving the input values to different indexes of the result tensor.
     # If we would compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
-    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with some weight tensor. 
-    # For convienience choose '100 * expected_tensor' as weight.
-    # The expected gradient is identical to this weight tensor reshaped according the input shape.
+    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with itself.     
+    # The expected gradient is identical to the input tensor.
 
     a = I([input_tensor])
 
     # reshape into output shape
     reshaped_input = C.reshape(a, output_shape)
 
-    some_factor = 100
-    weight =  expected_tensor * some_factor
+    output = reshaped_input * expected_tensor
 
-    output = reshaped_input * weight
-    expected_gradient = input_tensor * some_factor 
-    
-    unittest_helper(output, None, [[expected_gradient]], device_id = device_id,
+    unittest_helper(output, None, [[input_tensor]], device_id = device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
 
@@ -231,20 +226,15 @@ def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shap
     # Reshaping is just moving the input values to different indexes of the result tensor.
     # If we would compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
-    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with some weight tensor. 
-    # For convienience choose '100 * expected_tensor' as weight.
-    # The expected gradient is identical to this weight tensor reshaped according the input shape.
+    # test if they get wrongly permuted during test. To this end we multiply the reshaping result with itself.     
+    # The expected gradient is identical to the input tensor.
 
     a = I([input_tensor])
 
     # swap two axes
     reshaped_input = C.transpose_dimensions(a, axis1, axis2)
 
-    some_factor = 100
-    weight =  expected_tensor
-    output = reshaped_input * weight
-        
-    expected_gradient = weight.transpose(*permutated_axes)
+    output = reshaped_input * expected_tensor            
     
     unittest_helper(output, None, [[input_tensor]], device_id = device_id,
                     precision=precision, clean_up=False, backward_pass=True, input_node=a)
