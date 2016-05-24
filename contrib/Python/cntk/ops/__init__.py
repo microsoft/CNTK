@@ -468,7 +468,7 @@ def round(arg, name=None):
 
 
 ################################################################################
-# non_linear ops
+# non_linear and nn ops
 ################################################################################
 
 
@@ -587,6 +587,26 @@ def softmax(x, name=None):
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
 
+def dropout(x, name=None):
+    """
+    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
+    that are set to zero are randomly chosen. This is commonly used to prevent 
+    overfitting during the training process.
+
+    The output tensor has the same shape as `x`, but with `dropoutRate` of the
+    elements set to zero (droped out).
+    
+    
+    Examples:
+        TBA
+            
+    Args:        
+        x: source tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import Dropout
+    return Dropout(x, name = name)
 
 def exp(x, name=None):
     """
@@ -707,13 +727,10 @@ def cond(flag, value_if_true, value_if_false, name=None):
     from cntk.ops.cntk1 import If
     return If(flag, value_if_true, value_if_false, name = name)
 
-
+    
 ################################################################################
 # recurrent ops
 ################################################################################
-
-
-
 
 def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
@@ -809,7 +826,6 @@ def reshape(x, shape, name=None):
     from cntk.ops.cntk1 import NewReshape
     return NewReshape(x, shape, 0, 0, name = name)
     
-
 def transpose_dimensions(x, axis1, axis2, name=None):
     """
     Reverses two axes of the tensor. The output tensor has the same data but with
