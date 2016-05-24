@@ -42,7 +42,7 @@ speechTrain = [
                 module = "ExperimentalHTKMLFReader"
 
                 # Description of input streams
-                inputs = [
+                input = [
                     # Description of a particular input stream
                     features = [
                         dim = 363
@@ -53,7 +53,7 @@ speechTrain = [
             [
                 type = "MLFDataDeserializer"                
                 module = "ExperimentalHTKMLFReader"
-                inputs = [
+                input = [
                     labels = [
                         mlfFile = "$DataDir$/glob_0000.mlf"
                         labelMappingFile = "$DataDir$/state.list"

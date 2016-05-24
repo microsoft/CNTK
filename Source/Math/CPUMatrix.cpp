@@ -715,11 +715,12 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     }
     else
     {
-		ElemType* bufPtr = Data();
+        ElemType* bufPtr = Data();
         long m = (long) GetNumElements();
         // 2-way thread parallelism is sufficient for the memory bound
         // operation of just setting the values of an array.
         const unsigned SETVALUE_NUM_THREADS = 2;
+        UNUSED(SETVALUE_NUM_THREADS); // in case OMP is turned off.
 #pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
@@ -1382,7 +1383,6 @@ void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 // Resize() -- change matrix size
 // This function is cheap if the matrix size does not change.
 // Current content is not preserved.
-// BUGBUG: There is code that relies on zero initialization (without, we get subtle variations of output). That is wrong--we should initialize to QNaN and see where it fails.
 // If growOnly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
 // If this object does not own its memory then new memory cannot be allocated (one can still shrink and/or reshape).
 template <class ElemType>
@@ -1411,8 +1411,9 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     }
 
     // success
-    m_numRows = numRows;
-    m_numCols = numCols;
+    m_sliceViewOffset = 0;
+    m_numRows         = numRows;
+    m_numCols         = numCols;
 }
 
 // allocated by the callee but should be deleted by the caller

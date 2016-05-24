@@ -298,11 +298,9 @@ public:
 #else
         W.close(numframes);
 #endif
-#ifdef _WIN32 // BUGBUG: and on Linux??
         // rename to final destination
         // (This would only fail in strange circumstances such as accidental multiple processes writing to the same file.)
         renameOrDie(tmppath, path);
-#endif
     }
 };
 
@@ -417,7 +415,8 @@ public:
                     if (xpath.empty())
                         malformed(pathParam);
                     e = msra::strfun::toint(consume(xpath, L"]"));
-                    if (!xpath.empty())
+                    // TODO \r should be handled elsewhere; refine this
+                    if (!xpath.empty() && xpath != L"\r")
                         malformed(pathParam);
                     isarchive = true;
                 }

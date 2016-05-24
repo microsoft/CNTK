@@ -733,6 +733,49 @@ def reshape(x, shape, name=None):
     from cntk.ops.cntk1 import NewReshape
     return NewReshape(x, shape, 0, 0, name = name)
 
+def slice(x, begin_index, end_index, axis=0, name=None): 
+    '''
+    Slice the input along an axis.
+
+    Note:
+        `axis` is zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+
+    Examples:
+        >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.asarray([[[1, 2, -3],
+        ...                     [4, 5,  6]]])
+        >>> x = C.input_numpy(data)
+        >>> # slice index 1 (second) at first axis
+        >>> C.eval(C.slice(x, 1, 2, 0))
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> # slice index 0 (first) at second axis
+        >>> C.eval(C.slice(x, 0, 1, 1))
+        [array([[[ 1.],
+                 [ 4.]]])]        
+
+    NumPy's way of slicing works, too:
+
+    Examples:
+        >>> C.eval(x[1])
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> C.eval(x[:,:2,:])
+        [array([[[ 1.,  2.],
+                 [ 4.,  5.]]])]
+
+    Args:
+        arg: input tensor
+        axis (int): axis along which `begin_index` and `end_index` will be used to slice the data. 
+
+    See also:
+        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import Slice
+    cntk_axis = axis+1
+    return Slice(x, begin_index, end_index, cntk_axis, name=name)
+
 ################################################################################
 # training ops
 ################################################################################
@@ -916,3 +959,4 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
     return ReconcileDynamicAxis(data_input, layout_input, name=name)
+

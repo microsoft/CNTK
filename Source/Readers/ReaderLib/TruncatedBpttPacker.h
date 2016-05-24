@@ -7,7 +7,6 @@
 
 #include "Reader.h"
 #include "MemoryProvider.h"
-#include "Transformer.h"
 #include "PackerBase.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -23,7 +22,7 @@ class TruncatedBPTTPacker : public PackerBase
 public:
     TruncatedBPTTPacker(
         MemoryProviderPtr memoryProvider,
-        TransformerPtr transformer,
+        SequenceEnumeratorPtr sequenceEnumerator,
         const std::vector<StreamDescriptionPtr>& streams);
 
     virtual Minibatch ReadMinibatch() override;

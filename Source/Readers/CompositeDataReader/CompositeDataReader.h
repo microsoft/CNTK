@@ -9,7 +9,9 @@
 #include <string>
 #include <future>
 #include "DataReader.h"
-#include <Reader.h>
+#include "Reader.h"
+#include "Transformer.h"
+#include "TransformController.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,13 +46,11 @@ struct Minibatch;
 //     - sequences can be transformed by the transformers applied on top of deserializer (TODO: not yet in place)
 //     - deserializers are bound together using the bundler - it bundles sequences with the same sequence id retrieved from different deserializers
 //     - packer is used to pack randomized sequences into the minibatch
-// The composite data reader is currently also responsible for asynchronous prefetching of the minibatch data.
+// The composite reader is currently also responsible for asynchronous prefetching of the minibatch data.
 
 // In order not to break existing configs and allow deserializers composition it exposes the same interface as the old readers, but it is not exposed
 // to external developers. The actual "reader developer" now has to provide deserializer(s) only.
 // TODO: Implement proper corpus descriptor.
-// TODO: Add transformers as the next step.
-// TODO: Same code as in ReaderLib shim, the one in the ReaderLib will be deleted as the next step.
 // TODO: Change this interface when SGD is changed.
 class CompositeDataReader : public Reader, protected Plugin
 {
@@ -68,7 +68,10 @@ public:
 
 private:
     void CreateDeserializers(const ConfigParameters& readerConfig);
+    void CreateTransforms(const ConfigParameters& deserializerConfig);
+
     IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
+    TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule);
 
 
     enum class PackingMode
@@ -103,9 +106,11 @@ private:
     // A list of deserializers.
     std::vector<IDataDeserializerPtr> m_deserializers;
 
-    // Randomizer.
-    // TODO: remove Transformer interface from randomizer.
-    TransformerPtr m_randomizer;
+    // A list of transformers.
+    std::vector<Transformation> m_transforms;
+
+    // Sequence provider.
+    SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // TODO: Should be removed. We already have matrices on this level.
     // Should just get the corresponding pinned memory.

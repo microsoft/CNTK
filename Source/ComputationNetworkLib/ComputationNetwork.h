@@ -478,6 +478,47 @@ public:
         return std::vector<ComputationNodeBasePtr>{node};
     }
 
+    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
+    {
+        std::vector<ComputationNodeBasePtr> outputNodes;
+
+        if (outputNodeNames.size() == 0)
+        {
+            if (OutputNodes().size() == 0)
+                RuntimeError("There is no default output node specified in the network.");
+
+            outputNodes = OutputNodes();
+        }
+        else
+        {
+            for (int i = 0; i < outputNodeNames.size(); i++)
+                outputNodes.push_back(GetNodeFromName(outputNodeNames[i]));
+        }
+
+        return outputNodes;
+    }
+
+    // Collect all input nodes that outputNodes depend on.
+    std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<std::wstring>& outputNodeNames)
+    {
+        // use map to remove duplicated items
+        auto outputNodes = OutputNodesByName(outputNodeNames);
+
+        std::set<ComputationNodeBasePtr> inputNodesMap;
+        for (auto& onode : outputNodes)
+        {
+            for (auto& inode : InputNodes(onode))
+                inputNodesMap.insert(inode);
+        }
+
+        std::vector<ComputationNodeBasePtr> inputNodes;
+        for (auto& inode : inputNodesMap)
+            inputNodes.push_back(inode);
+
+        return inputNodes;
+    }
+
+
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
     const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }

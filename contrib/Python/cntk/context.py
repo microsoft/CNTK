@@ -15,7 +15,7 @@ import numpy as np
 import shutil as sh
 
 from cntk.graph import ComputationNode
-from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
+from cntk.utils import get_cntk_cmd
 from .utils import cntk_to_numpy_shape
 from .utils import with_metaclass
 from .reader import InputMap
@@ -205,6 +205,22 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return description, inputs
 
+    def _generate_global_params(self, **kw):
+        '''
+        Generates key value global parameters for a CNTK configuration file.
+
+        Args:
+            kw (dict): dictionary of key values. e.g., modelPath="my/path/model"
+
+        Returns: 
+            configuration string
+        '''        
+
+        config = []        
+        for k,w in kw.items():
+            config.append('{0}={1}'.format(k, w))
+        return '\n'.join(config)
+
     def _generate_train_config(self, root_nodes, training_params, input_map, 
                                override_existing, action_name=None):
         '''
@@ -227,18 +243,17 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         description, inputs = self._generate_config(root_nodes, input_map)
 
         tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()        
-
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
         tmpl_dict = {
             'ActionName': action_name,
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelDescription': description,
-            'ModelPath': self.model_path,
+            'ModelDescription': description,            
             'Reader': input_map._to_config_description(),
             'SGD': training_params._to_config_description(),
         }
 
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
 
     def _generate_test_config(self, root_nodes, input_map=None, action_name=None):
@@ -259,16 +274,17 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         # we generate the config just to collect the lazy readers in input_map
         self._generate_config(root_nodes, input_map)
 
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
+
         tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
             'ActionName': action_name,
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelPath': self.model_path,
             'Reader': input_map._to_config_description(),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
     def _generate_write_config(self, input_map, action_name=None):
         '''
@@ -285,17 +301,18 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         if input_map is None:
             input_map = InputMap()
 
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
+        
         tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
 
         tmpl_dict = {
             'ActionName': action_name,
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelPath': self.model_path,
             'OutputFile': self.output_filename_base,
             'Reader': input_map._to_config_description(),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
     def _generate_eval_config(self, root_nodes, input_map=None, 
                               node_unit_test=False, action_name=None):
@@ -328,18 +345,19 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             desc, _inputs = dummy_input._to_config_description(input_map)
             description += '\n\n' + desc
 
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision))                                                
+
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
         
         tmpl_dict = {
             'ActionName': action_name,
-            'DevideId': self.device_id,
-            'Precision': self.precision,
             'NodeUnitTest': node_unit_test,
             'OutputFile': self.output_filename_base,
             'ModelDescription': description,
             'Reader': input_map._to_config_description(),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
 class LocalExecutionContext(AbstractContext):
 
@@ -350,7 +368,7 @@ class LocalExecutionContext(AbstractContext):
         name (str): context name
         device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
         precision (str): either float or double
-        clean_up: whether the temporary directory should be removed when the context is left        
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
     '''
 
     def __init__(self, name,
@@ -371,7 +389,6 @@ class LocalExecutionContext(AbstractContext):
         del _CONTEXT[self.name]
         if self.clean_up:
             sh.rmtree(self.directory)
-
         
     def _call_cntk(self, config_file_name, config_content, action_name):
         '''
@@ -665,6 +682,10 @@ class LocalExecutionContext(AbstractContext):
             dictionary containing `SamplesSeen`, `Perplexity`, and values for
             objective and evaluation error indexed by their node names
         '''
+        
+        if root_nodes is None and input_map is None:
+            raise ValueError('if input_map is None, you have to specify root_nodes.')        
+        
         action_name = "Test"
         config_content = self._generate_test_config(root_nodes, input_map, 
                                                     action_name = action_name)
@@ -810,7 +831,7 @@ class DeferredExecutionContext(AbstractContext):
             input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
         if root_nodes is None and input_map is None:
-            raise ValueError('If input_map is None, you have to specify root_nodes.')
+            raise ValueError('if input_map is None, you have to specify root_nodes.')
 
         action_name = "Test"
         config_content = self._generate_test_config(root_nodes, input_map, action_name)
