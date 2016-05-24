@@ -189,7 +189,7 @@ def is_tensor(data):
         if isinstance(data, np.ndarray):
             return True
 
-        if not isinstance(data[0], list):
+        if not (isinstance(data[0], list) or isinstance(data[0], np.ndarray)):
             return False
 
         data = data[0]

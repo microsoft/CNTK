@@ -43,12 +43,8 @@ def eval(node):
                         # One param needs to be an Input() node. This will be fixed in 
                         # CNTK soon, so that we can remove this workaround and evaluate a 
                         # network with no inputs.
-                        if first:
-                            if not isinstance(val, list):                
-                                # inputs have the outmost dimension for sequence dimension
-                                val = [val]
-        
-                            ir = input_numpy(val, alias=p, name=p)
+                        if first:        
+                            ir = input_numpy([val], alias=p, name=p)
                             setattr(node, p, ir)
                             first = False
                         else:
@@ -56,5 +52,5 @@ def eval(node):
                     else:
                         if isinstance(val, _InputComputationNodeBase) and first:
                             first = False
-        ctx.clean_up=False                   
+                          
         return ctx.eval(node)
