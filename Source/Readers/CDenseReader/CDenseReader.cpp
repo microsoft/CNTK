@@ -352,8 +352,8 @@ namespace Microsoft {
 				std::thread readZipData([this] { this->ReadZipData(m_readOrder, m_readOrderLength); });
 				readZipData.detach();
 				
-				for (m_dIndex = 0; m_dIndex < m_dThreadCnt; m_dIndex++){
-					m_unzipThreads[m_dIndex] = std::thread([this] { this->UnzipData(m_dIndex, m_readOrderLength); });
+				for (m_dIndex = 0; m_dIndex < m_dThreadCnt; m_dIndex++){					
+					m_unzipThreads[m_dIndex] = std::thread([this](int idx) { this->UnzipData(idx, m_numBlocks); }, m_dIndex);
 					m_unzipThreads[m_dIndex].detach();
 				}
 
