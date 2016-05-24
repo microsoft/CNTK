@@ -57,7 +57,7 @@ public:
 
     void MaxPoolingMask(const Mat& in, Mat& mask);
 
-    void MaxUnpooling(const Mat& out, Mat& mask, Mat& in);
+    void MaxUnpooling(const Mat& out, const Mat& mask, Mat& in);
 
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
@@ -99,7 +99,7 @@ protected:
 
     virtual void MaxPoolingMaskCore(const Mat& in, Mat& mask) = 0;
 
-    virtual void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) = 0;
+    virtual void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) = 0;
 
 protected:
     ConvolveGeometryPtr m_geometry;

@@ -4358,7 +4358,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
                                        const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& mask,
                                        CPUMatrix<ElemType>& input) const
 {
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)

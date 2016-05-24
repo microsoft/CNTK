@@ -314,7 +314,7 @@ protected:
         LogicError("MaxPoolingMask is not implemented for cuDNN engine.");
     }
 
-    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
     {
         UNUSED(out);
         UNUSED(mask);

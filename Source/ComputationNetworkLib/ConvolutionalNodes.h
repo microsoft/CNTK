@@ -637,7 +637,10 @@ public:
 
     void ForwardProp(const FrameRange& fr) override
     {
-        UNUSED(fr);
+        const Matrix<ElemType>& input = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& mask = Input(1)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        m_convEng->MaxUnpooling(input, mask, sliceOutputValue);
     }
 
     void Validate(bool isFinalValidationPass) override

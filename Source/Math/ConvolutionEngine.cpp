@@ -126,7 +126,7 @@ void ConvolutionEngine<ElemType>::MaxPoolingMask(const Mat& in, Mat& mask)
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, Mat& mask, Mat& in)
+void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& mask, Mat& in)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -253,7 +253,7 @@ protected:
         in.MaxPoolingMask(m_mpRowCol, *m_mpRowIndices, *m_indices, mask);
     }
 
-    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
     {
         out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, mask, in);
     }
@@ -556,7 +556,7 @@ protected:
         LogicError("MaxPoolingMask is not implemented for legacy engine.");
     }
 
-    void MaxUnpoolingCore(const Mat& out, Mat& mask, Mat& in) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
     {
         UNUSED(out);
         UNUSED(mask);
