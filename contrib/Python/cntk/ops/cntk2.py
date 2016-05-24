@@ -284,3 +284,12 @@ class Pass(ComputationNode):
         self._ = _
         self.params_with_defaults = []
         self.inputs = ['_']     
+        
+class TransposeDimensions(ComputationNode):
+    def __init__(self, _, axis1, axis2, op_name='CNTK2.TransposeDimensions', name=None):
+        super(TransposeDimensions, self).__init__(params=['_', 'axis1', 'axis2'], op_name=op_name, name=name)
+        self._ = _
+        self.axis1 = axis1
+        self.axis2 = axis2
+        self.params_with_defaults = []
+        self.inputs = ['_']        

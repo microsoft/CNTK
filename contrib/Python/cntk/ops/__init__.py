@@ -808,6 +808,32 @@ def reshape(x, shape, name=None):
     """    
     from cntk.ops.cntk1 import NewReshape
     return NewReshape(x, shape, 0, 0, name = name)
+    
+
+def transpose_dimensions(x, axis1, axis2, name=None):
+    """
+    Reverses two axes of the tensor. The output tensor has the same data but with
+    axis1 and axis2 swaped.
+    
+    The backward pass propagates the received gradient for the output-shape to the input shape.
+    
+    Note:
+        axes are zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+        
+    Examples:
+        >>> C.eval(C.transpose_dimensions([[0,1],[2,3],[4,5]], 1,2))
+        [array([[[ 0.,  4.,  3.],
+                 [ 2.,  1.,  5.]]])]
+            
+    Args:        
+        x: tensor to be reshaped
+        axis1: the axis to swap with axis2
+        axis2: the axis to swap with axis1
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import TransposeDimensions
+    return TransposeDimensions(x, axis1, axis2, name = name)
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
     '''
