@@ -587,6 +587,8 @@ def softmax(x, name=None):
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
 
+# unittests might require training and testing at the same time ? which 
+# sounds more like end2end test ?
 def dropout(x, name=None):
     """
     Compute a new tensor with `dropoutRate` perecent set to zero. The values 
