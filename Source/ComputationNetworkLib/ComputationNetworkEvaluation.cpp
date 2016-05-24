@@ -10,6 +10,7 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <vector>
@@ -28,6 +29,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // forward and backward propagation
 // -----------------------------------------------------------------------
 
+std::map<const std::wstring, int> g_nodes =
+{
+    { /*  1 */  L"ElementTimes", profilerEvtNodeElementTimes },
+    { /*  2 */  L"Exp", profilerEvtNodeExp },
+    { /*  3 */  L"FutureValue", profilerEvtNodeFutureValue },
+    { /*  4 */  L"GatherPacked", profilerEvtNodeGatherPacked },
+    { /*  5 */  L"Hardmax", profilerEvtNodeHardmax },
+    { /*  6 */  L"If", profilerEvtNodeIf },
+    { /*  7 */  L"InputValue", profilerEvtNodeInputValue },
+    { /*  8 */  L"LearnableParameter", profilerEvtNodeLearnableParameter },
+    { /*  9 */  L"Log", profilerEvtNodeLog },
+    { /* 10 */  L"Minus", profilerEvtNodeMinus },
+    { /* 11 */  L"PackedIndex", profilerEvtNodePackedIndex },
+    { /* 12 */  L"Pass", profilerEvtNodePass },
+    { /* 13 */  L"PastValue", profilerEvtNodePastValue },
+    { /* 15 */  L"Plus", profilerEvtNodePlus },
+    { /* 17 */  L"Reciprocal", profilerEvtNodeReciprocal },
+    { /* 18 */  L"ReduceElements", profilerEvtNodeReduceElements },
+    { /* 19 */  L"Reshape", profilerEvtNodeReshape },
+    { /* 20 */  L"RowStack", profilerEvtNodeRowStack },
+    { /* 21 */  L"SEQTraversalFlowControlNode", profilerEvtSEQTraversalFlowControlNode },
+    { /* 22 */  L"ScatterPacked", profilerEvtScatterPacked },
+    { /* 23 */  L"Sigmoid", profilerEvtSigmoid },
+    { /* 24 */  L"Slice", profilerEvtSlice },
+    { /* 25 */  L"Softmax", profilerEvtSoftmax },
+    { /* 26 */  L"SumColumnElements", profilerEvSumColumnElements },
+    { /* 28 */  L"Tanh", profilerEvtTanh },
+    { /* 29 */  L"Times", profilerEvtTimes },
+    { /* 30 */  L"TransposeTimes", profilerEvtTransposeTimes },
+    { /* 31 */  L"Where", profilerEvtWhere },
+    { /* 32 */  L"CrossEntropyWithSoftmax", profilerEvtNodeCrossEntropyWithSoftmax },
+    { /* 33 */  L"LogSoftmax", profilerEvtNodeLogSoftmax },
+};
+
+class NodePerfScope 
+{
+
+    int Find(const std::wstring& name)
+    {
+        auto it = g_nodes.find(name);
+        if (it != g_nodes.end())
+        {
+            fprintf(stderr, ".");
+            return it->second;
+        }
+        fprintf(stderr, "*** %ls: unknown\n", name.c_str());
+        return profilerEvtNodeUnknown;
+    }
+    int m_stateId;
+    ComputationNodeBasePtr m_node;
+    bool m_isBackward;
+    float m_dummy;
+public:
+
+    NodePerfScope(ComputationNodeBasePtr node, bool isBackward, const char* travMode)
+    {
+        //fprintf(stderr, "*** %s:%s: %ls %ls\n", isBackward ? "BWD" : "FWD", travMode, node->OperationName().c_str(), node->GetName().c_str());
+        m_node = node;
+        m_isBackward = isBackward;
+
+        m_stateId = ProfilerTimeBegin(Find(node->OperationName()));
+    }
+
+
+    ~NodePerfScope()
+    {
+        if (m_node->Is<ComputationNode<float>>())
+        {
+            auto n = m_node->As<ComputationNode<float>>();
+            auto& m = (!m_isBackward ? n->Value() : n->Gradient());
+            if (&m != nullptr)
+                m_dummy = m.Get00Element();
+        }
+        ProfilerTimeEnd(m_stateId);
+    }
+};
+
 // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
 // This calls ForwardProp() on all nodes in order of data flow through the network.
 // By default, the network is applied concurrently on all frames in a minibatch in parallel (PAR mode, a "map" operation)
@@ -41,7 +119,9 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
+    fprintf(stderr, "************FWD************\n");
     GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+    fprintf(stderr, "************FWD Done************\n");
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -66,6 +146,7 @@ static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
+    fprintf(stderr, "************Backprop************\n");
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
 
@@ -78,6 +159,7 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
 
     // backpropagate through the network
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
+    fprintf(stderr, "************Backprop End************\n");
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -140,6 +222,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 #endif
         if (node->IsOutOfDateWrtInputs())
         {
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+            NodePerfScope scope(node, false, "PAR");
             node->BeginForwardProp();
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
             node->EndForwardProp();
@@ -157,6 +241,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     {
         auto& node = *pnode;
 
+        CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+        NodePerfScope scope(node, true, "PAR");
         node->BeginBackprop();
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
         node->EndBackprop();
@@ -221,6 +307,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     {
         for (auto& node : m_nestedNodes)
         {
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+            NodePerfScope scope(node, false, "SEQ");
             node->ForwardProp(t);
             node->BumpEvalTimeStamp();
         }
@@ -252,6 +340,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
         {
             auto& node2 = *nodeIter2;
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
+            NodePerfScope scope(node2, true, "SEQ");
             node2->Backprop(t, true /*childrenInThisLoop*/, false /*childrenInOuterLoop*/);
             // The above flags tell Backprop() to skip back-propagation from inside a node into
             // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
@@ -267,6 +357,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
     {
         auto& node2 = *nodeIter2;
+        CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
+        NodePerfScope scope(node2, true, "SEQ");
         node2->Backprop(FrameRange(m_nestedNodes[0]->GetMBLayout()), false /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
     }
 
