@@ -118,7 +118,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         // TODO: this should be removed when MLF deserializer is rewritten.
         if (numberOfFrames < 2)
         {
-            fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: skipping utterance with %d frames because it has less than 2 frames: %ls\n",
+            fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: skipping utterance with %d frames because it has less than 2 frames: %s\n",
                 (int)numberOfFrames, description.GetKey().c_str());
             continue;
         }
@@ -128,6 +128,9 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         {
             continue;
         }
+
+        // No need to store key, releasing it.
+        description.ClearLogicalPath();
 
         size_t id = stringRegistry[key];
         description.SetId(id);

@@ -37,6 +37,11 @@ public:
         return m_path;
     }
 
+    void ClearLogicalPath()
+    {
+        m_path.ClearLogicalPath();
+    }
+
     size_t GetNumberOfFrames() const
     {
         return m_path.numframes();

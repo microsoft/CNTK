@@ -445,12 +445,19 @@ public:
 
         string GetLogicalPath() const
         {
+            assert(!logicalpath.empty());
             return logicalpath.substr(0, logicalpath.find_last_of("."));
+        }
+
+        void ClearLogicalPath()
+        {
+            logicalpath.clear();
         }
 
         // casting to wstring yields the logical path
         operator wstring() const
         {
+            assert(!logicalpath.empty());
             return msra::strfun::utf16(logicalpath);
         }
 
