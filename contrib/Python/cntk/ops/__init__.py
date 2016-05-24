@@ -331,9 +331,9 @@ def element_divide(left, right, name=None):
     return ElementDivide(left, right, name=name)
 
 
-def times(left, right, name=None):
+def times(left, right, output_rank=1, name=None):
     """
-    The output of this operation is the tensor product of the two input tensors.
+    The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. In case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
     The operator (@) has been overloaded and can equally be used instead of times().
@@ -343,20 +343,36 @@ def times(left, right, name=None):
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
         [array([[ 17.,  39.]])]
         
-        >>> C.eval(C.times([[1,2],[3,4],[5,6]], [[0.5,0.25],[0.25,0.5]]))
-        [array([[[ 1.  ,  1.25],
-                 [ 2.5 ,  2.75],
-                 [ 4.  ,  4.25]]])]
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=1))        
+        [array([[[ 28.,  34.],
+        [ 76.,  98.]]])]
+        
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
+        [array([[[[[  4.,   5.],
+          [  6.,   7.]],
+
+         [[ 12.,  17.],
+          [ 22.,  27.]]],
+
+
+        [[[ 20.,  29.],
+          [ 38.,  47.]],
+
+         [[ 28.,  41.],
+          [ 54.,  67.]]]]])]
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        left: left side matrix or tensor
+        right: right side matrix or tensor
+        output_rank: in case we have tensors as arguemnts, output_rank represents
+            the number of axes to be collapsed in order to transform the tensors
+            into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Times
-    return Times(left, right, name=name)
+    return Times(left, right, outputRank=output_rank, name=name)
 
 def identity(x, name=None):
     """
@@ -373,8 +389,8 @@ def identity(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk2 import Pass
-    return Pass(x, name=name)
+    from cntk.ops.cntk2 import Identity
+    return Identity(x, name=name)
 
 ################################################################################
 # non_diff ops
@@ -644,7 +660,7 @@ def log(x, name=None):
     Note:
         CNTK returns -85.1 for log(x) if `x` is negative or zero. The reason is that 
         it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float 
-        number for `log`, because this is the only guaranteed precision accross 
+        number for `log`, because this is the only guaranteed precision across 
         platforms. This will be changed to return `NaN` and `-inf`.
     """
     from cntk.ops.cntk2 import Log

@@ -110,7 +110,7 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
     result = a[ax_slices]
 
     unittest_helper(result, None, [[expected_result]], device_id=device_id, 
-                precision=precision, clean_up=False, backward_pass=False)
+                precision=precision, clean_up=True, backward_pass=False)
     # Backward pass test
     # ==================
     # The gradient of the slice operator is a tensor of the same shape as the

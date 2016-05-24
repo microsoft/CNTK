@@ -45,10 +45,10 @@ def eval(node):
                         # network with no inputs.
                         if first:
                             if not isinstance(val, list):                
-                                # inputs have the outmost dimension for sequences
+                                # inputs have the outmost dimension for sequence dimension
                                 val = [val]
         
-                            ir = input_numpy([val], alias=p, name=p)
+                            ir = input_numpy(val, alias=p, name=p)
                             setattr(node, p, ir)
                             first = False
                         else:
@@ -56,5 +56,5 @@ def eval(node):
                     else:
                         if isinstance(val, _InputComputationNodeBase) and first:
                             first = False
-                            
+        ctx.clean_up=False                   
         return ctx.eval(node)
