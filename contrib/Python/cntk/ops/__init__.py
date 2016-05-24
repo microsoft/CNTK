@@ -92,6 +92,137 @@ def error_prediction(target_vector, output_vector, name=None):
     from cntk.ops.cntk2 import ErrorPrediction
     return ErrorPrediction(target_vector, output_vector, name = name)
 
+################################################################################
+# comparison ops
+################################################################################
+
+def less(left, right, name=None):
+    """
+    Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0. 
+
+    Example:
+       >>> C.eval(C.less([41., 42., 43.], [42., 42., 42.]))
+         [array([[1., 0., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Less
+    return Less(left, right, name=name)
+
+
+def equal(left, right, name=None):
+    """
+    Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise. 
+
+    Example:
+        >>> C.eval(C.equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [1]))
+        [array([[0., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Equal
+    return Equal(left, right, name=name)
+
+def greater(left, right, name=None):
+    """
+    Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0. 
+
+    Example:
+        >>> C.eval(C.greater([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 0., 1.]])]
+        
+        >>> C.eval(C.greater([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Greater
+    return Greater(left, right, name=name)
+
+
+def greater_equal(left, right, name=None):
+    """
+    Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0. 
+
+    Example:
+        >>> C.eval(C.greater_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 1.]])]
+        
+        >>> C.eval(C.greater_equal([-1,0,1], [0]))
+        [array([[0., 1., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import GreaterEqual
+    return GreaterEqual(left, right, name=name)
+
+def not_equal(left, right, name=None):
+    """
+    Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0. 
+
+    Example:
+        >>> C.eval(C.not_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 0., 1.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import NotEqual
+    return NotEqual(left, right, name=name)
+
+def less_equal(left, right, name=None):
+    """
+    Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0. 
+
+    Example:
+        >>> C.eval(C.less_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import LessEqual
+    return LessEqual(left, right, name=name)
 
 ################################################################################
 # linear ops
@@ -602,6 +733,49 @@ def reshape(x, shape, name=None):
     from cntk.ops.cntk1 import NewReshape
     return NewReshape(x, shape, 0, 0, name = name)
 
+def slice(x, begin_index, end_index, axis=0, name=None): 
+    '''
+    Slice the input along an axis.
+
+    Note:
+        `axis` is zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+
+    Examples:
+        >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.asarray([[[1, 2, -3],
+        ...                     [4, 5,  6]]])
+        >>> x = C.input_numpy(data)
+        >>> # slice index 1 (second) at first axis
+        >>> C.eval(C.slice(x, 1, 2, 0))
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> # slice index 0 (first) at second axis
+        >>> C.eval(C.slice(x, 0, 1, 1))
+        [array([[[ 1.],
+                 [ 4.]]])]        
+
+    NumPy's way of slicing works, too:
+
+    Examples:
+        >>> C.eval(x[1])
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> C.eval(x[:,:2,:])
+        [array([[[ 1.,  2.],
+                 [ 4.,  5.]]])]
+
+    Args:
+        arg: input tensor
+        axis (int): axis along which `begin_index` and `end_index` will be used to slice the data. 
+
+    See also:
+        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import Slice
+    cntk_axis = axis+1
+    return Slice(x, begin_index, end_index, cntk_axis, name=name)
+
 ################################################################################
 # training ops
 ################################################################################
@@ -785,3 +959,4 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
     return ReconcileDynamicAxis(data_input, layout_input, name=name)
+

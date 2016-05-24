@@ -68,6 +68,8 @@ void Bundler::CreateChunkDescriptions()
         return;
     }
 
+    m_takePrimarySequenceLength = true;
+
     // Otherwise build bundling chunks using underlying deserializers.
     std::vector<SequenceDescription> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front()->m_numberOfSequences);
@@ -85,6 +87,7 @@ void Bundler::CreateChunkDescriptions()
         {
             auto sequence = sequenceDescriptions[sequenceIndex];
             bool isValid = true;
+            size_t sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
                 m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex].m_key, s);
@@ -94,12 +97,18 @@ void Bundler::CreateChunkDescriptions()
                     invalid.insert(sequenceIndex);
                     break;
                 }
+
+                sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
             }
 
             if (isValid)
             {
-                numberOfSamples += sequence.m_numberOfSamples;
+                numberOfSamples += sequenceSamples;
                 numberOfSequences++;
+
+                // Check whether the primary stream has the longest sequence.
+                // If yes, we can optimize exposed sequence descriptions in GetSequencesByChunk.
+                m_takePrimarySequenceLength = m_takePrimarySequenceLength && (sequenceSamples == sequence.m_numberOfSamples);
             }
         }
 
@@ -130,30 +139,52 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
     ChunkDescriptionPtr original = chunk->m_original;
     m_driver->GetSequencesForChunk(original->m_id, sequences);
 
-    // Can return because all sequences are clean.
-    if (chunk->m_invalid.empty())
-    {
-        // Reindexing, because currently m_ids provided by some deserializers (i.e. CNTKTextFormat) are not contiguous.
-        for (size_t i = 0; i < sequences.size(); ++i)
-        {
-            sequences[i].m_id = i;
-        }
-        return;
-    }
-
-    // Do cleansing.
     std::vector<SequenceDescription> result;
-    result.reserve(sequences.size());
-    for (size_t sequenceIndex = 0, index = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+    if (m_takePrimarySequenceLength) // No need to consult other deserializers.
     {
-        if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+        // Can return because all sequences are clean.
+        if (chunk->m_invalid.empty())
         {
-            continue;
+            return;
         }
 
-        result.push_back(sequences[sequenceIndex]);
-        result.back().m_id = index++;
+        // Do cleansing.
+        result.reserve(sequences.size());
+        for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+        {
+            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+            {
+                continue;
+            }
+
+            result.push_back(sequences[sequenceIndex]);
+        }
     }
+    else // need to get the max sequence length from other deserializers.
+         // TODO: This will change when the sequence length will be exposed per stream.
+    {
+        result.reserve(sequences.size());
+        SequenceDescription s;
+        for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
+        {
+            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+            {
+                continue;
+            }
+
+            auto sequence = sequences[sequenceIndex];
+            size_t sequenceSamples = sequence.m_numberOfSamples;
+            for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+            {
+                m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequence.m_key, s);
+                assert(s.m_isValid);
+                sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
+            }
+            sequence.m_numberOfSamples = sequenceSamples;
+            result.push_back(sequence);
+        }
+    }
+
     std::swap(sequences, result);
 }
 

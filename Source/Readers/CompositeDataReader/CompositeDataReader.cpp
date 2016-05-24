@@ -32,7 +32,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
     m_provider(provider)
 {
     // Identifying packing mode.
-    bool frameMode = config(L"frameMode", true);
+    bool frameMode = config(L"frameMode", false);
     bool truncated = config(L"truncated", false);
     if (frameMode && truncated)
     {
@@ -73,11 +73,11 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
     {
         // Bundling deserializers together.
         // Option whether we need to check data between different deserializers.
-        bool cleanse = config(L"checkData", false);
+        bool cleanse = config(L"checkData", true);
         deserializer = std::make_shared<Bundler>(config, deserializer, m_deserializers, cleanse);
     }
 
-    int verbosity = config(L"verbosity", 2);
+    int verbosity = config(L"verbosity", 0);
 
     // Pick up the randomizer.
     bool randomize = config(L"randomize", false);

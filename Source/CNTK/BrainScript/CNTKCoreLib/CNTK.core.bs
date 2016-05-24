@@ -26,6 +26,17 @@ IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ]
 
 
 ##############################################################################
+# comparison functions
+##############################################################################
+
+Less         = CNTK2.Less
+Equal        = CNTK2.Equal
+Greater      = CNTK2.Greater
+GreaterEqual = CNTK2.GreaterEqual
+NotEqual     = CNTK2.NotEqual
+LessEqual    = CNTK2.LessEqual
+
+##############################################################################
 # ComputationNodes
 ##############################################################################
 
@@ -61,6 +72,18 @@ CNTK2 = [
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
     Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    Slice(_, beginIndex, endIndex, axis=1, tag='') =
+        if axis < 0 then [ # time axis: specify -1
+            beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, _)) else                 BS.Loop.IsLastN  (-beginIndex, _)
+            endFlags   = if endIndex   > 0 then                 BS.Loop.IsFirstN (endIndex,   _)  else BS.Boolean.Not (BS.Loop.IsLastN  (-endIndex,   _))
+            flags = if      beginIndex == 0 then endFlags
+                    else if endIndex   == 0 then beginFlags
+                    else                         BS.Boolean.And (beginFlags, endFlags)
+            out = if beginIndex == 0 && endIndex == 0
+                  then _
+                  else BS.Sequences.Gather (flags, _)
+        ].out
+        else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
@@ -105,7 +128,15 @@ CNTK2 = [
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
 
-    // 12. Others
+    // 13. Comparison nodes
+    Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
+	Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
+	Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
+	GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
+	NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
+	LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
+
+    // 13. Others
     // None so far.
 ]
 
@@ -249,7 +280,7 @@ SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; 
 # ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
-Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
+Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 

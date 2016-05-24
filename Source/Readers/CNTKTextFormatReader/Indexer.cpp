@@ -23,7 +23,7 @@ Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
     m_pos(nullptr),
     m_done(false),
     m_hasSequenceIds(!skipSequenceIds),
-    m_maxChunkSize(chunkSize)
+    m_index(chunkSize)
 {
     if (m_file == nullptr)
     {
@@ -53,24 +53,7 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::AddSequence(SequenceDescriptor& sd)
-{
-    assert(!m_chunks.empty());
-    ChunkDescriptor* chunk = &m_chunks.back();
-    if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
-    {
-        m_chunks.push_back({});
-        chunk = &m_chunks.back();
-        chunk->m_id = m_chunks.size() - 1;
-    }
-    chunk->m_byteSize += sd.m_byteSize;
-    chunk->m_numberOfSequences++;
-    chunk->m_numberOfSamples += sd.m_numberOfSamples;
-    sd.m_chunkId = chunk->m_id;
-    chunk->m_sequences.push_back(sd);
-}
-
-void Indexer::BuildFromLines()
+void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
 {
     assert(m_pos == m_bufferStart);
     m_hasSequenceIds = false;
@@ -82,13 +65,12 @@ void Indexer::BuildFromLines()
         if (m_pos)
         {
             SequenceDescriptor sd = {};
-            sd.m_id = lines;
             sd.m_numberOfSamples = 1;
             sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            AddSequence(sd);
+            AddSequenceIfIncluded(corpus, lines, sd);
             ++m_pos;
             ++lines;
         }
@@ -103,30 +85,22 @@ void Indexer::BuildFromLines()
         // There's a number of characters, not terminated by a newline,
         // add a sequence to the index, parser will have to deal with it.
         SequenceDescriptor sd = {};
-        sd.m_id = lines;
         sd.m_numberOfSamples = 1;
         sd.m_isValid = true;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-        AddSequence(sd);
+        AddSequenceIfIncluded(corpus, lines, sd);
     }
-
 }
 
 void Indexer::Build(CorpusDescriptorPtr corpus)
 {
-    if (!m_chunks.empty())
+    if (!m_index.IsEmpty())
     {
         return;
     }
 
-    if (m_maxChunkSize > 0)
-    {
-        auto fileSize = filesize(m_file);
-        m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
-    }
-
-    m_chunks.push_back({});
+    m_index.Reserve(filesize(m_file));
 
     RefillBuffer(); // read the first block of data
     if (m_done)
@@ -147,7 +121,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     if (!m_hasSequenceIds || m_bufferStart[0] == NAME_PREFIX)
     {
         // skip sequence id parsing, treat lines as individual sequences
-        BuildFromLines();
+        BuildFromLines(corpus);
         return;
     }
 
@@ -160,43 +134,43 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     }
 
     SequenceDescriptor sd = {};
-    sd.m_id = id;
     sd.m_fileOffsetBytes = offset;
     sd.m_isValid = true;
 
+    size_t currentKey = id;
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
         offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
-        if (!m_done && TryGetSequenceId(id) && id != sd.m_id)
+        if (!m_done && TryGetSequenceId(id) && id != currentKey)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            AddSequenceIfIncluded(corpus, sd);
+            AddSequenceIfIncluded(corpus, currentKey, sd);
 
             sd = {};
-            sd.m_id = id;
             sd.m_fileOffsetBytes = offset;
             sd.m_isValid = true;
+            currentKey = id;
         }
     }
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    AddSequenceIfIncluded(corpus, sd);
+    AddSequenceIfIncluded(corpus, currentKey, sd);
 }
 
-void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, SequenceDescriptor& sd)
+void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd)
 {
     auto& stringRegistry = corpus->GetStringRegistry();
-    auto key = msra::strfun::utf16(std::to_string(sd.m_id));
+    auto key = msra::strfun::utf16(std::to_string(sequenceKey));
     if (corpus->IsIncluded(key))
     {
         sd.m_key.m_sequence = stringRegistry[key];
         sd.m_key.m_sample = 0;
-        AddSequence(sd);
+        m_index.AddSequence(sd);
     }
 }
 

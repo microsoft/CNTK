@@ -15,11 +15,11 @@ import sys
 REGEX_STANDARD = re.compile(r'(?P<operator>\w+)\((?P<operands>.*?)\) = .*')
 REGEX_COMPNODE = re.compile(
     r'(?P<operator>\w+) ?\((?P<operands>.*?)\)\s*=\s*new\s*ComputationNode\s*\[\s*(?P<inputs>.*?inputs\s*=.*?[;|\/])?')
-REGEX_ALIAS = re.compile(r'(?P<operator>[A-Z]\w*)\s*=\s*(?P<alias>\w+)\s*(//.*|)')
+REGEX_ALIAS = re.compile(r'(?P<operator>[A-Z]\w*)\s*=\s*(?P<alias>\w+)\s*(//.*|#.*|)$')
 # ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix,
 # Reciprocal(anotherMatrix))
 REGEX_INSTANTIATION = re.compile(
-    r'(?P<operator>\w+)\((?P<operands>.*?)\)\s*=\s*(?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|)')
+    r'(?P<operator>\w+)\((?P<operands>.*?)\)\s*=\s*(?P<inst_operator>\w+)\s*\((?P<inst_operands>.*?)\)\s*(//.*|#.*|)')
 
 REGEX_COMMENT = re.compile(r'/\*.*\*/')
 
@@ -285,6 +285,17 @@ CNTK2_MANUAL_PREFIX = """\
 
 from cntk.graph import ComputationNode, _InputComputationNodeBase, _ImageInputComputationNodeBase
 
+class Slice(ComputationNode):
+    def __init__(self, _, beginIndex, endIndex, axis=1, op_name='CNTK2.Slice',
+            name=None):
+        super(Slice, self).__init__(params=['_', 'beginIndex', 'endIndex', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
 class Ceil(ComputationNode):
     def __init__(self, _, op_name='CNTK2.Ceil', name=None):
         super(Ceil, self).__init__(params=['_'], op_name=op_name, name=name)
@@ -361,7 +372,11 @@ def convert_bs_to_python(bs_fn, out_dir):
                 comp_match = REGEX_COMPNODE.match(line)
                 if comp_match:
                     ns = 'CNTK2.' if part_of_file==CNTK2_SECT else ''
-                    op = CompNodeOperator(comp_match, ns)
+                    try:
+                        op = CompNodeOperator(comp_match, ns)
+                    except ValueError:
+                        print('ERROR while parsing: %s'%line)
+                        continue
                     if op.name in OPERATORS_TO_IGNORE and part_of_file==COMP_NODE_SECT:
                         continue
                     pyf.write(str(op) + '\n')

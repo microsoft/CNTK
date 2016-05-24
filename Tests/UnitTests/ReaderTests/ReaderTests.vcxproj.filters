@@ -306,6 +306,15 @@
     <Text Include="Control\CNTKTextFormatReader\200x200x2_seq2seq_dense_sorted.txt">
       <Filter>Control\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_and_5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">

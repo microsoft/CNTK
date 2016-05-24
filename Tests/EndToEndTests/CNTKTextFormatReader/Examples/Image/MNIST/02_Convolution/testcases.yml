@@ -17,7 +17,7 @@ testCases:
       - learning rate per sample = {{float}}
       - momentum = {{float}}
 
-# TODO destabilized by integration of 16b606c
+# TODO destabilized by integration of 16b606c (VSO item #414)
 #  Epochs (with low train loss) must be finished with expected results:
 #    patterns:
 #      - Finished Epoch[{{integer}} of {{integer}}]
