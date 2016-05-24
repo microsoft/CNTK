@@ -33,7 +33,7 @@ BlockRandomizer::BlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
-      m_lastSeenChunkId(SIZE_MAX),
+      m_lastSeenChunkId(CHUNKID_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence)
 {
@@ -53,7 +53,7 @@ BlockRandomizer::BlockRandomizer(
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    m_lastSeenChunkId = SIZE_MAX;
+    m_lastSeenChunkId = CHUNKID_MAX;
 
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
@@ -106,7 +106,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 
         // Unloading all chunk data from memory.
         m_chunks.clear();
-        m_lastSeenChunkId = SIZE_MAX;
+        m_lastSeenChunkId = CHUNKID_MAX;
     }
 }
 

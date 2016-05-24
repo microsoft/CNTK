@@ -34,13 +34,13 @@ class HTKChunkDescription
     size_t m_totalFrames = 0;
 
     // Chunk ID (only used for diagnostics)
-    size_t m_chunkId;
+    ChunkIdType m_chunkId;
     
 public:
 
-    HTKChunkDescription() : m_chunkId(SIZE_MAX) { };
+    HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
 
-    HTKChunkDescription(size_t chunkId) : m_chunkId(chunkId) { };
+    HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
     size_t GetNumberOfUtterances() const
@@ -130,7 +130,7 @@ public:
 
             if (verbosity)
             {
-                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %" PRIu64 " (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                         m_chunkId,
                         m_utterances.size(),
                         m_totalFrames,
@@ -160,7 +160,7 @@ public:
 
         if (verbosity)
         {
-            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %" PRIu64 " (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                     m_chunkId,
                     m_utterances.size(),
                     m_totalFrames,

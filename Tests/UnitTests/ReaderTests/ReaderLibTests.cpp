@@ -26,11 +26,11 @@ private:
     size_t m_chunkBegin;
     size_t m_chunkEnd;
     TensorShapePtr m_sampleLayout;
-    size_t m_sequenceLength;
+    SequenceSampleCountType m_sequenceLength;
     vector<vector<float>>& m_sequenceData;
 
 public:
-    MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, size_t sequenceLength)
+    MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, SequenceSampleCountType sequenceLength)
         : m_chunkBegin(chunkBegin),
           m_chunkEnd(chunkEnd),
           m_sampleLayout(make_shared<TensorShape>(1)),
@@ -59,7 +59,7 @@ public:
 class MockDeserializer : public IDataDeserializer
 {
 private:
-    size_t m_sequenceLength;
+    SequenceSampleCountType m_sequenceLength;
     size_t m_numChunks;
     size_t m_numSequencesPerChunk;
     vector<SequenceDescription> m_descriptions;
@@ -69,7 +69,7 @@ private:
     vector<vector<float>> m_sequenceData;
 
 public:
-    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, vector<float>& data, size_t sequenceLength = 1)
+    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, vector<float>& data, SequenceSampleCountType sequenceLength = 1)
         : m_numChunks(numChunks),
           m_numSequencesPerChunk(numSequencesPerChunks),
           m_sampleLayout(make_shared<TensorShape>(1)),
@@ -90,13 +90,12 @@ public:
             m_descriptions.push_back(SequenceDescription {
                 i,
                 m_sequenceLength,
-                i / m_numSequencesPerChunk,
-                true,
+                (ChunkIdType) (i / m_numSequencesPerChunk),
                 { 0, i }
             });
         }
 
-        for (size_t i = 0; i < numChunks; i++)
+        for (ChunkIdType i = 0; i < numChunks; i++)
         {
             m_chunkDescriptions.push_back(make_shared<ChunkDescription>(ChunkDescription {
                 i,
@@ -121,7 +120,7 @@ public:
         return m_streams;
     }
 
-    virtual ChunkPtr GetChunk(size_t chunkId) override
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override
     {
         assert(chunkId < m_numChunks);
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
@@ -130,7 +129,7 @@ public:
         return chunk;
     }
 
-    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
+    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
     {
         throw logic_error("Not implemented");
     }
@@ -140,7 +139,7 @@ public:
         return m_chunkDescriptions;
     }
 
-    virtual void GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& descriptions) override
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& descriptions) override
     {
         for (size_t i = chunkId * m_numSequencesPerChunk; i < (chunkId + 1) * m_numSequencesPerChunk; i++)
         {
@@ -148,7 +147,6 @@ public:
                 i,
                 m_sequenceLength,
                 chunkId,
-                true,
                 { 0, i }
             });
         }
@@ -192,7 +190,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
         if (i < data.size())
         {
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
+            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
             actual.push_back(*((float*)data.m_data));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
@@ -227,7 +225,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks1)
         if (i < data.size())
         {
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
+            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
             actual.push_back(*((float*)data.m_data));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
@@ -266,7 +264,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
         if (i < data.size())
         {
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
+            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
             actual.push_back(*((float*)data.m_data));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
@@ -359,7 +357,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
         if (i < 10)
         {
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
+            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
             actual.push_back(*((float*)data.m_data));
 
         }
@@ -395,7 +393,7 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
         if (i < data.size())
         {
             auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1);
+            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
             actual.push_back(*((float*)data.m_data));
         }
 

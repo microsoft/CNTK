@@ -50,6 +50,10 @@ void Bundler::CreateChunkDescriptions()
     {
         RuntimeError("Driving deserializer should at least provide one chunk.");
     }
+    if (CHUNKID_MAX < chunks.size())
+    {
+        RuntimeError("Driving deserializer provided too many chunks.");
+    }
 
     m_chunks.reserve(chunks.size());
 
@@ -61,7 +65,7 @@ void Bundler::CreateChunkDescriptions()
             auto cd = std::make_shared<BundlerChunkDescription>();
             cd->m_numberOfSamples = c->m_numberOfSamples;
             cd->m_numberOfSequences = c->m_numberOfSequences;
-            cd->m_id = m_chunks.size();
+            cd->m_id = (ChunkIdType) m_chunks.size();
             cd->m_original = c;
             m_chunks.push_back(cd);
         }
@@ -74,7 +78,7 @@ void Bundler::CreateChunkDescriptions()
     std::vector<SequenceDescription> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front()->m_numberOfSequences);
     SequenceDescription s;
-    for (size_t chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
+    for (ChunkIdType chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
         size_t numberOfSamples = 0;
         size_t numberOfSequences = 0;
@@ -90,15 +94,14 @@ void Bundler::CreateChunkDescriptions()
             size_t sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
-                m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex].m_key, s);
-                if (!s.m_isValid)
+                isValid = m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex].m_key, s);
+                if (!isValid)
                 {
-                    isValid = false;
                     invalid.insert(sequenceIndex);
                     break;
                 }
 
-                sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
+                sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
             }
 
             if (isValid)
@@ -118,7 +121,7 @@ void Bundler::CreateChunkDescriptions()
             auto cd = std::make_shared<BundlerChunkDescription>();
             cd->m_numberOfSamples = numberOfSamples;
             cd->m_numberOfSequences = numberOfSequences;
-            cd->m_id = m_chunks.size();
+            cd->m_id = (ChunkIdType) m_chunks.size();
             cd->m_original = chunks[chunkIndex];
             m_chunks.push_back(cd);
             cd->m_invalid = std::move(invalid);
@@ -133,7 +136,7 @@ ChunkDescriptions Bundler::GetChunkDescriptions()
 }
 
 // Gets sequence descriptions for a chunk.
-void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& sequences)
+void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& sequences)
 {
     BundlerChunkDescriptionPtr chunk = m_chunks[chunkId];
     ChunkDescriptionPtr original = chunk->m_original;
@@ -173,11 +176,10 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
             }
 
             auto sequence = sequences[sequenceIndex];
-            size_t sequenceSamples = sequence.m_numberOfSamples;
+            SequenceSampleCountType sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
                 m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequence.m_key, s);
-                assert(s.m_isValid);
                 sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
             }
             sequence.m_numberOfSamples = sequenceSamples;
@@ -193,7 +195,7 @@ class Bundler::BundlingChunk : public Chunk
 {
     size_t m_numberOfInputs;
     Bundler* m_parent;
-    size_t m_chunkId;
+    ChunkIdType m_chunkId;
 
     // A mapping between exposed sequence id and inner chunk for each deserializer.
     // Index i of the vector maps to the chunk of inner sequence (i / number of deserializers) of
@@ -206,7 +208,7 @@ class Bundler::BundlingChunk : public Chunk
     DISABLE_COPY_AND_MOVE(BundlingChunk);
 
 public:
-    BundlingChunk(size_t numberOfInputs, Bundler* parent, size_t chunkId)
+    BundlingChunk(size_t numberOfInputs, Bundler* parent, ChunkIdType chunkId)
         : m_numberOfInputs(numberOfInputs), m_parent(parent), m_chunkId(chunkId)
     {
         BundlerChunkDescriptionPtr chunk = m_parent->m_chunks[m_chunkId];
@@ -281,7 +283,7 @@ public:
 };
 
 // Get chunk data by id.
-ChunkPtr Bundler::GetChunk(size_t chunkId)
+ChunkPtr Bundler::GetChunk(ChunkIdType chunkId)
 {
     return std::make_shared<BundlingChunk>(m_streams.size(), this, chunkId);
 }

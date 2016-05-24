@@ -570,7 +570,7 @@ private:
 
         // done: swap it in
         int64_t bytepos = fgetpos(f);
-        setkind(kind, dim, H.sampperiod, ppath); // this checks consistency
+        setkind(kind, dim, H.sampperiod, ppath.physicallocation()); // this checks consistency
         this->physicalpath.swap(physpath);
         this->physicaldatastart = bytepos;
         this->physicalframes = H.nsamples;

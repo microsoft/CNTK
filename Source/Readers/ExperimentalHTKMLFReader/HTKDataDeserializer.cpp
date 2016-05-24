@@ -155,7 +155,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     m_chunks.resize(0);
     m_chunks.reserve(m_totalNumberOfFrames / ChunkFrames);
 
-    int chunkId = -1;
+    ChunkIdType chunkId = CHUNKID_MAX;
     size_t startFrameInsideChunk = 0;
     foreach_index(i, utterances)
     {
@@ -218,7 +218,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
     ChunkDescriptions chunks;
     chunks.reserve(m_chunks.size());
 
-    for (size_t i = 0; i < m_chunks.size(); ++i)
+    for (ChunkIdType i = 0; i < m_chunks.size(); ++i)
     {
         auto cd = make_shared<ChunkDescription>();
         cd->m_id = i;
@@ -233,7 +233,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
-void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result)
+void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
@@ -254,7 +254,6 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
                 f.m_key.m_sequence = sequence;
                 f.m_key.m_sample = k;
                 f.m_id = offsetInChunk++;
-                f.m_isValid = true;
                 f.m_numberOfSamples = 1;
                 result.push_back(f);
             }
@@ -267,8 +266,12 @@ void HTKDataDeserializer::GetSequencesForChunk(size_t chunkId, vector<SequenceDe
             f.m_key.m_sequence = sequence;
             f.m_key.m_sample = 0;
             f.m_id = offsetInChunk++;
-            f.m_isValid = true;
-            f.m_numberOfSamples = utterance->GetNumberOfFrames();
+            if (SEQUENCESAMPLECOUNT_MAX < utterance->GetNumberOfFrames())
+            {
+                RuntimeError("Maximum number of samples per sequence exceeded");
+            }
+
+            f.m_numberOfSamples = (SequenceSampleCountType) utterance->GetNumberOfFrames();
             result.push_back(f);
         }
     }
@@ -305,7 +308,7 @@ private:
 class HTKDataDeserializer::HTKChunk : public Chunk
 {
 public:
-    HTKChunk(HTKDataDeserializer* parent, size_t chunkId) : m_parent(parent), m_chunkId(chunkId)
+    HTKChunk(HTKDataDeserializer* parent, ChunkIdType chunkId) : m_parent(parent), m_chunkId(chunkId)
     {
         auto& chunkDescription = m_parent->m_chunks[chunkId];
 
@@ -333,11 +336,11 @@ public:
 private:
     DISABLE_COPY_AND_MOVE(HTKChunk);
     HTKDataDeserializer* m_parent;
-    size_t m_chunkId;
+    ChunkIdType m_chunkId;
 };
 
 // Gets a data chunk with the specified chunk id.
-ChunkPtr HTKDataDeserializer::GetChunk(size_t chunkId)
+ChunkPtr HTKDataDeserializer::GetChunk(ChunkIdType chunkId)
 {
     return make_shared<HTKChunk>(this, chunkId);
 };
@@ -391,7 +394,11 @@ struct HTKFloatSequenceData : DenseSequenceData
 {
     HTKFloatSequenceData(FeatureMatrix&& data) : m_buffer(data)
     {
-        m_numberOfSamples = data.GetNumberOfColumns();
+        m_numberOfSamples = (SequenceSampleCountType)data.GetNumberOfColumns();
+        if (m_numberOfSamples != data.GetNumberOfColumns())
+        {
+            RuntimeError("Maximum number of samples per sequence exceeded.");
+        }
         m_data = m_buffer.GetData();
     }
 
@@ -404,7 +411,11 @@ struct HTKDoubleSequenceData : DenseSequenceData
 {
     HTKDoubleSequenceData(FeatureMatrix& data) : m_buffer(data.GetData(), data.GetData() + data.GetTotalSize())
     {
-        m_numberOfSamples = data.GetNumberOfColumns();
+        m_numberOfSamples = (SequenceSampleCountType)data.GetNumberOfColumns();
+        if (m_numberOfSamples != data.GetNumberOfColumns())
+        {
+            RuntimeError("Maximum number of samples per sequence exceeded.");
+        }
         m_data = m_buffer.data();
     }
 
@@ -414,7 +425,7 @@ private:
 
 // Get a sequence by its chunk id and sequence id.
 // Sequence ids are guaranteed to be unique inside a chunk.
-void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<SequenceDataPtr>& r)
+void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<SequenceDataPtr>& r)
 {
     const auto& chunkDescription = m_chunks[chunkId];
     size_t utteranceIndex = m_frameMode ? chunkDescription.GetUtteranceForChunkFrameIndex(id) : id;
@@ -458,27 +469,22 @@ void HTKDataDeserializer::GetSequenceById(size_t chunkId, size_t id, vector<Sequ
     r.push_back(result);
 }
 
-static SequenceDescription s_InvalidSequence{0, 0, 0, false};
-
 // Gets sequence description by its key.
-void HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
+bool HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& d)
 {
     assert(!m_primary);
     auto iter = m_keyToChunkLocation.find(key.m_sequence);
     if (iter == m_keyToChunkLocation.end())
     {
-        // Unknown sequence. Return invalid.
-        d = s_InvalidSequence;
+        return false;
     }
-    else
-    {
-        const auto& chunk = m_chunks[iter->second.first];
-        const auto& sequence = chunk.GetUtterance(iter->second.second);
-        d.m_chunkId = sequence->GetChunkId();
-        d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
-        d.m_isValid = true;
-        d.m_numberOfSamples = m_frameMode ? 1 : sequence->GetNumberOfFrames();
-    }
+
+    const auto& chunk = m_chunks[iter->second.first];
+    const auto& sequence = chunk.GetUtterance(iter->second.second);
+    d.m_chunkId = sequence->GetChunkId();
+    d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
+    d.m_numberOfSamples = m_frameMode ? 1 : (SequenceSampleCountType)sequence->GetNumberOfFrames();
+    return true;
 }
 
 }}}

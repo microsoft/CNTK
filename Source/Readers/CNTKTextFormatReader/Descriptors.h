@@ -11,10 +11,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // Stream (input) metadata. This text-reader specific descriptor adds two 
+    // Stream (input) metadata. This text-reader specific descriptor adds two
     // additional fields: stream alias (name prefix in each sample) and expected
     // sample dimension.
-    struct StreamDescriptor : StreamDescription 
+    struct StreamDescriptor : StreamDescription
     {
         std::string m_alias; // sample name prefix used in the input data
         size_t m_sampleDimension; // expected number of elements in a sample
@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // Sequence metadata. This text-reader specific descriptor adds two additional
-    // fields: file offset and size in bytes. Both are required to efficiently 
+    // fields: file offset and size in bytes. Both are required to efficiently
     // locate and retrieve a sequence from file, given a sequence descriptor.
     struct SequenceDescriptor : SequenceDescription
     {
@@ -36,19 +36,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_byteSize; // size in bytes
     };
 
-    // Chunk metadata, similar to the sequence descriptor above, 
+    // Chunk metadata, similar to the sequence descriptor above,
     // but used to facilitate indexing and retrieval of blobs of input data of
     // some user-specified size.
     struct ChunkDescriptor : ChunkDescription
-    { 
+    {
         ChunkDescriptor() : ChunkDescription({}), m_byteSize(0) {}
-        // TODO: if we don't want to keep the whole index 
+        // TODO: if we don't want to keep the whole index
         // (metadata for all sequences in memory), we should not
         // leave this empty when building a chunk index, and only
-        // fill it out when the chunk needs to be loaded 
+        // fill it out when the chunk needs to be loaded
         // (the indexer will have to do a second pass for this chunk).
         std::vector<SequenceDescriptor> m_sequences;
-        
+
         size_t m_byteSize; // size in bytes
     };
 
@@ -80,7 +80,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // Creating a new chunk if the size is exceeded.
                 m_chunks.push_back({});
                 chunk = &m_chunks.back();
-                chunk->m_id = m_chunks.size() - 1;
+                chunk->m_id = (ChunkIdType) (m_chunks.size() - 1);
+                if (CHUNKID_MAX < m_chunks.size())
+                {
+                    RuntimeError("Maximum number of chunks exceeded");
+                }
             }
 
             chunk->m_byteSize += sd.m_byteSize;

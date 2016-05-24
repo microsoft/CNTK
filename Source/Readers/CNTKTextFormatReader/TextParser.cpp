@@ -41,7 +41,7 @@ public:
     std::map<size_t, SequenceBuffer> m_sequenceMap;
 
     // chunk id (copied from the descriptor)
-    size_t m_id;
+    ChunkIdType m_id;
 
     // a non-owned pointer to the parser that created this chunk
     TextParser* m_parser;
@@ -206,7 +206,7 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
 }
 
 template <class ElemType>
-void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void TextParser<ElemType>::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
 {
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index.m_chunks[chunkId];
@@ -219,7 +219,6 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
             s.m_id,
             s.m_numberOfSamples,
             s.m_chunkId,
-            s.m_isValid,
             s.m_key
         });
     }
@@ -272,7 +271,7 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 }
 
 template <class ElemType>
-ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
+ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 {
     const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
     auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, this);
@@ -1192,20 +1191,18 @@ std::wstring TextParser<ElemType>::GetFileInfo()
     return info.str();
 }
 
-static SequenceDescription s_InvalidSequence{0, 0, 0, false, {0, 0}};
-
 template <class ElemType>
-void TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
     const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;
     auto sequenceLocation = keys.find(key.m_sequence);
     if (sequenceLocation == keys.end())
     {
-        result = s_InvalidSequence;
-        return;
+        return false;
     }
 
     result = m_indexer->GetIndex().m_chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
+    return true;
 }
 
 template <class ElemType>

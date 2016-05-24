@@ -23,10 +23,10 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for a particular chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
 
     // Gets a chunk with data.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
 private:
     DISABLE_COPY_AND_MOVE(Bundler);

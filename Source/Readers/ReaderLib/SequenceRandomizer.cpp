@@ -156,10 +156,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Determine the end chunk that we need to load into memory.
-        size_t nextChunkWindowEnd = m_randomizedChunks[nextRandomizationCursor - 1].m_randomizationWindow.m_end;
+        ChunkIdType nextChunkWindowEnd = m_randomizedChunks[nextRandomizationCursor - 1].m_randomizationWindow.m_end;
 
         // Lets page in everything from m_currentRangeEndChunkIndex to endChunkIdx
-        for (size_t i = m_chunkWindowEnd; i < nextChunkWindowEnd; ++i)
+        for (ChunkIdType i = m_chunkWindowEnd; i < nextChunkWindowEnd; ++i)
         {
             AddRandomizedSequencesForChunk(i);
         }
@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // Get valid randomization range, expressed in chunks
             // TODO: This can be done more efficiently, we know the range of chunks already.
-            const size_t currentChunkIdx = GetChunkIndexForSequencePosition(t);
+            const ChunkIdType currentChunkIdx = GetChunkIndexForSequencePosition(t);
 
             size_t chunkWindowBegin = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_begin;
             size_t chunkWindowEnd = m_randomizedChunks[currentChunkIdx].m_randomizationWindow.m_end;
@@ -291,18 +291,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Gets randomized chunk index using a sequence position in the sweep.
-    size_t SequenceRandomizer::GetChunkIndexForSequencePosition(size_t sequencePosition) const
+    ChunkIdType SequenceRandomizer::GetChunkIndexForSequencePosition(size_t sequencePosition) const
     {
         auto result = std::upper_bound(
             m_randomizedChunks.begin(),
             m_randomizedChunks.end(),
             sequencePosition,
             [](size_t sp, const RandomizedChunk& c) { return sp < c.m_sequencePositionStart; });
-        return result - 1 - m_randomizedChunks.begin();
+        return (ChunkIdType)(result - 1 - m_randomizedChunks.begin());
     }
 
     // Add randomizes sequences for the chunk with a given index.
-    void SequenceRandomizer::AddRandomizedSequencesForChunk(size_t chunkIdx)
+    void SequenceRandomizer::AddRandomizedSequencesForChunk(ChunkIdType chunkIdx)
     {
         assert(chunkIdx == m_chunkWindowEnd);
 
@@ -329,7 +329,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Gets randomized sequence by the sequence id.
     RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId)
     {
-        size_t globalChunkIdx = GetChunkIndexForSequencePosition(sequenceId);
+        ChunkIdType globalChunkIdx = GetChunkIndexForSequencePosition(sequenceId);
         size_t sequenceOffsetInsideChunk = sequenceId - m_randomizedChunks[globalChunkIdx].m_sequencePositionStart;
         return m_sequenceWindow[globalChunkIdx - m_chunkWindowBegin][sequenceOffsetInsideChunk];
     }

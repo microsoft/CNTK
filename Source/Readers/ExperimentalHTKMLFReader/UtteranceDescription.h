@@ -22,13 +22,13 @@ class UtteranceDescription
     // Position of the first sample of the utterance inside the chunk.
     size_t m_startFrameIndexInsideChunk;
     // Chunk id.
-    size_t m_chunkId;
+    ChunkIdType m_chunkId;
     // Utterance id.
     size_t m_id;
 
 public:
     UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
-        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0), m_chunkId(SIZE_MAX)
+        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0), m_chunkId(CHUNKID_MAX)
     {
     }
 
@@ -52,7 +52,7 @@ public:
         return m_path.GetLogicalPath();
     }
 
-    void AssignToChunk(size_t chunkId, size_t indexInsideChunk, size_t frameInsideChunk)
+    void AssignToChunk(ChunkIdType chunkId, size_t indexInsideChunk, size_t frameInsideChunk)
     {
         m_chunkId = chunkId;
         m_indexInsideChunk = indexInsideChunk;
@@ -62,7 +62,7 @@ public:
     size_t GetId() const  { return m_id; }
     void SetId(size_t id) { m_id = id; }
 
-    size_t GetChunkId() const  { return m_chunkId; }
+    ChunkIdType GetChunkId() const  { return m_chunkId; }
     size_t GetIndexInsideChunk() const { return m_indexInsideChunk;}
     size_t GetStartFrameIndexInsideChunk() const { return m_startFrameIndexInsideChunk; }
 
