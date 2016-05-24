@@ -165,7 +165,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
 void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd)
 {
     auto& stringRegistry = corpus->GetStringRegistry();
-    auto key = msra::strfun::utf16(std::to_string(sequenceKey));
+    auto key = std::to_string(sequenceKey);
     if (corpus->IsIncluded(key))
     {
         sd.m_key.m_sequence = stringRegistry[key];

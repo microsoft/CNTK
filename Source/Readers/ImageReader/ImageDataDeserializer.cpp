@@ -263,8 +263,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         }
 
         // Skipping sequences that are not included in corpus.
-        auto key = msra::strfun::utf16(sequenceKey);
-        if (!corpus->IsIncluded(key))
+        if (!corpus->IsIncluded(sequenceKey))
         {
             continue;
         }
@@ -288,7 +287,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
             description.m_chunkId = curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = stringRegistry[key];
+            description.m_key.m_sequence = stringRegistry[sequenceKey];
             description.m_key.m_sample = 0;
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();

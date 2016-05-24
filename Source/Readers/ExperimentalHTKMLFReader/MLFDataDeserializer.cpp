@@ -134,7 +134,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         // Currently the string registry contains only utterances described in scp.
         // So here we skip all others.
         size_t id = 0;
-        if (!stringRegistry.TryGet(l.first, id))
+        if (!stringRegistry.TryGet(msra::strfun::utf8(l.first), id))
             continue;
 
         description.m_key.m_sequence = id;

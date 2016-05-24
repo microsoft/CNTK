@@ -42,10 +42,9 @@ public:
         return m_path.numframes();
     }
 
-    wstring GetKey() const
+    string GetKey() const
     {
-        std::wstring filename(m_path);
-        return filename.substr(0, filename.find_last_of(L"."));
+        return m_path.GetLogicalPath();
     }
 
     void AssignToChunk(size_t chunkId, size_t indexInsideChunk, size_t frameInsideChunk)

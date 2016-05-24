@@ -123,7 +123,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
             continue;
         }
 
-        wstring key = description.GetKey();
+        string key = description.GetKey();
         if (!m_corpus->IsIncluded(key))
         {
             continue;

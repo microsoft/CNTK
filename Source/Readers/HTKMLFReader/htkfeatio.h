@@ -443,6 +443,11 @@ public:
             return archivepath();
         }
 
+        string GetLogicalPath() const
+        {
+            return logicalpath.substr(0, logicalpath.find_last_of("."));
+        }
+
         // casting to wstring yields the logical path
         operator wstring() const
         {

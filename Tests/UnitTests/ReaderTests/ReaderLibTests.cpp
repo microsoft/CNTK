@@ -412,11 +412,11 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
     mt19937 rng(seed);
     uniform_int_distribution<int> distr(50, 60);
 
-    wstring randomKey(10, (char)distr(rng));
+    string randomKey(10, (char)distr(rng));
 
     CorpusDescriptor corpus;
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L""));
+    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
 }
 
 BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
@@ -428,12 +428,12 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fclose(test);
 
     CorpusDescriptor corpus(L"test.tmp");
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded(L"0"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"1"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"2"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded(L"3"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(L"4"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded(L"5"));
+    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
+    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
+    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));
+    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("3"));
+    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("4"));
+    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("5"));
 
     remove("test.tmp");
 }

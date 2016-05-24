@@ -399,7 +399,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Could not read a row (# %" PRIu64 ")"
-                    " while loading sequence (id = %ls) %ls.\n",
+                    " while loading sequence (id = %s) %ls.\n",
                     i + 1,
                     GetSequenceKey(sequenceDsc).c_str(),
                     GetFileInfo().c_str());
@@ -412,7 +412,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Exhausted all input"
-                    " expected for the current sequence (id = %ls) %ls,"
+                    " expected for the current sequence (id = %s) %ls,"
                     " but only read %" PRIu64 " out of %" PRIu64 " expected rows.\n",
                     GetSequenceKey(sequenceDsc).c_str(),
                     GetFileInfo().c_str(), numRowsRead, expectedRowCount);
@@ -430,7 +430,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (sequence[i]->m_numberOfSamples == 0)
         {
             fprintf(stderr,
-                "ERROR: Input ('%ls') is empty in sequence (id = %ls) %ls.\n",
+                "ERROR: Input ('%ls') is empty in sequence (id = %s) %ls.\n",
                 m_streams[i]->m_name.c_str(), GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
@@ -442,7 +442,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
-                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %ls) %ls.\n",
+                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %s) %ls.\n",
                     m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
                     GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             }
@@ -465,7 +465,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (ShouldWarn())
         {
             fprintf(stderr,
-                "WARNING: Maximum per-input number of samples for sequence (id = %ls) %ls"
+                "WARNING: Maximum per-input number of samples for sequence (id = %s) %ls"
                 " is less than expected (%" PRIu64 " vs. %" PRIu64 ").\n",
                 GetSequenceKey(sequenceDsc).c_str(),
                 GetFileInfo().c_str(), maxInputLength, expectedRowCount);
@@ -476,7 +476,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     if (m_traceLevel >= Info)
     {
         fprintf(stderr,
-            "INFO: Finished loading sequence (id = %ls) %ls,"
+            "INFO: Finished loading sequence (id = %s) %ls,"
             " successfully read %" PRIu64 " out of expected %" PRIu64 " rows.\n",
             GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
@@ -1209,7 +1209,7 @@ void TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, Seque
 }
 
 template <class ElemType>
-const wstring& TextParser<ElemType>::GetSequenceKey(const SequenceDescriptor& s) const
+const string& TextParser<ElemType>::GetSequenceKey(const SequenceDescriptor& s) const
 {
     return m_corpus->GetStringRegistry()[s.m_key.m_sequence];
 }
