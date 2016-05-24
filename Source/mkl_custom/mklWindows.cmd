@@ -1,4 +1,4 @@
-rem @echo off
+@echo off
 echo.
 echo This batch file will build a custom MKL dynamic link library for usage by CNTK.
 echo.
