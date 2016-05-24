@@ -591,7 +591,7 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
         {
             unique_set.insert(*(rowIndices + i));
         }
-        fprintf(stderr, "read features %d nnz = %d, unique_nnz = %d.\n", c, nnz, (int)unique_set.size());
+        fprintf(stderr, "read features %d nnz = %d, unique_nnz = %d, curMBSize = %d.\n", c, nnz, (int)unique_set.size(), curMBSize);
 
         int32_t* colIndices = (int32_t*) ((char*) data_buffer + buffer_offset);
         buffer_offset += sizeof(int32_t) * (curMBSize + 1);
