@@ -30,7 +30,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(ACML_PATH)')">
-	<MathLibrayName>ACML</MathLibrayName>
+    <MathLibrayName>ACML</MathLibrayName>
     <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
     <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
     <MathLinkLibrary>libacml_mp_dll.lib</MathLinkLibrary>
@@ -38,22 +38,22 @@
     <MathPostBuildPath>$(ACML_PATH)\lib\*.dll</MathPostBuildPath>
     <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
     <MathDefine>USE_ACML</MathDefine>
-	<!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
+    <!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
     <MKLCustomVersion>1</MKLCustomVersion>
     <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
-	<!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
-	<!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
-	<!-- this allows for multiple version of the custom DLLs present on the machine -->
-	<!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
+    <!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
+    <!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
+    <!-- this allows for multiple version of the custom DLLs present on the machine -->
+    <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
     <MathLibrayName>CNTK-Custom MKL (Version: $(MKLCustomVersion))</MathLibrayName>
     <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
     <MathLibraryPath>$(MKLDropDirectory)\x64</MathLibraryPath>
     <MathLinkLibrary>mkl_custom.lib</MathLinkLibrary>
     <MathDelayLoad>mkl_custom.dll</MathDelayLoad>
-	<!-- mkl custom dll, lib, header files not yet added to build/jenkins machines -->
+    <!-- mkl custom dll, lib, header files not yet added to build/jenkins machines -->
     <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
     <UnitTestDlls>$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
     <MathDefine>USE_MKL</MathDefine>
