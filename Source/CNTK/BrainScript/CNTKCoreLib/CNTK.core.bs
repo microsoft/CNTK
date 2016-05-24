@@ -146,7 +146,7 @@ CNTK2 = [
 
     // 13. Others
     // 12. Others
-    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
+    Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
 LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
