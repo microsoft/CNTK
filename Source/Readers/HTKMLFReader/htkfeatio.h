@@ -357,9 +357,9 @@ public:
             return archivePathStringVector[archivePathIdx];
         }
 
-        size_t s, e;         // first and last frame inside the archive file; (0, INT_MAX) if not given
         bool isarchive;      // true if archive (range specified)
         bool isidxformat;    // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
+        size_t s, e;         // first and last frame inside the archive file; (0, INT_MAX) if not given
         void malformed(const wstring& path) const
         {
             RuntimeError("parsedpath: malformed path '%ls'", path.c_str());

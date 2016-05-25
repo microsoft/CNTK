@@ -156,7 +156,6 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     m_chunks.reserve(m_totalNumberOfFrames / ChunkFrames);
 
     ChunkIdType chunkId = CHUNKID_MAX;
-    size_t startFrameInsideChunk = 0;
     foreach_index(i, utterances)
     {
         // if exceeding current entry--create a new one
@@ -164,18 +163,15 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames || m_chunks.back().GetNumberOfUtterances() >= MaxUtterancesPerChunk)
         {
             m_chunks.push_back(HTKChunkDescription(++chunkId));
-            startFrameInsideChunk = 0;
         }
 
         // append utterance to last chunk
         HTKChunkDescription& currentChunk = m_chunks.back();
-        utterances[i].AssignToChunk(chunkId, currentChunk.GetNumberOfUtterances(), startFrameInsideChunk);
         if (!m_primary)
         {
             // Have to store key <-> utterance mapping for non primary deserializers.
-            m_keyToChunkLocation[utterances[i].GetId()] = make_pair(utterances[i].GetChunkId(), utterances[i].GetIndexInsideChunk());
+            m_keyToChunkLocation[utterances[i].GetId()] = make_pair(chunkId, currentChunk.GetNumberOfUtterances());
         }
-        startFrameInsideChunk += utterances[i].GetNumberOfFrames();
         currentChunk.Add(move(utterances[i]));
     }
 
@@ -439,7 +435,7 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
     if (m_frameMode)
     {
         // For frame mode augment a single frame.
-        size_t frameIndex = id - utterance->GetStartFrameIndexInsideChunk();
+        size_t frameIndex = id - chunkDescription.GetStartFrameIndexInsideChunk(utteranceIndex);
         msra::dbn::augmentneighbors(utteranceFramesWrapper, vector<char>(), frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, features, 0);
     }
     else
@@ -479,10 +475,12 @@ bool HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
         return false;
     }
 
-    const auto& chunk = m_chunks[iter->second.first];
-    const auto& sequence = chunk.GetUtterance(iter->second.second);
-    d.m_chunkId = sequence->GetChunkId();
-    d.m_id = m_frameMode ? sequence->GetStartFrameIndexInsideChunk() + key.m_sample : sequence->GetIndexInsideChunk();
+    auto chunkId = iter->second.first;
+    auto utteranceIndexInsideChunk = iter->second.second;
+    const auto& chunk = m_chunks[chunkId];
+    const auto& sequence = chunk.GetUtterance(utteranceIndexInsideChunk);
+    d.m_chunkId = (ChunkIdType)chunkId;
+    d.m_id = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(chunkId) + key.m_sample : utteranceIndexInsideChunk;
     d.m_numberOfSamples = m_frameMode ? 1 : (SequenceSampleCountType)sequence->GetNumberOfFrames();
     return true;
 }

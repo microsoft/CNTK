@@ -73,16 +73,22 @@ public:
         return &m_utterances[index];
     }
 
+    // Get start frame index inside chunk.
+    size_t GetStartFrameIndexInsideChunk(size_t index) const
+    {
+        return m_firstFrames[index];
+    }
+
     // Get utterance by the absolute frame index in chunk.
     // Uses the upper bound to do the binary search among sequences of the chunk.
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
         auto result = std::upper_bound(
-            m_utterances.begin(),
-            m_utterances.end(),
-            frameIndex, 
-            [](size_t fi, const UtteranceDescription& a) { return fi < a.GetStartFrameIndexInsideChunk(); });
-        return result - 1 - m_utterances.begin();
+            m_firstFrames.begin(),
+            m_firstFrames.end(),
+            frameIndex,
+            [](size_t fi, const size_t& a) { return fi < a; });
+        return result - 1 - m_firstFrames.begin();
     }
 
     // Returns all frames of a given utterance.
