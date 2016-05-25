@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)
     // Allocate the output values layer
     std::vector<VariableBuffer<float>> outputBuffer(1);
 
-    // Allocate the input values layer (empty)>	EvalTests.exe!Microsoft::MSR::CNTK::Test::EvalTestSuite::EvalConstantPlusTest::test_method() Line 85	C++
+    // Allocate the input values layer (empty)
 
     std::vector<VariableBuffer<float>> inputBuffer;
 
@@ -127,9 +127,7 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesTest)
 
     // Allocate the input values layer
     std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_buffer.push_back(2);
-    inputBuffer[0].m_indices.push_back(0);
-    inputBuffer[0].m_colIndices.push_back(0);
+    inputBuffer[0].m_buffer = { 2 };
     
     // We can call the evaluate method and get back the results...
     eval->ForwardPass(inputBuffer, outputBuffer);
@@ -166,9 +164,7 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesDualOutputTest)
 
     // Allocate the input values layer
     std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_buffer.push_back(2);
-    inputBuffer[0].m_indices.push_back(0);
-    inputBuffer[0].m_colIndices.push_back(0);
+    inputBuffer[0].m_buffer = { 2 };
 
     // We can call the evaluate method and get back the results...
     // TODO: Indicate to ForwardPass that we want output o2 only
