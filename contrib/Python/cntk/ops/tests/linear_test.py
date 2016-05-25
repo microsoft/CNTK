@@ -9,6 +9,7 @@ Unit tests for linear algebra operations, each operation is tested for
 the forward and the backward pass
 """
 
+from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
@@ -33,7 +34,7 @@ TENSOR_PAIRS = [
     #([5], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
-    ([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
