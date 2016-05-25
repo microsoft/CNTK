@@ -6,8 +6,6 @@
 #include "stdafx.h"
 #include "EvalTestHelper.h"
 #include "fileutil.h"
-#include "ExceptionWithCallStack.h"
-#include "ScriptableObjects.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -179,59 +177,43 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesDualOutputTest)
 
 BOOST_AUTO_TEST_CASE(EvalDenseTimesTest)
 {
-    try
-    {
-        std::string modelDefinition =
-            "deviceId = -1 \n"
-            "precision = \"float\" \n"
-            "traceLevel = 1 \n"
-            "run=BrainScriptNetworkBuilder \n"
-            "BrainScriptNetworkBuilder=[ \n"
-            "i1 = Input(4) \n"
-            "o1 = Times(ConstantTensor(2, 1:4), i1, tag=\"output\") \n"
-            "FeatureNodes = (i1) \n"
-            "] \n";
+    std::string modelDefinition =
+        "deviceId = -1 \n"
+        "precision = \"float\" \n"
+        "traceLevel = 1 \n"
+        "run=NDLNetworkBuilder \n"
+        "NDLNetworkBuilder=[ \n"
+        "i1 = Input(4) \n"
+        "o1 = Times(Constant(2, rows=1, cols=4), i1, tag=\"output\") \n"
+        "FeatureNodes = (i1) \n"
+        "] \n";
 
-        VariableSchema inputLayouts;
-        VariableSchema outputLayouts;
-        IEvaluateModelExtended<float> *eval;
-        eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
+    VariableSchema inputLayouts;
+    VariableSchema outputLayouts;
+    IEvaluateModelExtended<float> *eval;
+    eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
-        // Allocate the output values layer
-        std::vector<VariableBuffer<float>> outputBuffer(1);
+    // Allocate the output values layer
+    std::vector<VariableBuffer<float>> outputBuffer(1);
 
-        // Number of inputs must adhere to the schema
-        std::vector<VariableBuffer<float>> inputBuffer1(0);
-        BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer1, outputBuffer), std::exception); // Not enough inputs
+    // Number of inputs must adhere to the schema
+    std::vector<VariableBuffer<float>> inputBuffer1(0);
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer1, outputBuffer), std::exception); // Not enough inputs
 
-        // Number of elements in the input must adhere to the schema
-        std::vector<VariableBuffer<float>> inputBuffer(1);
-        inputBuffer[0].m_buffer = { 1, 2, 3 };
-        BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Not enough elements in the sample
+    // Number of elements in the input must adhere to the schema
+    std::vector<VariableBuffer<float>> inputBuffer(1);
+    inputBuffer[0].m_buffer = { 1, 2, 3 };
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Not enough elements in the sample
 
-        // Output values and shape must be correct.
-        inputBuffer[0].m_buffer = { 1, 2, 3, 4 };
-        eval->ForwardPass(inputBuffer, outputBuffer);
+    // Output values and shape must be correct.
+    inputBuffer[0].m_buffer = { 1, 2, 3, 4 };
+    eval->ForwardPass(inputBuffer, outputBuffer);
 
-        std::vector<float> expected{ 20 };
-        auto buf = outputBuffer[0].m_buffer;
-        BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
+    std::vector<float> expected{ 20 };
+    auto buf = outputBuffer[0].m_buffer;
+    BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
 
-        eval->Destroy();
-    }
-    catch (const ScriptableObjects::ScriptingException& err)
-    {
-        fprintf(stderr, "\n");
-        err.PrintError(L"EXCEPTION occurred");
-        throw;
-    }
-    catch (const IExceptionWithCallStackBase& err)
-    {
-        fprintf(stderr, "\n");
-        fprintf(stderr, "%s", err.CallStack());
-        fprintf(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
-        throw;
-    }
+    eval->Destroy();
 }
 
 BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
