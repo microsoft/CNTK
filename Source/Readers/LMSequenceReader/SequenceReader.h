@@ -357,6 +357,8 @@ private:
     size_t m_epochSamplesReturned; // number of samples returned in this epoch
 
     vector<size_t> mToProcess;     // [] current set of sequences (gets updated each minibatch except if they are too long)
+	vector<size_t> mToProcessForThisWorker;	// [] current set of sequences that's going to be handled by this worker.
+	vector<size_t> m_workerPriorityList;
 
     size_t mPosInSentence;
     size_t mLastPosInSentence;
@@ -418,7 +420,7 @@ public:
 	bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
     bool DataEnd() override;
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcessForThisWorker.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
     size_t GetNumParallelSequencesForFixingBPTTMode() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?
 
     // TODO: what are these?

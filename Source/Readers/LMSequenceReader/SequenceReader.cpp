@@ -1580,6 +1580,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         mProcessed.clear();
         mToProcess.clear();
+		mToProcessForThisWorker.clear();
         mLastProcessedSentenceId = 0;
         mPosInSentence = 0;
         mLastPosInSentence = 0;
@@ -1597,6 +1598,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_subsetNum = subsetNum;
         m_numSubsets = numSubsets;
+		m_workerPriorityList.reserve(numSubsets);
+		for (size_t i = 0; i < m_numSubsets; i++)
+		{
+			m_workerPriorityList.push_back(i);
+		}
+
         // if we aren't currently caching, see if we can use a cache
         if (!m_cachingReader && !m_cachingWriter)
         {
@@ -1745,7 +1752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - the parser will start over, to cacheBlockSize must be >= corpus size, and all gets (re-)loaded into RAM each epoch
         // The alternative, set cacheBlockSize == epoch size, is not good since it will have very few utterances of the same length to batch.
         // We will not fix much more than this since the soon-to-come new reader API will solve these issues.
-        if (m_epochSamplesReturned > m_epochSize)
+		if (m_epochSamplesReturned > m_epochSize)
             return false;
 
         m_featureData.clear();
@@ -1784,97 +1791,101 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sLn = DetermineSequencesToProcess();
         }
 
-        // --- STEP 2: distribute the data across workers
+		// --- STEP 2: distribute the data across workers
 
+		mToProcessForThisWorker.clear();
         size_t totalNumSequencesToProcess = mToProcess.size();
         size_t numSequencesPerWorker = (totalNumSequencesToProcess > m_numSubsets) ? (totalNumSequencesToProcess / m_numSubsets) : 1;
-        size_t startIndex = m_subsetNum * numSequencesPerWorker;
-        size_t endIndex = (m_subsetNum + 1) * numSequencesPerWorker;
+        size_t startIndex = m_workerPriorityList[m_subsetNum] * numSequencesPerWorker;
+		size_t endIndex = startIndex + numSequencesPerWorker;
 
-        if (startIndex >= totalNumSequencesToProcess)
-        {
-            // no data to process. clear vectors and return
-            mToProcess.clear();
-            m_featureData.clear();
-            m_labelIdData.clear();
-            return true;
-        }
+		// priority rotation to make sure worker(s) is not always left out.
+		for (size_t i = 0; i < m_numSubsets; i++)
+		{
+			m_workerPriorityList[i]++;
+			m_workerPriorityList[i] = m_workerPriorityList[i] % m_numSubsets;
+		}
 
-        std::vector<size_t> toProcessTemp(mToProcess.begin() + startIndex, mToProcess.begin() + endIndex);
-        mToProcess = toProcessTemp;
-        toProcessTemp.clear();
+		// --- STEP 3: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
 
-        // --- STEP 3: copy sentences in mToProcess[] into m_featureData[] and m_labelIdData[]
-
-        const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
+		const bool nextWord = (m_labelInfo[labelInfoOut].type == labelNextWord);
         LabelInfo& labelIn = m_labelInfo[labelInfoIn];
         LabelInfo& labelOut = m_labelInfo[labelInfoOut];
 
         firstPosInSentence = mLastPosInSentence;
+		size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);
 
-        size_t effectiveInputSequenceLength = sLn - (labelOut.type != labelNone);
-        // exclude the last token since it is the last label to be predicted
-        // ############### BREAKING CHANGE ################
-        // We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
-        // ############### BREAKING CHANGE ################
-        const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;    // mbSize here is truncation length
-        for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
-        {
-            for (size_t k = 0; k < mToProcess.size(); k++)
-            {
-                size_t seq = mToProcess[k];
-                size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
+		if (startIndex < totalNumSequencesToProcess)
+		{
+			mToProcessForThisWorker.assign(mToProcess.begin() + startIndex, mToProcess.begin() + endIndex);     
+			// exclude the last token since it is the last label to be predicted
+			// ############### BREAKING CHANGE ################
+			// We use sLn, not sLn -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
+			// ############### BREAKING CHANGE ################
+			const size_t jend = mRequestedNumParallelSequences > 0 ? m_mbSize : SIZE_MAX;    // mbSize here is truncation length
+			for (size_t j = 0; j < jend && mLastPosInSentence < effectiveInputSequenceLength; mLastPosInSentence++, j++)
+			{
+				for (size_t k = 0; k < mToProcessForThisWorker.size(); k++)
+				{
+					size_t seq = mToProcessForThisWorker[k];
+					size_t pos = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + mLastPosInSentence;
 
-                // labelIn should be a category label
-                const auto& labelValue = m_labelTemp[pos];
-                pos++; // consume it
+					// labelIn should be a category label
+					const auto& labelValue = m_labelTemp[pos];
+					pos++; // consume it
 
-                       // generate the feature token
-                if (labelIn.type == labelCategory)
-                {
-                    LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
+						   // generate the feature token
+					if (labelIn.type == labelCategory)
+					{
+						LabelIdType labelId = GetIdFromLabel(labelValue, labelIn);
 
-                    // use the found value, and set the appropriate location to a 1.0
-                    assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
-                    m_featureData.push_back((float)labelId);
-                }
-                else
-                    RuntimeError("Input labels are expected to be category labels.");
+						// use the found value, and set the appropriate location to a 1.0
+						assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
+						m_featureData.push_back((float)labelId);
+					}
+					else
+						RuntimeError("Input labels are expected to be category labels.");
 
-                // generate the output label token
-                if (labelOut.type != labelNone)
-                {
-                    const auto& labelValue = m_labelTemp[pos];
-                    LabelIdType labelId;
-                    if (labelOut.type == labelCategory)
-                    {
-                        pos++; // consume it   --TODO: value is not used after this
-                        labelId = GetIdFromLabel(labelValue, labelOut);
-                    }
-                    else if (nextWord)
-                    {
-                        // this is the next word (pos was already incremented above when reading out labelValue)
-                        if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
-                            labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
-                        else
-                            labelId = GetIdFromLabel(labelValue, labelIn);
-                    }
-                    else
-                        LogicError("Unexpected output label type."); // should never get here
+					// generate the output label token
+					if (labelOut.type != labelNone)
+					{
+						const auto& labelValue = m_labelTemp[pos];
+						LabelIdType labelId;
+						if (labelOut.type == labelCategory)
+						{
+							pos++; // consume it   --TODO: value is not used after this
+							labelId = GetIdFromLabel(labelValue, labelOut);
+						}
+						else if (nextWord)
+						{
+							// this is the next word (pos was already incremented above when reading out labelValue)
+							if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
+								labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
+							else
+								labelId = GetIdFromLabel(labelValue, labelIn);
+						}
+						else
+							LogicError("Unexpected output label type."); // should never get here
 
-                    m_labelIdData.push_back(labelId);
-                }
+						m_labelIdData.push_back(labelId);
+					}
 
-                m_totalSamples++;
-                m_epochSamplesReturned++;
-            }
-        }
-        //mLastPosInSentence = i; // (we could also iterate over mLastPosInSentence directly)
+					m_totalSamples++;
+					m_epochSamplesReturned++;
+				}
+			}
+			//mLastPosInSentence = i; // (we could also iterate over mLastPosInSentence directly)
+			assert(m_featureData.size() > 0);
+		}
+		else
+		{
+			m_featureData.clear();
+            m_labelIdData.clear();
+		}
 
-        // remember if we are at the end
+		// remember if we are at the end
         // Note: This flag will propagate into setting mProcessed[] in DataEnd(), which seems a bit fragile. Can't we do it here?
         mSentenceEnd = (mLastPosInSentence == effectiveInputSequenceLength);
-
         return true;
     }
 
@@ -1899,7 +1910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool moreData = GetMinibatchData(firstPosInSentence);
         if (!moreData)
         {
-            m_pMBLayout->Init(mToProcess.size(), 0);
+            m_pMBLayout->Init(mToProcessForThisWorker.size(), 0);
             return false;
         }
 
@@ -1912,7 +1923,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // now:
             //  - there is at least one sequence to return
-            //  - mToProcess[] lists all sequences
+            //  - mToProcessForThisWorker[] lists all sequences
             //  - mProcessed[s] says whether a sequence has completed
             //  - m_featureData[j] contains the input label indices
             //  - m_labelIdData[j] contains the output label indices
@@ -1923,12 +1934,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // create MBLayout
             // This handles variable-length sequences.
-            size_t nT = actualmbsize / mToProcess.size();
-            assert(nT * mToProcess.size() == actualmbsize);
-            m_pMBLayout->Init(mToProcess.size(), nT);
-            for (size_t s = 0; s < mToProcess.size(); s++)
+            size_t nT = actualmbsize / mToProcessForThisWorker.size();
+            assert(nT * mToProcessForThisWorker.size() == actualmbsize);
+            m_pMBLayout->Init(mToProcessForThisWorker.size(), nT);
+            for (size_t s = 0; s < mToProcessForThisWorker.size(); s++)
             {
-                size_t seq = mToProcess[s];
+                size_t seq = mToProcessForThisWorker[s];
                 const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
                 size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - (labelOut.type != labelNone); // -1 because last one is label
                 // ############### BREAKING CHANGE ################
@@ -1976,7 +1987,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
             {
                 // vector of feature data goes into matrix column
-                size_t idx = (size_t)m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcess.size(), s=j%mToProcess.size())
+                size_t idx = (size_t)m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcessForThisWorker.size(), s=j%mToProcessForThisWorker.size())
 
                 features.SetValue(idx, j, (ElemType)1);
             }
@@ -2015,7 +2026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 #endif
-
+		assert(mToProcessForThisWorker.size() == m_pMBLayout->GetNumParallelSequences());
         // we read some records, so process them
         return true;
     }

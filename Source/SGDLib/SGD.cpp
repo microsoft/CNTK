@@ -875,8 +875,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         size_t actualMBSize = 0;
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
-            break;                                                                // end of epoch
+			break;
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
         // Must not touch them.
@@ -976,15 +977,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (!useGradientAggregation)
         {
-            // accumulate criterion values (objective, eval)
-            if (actualMBSize != 0)
-            {
-                assert(wasDataRead);
-                // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
-                for (size_t i = 0; i < evaluationNodes.size(); i++)
-                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
-            }
+			if(numSamplesWithLabelOfNetwork > 0)
+			{
+				// accumulate criterion values (objective, eval)
+				// criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
+				localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
+				assert(localEpochCriterion.GetCriterion(0).first > 0.0 );
+			
+				//fprintf(stderr, "\nRank %d localepochcriterion being set to: %f\n", m_mpi->CurrentNodeRank(), localEpochCriterion.GetCriterion(0).first);
+				for (size_t i = 0; i < evaluationNodes.size(); i++)
+					localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
+			}
+            
         }
         else
         {
@@ -1072,7 +1076,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // aggregation by model averaging or block momentum 
-        if (useModelAggregation)
+        if (useModelAggregation && (actualMBSize > 0))
         {
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
             {
@@ -1090,97 +1094,89 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         timer.Stop();
+		totalTimeInMBs += timer.ElapsedSeconds();
 		if (actualMBSize > 0)
+		{
 			numMBsRun++;
-
-        totalTimeInMBs += timer.ElapsedSeconds();
-        //trainSamplesSinceLastLogged += (int)aggregateNumSamplesWithLabel; // now inside epochCriterionLastLogged
-
-        // log
-        // This shows the criterion since last logged.
-        if (numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0)))
-        {
-            // get the epoch Values updated
-            if (!useGradientAggregation)
-            {
-                // if no aggregation, we directly get the values from the minibatch accumulators
-                timer.Restart();
-                epochCriterion = localEpochCriterion.GetCriterion(0);
-                for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
-                timer.Stop();
-
-                // Add the last trailing compute
-                totalTimeInMBs += timer.ElapsedSeconds();
-            }
-
-            // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
-            EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
-            let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
-            let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
-
-            // determine progress in percent
-            int mbProgNumPrecision = 2;
-            double mbProg = 0.0;
-            if (epochNumber > 0 || (int)epochSize > 0) // TODO: explain this condition in a comment
-            {
-                if (m_maxComputedEpochSize != 0)
-                {
-                    double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
-                    mbProg = (double)numMBsRun / numMBPerEpoch;
-                    mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
-                    mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
-                }
-            }
-            else // estimate epoch size
-                m_maxComputedEpochSize = numMBsRun * trainSamplesSinceLastLogged / m_numMBsToShowResult;
-
-            // progress tracing for compute cluster management
-            let wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
-
-            // progress tracing for regular log
-            if (m_traceLevel > 0)
-            {
-				std::string prefixStr(prefixMsg);
-				if (m_mpi != nullptr)
+			// log
+			// This shows the criterion since last logged.
+			if (numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0)))
+			{
+				// get the epoch Values updated
+				if (!useGradientAggregation)
 				{
-					char RankStr[20];
-					sprintf(RankStr, "Rank %d: ", (int)m_mpi->CurrentNodeRank());
-					prefixStr += RankStr;
+					// if no aggregation, we directly get the values from the minibatch accumulators
+					timer.Restart();
+					epochCriterion = localEpochCriterion.GetCriterion(0);
+					for (size_t i = 0; i < epochEvalErrors.size(); i++)
+						epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
+					timer.Stop();
+
+					// Add the last trailing compute
+					totalTimeInMBs += timer.ElapsedSeconds();
 				}
 
-                PREPENDTS(stderr);
-                fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
-                        prefixStr.c_str(), epochNumber + 1, (int)m_maxEpochs,
-                        (int)(numMBsRun - m_numMBsToShowResult + 1), numMBsRun);
-                if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
-                    fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
-                fprintf(stderr, "]: ");
-                epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
-                for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    (epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(evaluationNodes[i]->NodeName());
+				// epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
+				EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
+				let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
+				let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
 
-                fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
-                        totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
-				fflush(stderr);
-            }
+				// determine progress in percent
+				int mbProgNumPrecision = 2;
+				double mbProg = 0.0;
+				if (epochNumber > 0 || (int)epochSize > 0) // TODO: explain this condition in a comment
+				{
+					if (m_maxComputedEpochSize != 0)
+					{
+						double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
+						mbProg = (double)numMBsRun / numMBPerEpoch;
+						mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
+						mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
+					}
+				}
+				else // estimate epoch size
+					m_maxComputedEpochSize = numMBsRun * trainSamplesSinceLastLogged / m_numMBsToShowResult;
 
-            // progress tracing for compute cluster management
-            if (wasProgressPrinted)
-                ProgressTracing::TraceTrainLoss(trainLossSinceLastLogged);
+				// progress tracing for compute cluster management
+				let wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
 
-            if (m_traceLevel > 0)
-                fflush(stderr);
+				// progress tracing for regular log
+				if (m_traceLevel > 0)
+				{
+					PREPENDTS(stderr);
+					fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
+							prefixMsg.c_str(), epochNumber + 1, (int)m_maxEpochs,
+							(int)(numMBsRun - m_numMBsToShowResult + 1), numMBsRun);
+					if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
+						fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
+					fprintf(stderr, "]: ");
+					epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
+					for (size_t i = 0; i < epochEvalErrors.size(); i++)
+						(epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(evaluationNodes[i]->NodeName());
 
-            if (epochCriterion.IsNan())
-                RuntimeError("The training criterion is not a number (NAN).");
+					fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
+							totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
 
-            // reset statistics for differential logging
-            epochCriterionLastLogged  = epochCriterion;
-            epochEvalErrorsLastLogged = epochEvalErrors;
+					fflush(stderr);
+				}
 
-            totalTimeInMBs = 0;
-        }
+				// progress tracing for compute cluster management
+				if (wasProgressPrinted)
+					ProgressTracing::TraceTrainLoss(trainLossSinceLastLogged);
+
+				if (m_traceLevel > 0)
+					fflush(stderr);
+
+				if (epochCriterion.IsNan())
+					RuntimeError("The training criterion is not a number (NAN).");
+
+				// reset statistics for differential logging
+				epochCriterionLastLogged  = epochCriterion;
+				epochEvalErrorsLastLogged = epochEvalErrors;
+
+				totalTimeInMBs = 0;
+			}
+		}
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
