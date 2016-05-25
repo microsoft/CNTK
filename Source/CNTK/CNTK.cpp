@@ -477,6 +477,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
+
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
@@ -544,7 +546,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -574,6 +575,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
+
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -662,7 +665,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
