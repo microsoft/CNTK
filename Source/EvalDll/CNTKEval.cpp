@@ -304,11 +304,39 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, 
     for (auto& input : m_inputMatrices)
     {
         VariableBuffer<ElemType> buffer = inputs[i];
-        int numRows = input.second.sampleLayout.GetNumElements(); 
-        int numCols = buffer.m_numberOfSamples;
         shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
-        auto type = matrix->GetMatrixType(); 
+        auto type = matrix->GetMatrixType();
+        int numRows = input.second.sampleLayout.GetNumElements();
 
+        if (type == MatrixType::DENSE)
+        {
+            if (buffer.m_buffer.size() % numRows != 0)
+            {
+                RuntimeError("Input %ls: Expected input data to be a multiple of %ld, but it is %ld", m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
+            }
+            if (buffer.m_buffer.size() == 0)
+            {
+                RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
+            }
+        }
+        else if (type == MatrixType::SPARSE)
+        {
+            if (buffer.m_colIndices.size() < 2)
+            {
+                RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
+            } 
+            if (buffer.m_colIndices[0] != 0)
+            {
+                RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
+            }
+            if (buffer.m_colIndices[buffer.m_colIndices.size()-1] != buffer.m_indices.size())
+            {
+                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
+            }
+        }
+
+        int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
+        assert(numCols >= 1);
         input.second.pMBLayout->Init(1, numCols);
         input.second.pMBLayout->AddSequence(0, 0, 0, numCols);
        

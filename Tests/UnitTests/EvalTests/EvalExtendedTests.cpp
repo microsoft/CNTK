@@ -5,6 +5,9 @@
 
 #include "stdafx.h"
 #include "EvalTestHelper.h"
+#include "fileutil.h"
+#include "ExceptionWithCallStack.h"
+#include "ScriptableObjects.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -87,13 +90,16 @@ BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)
     // Allocate the output values layer
     std::vector<VariableBuffer<float>> outputBuffer(1);
 
-    // Allocate the input values layer (empty)
+    // Allocate the input values layer (empty)>	EvalTests.exe!Microsoft::MSR::CNTK::Test::EvalTestSuite::EvalConstantPlusTest::test_method() Line 85	C++
+
     std::vector<VariableBuffer<float>> inputBuffer;
 
     // We can call the evaluate method and get back the results...
     eval->ForwardPass(inputBuffer, outputBuffer);
 
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[0], 3 /* 1 + 2 */);
+    std::vector<float> expected{ 3 /* 1 + 2 */ };
+    auto buf = outputBuffer[0].m_buffer;
+    BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
 
     eval->Destroy();
 }
@@ -121,7 +127,6 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesTest)
 
     // Allocate the input values layer
     std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_numberOfSamples = 1;
     inputBuffer[0].m_buffer.push_back(2);
     inputBuffer[0].m_indices.push_back(0);
     inputBuffer[0].m_colIndices.push_back(0);
@@ -129,7 +134,9 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesTest)
     // We can call the evaluate method and get back the results...
     eval->ForwardPass(inputBuffer, outputBuffer);
 
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[0], 6);
+    std::vector<float> expected{ 6 };
+    auto buf = outputBuffer[0].m_buffer;
+    BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
 
     eval->Destroy();
 }
@@ -159,7 +166,6 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesDualOutputTest)
 
     // Allocate the input values layer
     std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_numberOfSamples = 1;
     inputBuffer[0].m_buffer.push_back(2);
     inputBuffer[0].m_indices.push_back(0);
     inputBuffer[0].m_colIndices.push_back(0);
@@ -168,48 +174,68 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesDualOutputTest)
     // TODO: Indicate to ForwardPass that we want output o2 only
     eval->ForwardPass(inputBuffer, outputBuffer);
 
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[0], 6);
+    std::vector<float> expected{ 6 };
+    auto buf = outputBuffer[0].m_buffer;
+    BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
 
     eval->Destroy();
 }
 
 BOOST_AUTO_TEST_CASE(EvalDenseTimesTest)
 {
-    std::string modelDefinition =
-        "deviceId = -1 \n"
-        "precision = \"float\" \n"
-        "traceLevel = 1 \n"
-        "run=NDLNetworkBuilder \n"
-        "NDLNetworkBuilder=[ \n"
-        "i1 = Input(4) \n"
-        "o1 = Times(i1, Constant(2), tag=\"output\") \n"
-        "FeatureNodes = (i1) \n"
-        "] \n";
+    try
+    {
+        std::string modelDefinition =
+            "deviceId = -1 \n"
+            "precision = \"float\" \n"
+            "traceLevel = 1 \n"
+            "run=BrainScriptNetworkBuilder \n"
+            "BrainScriptNetworkBuilder=[ \n"
+            "i1 = Input(4) \n"
+            "o1 = Times(ConstantTensor(2, 1:4), i1, tag=\"output\") \n"
+            "FeatureNodes = (i1) \n"
+            "] \n";
 
-    VariableSchema inputLayouts;
-    VariableSchema outputLayouts;
-    IEvaluateModelExtended<float> *eval;
-    eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
+        VariableSchema inputLayouts;
+        VariableSchema outputLayouts;
+        IEvaluateModelExtended<float> *eval;
+        eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
-    // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
-    
-    // Allocate the input values layer
-    std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_numberOfSamples = 4;
-    inputBuffer[0].m_buffer = {1, 2, 3, 4};
-    inputBuffer[0].m_indices.push_back(0);
-    inputBuffer[0].m_colIndices.push_back(0);
+        // Allocate the output values layer
+        std::vector<VariableBuffer<float>> outputBuffer(1);
 
-    // We can call the evaluate method and get back the results...
-    eval->ForwardPass(inputBuffer, outputBuffer);
+        // Number of inputs must adhere to the schema
+        std::vector<VariableBuffer<float>> inputBuffer1(0);
+        BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer1, outputBuffer), std::exception); // Not enough inputs
 
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[0], 2);
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[1], 4);
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[2], 6);
-    BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[3], 8);
+        // Number of elements in the input must adhere to the schema
+        std::vector<VariableBuffer<float>> inputBuffer(1);
+        inputBuffer[0].m_buffer = { 1, 2, 3 };
+        BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Not enough elements in the sample
 
-    eval->Destroy();
+        // Output values and shape must be correct.
+        inputBuffer[0].m_buffer = { 1, 2, 3, 4 };
+        eval->ForwardPass(inputBuffer, outputBuffer);
+
+        std::vector<float> expected{ 20 };
+        auto buf = outputBuffer[0].m_buffer;
+        BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
+
+        eval->Destroy();
+    }
+    catch (const ScriptableObjects::ScriptingException& err)
+    {
+        fprintf(stderr, "\n");
+        err.PrintError(L"EXCEPTION occurred");
+        throw;
+    }
+    catch (const IExceptionWithCallStackBase& err)
+    {
+        fprintf(stderr, "\n");
+        fprintf(stderr, "%s", err.CallStack());
+        fprintf(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
+        throw;
+    }
 }
 
 BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
@@ -220,8 +246,8 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
         "traceLevel = 1 \n"
         "run=NDLNetworkBuilder \n"
         "NDLNetworkBuilder=[ \n"
-        "i1 = SparseInput(9) \n"
-        "o1 = Times(i1, Constant(2), tag=\"output\") \n"
+        "i1 = SparseInput(3) \n"
+        "o1 = Times(Constant(2, rows=1, cols=3), i1, tag=\"output\") \n"
         "FeatureNodes = (i1) \n"
         "] \n";
 
@@ -235,16 +261,30 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
 
     // Allocate the input values layer
     std::vector<VariableBuffer<float>> inputBuffer(1);
-    inputBuffer[0].m_numberOfSamples = 9;
-    inputBuffer[0].m_buffer = {1, 2, 3, 4, 5, 6};
-    inputBuffer[0].m_indices = {0, 2, 3, 6};
-    inputBuffer[0].m_colIndices = {0, 2, 2, 0, 1, 2};
+    inputBuffer[0].m_buffer = {1, 2, 3, 5, 6};
+    inputBuffer[0].m_indices = {0, 2, 2, 1, 2};
+
+    inputBuffer[0].m_colIndices = {};
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Empty input
+
+    inputBuffer[0].m_colIndices = { 0 };
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Empty input
+
+    inputBuffer[0].m_colIndices = { 1, 0 };
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Illegal: First entry must be 0
+
+    inputBuffer[0].m_colIndices = { 0, 2, 2, 4 };
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Illegal: Last entry must be indices.size()
+
+    inputBuffer[0].m_colIndices = { 0, 2, 2, 5 };
 
     // We can call the evaluate method and get back the results...
-    // TODO: Enable when SparseInput is supported
-    //eval->ForwardPass(inputBuffer, outputBuffer);
-    //BOOST_CHECK_EQUAL(outputBuffer[0].m_buffer[0], 2);
-
+    eval->ForwardPass(inputBuffer, outputBuffer);
+    
+    // [2,2,2] * [1,2,3]^T etc.
+    std::vector<float> expected{ 6, 0, 28 };
+    auto buf = outputBuffer[0].m_buffer;
+    BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
     eval->Destroy();
 }
 

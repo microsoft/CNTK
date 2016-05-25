@@ -123,35 +123,11 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy "$(OutDir)..\evaldll.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copy EvalDLL to the UnitTest output directory</Message>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy "$(OutDir)..\evaldll.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy EvalDLL to the UnitTest output directory</Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">copy "$(OutDir)..\evaldll.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Copy EvalDLL to the UnitTest output directory</Message>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">copy "$(OutDir)..\evaldll.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Copy EvalDLL to the UnitTest output directory</Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="EvalTestHelper.h" />
@@ -177,10 +153,10 @@
       <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
     </ItemGroup>
     <ItemGroup Condition="$(GpuBuild)">
-      <UnitTestDependencies Include="$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
+      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
