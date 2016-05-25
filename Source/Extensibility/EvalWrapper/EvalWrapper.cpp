@@ -23,6 +23,7 @@ using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Runtime::Serialization;
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
@@ -524,7 +525,8 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
+[Serializable]
+public ref class CNTKException : Exception, ISerializable
 {
 public:
     CNTKException() : Exception()
@@ -537,8 +539,23 @@ public:
     {}
 
     const String^ NativeCallStack;
+
+
+    [System::Security::Permissions::SecurityPermissionAttribute
+        (System::Security::Permissions::SecurityAction::LinkDemand,
+        Flags = System::Security::Permissions::SecurityPermissionFlag::SerializationFormatter)]
+    virtual void GetObjectData(SerializationInfo^ info, StreamingContext context) override
+    {
+        Exception::GetObjectData(info, context);
+    }
+
+protected:
+
+    CNTKException(SerializationInfo^ info, StreamingContext context) : Exception(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKRuntimeException : CNTKException
 {
 public:
@@ -549,6 +566,7 @@ public:
     {}
 };
 
+[Serializable]
 public ref class CNTKLogicErrorException : CNTKException
 {
 public:
@@ -559,6 +577,7 @@ public:
     {}
 };
 
+[Serializable]
 public ref class CNTKInvalidArgumentException : CNTKException
 {
 public:
@@ -569,6 +588,7 @@ public:
     {}
 };
 
+[Serializable]
 public ref class CNTKBadAllocException : CNTKException
 {
 public:
