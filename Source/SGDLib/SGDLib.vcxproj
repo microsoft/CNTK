@@ -91,6 +91,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\BlockMomentum\BlockMomentumSGD.h" />
     <ClInclude Include="..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
@@ -120,6 +121,7 @@
     <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
+    <ClInclude Include="MASGD.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="MASGD.h" />

@@ -918,6 +918,33 @@ bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr
     extrauttmap.insert(extrauttmap.end(), m_extraSeqsPerMB.begin(), m_extraSeqsPerMB.end());
     return true;
 }
+template<class ElemType>
+bool HTKMLFReader<ElemType>::GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+{
+    if (m_trainOrTest)
+    {
+        return GetMinibatch4CTCToTrainOrTest(boundaries, extrauttmap);
+    }
+    else
+    {
+        return true;
+    }
+}
+
+template<class ElemType>
+bool HTKMLFReader<ElemType>::GetMinibatch4CTCToTrainOrTest(std::vector<size_t> &boundaries, std::vector<size_t> &extrauttmap)
+{
+
+    boundaries.clear();
+    extrauttmap.clear();
+    for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
+    {
+        boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
+    }
+    extrauttmap.insert(extrauttmap.end(), m_extraSeqsPerMB.begin(), m_extraSeqsPerMB.end());
+
+    return true;
+}
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
@@ -1060,8 +1087,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         {
                             m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                             m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                            m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                         }
+                            m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+
                     }
                 }
                 ReNewBufferForMultiIO(i);
@@ -1102,8 +1130,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 {
                                     m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[src]);
                                     m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[src]);
-                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
                                 }
+
+                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
 
                                 fillOneUttDataforParallelmode(matrices, m_numValidFrames[des], framenum, des, src);
                                 m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, des, m_numValidFrames[des], m_numValidFrames[des] + framenum);
@@ -1804,11 +1833,12 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
     if (m_mbiter->haslattice())
     {
         m_latticeBufferMultiUtt[i] = std::move(m_mbiter->lattice(0));
-        m_phoneboundaryIDBufferMultiUtt[i].clear();
-        m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
-        m_labelsIDBufferMultiUtt[i].clear();
-        m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
-    }
+	}
+
+	m_labelsIDBufferMultiUtt[i].clear();
+	m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
+	m_phoneboundaryIDBufferMultiUtt[i].clear();
+	m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
 
     m_processedFrame[i] = 0;
 
@@ -2059,3 +2089,4 @@ std::shared_ptr<ElemType> HTKMLFReader<ElemType>::AllocateIntermediateBuffer(int
 template class HTKMLFReader<float>;
 template class HTKMLFReader<double>;
 } } }
+

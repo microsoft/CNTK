@@ -3,6 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #pragma  once 
 
 #include "Basics.h"
@@ -173,7 +174,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          
          virtual void SaveToCheckPoint(File& fstream){}
          virtual void LoadFromCheckPoint(File& fstream){}
-         
 
     protected:
         bool    somePeersHaveArrivedAtEnd()
@@ -291,7 +291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MASGDPerfStats              m_perfReporter;
         MPIWrapperPtr m_pMPI;
         DEVICEID_TYPE               m_deviceId;
- };
+};
 
 
     // Implementation of standard model averaging 
@@ -376,3 +376,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 } } }
+

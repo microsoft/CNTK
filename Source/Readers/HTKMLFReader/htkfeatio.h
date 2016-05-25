@@ -825,6 +825,7 @@ public:
             RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second; // get state index
         setdata(ts, te, uid);
+        phonestart = 65535;
         // phone boundary
         if (hmmnamehash.size() > 0)
         {
@@ -915,6 +916,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         filename = filename.substr(1, filename.length() - 2); // strip quotes
         if (filename.find("*/") == 0)
             filename = filename.substr(2);
+
 #ifdef _MSC_VER
         wstring key = msra::strfun::utf16(regex_replace(filename, regex("\\.[^\\.\\\\/:]*$"), string())); // delete extension (or not if none)
 #else

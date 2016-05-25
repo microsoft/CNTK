@@ -231,9 +231,9 @@ public:
     size_t NzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
-			return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
+            return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
         else if (GetFormat()== matrixFormatSparseCSR)
-			return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
+            return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return GetBlockSize() * GetNumRows();
         else

@@ -160,10 +160,17 @@ public:
     }
 
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices) = 0;
+
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
     {
         NOT_IMPLEMENTED;
     };
+
+    virtual bool GetMinibatch4CTC(vector<size_t> &/*boundaries*/, vector<size_t> &/*extrauttmap*/)  
+    { 
+        NOT_IMPLEMENTED; 
+    };
+    
     virtual bool GetHmmData(msra::asr::simplesenonehmm* /*hmm*/)
     {
         NOT_IMPLEMENTED;
@@ -333,8 +340,10 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
+
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
+    virtual bool GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     size_t GetNumParallelSequencesForFixingBPTTMode();

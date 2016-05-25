@@ -1356,7 +1356,20 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 {
     return *this;
 }
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq,
+    const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+{
+    return *this;
+}
 
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+    GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, const bool isColWise)
+{
+    return *this;
+}
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
 {

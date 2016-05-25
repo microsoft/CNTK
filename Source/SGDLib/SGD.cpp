@@ -14,7 +14,6 @@
 #include "AllReduceDistGradAggregator.h"
 #include "BlockMomentumSGD.h"
 #endif
-
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
@@ -33,6 +32,7 @@ template SGD<float>::SGD(const ConfigParameters&);
 template SGD<double>::SGD(const ConfigParameters&);
 template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
+
 
 // -----------------------------------------------------------------------
 // Train() -- perform a multi-epoch training end-to-end with checkpointing
@@ -222,6 +222,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         trainSetDataReader->GetHmmData(hmm);
     }
 
+    bool isCTCTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
+    if (isCTCTrainingCriterion)
+    {
+        //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
+        auto  hmm = node->gethmm();
+        trainSetDataReader->GetHmmData(hmm);
+    }
+
     // used for KLD regularized adaptation. For all other adaptation techniques
     // use MEL to edit the model and using normal training algorithm
     // TODO: Should this be done in SGD::Adapt()?
@@ -299,7 +308,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             m_mpi->WaitAll();
         }
-
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -320,6 +328,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      /*out*/ m_prevChosenMinibatchSize);
         if (learnRateInitialized)
             prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
+
     }
 
     if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -350,6 +359,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
     }
 
+    if (isCTCTrainingCriterion)
+    {
+        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum);
+    }
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
@@ -601,7 +614,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         break;
                     }
                 }
-
                 if (learnRateReduced)
                 {
                     learnRatePerSample *= m_learnRateDecreaseFactor;
@@ -777,6 +789,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
+
     if (useParallelTrain && m_pMASGDHelper)
     {
         m_pMASGDHelper->OnEpochStart(learnableNodes);
@@ -884,6 +897,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (!wasDataRead)
             actualMBSize = 0; // (undefined if !wasDataRead)
 
+        // for progress and statistics, we should only count frames that are not gaps
         nSamplesSinceLastModelSync += actualMBSize;
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
@@ -1074,6 +1088,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
+
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
             {
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
@@ -1083,6 +1098,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
             // prepare break condition
+
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
@@ -1189,11 +1205,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         profiler.NextSample();
     }
-
     // --- END MAIN MINIBATCH LOOP
 
     if (useModelAggregation )
     {
+
         m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
@@ -1227,6 +1243,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: merge with training criteria
         vector<double> numer(epochEvalErrors.size());
         vector<size_t> denom(epochEvalErrors.size());
+
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
         {
             numer[i] = epochEvalErrors[i].first;
@@ -1239,9 +1256,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         // 3. modify return value 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
+
     }
     return totalEpochSamples;
 }
+
 
 // -----------------------------------------------------------------------
 // subroutines and helpers follow below
@@ -2435,6 +2454,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
+    //CTC parameter
+    m_blankNum = configSGD(L"blankNum", (size_t)1);
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
     m_batchNormalizationBlendTimeConstant = configSGD(L"batchNormalizationBlendTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
@@ -2673,3 +2694,4 @@ SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
 ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
 
 }}}
+

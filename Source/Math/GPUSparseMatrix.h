@@ -104,13 +104,13 @@ public:
 	GPUSPARSE_INDEX_TYPE NzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
-			return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
+            return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
         if (GetFormat() == matrixFormatSparseCSR )
-			return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
+            return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return (int)(GetNumRows() * GetBlockSize());
         else
-			NOT_IMPLEMENTED;
+            NOT_IMPLEMENTED;
 
     }
     inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use

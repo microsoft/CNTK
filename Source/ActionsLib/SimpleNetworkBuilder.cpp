@@ -1746,6 +1746,11 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
                 tinput = builder.Times(matrix, input);
             output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
             break;
+        case EvalCriterion::PhoneError:
+            if (matrix != nullptr && tinput == input)
+                tinput = builder.Times(matrix, input);
+            output = builder.PhoneError(label, tinput, (evalNodeName == L"") ? L"PhoneError" : evalNodeName);
+            break;
 #ifdef COMING_SOON
         case EvalCriterion::CRF:
             assert(trans != nullptr);
@@ -1786,6 +1791,7 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
     if      (EqualCI(s, L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    else if (EqualCI(s, L"PhoneError"))                   return EvalCriterion::PhoneError;
     else if (EqualCI(s, L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
     else if (EqualCI(s, L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
     else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;

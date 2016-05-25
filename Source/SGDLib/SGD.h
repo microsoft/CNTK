@@ -110,6 +110,7 @@ struct SGDParams : public ScriptableObjects::Object
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
+
 protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
@@ -117,6 +118,7 @@ protected:
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
     bool m_useNesterovMomentum;
+
 
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
@@ -270,7 +272,6 @@ protected:
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
     double m_blockMomentumAsTimeConstant;
-
     bool m_needAveMultiplier;
     double m_L2RegWeight;
     double m_L1RegWeight;
@@ -284,10 +285,15 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+    size_t m_blankNum;
+
 };
 
 template <class ElemType>
 class IDistGradAggregator;
+
+template <class ElemType>
+class MASGD;
 
 // -----------------------------------------------------------------------
 // class SGD
@@ -474,6 +480,7 @@ protected:
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
+
 public:
     // UpdateWeightsS - static version of UpdateWeights()
     static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
@@ -562,6 +569,7 @@ protected:
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
+
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
@@ -585,3 +593,4 @@ private:
 };
 
 }}}
+
