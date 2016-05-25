@@ -49,7 +49,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # Backward pass test
     # ==================
     # Reshaping is just moving the input values to different indexes of the result tensor.
-    # If we would compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
+    # If we compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
     # test if they get wrongly permuted during test. To this end we multiply the reshaping result with itself.     
     # The expected gradient is identical to the input tensor.
@@ -224,7 +224,7 @@ def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shap
     # Backward pass test
     # ==================
     # Reshaping is just moving the input values to different indexes of the result tensor.
-    # If we would compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
+    # If we compute the gradients on the unmodified tensor, reshape would get 1 for all inputs.
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
     # test if they get wrongly permuted during test. To this end we multiply the reshaping result with itself.     
     # The expected gradient is identical to the input tensor.
