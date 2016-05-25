@@ -18,6 +18,7 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
+#include "GPUMatrix.h"
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -68,6 +69,16 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+// Setup profiling
+template <typename ConfigParamType>
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config)
+{
+    if (config(L"profilerEnabled", true))
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(),
+        config(L"profilerDelay", 0.0f),
+        config(L"profilerBufferSize", 32ull * 1024ull * 1024ull));
+}
 
 void RedirectStdErr(wstring logpath)
 {
@@ -474,8 +485,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // Setup profiling
     ProfilerContext profilerContext;
-    if (config(L"profilerEnabled", true))
-        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
+    SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config);
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
@@ -644,8 +654,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // Setup profiling
     ProfilerContext profilerContext;
-    if (config(L"profilerEnabled", true))
-        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
+    SetupProfiling<ConfigParameters>(profilerContext, config);
 
     // run commands
     std::string type = config(L"precision", "float");

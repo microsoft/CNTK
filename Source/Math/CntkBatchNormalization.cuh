@@ -24,22 +24,6 @@ size_t RoundUpToMultiple(size_t n, size_t blockSize)
     return (n + blockSize - 1) / blockSize;
 }
 
-cudaError_t GetLastCudaError()
-{
-    cudaError_t prelaunchErr = cudaGetLastError();
-    assert(cudaSuccess == prelaunchErr);
-    if (prelaunchErr != cudaSuccess)
-        return prelaunchErr;
-        
-#ifndef NO_SYNC
-    cudaError_t executionErr = cudaStreamSynchronize(GetStream());
-    assert(cudaSuccess == executionErr);
-    if (executionErr != cudaSuccess)
-        return executionErr;
-#endif
-    return cudaSuccess;
-}
-
 template <int U, typename T>
 __device__ __forceinline__ void LoadValues(const T* src, T dst[U])
 {

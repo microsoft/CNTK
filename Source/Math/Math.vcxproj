@@ -55,7 +55,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ACML_PATH)\include;$(SolutionDir)Source\Common\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ACML_PATH)\include;$(SolutionDir)Source\Common\include;$(SolutionDir)Source\PerformanceProfilerDll;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ACML_PATH)\lib;$(OutDir)</AdditionalLibraryDirectories>
@@ -77,8 +77,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalDependencies>libacml_mp_dll.lib;PerformanceProfilerDll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>libacml_mp_dll.dll; PerformanceProfilerDll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
@@ -119,9 +119,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libacml_mp_dll.lib;PerformanceProfilerDll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>libacml_mp_dll.dll; PerformanceProfilerDll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutputPath)"</Command>

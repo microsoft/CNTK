@@ -12,11 +12,9 @@
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "Basics.h"
-#include "PerformanceProfiler.h"
 #include "fileutil.h"
 #include <stdio.h>
 #include <time.h>
-
 
 #ifdef _WIN32
 #include <direct.h>
@@ -26,6 +24,8 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #endif 
+
+#include "PerformanceProfiler.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -41,17 +41,17 @@ enum ProfilerEvtType
 };
 
 static const char* c_profilerEvtDesc[profilerEvtMax] = {  
-    "Epoch Time................:",
-    "Forward Pass Time.........:",
-    "Backward Pass Time........:",
-    "Gradient Aggregation Time.:",
-    "Weight Update Time........:",
-    "Input Data Processing Time:",
-    "Image Decoding Time.......:",
-    "MPI Processing Time.......:",
-    "MPI Wait Time.............:",
-    "MPI Throughput............:",
-    "ImageReader Throughput....:"
+    "Epoch Time",
+    "Forward Pass Time",
+    "Backward Pass Time",
+    "Gradient Aggregation Time",
+    "Weight Update Time",
+    "Input Data Processing Time",
+    "Image Decoding Time",
+    "MPI Processing Time",
+    "MPI Wait Time",
+    "MPI Throughput",
+    "ImageReader Throughput"
 };
 
 static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
@@ -72,7 +72,7 @@ struct FixedEventRecord
 {
     int             cnt;
     long long       sum;
-    long long       sumsq;
+    double          sumsq;
     long long       min;
     long long       max;
     long long       totalBytes;
@@ -105,6 +105,7 @@ struct CustomEventRecordEnd
 // CustomEventRecordEnd struct
 //
 
+
 struct ProfilerState
 {
     bool                    init = false;
@@ -115,10 +116,15 @@ struct ProfilerState
     unsigned long long      uniqueId;
     unsigned long long      customEventBufferBytes;     // Number of bytes allocated for the custom event buffer
     unsigned long long      customEventPtr;             // Pointer to current place in buffer
+    unsigned long long      customEventCommittedBytes;  // Number of bytes committed in the event buffer
     char*                   customEventBuffer;
 };
 
-#define INVALID_STATE_ID    0xffffffff
+// State id is packed into a 64 bit int as follows:
+// bits 63-16: unique custom event id
+// bits 15-0: fixed event id
+#define INVALID_STATE_ID        0xffffffffffffffffull
+#define INVALID_FIXED_EVENT_ID  0xffffull
 
 // We support one global instance of the profiler
 static ProfilerState g_profilerState;
@@ -182,11 +188,14 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySe
 //
 // Measure time for either a fixed or a custom event.
 // The *Begin call returns a stateId that is passed to ProfilerTimeEnd().
-// If the event does not need to be recorded, call ProfilerTimeCancel().
+// If the event does not need to be recorded, call ProfilerTimeCancel() before ProfilerTimeEnd().
 //
-int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
+unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const int eventId)
 {
     if (!g_profilerState.init || GetClock() < g_profilerState.startClock) return INVALID_STATE_ID;
+
+    unsigned long long stateId = ProfilerTimeBegin(c_profilerEvtDesc[eventId]);
+    if (stateId == INVALID_STATE_ID) return INVALID_STATE_ID;
 
     LOCK
 
@@ -196,79 +205,13 @@ int PERF_PROFILER_API ProfilerTimeBegin(int eventId)
     }
     g_profilerState.fixedEvents[eventId].refCnt++;
 
-    return eventId;
+    return (stateId & ~0xffffull) | (unsigned long long)eventId;
 }
 
-void PERF_PROFILER_API ProfilerTimeEnd(int stateId)
+void ProfilerTimeEndInt(const unsigned long long stateId, const long long customClock = -1ll)
 {
-    long long endClock = GetClock();
-    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
-
-    LOCK
-    
-    g_profilerState.fixedEvents[stateId].refCnt--;
-    if (g_profilerState.fixedEvents[stateId].refCnt == 0)
-    {
-        long long delta = endClock - g_profilerState.fixedEvents[stateId].beginClock;
-        if (g_profilerState.fixedEvents[stateId].cnt == 0)
-        {
-            g_profilerState.fixedEvents[stateId].min = delta;
-            g_profilerState.fixedEvents[stateId].max = delta;
-        }
-        g_profilerState.fixedEvents[stateId].min = min(delta, g_profilerState.fixedEvents[stateId].min);
-        g_profilerState.fixedEvents[stateId].max = max(delta, g_profilerState.fixedEvents[stateId].max);
-        g_profilerState.fixedEvents[stateId].sum += delta;
-        delta /= 1000;  // Scale delta to prevent overflow
-        g_profilerState.fixedEvents[stateId].sumsq += delta * delta;
-        g_profilerState.fixedEvents[stateId].cnt++;
-    }
-}
-
-void PERF_PROFILER_API ProfilerTimeCancel(int stateId)
-{
-    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
-
-    LOCK
-
-    g_profilerState.fixedEvents[stateId].refCnt = 0;
-}
-
-
-
-unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const char* eventDescription)
-{
-    if (!g_profilerState.init || GetClock() < g_profilerState.startClock) return INVALID_STATE_ID;
-
-    LOCK
-
-    unsigned long long eventDescriptionBytes = strlen(eventDescription) + 1;
-    unsigned long long requiredBufferBytes = 2 /* Allow room for the custom event type */ + eventDescriptionBytes + sizeof(CustomEventRecordBegin) + sizeof(CustomEventRecordEnd);
-    if ((g_profilerState.customEventPtr + requiredBufferBytes) > g_profilerState.customEventBufferBytes) return INVALID_STATE_ID;
-
-    g_profilerState.uniqueId++;
-    if (g_profilerState.uniqueId == INVALID_STATE_ID) g_profilerState.uniqueId++;
-
-    g_profilerState.customEventBuffer[g_profilerState.customEventPtr++] = CUSTOM_EVT_BEGIN_TYPE;
-
-    strcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, eventDescription);
-    g_profilerState.customEventPtr += eventDescriptionBytes;
-
-    CustomEventRecordBegin beginRecord;
-
-    beginRecord.uniqueId = g_profilerState.uniqueId;
-    beginRecord.threadId = GetThreadId();
-    beginRecord.beginClock = GetClock();
-
-    memcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, &beginRecord, sizeof(CustomEventRecordBegin));
-    g_profilerState.customEventPtr += sizeof(CustomEventRecordBegin);
-
-    return g_profilerState.uniqueId;
-}
-
-void PERF_PROFILER_API ProfilerTimeEnd(unsigned long long stateId)
-{
-    long long endClock = GetClock();
-    if (!g_profilerState.init || stateId == INVALID_STATE_ID) return;
+    long long endClock = (customClock == -1ll ? GetClock() : customClock);
+    if (!g_profilerState.init || (stateId & 0xffffffffffff0000ull) == (INVALID_STATE_ID & 0xffffffffffff0000ull)) return;
 
     LOCK
 
@@ -276,36 +219,136 @@ void PERF_PROFILER_API ProfilerTimeEnd(unsigned long long stateId)
 
     CustomEventRecordEnd endRecord;
     endRecord.endClock = endClock;
-    endRecord.uniqueId = stateId;
+    endRecord.uniqueId = (stateId & ~0xffffull) >> 16;
 
     memcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, &endRecord, sizeof(CustomEventRecordEnd));
     g_profilerState.customEventPtr += sizeof(CustomEventRecordEnd);
+
+    int eventId = stateId & 0xffff;
+    if (eventId != INVALID_FIXED_EVENT_ID)
+    {
+        g_profilerState.fixedEvents[eventId].refCnt--;
+        if (g_profilerState.fixedEvents[eventId].refCnt == 0)
+        {
+            long long delta = endClock - g_profilerState.fixedEvents[eventId].beginClock;
+            if (g_profilerState.fixedEvents[eventId].cnt == 0)
+            {
+                g_profilerState.fixedEvents[eventId].min = delta;
+                g_profilerState.fixedEvents[eventId].max = delta;
+            }
+            g_profilerState.fixedEvents[eventId].min = min(delta, g_profilerState.fixedEvents[eventId].min);
+            g_profilerState.fixedEvents[eventId].max = max(delta, g_profilerState.fixedEvents[eventId].max);
+            g_profilerState.fixedEvents[eventId].sum += delta;
+            g_profilerState.fixedEvents[eventId].sumsq += (double)delta * (double)delta;
+            g_profilerState.fixedEvents[eventId].cnt++;
+        }
+    }
 }
+
+void PERF_PROFILER_API ProfilerTimeEnd(const unsigned long long stateId)
+{
+    ProfilerTimeEndInt(stateId);
+}
+
+void PERF_PROFILER_API ProfilerTimeCancel(unsigned long long* stateId)
+{
+    if (!g_profilerState.init || ((*stateId) & 0xffffffffffff0000ull) == (INVALID_STATE_ID & 0xffffffffffff0000ull)) return;
+
+    LOCK
+
+    int eventId = (*stateId) & 0xffff;
+    if (eventId != INVALID_FIXED_EVENT_ID)
+    {
+        g_profilerState.fixedEvents[eventId].refCnt = 0;
+    }
+
+    *stateId = INVALID_STATE_ID;
+}
+
+unsigned long long ProfilerTimeBeginInt(const char* eventDescription, const long long customClock = -1ll)
+{
+    if (!g_profilerState.init || GetClock() < g_profilerState.startClock) return INVALID_STATE_ID;
+
+    LOCK
+
+    // TODO: Perf: We are iterating through eventDescription twice, for length and the copy, this could be optimized.
+    unsigned long long eventDescriptionBytes = strlen(eventDescription) + 1;
+    unsigned long long requiredBufferBytes = 2 /* Allow room for the custom event type */ + eventDescriptionBytes + sizeof(CustomEventRecordBegin) + sizeof(CustomEventRecordEnd);
+    if ((g_profilerState.customEventCommittedBytes + requiredBufferBytes) > g_profilerState.customEventBufferBytes) return INVALID_STATE_ID;
+    g_profilerState.customEventCommittedBytes += requiredBufferBytes;
+
+    // Increment id with wrapping around, skipping the INVALID_STATE_ID
+    g_profilerState.uniqueId++;
+    g_profilerState.uniqueId &= 0xffffffffffffull;
+    if (g_profilerState.uniqueId == (INVALID_STATE_ID >> 16))
+    {
+        g_profilerState.uniqueId++;
+        g_profilerState.uniqueId &= 0xffffffffffffull;
+    }
+
+    g_profilerState.customEventBuffer[g_profilerState.customEventPtr++] = CUSTOM_EVT_BEGIN_TYPE;
+
+    strcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, eventDescription);
+    g_profilerState.customEventPtr += eventDescriptionBytes;
+
+    CustomEventRecordBegin beginRecord;
+    beginRecord.uniqueId = g_profilerState.uniqueId;
+    beginRecord.threadId = GetThreadId();
+    beginRecord.beginClock = (customClock == -1ll ? GetClock() : customClock);
+
+    memcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, &beginRecord, sizeof(CustomEventRecordBegin));
+    g_profilerState.customEventPtr += sizeof(CustomEventRecordBegin);
+
+    return (g_profilerState.uniqueId << 16) | INVALID_FIXED_EVENT_ID;
+}
+
+unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const char* eventDescription)
+{
+    return ProfilerTimeBeginInt(eventDescription);
+}
+
+
+//
+// CUDA kernel profiling.
+// The cuda event calls must be called around the kernel, and the total kernel time provided
+// in deltaSeconds.
+//
+unsigned long long PERF_PROFILER_API ProfilerCudaTimeBegin(const char* eventDescription)
+{
+    return ProfilerTimeBeginInt(eventDescription, 0ll);
+}
+
+
+void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const unsigned long long stateId)
+{
+    ProfilerTimeEndInt(stateId, (long long)((double)deltaSeconds * (double)g_profilerState.clockFrequency));
+}
+
 
 //
 // Measure throughput given a bytes in an *Begin/*End block.
 // The ThroughputEventRecord is meaintained by the caller.
 // If ProfilerThroughputEnd is not called, the event is not recorded.
 //
-void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ProfilerThroughputEventRecord* throughputEventRecord)
+void PERF_PROFILER_API ProfilerThroughputBegin(const int eventId, ProfilerThroughputEventRecord* profilerThroughputEventRecord)
 {
     if (!g_profilerState.init) return;
 
-    throughputEventRecord->eventId = eventId;
-    throughputEventRecord->beginClock = GetClock();
+    profilerThroughputEventRecord->eventId = eventId;
+    profilerThroughputEventRecord->beginClock = GetClock();
 }
 
-void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ProfilerThroughputEventRecord* throughputEventRecord)
+void PERF_PROFILER_API ProfilerThroughputEnd(const long long bytes, ProfilerThroughputEventRecord* profilerThroughputEventRecord)
 {
     long long endClock = GetClock();
     if (!g_profilerState.init || endClock < g_profilerState.startClock) return;
 
     LOCK
 
-    if (endClock == throughputEventRecord->beginClock) return;
+    if (endClock == profilerThroughputEventRecord->beginClock) return;
     // Use KB rather than bytes to prevent overflow
-    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - throughputEventRecord->beginClock);
-    int eventId = throughputEventRecord->eventId;
+    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - profilerThroughputEventRecord->beginClock);
+    int eventId = profilerThroughputEventRecord->eventId;
     if (g_profilerState.fixedEvents[eventId].cnt == 0)
     {
         g_profilerState.fixedEvents[eventId].min = KBytesPerSec;
@@ -314,7 +357,7 @@ void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ProfilerThroughput
     g_profilerState.fixedEvents[eventId].min = min(KBytesPerSec, g_profilerState.fixedEvents[eventId].min);
     g_profilerState.fixedEvents[eventId].max = max(KBytesPerSec, g_profilerState.fixedEvents[eventId].max);
     g_profilerState.fixedEvents[eventId].sum += KBytesPerSec;
-    g_profilerState.fixedEvents[eventId].sumsq += KBytesPerSec * KBytesPerSec;
+    g_profilerState.fixedEvents[eventId].sumsq += (double)KBytesPerSec * (double)KBytesPerSec;
     g_profilerState.fixedEvents[eventId].totalBytes += bytes;
     g_profilerState.fixedEvents[eventId].cnt++;
 }
@@ -350,6 +393,36 @@ void PERF_PROFILER_API ProfilerClose()
 
     delete[] g_profilerState.customEventBuffer;
 }
+
+
+//
+// Helpers for CUDA call profiling.
+//
+
+#ifdef NO_SYNC
+static bool g_SyncCudaScope_syncEnabled = false;
+#else
+static bool g_SyncCudaScope_syncEnabled = true;
+#endif
+static bool g_SyncCudaScope_profilingEnabled = false;
+
+// Helper functions to set/get Sync flags.
+void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled)
+{
+    g_SyncCudaScope_syncEnabled = syncEnabled;
+    g_SyncCudaScope_profilingEnabled = profilingEnabled;
+}
+
+void PERF_PROFILER_API SyncCudaScopeGetFlags(bool& syncEnabled, bool& profilingEnabled)
+{
+#ifdef NO_SYNC
+    syncEnabled = g_SyncCudaScope_syncEnabled;
+#else
+    syncEnabled = true;
+#endif
+    profilingEnabled = g_SyncCudaScope_profilingEnabled;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utility functions.
@@ -488,7 +561,7 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
 
     for (int evtIdx = 0; evtIdx < profilerEvtMax; evtIdx++)
     {
-        fprintfOrDie(f, "%s ", c_profilerEvtDesc[evtIdx]);
+        fprintfOrDie(f, "%-26s: ", c_profilerEvtDesc[evtIdx]);
 
         switch (c_profilerEvtType[evtIdx])
         {
@@ -503,7 +576,7 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
                     fprintfOrDie(f, "%s ", str);
 
                     double sum = (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency;
-                    double sumsq = (((double)g_profilerState.fixedEvents[evtIdx].sumsq + 500000.0) * 1000000.0) / (double)g_profilerState.clockFrequency / (double)g_profilerState.clockFrequency;
+                    double sumsq = g_profilerState.fixedEvents[evtIdx].sumsq / (double)g_profilerState.clockFrequency / (double)g_profilerState.clockFrequency;
                     double stdDev = sumsq - (pow(sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
                     if (stdDev < 0.0) stdDev = 0.0;
                     stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
@@ -534,7 +607,7 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
                     FormatThroughputStr(str, sizeof(str), mean);
                     fprintfOrDie(f, "%s ", str);
 
-                    double stdDev = (double)g_profilerState.fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState.fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                    double stdDev = g_profilerState.fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState.fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
                     if (stdDev < 0.0) stdDev = 0.0;
                     stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
                     FormatThroughputStr(str, sizeof(str), stdDev);
@@ -624,7 +697,7 @@ void ProfilerGenerateDetailFile(const char* fileName)
             memcpy(&beginRecord, eventPtr, sizeof(CustomEventRecordBegin));
             eventPtr += sizeof(CustomEventRecordBegin);
 
-            fprintfOrDie(f, "%llu,\"%s\",%u,%f\n", beginRecord.uniqueId, descriptionStr, beginRecord.threadId, 1000.0 * ((double)beginRecord.beginClock / (double)g_profilerState.clockFrequency));
+            fprintfOrDie(f, "%llu,\"%s\",%u,%.8f\n", beginRecord.uniqueId, descriptionStr, beginRecord.threadId, 1000.0 * ((double)beginRecord.beginClock / (double)g_profilerState.clockFrequency));
         }
         else if (*eventPtr == CUSTOM_EVT_END_TYPE)
         {
@@ -634,7 +707,7 @@ void ProfilerGenerateDetailFile(const char* fileName)
             memcpy(&endRecord, eventPtr, sizeof(CustomEventRecordEnd));
             eventPtr += sizeof(CustomEventRecordEnd);
 
-            fprintfOrDie(f, "%llu,,,%f\n", endRecord.uniqueId, 1000.0 * ((double)endRecord.endClock / (double)g_profilerState.clockFrequency));
+            fprintfOrDie(f, "%llu,,,%.8f\n", endRecord.uniqueId, 1000.0 * ((double)endRecord.endClock / (double)g_profilerState.clockFrequency));
         }
         else
         {

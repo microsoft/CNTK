@@ -74,7 +74,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <OpenMPSupport>true</OpenMPSupport>
@@ -83,9 +83,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CudaLibs);libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(CudaLibs);libacml_mp_dll.lib;PerformanceProfilerDll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>$(CudaDlls);%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>$(CudaDlls);PerformanceProfilerDll.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>$(OutDir);$(ACML_PATH)\lib;$(CudaLibPath);$(CuDnnLibPath)</AdditionalLibraryDirectories>

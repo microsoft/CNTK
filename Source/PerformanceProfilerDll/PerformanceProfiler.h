@@ -52,16 +52,6 @@ struct ProfilerThroughputEventRecord
 };
 
 //
-// Caller maintained record to measure custom events.
-//
-struct ProfilerCustomTimeEventRecord
-{
-    long long       beginClock;
-    unsigned int    threadId;
-    char*           eventDescription;
-};
-
-//
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
 // delaySeconds: Number of seconds since this call to wait to start profiling.
@@ -72,13 +62,22 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySe
 //
 // Measure time for either a fixed or a custom event.
 // The *Begin call returns a stateId that is passed to ProfilerTimeEnd().
-// If the event does not need to be recorded, call ProfilerTimeCancel().
+// If the fixed event does not need to be recorded, call ProfilerTimeCancel() before ProfilerTimeEnd().
 //
-int PERF_PROFILER_API ProfilerTimeBegin(int eventId);
-void PERF_PROFILER_API ProfilerTimeEnd(int stateId);
-void PERF_PROFILER_API ProfilerTimeCancel(int stateId);
+unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const int eventId);
+void PERF_PROFILER_API ProfilerTimeEnd(const unsigned long long stateId);
+void PERF_PROFILER_API ProfilerTimeCancel(unsigned long long* stateId);
+
 unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const char* eventDescription);
-void PERF_PROFILER_API ProfilerTimeEnd(unsigned long long stateId);
+
+
+//
+// CUDA kernel profiling.
+// The cuda event calls must be called around the kernel, and the total kernel time provided
+// in deltaSeconds.
+//
+unsigned long long PERF_PROFILER_API ProfilerCudaTimeBegin(const char* eventDescription);
+void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const unsigned long long stateId);
 
 
 //
@@ -86,8 +85,8 @@ void PERF_PROFILER_API ProfilerTimeEnd(unsigned long long stateId);
 // The ThroughputEventRecord is meaintained by the caller.
 // If ProfilerThroughputEnd is not called, the event is not recorded.
 //
-void PERF_PROFILER_API ProfilerThroughputBegin(int eventId, ProfilerThroughputEventRecord* throughputEventRecord);
-void PERF_PROFILER_API ProfilerThroughputEnd(long long bytes, ProfilerThroughputEventRecord* throughputEventRecord);
+void PERF_PROFILER_API ProfilerThroughputBegin(const int eventId, ProfilerThroughputEventRecord* profilerThroughputEventRecord);
+void PERF_PROFILER_API ProfilerThroughputEnd(const long long bytes, ProfilerThroughputEventRecord* profilerThroughputEventRecord);
 
 //
 // Generate reports and release all resources.
@@ -100,7 +99,7 @@ void PERF_PROFILER_API ProfilerClose();
 //
 struct ProfilerContext
 {
-    void Init(const char* profilerDir = nullptr, const float delaySeconds = 0.0f, const unsigned long long customEventBufferBytes = (16 * 1024 * 1024))
+    void Init(const char* profilerDir = nullptr, const float delaySeconds = 0.0f, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024))
     {
         ProfilerInit(profilerDir, delaySeconds, customEventBufferBytes);
     }
@@ -117,12 +116,17 @@ struct ProfilerContext
 //
 class ScopeProfile
 {
-    int m_stateId;
+    unsigned long long m_stateId;
 
 public:
     ScopeProfile(int eventId)
     {
         m_stateId = ProfilerTimeBegin(eventId);
+    }
+
+    ScopeProfile(const char* description)
+    {
+        m_stateId = ProfilerTimeBegin(description);
     }
 
     ~ScopeProfile()
@@ -131,35 +135,9 @@ public:
     }
 };
 
-//
-// Function scope profiling.
-//
 #define PROFILE_SCOPE(eventId)      ScopeProfile __sp(eventId);
+#define PROFILE_FUNCTION            ScopeProfile __fsp(__FUNCTION__);
 
-
-//
-// Scoped custom event profiling.
-//
-class CustomScopeProfile
-{
-    unsigned long long m_stateId;
-
-public:
-    CustomScopeProfile(const char* description)
-    {
-        m_stateId = ProfilerTimeBegin(description);
-    }
-
-    ~CustomScopeProfile()
-    {
-        ProfilerTimeEnd(m_stateId);
-    }
-};
-
-//
-// Function name scope profiling.
-//
-#define PROFILE_FUNCTION        CustomScopeProfile __csp(__FUNCTION__);
 
 
 //
@@ -184,5 +162,60 @@ public:
 };
 
 #define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st(eventId, bytes);
+
+
+//
+// CUDA profiling helpers.
+//
+
+void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled);
+void PERF_PROFILER_API SyncCudaScopeGetFlags(bool& syncEnabled, bool& profilingEnabled);
+
+struct CudaProfilerTimer
+{
+    //
+    // Setup the CUDA profiler.
+    // enable: flag indicating if profiler is enabled
+    // syncIterations: Number of iterations between profiling & sync (ex: 100 means that we profile every 100 iterations)
+    // maxIterations: Stop syncing & profiling after this many iterations. -1 indicates to never stop.
+    //                (ex: 1000 means that we stop after 1000 iterations)
+    //
+    CudaProfilerTimer(bool enable, int syncIterations, int maxIterations)
+    {
+        m_enable = enable;
+        m_syncIterations = syncIterations;
+        m_maxIterations = maxIterations;
+        m_iterationCnt = 0;
+        SyncCudaScopeSetFlags(true, true);
+    }
+
+    //
+    // Main function that enables profiling, to be called at the beggining of each iteration.
+    //
+    void Update()
+    {
+        if (!m_enable) return;
+
+        if (m_iterationCnt == m_syncIterations && (m_iterationCntTotal < m_maxIterations || m_maxIterations == -1))
+        {
+            SyncCudaScopeSetFlags(true, true);
+            m_iterationCnt = 0;
+        }
+        else
+        {
+            SyncCudaScopeSetFlags(false, false);
+        }
+
+        m_iterationCnt++;
+        m_iterationCntTotal++;
+    }
+
+private:
+    bool    m_enable;
+    int     m_syncIterations;
+    int     m_maxIterations;
+    int     m_iterationCnt;
+    int     m_iterationCntTotal;
+};
 
 }}}

@@ -19,6 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
+#include "GPUMatrix.h"
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
@@ -329,11 +330,14 @@ public:
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
+               CudaProfilerTimer& cudaProfilerTimer,
                const bool makeMode = true);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
-               const DEVICEID_TYPE deviceID, const bool makeMode = true);
+               const DEVICEID_TYPE deviceID, 
+               CudaProfilerTimer& cudaProfilerTimer,
+               const bool makeMode = true);
 
 protected:
 
@@ -345,7 +349,8 @@ protected:
                            ComputationNetworkPtr refNet,
                            ComputationNodeBasePtr refNode,
                            IDataReader* trainSetDataReader,
-                           IDataReader* validationSetDataReader);
+                           IDataReader* validationSetDataReader,
+                           CudaProfilerTimer& cudaProfilerTimer);
 
 protected:
 
@@ -370,7 +375,8 @@ protected:
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                   const bool learnRateInitialized,
-                                  const double largestPrevLearnRatePerSample);
+                                  const double largestPrevLearnRatePerSample,
+                                  CudaProfilerTimer& cudaProfilerTimer);
 
     void TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                          ComputationNetworkPtr refNet,
@@ -387,6 +393,7 @@ protected:
                                          std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
+                                         CudaProfilerTimer& cudaProfilerTimer,
                                          std::string prefixMsg = "");
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
@@ -404,7 +411,8 @@ protected:
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
-                                   const double learningRateAdjustmentFactor);
+                                   const double learningRateAdjustmentFactor,
+                                   CudaProfilerTimer& cudaProfilerTimer);
 
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
@@ -422,7 +430,8 @@ protected:
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
                                       std::list<Matrix<ElemType>>& smoothedGradients,
-                                      const size_t minMinibatchSize, const size_t maxMinibatchSize);
+                                      const size_t minMinibatchSize, const size_t maxMinibatchSize,
+                                      CudaProfilerTimer& cudaProfilerTimer);
 
     // Attemps to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
@@ -451,6 +460,7 @@ protected:
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
+                         CudaProfilerTimer& cudaProfilerTimer,
                          const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);

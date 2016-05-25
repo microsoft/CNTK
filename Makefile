@@ -221,6 +221,26 @@ endif
 
 
 ########################################
+# Performance profiler library
+########################################
+
+CNTKPP:=cntkpp
+
+PP_SRC =\
+	$(SOURCEDIR)/PerformanceProfilerDll/PerformanceProfiler.cpp \
+
+PP_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC)))
+
+CNTKPP_LIB:= $(LIBDIR)/lib$(CNTKPP).so
+ALL += $(CNTKPP_LIB)
+SRC += $(PP_SRC)
+
+$(CNTKPP_LIB): $(PP_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^
+
+
+########################################
 # Math library
 ########################################
 
@@ -292,27 +312,7 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
-
-
-########################################
-# Performance profiler library
-########################################
-
-CNTKPP:=cntkpp
-
-PP_SRC =\
-	$(SOURCEDIR)/PerformanceProfilerDll/PerformanceProfiler.cpp \
-
-PP_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC)))
-
-CNTKPP_LIB:= $(LIBDIR)/lib$(CNTKPP).so
-ALL += $(CNTKPP_LIB)
-SRC += $(PP_SRC)
-
-$(CNTKPP_LIB): $(PP_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp -l$(CNTKPP)
 
 
 ########################################

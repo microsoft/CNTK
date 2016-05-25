@@ -379,10 +379,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalDll", "Source\EvalDll\E
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
+		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {B3DD765E-694E-4494-BAD7-37BBF2942517}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MathCUDA", "Source\Math\MathCUDA.vcxproj", "{B3DD765E-694E-4494-BAD7-37BBF2942517}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibSVMBinaryReader", "Source\Readers\LibSVMBinaryReader\LibSVMBinaryReader.vcxproj", "{D667AF32-028A-4A5D-BE19-F46776F0F6B2}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -975,9 +979,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{181664AC-4C9
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerformanceProfilerDll", "Source\PerformanceProfilerDll\PerformanceProfilerDll.vcxproj", "{4B442D34-641A-4B37-9A4B-D18DBE28A979}"
-	ProjectSection(ProjectDependencies) = postProject
-		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

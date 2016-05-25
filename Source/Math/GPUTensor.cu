@@ -499,7 +499,7 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_launchTensorOp", t_stream);
     GridDim grid(NN);
     _launchTensorOp<ElemType, N, /*M=*/0, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
 }
@@ -540,7 +540,6 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    SyncGuard syncGuard;
 
     // do some optimization for reductions
     // Cases:
@@ -584,6 +583,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
         let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
+        PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
         if (beta == 1 || numBlocksZ == 1)
         {
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
@@ -599,6 +599,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     else
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
+        PROFILE_CUDA_STREAM("_launchTensorOp", t_stream);
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
     }
 }
@@ -660,7 +661,7 @@ void LaunchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemTy
             _launchUnaryTensorOp<ElemType, Functor##oper><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pa, pb, alpha, NN);\
         break;
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("LaunchUnaryTensorOp", t_stream);
     GridDim grid(NN);
     switch (op)
     {

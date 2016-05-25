@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+
 #pragma once
 #include "Platform.h"
 #include "File.h"
@@ -11,6 +12,9 @@
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "BestGpu.h" // for CPUONLY macro
 #include "ConcStack.h"
+#ifndef CPUONLY
+#include "PerformanceProfiler.h"
+#endif
 #include <string>
 #include <vector>
 #include <array>
@@ -22,6 +26,8 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
+
+
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -615,47 +621,64 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
 
 // -----------------------------------------------------------------------
-// SyncGuard -- synchronize around CUDA calls
+// SyncCudaScope -- synchronize around and time CUDA calls
 // -----------------------------------------------------------------------
-
-class SyncGuard
+struct SyncCudaScope
 {
-    static bool DoSync()
+    SyncCudaScope(const char* description, cudaStream_t stream = (cudaStream_t)0)
     {
-#ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
-        static bool do_sync = false;
-#else
-        static bool do_sync = true;
-#endif
-        return do_sync;
+        bool syncEnabled;
+        bool profilingEnabled;
+        Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+        if (!syncEnabled) return;
+
+        CUDA_CALL(cudaEventCreate(&m_beginEvent));
+        CUDA_CALL(cudaEventCreate(&m_endEvent));
+
+        if (profilingEnabled)
+            m_stateId = Microsoft::MSR::CNTK::ProfilerCudaTimeBegin(description);
+
+        m_stream = stream;
+        CUDA_CALL(cudaEventRecord(m_beginEvent, m_stream));
     }
-    cudaEvent_t m_done;
-public:
-    SyncGuard()
+
+    ~SyncCudaScope()
     {
-        m_done = nullptr;
-        if (DoSync())
-            CUDA_CALL(cudaEventCreate(&m_done));
-    }
-    ~SyncGuard()
-    {
-        if (DoSync())
+        bool syncEnabled;
+        bool profilingEnabled;
+        Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+        if(!syncEnabled) return;
+
+        if (!std::uncaught_exception())
         {
-            // The regular use of this destructor is to synchronize the GPU, but also
-            // to check for errors. So this destructor is where CUDA errors would be thrown.
-            // If this destructor runs during stack unwinding, then a different error has
-            // already happened that should be reported; so we only clean up the resource.
-            if (std::uncaught_exception())
-                cudaEventDestroy(m_done);
-            else
+            // failures in a prior launch might be reported here
+            CUDA_CALL(cudaEventRecord(m_endEvent, m_stream));
+            CUDA_CALL(cudaEventSynchronize(m_endEvent));
+
+            if (profilingEnabled)
             {
-                // failures in a prior launch might be reported here
-                CUDA_CALL(cudaEventRecord(m_done));
-                CUDA_CALL(cudaEventSynchronize(m_done));
-                CUDA_CALL(cudaEventDestroy(m_done));
+                float deltaTime = 0.0f;
+                CUDA_CALL(cudaEventElapsedTime(&deltaTime, m_beginEvent, m_endEvent));
+
+                Microsoft::MSR::CNTK::ProfilerCudaTimeEnd(deltaTime / 1000.0f, m_stateId);
             }
         }
+
+        cudaEventDestroy(m_beginEvent);
+        cudaEventDestroy(m_endEvent);
     }
+
+private:
+    cudaEvent_t         m_beginEvent;
+    cudaEvent_t         m_endEvent;
+    cudaStream_t        m_stream;
+    unsigned long long  m_stateId;
 };
 
+#define PROFILE_CUDA(description)                   SyncCudaScope  __scs("CUDA " __FUNCTION__ " " description);
+#define PROFILE_CUDA_STREAM(description, stream)    SyncCudaScope  __scs("CUDA " __FUNCTION__ " " description, stream);
+
 #endif // CPUONLY
+
