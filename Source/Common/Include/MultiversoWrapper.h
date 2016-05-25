@@ -377,16 +377,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 							ElemType * px = m_deltaArray + m_tableOffsets[i];
 							mat.CopyToArray(px, m_tableLength[i]);
-#pragma warning( push )
-#pragma warning( disable : 4244)
 
-              if (m_traceLevel > 3)
-              {
-                int countnum = std::count(px, px + m_tableLength[i], 0.0f);
-                fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
-                fflush(stderr);
-              }
-#pragma warning( pop ) 
               if (m_isSparseArray[i])
               {
                 size_t layerRowSize = mat.GetNumRows();
@@ -400,6 +391,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						}
 
             std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
+
+#pragma warning( push )
+#pragma warning( disable : 4244)
+
+            if (m_traceLevel > 3)
+            {
+              int countnum = std::count(px, px + m_tableLength[i], 0.0f);
+              fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
+              fflush(stderr);
+            }
+#pragma warning( pop ) 
 
 						// lr decay
             if (m_isAverage)
