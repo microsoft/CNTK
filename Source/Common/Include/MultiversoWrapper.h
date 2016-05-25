@@ -395,11 +395,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma warning( push )
 #pragma warning( disable : 4244)
 
+            
             if (m_traceLevel > 3)
             {
-              int countnum = std::count(px, px + m_tableLength[i], 0.0f);
-              fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
-              fflush(stderr);
+              for (int widx = 0; widx < m_tableCount; widx++)
+              {
+                ElemType * px = m_deltaArray + m_tableOffsets[widx];
+                int countnum = std::count(px, px + m_tableLength[i], 0.0f);
+                fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
+                fflush(stderr);
+              }
             }
 #pragma warning( pop ) 
 
