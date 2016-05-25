@@ -423,7 +423,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     // Double check if there are empty input streams.
     // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
     bool hasEmptyInputs = false, hasDuplicateInputs = false;
-    size_t maxInputLength = 0;
+    SequenceSampleCountType maxInputLength = 0;
     for (size_t i = 0; i < sequence.size(); ++i)
     {
         if (sequence[i]->m_numberOfSamples == 0)
@@ -441,7 +441,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
-                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %s) %ls.\n",
+                    " (%u vs. %" PRIu64 ") for sequence (id = %s) %ls.\n",
                     m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
                     GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             }
@@ -465,7 +465,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         {
             fprintf(stderr,
                 "WARNING: Maximum per-input number of samples for sequence (id = %s) %ls"
-                " is less than expected (%" PRIu64 " vs. %" PRIu64 ").\n",
+                " is less than expected (%u vs. %" PRIu64 ").\n",
                 GetSequenceKey(sequenceDsc).c_str(),
                 GetFileInfo().c_str(), maxInputLength, expectedRowCount);
         }

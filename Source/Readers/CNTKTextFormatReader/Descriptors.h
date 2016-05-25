@@ -93,7 +93,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sd.m_chunkId = chunk->m_id;
             sd.m_id = chunk->m_sequences.size();
             auto location = std::make_pair(chunk->m_id, sd.m_id);
-            m_keyToSequenceInChunk.insert(std::make_pair(sd.m_key.m_sequence, location));
+            auto sequenceId = sd.m_key.m_sequence;
+            m_keyToSequenceInChunk.insert(std::make_pair(sequenceId, location));
             chunk->m_sequences.push_back(sd);
         }
 

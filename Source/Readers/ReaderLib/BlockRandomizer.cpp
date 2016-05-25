@@ -269,7 +269,7 @@ void BlockRandomizer::RetrieveDataChunks()
             chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->m_id);
 
             if (m_verbosity >= Information)
-                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %" PRIu64 " (original chunk: %" PRIu64"), now %" PRIu64 " chunks in memory\n",
+                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                         chunk.m_chunkId,
                         chunk.m_original->m_id,
                         ++numLoadedChunks);
@@ -281,7 +281,7 @@ void BlockRandomizer::RetrieveDataChunks()
     m_chunks.swap(chunks);
 
     if (m_verbosity >= Notification)
-        fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%" PRIu64 "..%" PRIu64 "]\n",
+        fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",
                 m_chunks.size(),
                 window.front().m_chunkId,
                 window.back().m_chunkId);

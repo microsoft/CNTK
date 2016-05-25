@@ -22,10 +22,10 @@ struct KeyType
     // size_t m_prefix;
 
     // Identifies sequence between different deserializers.
-    size_t m_sequence;
+    size_t m_sequence : 40;
 
     // Sample id.
-    size_t m_sample;
+    size_t m_sample : 24;
 };
 
 class Chunk;
