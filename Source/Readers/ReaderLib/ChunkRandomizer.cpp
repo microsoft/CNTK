@@ -127,6 +127,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // got more space, move window to the right.
                 chunk.m_randomizationWindow.m_end++;
             }
+
+            // TODO verbosity or remove
+            // fprintf(stderr, "chunk %u randomizationWindow [%u..%u)\n", chunkId, chunk.m_randomizationWindow.m_begin, chunk.m_randomizationWindow.m_end);
         }
     }
 }}}

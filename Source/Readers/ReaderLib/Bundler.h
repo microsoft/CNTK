@@ -58,6 +58,9 @@ private:
     // Used for optimization when sequences between different deserializers are of the same length
     // (i.e. often in speech)
     bool m_takePrimarySequenceLength;
+
+    // General configuration
+    int m_verbosity;
 };
 
 }}}

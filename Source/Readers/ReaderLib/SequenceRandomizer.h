@@ -32,6 +32,7 @@ class SequenceRandomizer
 {
 public:
     SequenceRandomizer(
+        int verbosity,
         IDataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer);
 
@@ -141,6 +142,7 @@ private:
     // sequenced randomized.
     std::deque<ChunkInfo> m_randomizedChunkInfo;
 
+    // TODO consider to change to ChunkIdType where appropriate
     // Index of the first chunk in the window (inclusive).
     size_t m_chunkWindowBegin;
 
@@ -157,6 +159,9 @@ private:
 
     // Index of the last chunk in the window (exclusive).
     ChunkIdType m_chunkWindowEnd;
+
+    // General configuration
+    int m_verbosity;
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;

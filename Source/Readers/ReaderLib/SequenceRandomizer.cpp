@@ -5,6 +5,8 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "SequenceRandomizer.h"
 #include <algorithm>
 #include <utility>
@@ -22,9 +24,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     SequenceRandomizer::SequenceRandomizer(
+        int verbosity,
         IDataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer)
-        : m_randomizedChunks(chunkRandomizer->GetRandomizedChunks()),
+        : m_verbosity(verbosity),
+        m_randomizedChunks(chunkRandomizer->GetRandomizedChunks()),
         m_chunkWindowBegin(0),
         m_randomizedWindowEnd(0),
         m_randomizationCursor(0),
@@ -117,6 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // That means the sequence description that we have got from the previous call can still be in the BlockRandomizer.
         size_t currentChunk = std::min(m_currentChunkCursor, m_randomizedChunks.size() - 1);
         size_t candidateToUnload = m_chunkWindowBegin;
+        size_t releasedChunks = 0;
         while (candidateToUnload < m_randomizedChunks.size() &&
                candidateToUnload < m_randomizedChunks[currentChunk].m_randomizationWindow.m_begin &&
                m_randomizedChunks[candidateToUnload].m_randomizationWindow.m_end <= m_currentChunkCursor)
@@ -126,7 +131,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomizedChunkInfo.pop_front();
             m_chunkWindowBegin++;
             candidateToUnload++;
+            releasedChunks++;
         }
+
+        if (m_verbosity && 0 < releasedChunks)
+            fprintf(stderr,
+                "SequenceRandomizer::ReleaseChunks(): "
+                "released %" PRIu64 "chunks, now "
+                "chunk window [%" PRIu64 "..%u), cursor %" PRIu64 ", "
+                "randomized window [%" PRIu64 "..%" PRIu64 "), randomization cursor %" PRIu64 "\n",
+                releasedChunks,
+                m_chunkWindowBegin, m_chunkWindowEnd,
+                m_currentChunkCursor,
+                m_chunkWindowBegin, m_randomizedWindowEnd,
+                m_randomizationCursor);
     }
 
     // Randomize one more chunk if needed after the chunk cursor has been incremented.
@@ -228,6 +246,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_randomizedWindowEnd++;
         m_randomizationCursor = nextRandomizationCursor;
         m_chunkWindowEnd = nextChunkWindowEnd;
+
+        if (m_verbosity)
+            fprintf(stderr,
+                "SequenceRandomizer::RandomizeNextChunkIfNeeded(): "
+                "chunk window [%" PRIu64 "..%u), cursor %" PRIu64 ", "
+                "randomized window [%" PRIu64 "..%" PRIu64 "), randomization cursor %" PRIu64 "\n",
+                m_chunkWindowBegin, m_chunkWindowEnd,
+                m_currentChunkCursor,
+                m_chunkWindowBegin, m_randomizedWindowEnd,
+                m_randomizationCursor);
     }
 
     // Sets current cursor to the given sample offset.
@@ -244,16 +272,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedWindowEndInSamples = m_randomizedChunkInfo.back().start + m_randomizedChunkInfo.back().numberOfSamples;
         }
 
+        if (m_verbosity)
+            fprintf(stderr, "SequenceRandomizer::Seek(): seeking offset %" PRIu64 "in sweep %" PRIu64 "\n",
+                sweepSampleOffset,
+                sweep);
+
         if (sweepSampleOffset < randomizeWindowBeginInSamples)
         {
             // The requested offset is before the earliest randomized sequences we still have.
             // Need to start over.
+            if (m_verbosity)
+                fprintf(stderr, "SequenceRandomizer::Seek(): starting over \n");
+
             Reset(sweep + 1);
         }
         else if (sweepSampleOffset < randomizedWindowEndInSamples)
         {
             // The requested offset is within the randomized window.
             // We change the current chunk cursor to contain the requested offset.
+            if (m_verbosity)
+                fprintf(stderr, "SequenceRandomizer::Seek(): offset is within randomized window\n");
             size_t index;
             for (index = 0; index < m_randomizedChunkInfo.size(); index++)
             {
@@ -274,10 +312,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Advance sequence by sequence until the desire offset is reached.
+        if (m_verbosity)
+            fprintf(stderr, "SequenceRandomizer::Seek(): advancing cursor from %" PRIu64 " to %" PRIu64 "\n",
+                m_currentSampleCursor,
+                sweepSampleOffset);
+
         // TODO perhaps optimize this
         while (m_currentSampleCursor < sweepSampleOffset)
         {
             GetNextSequenceDescriptions(1);
+            if (m_chunkWindowBegin < m_currentChunkCursor)
+            {
+                ReleaseChunks();
+            }
         }
 
         return m_currentSampleCursor;

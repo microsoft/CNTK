@@ -40,7 +40,7 @@ BlockRandomizer::BlockRandomizer(
     assert(deserializer != nullptr);
 
     m_streams = m_deserializer->GetStreamDescriptions();
-    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(m_deserializer, m_chunkRandomizer);
+    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(verbosity, m_deserializer, m_chunkRandomizer);
 
     // Calculate total number of samples.
     m_sweepTotalNumberOfSamples = 0;

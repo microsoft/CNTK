@@ -5,6 +5,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "Bundler.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -25,7 +27,7 @@ Bundler::Bundler(
     bool cleanse)
     : m_deserializers(deserializers), m_driver(driver)
 {
-    UNUSED(readerConfig);
+    m_verbosity = readerConfig(L"verbosity", 0);
 
     // Combines streams of underlying deserializers.
     for (auto d : deserializers)
@@ -45,6 +47,9 @@ Bundler::Bundler(
 // Creates chunk descriptions based on chunks of underlying deserializers.
 void Bundler::CreateChunkDescriptions()
 {
+    if (m_verbosity)
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): started\n");
+
     auto chunks = m_driver->GetChunkDescriptions();
     if (chunks.size() < 1)
     {
@@ -56,6 +61,9 @@ void Bundler::CreateChunkDescriptions()
     }
 
     m_chunks.reserve(chunks.size());
+
+    if (m_verbosity)
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", m_chunks.size());
 
     // If there is not cleaning required simply build chunks based on the chunk descriptions of the primary deserializer.
     if (!m_cleanse)
@@ -71,6 +79,9 @@ void Bundler::CreateChunkDescriptions()
         }
         return;
     }
+
+    if (m_verbosity)
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): starting to clean chunks\n");
 
     m_takePrimarySequenceLength = true;
 
@@ -127,6 +138,9 @@ void Bundler::CreateChunkDescriptions()
             cd->m_invalid = std::move(invalid);
         }
     }
+
+    if (m_verbosity)
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): finished cleaning of %" PRIu64 " chunks\n", m_chunks.size());
 }
 
 // Gets chunk descriptions.
