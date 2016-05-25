@@ -5,7 +5,6 @@
 
 #include "stdafx.h"
 #include "EvalTestHelper.h"
-#include "fileutil.h"
 
 using namespace Microsoft::MSR::CNTK;
 
