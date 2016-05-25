@@ -940,7 +940,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from .. import utils
-    if utils.is_tensor(value) or utils.is_tensor(value):
+    if utils.is_tensor(value) or utils.is_tensor_list(value):
         value = np.asarray(value)
         if dynamic_axis:
             cntk_shape = value[0].shape[1:]

@@ -60,7 +60,7 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=False)
 
     unittest_helper(a + b, None, expected, device_id=device_id,
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=T, backward_pass=False)
 
     # Backward pass test
     #==================

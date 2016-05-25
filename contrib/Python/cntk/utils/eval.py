@@ -28,6 +28,7 @@ def eval(node):
     from cntk.context import get_new_context        
     from cntk.ops import input_numpy, constant
     from cntk.graph import ComputationNode, _InputComputationNodeBase
+    import numpy as np
     
     # call a helper method to get a context
     with get_new_context() as ctx:
