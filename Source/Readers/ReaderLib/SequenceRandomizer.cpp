@@ -137,7 +137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_verbosity && 0 < releasedChunks)
             fprintf(stderr,
                 "SequenceRandomizer::ReleaseChunks(): "
-                "released %" PRIu64 "chunks, now "
+                "released %" PRIu64 " chunks, now "
                 "chunk window [%" PRIu64 "..%u), cursor %" PRIu64 ", "
                 "randomized window [%" PRIu64 "..%" PRIu64 "), randomization cursor %" PRIu64 "\n",
                 releasedChunks,

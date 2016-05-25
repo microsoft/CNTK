@@ -48,8 +48,10 @@ public:
     std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
 
     // Gets the current randomized chunk window.
-    const std::deque<RandomizedChunk>& GetChunkWindow() const
+    const std::deque<RandomizedChunk>& GetChunkWindow(size_t& randomizedIndex) const
     {
+        assert(m_chunkWindow.size() >= m_randomizationCursor - m_chunkWindowBegin);
+        randomizedIndex = m_randomizationCursor - m_chunkWindowBegin;
         return m_chunkWindow;
     }
 

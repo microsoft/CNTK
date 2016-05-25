@@ -238,13 +238,14 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
-    const auto& window = m_sequenceRandomizer->GetChunkWindow();
-    if (window.back().m_chunkId == m_lastSeenChunkId)
+    size_t randomizedEnd = 0;
+    const auto& window = m_sequenceRandomizer->GetChunkWindow(randomizedEnd);
+    if (window[randomizedEnd - 1].m_chunkId == m_lastSeenChunkId)
     {
         return; // nothing to retrieve.
     }
 
-    m_lastSeenChunkId = window.back().m_chunkId;
+    m_lastSeenChunkId = window[randomizedEnd - 1].m_chunkId;
 
     // in the loop we are building a new map of currently loaded chunks:
     // we are iterating thru all chunks in the window and if they are not in m_chunks map -
@@ -252,8 +253,9 @@ void BlockRandomizer::RetrieveDataChunks()
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;
     size_t numLoadedChunks = m_chunks.size();
-    for (auto const& chunk : window)
+    for (size_t i = 0; i < randomizedEnd; ++i)
     {
+        auto const& chunk = window[i];
         if (m_decimationMode == DecimationMode::chunk && chunk.m_chunkId % m_config.m_numberOfWorkers != m_config.m_workerRank)
         {
             continue;
