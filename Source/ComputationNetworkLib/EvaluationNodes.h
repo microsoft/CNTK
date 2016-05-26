@@ -301,7 +301,8 @@ private:
                         if (lastid != refframeseq(0, i * samplesInRecurrentStep + nchannel))
                         {
                             lastid = (size_t)refframeseq(0, i * samplesInRecurrentStep + nchannel);
-                            labelseq.push_back(lastid);
+                            if (lastid < allphonenum - blanknum)  //hard code
+                                labelseq.push_back(lastid);
                         }
                         /*lastid = (size_t)refframeseq(0, i * samplesInRecurrentStep + nchannel);
 
@@ -413,7 +414,7 @@ private:
 
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    size_t m_blanknum;
+    size_t m_blanknum=1;
     int m_topK;
     };
 
