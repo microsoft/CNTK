@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -19,72 +19,100 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CDA96AA3-3252-4978-A0BF-2ACD670823CB}</ProjectGuid>
+    <ProjectGuid>{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NetworkTests</RootNamespace>
-    <ProjectName>NetworkTests</ProjectName>
+    <RootNamespace>EvalTests</RootNamespace>
+    <ProjectName>EvalTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
-  <PropertyGroup>
-    <HasBoost>false</HasBoost>
-    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration">
+  <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration">
-    <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
+  <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <Choose>
+    <When Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">
+      <PropertyGroup>
+        <HasBoost>true</HasBoost>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <HasBoost>false</HasBoost>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Condition="$(GpuBuild)" Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>$(DebugBuild)</LinkIncremental>
     <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <UseFullPaths>true</UseFullPaths>
-      <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(MSMPI_INC);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\ActionsLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK\BrainScript;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <OpenMPSupport>true</OpenMPSupport>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <OpenMPSupport>false</OpenMPSupport>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
@@ -95,46 +123,40 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Common\NetworkTestHelper.h" />
+    <ClInclude Include="EvalTestHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp" />
-    <ClCompile Include="OperatorEvaluation.cpp" />
+    <ClCompile Include="EvalExtendedTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="Config\Network_Operator_Plus.cntk" />
-    <Text Include="Control\Network_Operator_Plus_Control.txt" />
-    <Text Include="Data\Network_Operator_Plus_Data.txt" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Condition="$(GpuBuild)" Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
+  </ImportGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="NetworkTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Warning Condition="!$(HasBoost)" Text="MathTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
+    <PropertyGroup>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+    </PropertyGroup>
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+    </ItemGroup>
+    <ItemGroup Condition="$(GpuBuild)">
+      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

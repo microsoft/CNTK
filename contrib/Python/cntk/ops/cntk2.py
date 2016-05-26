@@ -250,3 +250,53 @@ class ErrorPrediction(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['_', 'outVectorSequence']
 
+class Log(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Log', name=None):
+        super(Log, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+
+class Exp(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Exp', name=None):
+        super(Exp, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+        
+class Sqrt(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Sqrt', name=None):
+        super(Sqrt, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']        
+        
+class Square(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Square', name=None):
+        super(Square, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']                
+
+class Identity(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Identity', name=None):
+        super(Identity, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']     
+
+class Dropout(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Dropout', name=None):
+        super(Dropout, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+        
+class TransposeDimensions(ComputationNode):
+    def __init__(self, _, axis1, axis2, op_name='CNTK2.TransposeDimensions', name=None):
+        super(TransposeDimensions, self).__init__(params=['_', 'axis1', 'axis2'], op_name=op_name, name=name)
+        self._ = _
+        self.axis1 = axis1
+        self.axis2 = axis2
+        self.params_with_defaults = []
+        self.inputs = ['_']        
