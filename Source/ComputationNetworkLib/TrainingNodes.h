@@ -701,7 +701,6 @@ public:
         {
             auto gradient = Input(1)->GradientFor(fr);
 
-            // log(1+exp(sigma*(si - sj)))
             // sigma*(si - sj)
             m_sigmaPairwiseDiff->AssignProductOf(m_sigma, *m_pairwiseDifferences);
             // exp(sigma*(si - sj))
@@ -725,7 +724,11 @@ public:
                 {
                     Url& UrlI = *iturlI;
                     size_t K = UrlI.K;
+
+                    // discount
                     logKi = m_logWeights[UrlI.rk];
+
+                    // gain
                     gKi = UrlI.gn;
                     idI = UrlI.id;
                     if (K == 0) continue;
@@ -738,6 +741,8 @@ public:
                         // update IR metric
                         g = gKij * (logKi - logKj);
                         g /= (logKi * logKj);
+
+                        // |delta NDCG|
                         g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0));
 
                         // combined with log exp term
@@ -750,9 +755,7 @@ public:
                 }
             }
 
-            //grdLocal.Print("grdLocal", 0, 0, 0, 100);
             gradient.AssignDifferenceOf(grdLocal, 0.0);
-            //gradient.Print("gradient", 0, 0, 0, 100);
         }
     }
 
@@ -898,8 +901,8 @@ public:
 
             if (qu.irm0 != 0.0)
             {
-            	IRMetricValue += (qu.irm / qu.irm0);
-            	nValidQueries++;
+                IRMetricValue += (qu.irm / qu.irm0);
+                nValidQueries++;
             }
 
             //IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
@@ -1005,15 +1008,17 @@ protected:
         int id; // sample id
         int rk0; // original rank based on label
         int rk; // rank based on s in the associated query
-        ElemType sc; // score
+        // score
+        ElemType sc; 
         ElemType gn; // gain
         int K; // the pair index
         bool operator < (const Url &url) const{
             // tie breaking
-            if (sc == url.sc)
+            if (sc == url.sc || isnan(sc) || isnan(url.sc))
             {
                 return gn < url.gn;
             }
+
             return sc > url.sc;
         }
     };

@@ -403,7 +403,7 @@ protected:
         int K; // the pair index
         bool operator < (const Url &url) const{
             // tie breaking
-            if (sc == url.sc)
+            if (sc == url.sc || isnan(sc) || isnan(url.sc))
             {
                 return gn < url.gn;
             }
