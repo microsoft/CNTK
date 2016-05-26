@@ -74,10 +74,13 @@ void TestCn(const ConfigParameters& config);
 template <typename ConfigParamType>
 void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config)
 {
-    if (config(L"profilerEnabled", true))
-        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(),
-        config(L"profilerDelay", 0.0f),
-        config(L"profilerBufferSize", 32ull * 1024ull * 1024ull));
+	if (config(L"profilerEnabled", true))
+	{
+		profilerContext.Init(
+			config(L"profilerDirectory", "./profiler").c_str(),
+			config(L"profilerDelay", 0.0f),
+			config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)));
+	}
 }
 
 void RedirectStdErr(wstring logpath)
