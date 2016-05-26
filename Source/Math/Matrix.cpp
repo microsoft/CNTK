@@ -5306,6 +5306,25 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 }
 
 template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignSequenceCTCError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& CTCgamma,
+    const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+{
+    DecideAndMoveToRightDevice(label, dnnoutput, gamma);
+
+    if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->AssignSequenceCTCError(hsmoothingWeight, *label.m_CPUMatrix, *CTCgamma.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+        m_GPUMatrix->AssignSequenceCTCError(hsmoothingWeight, *label.m_GPUMatrix, *CTCgamma.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+    return *this;
+}
+template<class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
     const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
 {

@@ -4317,6 +4317,22 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
     return *this;
 }
 
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceCTCError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& CTCgamma,
+    const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+{
+    if (IsEmpty())
+        LogicError("AssignSequenceError: Matrix is empty.");
+
+    PrepareDevice();
+
+   
+    long N = (LONG64)label.GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    _AssignSequenceCTCError << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(hsmoothingWeight, Data(), label.Data(), CTCgamma.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
+
+    return *this;
+}
 #pragma endregion Static BLAS Functions
 
 /// f = logadd(f, vec) to get the logadd sum of vector elments

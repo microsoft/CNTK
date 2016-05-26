@@ -466,8 +466,17 @@ public:
         else if (inputIndex == 1)
         {
             FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+            if (m_CTCSE == 0 && m_fsSmoothingWeight < 1.0f)
+            {
+                //m_softmaxOfRight->Print("soft max ", 6009, 6012, 10, 20);
+                //m_CTCposterior->Print("ctc gamma", 6009, 6012, 10, 20);
+                BackpropToRightCTC(*m_softmaxOfRight, Input(0)->Value(), *m_CTCposterior, Input(inputIndex)->Gradient(),
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+            }
+            else
+                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+            
             MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
 
 #ifdef _DEBUG
@@ -500,7 +509,29 @@ public:
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
 #endif
     }
-
+    static void WINAPI BackpropToRightCTC(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
+        const Matrix<ElemType>& inputCTCgamma, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+    {
+#if DUMPOUTPUT
+        softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("SequenceWithSoftmaxNode Partial-inputFunctionValues");
+        gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
+#endif
+        //gammaFromLattice.Print("gamma");
+        //inputFunctionValues.Print("label");
+        //softmaxOfRight.Print("soft max");
+        //Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
+        inputGradientValues.AssignSequenceCTCError((ElemType)hsmoothingWeight, inputFunctionValues, inputCTCgamma, softmaxOfRight, gammaFromLattice, 
+            gradientValues.Get00Element());
+        //inputGradientValues.Print("error before drop", inputGradientValues.GetNumRows() - 2, inputGradientValues.GetNumRows() - 1, 0, inputGradientValues.GetNumCols() - 1);
+        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
+        //inputGradientValues.Print("error", inputGradientValues.GetNumRows() - 2, inputGradientValues.GetNumRows() - 1, 0, inputGradientValues.GetNumCols()-1);        
+#if DUMPOUTPUT
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
+#endif
+    }
     static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
                                        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
@@ -549,7 +580,15 @@ public:
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                                         m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
                                         Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+        if (m_CTCSE == 0 && m_fsSmoothingWeight < 1.0)
+        {
+            size_t sequenceNum = Input(1)->GetNumParallelSequences();
+            m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+            m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
+            //m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
+            m_gammaCalculator.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extraUttMap);
+        }
 #if NANCHECK
         Value().HasNan("SequenceWithSoftmaxNode");
 #endif
@@ -592,7 +631,9 @@ public:
 
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_loglikelihood->SetValue(*m_loglikelihood);            
             node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
+            node->m_CTCposterior->SetValue(*m_CTCposterior);
             node->m_fsSmoothingWeight = m_fsSmoothingWeight;
             node->m_frameDropThreshold = m_frameDropThreshold;
             node->m_doReferenceAlignment = m_doReferenceAlignment;
@@ -604,8 +645,10 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_loglikelihood, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+        RequestMatrixFromPool(m_CTCposterior, matrixPool);
     }
 
     // request matrices needed to do node function value evaluation
@@ -613,8 +656,10 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_loglikelihood, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+        ReleaseMatrixToPool(m_CTCposterior, matrixPool);
     }
 
     // TODO: method names should be CamelCase
@@ -637,6 +682,7 @@ public:
         param.bMMIfactor = bMMIfactor;
         param.sMBRmode = sMBR;
         m_gammaCalculator.SetGammarCalculationParams(param);
+        //m_CTCSE = CTCSE;
     }
 
     void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
@@ -647,8 +693,10 @@ public:
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_loglikelihood;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    shared_ptr<Matrix<ElemType>> m_CTCposterior;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
@@ -667,6 +715,7 @@ protected:
 
     unsigned long long m_gammatime; // TODO: what are these? Not even the context can be guessed from these names.
     unsigned long long m_partialtime;
+	int m_CTCSE = 0;
 };
 
 template class SequenceWithSoftmaxNode<float>;

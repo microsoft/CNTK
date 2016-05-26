@@ -85,7 +85,7 @@ __global__ void edgealignmentj(const vectorref<lrhmmdef> hmms, const vectorref<l
     const size_t j = jinblock + blockIdx.x * tpb;
     if (j < edges.size()) // note: will cause issues if we ever use __synctreads()
     {
-        msra::lattices::latticefunctionskernels::edgealignmentj(j, hmms, transPs, spalignunitid, silalignunitid, logLLs, nodes, edges, aligns, alignoffsets, backptrstorage, backptroffsets, alignresult, edgeacscores);
+        msra::lattices::latticefunctionskernels::ctcedgealignmentphonej2(j, hmms, transPs, spalignunitid, silalignunitid, logLLs, nodes, edges, aligns, alignoffsets, backptrstorage, backptroffsets, alignresult, edgeacscores);
     }
 }
 

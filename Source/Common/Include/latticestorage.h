@@ -93,6 +93,13 @@ struct aligninfo // phonetic alignment
     unsigned int unit : 19;   // triphone index
     unsigned int frames : 11; // duration in frames
     // note: V1 did not have the following, which were instead the two 2 bits of 'frames'
+    unsigned int statenum;
+    unsigned int suid0;
+    unsigned int suid1;
+    unsigned int suid2;
+    unsigned int sdur0;
+    unsigned int sdur1;
+    unsigned int sdur2;
     unsigned int unused : 1; // (for future use)
     unsigned int last : 1;   // set for last entry
     aligninfo(size_t punit, size_t pframes)

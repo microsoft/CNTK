@@ -345,6 +345,109 @@ static bool islogzero(FLOAT v)
 // Gammas matrix must have two extra columns as buffer.
 // ---------------------------------------------------------------------------
 
+/*static*/ float lattice::alignedge2(const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm &hset, const msra::math::ssematrixbase &logLLs,
+    msra::math::ssematrixbase &loggammas, size_t edgeindex /*for diagnostic messages*/, 
+    array_ref<unsigned short> thisedgealignmentsj)
+{
+    // alphas and betas are stored in-place inside the loggammas matrix shifted by one?two columns
+    assert(loggammas.cols() == logLLs.cols() + 2);
+    msra::math::ssematrixstriperef<msra::math::ssematrixbase> backpointers(loggammas, 0, logLLs.cols());
+    msra::math::ssematrixstriperef<msra::math::ssematrixbase> pathscores(loggammas, 2, logLLs.cols());
+
+    // pathscores(j,t) store the sum of all paths up to including state j at time t, including logLL(j,t)
+    // backpointers(j,t) are the relative states that it came from
+    // gammas(j,t) <- 1 if on best path, 0 otherwise    
+
+    // Viterbi alignment
+    size_t ts = 0;           // start frame for unit 'k'
+    float fwscore = 0.0f;    // score passed across phone boundaries
+    size_t alignindex = 0;
+    edgeindex;
+    foreach_index(k, units) // we exploit that units have fixed boundaries
+    {
+        const auto &hmm = hset.gethmm(units[k].unit);
+        const auto &transP = hmm.gettransP();
+        const size_t te = ts + units[k].frames;    // end time of current unit               
+        const aligninfo align = units[k];
+        const size_t numstate = hmm.getnumstates(); // range of state indices
+        size_t s,s0=0,s1=1,s2=2,finals=2;
+        if (align.frames > 0)
+        {
+            size_t sid, td;
+            if (align.statenum > 0)
+            {
+                sid = align.suid0;
+                for (s = 0; s < numstate; s++)
+                {
+                    const size_t sid2 = hmm.getsenoneid(s);
+                    if (sid2 == sid)
+                        break;
+                }
+                s0 = s;
+                finals = s0;
+                fwscore += transP(-1, s0);
+                for (td = 0; td < align.sdur0; td++)
+                {
+                    fwscore += logLLs(sid, ts + td);
+                    if (td > 0)
+                        fwscore += transP(s0, s0);
+                    thisedgealignmentsj[alignindex + td] = (unsigned short)sid;
+                }
+
+            }            
+            
+            if (align.statenum > 1)
+            {
+                sid = align.suid1;
+                for (s = 0; s < numstate; s++)
+                {
+                    const size_t sid2 = hmm.getsenoneid(s);
+                    if (sid2 == sid && s > finals)
+                        break;
+                }
+                s1 = s;
+                finals = s1;
+                fwscore += transP(s0, s1);
+                for (td = 0; td < align.sdur1; td++)
+                {
+                    fwscore += logLLs(sid, ts + align.sdur0 + td);
+                    if (td > 0)
+                        fwscore += transP(s1, s1);
+                    thisedgealignmentsj[alignindex + align.sdur0 + td] = (unsigned short)sid;
+                }
+            }
+            
+            if (align.statenum > 2)
+            {
+                sid = align.suid2;
+                for (s = 0; s < numstate; s++)
+                {
+                    const size_t sid2 = hmm.getsenoneid(s);
+                    if (sid2 == sid && s > finals)
+                        break;
+                }
+                s2 = s;
+                finals = s2;
+                fwscore += transP(s1, s2);
+                for (td = 0; td < align.sdur2; td++)
+                {
+                    fwscore += logLLs(sid, ts + align.sdur0 + align.sdur1 + td);
+                    if (td > 0)
+                        fwscore += transP(s2, s2);
+                    thisedgealignmentsj[alignindex + align.sdur0 + align.sdur1 + td] = (unsigned short)sid;
+                }
+            }
+            fwscore += transP(finals, numstate);
+            alignindex += te - ts;
+            ts = te;
+        }
+
+    }
+
+    
+    // we return the full path score
+    return fwscore;
+}
 /*static*/ float lattice::alignedge(const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm &hset, const msra::math::ssematrixbase &logLLs,
                                     msra::math::ssematrixbase &loggammas, size_t edgeindex /*for diagnostic messages*/, const bool returnsenoneids,
                                     array_ref<unsigned short> thisedgealignmentsj)

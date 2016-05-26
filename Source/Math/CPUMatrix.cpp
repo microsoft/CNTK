@@ -6147,6 +6147,15 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
     return *this;
 }
 
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceCTCError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& CTCgamma,
+    const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha)
+{
+    auto& us = *this;
+    foreach_coord(i, j, us)
+        us(i, j) += alpha * ((1 - hsmoothingWeight) * (CTCgamma(i, j) - dnnoutput(i, j)) + hsmoothingWeight * (label(i, j) - gamma(i, j)));
+    return *this;
+}
 // note: this function does not depend on the <ElemType> parameter
 template <class ElemType>
 int CPUMatrix<ElemType>::SetNumThreads(int numThreads)

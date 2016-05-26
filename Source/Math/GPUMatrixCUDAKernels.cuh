@@ -4948,6 +4948,16 @@ __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType* 
     if (id >= N)
         return;
     error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+}
+
+template <class ElemType>
+__global__ void _AssignSequenceCTCError(const ElemType hsmoothingWeight, ElemType* error, const ElemType* label, const ElemType* CTCgamma,
+    const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    error[id] -= alpha * ((1.0 - hsmoothingWeight) * (CTCgamma[id] - dnnoutput[id]) + hsmoothingWeight * (label[id] - gamma[id]));
     // change to ce
     // error[id] -= alpha * (label[id] - dnnoutput[id] );
 }

@@ -356,6 +356,117 @@ struct latticefunctionskernels
         return transP.loga[from + 1][to];
     }
     template <typename lrhmmdefvector, typename lr3transPvector, typename matrix, typename nodeinfovector, typename edgeinfowithscoresvector, typename aligninfovector, typename ushortvector, typename uintvector, typename floatvector, typename sizetvector>
+    static inline __device__ void ctcedgealignmentphonej2(size_t j, const lrhmmdefvector &hmms, const lr3transPvector &transPs, const size_t spalignunitid,
+        const size_t silalignunitid, const matrix &logLLs, const nodeinfovector &nodes,
+        const edgeinfowithscoresvector &edges, const aligninfovector &aligns,
+        const uintvector &alignoffsets, ushortvector &backptrstorage, const sizetvector &backptroffsets,
+        ushortvector &alignresult, floatvector &edgeacscores)
+    { // TODO: alignresult will change to (start,end)
+        // mostly finished
+        // some preparation
+        size_t as = edges[j].firstalign; // align start
+        size_t ae = (j + 1) < edges.size() ? (size_t)edges[j + 1].firstalign : aligns.size();
+        if (as == ae) // the last empty alignment
+            return;
+        size_t ts = nodes[edges[j].S].t;
+
+        size_t alignindex = alignoffsets[j]; // index to set (result)
+#ifndef PARALLEL_SIL
+        const bool isSil = (aligns[as].unit == silalignunitid || aligns[ae - 1].unit == silalignunitid);
+        if (isSil)
+            return; // we do not support silence edge now, which is computed by cpu, may change when we support it
+#endif
+        // Viterbi alignment        
+        float fwscore = 0.0f;
+        for (size_t k = as; k < ae; k++)
+        {
+            const aligninfo align = aligns[k];
+            const size_t numframes = align.frames;
+            const size_t te = ts + numframes;
+            const lrhmmdef hmm = hmms[align.unit];
+            const lr3transP transP = transPs[hmm.transPindex];
+            size_t senonenum = (size_t)hmm.numstates;
+            size_t s, s0, s1, s2, finals;
+
+            if (align.frames > 0)
+            {
+                size_t sid, td;
+                if (align.statenum > 0)
+                {
+                    sid = align.suid0;
+                    for (s = 0; s < senonenum; s++)
+                    {
+                        const size_t sid2 = (size_t)(hmm.senoneids[s]);
+                        if (sid2 == sid)
+                            break;
+                    }
+                    s0 = s;
+                    finals = s0;
+                    fwscore += getlogtransp(transP, -1, s0);
+
+                   
+                    for (td = 0; td < align.sdur0; td++)
+                    {                        
+                        fwscore += logLLs(sid, ts + td);
+                        if (td > 0)
+                            fwscore += getlogtransp(transP, s0, s0);
+                        alignresult[alignindex + td] = (unsigned short)sid;
+                    }
+                    
+                }
+                
+                if (align.statenum > 1)
+                {
+                    sid = align.suid1;
+                    for (s = 0; s < senonenum; s++)
+                    {
+                        const size_t sid2 = (size_t)(hmm.senoneids[s]);
+                        if (sid2 == sid && s > finals)
+                            break;
+                    }
+                    s1 = s;
+                    finals = s1;
+                    fwscore += getlogtransp(transP, s0, s1);
+                    for (td = 0; td < align.sdur1; td++)
+                    {
+                        fwscore += logLLs(sid, ts + align.sdur0 + td);
+                        if (td > 0)
+                            fwscore += getlogtransp(transP, s1, s1);
+                        alignresult[alignindex +align.sdur0+ td] = (unsigned short)sid;
+                    }
+                }
+                
+                if (align.statenum > 2)
+                {
+                    sid = align.suid2;
+                    for (s = 0; s < senonenum; s++)
+                    {
+                        const size_t sid2 = (size_t)(hmm.senoneids[s]);
+                        if (sid2 == sid && s > finals)
+                            break;
+                    }
+                    s2 = s;
+                    finals = s2;
+                    fwscore += getlogtransp(transP, s1, s2);
+                    for (td = 0; td < align.sdur2; td++)
+                    {
+                        fwscore += logLLs(sid, ts + align.sdur0 + align.sdur1 + td);
+                        if (td > 0)
+                            fwscore += getlogtransp(transP, s2, s2);
+                        alignresult[alignindex + align.sdur0+align.sdur1 + td] = (unsigned short)sid;
+                    }                    
+                }
+                fwscore += getlogtransp(transP, finals, senonenum);
+                alignindex += te - ts;
+                ts = te;
+            }
+            
+        }
+        
+        edgeacscores[j] = fwscore;
+    }
+
+    template <typename lrhmmdefvector, typename lr3transPvector, typename matrix, typename nodeinfovector, typename edgeinfowithscoresvector, typename aligninfovector, typename ushortvector, typename uintvector, typename floatvector, typename sizetvector>
     static inline __device__ void edgealignmentj(size_t j, const lrhmmdefvector &hmms, const lr3transPvector &transPs, const size_t spalignunitid,
                                                  const size_t silalignunitid, const matrix &logLLs, const nodeinfovector &nodes,
                                                  const edgeinfowithscoresvector &edges, const aligninfovector &aligns,

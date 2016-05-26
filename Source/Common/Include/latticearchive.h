@@ -90,7 +90,8 @@ class lattice
     // ensure type size as these are expected to be of this size in the files we read
     static_assert(sizeof(nodeinfo) == 2, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     static_assert(sizeof(edgeinfowithscores) == 16, "unexpected size of edgeinfowithscores");
-    static_assert(sizeof(aligninfo) == 4, "unexpected size of aligninfo");
+    //static_assert(sizeof(aligninfo) == 32, "unexpected size of aligninfo");
+    int sa = sizeof(aligninfo);
     std::vector<nodeinfo> nodes;
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
@@ -716,6 +717,8 @@ private:
     static float alignedge(const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm& hset,
                            const msra::math::ssematrixbase& logLLs, msra::math::ssematrixbase& gammas,
                            size_t edgeindex, const bool returnsenoneids, array_ref<unsigned short> thisedgealignments);
+    static float alignedge2(const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm &hset, const msra::math::ssematrixbase& logLLs, msra::math::ssematrixbase& gammas,
+        size_t edgeindex, array_ref<unsigned short> thisedgealignments);
 
     const_array_ref<aligninfo> getaligninfo(size_t j) const
     {

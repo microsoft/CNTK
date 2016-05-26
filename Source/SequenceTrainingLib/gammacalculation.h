@@ -458,7 +458,7 @@ public:
             phoneseq.push_back(65535);
             for (size_t i = 0; i < uidsstripe.size(); i++)
             {
-                if (uidsstripe[i] != 65535)
+                if (uidsstripe[i] != 65535 && uidsstripe[i] != blankid )
                 {
                     phoneseq.push_back(blankid);
                     phoneseq.push_back(uidsstripe[i]);
