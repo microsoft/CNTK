@@ -325,7 +325,7 @@ namespace Microsoft {
 				size_t G1 = 1024 * 1024 * 1024 * 1.5;
 
 				size_t maxPointers = G1 / m_microbatchFileSize;
-				size_t zipQueueLen = G1 / m_blockSize;
+				size_t zipQueueLen = G1 * 5 / m_blockSize;
 				size_t unzipQueueLen = G1 * 2 / (sizeof(int32_t) * m_totalDim * m_blockSampleCnt * 2);
 
 				if (!m_bQueueBufferAllocated){
