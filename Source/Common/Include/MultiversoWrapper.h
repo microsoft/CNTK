@@ -380,7 +380,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
               if (m_isSparseArray[i])
               {
-                mat.Print(std::string(i + "debug model" + m_modelSyncCount).c_str());
                 size_t layerRowSize = mat.GetNumRows();
                 size_t layerColSize = mat.GetNumCols();
                 size_t layerSize = mat.GetNumElements();
@@ -399,12 +398,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             if (m_traceLevel > 3)
             {
+              bool debug_flag =false;
               for (int widx = 0; widx < m_tableCount; widx++)
               {
-                ElemType * px = m_deltaArray + m_tableOffsets[widx];
-                int countnum = std::count(px, px + m_tableLength[i], 0.0f);
-                fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
-                fflush(stderr);
+                if (m_isSparseArray[widx])
+                {
+                  ElemType * px = m_deltaArray + m_tableOffsets[widx];
+                  int countnum = std::count(px, px + m_tableLength[i], 0.0f);
+                  if (!debug_flag) {
+                    debug_flag = true;
+                    for (auto i = 0; i < 49232; i++) {
+                      for (auto j = 0; j < 128; j++){
+                        fprintf(stderr, "%f\t", *(px + i*128 +j));
+                      }
+                      fprintf(stderr, "\n");
+                    }
+                  }
+                  fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
+                  fflush(stderr);
+                }
               }
             }
 #pragma warning( pop ) 
