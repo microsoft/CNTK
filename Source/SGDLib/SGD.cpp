@@ -1076,9 +1076,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // aggregation by model averaging or block momentum 
-        if (useModelAggregation && (actualMBSize > 0))
+        if (useModelAggregation)
         {
-            if (nSamplesSinceLastModelSync >= m_nFramesBetweenMASync)
+            if ((nSamplesSinceLastModelSync >= m_nFramesBetweenMASync) && (actualMBSize > 0))
             {
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)

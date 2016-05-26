@@ -1576,7 +1576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template <class ElemType>
-    void BatchSequenceReader<ElemType>::Reset()
+    inline void BatchSequenceReader<ElemType>::Reset()
     {
         mProcessed.clear();
         mToProcess.clear();
