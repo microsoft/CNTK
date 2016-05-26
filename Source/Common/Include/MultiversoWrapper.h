@@ -380,6 +380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
               if (m_isSparseArray[i])
               {
+                mat.Print(std::string(i + "debug model" + m_modelSyncCount).c_str());
                 size_t layerRowSize = mat.GetNumRows();
                 size_t layerColSize = mat.GetNumCols();
                 size_t layerSize = mat.GetNumElements();
