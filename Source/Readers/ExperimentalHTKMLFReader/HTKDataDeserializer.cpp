@@ -4,6 +4,8 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "HTKDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
@@ -109,19 +111,16 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
     auto& stringRegistry = m_corpus->GetStringRegistry();
+    size_t allUtterances = 0, allFrames = 0;
+
     for (const auto& u : paths)
     {
         UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(u)));
         size_t numberOfFrames = description.GetNumberOfFrames();
 
-        // TODO: we need at least 2 frames for boundary markers to work
-        // TODO: this should be removed when MLF deserializer is rewritten.
-        if (numberOfFrames < 2)
-        {
-            fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: skipping utterance with %d frames because it has less than 2 frames: %s\n",
-                (int)numberOfFrames, description.GetKey().c_str());
-            continue;
-        }
+        // For logging, also account for utterances and frames that we skip
+        allUtterances++;
+        allFrames += numberOfFrames;
 
         string key = description.GetKey();
         if (!m_corpus->IsIncluded(key))
@@ -146,7 +145,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     // We have 100 frames in a second.
     const size_t FramesPerSec = 100;
 
-    // A chunk consitutes 15 minutes
+    // A chunk constitutes of 15 minutes
     const size_t ChunkFrames = 15 * 60 * FramesPerSec; // number of frames to target for each chunk
 
     // Loading an initial 24-hour range will involve 96 disk seeks, acceptable.
@@ -176,11 +175,16 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     }
 
     fprintf(stderr,
-        "HTKDataDeserializer::HTKDataDeserializer: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
-        (int)utterances.size(),
-        (int)m_chunks.size(),
+        "HTKDataDeserializer::HTKDataDeserializer: "
+        "selected %" PRIu64 " utterances grouped into %" PRIu64 " chunks, "
+        "average chunk size: %.1f utterances, %.1f frames "
+        "(for I/O: %.1f utterances, %.1f frames)\n",
+        utterances.size(),
+        m_chunks.size(),
         utterances.size() / (double)m_chunks.size(),
-        m_totalNumberOfFrames / (double)m_chunks.size());
+        m_totalNumberOfFrames / (double)m_chunks.size(),
+        allUtterances / (double)m_chunks.size(),
+        allFrames / (double)m_chunks.size());
 }
 
 // Describes exposed stream - a single stream of htk features.
