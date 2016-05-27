@@ -77,8 +77,14 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
                            config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
-    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
-    eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
+	MPIWrapperPtr mpiInstance = MPIWrapper::GetInstance();
+	if (mpiInstance->IsMainNode())
+	{
+		SimpleEvaluator<ElemType> eval(net, nullptr, enableDistributedMBReading, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+		eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
+	}
+
+	mpiInstance->DeleteInstance();
 }
 
 template <typename ElemType>

@@ -663,7 +663,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
-                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                LOGPRINTF(stderr, "SGD: revert back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
             }
             else
