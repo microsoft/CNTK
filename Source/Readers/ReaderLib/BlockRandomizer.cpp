@@ -92,7 +92,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
     if (m_sweep != sweep)
     {
         if (m_verbosity >= Notification)
-            fprintf(stderr, "BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep %d in\n",
+            fprintf(stderr, "BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep %d\n",
                     (int) sweep);
 
         m_sweep = sweep;

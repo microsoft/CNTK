@@ -443,12 +443,15 @@ public:
             return archivepath();
         }
 
+        // Gets logical path of the utterance.
         string GetLogicalPath() const
         {
             assert(!logicalpath.empty());
             return logicalpath.substr(0, logicalpath.find_last_of("."));
         }
 
+        // Clears logical path after parsing, in order not to duplicate it 
+        // with the one stored in the corpus descriptor.
         void ClearLogicalPath()
         {
             logicalpath.clear();
@@ -457,7 +460,6 @@ public:
         // casting to wstring yields the logical path
         operator wstring() const
         {
-            assert(!logicalpath.empty());
             return msra::strfun::utf16(logicalpath);
         }
 
@@ -570,7 +572,8 @@ private:
 
         // done: swap it in
         int64_t bytepos = fgetpos(f);
-        setkind(kind, dim, H.sampperiod, ppath.physicallocation()); // this checks consistency
+        auto location = ((std::wstring)ppath).empty() ? ppath.physicallocation() : (std::wstring)ppath;
+        setkind(kind, dim, H.sampperiod, location); // this checks consistency
         this->physicalpath.swap(physpath);
         this->physicaldatastart = bytepos;
         this->physicalframes = H.nsamples;

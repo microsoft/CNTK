@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         if (m_verbosity)
-            fprintf(stderr, "SequenceRandomizer::Seek(): seeking offset %" PRIu64 "in sweep %" PRIu64 "\n",
+            fprintf(stderr, "SequenceRandomizer::Seek(): seeking offset %" PRIu64 " in sweep %" PRIu64 "\n",
                 sweepSampleOffset,
                 sweep);
 

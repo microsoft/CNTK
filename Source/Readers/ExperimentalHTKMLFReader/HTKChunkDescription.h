@@ -33,9 +33,9 @@ class HTKChunkDescription
     // Total number of frames in this chunk
     size_t m_totalFrames = 0;
 
-    // Chunk ID (only used for diagnostics)
+    // Chunk id.
     ChunkIdType m_chunkId;
-    
+
 public:
 
     HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
@@ -46,6 +46,11 @@ public:
     size_t GetNumberOfUtterances() const
     {
         return m_utterances.size();
+    }
+
+    ChunkIdType GetChunkId() const
+    {
+        return m_chunkId;
     }
 
     // Adds an utterance to the chunk.

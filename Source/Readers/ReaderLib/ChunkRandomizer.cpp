@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_deserializer(deserializer), m_legacy(legacy), m_randomizationRangeInSamples(randomizationRangeInSamples)
     {
         m_originalChunks = m_deserializer->GetChunkDescriptions();
-        assert(m_originalChunks.size() <= CHUNKID_MAX);
+        assert(m_originalChunks.size() < CHUNKID_MAX);
     }
 
     // Gets randomized chunks.
@@ -127,9 +127,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // got more space, move window to the right.
                 chunk.m_randomizationWindow.m_end++;
             }
-
-            // TODO verbosity or remove
-            // fprintf(stderr, "chunk %u randomizationWindow [%u..%u)\n", chunkId, chunk.m_randomizationWindow.m_begin, chunk.m_randomizationWindow.m_end);
         }
     }
 }}}

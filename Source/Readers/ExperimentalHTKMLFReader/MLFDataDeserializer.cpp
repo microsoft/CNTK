@@ -148,7 +148,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             if ((i == 0 && timespan.firstframe != 0) ||
                 (i > 0 && utterance[i - 1].firstframe + utterance[i - 1].numframes != timespan.firstframe))
             {
-                RuntimeError("Labels are not in the consecutive order MLF in label set: %s", l.first.c_str());
+                RuntimeError("Labels are not in the consecutive order MLF in label set: %ls", l.first.c_str());
             }
 
             if (timespan.classid >= dimension)
@@ -277,11 +277,6 @@ struct MLFSequenceData : SparseSequenceData
             RuntimeError("Number of samples in an MLFSequence (%" PRIu64 ") "
                 "exceeds the maximum allowed value (%" PRIu64 ")\n",
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());
-        }
-
-        if (SEQUENCELEN_MAX < numberOfSamples)
-        {
-            RuntimeError("Maximum number of samples per sequence exceeded");
         }
 
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
