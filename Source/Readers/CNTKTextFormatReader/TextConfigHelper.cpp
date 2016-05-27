@@ -123,7 +123,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     {
         m_randomizationWindow = randomizeNone;
     }
-    else if (randomizeString != L"auto")
+    else if (randomizeString == L"auto")
     {
         m_randomizationWindow = randomizeAuto;
     }
