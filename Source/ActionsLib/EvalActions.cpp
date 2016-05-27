@@ -84,6 +84,8 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 		eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 	}
 
+	// wait for main worker to finish the eval step
+	mpiInstance->WaitAll();
 	mpiInstance->DeleteInstance();
 }
 
