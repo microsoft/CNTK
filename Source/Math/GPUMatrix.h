@@ -625,7 +625,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 // -----------------------------------------------------------------------
 struct SyncCudaScope
 {
-    SyncCudaScope(const char* description, cudaStream_t stream = (cudaStream_t)0)
+    SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream = (cudaStream_t)0)
     {
         bool syncEnabled;
         bool profilingEnabled;
@@ -637,7 +637,15 @@ struct SyncCudaScope
         CUDA_CALL(cudaEventCreate(&m_endEvent));
 
         if (profilingEnabled)
-            m_stateId = Microsoft::MSR::CNTK::ProfilerCudaTimeBegin(description);
+        {
+            // We want proper truncation on both Windows and Unix, with different snprintf behaviors
+            char eventDescription[256];
+            eventDescription[0] = 0;
+            snprintf(eventDescription, sizeof(eventDescription)-1, "CUDA %s %s", functionName, description);
+            eventDescription[sizeof(eventDescription) - 1] = 0;
+
+            m_stateId = Microsoft::MSR::CNTK::ProfilerCudaTimeBegin(eventDescription);
+        }
 
         m_stream = stream;
         CUDA_CALL(cudaEventRecord(m_beginEvent, m_stream));
@@ -677,8 +685,8 @@ private:
     unsigned long long  m_stateId;
 };
 
-#define PROFILE_CUDA(description)                   SyncCudaScope  __scs("CUDA " __FUNCTION__ " " description);
-#define PROFILE_CUDA_STREAM(description, stream)    SyncCudaScope  __scs("CUDA " __FUNCTION__ " " description, stream);
+#define PROFILE_CUDA(description)                   SyncCudaScope  __scs(__FUNCTION__, description);
+#define PROFILE_CUDA_STREAM(description, stream)    SyncCudaScope  __scs(__FUNCTION__, description, stream);
 
 #endif // CPUONLY
 

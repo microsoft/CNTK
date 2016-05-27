@@ -30,6 +30,10 @@
 #if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
 #define __func__ __FUNCTION__
 #endif
+
+#if defined(_MSC_VER)
+#define snprintf _snprintf
+#endif
 // ===========================================================================
 // emulation of some MSVC proprietary CRT
 // ===========================================================================
