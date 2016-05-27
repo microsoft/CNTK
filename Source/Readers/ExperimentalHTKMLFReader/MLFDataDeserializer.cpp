@@ -122,6 +122,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
 
     MLFUtterance description;
     description.m_isValid = true;
+    size_t numClasses = 0;
     size_t totalFrames = 0;
 
     const auto& stringRegistry = corpus->GetStringRegistry();
@@ -162,6 +163,8 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
                 RuntimeError("CLASSIDTYPE has too few bits");
             }
 
+            numClasses = max(numClasses, (size_t)(1u + timespan.classid));
+
             for (size_t t = timespan.firstframe; t < timespan.firstframe + timespan.numframes; t++)
             {
                 m_classIds.push_back(timespan.classid);
@@ -185,8 +188,10 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
 
     m_totalNumberOfFrames = totalFrames;
 
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d frames\n", (int)m_totalNumberOfFrames);
-    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: read %d utterances\n", (int)m_numberOfSequences);
+    fprintf(stderr, "MLFDataDeserializer::MLFDataDeserializer: %" PRIu64 " utterances with %" PRIu64 " frames in %" PRIu64 " classes\n",
+            m_numberOfSequences,
+            m_totalNumberOfFrames,
+            numClasses);
 
     // Initializing array of labels.
     m_categories.reserve(dimension);

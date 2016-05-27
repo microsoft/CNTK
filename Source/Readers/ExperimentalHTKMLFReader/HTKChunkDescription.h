@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "UtteranceDescription.h"
@@ -29,12 +31,16 @@ class HTKChunkDescription
     std::vector<size_t> m_firstFrames;
 
     // Total number of frames in this chunk
-    size_t m_totalFrames;
+    size_t m_totalFrames = 0;
 
+    // Chunk ID (only used for diagnostics)
+    size_t m_chunkId;
+    
 public:
-    HTKChunkDescription() : m_totalFrames(0)
-    {
-    }
+
+    HTKChunkDescription() : m_chunkId(SIZE_MAX) { };
+
+    HTKChunkDescription(size_t chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
     size_t GetNumberOfUtterances() const
@@ -124,7 +130,11 @@ public:
 
             if (verbosity)
             {
-                fprintf(stderr, "RequireData: %d utterances read\n", (int)m_utterances.size());
+                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %" PRIu64 " (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                        m_chunkId,
+                        m_utterances.size(),
+                        m_totalFrames,
+                        sizeof(float) * m_frames.rows() * m_frames.cols());
             }
         }
         catch (...)
@@ -136,7 +146,7 @@ public:
     }
 
     // Pages-out data for this chunk.
-    void ReleaseData() const
+    void ReleaseData(int verbosity = 0) const
     {
         if (GetNumberOfUtterances() == 0)
         {
@@ -146,6 +156,15 @@ public:
         if (!IsInRam())
         {
             LogicError("Cannot page-out data that is not memory.");
+        }
+
+        if (verbosity)
+        {
+            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %" PRIu64 " (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                    m_chunkId,
+                    m_utterances.size(),
+                    m_totalFrames,
+                    sizeof(float) * m_frames.rows() * m_frames.cols());
         }
 
         // release frames

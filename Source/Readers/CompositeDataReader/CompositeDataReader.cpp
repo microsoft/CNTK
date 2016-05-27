@@ -77,7 +77,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         deserializer = std::make_shared<Bundler>(config, deserializer, m_deserializers, cleanse);
     }
 
-    int verbosity = config(L"verbosity", 2);
+    int verbosity = config(L"verbosity", 0);
 
     // Pick up the randomizer.
     bool randomize = config(L"randomize", false);

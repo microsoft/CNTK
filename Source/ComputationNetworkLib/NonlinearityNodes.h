@@ -562,4 +562,89 @@ public:
 template class ClipNode<float>;
 template class ClipNode<double>;
 
+
+// -----------------------------------------------------------------------
+// CompareNode(a,b)
+// -----------------------------------------------------------------------
+// Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 
+// Note: parametrizing the 6 comparison operations with the the two parameters 'compType' an 'polarity' is motivated by:
+//
+// comp(a, b, compType, polarity) <==> sign(a-b) == compType, if polarity == 0
+//                                     sign(a-b) != compType, if polarity == 1
+template <class ElemType, int compType, int polarity>
+class ComparisonNode : public BinaryElementWiseNode<ElemType>
+{
+private:
+    // Index corresponds to different comparison operations. 
+    const static int index = 1 + compType + 3 * polarity;
+
+	// The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
+	// This ordering is checked below:
+	static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEQ has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGT has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGE has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNE has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLE has wrong value relative to ElementWiseOperator::opLess");
+
+public:
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+
+    static const std::wstring TypeName()
+    {
+		const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
+        return names[index];
+    }
+
+    DeclareConstructorFromConfigWithNumInputs(ComparisonNode);
+    ComparisonNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result =           ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+        result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Function is piecewise constant --> gradient = 0
+    }
+};
+
+// Define macro that defines and instantiates different comparison nodes.
+// Unfortuanately the C++ 11 type alias syntax doesn't work for mpic++ so we use this more ugly way.
+#define DefineComparisonNode(ClassName, compType, polarity)             \
+template <class ElemType>                                               \
+class ClassName : public ComparisonNode<ElemType, compType, polarity>   \
+{                                                                       \
+    typedef ComparisonNode<ElemType, compType, polarity> Base;          \
+    UsingComputationNodeMembersBoilerplate;                             \
+                                                                        \
+public:                                                                 \
+    static const std::wstring TypeName() { return Base::TypeName(); }   \
+    DeclareConstructorFromConfigWithNumInputs(ClassName);               \
+    ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
+            : Base(deviceId, name)                                      \
+        {                                                               \
+        }                                                               \
+};                                                                      \
+                                                                        \
+template class ClassName<float>;                                        \
+template class ClassName<double>;
+
+DefineComparisonNode(ComparsionLessNode,         -1, 0)
+DefineComparisonNode(ComparisonEqualNode,         0, 0)
+DefineComparisonNode(ComparisonGreaterNode,       1, 0)
+DefineComparisonNode(ComparisonGreaterEqualNode, -1, 1)
+DefineComparisonNode(ComparisonNotEqualNode,      0, 1)
+DefineComparisonNode(ComparisonLessEqualNode,     1, 1)
 }}}

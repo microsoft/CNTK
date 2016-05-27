@@ -107,7 +107,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
 
     bool cleanse = readerConfig(L"checkData", false);
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
-    int verbosity = readerConfig(L"verbosity", 2);
+    int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
     // TODO: this should be bool. Change when config per deserializer is allowed.
