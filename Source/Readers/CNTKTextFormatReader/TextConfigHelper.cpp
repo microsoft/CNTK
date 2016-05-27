@@ -119,9 +119,13 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 
     // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput.
     wstring randomizeString = config(L"randomize", wstring());
-    if (!_wcsicmp(randomizeString.c_str(), L"none"))
+    if (!_wcsicmp(randomizeString.c_str(), L"none")) // TODO: don't support case-insensitive option strings in the new reader
     {
         m_randomizationWindow = randomizeNone;
+    }
+    else if (randomizeString != L"auto")
+    {
+        m_randomizationWindow = randomizeAuto;
     }
     else
     {
