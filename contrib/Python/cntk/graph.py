@@ -123,20 +123,61 @@ class ComputationNode(object):
     def __abs__(self):
         return ops.abs(self)
 
-    def __getitem__(self, so):
-        if so.stop == None:
-            raise ValueError('The stop index has to be provided')
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            # Case 1: e.g. data[3] -> key=3
+            return ops.slice(self, key, key+1, axis=0)
 
-        if isinstance(so, int):
-            return RowSlice(self, so, 1)
+        elif isinstance(key, slice):
+            # Case 2: e.g. data[2:4] -> key will be a slice object
+            if key.step is not None:
+                raise TypeError('step argument is not supported')
+            if not isinstance(key.stop, int):
+                raise TypeError('end index has to be of type int, not "%s"'%type(key.stop))
 
-        elif isinstance(so, slice):
-            if so.step not in {1, None}:
-                raise ValueError("RowSlice does not support strides")
+            if isinstance(key.start, int):
+                if key.stop<=key.start:
+                    raise ValueError('end index has to be greater than start index')
+            return ops.slice(self, key.start or 0, key.stop or 0, axis=0)
 
-            start = so.start or 0
+        elif isinstance(key, (tuple, list)):
+            # Case 3: e.g. data[2:4,1:,1:7] -> key will be an iterable of ints
+            # (case 1) or slices (case 2)
+            # objects.
+            # FIXME: we need to check that len(key) equals the node's rank
+            node = self
+            for ax_counter, so in enumerate(key):
+                if isinstance(so, int):
+                    # Proceed as case 1
+                    node = ops.slice(node, so, so+1, axis=ax_counter)
 
-            return RowSlice(self, start, so.stop - start)
+                elif isinstance(so, slice):
+                    # Proceed as case 2
+                    if so.step is not None:
+                        raise TypeError('step argument is not supported')
+                    if isinstance(so.start, int) and isinstance(so.stop, int):
+                        if so.stop<=so.start:
+                            raise ValueError('end index has to be greater than start index')
+                    if so.start is None and so.stop is None:
+                        continue
+                    node = ops.slice(node, so.start or 0, so.stop or 0, axis=ax_counter)
+                elif isinstance(so, list):
+                    # Case 3b: e.g. data[[0],[2,3]] aka "advanced indexing" ->
+                    # so = ([0], [2,3])
+                    # In NumPy we would have another dimension, but since
+                    # data[0].shape != data[[0]].shape == data[[[0]]].shape ==
+                    # we decided to have all shapes like data[0] in this case
+                    for idx in so:
+                        if not isinstance(idx, int):
+                            raise IndexError('indices have to be of type int and not "%s"'%type(idx))
+                        node = ops.slice(node, idx, idx+1, axis=ax_counter)
+                else:
+                    raise IndexError('type "%s" is not supported as index'%type(so))
+
+            return node
+        else:
+            raise TypeError('index must be int or slice, not {}'.format(type(key).__name__))
+
 
     # TODO more __operators__
 

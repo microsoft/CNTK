@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop3)
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_Output.txt",
         "Simple_Test",
         "reader",
-        5,
+        randomizeAuto, // epoch size - all available
         250,
         2,
         1,
@@ -560,9 +560,24 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop20)
         1);
 };
 
+BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop3)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_13_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_Output.txt",
+        "Simple_Test",
+        "reader",
+        randomizeAuto, // epoch size - all available
+        1,
+        2,
+        1,
+        0,
+        0,
+        1);
+};
 
 BOOST_AUTO_TEST_SUITE_END()
-
 }
 
 }}}

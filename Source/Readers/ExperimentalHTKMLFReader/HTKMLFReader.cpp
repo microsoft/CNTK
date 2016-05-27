@@ -27,9 +27,9 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     ConfigHelper config(readerConfig);
 
     config.GetDataNamesFromConfig(featureNames, labelNames, notused, notused);
-    if (featureNames.size() < 1 || labelNames.size() < 1)
+    if (featureNames.size() < 1)
     {
-        InvalidArgument("Network needs at least 1 feature and 1 label specified.");
+        InvalidArgument("Network needs at least 1 feature specified.");
     }
 
     CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
@@ -105,8 +105,9 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         LogicError("Please specify at least a single input stream.");
     }
 
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
-    int verbosity = readerConfig(L"verbosity", 2);
+    bool cleanse = readerConfig(L"checkData", false);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
+    int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
     // TODO: this should be bool. Change when config per deserializer is allowed.
@@ -122,8 +123,6 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     {
         RuntimeError("readMethod must be 'blockRandomize' or 'none'.");
     }
-
-    m_randomizer->Initialize(nullptr, readerConfig);
 
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)

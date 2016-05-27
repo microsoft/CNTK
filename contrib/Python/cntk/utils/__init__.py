@@ -203,7 +203,7 @@ def is_tensor_list(data):
     a list of varying sized NumPy objects.
     '''
     is_list = isinstance(data, list)
-    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
+    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray) 
 
 
 def get_temp_filename(directory=None):

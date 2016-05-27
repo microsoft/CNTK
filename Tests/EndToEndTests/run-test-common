@@ -87,11 +87,12 @@ cntkrun()
   else
     run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
   fi
+  local ExitCode=$?
   if [[ $DeleteModelsAfterTest == 1 ]]; then
     [ -d $modelsDir ] && rm -rf "$modelsDir"
   fi
 
-  return $?
+  return $ExitCode
 }
 
 # Given number of instances, return number of hardware threads we can use per

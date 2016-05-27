@@ -25,31 +25,33 @@ def eval(node):
         NumPy array containing the result
     """    
     
-    from cntk.context import get_context        
+    from cntk.context import get_new_context        
     from cntk.ops import input_numpy, constant
-
-    # call a helper method to get a context
-    ctx = get_context()    
-    first = True    
+    from cntk.graph import ComputationNode, _InputComputationNodeBase
+    import numpy as np
     
-    # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
-    # wrap them with input and parameter nodes.
-    if node.params:
-        for p in node.params:
-            if p in node.inputs:
-                val = getattr(node, p)
-                # One param needs to be an Input() node. This will being fixed in 
-                # CNTK soon, so that we can remove this workaround and evaluate a 
-                # network with no inputs.
-                if first:
-                    if not isinstance(val, list):                
-                        # inputs have the outmost dimension for sequences
-                        val = [val]
-
-                    ir = input_numpy([val], alias=p, name=p)
-                    setattr(node, p, ir)
-                    first = False
-                else:
-                    setattr(node, p, constant(getattr(node, p), name=p))
-
-    return ctx.eval(node)
+    # call a helper method to get a context
+    with get_new_context() as ctx:
+        first = True    
+        
+        # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
+        # wrap them with input and parameter nodes.
+        if node.params:
+            for p in node.params:
+                if p in node.inputs:
+                    val = getattr(node, p)
+                    if not isinstance(val, ComputationNode):
+                        # One param needs to be an Input() node. This will be fixed in 
+                        # CNTK soon, so that we can remove this workaround and evaluate a 
+                        # network with no inputs.
+                        if first:        
+                            ir = input_numpy([val], alias=p, name=p)
+                            setattr(node, p, ir)
+                            first = False
+                        else:
+                            setattr(node, p, constant(getattr(node, p), name=p))
+                    else:
+                        if isinstance(val, _InputComputationNodeBase) and first:
+                            first = False
+                          
+        return ctx.eval(node)

@@ -107,32 +107,30 @@ class CNTKTextFormatReader(AbstractReader):
 
     Args:
         filename (str): path to the input file to read from
-        randomize (str or int): whether the input should be randomized. `auto` (default): randomly shuffle the input data; integer value: shuffle within a window of that size; `none`: do not shuffle at all and take the input in the order it was read
+        randomize (bool): whether the input should be randomized. ``True`` (default): randomly shuffle the input data; ``False``: do not shuffle at all and take the input in the order it was read
         skip_sequence_ids (bool): if ``True``, the sequence ID will be ignored and every line will be treated as a separate sequence
         max_errors (int): number of errors to ignore before throwing an exception
         trace_level (int): verbosity of output (``0``=only errors, ``1``=errors + warning, ``2``=all output)
         chunk_size_in_bytes (int): number of bytes to read from disk in a single read operation (default 32MB)
-        num_chunks_to_cache (int): number of chunks to keep in memory (default=32)
-
+        randomizationWindow (int): (optional) randomization window in samples. If randomize is set to ``True``, shuffle input data within the specified window size
+        keepDataInMemory (bool): (optional) if ``True``, will cache the whole dataset in memory
+        frameMode (bool): (optional) if ``True``, will use a packing method optimized for frames (single sample sequences)
     """
 
     def __init__(self, 
             filename, 
-            randomize='auto', 
+            randomize=True,
             skip_sequence_ids=False,
             max_errors=0,
-            trace_level=0,
+            trace_level=1,
             chunk_size_in_bytes=32*1024**2,
-            num_chunks_to_cache=32      
+            randomizationWindow=None,
+            keepDataInMemory=False,
+            frameMode=False
             ):
         self.reader_type = 'CNTKTextFormatReader'
         self.filename = filename
-        if randomize is None:
-            randomize = 'none'
-        self.randomize = randomize.lower()
-        if not self.randomize in ['auto', 'none']:
-            raise ValueError('parameter "randomize" can be only "auto", ' +
-                    '"none", or None. You gave: %s'%randomize)
+        self.randomize = bool(randomize)
         self.skip_sequence_ids = bool(skip_sequence_ids)
         self.max_errors = int(max_errors)
         if not self.max_errors >= 0:
@@ -147,12 +145,22 @@ class CNTKTextFormatReader(AbstractReader):
         if not self.chunk_size_in_bytes > 0:
             raise ValueError('parameter "chunk_size_in_bytes" has to be an integer ' +
                     'greater than zero. You gave: %s'%str(chunk_size_in_bytes))
-        self.num_chunks_to_cache = int(num_chunks_to_cache)
         
         if self.chunk_size_in_bytes < 0:
             raise ValueError('parameter "chunk_size_in_bytes" has to be an integer ' +
                     'greater than or equal to zero. You gave: %s'\
                             %str(self.chunk_size_in_bytes))
+        
+        self.randomizationWindow = None
+        if (randomizationWindow is not None):
+            self.randomizationWindow = int(randomizationWindow)
+            if self.randomizationWindow <= 0:
+                raise ValueError('parameter "randomizationWindow" has to be an integer ' +
+                    'greater than zero. You gave: %s'\
+                            %str(self.randomizationWindow))
+
+        self.keepDataInMemory = bool(keepDataInMemory)
+        self.frameMode = bool(frameMode)
 
     def map(self, node_or_name, **kw):
         '''
@@ -196,12 +204,13 @@ class CNTKTextFormatReader(AbstractReader):
         configuration = {
                 'readerType': self.reader_type,
                 'file': self.filename,
-                'randomize': self.randomize,
+                'randomize': str(self.randomize).lower(),
                 'skipSequenceIds': str(self.skip_sequence_ids).lower(),
                 'maxErrors': self.max_errors,
                 'traceLevel': self.trace_level,
                 'chunkSizeInBytes': self.chunk_size_in_bytes,
-                'numChunksToCache': self.num_chunks_to_cache
+                'keepDataInMemory': str(self.keepDataInMemory).lower(),
+                'frameMode': str(self.frameMode).lower()
                 }
 
         template = ''' 
@@ -213,8 +222,14 @@ class CNTKTextFormatReader(AbstractReader):
             maxErrors = %(maxErrors)s
             traceLevel = %(traceLevel)i
             chunkSizeInBytes = %(chunkSizeInBytes)i
-            numChunksToCache = %(numChunksToCache)i
+            keepDataInMemory = %(keepDataInMemory)s
+            frameMode = %(frameMode)s
         ''' % configuration
+
+        if (self.randomizationWindow is not None):
+            template += '''
+            randomizationWindow = %i
+        ''' % self.randomizationWindow
 
         template += '''
             input = [
@@ -478,7 +493,7 @@ class InputMap(object):
     def is_empty(self):
         return not self.has_mapped() and not self.has_unmapped()
 
-    def _to_config_description(self):
+    def _to_config_description(self, directory=None):
         if self.reader is None:
             if not self.unmapped_nodes:
                 # No inputs in the graph
@@ -487,10 +502,9 @@ class InputMap(object):
             # We have found only inputs that were directly initialized.
             # In this case, we need to serialize them into one file.
 
-            from .context import get_context
             from .utils import get_temp_filename
-            filename = get_temp_filename(get_context().directory)
 
+            filename = get_temp_filename(directory)
             if len(self.node_map) > 0:
                 raise ValueError('you cannot have inputs initialized with '+
                         'NumPy arrays together with inputs that are ' +

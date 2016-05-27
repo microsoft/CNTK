@@ -10,11 +10,10 @@
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
-#include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ElementTypeUtils.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK
+namespace Microsoft { namespace MSR { namespace CNTK 
 {
 
 struct ImageSequenceData : DenseSequenceData
@@ -24,53 +23,51 @@ struct ImageSequenceData : DenseSequenceData
     SequenceDataPtr m_original;
 };
 
-void ImageTransformerBase::Initialize(TransformerPtr next,
-                                      const ConfigParameters &readerConfig)
+ImageTransformerBase::ImageTransformerBase(const ConfigParameters& readerConfig) : m_imageElementType(0)
 {
-    Base::Initialize(next, readerConfig);
-    m_seed = readerConfig(L"seed", (unsigned int)0);
-
-    ImageConfigHelper config(readerConfig);
-    size_t featureStreamId = config.GetFeatureStreamId();
-    m_appliedStreamIds.push_back(featureStreamId);
-    if (m_appliedStreamIds.size() != 1)
-    {
-        RuntimeError("Only a single feature stream is supported.");
-    }
-
-    const auto &inputStreams = GetInputStreams();
-    m_outputStreams.resize(inputStreams.size());
-    std::copy(inputStreams.begin(), inputStreams.end(), m_outputStreams.begin());
+    m_seed = readerConfig(L"seed", 0u);
 }
 
-SequenceDataPtr
-ImageTransformerBase::Apply(SequenceDataPtr sequence,
-                            const StreamDescription &inputStream,
-                            const StreamDescription & /*outputStream*/)
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Currently for image transformations we only support dense streams of type double or float.
+StreamDescription ImageTransformerBase::Transform(const StreamDescription& inputStream)
 {
-    assert(inputStream.m_storageType == StorageType::dense);
-    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence.get());
-    ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
-    int columns = static_cast<int>(dimensions.m_width);
-    int rows = static_cast<int>(dimensions.m_height);
-    int channels = static_cast<int>(dimensions.m_numChannels);
+    m_inputStream = inputStream;
+    m_outputStream = m_inputStream;
 
-    int typeId = 0;
-    if (inputStream.m_elementType == ElementType::tdouble)
+    if (m_inputStream.m_storageType != StorageType::dense)
     {
-        typeId = CV_64F;
+        LogicError("ImageTransformerBase supports only dense input streams.");
     }
-    else if (inputStream.m_elementType == ElementType::tfloat)
+
+    if (m_inputStream.m_elementType == ElementType::tdouble)
     {
-        typeId = CV_32F;
+        m_imageElementType = CV_64F;
+    }
+    else if (m_inputStream.m_elementType == ElementType::tfloat)
+    {
+        m_imageElementType = CV_32F;
     }
     else
     {
         RuntimeError("Unsupported type");
     }
 
+    return m_outputStream;
+}
+
+// Transforms a single sequence as open cv dense image. Called once per sequence.
+SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
+{
+    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence);
+
+    ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
+    int columns = static_cast<int>(dimensions.m_width);
+    int rows = static_cast<int>(dimensions.m_height);
+    int channels = static_cast<int>(dimensions.m_numChannels);
+
     auto result = std::make_shared<ImageSequenceData>();
-    int type = CV_MAKETYPE(typeId, channels);
+    int type = CV_MAKETYPE(m_imageElementType, channels);
     cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
     Apply(sequence->m_id, buffer);
     if (!buffer.isContinuous())
@@ -92,19 +89,8 @@ ImageTransformerBase::Apply(SequenceDataPtr sequence,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void CropTransformer::Initialize(TransformerPtr next,
-                                 const ConfigParameters &readerConfig)
+CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    ImageTransformerBase::Initialize(next, readerConfig);
-    auto featureStreamIds = GetAppliedStreamIds();
-    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
-}
-
-void CropTransformer::InitFromConfig(const ConfigParameters &config)
-{
-    m_cropType = ParseCropType(config(L"cropType", ""));
-
     floatargvector cropRatio = config(L"cropRatio", "1.0");
     m_cropRatioMin = cropRatio[0];
     m_cropRatioMax = cropRatio[1];
@@ -118,6 +104,8 @@ void CropTransformer::InitFromConfig(const ConfigParameters &config)
     }
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));
+
+    m_cropType = ImageConfigHelper::ParseCropType(config(L"cropType", ""));
 
     if (!config.ExistsCurrent(L"hflip"))
     {
@@ -136,7 +124,6 @@ void CropTransformer::StartEpoch(const EpochConfiguration &config)
     m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
     if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
         InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
-
     ImageTransformerBase::StartEpoch(config);
 }
 
@@ -178,27 +165,6 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     m_rngs.push(std::move(rng));
 }
 
-CropTransformer::CropType
-CropTransformer::ParseCropType(const std::string &src)
-{
-    if (src.empty() || AreEqualIgnoreCase(src, "center"))
-    {
-        return CropType::Center;
-    }
-
-    if (AreEqualIgnoreCase(src, "random"))
-    {
-        return CropType::Random;
-    }
-
-    if (AreEqualIgnoreCase(src, "multiview10"))
-    {
-        return CropType::MultiView10;
-    }
-
-    RuntimeError("Invalid crop type: %s.", src.c_str());
-}
-
 CropTransformer::RatioJitterType
 CropTransformer::ParseJitterType(const std::string &src)
 {
@@ -226,7 +192,7 @@ CropTransformer::ParseJitterType(const std::string &src)
 }
 
 cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, int ccol,
-                                      double cropRatio, std::mt19937 &rng)
+                                          double cropRatio, std::mt19937 &rng)
 {
     assert(crow > 0);
     assert(ccol > 0);
@@ -278,27 +244,27 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
         int isubView = viewIndex % 5;
         switch (isubView)
         {
-        // top-left
+            // top-left
         case 0:
             xOff = 0;
             yOff = 0;
             break;
-        // top-right
+            // top-right
         case 1:
             xOff = ccol - cropSizeX;
             yOff = 0;
             break;
-        // bottom-left
+            // bottom-left
         case 2:
             xOff = 0;
             yOff = crow - cropSizeY;
             break;
-        // bottom-right
+            // bottom-right
         case 3:
             xOff = ccol - cropSizeX;
             yOff = crow - cropSizeY;
             break;
-        // center
+            // center
         case 4:
             xOff = (ccol - cropSizeX) / 2;
             yOff = (crow - cropSizeY) / 2;
@@ -317,24 +283,13 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ScaleTransformer::Initialize(TransformerPtr next,
-                                  const ConfigParameters &readerConfig)
+ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    ImageTransformerBase::Initialize(next, readerConfig);
     m_interpMap.emplace("nearest", cv::INTER_NEAREST);
     m_interpMap.emplace("linear", cv::INTER_LINEAR);
     m_interpMap.emplace("cubic", cv::INTER_CUBIC);
     m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
 
-    auto featureStreamIds = GetAppliedStreamIds();
-    const auto &feature = GetInputStreams()[featureStreamIds[0]];
-    m_dataType = feature->m_elementType == ElementType::tfloat ? CV_32F : CV_64F;
-
-    InitFromConfig(readerConfig(feature->m_name));
-}
-
-void ScaleTransformer::InitFromConfig(const ConfigParameters &config)
-{
     m_imgWidth = config(L"width");
     m_imgHeight = config(L"height");
     m_imgChannels = config(L"channels");
@@ -359,15 +314,24 @@ void ScaleTransformer::InitFromConfig(const ConfigParameters &config)
         m_interp.push_back(cv::INTER_LINEAR);
 }
 
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Scale transformer transforms the stream so that all samples are of the same size.
+StreamDescription ScaleTransformer::Transform(const StreamDescription& inputStream)
+{
+    ImageTransformerBase::Transform(inputStream);
+    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(m_imgWidth, m_imgHeight, m_imgChannels).AsTensorShape(HWC));
+    return m_outputStream;
+}
+
 void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
+
     // If matrix has not been converted to the right type, do it now as rescaling
     // requires floating point type.
-    //
-    if (mat.type() != CV_MAKETYPE(m_dataType, m_imgChannels))
+    if (mat.type() != CV_MAKETYPE(m_imageElementType, m_imgChannels))
     {
-        mat.convertTo(mat, m_dataType);
+        mat.convertTo(mat, m_imageElementType);
     }
 
     auto seed = GetSeed();
@@ -375,7 +339,6 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 
     auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
     assert(m_interp.size() > 0);
-
     cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
 
     m_rngs.push(std::move(rng));
@@ -383,16 +346,7 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MeanTransformer::Initialize(TransformerPtr next,
-                                 const ConfigParameters &readerConfig)
-{
-    ImageTransformerBase::Initialize(next, readerConfig);
-
-    auto featureStreamIds = GetAppliedStreamIds();
-    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
-}
-
-void MeanTransformer::InitFromConfig(const ConfigParameters &config)
+MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     std::wstring meanFile = config(L"meanFile", L"");
     if (meanFile.empty())
@@ -425,7 +379,7 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
     UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
-            m_meanImg.channels() == mat.channels()));
+           m_meanImg.channels() == mat.channels()));
 
     // REVIEW alexeyk: check type conversion (float/double).
     if (m_meanImg.size() == mat.size())
@@ -434,48 +388,34 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void TransposeTransformer::Initialize(TransformerPtr next,
-                                      const ConfigParameters &readerConfig)
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Transpose transformer expects the dense input stream with samples as HWC and outputs CHW.
+StreamDescription TransposeTransformer::Transform(const StreamDescription& inputStream)
 {
-    TransformerBase::Initialize(next, readerConfig);
-
-    // Currently we only support a single stream.
-    ImageConfigHelper config(readerConfig);
-    size_t featureStreamId = config.GetFeatureStreamId();
-    m_appliedStreamIds.push_back(featureStreamId);
-
-    const auto &inputStreams = GetInputStreams();
-    m_outputStreams.resize(inputStreams.size());
-    std::copy(inputStreams.begin(), inputStreams.end(), m_outputStreams.begin());
-
-    for (auto id : m_appliedStreamIds)
+    m_inputStream = inputStream;
+    if (m_inputStream.m_storageType != StorageType::dense)
     {
-        auto &stream = inputStreams[id];
-
-        ImageDimensions dimensions(*stream->m_sampleLayout, HWC);
-
-        // Changing from NHWC to NCHW (note: row-major notation)
-        auto changedStream = std::make_shared<StreamDescription>(*stream);
-        changedStream->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
-        m_outputStreams[id] = changedStream;
+        LogicError("Transpose transformer supports only dense streams.");
     }
+
+    // Changing from NHWC to NCHW
+    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
+    m_outputStream = m_inputStream;
+    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    return m_outputStream;
 }
 
-SequenceDataPtr
-TransposeTransformer::Apply(SequenceDataPtr inputSequence,
-                            const StreamDescription &inputStream,
-                            const StreamDescription &outputStream)
+// Transformation of the sequence.
+SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
 {
-    if (inputStream.m_elementType == ElementType::tdouble)
+    if (m_inputStream.m_elementType == ElementType::tdouble)
     {
-        return TypedApply<double>(inputSequence, inputStream, outputStream);
+        return TypedTransform<double>(sequence);
     }
 
-    if (inputStream.m_elementType == ElementType::tfloat)
+    if (m_inputStream.m_elementType == ElementType::tfloat)
     {
-        return TypedApply<float>(inputSequence, inputStream, outputStream);
+        return TypedTransform<float>(sequence);
     }
 
     RuntimeError("Unsupported type");
@@ -490,21 +430,17 @@ struct DenseSequenceWithBuffer : DenseSequenceData
 };
 
 template <class TElemType>
-SequenceDataPtr TransposeTransformer::TypedApply(SequenceDataPtr sequence,
-                                                 const StreamDescription &inputStream,
-                                                 const StreamDescription &outputStream)
+SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
 {
-    assert(inputStream.m_storageType == StorageType::dense);
-    auto inputSequence = static_cast<DenseSequenceData&>(*sequence.get());
+    auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
     assert(inputSequence.m_numberOfSamples == 1);
-    assert(inputStream.m_sampleLayout->GetNumElements() == outputStream.m_sampleLayout->GetNumElements());
 
-    size_t count = inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(inputStream.m_elementType);
+    size_t count = m_inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
 
     auto result = std::make_shared<DenseSequenceWithBuffer>();
     result->m_buffer.resize(count);
 
-    ImageDimensions dimensions(*inputStream.m_sampleLayout, ImageLayoutKind::HWC);
+    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, ImageLayoutKind::HWC);
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
 
@@ -519,7 +455,7 @@ SequenceDataPtr TransposeTransformer::TypedApply(SequenceDataPtr sequence,
         }
     }
 
-    result->m_sampleLayout = outputStream.m_sampleLayout;
+    result->m_sampleLayout = m_outputStream.m_sampleLayout;
     result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
@@ -527,16 +463,7 @@ SequenceDataPtr TransposeTransformer::TypedApply(SequenceDataPtr sequence,
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void IntensityTransformer::Initialize(TransformerPtr next,
-                                 const ConfigParameters &readerConfig)
-{
-    ImageTransformerBase::Initialize(next, readerConfig);
-
-    auto featureStreamIds = GetAppliedStreamIds();
-    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
-}
-
-void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
+IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
     m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
     std::wstring intFile = config(L"intensityFile", L"");
@@ -564,7 +491,6 @@ void IntensityTransformer::InitFromConfig(const ConfigParameters &config)
 void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
 {
     m_curStdDev = m_stdDev[config.m_epochIndex];
-
     ImageTransformerBase::StartEpoch(config);
 }
 
@@ -618,15 +544,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ColorTransformer::Initialize(TransformerPtr next, const ConfigParameters &readerConfig)
-{
-    ImageTransformerBase::Initialize(next, readerConfig);
-
-    auto featureStreamIds = GetAppliedStreamIds();
-    InitFromConfig(readerConfig(GetInputStreams()[featureStreamIds[0]]->m_name));
-}
-
-void ColorTransformer::InitFromConfig(const ConfigParameters &config)
+ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
     m_brightnessRadius = config(L"brightnessRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
     m_contrastRadius = config(L"contrastRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));

@@ -53,6 +53,11 @@ private:
     // correct number of samples/sequences they contain.
     // If this flag is set to false, no cleaning will be done, so additional overhead.
     bool m_cleanse;
+
+    // If flag is set to true the sequence length is counted by the primary deserializer only.
+    // Used for optimization when sequences between different deserializers are of the same length
+    // (i.e. often in speech)
+    bool m_takePrimarySequenceLength;
 };
 
 }}}

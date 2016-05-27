@@ -9,6 +9,7 @@
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
 #include "Indexer.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,10 +23,9 @@ class TextParser : public DataDeserializerBase {
 public:
     explicit TextParser(const TextConfigHelper& helper);
 
-    ~TextParser();
+    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper);
 
-    // Builds an index of the input data.
-    void Initialize();
+    ~TextParser();
 
     // Retrieves a chunk of data.
     ChunkPtr GetChunk(size_t chunkId) override;
@@ -36,7 +36,12 @@ public:
     // Get information about particular chunk.
     void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
 
+    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+
 private:
+    // Builds an index of the input data.
+    void Initialize();
+
     // A buffer to keep data for all samples in a (variable length) sequence 
     // from a single input stream.
     struct InputStreamBuffer
@@ -106,7 +111,6 @@ private:
     unique_ptr<char[]> m_scratch; // local buffer for string parsing
 
     size_t m_chunkSizeBytes;
-    unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
     unsigned int m_traceLevel;
     bool m_hadWarnings;
     unsigned int m_numAllowedErrors;
@@ -114,9 +118,8 @@ private:
     unsigned int m_numRetries; // specifies the number of times an unsuccessful 
     // file operation should be repeated (default value is 5).
 
-    // A map of currently loaded chunks
-    // TODO: remove caching once partial randomization is in master.
-    std::map<size_t, TextChunkPtr> m_chunkCache;
+    // Corpus descriptor.
+    CorpusDescriptorPtr m_corpus;
 
     // throws runtime exception when number of parsing errors is 
     // greater than the specified threshold
@@ -166,12 +169,12 @@ private:
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
 
     // Given a descriptor, retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(bool verifyId, const SequenceDescriptor& descriptor);
+    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor);
 
     // Given a descriptor, retrieves the data for the corresponding chunk from the file.
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
-    TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams);
+    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -181,11 +184,11 @@ private:
 
     void SetChunkSize(size_t size);
 
-    void SetChunkCacheSize(unsigned int size);
-
     void SetNumRetries(unsigned int numRetries);
 
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
+
+    const std::wstring& GetSequenceKey(const SequenceDescriptor& s) const;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };

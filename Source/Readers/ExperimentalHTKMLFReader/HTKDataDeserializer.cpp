@@ -26,17 +26,16 @@ HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
     bool primary)
-    : m_ioFeatureDimension(0),
-    m_samplePeriod(0),
-    m_verbosity(0),
-    m_corpus(corpus),
-    m_totalNumberOfFrames(0),
-    m_primary(primary)
+    : m_verbosity(0),
+      m_corpus(corpus),
+      m_primary(primary)
 {
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
-    argvector<ConfigValue> inputs = cfg("inputs");
+    m_verbosity = cfg(L"verbosity", 0);
+
+    argvector<ConfigValue> inputs = cfg("input");
     if (inputs.size() != 1)
     {
         InvalidArgument("HTKDataDeserializer supports a single input stream only.");
@@ -65,11 +64,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
-    : m_ioFeatureDimension(0),
-      m_samplePeriod(0),
-      m_verbosity(0),
-      m_corpus(corpus),
-      m_totalNumberOfFrames(0),
+    : m_corpus(corpus),
       m_primary(primary)
 {
     // The frame mode is currently specified once per configuration,
@@ -79,6 +74,8 @@ HTKDataDeserializer::HTKDataDeserializer(
 
     ConfigHelper config(feature);
     config.CheckFeatureType();
+
+    m_verbosity = feature(L"verbosity", 0);
 
     auto context = config.GetContextWindow();
     m_elementType = config.GetElementType();
@@ -127,22 +124,12 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         }
 
         wstring key = description.GetKey();
-        size_t id = 0;
-        if (m_primary)
+        if (!m_corpus->IsIncluded(key))
         {
-            // TODO: Definition of the corpus should be moved to the CorpusDescriptor
-            // TODO: All keys should be added there. Currently, we add them in the driving deserializer.
-            id = stringRegistry.AddValue(key);
-        }
-        else
-        {
-            if (!stringRegistry.TryGet(key, id))
-            {
-                // Utterance is unknown, skipping it.
-                continue;
-            }
+            continue;
         }
 
+        size_t id = stringRegistry[key];
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;
@@ -173,8 +160,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
         if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames || m_chunks.back().GetNumberOfUtterances() >= MaxUtterancesPerChunk)
         {
-            m_chunks.push_back(HTKChunkDescription());
-            chunkId++;
+            m_chunks.push_back(HTKChunkDescription(++chunkId));
             startFrameInsideChunk = 0;
         }
 
@@ -219,7 +205,7 @@ void HTKDataDeserializer::InitializeFeatureInformation()
         msra::asr::htkfeatreader reader;
         reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
         fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n",
-            (int)m_dimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
+            (int)m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
 }
 
@@ -311,7 +297,7 @@ private:
 };
 
 
-// Represets a chunk data in memory. Given up to the randomizer.
+// Represents a chunk data in memory. Given up to the randomizer.
 // It is up to the randomizer to decide when to release a particular chunk.
 class HTKDataDeserializer::HTKChunk : public Chunk
 {
@@ -338,7 +324,7 @@ public:
     ~HTKChunk()
     {
         auto& chunkDescription = m_parent->m_chunks[m_chunkId];
-        chunkDescription.ReleaseData();
+        chunkDescription.ReleaseData(m_parent->m_verbosity);
     }
 
 private:
