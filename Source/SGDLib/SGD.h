@@ -284,6 +284,9 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+
+    // data set reduction
+    size_t m_dataDecimationFactor;
 };
 
 template <class ElemType>
