@@ -641,10 +641,10 @@ public:                                                                 \
 template class ClassName<float>;                                        \
 template class ClassName<double>;
 
-DefineComparisonNode(ComparsionLessNode,         -1, 0)
-DefineComparisonNode(ComparisonEqualNode,         0, 0)
-DefineComparisonNode(ComparisonGreaterNode,       1, 0)
-DefineComparisonNode(ComparisonGreaterEqualNode, -1, 1)
-DefineComparisonNode(ComparisonNotEqualNode,      0, 1)
-DefineComparisonNode(ComparisonLessEqualNode,     1, 1)
+DefineComparisonNode(LessNode,         -1, 0)
+DefineComparisonNode(EqualNode,         0, 0)
+DefineComparisonNode(GreaterNode,       1, 0)
+DefineComparisonNode(GreaterEqualNode, -1, 1)
+DefineComparisonNode(NotEqualNode,      0, 1)
+DefineComparisonNode(LessEqualNode,     1, 1)
 }}}
