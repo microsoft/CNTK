@@ -423,7 +423,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     // Double check if there are empty input streams.
     // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
     bool hasEmptyInputs = false, hasDuplicateInputs = false;
-    SequenceSampleCountType maxInputLength = 0;
+    uint32_t maxInputLength = 0;
     for (size_t i = 0; i < sequence.size(); ++i)
     {
         if (sequence[i]->m_numberOfSamples == 0)

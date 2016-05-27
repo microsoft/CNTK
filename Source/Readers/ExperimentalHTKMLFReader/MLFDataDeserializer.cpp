@@ -140,7 +140,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
 
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();
-        SequenceSampleCountType numberOfFrames = 0;
+        uint32_t numberOfFrames = 0;
 
         foreach_index(i, utterance)
         {
@@ -148,7 +148,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             if ((i == 0 && timespan.firstframe != 0) ||
                 (i > 0 && utterance[i - 1].firstframe + utterance[i - 1].numframes != timespan.firstframe))
             {
-                RuntimeError("Labels are not in the consecutive order MLF in label set: %ls", l.first.c_str());
+                RuntimeError("Labels are not in the consecutive order MLF in label set: %s", l.first.c_str());
             }
 
             if (timespan.classid >= dimension)
@@ -161,7 +161,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
                 RuntimeError("CLASSIDTYPE has too few bits");
             }
 
-            if (SEQUENCESAMPLECOUNT_MAX < timespan.firstframe + timespan.numframes)
+            if (SEQUENCELEN_MAX < timespan.firstframe + timespan.numframes)
             {
                 RuntimeError("Maximum number of sample per sequence exceeded.");
             }
@@ -279,13 +279,13 @@ struct MLFSequenceData : SparseSequenceData
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());
         }
 
-        if (SEQUENCESAMPLECOUNT_MAX < numberOfSamples)
+        if (SEQUENCELEN_MAX < numberOfSamples)
         {
             RuntimeError("Maximum number of samples per sequence exceeded");
         }
 
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
-        m_numberOfSamples = (SequenceSampleCountType) numberOfSamples;
+        m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
         m_data = m_values.data();
@@ -349,7 +349,7 @@ bool MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     {
         assert(result.m_key.m_sample == 0);
         result.m_id = sequenceId;
-        result.m_numberOfSamples = (SequenceSampleCountType) (m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId]);
+        result.m_numberOfSamples = (uint32_t) (m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId]);
     }
     return true;
 }

@@ -20,7 +20,7 @@ struct RandomizedSequenceDescription
     // Sequence id.
     size_t m_id;
     // Number of samples in sequence.
-    SequenceSampleCountType m_numberOfSamples;
+    uint32_t m_numberOfSamples;
     // Randomized chunk this sequence belongs to.
     const RandomizedChunk* m_chunk;
 };

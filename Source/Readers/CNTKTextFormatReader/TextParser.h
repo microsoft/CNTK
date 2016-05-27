@@ -48,7 +48,7 @@ private:
     {
         virtual ~InputStreamBuffer() { };
 
-        SequenceSampleCountType m_numberOfSamples = 0;
+        uint32_t m_numberOfSamples = 0;
         std::vector<ElemType> m_buffer;
     };
 

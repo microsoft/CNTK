@@ -266,12 +266,12 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
             f.m_key.m_sequence = sequence;
             f.m_key.m_sample = 0;
             f.m_id = offsetInChunk++;
-            if (SEQUENCESAMPLECOUNT_MAX < utterance->GetNumberOfFrames())
+            if (SEQUENCELEN_MAX < utterance->GetNumberOfFrames())
             {
                 RuntimeError("Maximum number of samples per sequence exceeded");
             }
 
-            f.m_numberOfSamples = (SequenceSampleCountType) utterance->GetNumberOfFrames();
+            f.m_numberOfSamples = (uint32_t) utterance->GetNumberOfFrames();
             result.push_back(f);
         }
     }
@@ -394,7 +394,7 @@ struct HTKFloatSequenceData : DenseSequenceData
 {
     HTKFloatSequenceData(FeatureMatrix&& data) : m_buffer(data)
     {
-        m_numberOfSamples = (SequenceSampleCountType)data.GetNumberOfColumns();
+        m_numberOfSamples = (uint32_t)data.GetNumberOfColumns();
         if (m_numberOfSamples != data.GetNumberOfColumns())
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
@@ -411,7 +411,7 @@ struct HTKDoubleSequenceData : DenseSequenceData
 {
     HTKDoubleSequenceData(FeatureMatrix& data) : m_buffer(data.GetData(), data.GetData() + data.GetTotalSize())
     {
-        m_numberOfSamples = (SequenceSampleCountType)data.GetNumberOfColumns();
+        m_numberOfSamples = (uint32_t)data.GetNumberOfColumns();
         if (m_numberOfSamples != data.GetNumberOfColumns())
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
@@ -485,7 +485,7 @@ bool HTKDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     const auto& sequence = chunk.GetUtterance(utteranceIndexInsideChunk);
     d.m_chunkId = (ChunkIdType)chunkId;
     d.m_id = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(chunkId) + key.m_sample : utteranceIndexInsideChunk;
-    d.m_numberOfSamples = m_frameMode ? 1 : (SequenceSampleCountType)sequence->GetNumberOfFrames();
+    d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)sequence->GetNumberOfFrames();
     return true;
 }
 

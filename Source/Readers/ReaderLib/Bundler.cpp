@@ -190,7 +190,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
             }
 
             auto sequence = sequences[sequenceIndex];
-            SequenceSampleCountType sequenceSamples = sequence.m_numberOfSamples;
+            uint32_t sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
                 m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequence.m_key, s);

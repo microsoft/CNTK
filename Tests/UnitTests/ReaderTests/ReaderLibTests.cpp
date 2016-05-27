@@ -26,11 +26,11 @@ private:
     size_t m_chunkBegin;
     size_t m_chunkEnd;
     TensorShapePtr m_sampleLayout;
-    SequenceSampleCountType m_sequenceLength;
+    uint32_t m_sequenceLength;
     vector<vector<float>>& m_sequenceData;
 
 public:
-    MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, SequenceSampleCountType sequenceLength)
+    MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
         : m_chunkBegin(chunkBegin),
           m_chunkEnd(chunkEnd),
           m_sampleLayout(make_shared<TensorShape>(1)),
@@ -59,7 +59,7 @@ public:
 class MockDeserializer : public IDataDeserializer
 {
 private:
-    SequenceSampleCountType m_sequenceLength;
+    uint32_t m_sequenceLength;
     size_t m_numChunks;
     size_t m_numSequencesPerChunk;
     vector<SequenceDescription> m_descriptions;
@@ -69,7 +69,7 @@ private:
     vector<vector<float>> m_sequenceData;
 
 public:
-    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, vector<float>& data, SequenceSampleCountType sequenceLength = 1)
+    MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, vector<float>& data, uint32_t sequenceLength = 1)
         : m_numChunks(numChunks),
           m_numSequencesPerChunk(numSequencesPerChunks),
           m_sampleLayout(make_shared<TensorShape>(1)),

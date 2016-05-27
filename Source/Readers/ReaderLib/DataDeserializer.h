@@ -31,11 +31,10 @@ struct KeyType
 class Chunk;
 typedef std::shared_ptr<Chunk> ChunkPtr;
 
-typedef unsigned int ChunkIdType;
+typedef uint32_t ChunkIdType;
 #define CHUNKID_MAX ((ChunkIdType)(-1))
 
-typedef unsigned int SequenceSampleCountType;
-#define SEQUENCESAMPLECOUNT_MAX ((SequenceSampleCountType)(-1))
+#define SEQUENCELEN_MAX ((uint32_t)(-1))
 
 // Defines main properties of a sequence.
 // Sequence descriptions are used by the randomizer to establish a global timeline for complete input.
@@ -43,7 +42,7 @@ typedef unsigned int SequenceSampleCountType;
 struct SequenceDescription
 {
     size_t m_id;                               // Sequence id, uniquely identifies the sequence.
-    SequenceSampleCountType m_numberOfSamples; // Number of samples in a sequence.
+    uint32_t m_numberOfSamples;                // Number of samples in a sequence.
     ChunkIdType m_chunkId;                     // Each sequence belongs to an I/O chunk, how chunk is defined is specific to a
                                                // particular data deserializer (or bundler). The randomizer guarantees to request
                                                // sequences from only limited subset of chunks at any moment in time.
@@ -64,7 +63,7 @@ struct SequenceDataBase
 
     // Sequence id.
     size_t m_id;
-    SequenceSampleCountType m_numberOfSamples;      // Number of samples in the sequence
+    uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
