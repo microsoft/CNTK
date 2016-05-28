@@ -90,7 +90,7 @@ struct SparseSequenceData : SequenceDataBase
 {
     IndexType* m_indices; // an index for every value in the m_data array
     std::vector<IndexType> m_nnzCounts; // nnz count for each sample in the sequence
-    IndexType m_totalNnzCount; // sum of all nzzCounts of all samples
+    IndexType m_totalNnzCount; // sum of all nnzCounts of all samples
     // Using IndexType for both properties above since the nnzCount should fit inside
     // the index type (in CSC format, the last value in the column index array == nnzCount)
 };
