@@ -1,0 +1,44 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
+#pragma once
+
+#include <string>
+#include <vector>
+#include "Config.h"
+#include "Reader.h"
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+// A helper class for binary specific parameters.
+// A simple wrapper around CNTK ConfigParameters.
+class BinaryConfigHelper
+{
+public:
+    explicit BinaryConfigHelper(const ConfigParameters& config);
+
+    // Get all input streams that are specified in the configuration.
+    const vector<StreamDescription>& GetStreams() const { return m_streams; }
+
+    // Get full path to the input file.
+    const wstring& GetFilePath() const { return m_filepath; }
+
+    size_t GetRandomizationWindow() const { return m_randomizationWindow; }
+
+    unsigned int GetTraceLevel() const { return m_traceLevel; }
+
+    bool ShouldKeepDataInMemory() const { return m_keepDataInMemory; }
+
+    DISABLE_COPY_AND_MOVE(BinaryConfigHelper);
+
+private:
+    std::wstring m_filepath;
+    std::vector<StreamDescription> m_streams;
+    size_t m_randomizationWindow;
+    unsigned int m_traceLevel;
+    bool m_keepDataInMemory; // if true the whole dataset is kept in memory
+};
+
+} } }
