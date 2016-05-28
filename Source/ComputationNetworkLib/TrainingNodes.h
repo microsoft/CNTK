@@ -716,7 +716,7 @@ public:
             const Matrix<ElemType>& logExpTerm = *m_logexpterm;
             Matrix<ElemType> grdLocal = gradient.DeepClone();
             size_t pairsCount = 0, idI;
-            ElemType logKi, logKj, gKi, gKij, g;
+            ElemType logKi, logKj, gKi, gKij, g, sDiff;
             for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
             {
                 ElemType irm0 = itqu->irm0;
@@ -738,12 +738,15 @@ public:
                         logKj = m_logWeights[UrlJ.rk];
                         gKij = gKi - UrlJ.gn;
 
+                        // score diff
+                        sDiff = abs(UrlI.sc - UrlJ.sc) + (ElemType)0.1;
+
                         // update IR metric
                         g = gKij * (logKi - logKj);
                         g /= (logKi * logKj);
 
                         // |delta NDCG|
-                        g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0));
+                        g = (irm0 == 0.0 ? (ElemType) 0.0 : abs(g / irm0) / sDiff);
 
                         // combined with log exp term
                         g = logExpTerm(0, pairsCount++) * g;
