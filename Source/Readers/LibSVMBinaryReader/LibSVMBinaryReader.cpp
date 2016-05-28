@@ -443,6 +443,10 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
     {
         maxMBSize = max(maxMBSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
         // fprintf(stderr, "m_offsets[%lu] = %lu\n", c, m_offsets[c]);
+        if (m_offsets[c + 1] < m_offsets[c])
+        {
+            LogicError("LibSVMBinaryReader: next offset (%d) < current offset (%d)!", m_offsets[c + 1], m_offsets[c]);
+        }
     }
     if (maxMBSize > m_maxMBSize)
     {
@@ -455,6 +459,11 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
 
         size_t maxMem = 1024 * 1024 * 1024; // 1GB
         size_t maxPointers = maxMem / m_maxMBSize;
+        if (!maxPointers)
+        {
+            LogicError("LibSVMBinaryReader: maxMem (%d) < m_maxMBSize (%d)!", maxMem, m_maxMBSize);
+        }
+
         for (size_t c = 0; c < maxPointers; c++)
         {
             void* dataBuffer = malloc(m_maxMBSize);
