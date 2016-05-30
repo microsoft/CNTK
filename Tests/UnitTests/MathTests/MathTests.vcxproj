@@ -171,7 +171,7 @@
       <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(UnitTestDlls);" />
     </ItemGroup>
     <ItemGroup Condition="$(GpuBuild)">
-      <UnitTestDependencies Include="$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
+      <UnitTestDependencies Include="$(OutDir)..\cuda*.dll;$(CuDnnDll);$(UnitTestDependencies)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
