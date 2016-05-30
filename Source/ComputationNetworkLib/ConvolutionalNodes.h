@@ -404,6 +404,8 @@ public:
     void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
     {
         m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+        if (m_convEng != nullptr)
+            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
 
 protected:

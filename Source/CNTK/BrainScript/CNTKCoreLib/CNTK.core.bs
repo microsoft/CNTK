@@ -85,6 +85,9 @@ CNTK2 = [
         ].out
         else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
+    // Swap two axes of a tensor
+    TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
+
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
     Times(x, y, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
@@ -96,10 +99,14 @@ CNTK2 = [
     Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
     ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
     ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
+    Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _ /*plus the function args*/ ]
     Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
+    Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _ /*plus the function args*/ ]
     Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
     Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
     Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
+    Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
+    Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions
@@ -121,6 +128,7 @@ CNTK2 = [
     Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+    Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
@@ -130,14 +138,15 @@ CNTK2 = [
 
     // 13. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
-	Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
-	Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
-	GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
-	NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
-	LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
+    Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
+    Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
+    GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
+    NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
+    LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
 
     // 13. Others
-    // None so far.
+    // 12. Others
+    Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
 LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]

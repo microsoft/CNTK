@@ -44,7 +44,16 @@ CNTK_OUTPUT_FILENAME = "out"
 _CONTEXT = {}
 
 
-def get_context(handle='default'):
+def get_context(handle):
+    '''
+    If the context for the current handle is already built it returns it. Otherwise,
+    it will build new context and return it.
+    Args:
+        handle (str): context name
+    Returns:
+        :class:`cntk.context.LocalExecutionContext`
+    '''    
+    
     # TODO: we need more sanity in the model handling here
     if handle not in _CONTEXT:
         _CONTEXT[handle] = LocalExecutionContext(handle)
@@ -249,7 +258,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl_dict = {
             'ActionName': action_name,
             'ModelDescription': description,            
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
             'SGD': training_params._to_config_description(),
         }
 
@@ -282,7 +291,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         tmpl_dict = {
             'ActionName': action_name,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -310,7 +319,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tmpl_dict = {
             'ActionName': action_name,
             'OutputFile': self.output_filename_base,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -355,7 +364,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             'NodeUnitTest': node_unit_test,
             'OutputFile': self.output_filename_base,
             'ModelDescription': description,
-            'Reader': input_map._to_config_description(),
+            'Reader': input_map._to_config_description(self.directory),
         }
         return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
@@ -423,7 +432,7 @@ class LocalExecutionContext(AbstractContext):
 
         if not output:
             raise ValueError('no output returned')
-
+        
         return output
 
     '''
@@ -767,7 +776,7 @@ class DeferredExecutionContext(AbstractContext):
         
     Args:        
         device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
-        precision (str): either float or double            
+        precision (str): either 'float' or 'double'
     '''
     
     def __init__(self, 
@@ -777,7 +786,7 @@ class DeferredExecutionContext(AbstractContext):
         self.device_id = device_id
         self.precision = precision
         self.input_nodes = set()        
-        
+        self.directory = None
         self.model_path = os.path.join("$ModelDir$", "model")
         self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
         self.config = []
