@@ -370,9 +370,9 @@ def times(left, right, output_rank=1, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk2 import Times
+    from cntk.ops.cntk2 import Times   
     return Times(left, right, outputRank=output_rank, name=name)
-
+    
 def identity(x, name=None):
     """
     The identity function. It returns an identical tensor to the input tensor `x`: 
@@ -601,29 +601,6 @@ def softmax(x, name=None):
     """
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
-
-# unittests might require training and testing at the same time ? which 
-# sounds more like end2end test ?
-def dropout(x, name=None):
-    """
-    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
-    that are set to zero are randomly chosen. This is commonly used to prevent 
-    overfitting during the training process.
-
-    The output tensor has the same shape as `x`, but with `dropoutRate` of the
-    elements set to zero (droped out).
-    
-    
-    Examples:
-        TBA
-            
-    Args:        
-        x: source tensor
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """    
-    from cntk.ops.cntk2 import Dropout
-    return Dropout(x, name = name)
 
 def exp(x, name=None):
     """
@@ -916,6 +893,29 @@ def slice(x, begin_index, end_index, axis=0, name=None):
 ################################################################################
 # training ops
 ################################################################################
+
+# unittests might require training and testing at the same time ? which 
+# sounds more like end2end test ?
+def dropout(x, name=None):
+    """
+    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
+    that are set to zero are randomly chosen. This is commonly used to prevent 
+    overfitting during the training process.
+
+    The output tensor has the same shape as `x`, but with `dropoutRate` of the
+    elements set to zero (droped out).
+    
+    
+    Examples:
+        TBA
+            
+    Args:        
+        x: source tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import Dropout
+    return Dropout(x, name = name)
 
 ################################################################################
 # variables_and_parameters ops
