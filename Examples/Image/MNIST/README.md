@@ -14,12 +14,16 @@
 ### Getting the data
 
 The MNIST dataset is not included in the CNTK distribution but can be easily 
-downloaded and converted by running the following command from the 'AdditionalFiles' folder:
+downloaded and converted by running the following commands from the 'AdditionalFiles' folder:
 
-`python mnist_convert.py`
+```
+python mnist_convert.py
+python ../../../../Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py -in ../Data/Train-28x28.txt  --output_file ../Data/Train-28x28_cntk_text.txt -ls 0 -ld 1 --num_labels=10 -fs 1 -fd 784 -lt Category
+python ../../../../Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py -in ../Data/Test-28x28.txt  --output_file ../Data/Test-28x28_cntk_text.txt -ls 0 -ld 1 --num_labels=10 -fs 1 -fd 784 -lt Category
+```
 
-The script will download all required files and convert them to CNTK-supported format. 
-The resulting files (Train-28x28.txt and Test-28x28.txt) will be stored in the 'Data' folder. 
+The scripts will download all required files and convert them to CNTK-supported format. 
+The resulting files (Train-28x28_cntk_text.txt and Test-28x28_cntk_text.txt) will be stored in the 'Data' folder. 
 In case you don't have Python installed, there are 2 options:
 
 1. Download and install latest version of Python 2.7 from: https://www.python.org/downloads/ 
