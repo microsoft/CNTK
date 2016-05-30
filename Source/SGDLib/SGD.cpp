@@ -1934,6 +1934,11 @@ template <class ElemType>
 
     // clipping gradients to prevent outliers
     sgd->ClipGradient(gradientValues, actualMBSize);
+    if (gradientValues.GetMatrixType() == MatrixType::SPARSE)
+    {
+      fprintf(stderr, "Sparse matirx: %d [%d * %d] \n", gradientValues.GetNumElements(), gradientValues.GetNumRows(), gradientValues.GetNumCols());
+      fflush(stderr);
+    }
 
     GradientsUpdateType adpType = sgd->GradUpdateType();
     double noiseStd = sgd->GradientUpdateNoiseStd();
@@ -1946,6 +1951,7 @@ template <class ElemType>
         // reset its value to random
         sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType) noiseStd);
     }
+
 
     // L2 regularizer
     if (L2RegWeight > 0)
