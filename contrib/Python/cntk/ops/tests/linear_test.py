@@ -12,7 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from .ops_test_utils import unittest_helper, AA, I, SI, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
 from ...graph import *
 from .. import *
 from ...reader import *
