@@ -36,13 +36,20 @@ namespace Microsoft {
 					}
 					this->d_condition.notify_one();
 				}
+
 				T pop() {
+					return pop(1);
+				}
+
+				T pop(size_t limit) {
+					if (limit < 1) limit = 1;
 					std::unique_lock<std::mutex> lock(this->d_mutex);
-					this->d_condition.wait(lock, [=]{ return !this->d_queue.empty(); });
+					this->d_condition.wait(lock, [=]{ return this->d_queue.size() >= limit; });
 					T rc(std::move(this->d_queue.back()));
 					this->d_queue.pop_back();
 					return rc;
 				}
+
                 bool empty() {
                     std::lock_guard<std::mutex> lock(this->d_mutex);
                     return this->d_queue.empty();
@@ -130,9 +137,17 @@ namespace Microsoft {
 				int GetMinimumEpochSizeCrossAllWorker(size_t mbSize, size_t subsetNum, size_t numSubsets);
 				int32_t Copy2Buffer(void *bufferInProduce, size_t numToRead);
 
-				void ReadZipData(size_t* read_order, size_t numToRead);
+				size_t ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize,
+					size_t skipBlockNum, bool writeToCache); //return: cached block num
+
+				void ReadCachedZipData(size_t* read_order, size_t numToTread);
 
 				ifstream m_inFile;
+
+				fstream m_cacheFile;
+				size_t m_maxCacheSize; //MB
+				size_t m_cachedBlockNum;
+
 				std::wstring m_fileName;
 				size_t m_fileSize;				
 
@@ -186,6 +201,7 @@ namespace Microsoft {
 
 				//muti-thread to decompress
 				std::mutex m_unzipLocker;
+				std::mutex m_blockCntLocker;
 				string m_cAlgo;
 				size_t m_processedBlockCnt;
 				int32_t m_dThreadCnt;
@@ -193,6 +209,7 @@ namespace Microsoft {
 				size_t m_blockCntBeenCopied;
 				size_t m_batchCntBeenCopied;
 				std::thread m_unzipThreads[1000];
+
 				DenseBlockingQueue<void*> m_zipedDataToProduce; //read zip data to this queue
 				DenseBlockingQueue<void*> m_zipedDataToConsume; //read zip data to this queue
 				

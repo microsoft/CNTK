@@ -17,6 +17,7 @@
 #include <mutex>
 #include <ctime>
 #include <time.h>
+#include <direct.h>
 #include "CUDAPageLockedMemAllocator.h"
 #include <chrono>
 #include <thread>
@@ -32,6 +33,8 @@
 #endif
 
 
+
+
 namespace Microsoft {
 	namespace MSR {
 		namespace CNTK {
@@ -43,11 +46,11 @@ namespace Microsoft {
 			SDenseBinaryMatrix<ElemType>::SDenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols) : BDenseBinaryMatrix<ElemType>(name, deviceID, numRows, numCols) {
 				//this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
 				this->m_values = (ElemType*)CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType)*numRows*numCols, deviceID);
-	//			if (this->m_values == nullptr)
-	//			{
-					//cpu only
-	//				this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
-	//			}
+				//			if (this->m_values == nullptr)
+				//			{
+				//cpu only
+				//				this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
+				//			}
 			}
 
 			template <class ElemType>
@@ -62,10 +65,10 @@ namespace Microsoft {
 					CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
 				}
 
-	//			if (this->m_values != nullptr) {
-					//cpu only
-	//				free(this->m_values);
-	//			}
+				//			if (this->m_values != nullptr) {
+				//cpu only
+				//				free(this->m_values);
+				//			}
 
 				this->m_values = nullptr;
 			}
@@ -118,18 +121,21 @@ namespace Microsoft {
 			template<class ElemType>
 			template<class ConfigRecordType>
 			void DenseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename, const ConfigRecordType & config) {
-				
+
 				GetZippedFileInfo();
-				
+
 				m_dThreadCnt = config(L"dThreadCnt", (int32_t)4);
 				m_cAlgo = config(L"cAlgo", "7z");  //accapt value, "7z" or "gz"
 
 				m_totalDim = config(L"totalDim", (int32_t)0);
 				m_microBatchSize = config(L"microBatchSize", (int32_t)(1024));
 				m_mbSize = (size_t)m_microBatchSize;
-				
+
+				//cache is disabled by default
+				m_maxCacheSize = ((size_t)config(L"maxCacheSize", (size_t)(0))) * 1024 * 1024;
+
 				m_blockSizeOfUnzippedBuffer = 4;
-                size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize); 
+				size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize);
 				m_unzippedBufferLen = sizeof(int32_t) * m_totalDim * maxSampleNum * m_blockSizeOfUnzippedBuffer;
 				if (m_unzippedBuffer != nullptr)
 					free(m_unzippedBuffer);
@@ -140,8 +146,8 @@ namespace Microsoft {
 				m_zippedFileBlockBuffer = malloc(m_blockSize);
 
 				m_numBatches = m_numRows / m_microBatchSize;
-				if (m_numRows% m_microBatchSize)				
-					m_numBatches += 1;				
+				if (m_numRows% m_microBatchSize)
+					m_numBatches += 1;
 
 				m_microbatchFileSize = (sizeof(ElemType)) * m_totalDim * m_microBatchSize;
 				for (const auto & id : config.GetMemberIds())
@@ -160,7 +166,7 @@ namespace Microsoft {
 							m_labels.emplace_back(wname);
 						}
 						else
-						{							
+						{
 							m_labels.emplace_back(rename[wname]);
 						}
 						m_mappedNumCols[m_labels.back()] = singlefeature_dim;
@@ -190,15 +196,17 @@ namespace Microsoft {
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::GetZippedFileInfo()
 			{
+				cout << "GetZippedFileInfo Begin" << endl;
+
 				m_inFile.seekg(0, ios::end);
 				m_fileSize = (size_t)m_inFile.tellg();
 				if (m_fileSize <= 0)
 					RuntimeError("Input Data file Does Not Exists Or Empty");
-				
+
 				int32_t block_size = 0;
 				int32_t block_sample_cnt = 0;
 
-				m_inFile.seekg(0, ios::beg);				
+				m_inFile.seekg(0, ios::beg);
 				m_inFile.read((char *)&block_size, 4);
 				m_inFile.read((char *)&block_sample_cnt, 4);
 				m_blockSizeInByte.reserve((size_t)((m_fileSize / block_size) * 1.1));
@@ -212,11 +220,19 @@ namespace Microsoft {
 				m_blockSize = 0;
 				m_blockSampleCnt = 0;
 				size_t totalSampel = 0;
+
+				int progress = -1;
 				while (pos < m_fileSize)
-				{					
+				{
+					int newProgress = pos * 10 / m_fileSize;
+					if (newProgress != progress) {
+						cout << "GetZippedFileInfo: " << newProgress * 10 << "%" << endl;
+						progress = newProgress;
+					}
+
 					m_inFile.read((char *)&block_size, 4);
 					m_inFile.read((char *)&block_sample_cnt, 4);
-					
+
 					totalSampel += block_sample_cnt;
 
 					m_blockSizeInByte.push_back(block_size + 4 + 4);
@@ -227,11 +243,13 @@ namespace Microsoft {
 					m_numBlocks++;
 
 					pos += block_size + 4 + 4;
-					m_inFile.seekg(pos, ios::beg);	
+					m_inFile.seekg(pos, ios::beg);
 
 					m_blockSize = max(m_blockSize, block_size + 8);
 					m_blockSampleCnt = max(m_blockSampleCnt, block_sample_cnt);
-				}				
+				}
+
+				cout << "GetZippedFileInfo End" << endl;
 			}
 
 			template<class ElemType>
@@ -239,10 +257,10 @@ namespace Microsoft {
 			{
 				if (m_readOrder != nullptr)
 					free(m_readOrder);
-				
+
 				m_readOrder = (size_t*)malloc(sizeof(size_t)*m_windowSize);
-				for (size_t c = 0; c < m_windowSize; c++)				
-					m_readOrder[c] = c + m_startBlock;				
+				for (size_t c = 0; c < m_windowSize; c++)
+					m_readOrder[c] = c + m_startBlock;
 			}
 
 			template<class ElemType>
@@ -256,10 +274,10 @@ namespace Microsoft {
 
 			template<class ElemType>
 			int DenseBinaryInput<ElemType>::GetMinimumEpochSizeCrossAllWorker(size_t mbSize, size_t subsetNum, size_t numSubsets){
-				
+
 				int * tmpEpochSize = (int*)malloc(numSubsets * sizeof(int));
 				size_t minEpochSize = 1e10;
-                                size_t blockNum = m_blockOffset.size();
+				size_t blockNum = m_blockOffset.size();
 				size_t local_startBlock = 0;
 				size_t local_endBlock = 0;
 				int blockCnt = m_blockOffset.size() / numSubsets;
@@ -290,7 +308,7 @@ namespace Microsoft {
 					}
 				}
 
-     	         		size_t sampleNum = 0;
+				size_t sampleNum = 0;
 				size_t totalSampleNum = minEpochSize * mbSize;
 				size_t blockId = local_startBlock;
 				while ((sampleNum < totalSampleNum) && (blockId < local_endBlock)){
@@ -299,8 +317,8 @@ namespace Microsoft {
 				}
 				m_windowSize = blockId - local_startBlock;
 				m_startBlock = local_startBlock;
-				
-				for (int i = 0; i < numSubsets; i++){					
+
+				for (int i = 0; i < numSubsets; i++){
 					fprintf(stderr, "iEpochSize %d, minEpochSize %d, startBlock %d, windowSize %d, subsetNum %d, numSubsets %d\n", tmpEpochSize[i], (int)minEpochSize, (int)m_startBlock, (int)m_windowSize, (int)subsetNum, (int)numSubsets);
 				}
 
@@ -309,18 +327,30 @@ namespace Microsoft {
 				return minEpochSize;
 			}
 
+			void InitCacheDir(const char* dirPath, int maxFileIndex = 100) {
+				//std C++ has no protable code to iterate a dir
+				int flag = _mkdir(dirPath);
+				if (flag != 0) {
+					char buf[255];
+					for (int i = 0; i < maxFileIndex; ++i) {
+						sprintf(buf, "%s/%d", dirPath, i);
+						remove(buf);
+					}
+				}
+			}
+
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t subsetNum, size_t numSubsets) {
 				m_nextMB = 0;
 				m_mbSize = mbSize;
 
 				m_epochSize = GetMinimumEpochSizeCrossAllWorker(mbSize, subsetNum, numSubsets);
-				
+
 				if (m_windowSize != m_readOrderLength) {
 					FillReadOrder();
 					m_readOrderLength = m_windowSize;
 				}
-				
+
 				//Shuffle();
 				size_t G1 = 1024 * 1024 * 1024 * 1.5;
 
@@ -328,7 +358,9 @@ namespace Microsoft {
 				size_t zipQueueLen = G1 * 5 / m_blockSize;
 				size_t unzipQueueLen = G1 * 2 / (sizeof(int32_t) * m_totalDim * m_blockSampleCnt * 2);
 
-				if (!m_bQueueBufferAllocated){
+				bool firstEpoch = !m_bQueueBufferAllocated;
+
+				if (!m_bQueueBufferAllocated) {
 					for (size_t c = 0; c < maxPointers; c++) {
 						void* dataBuffer = malloc(m_microbatchFileSize + sizeof(int32_t)); //sample cnt
 						m_dataToProduce.push(dataBuffer);
@@ -343,16 +375,66 @@ namespace Microsoft {
 						void* zipDataBuffer = malloc(m_blockSize);
 						m_zipedDataToProduce.push(zipDataBuffer);
 					}
-
-
-
 					m_bQueueBufferAllocated = true;
 				}
-				
-				std::thread readZipData([this] { this->ReadZipData(m_readOrder, m_readOrderLength); });
+
+				bool enableCache = this->m_maxCacheSize;
+
+				if (firstEpoch && enableCache) {
+					//init cache dir
+#ifdef _WIN32
+					const char dirName[] = "./cache";
+#else
+					const char dirName[] = "/tmp/cachefromcdensereader";
+#endif
+					InitCacheDir(dirName);
+
+					//open cache file
+					char buf[255];
+					for (int i = 0; i < 100; ++i) {
+						sprintf(buf, "%s/%d", dirName, i);
+						this->m_cacheFile.open(buf, ios::in | ios::out | ios::binary | ios::trunc);
+
+						if (this->m_cacheFile) {
+							break;
+						}
+					}
+
+					if (!this->m_cacheFile) {
+						cerr << "allocate cache file failed." << endl;
+						exit(-1);
+					}
+
+					this->m_cachedBlockNum = 0;
+				}
+
+
+				//read thread
+				bool writeCache = firstEpoch && enableCache;
+				std::thread readZipData([this](bool writeCache)
+				{
+					size_t writedBlockNum = this->ReadZipData(m_readOrder, 
+						m_readOrderLength, this->m_maxCacheSize,
+						this->m_cachedBlockNum, writeCache);
+
+					if (writeCache) {
+						this->m_cachedBlockNum = writedBlockNum;
+					}
+
+				}, writeCache);
 				readZipData.detach();
-				
-				for (m_dIndex = 0; m_dIndex < m_dThreadCnt; m_dIndex++){					
+
+				//cache thread
+				if (!firstEpoch && enableCache) {
+					std::thread readCacheData([this]
+					{
+						this->ReadCachedZipData(this->m_readOrder, this->m_cachedBlockNum);
+					});
+					readCacheData.detach();
+				}
+
+
+				for (m_dIndex = 0; m_dIndex < m_dThreadCnt; m_dIndex++){
 					m_unzipThreads[m_dIndex] = std::thread([this](int idx) { this->UnzipData(idx, m_numBlocks); }, m_dIndex);
 					m_unzipThreads[m_dIndex].detach();
 				}
@@ -360,7 +442,7 @@ namespace Microsoft {
 				std::thread processData([this] { this->ReadMinibatches(m_readOrder, m_readOrderLength); });
 				processData.detach();
 
-			}
+		}
 
 			template<class ElemType>
 			shared_ptr<BDenseBinaryMatrix<ElemType>> DenseBinaryInput<ElemType>::CreateMatrix(std::wstring matName, int deviceId) {
@@ -390,7 +472,7 @@ namespace Microsoft {
 			void DenseBinaryInput<ElemType>::ClearUnzipBufferStatus(){
 				m_blockCntBeenRead = 0;
 				m_sampleCntInUnzippedBuffer = 0;
-				m_lastValidPosOfUnzippedBuffer = -1; 
+				m_lastValidPosOfUnzippedBuffer = -1;
 				m_firstValidPosOfUnzippedBuffer = 0;
 
 
@@ -437,7 +519,7 @@ namespace Microsoft {
 				else
 					return UnzipGz(input, output, inputSize, outputSize);
 			}
-			
+
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::CompactUnzipBuffer(){
 				int cnt = 0;
@@ -449,20 +531,22 @@ namespace Microsoft {
 				m_firstValidPosOfUnzippedBuffer = 0;
 				m_lastValidPosOfUnzippedBuffer = cnt - 1;
 			}
-						
+
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::UnzipData(int threadIndex, size_t numToRead){
 				while (true){
-					
-					m_unzipLocker.lock();					
-					if (m_processedBlockCnt >= numToRead){
-						m_unzipLocker.unlock();					
+
+					m_unzipLocker.lock();
+					if (m_processedBlockCnt >= numToRead) {
+						m_unzipLocker.unlock();
 						return;
 					}
-					else
-					m_processedBlockCnt++;
-					m_unzipLocker.unlock();			
-					
+					else{
+						m_processedBlockCnt++;
+					}
+					m_unzipLocker.unlock();
+
+
 					void * zipData = m_zipedDataToConsume.pop();
 					void * unzipData = m_unzipedDataToProduce.pop();
 
@@ -477,30 +561,71 @@ namespace Microsoft {
 
 					m_unzipedDataToConsume.push(unzipData);
 					m_zipedDataToProduce.push(zipData);
-                                       
+
+				}
+			}
+
+
+			template<class ElemType>
+			void DenseBinaryInput<ElemType>::ReadCachedZipData(size_t* read_order, size_t numToTread) {
+
+				size_t limit = (this->m_zipedDataToConsume.size() + this->m_zipedDataToProduce.size()) / 2;
+
+				//move to the beg
+				this->m_cacheFile.seekg(0, ios::beg);
+
+				for (int i = 0; i < numToTread; ++i) {
+					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
+
+					size_t readSize = m_blockSizeInByte[read_order[i]];
+					this->m_cacheFile.read((char*)zipDataBuffer, readSize);
+
+					m_zipedDataToConsume.push(zipDataBuffer);
+
+					m_blockCntLocker.lock();
+					m_blockCntBeenRead += 1;
+					m_blockCntLocker.unlock();
 				}
 			}
 
 			template<class ElemType>
-			void DenseBinaryInput<ElemType>::ReadZipData(size_t* read_order, size_t numToRead)
+			size_t DenseBinaryInput<ElemType>::ReadZipData(size_t* read_order,
+				size_t numToRead, size_t maxCacheSize, size_t skipBlockNum, bool writeToCache)
 			{
-				for (int i = 0; i < numToRead; i++){
-					size_t readSize = m_blockSizeInByte[read_order[i]];					
-					m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
+				size_t cachedNum = 0;
 
-					void * zipDataBuffer = m_zipedDataToProduce.pop();
+				for (int i = skipBlockNum; i < numToRead; i++) {
+					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
 
-					m_inFile.read((char*)zipDataBuffer, readSize);
+					size_t readSize = m_blockSizeInByte[read_order[i]];
+					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
 
+					this->m_inFile.read((char*)zipDataBuffer, readSize);
 					m_zipedDataToConsume.push(zipDataBuffer);
-					m_blockCntBeenRead++;
+
+					this->m_blockCntLocker.lock();
+					m_blockCntBeenRead += 1;
+					this->m_blockCntLocker.unlock();
+
+
+					if (writeToCache && maxCacheSize >= readSize) {
+						this->m_cacheFile.write((char*)zipDataBuffer, readSize);
+						cachedNum += 1;
+						maxCacheSize -= readSize;
+					}
+					else {
+						//stop caching
+						writeToCache = false;
+					}
 				}
+
+				return cachedNum;
 			}
 
-		        	
-            template<class ElemType>
+
+			template<class ElemType>
 			int32_t DenseBinaryInput<ElemType>::Copy2Buffer(void *bufferInProduce, size_t numToRead){
-				
+
 				//first, fill the source buffer
 				while (m_sampleCntInUnzippedBuffer < m_microBatchSize && m_blockCntBeenCopied < numToRead){
 					CompactUnzipBuffer();
@@ -509,10 +634,10 @@ namespace Microsoft {
 					memcpy(&sampleCnt, unzipBuffer, 4);
 					int byteCnt = sampleCnt * m_totalDim * sizeof(int32_t);
 					memcpy((char *)m_unzippedBuffer + m_lastValidPosOfUnzippedBuffer + 1, (char *)unzipBuffer + 4, byteCnt);
-					
+
 					m_sampleCntInUnzippedBuffer += sampleCnt;
 					m_lastValidPosOfUnzippedBuffer += byteCnt;
-					
+
 					m_blockCntBeenCopied++;
 
 					m_unzipedDataToProduce.push(unzipBuffer);
@@ -532,7 +657,7 @@ namespace Microsoft {
 
 				return sampleCntToBeCopied;
 			}
-                        
+
 
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::ReadMinibatches(size_t* read_order, size_t numToRead) {
@@ -541,12 +666,12 @@ namespace Microsoft {
 						ClearUnzipBufferStatus();
 						break;
 					}
-					
+
 					void* data_buffer = m_dataToProduce.pop();
 					int32_t sampleNumber = Copy2Buffer((char *)data_buffer + 4, numToRead);
-					memcpy(data_buffer, &sampleNumber, 4);		
+					memcpy(data_buffer, &sampleNumber, 4);
 					m_batchCntBeenCopied++;
-																			
+
 					for (int32_t c = 0; c < m_labels.size(); c++)
 					{
 						void* labelBuffer = m_mappedBuffer[m_labels[c]];
@@ -563,7 +688,7 @@ namespace Microsoft {
 						}
 					}
 
-					void* pDest = (char*)data_buffer + sizeof(int32_t);		
+					void* pDest = (char*)data_buffer + sizeof(int32_t);
 					for (int32_t c = 0; c < m_labels.size(); c++)
 					{
 						void* labelBuffer = m_mappedBuffer[m_labels[c]];
@@ -571,9 +696,9 @@ namespace Microsoft {
 						memcpy(pDest, labelBuffer, sampleNumber* sizeof(ElemType)*labelDim);
 						pDest = (char*)pDest + sampleNumber* sizeof(ElemType)*labelDim;
 
-					}			
+					}
 
-					m_dataToConsume.push(data_buffer);					
+					m_dataToConsume.push(data_buffer);
 				} while (true);
 
 			}
@@ -592,8 +717,8 @@ namespace Microsoft {
 
 
 				for (int32_t c = 0; c < m_labels.size(); c++)
-				{					
-					int32_t labelDim = m_mappedNumCols[m_labels[c]];										
+				{
+					int32_t labelDim = m_mappedNumCols[m_labels[c]];
 
 					auto findMat = matrices.find(m_labels[c]);
 					if (findMat != matrices.end())
@@ -608,7 +733,7 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			size_t DenseBinaryInput<ElemType>::FillMatrices(std::map<std::wstring, shared_ptr<BDenseBinaryMatrix<ElemType>>>& matrices) {				
+			size_t DenseBinaryInput<ElemType>::FillMatrices(std::map<std::wstring, shared_ptr<BDenseBinaryMatrix<ElemType>>>& matrices) {
 				size_t curSize = 0;
 				for (auto mat : matrices) {
 					mat.second->SetMaxRows(m_mbSize);
@@ -617,30 +742,30 @@ namespace Microsoft {
 				void* data_buffer;
 				while (curSize + m_microBatchSize <= m_mbSize && m_nextMB < m_epochSize) {
 					data_buffer = m_dataToConsume.pop();
-					curSize += ReadMinibatch(data_buffer, matrices);					
+					curSize += ReadMinibatch(data_buffer, matrices);
 					m_nextMB++;
 					m_dataToProduce.push(data_buffer);
 				}
-                                //Debug
-                                if (curSize == 0){	            
+				//Debug
+				if (curSize == 0){
 
-				   while (!m_dataToConsume.empty())
-				   {
-					   m_dataToProduce.push(m_dataToConsume.pop());
-				   }
-         
-				   while(!m_zipedDataToConsume.empty())
-				   {
-					   m_zipedDataToProduce.push(m_zipedDataToConsume.pop());
-				   }
+					while (!m_dataToConsume.empty())
+					{
+						m_dataToProduce.push(m_dataToConsume.pop());
+					}
 
-				   while (!m_unzipedDataToConsume.empty())
-				   {
-					   m_unzipedDataToProduce.push(m_unzipedDataToConsume.pop());
-				   }
+					while (!m_zipedDataToConsume.empty())
+					{
+						m_zipedDataToProduce.push(m_zipedDataToConsume.pop());
+					}
+
+					while (!m_unzipedDataToConsume.empty())
+					{
+						m_unzipedDataToProduce.push(m_unzipedDataToConsume.pop());
+					}
 
 				}
-                return curSize;
+				return curSize;
 			}
 
 			template<class ElemType>
@@ -730,7 +855,7 @@ namespace Microsoft {
 #endif
 				m_dataInput->StartDistributedMinibatchLoop(mbSize, subsetNum, numSubsets);
 
-			}
+	}
 
 			template<class ElemType>
 			void CDensereader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matrices) {
@@ -782,7 +907,7 @@ namespace Microsoft {
 							return m_dataInput->FillMatrices(m_dataMatrices);
 						});
 					}
-                                             
+
 					//fprintf(stderr, "before get.\n");
 					//timer = clock();
 #if DEBUG
@@ -797,7 +922,7 @@ namespace Microsoft {
 
 					if (actualMBSize == 0) {
 						return false;
-					}
+						}
 
 					m_pMBLayout->InitAsFrameMode(actualMBSize);
 #if DEBUG
@@ -806,25 +931,25 @@ namespace Microsoft {
 					for (auto matrix : m_dataMatrices) {						
 						if (matrices.HasInput(matrix.first))
 							matrix.second->Fill(&matrices.GetInputMatrix<ElemType>(matrix.first));
-					}					
+					}
 #if DEBUG
 					reader_series->write_flag(_T("done fill."));
 #endif
 					if (matrices.HasInput((L"DSSMLabel")))
 						DoDSSMMatrix(matrices.GetInputMatrix<ElemType>(L"DSSMLabel"), actualMBSize);
-					
+
 					m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this]()
 					{
 						//CheckDataMatrices(matrices);
 						return m_dataInput->FillMatrices(m_dataMatrices);
-					});
-				}
+				});
+			}
 #if DEBUG
 				cur_read++;
 #endif
 
 				m_pMBLayout->InitAsFrameMode(actualMBSize);
-                                
+
 				return true;
 			}
 
@@ -862,7 +987,7 @@ namespace Microsoft {
 			// instantiate all the combinations we expect to be used
 			template class CDensereader<double>;
 			template class CDensereader<float>;
-		}
+}
 	}
 
 }
