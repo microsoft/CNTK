@@ -988,6 +988,10 @@ def input(shape, dynamic_axis='', name=None):
     """
 
     from cntk.ops.cntk1 import Input
+    import collections
+    if isinstance(shape, collections.Sequence):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
 
 
