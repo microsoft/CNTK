@@ -1945,14 +1945,11 @@ template <class ElemType>
 
         // reset its value to random
         sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType) noiseStd);
-
-        fprintf(stderr, "noise Std = %lf", noiseStd);
     }
 
     // L2 regularizer
     if (L2RegWeight > 0)
     {
-      fprintf(stderr, "L2RegWeight = %lf", L2RegWeight);
         // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
         Matrix<ElemType>::ScaleAndAdd((ElemType)(L2RegWeight * actualMBSize), functionValues, gradientValues);
     }
@@ -1991,7 +1988,6 @@ template <class ElemType>
     // L1 regularizer with proximal gradient descent method
     if (L1RegWeight > 0)
     {
-        fprintf(stderr, "L1RegWeight = %lf", L1RegWeight);
         // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
         functionValues.InplaceSoftThreshold((ElemType)(learnRatePerSample * L1RegWeight * actualMBSize));
     }
