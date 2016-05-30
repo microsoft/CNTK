@@ -104,7 +104,7 @@ def with_metaclass(meta, *bases):
 
 
 def dense_to_str(data):
-    return ' '.join(data.ravel(order='F').astype(np.str))
+    return ' '.join(data.ravel(order='C').astype(np.str))
 
 
 def sparse_to_str(data):
