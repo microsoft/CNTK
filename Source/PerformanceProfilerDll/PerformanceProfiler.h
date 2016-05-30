@@ -39,7 +39,21 @@ enum ProfilerEvents
     profilerEvtMPIWait,
     profilerEvtMPIThroughput,
     profilerEvtImageReaderThroughput,
-    profilerEvtMax,
+	profilerEvtAggZeroSamples,
+	profilerEvtAggGpuToCpu,
+	profilerEvtAggMpiRecv1,
+	profilerEvtAggMpiSend1,
+	profilerEvtAggWaitForGpuToCpu,
+	profilerEvtAggMpiAllReduce,
+	profilerEvtAggWaitAndAggregate,
+	profilerEvtAggMpiRecv2,
+	profilerEvtAggMpiSend2,
+	profilerEvtAggWaitForReduce,
+	profilerEvtAggCpuToGpu,
+	profilerEvtAggWaitForHeader,
+	profilerEvtAggWaitForCpuToGpu,
+	profilerEvtAggWaitForCompletion,
+	profilerEvtMax,
 };
 
 //

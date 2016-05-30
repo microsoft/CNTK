@@ -51,7 +51,21 @@ static const char* c_profilerEvtDesc[profilerEvtMax] = {
     "MPI Processing Time",
     "MPI Wait Time",
     "MPI Throughput",
-    "ImageReader Throughput"
+    "ImageReader Throughput",
+	"AggZeroSamples",
+	"AggGpuToCpu",
+	"AggMpiRecv1",
+	"AggMpiSend1",
+	"AggWaitForGpuToCpu",
+	"AggMpiAllReduce",
+	"AggWaitAndAggregate",
+	"AggMpiRecv2",
+	"AggMpiSend2",
+	"AggWaitForReduce",
+	"AggCpuToGpu",
+	"AggWaitForHeader",
+	"AggWaitForCpuToGpu",
+	"AggWaitForCompletion"
 };
 
 static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
@@ -65,7 +79,21 @@ static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
     profilerEvtTime,
     profilerEvtTime,
     profilerEvtThroughput,
-    profilerEvtThroughput
+    profilerEvtThroughput,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime
 };
 
 struct FixedEventRecord
