@@ -1,6 +1,7 @@
 // SGD.cpp -- implements SGD with all bells and whistles, parallelization, randomization, etc.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#define DUMPOUTPUT
 
 #include "Basics.h"
 #include "SGD.h"
@@ -1934,6 +1935,7 @@ template <class ElemType>
 
     // clipping gradients to prevent outliers
     sgd->ClipGradient(gradientValues, actualMBSize);
+
 
     GradientsUpdateType adpType = sgd->GradUpdateType();
     double noiseStd = sgd->GradientUpdateNoiseStd();
