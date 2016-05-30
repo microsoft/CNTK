@@ -1928,6 +1928,7 @@ template <class ElemType>
     gradientValues.Print("Gradient Input");
     smoothedGradient.Print("Smoothed Gradient Input");
 #endif
+    gradientValues.Print("Gradient");
 
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
