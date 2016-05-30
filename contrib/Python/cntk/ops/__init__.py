@@ -988,8 +988,7 @@ def input(shape, dynamic_axis='', name=None):
     """
 
     from cntk.ops.cntk1 import Input
-    import collections
-    if isinstance(shape, collections.Sequence):
+    if not np.isscalar(shape):
         # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
@@ -1083,10 +1082,13 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
     """
 
     from . import cntk1
-
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
+
+        if shape is not None and not np.isscalar(shape):
+            # cntk uses column major, thus we reverse the shape    
+            shape = tuple(reversed(shape))
 
         if init_from_file_path:
             return cntk1.ParameterTensor(shape, init='fromFile',
@@ -1116,9 +1118,14 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
         raise ValueError('only dense data is supported')
 
     param_shape = value.shape if value.shape else (1,)
+    
+    # cntk uses column major, thus we reverse the shape    
+    param_shape = tuple(reversed(param_shape))
     literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
 
-    literal_array = np.reshape(value, literal_shape, order = 'F')
+    # cntk expects data in reverse order, thus we transpose first 
+    transposed_val = np.transpose(value)
+    literal_array = np.reshape(transposed_val, literal_shape, order = 'F')    
 
     from io import BytesIO
     s = BytesIO()
