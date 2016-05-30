@@ -371,7 +371,9 @@ def times(left, right, output_rank=1, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Times   
-    return Times(left, right, outputRank=output_rank, name=name)
+    # CNTK uses column vectors and column major representation, thus we reverse
+    # params and adjust output_rank
+    return Times(right, left, outputRank=len(left.dims) - (1 + output_rank), name=name)
     
 def identity(x, name=None):
     """
