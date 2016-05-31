@@ -44,7 +44,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     reshaped_input = C.reshape(a, output_shape)
 
     unittest_helper(reshaped_input, None, [[expected_tensor]], device_id=device_id, 
-                precision=precision, clean_up=False, backward_pass=False)
+                precision=precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
     # ==================

@@ -868,6 +868,9 @@ def reshape(x, shape, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import NewReshape
+    if not np.isscalar(shape):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))    
     op = NewReshape(x, shape, 0, 0, name = name)
     op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
@@ -895,8 +898,10 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
-    cntk_axis1 = axis1+1
-    cntk_axis2 = axis2+1
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    cntk_axis1 = len(x.rank) - axis1
+    cntk_axis2 = len(x.rank) - axis2
     op = TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
     op.rank = x.rank
     return op
@@ -941,7 +946,9 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Slice
-    cntk_axis = axis+1
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    cntk_axis = len(x.rank) - axis
     op = Slice(x, begin_index, end_index, cntk_axis, name=name)
     op.rank = x.rank
     return op
