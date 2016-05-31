@@ -373,7 +373,9 @@ def times(left, right, output_rank=1, name=None):
     from cntk.ops.cntk2 import Times   
     # CNTK uses column vectors and column major representation, thus we reverse
     # params and adjust output_rank
-    return Times(right, left, outputRank=len(left.dims) + 1 - output_rank, name=name)
+    if not np.isscalar(left.dims):
+        output_rank = len(left.dims) + 1 - output_rank
+    return Times(right, left, outputRank=output_rank, name=name)
     
 def identity(x, name=None):
     """
