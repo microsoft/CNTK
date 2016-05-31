@@ -137,8 +137,7 @@ namespace Microsoft {
 				int GetMinimumEpochSizeCrossAllWorker(size_t mbSize, size_t subsetNum, size_t numSubsets);
 				int32_t Copy2Buffer(void *bufferInProduce, size_t numToRead);
 
-				size_t ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize,
-					size_t skipBlockNum, bool writeToCache); //return: cached block num
+				size_t ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache); //return: cached block num
 
 				void ReadCachedZipData(size_t* read_order, size_t numToTread);
 
@@ -153,7 +152,6 @@ namespace Microsoft {
 
 				size_t m_nextMB; // starting sample # of the next minibatch
 				size_t m_epochSize; // size of an epoch
-
 
 				size_t m_numRows;    // size of minibatch requested
 				size_t m_numBatches;    // size of minibatch requested

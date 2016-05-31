@@ -421,14 +421,14 @@ namespace Microsoft {
 				bool writeCache = firstEpoch && enableCache;
 				std::thread readZipData([this](bool writeCache)
 				{
-					size_t writedBlockNum = this->ReadZipData(m_readOrder,
-						m_readOrderLength, this->m_maxCacheSize,
-						this->m_cachedBlockNum, writeCache);
+					size_t writedBlockNum = this->ReadZipData(
+						m_readOrder + this->m_cachedBlockNum,
+						m_readOrderLength - this->m_cachedBlockNum,
+						this->m_maxCacheSize, writeCache);
 
 					if (writeCache) {
 						this->m_cachedBlockNum = writedBlockNum;
 					}
-
 				}, writeCache);
 				readZipData.detach();
 
@@ -605,14 +605,13 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			size_t DenseBinaryInput<ElemType>::ReadZipData(size_t* read_order,
-				size_t numToRead, size_t maxCacheSize, size_t skipBlockNum, bool writeToCache)
+			size_t DenseBinaryInput<ElemType>::ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize , bool writeToCache)
 			{
 				size_t cachedNum = 0;
 
 				time_t start = time(0);
 
-				for (int i = skipBlockNum; i < numToRead; i++) {
+				for (int i = 0; i < numToRead; i++) {
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
 					cerr << "read zip data:"
 						<< this->m_zipedDataToProduce.size()
@@ -649,7 +648,7 @@ namespace Microsoft {
 
 
 			template<class ElemType>
-			int32_t DenseBinaryInput<ElemType>::Copy2Buffer(void *bufferInProduce, size_t numToRead){
+			int32_t DenseBinaryInput<ElemType>::Copy2Buffer(void *bufferInProduce, size_t numToRead) {
 
 				//first, fill the source buffer
 				while (m_sampleCntInUnzippedBuffer < m_microBatchSize && m_blockCntBeenCopied < numToRead){
