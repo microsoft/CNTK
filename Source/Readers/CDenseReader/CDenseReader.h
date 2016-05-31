@@ -137,15 +137,17 @@ namespace Microsoft {
 				int GetMinimumEpochSizeCrossAllWorker(size_t mbSize, size_t subsetNum, size_t numSubsets);
 				int32_t Copy2Buffer(void *bufferInProduce, size_t numToRead);
 
-				size_t ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache); //return: cached block num
+				size_t ReadZipData(ifstream& ifile, size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache); //return: cached block num
 
 				void ReadCachedZipData(size_t* read_order, size_t numToTread);
 
-				ifstream m_inFile;
+				std::vector<ifstream> m_inFiles;
 
 				fstream m_cacheFile;
 				size_t m_maxCacheSize; //MB
 				size_t m_cachedBlockNum;
+
+				size_t m_readThread;
 
 				std::wstring m_fileName;
 				size_t m_fileSize;

@@ -113,7 +113,25 @@ namespace Microsoft {
 				m_startBlock(0), m_unzippedBuffer(nullptr), m_zippedFileBlockBuffer(nullptr), m_unzippedBufferLen(0), m_sampleCntInUnzippedBuffer(0), m_lastValidPosOfUnzippedBuffer(-1), m_firstValidPosOfUnzippedBuffer(0), m_blockCntBeenRead(0),
 				m_blockCntBeenCopied(0), m_dThreadCnt(0), m_batchCntBeenCopied(0), m_processedBlockCnt(0){
 				std::string name = msra::strfun::utf8(m_fileName);
-				m_inFile.open(name, ifstream::binary | ifstream::in);
+
+				//m_inFile.open(name, ifstream::binary | ifstream::in);
+
+				for (int i = 0; i < this->m_readThread; ++i) {
+					ifstream inFile;
+					inFile.open(name, ifstream::binary | ifstream::in);
+					if (inFile) {
+						this->m_inFiles.push_back(std::move(inFile));
+					}
+					else{
+						break;
+					}
+				}
+
+				if (this->m_inFiles.empty()) {
+					RuntimeError("open file %s failed", name.c_str());
+				}
+
+				cerr << "read thread:" << this->m_inFiles.size() << endl;
 			}
 
 			template<class ElemType>
@@ -136,6 +154,11 @@ namespace Microsoft {
 
 				//cache is disabled by default
 				m_maxCacheSize = ((size_t)config(L"maxCacheSize", (size_t)(0))) * 1024 * 1024;
+
+				m_readThread = (size_t)config(L"readThread", (size_t)(1));
+				if (m_readThread == 0) {
+					RuntimeError("invalid readThread");
+				}
 
 				m_blockSizeOfUnzippedBuffer = 4;
 				size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize);
@@ -199,6 +222,8 @@ namespace Microsoft {
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::GetZippedFileInfo()
 			{
+				auto& m_inFile = this->m_inFiles[0];
+
 				cout << "GetZippedFileInfo Begin" << endl;
 
 				m_inFile.seekg(0, ios::end);
@@ -409,8 +434,7 @@ namespace Microsoft {
 						}
 
 						if (!this->m_cacheFile) {
-							cerr << "allocate cache file failed." << endl;
-							exit(-1);
+							RuntimeError("allocate cache file failed");
 						}
 					}
 					this->m_cachedBlockNum = 0;
@@ -418,22 +442,38 @@ namespace Microsoft {
 
 
 				//read thread
-				bool writeCache = firstEpoch && enableCache;
-				std::thread readZipData([this](bool writeCache)
-				{
-					size_t writedBlockNum = this->ReadZipData(
-						m_readOrder + this->m_cachedBlockNum,
-						m_readOrderLength - this->m_cachedBlockNum,
-						this->m_maxCacheSize, writeCache);
+				bool writeCache = (firstEpoch && enableCache);
 
-					if (writeCache) {
-						this->m_cachedBlockNum = writedBlockNum;
-					}
-				}, writeCache);
-				readZipData.detach();
+				//if write cache, only start 1 thread
+				size_t threadNum = writeCache ? 1 : this->m_inFiles.size();
+
+				//read threads
+				for (size_t i = 0; i < threadNum; ++i) {
+					std::thread readZipData([this](bool writeCache, size_t idx, size_t num)
+					{
+						//only the first thread write cache
+						writeCache &= (idx == 0);
+
+						//compute the start index & length
+						const size_t delta = (this->m_readOrderLength - this->m_cachedBlockNum) / num;
+						int skip = delta * idx + this->m_cachedBlockNum;
+						int readNum = (idx != (num - 1)) ? delta : this->m_readOrderLength - skip;
+
+						if (readNum > 0) {
+							size_t writedBlockNum = this->ReadZipData(
+								this->m_inFiles[idx], m_readOrder + skip,
+								readNum, this->m_maxCacheSize, writeCache);
+
+							if (writeCache) {
+								this->m_cachedBlockNum = writedBlockNum;
+							}
+						}
+					}, writeCache, i, threadNum);
+					readZipData.detach();
+				}
 
 				//cache thread
-				if (!firstEpoch && enableCache) {
+				if (!firstEpoch && enableCache && this->m_cachedBlockNum > 0) {
 					std::thread readCacheData([this]
 					{
 						this->ReadCachedZipData(this->m_readOrder, this->m_cachedBlockNum);
@@ -605,7 +645,8 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			size_t DenseBinaryInput<ElemType>::ReadZipData(size_t* read_order, size_t numToRead, size_t maxCacheSize , bool writeToCache)
+			size_t DenseBinaryInput<ElemType>::ReadZipData(
+				ifstream& ifile, size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache)
 			{
 				size_t cachedNum = 0;
 
@@ -620,9 +661,9 @@ namespace Microsoft {
 						<< endl;
 
 					size_t readSize = m_blockSizeInByte[read_order[i]];
-					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
+					ifile.seekg(m_blockOffset[read_order[i]], ios::beg);
 
-					this->m_inFile.read((char*)zipDataBuffer, readSize);
+					ifile.read((char*)zipDataBuffer, readSize);
 					m_zipedDataToConsume.push(zipDataBuffer);
 
 					this->m_blockCntLocker.lock();
