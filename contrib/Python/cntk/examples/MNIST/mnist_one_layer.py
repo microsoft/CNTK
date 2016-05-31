@@ -22,17 +22,17 @@ import cntk as C
 
 
 def add_dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim)) * param_scale
-    b = C.parameter((out_dim, 1)) * param_scale
-    t = C.times(W, x)
+    W = C.parameter((in_dim, out_dim)) * param_scale
+    b = C.parameter((1, out_dim)) * param_scale
+    t = C.times(x, W)
     z = C.plus(t, b)
     return C.sigmoid(z)
 
 
 def add_dnn_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim)) * param_scale
-    b = C.parameter((out_dim, 1)) * param_scale
-    t = C.times(W, x)
+    W = C.parameter((in_dim, out_dim)) * param_scale
+    b = C.parameter((1, out_dim)) * param_scale
+    t = C.times(x, W)
     return C.plus(t, b)
 
 def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
@@ -73,11 +73,11 @@ def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
     eval.tag = 'eval'
     
     # Specify the training parameters (settings are scaled down)
-    my_sgd = C.SGDParams(epoch_size=600, minibatch_size=32,
-                       learning_rates_per_mb=0.1, max_epochs=5, momentum_per_mb=0)
+    my_sgd = C.SGDParams(epoch_size=60000, minibatch_size=32,
+                       learning_rates_per_mb=0.1, max_epochs=30, momentum_per_mb=0)
 
     # Create a context or re-use if already there
-    with C.LocalExecutionContext('mnist_one_layer', clean_up=True) as ctx:
+    with C.LocalExecutionContext('mnist_one_layer', clean_up=False) as ctx:
         # CNTK actions
          ctx.train(
             root_nodes=[ec, eval],

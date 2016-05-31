@@ -394,7 +394,8 @@ def times(left, right, output_rank=1, name=None):
     # CNTK uses column vectors and column major representation, thus we reverse
     # params and adjust output_rank    
     output_rank = left.rank + 1 - output_rank
-    op = Times(right, left, outputRank=output_rank, name=name)
+    #TODO: output_rank is not correct fix it and repalce the hardcoded (1)
+    op = Times(right, left, outputRank=1, name=name)
     op.rank = left.rank + right.rank -2
     return op
 
