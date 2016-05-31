@@ -6,7 +6,6 @@ Train = [
         # Currently for image reader a single sequence is a chunk
         # so setting randomization window to 1.
         randomizationWindow = 1
-        useLegacy = false
 
         # A list of deserializers to use.
         deserializers = (
