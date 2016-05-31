@@ -556,52 +556,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mUnk = readerConfig(L"unk", "<unk>");
     }
 
-#if 0
-    template <class ElemType>
-    void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
-    {
-        FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
-
-        int a = 0, ch;
-
-        while (!feof(fin))
-        {
-            ch = fgetc(fin);
-
-            if (ch == 13)
-                continue;
-
-            if ((ch == ' ') || (ch == '\t') || (ch == '\n'))
-            {
-                if (a > 0)
-                {
-                    if (ch == '\n')
-                        ungetc(ch, fin);
-                    break;
-                }
-
-                if (ch == '\n')
-                {
-                    strcpy_s(word, strlen("</s>"), (char*) "</s>");
-                    return;
-                }
-                else
-                    continue;
-            }
-
-            word[a] = (char) ch;
-            a++;
-
-            if (a >= MAX_STRING)
-            {
-                // printf("Too long word found!\n");   // truncate too long words
-                a--;
-            }
-        }
-        word[a] = 0;
-    }
-#endif
-
     template <class ElemType>
     void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classSize,
         map<string, int>& word4idx,
@@ -1051,7 +1005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int curDevId = m_id2Prob->GetDeviceId();
         m_id2Prob->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
         for (size_t j = 0; j < nwords; j++)
-            (*m_id2Prob)((int)j, 0) = (float) m_noiseSampler.prob((int)j);
+            (*m_id2Prob)((int) j, 0) = (float) m_noiseSampler.prob((int) j);
         m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
         int oldDeviceId = idx2prob.GetDeviceId();
@@ -1083,7 +1037,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_id2classLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
         for (size_t j = 0; j < nwords; j++)
         {
-            int clsidx = idx4class[(int)j];
+            int clsidx = idx4class[(int) j];
             (*m_id2classLocal)(j, 0) = (float) clsidx;
         }
         m_id2classLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
