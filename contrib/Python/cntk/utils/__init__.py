@@ -198,16 +198,6 @@ def is_tensor(data):
 
     return True
 
-
-def is_tensor_list(data):
-    '''
-    Checks whether the data is a CNTK sequence, which is expressed in Python as
-    a list of varying sized NumPy objects.
-    '''
-    is_list = isinstance(data, list)
-    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray) 
-
-
 def get_temp_filename(directory=None):
     '''
     Create and return a temporary filename.

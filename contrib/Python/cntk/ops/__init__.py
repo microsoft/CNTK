@@ -1001,16 +1001,8 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
     op =s:
         :class:`cntk.graph.ComputationNode`
     '''
-    from .. import utils
-    #TODO:
-    # 1- is_tensor_list op =s false for our unit test data and examples,
-    #    though we intend to pass a list of tensors, the reason is that the method 
-    #    checks for np.ndarray type. However, it got covered by is_tensor which op =s
-    #    true for those case though it should not 
-    # 2- Once those fixed, we should not skip the first dimension (value[0])
-    #    if value is tensor and not tensor list
-    
-    if utils.is_tensor(value) or utils.is_tensor_list(value):
+    from .. import utils    
+    if utils.is_tensor(value):
         value = np.asarray(value)
         if dynamic_axis:
             cntk_shape = value[0].shape[1:]
