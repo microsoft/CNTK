@@ -1156,8 +1156,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 					fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
 							totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
-
-					fflush(stderr);
 				}
 
 				// progress tracing for compute cluster management
