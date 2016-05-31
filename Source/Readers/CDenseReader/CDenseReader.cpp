@@ -17,12 +17,12 @@
 #include <mutex>
 #include <ctime>
 #include <time.h>
-#include <direct.h>
 #include "CUDAPageLockedMemAllocator.h"
 #include <chrono>
 #include <thread>
 #include "LzmaDec.h"
 #include "zlib.h"
+
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -30,6 +30,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/stat.h>
+#else
+#include <direct.h>
 #endif
 
 
@@ -329,7 +332,11 @@ namespace Microsoft {
 
 			void InitCacheDir(const char* dirPath, int maxFileIndex = 100) {
 				//std C++ has no protable code to iterate a dir
+#ifdef _WIN32
 				int flag = _mkdir(dirPath);
+#else
+				int flag = mkdir(dirPath, 0755);
+#endif
 				if (flag != 0) {
 					char buf[255];
 					for (int i = 0; i < maxFileIndex; ++i) {
@@ -378,33 +385,34 @@ namespace Microsoft {
 					m_bQueueBufferAllocated = true;
 				}
 
-				bool enableCache = this->m_maxCacheSize;
+				bool enableCache = (this->m_maxCacheSize != 0);
 
-				if (firstEpoch && enableCache) {
-					//init cache dir
+				if (firstEpoch) {
+					if (enableCache){
+						//init cache dir
 #ifdef _WIN32
-					const char dirName[] = "./cache";
+						const char dirName[] = "./cache";
 #else
-					const char dirName[] = "/tmp/cachefromcdensereader";
+						const char dirName[] = "/tmp/cachefromcdensereader";
 #endif
-					InitCacheDir(dirName);
+						InitCacheDir(dirName);
 
-					//open cache file
-					char buf[255];
-					for (int i = 0; i < 100; ++i) {
-						sprintf(buf, "%s/%d", dirName, i);
-						this->m_cacheFile.open(buf, ios::in | ios::out | ios::binary | ios::trunc);
+						//open cache file
+						char buf[255];
+						for (int i = 0; i < 100; ++i) {
+							sprintf(buf, "%s/%d", dirName, i);
+							this->m_cacheFile.open(buf, ios::in | ios::out | ios::binary | ios::trunc);
 
-						if (this->m_cacheFile) {
-							break;
+							if (this->m_cacheFile) {
+								break;
+							}
+						}
+
+						if (!this->m_cacheFile) {
+							cerr << "allocate cache file failed." << endl;
+							exit(-1);
 						}
 					}
-
-					if (!this->m_cacheFile) {
-						cerr << "allocate cache file failed." << endl;
-						exit(-1);
-					}
-
 					this->m_cachedBlockNum = 0;
 				}
 
@@ -413,7 +421,7 @@ namespace Microsoft {
 				bool writeCache = firstEpoch && enableCache;
 				std::thread readZipData([this](bool writeCache)
 				{
-					size_t writedBlockNum = this->ReadZipData(m_readOrder, 
+					size_t writedBlockNum = this->ReadZipData(m_readOrder,
 						m_readOrderLength, this->m_maxCacheSize,
 						this->m_cachedBlockNum, writeCache);
 
@@ -442,7 +450,7 @@ namespace Microsoft {
 				std::thread processData([this] { this->ReadMinibatches(m_readOrder, m_readOrderLength); });
 				processData.detach();
 
-		}
+			}
 
 			template<class ElemType>
 			shared_ptr<BDenseBinaryMatrix<ElemType>> DenseBinaryInput<ElemType>::CreateMatrix(std::wstring matName, int deviceId) {
@@ -567,15 +575,21 @@ namespace Microsoft {
 
 
 			template<class ElemType>
-			void DenseBinaryInput<ElemType>::ReadCachedZipData(size_t* read_order, size_t numToTread) {
+			void DenseBinaryInput<ElemType>::ReadCachedZipData(size_t* read_order, size_t numToRead) {
 
 				size_t limit = (this->m_zipedDataToConsume.size() + this->m_zipedDataToProduce.size()) / 2;
 
-				//move to the beg
 				this->m_cacheFile.seekg(0, ios::beg);
 
-				for (int i = 0; i < numToTread; ++i) {
+				time_t start = time(0);
+
+				for (int i = 0; i < numToRead; ++i) {
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
+					cerr << "read cached data:"
+						<< this->m_zipedDataToProduce.size()
+						<< ","
+						<< this->m_zipedDataToConsume.size()
+						<< endl;
 
 					size_t readSize = m_blockSizeInByte[read_order[i]];
 					this->m_cacheFile.read((char*)zipDataBuffer, readSize);
@@ -586,6 +600,8 @@ namespace Microsoft {
 					m_blockCntBeenRead += 1;
 					m_blockCntLocker.unlock();
 				}
+
+				cerr << "read cached data finished in " << time(0) - start << "s" << endl;
 			}
 
 			template<class ElemType>
@@ -594,8 +610,15 @@ namespace Microsoft {
 			{
 				size_t cachedNum = 0;
 
+				time_t start = time(0);
+
 				for (int i = skipBlockNum; i < numToRead; i++) {
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
+					cerr << "read zip data:"
+						<< this->m_zipedDataToProduce.size()
+						<< ","
+						<< this->m_zipedDataToConsume.size()
+						<< endl;
 
 					size_t readSize = m_blockSizeInByte[read_order[i]];
 					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
@@ -618,6 +641,8 @@ namespace Microsoft {
 						writeToCache = false;
 					}
 				}
+
+				cerr << "read zip finished in " << time(0) - start << "s" << endl;
 
 				return cachedNum;
 			}
@@ -855,7 +880,7 @@ namespace Microsoft {
 #endif
 				m_dataInput->StartDistributedMinibatchLoop(mbSize, subsetNum, numSubsets);
 
-	}
+			}
 
 			template<class ElemType>
 			void CDensereader<ElemType>::CheckDataMatrices(StreamMinibatchInputs& matrices) {
@@ -922,13 +947,13 @@ namespace Microsoft {
 
 					if (actualMBSize == 0) {
 						return false;
-						}
+					}
 
 					m_pMBLayout->InitAsFrameMode(actualMBSize);
 #if DEBUG
 					reader_series->write_flag(_T("starting fill."));
 #endif
-					for (auto matrix : m_dataMatrices) {						
+					for (auto matrix : m_dataMatrices) {
 						if (matrices.HasInput(matrix.first))
 							matrix.second->Fill(&matrices.GetInputMatrix<ElemType>(matrix.first));
 					}
@@ -942,8 +967,8 @@ namespace Microsoft {
 					{
 						//CheckDataMatrices(matrices);
 						return m_dataInput->FillMatrices(m_dataMatrices);
-				});
-			}
+					});
+				}
 #if DEBUG
 				cur_read++;
 #endif
@@ -987,7 +1012,7 @@ namespace Microsoft {
 			// instantiate all the combinations we expect to be used
 			template class CDensereader<double>;
 			template class CDensereader<float>;
-}
+		}
 	}
 
 }

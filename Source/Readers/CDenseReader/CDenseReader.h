@@ -50,15 +50,15 @@ namespace Microsoft {
 					return rc;
 				}
 
-                bool empty() {
-                    std::lock_guard<std::mutex> lock(this->d_mutex);
-                    return this->d_queue.empty();
-                }
+				bool empty() {
+					std::lock_guard<std::mutex> lock(this->d_mutex);
+					return this->d_queue.empty();
+				}
 
-                size_t size() {
-                    std::lock_guard<std::mutex> lock(this->d_mutex);
-                    return this->d_queue.size(); 
-                }
+				size_t size() {
+					std::lock_guard<std::mutex> lock(this->d_mutex);
+					return this->d_queue.size();
+				}
 			};
 
 
@@ -110,27 +110,27 @@ namespace Microsoft {
 			public:
 				DenseBinaryInput(std::wstring fileName);
 				~DenseBinaryInput();
-				template<class ConfigRecordType> 
+				template<class ConfigRecordType>
 				void Init(std::map<std::wstring, std::wstring> rename, const ConfigRecordType & config);
 				void StartDistributedMinibatchLoop(size_t mbSize, size_t subsetNum, size_t numSubsets);
 				void ReadMinibatches(size_t* read_order, size_t numToRead);
-				size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BDenseBinaryMatrix<ElemType>>>& matrices);				
+				size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BDenseBinaryMatrix<ElemType>>>& matrices);
 				size_t FillMatrices(std::map<std::wstring, shared_ptr<BDenseBinaryMatrix<ElemType>>>& matrices);
 				size_t GetMBSize() { return m_mbSize; }
 				size_t GetNumMB() { return m_numBatches / (m_mbSize / m_microBatchSize); }
 				void Shuffle();
-				shared_ptr<BDenseBinaryMatrix<ElemType>> CreateMatrix(std::wstring matName, int deviceId);				
+				shared_ptr<BDenseBinaryMatrix<ElemType>> CreateMatrix(std::wstring matName, int deviceId);
 				virtual bool DataEnd();
 
 
-			private:				
+			private:
 				void FillReadOrder();
 				bool Randomize();
 				void GetZippedFileInfo();
 				int Unzip(void * input, void * output, int inputSize, int outputSize);
 				int Unzip7z(void * input, void * output, int inputSize, int outputSize);
 				int UnzipGz(void * input, void * output, int inputSize, int outputSize);
-				void CompactUnzipBuffer();				
+				void CompactUnzipBuffer();
 				void UnzipData(int threadIndex, size_t numToRead);
 				void Print(void * buffer, int start, int end);
 				void ClearUnzipBufferStatus();
@@ -149,7 +149,7 @@ namespace Microsoft {
 				size_t m_cachedBlockNum;
 
 				std::wstring m_fileName;
-				size_t m_fileSize;				
+				size_t m_fileSize;
 
 				size_t m_nextMB; // starting sample # of the next minibatch
 				size_t m_epochSize; // size of an epoch
@@ -160,7 +160,7 @@ namespace Microsoft {
 
 				int32_t m_microBatchSize;
 				size_t m_mbSize;
-			
+
 				size_t m_windowSize;
 				size_t m_startBlock;
 
@@ -186,7 +186,7 @@ namespace Microsoft {
 				std::vector<size_t> m_blockSizeInByte;
 				std::vector<size_t> m_sampleCntInBlock;
 				std::vector<size_t> m_blockOffset;
-				size_t m_numBlocks;				
+				size_t m_numBlocks;
 				int32_t m_blockSampleCnt;
 				int32_t m_blockSize;
 				int32_t m_blockSizeOfUnzippedBuffer;
@@ -195,7 +195,7 @@ namespace Microsoft {
 				void * m_zippedFileBlockBuffer;
 				size_t m_unzippedBufferLen;
 				size_t m_sampleCntInUnzippedBuffer;
-				size_t m_blockCntBeenRead;				
+				size_t m_blockCntBeenRead;
 				long m_lastValidPosOfUnzippedBuffer;
 				long m_firstValidPosOfUnzippedBuffer;
 
@@ -205,18 +205,18 @@ namespace Microsoft {
 				string m_cAlgo;
 				size_t m_processedBlockCnt;
 				int32_t m_dThreadCnt;
-				int32_t m_dIndex;				
+				int32_t m_dIndex;
 				size_t m_blockCntBeenCopied;
 				size_t m_batchCntBeenCopied;
 				std::thread m_unzipThreads[1000];
 
 				DenseBlockingQueue<void*> m_zipedDataToProduce; //read zip data to this queue
 				DenseBlockingQueue<void*> m_zipedDataToConsume; //read zip data to this queue
-				
+
 				DenseBlockingQueue<void*> m_unzipedDataToProduce; //read zip data to this queue
 				DenseBlockingQueue<void*> m_unzipedDataToConsume; //read zip data to this queue
 
-				
+
 				RandomOrdering m_randomordering;   // randomizing class
 				std::mt19937_64 m_randomEngine;
 #ifdef _WIN32
@@ -231,7 +231,7 @@ namespace Microsoft {
 			template <class ElemType>
 			class CDensereader : public DataReaderBase
 			{
-			public:				
+			public:
 
 				virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
 				virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
@@ -240,10 +240,10 @@ namespace Microsoft {
 
 				virtual void Destroy();
 
-				CDensereader() : DSSMLabels(nullptr), DSSMCols(0) { 
-                                        m_pMBLayout = make_shared<MBLayout>();
-                                        m_pMBLayout->SetUniqueAxisName(L"CDenseReader");
-                                };
+				CDensereader() : DSSMLabels(nullptr), DSSMCols(0) {
+					m_pMBLayout = make_shared<MBLayout>();
+					m_pMBLayout->SetUniqueAxisName(L"CDenseReader");
+				};
 
 				virtual ~CDensereader();
 
