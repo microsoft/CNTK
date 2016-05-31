@@ -128,14 +128,14 @@ namespace Microsoft {
 				//open file stream
 				m_readThread = (size_t)config(L"readThread", (size_t)(1));
 				for (int i = 0; i < this->m_readThread; ++i) {
-					this->m_inFiles.push_back(ifstream());
-					auto& inFile = this->m_inFiles.back();
-					inFile.open(this->m_readFileName, ifstream::binary | ifstream::in);
-					if (!inFile) {
+					auto inFile = new ifstream();
+					inFile->open(this->m_readFileName, ifstream::binary | ifstream::in);
+					if (!*inFile) {
 						cerr << "open " << this->m_readFileName << " failed at thread " << i << endl;
-						this->m_inFiles.pop_back();
+						delete inFile;
 						break;
 					}
+					this->m_inFiles.push_back(inFile);
 				}
 				if (this->m_inFiles.empty()) {
 					RuntimeError("open file %s failed", this->m_readFileName.c_str());
@@ -216,7 +216,7 @@ namespace Microsoft {
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::GetZippedFileInfo()
 			{
-				auto& m_inFile = this->m_inFiles[0];
+				auto& m_inFile = *this->m_inFiles[0];
 
 				cout << "GetZippedFileInfo Begin" << endl;
 
@@ -455,7 +455,7 @@ namespace Microsoft {
 
 						if (readNum > 0) {
 							size_t writedBlockNum = this->ReadZipData(
-								this->m_inFiles[idx], m_readOrder + skip,
+								*this->m_inFiles[idx], m_readOrder + skip,
 								readNum, this->m_maxCacheSize, writeCache);
 
 							if (writeCache) {

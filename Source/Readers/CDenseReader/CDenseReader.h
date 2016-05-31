@@ -141,7 +141,7 @@ namespace Microsoft {
 
 				void ReadCachedZipData(size_t* read_order, size_t numToTread);
 
-				std::vector<ifstream> m_inFiles;
+				std::vector<ifstream*> m_inFiles;
 
 				fstream m_cacheFile;
 				size_t m_maxCacheSize; //MB
