@@ -368,7 +368,7 @@ class LazyInputReader(_LazyInputReaderBase):
             shape = (1,)
         
         # cntk uses column major, thus we reverse the shape
-        self.shape = tuple(reversed(shape))
+        self.shape = self.node.shape = tuple(reversed(shape))
 
         self.param_dict = {}
         self.param_dict['dim'] = np.multiply.reduce(self.shape)
@@ -422,7 +422,7 @@ class LazySparseInputReader(_LazyInputReaderBase):
         self.values = values
 
         # cntk uses column major, thus we reverse the shape
-        self.shape = tuple(reversed(shape))
+        self.shape = self.node.shape = tuple(reversed(shape))
 
 
         self.param_dict = {}
