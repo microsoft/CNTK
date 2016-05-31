@@ -4409,6 +4409,8 @@ template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 
+template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();
 

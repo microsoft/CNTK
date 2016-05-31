@@ -1225,14 +1225,16 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
             // Set CPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
-                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(deepCopyFrom.m_GPUMatrix->GetNumRows(), deepCopyFrom.m_GPUMatrix->GetNumCols(), deepCopyFrom.m_GPUMatrix->CopyToArray()); },// //{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { this->Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols()); deepCopyFrom.CopySection(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), m_CPUMatrix->Data(), this->GetNumRows()); },
+                //{ LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(deepCopyFrom.m_GPUMatrix->GetNumRows(), deepCopyFrom.m_GPUMatrix->GetNumCols(), deepCopyFrom.m_GPUMatrix->CopyToArray()); },// //{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a CPUMatrix is not yet implemented."); },//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUMatrix is not yet implemented."); });//{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
         { 
             // Set GPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
-                { LogicError("AssignValuesOf: Assigning a GPUMatrix to a CPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(deepCopyFrom.m_CPUMatrix->GetNumRows(), deepCopyFrom.m_CPUMatrix->GetNumCols(), m_GPUMatrix->GetComputeDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },////{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
+                { m_GPUMatrix->SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), this->GetDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },
+                //{ LogicError("AssignValuesOf: Assigning a CPUMatrix to a GPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(deepCopyFrom.m_CPUMatrix->GetNumRows(), deepCopyFrom.m_CPUMatrix->GetNumCols(), m_GPUMatrix->GetComputeDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },////{ m_CPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
                 { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a GPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a GPUMatrix is not yet implemented."); });//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
@@ -3494,20 +3496,27 @@ void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, con
     if (deviceIdA == deviceIdB)
         return;
 
-    int preferredDeviceIdA = a.GetPreferredDeviceId(), preferredDeviceIdB = b.GetPreferredDeviceId();
-
-    if (preferredDeviceIdA == preferredDeviceIdB) // both prefer the same device: move to preferred
-    {
-        a._transferToDevice(preferredDeviceIdA);
-        b._transferToDevice(preferredDeviceIdA);
-    }
-    else if (deviceIdA != CPUDEVICE) // one of them lives on GPU: use that
-    {
+    if (!a.OwnBuffer() && b.OwnBuffer())
         b._transferToDevice(deviceIdA);
-    }
+    else if (a.OwnBuffer() && !b.OwnBuffer())
+        a._transferToDevice(deviceIdB);
     else
     {
-        a._transferToDevice(deviceIdB);
+        int preferredDeviceIdA = a.GetPreferredDeviceId(), preferredDeviceIdB = b.GetPreferredDeviceId();
+
+        if (preferredDeviceIdA == preferredDeviceIdB) // both prefer the same device: move to preferred
+        {
+            a._transferToDevice(preferredDeviceIdA);
+            b._transferToDevice(preferredDeviceIdA);
+        }
+        else if (deviceIdA != CPUDEVICE) // one of them lives on GPU: use that
+        {
+            b._transferToDevice(deviceIdA);
+        }
+        else
+        {
+            a._transferToDevice(deviceIdB);
+        }
     }
 }
 

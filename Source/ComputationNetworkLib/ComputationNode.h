@@ -1422,6 +1422,20 @@ public:
         m_gradientInitialized = true;
     }
 
+    // resize and reset this node's gradient to a given matrix's value
+    void ResetGradient(const Matrix<ElemType>& val)
+    {
+        UpdateDataSize(Gradient());
+
+        // The specified value matrix's dimensions must match the gradient matrix dimensions
+        if ((val.GetNumRows() != Gradient().GetNumRows()) || (val.GetNumCols() != Gradient().GetNumCols()))
+            LogicError("%ls %ls operation: The value matrix specified for ResetGradient() does not match the dimensions of the gradient matrix.", NodeName().c_str(), OperationName().c_str());
+
+        Gradient().AssignValuesOf(val);
+
+        m_gradientInitialized = true;
+    }
+
     // -----------------------------------------------------------------------
     // memory sharing
     // -----------------------------------------------------------------------
