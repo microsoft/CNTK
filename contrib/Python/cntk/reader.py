@@ -254,12 +254,11 @@ class CNTKTextFormatReader(AbstractReader):
                 param_dict['format'] = 'dense'
             
             if not 'dim' in param_dict:
-                if isinstance(node_or_name.reader, LazyInputReader):
+                if isinstance(node_or_name.reader, _LazyInputReaderBase):
                     lazy = node_or_name.reader
-                    param_dict['dim'] = np.multiply.reduce(lazy.shape)
+                    param_dict.update(node_or_name.reader.param_dict)
                 else:
                     raise ValueError('parameter "dim" not specified for node "%s"'%str(node_or_name))
-
 
             indent =5*MODEL_INDENTATION*' '
             params = ['%s%s = %s'%(indent, k,v) for k,v in
@@ -285,7 +284,36 @@ class CNTKTextFormatReader(AbstractReader):
         return template
 
 
-class LazyInputReader(object):
+class _LazyInputReaderBase(object):
+
+    '''
+    Base class of lazy readers that serializes the data to disk only when
+    the complete graph is specified. This is necessary in case of multiple
+    inputs, because they have to reside in the same file.
+
+    Note:
+        All readers of this type need to have the exact same number of samples,
+        as they will be aligned by the first index.
+
+    Note:
+        This class will be deprecated once the reader bundlers have arrived in
+        CNTK.
+
+    Args:
+        node (`_InputComputationNodeBase`): node to which this lazy reader is connected
+        input_alias (str): a short name for the input, it is how inputs are referenced in the data files. If not provided, it will be automatically assigned.
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis packaged as sequences. If not, it will wrapped again in a sequence of length 1.
+    '''
+
+    def __init__(self, node, input_alias=None, dynamic_axis=''):
+        if not node._is_input():
+            raise ValueError('LazyInputReader needs an input node')
+
+        self.node = node
+        self.input_alias = input_alias
+        self.dynamic_axis = dynamic_axis
+
+class LazyInputReader(_LazyInputReaderBase):
 
     '''
     Lazy reader that takes an NumPy array and serializes it to disk only when
@@ -302,37 +330,115 @@ class LazyInputReader(object):
 
     Args:
         batch (ndarray): the data to be serialized.
-        node (`InputComputationNodeBase`): node to which this lazy reader is
-        connected
-        input_alias (str): a short name for the input, it is how inputs are
-        referenced in the data files. If not provided, it will be automatically
-        assigned.
-        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
-        packaged as sequences. If not, it will wrapped again in a sequence of
-        length 1.
+        node (`_InputComputationNodeBase`): node to which this lazy reader is connected
+        input_alias (str): a short name for the input, it is how inputs are referenced in the data files. If not provided, it will be automatically assigned.
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis packaged as sequences. If not, it will wrapped again in a sequence of length 1.
     '''
 
     def __init__(self, batch, node, input_alias=None, dynamic_axis=''):
+        super(LazyInputReader, self).__init__(node, input_alias, dynamic_axis)
+
         if batch is None:
             raise ValueError(
                 'you initalized LazyInputReader without valid batch data')
 
         self.batch = batch
-        if not node._is_input():
-            raise ValueError('LazyInputReader needs an input node')
 
-        self.node = node
+        shapes_in_tensor = set()
+        # make sure that modulo dynamic axis all tensors of one lazy input have
+        # the same shape
+        for tensor in self.batch:
+            if isinstance(tensor, list):
+                tensor = np.asarray(tensor)
 
-        sample = batch[0]
-        if dynamic_axis:
-            # collecting the shapes ignoring the dynamic axis
-            self.node.shape = np.asarray(sample).shape[1:]
-        else:
-            self.node.shape = np.asarray(sample).shape
+            if self.dynamic_axis:
+                # collecting the shapes ignoring the dynamic axis
+                shapes_in_tensor.add(tensor.shape[1:])
+            else:
+                shapes_in_tensor.add(tensor.shape)
 
-        self.input_alias = input_alias
-        self.dynamic_axis = dynamic_axis
+        # ignoring the dynamic axis, all shapes should be equal
+        if len(shapes_in_tensor) != 1:
+            raise ValueError('except for the sequence dimensions all shapes ' +
+                             'should be the same - instead we %s' %
+                             (", ".join(str(s) for s in shapes_in_tensor)))
 
+        shape = shapes_in_tensor.pop()
+        if not shape:
+            shape = (1,)
+
+        self.shape = self.node.shape = shape
+
+        self.param_dict = {}
+        self.param_dict['dim'] = np.multiply.reduce(self.shape)
+        self.param_dict['format'] = 'dense'
+
+    def batch_size(self):
+        return len(self.batch)
+
+    def data_of_sample(self, idx):
+        data = self.batch[idx]
+        if not self.dynamic_axis:
+            data = np.asarray([data])
+
+        return data
+
+class LazySparseInputReader(_LazyInputReaderBase):
+
+    '''
+    Lazy reader that takes an NumPy array and serializes it to disk only when
+    the complete graph is specified. This is necessary in case of multiple
+    inputs, because they have to reside in the same file.
+
+    Note:
+        All readers of this type need to have the exact same number of samples,
+        as they will be aligned by the first index.
+
+    Note:
+        This class will be deprecated once the reader bundlers have arrived in
+        CNTK.
+
+    Args:
+        indices (list): list of indices
+        values (list): list of values corresponding to indices
+        shape (tuple): shape of the input
+        node (`_InputComputationNodeBase`): node to which this lazy reader is connected
+        input_alias (str): a short name for the input, it is how inputs are referenced in the data files. If not provided, it will be automatically assigned.
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis packaged as sequences. If not, it will wrapped again in a sequence of length 1.
+    '''
+
+    def __init__(self, indices, values, shape, node, input_alias=None, dynamic_axis=''):
+        super(LazySparseInputReader, self).__init__(node, input_alias, dynamic_axis)
+
+        if not indices or not values or not shape:
+            raise ValueError(
+                'you initalized LazySparseInputReader without valid initialization')
+
+        if not len(indices) == len(values):
+            raise ValueError('indices has different length than values')
+
+        self.indices = indices
+        self.values = values
+
+        self.shape = self.node.shape = shape
+
+        self.param_dict = {}
+        self.param_dict['dim'] = np.multiply.reduce(self.shape)
+        self.param_dict['format'] = 'sparse'
+
+    def batch_size(self):
+        return len(self.indices)
+
+    def data_of_sample(self, idx):
+        indices = self.indices[idx]
+        values = self.values[idx]
+
+        data = dict(zip(indices,values))
+
+        if not self.dynamic_axis:
+            data = [data]
+
+        return data
 
 class AbstractReaderAggregator(with_metaclass(ABCMeta, dict)):
 
@@ -543,7 +649,7 @@ class InputMap(object):
         sample_sizes = collections.defaultdict(list)
         used_aliases = set()
         for node in self.unmapped_nodes:
-            is_lazy_input = isinstance(node.reader, LazyInputReader)
+            is_lazy_input = isinstance(node.reader, _LazyInputReaderBase)
             if not (node._is_input() and is_lazy_input):
                 raise ValueError('expected NumPy input, but got "%s"'%str(node))
             
@@ -561,32 +667,8 @@ class InputMap(object):
                 used_aliases.add(new_alias)
 
             # keep track of sample sizes
-            sample_sizes[len(l.batch)].append(l.input_alias)
+            sample_sizes[l.batch_size()].append(l.input_alias)
 
-            shapes_in_tensor = set()
-
-            # make sure that modulo dynamic axis all tensors of one lazy input have
-            # the same shape
-            for tensor in l.batch:
-                if isinstance(tensor, list):
-                    tensor = np.asarray(tensor)
-
-                if l.dynamic_axis:
-                    # collecting the shapes ignoring the dynamic axis
-                    shapes_in_tensor.add(tensor.shape[1:])
-                else:
-                    shapes_in_tensor.add(tensor.shape)
-
-            # ignoring the dynamic axis, all shapes should be equal
-            if len(shapes_in_tensor) != 1:
-                raise ValueError('except for the sequence dimensions all shapes ' +
-                                 'should be the same - instead we %s' %
-                                 (", ".join(str(s) for s in shapes_in_tensor)))
-
-            # shapes_in_tensor now contains only one shape, which has the sequence
-            # dimension removed.
-            value_shape = shapes_in_tensor.pop()
-            l.shape = value_shape if value_shape else (1,)
 
             self.node_map[node] = { 'alias': l.input_alias }
 
@@ -603,10 +685,7 @@ class InputMap(object):
                 alias_tensor_map = {}
                 for node in self.unmapped_nodes:
                     l = node.reader
-                    if l.dynamic_axis:
-                        alias_tensor_map[l.input_alias] = l.batch[idx]
-                    else:
-                        alias_tensor_map[l.input_alias] = np.asarray([l.batch[idx]])
+                    alias_tensor_map[l.input_alias] = l.data_of_sample(idx)
                 f.write(tensors_to_text_format(idx, alias_tensor_map) + '\n')
 
         self.unmapped_nodes.clear()

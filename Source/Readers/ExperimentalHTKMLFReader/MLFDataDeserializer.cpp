@@ -121,7 +121,6 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     m_elementType = config.GetElementType();
 
     MLFUtterance description;
-    description.m_isValid = true;
     size_t numClasses = 0;
     size_t totalFrames = 0;
 
@@ -134,15 +133,14 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         // Currently the string registry contains only utterances described in scp.
         // So here we skip all others.
         size_t id = 0;
-        if (!stringRegistry.TryGet(l.first, id))
+        if (!stringRegistry.TryGet(msra::strfun::utf8(l.first), id))
             continue;
 
         description.m_key.m_sequence = id;
 
         const auto& utterance = l.second;
         description.m_sequenceStart = m_classIds.size();
-        description.m_isValid = true;
-        size_t numberOfFrames = 0;
+        uint32_t numberOfFrames = 0;
 
         foreach_index(i, utterance)
         {
@@ -161,6 +159,11 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             if (timespan.classid != static_cast<msra::dbn::CLASSIDTYPE>(timespan.classid))
             {
                 RuntimeError("CLASSIDTYPE has too few bits");
+            }
+
+            if (SEQUENCELEN_MAX < timespan.firstframe + timespan.numframes)
+            {
+                RuntimeError("Maximum number of sample per sequence exceeded.");
             }
 
             numClasses = max(numClasses, (size_t)(1u + timespan.classid));
@@ -245,13 +248,13 @@ ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()
 }
 
 // Gets sequences for a particular chunk.
-void MLFDataDeserializer::GetSequencesForChunk(size_t, vector<SequenceDescription>& result)
+void MLFDataDeserializer::GetSequencesForChunk(ChunkIdType, vector<SequenceDescription>& result)
 {
     UNUSED(result);
     LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
 }
 
-ChunkPtr MLFDataDeserializer::GetChunk(size_t chunkId)
+ChunkPtr MLFDataDeserializer::GetChunk(ChunkIdType chunkId)
 {
     UNUSED(chunkId);
     assert(chunkId == 0);
@@ -277,7 +280,7 @@ struct MLFSequenceData : SparseSequenceData
         }
 
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
-        m_numberOfSamples = numberOfSamples;
+        m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
         m_data = m_values.data();
@@ -318,22 +321,18 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
     }
 }
 
-static SequenceDescription s_InvalidSequence { 0, 0, 0, false, { 0, 0 } };
-
-void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+bool MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
 
     auto sequenceId = key.m_sequence < m_keyToSequence.size() ? m_keyToSequence[key.m_sequence] : SIZE_MAX;
 
     if (sequenceId == SIZE_MAX)
     {
-        result = s_InvalidSequence;
-        return;
+        return false;
     }
 
     result.m_chunkId = 0;
     result.m_key = key;
-    result.m_isValid = true;
 
     if (m_frameMode)
     {
@@ -345,8 +344,9 @@ void MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     {
         assert(result.m_key.m_sample == 0);
         result.m_id = sequenceId;
-        result.m_numberOfSamples = m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId];
+        result.m_numberOfSamples = (uint32_t) (m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId]);
     }
+    return true;
 }
 
 }}}

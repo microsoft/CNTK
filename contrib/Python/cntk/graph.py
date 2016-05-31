@@ -198,8 +198,11 @@ class ComputationNode(object):
             if p_name in ['shape', 'dims', 'inputs', 'z']:
                 p_value = _tuple_to_cntk_shape(p_value)
             else:
-                raise ValueError('tuple or list initialization is only allowed for' +
-                                 ' parameters shape, dims, inputs, and z, but not "%s"' % p_name)
+                msg = 'tuple or list initialization is only allowed for' +\
+                      ' parameters shape, dims, inputs, and z, but' +\
+                      ' not "%s". If this is an input or' % p_name + \
+                      ' parameter, please use parameter() or input_numpy().'
+                raise ValueError(msg)
         else:
             p_value = str(p_value)
 
