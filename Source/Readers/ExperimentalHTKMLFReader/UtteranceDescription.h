@@ -17,18 +17,12 @@ class UtteranceDescription
     // Archive filename and frame range in that file.
     msra::asr::htkfeatreader::parsedpath m_path;
 
-    // Index of the utterance inside the chunk.
-    size_t m_indexInsideChunk;
-    // Position of the first sample of the utterance inside the chunk.
-    size_t m_startFrameIndexInsideChunk;
-    // Chunk id.
-    size_t m_chunkId;
     // Utterance id.
     size_t m_id;
 
 public:
     UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
-        : m_path(std::move(path)), m_indexInsideChunk(0), m_startFrameIndexInsideChunk(0), m_chunkId(SIZE_MAX)
+        : m_path(std::move(path))
     {
     }
 
@@ -37,35 +31,23 @@ public:
         return m_path;
     }
 
+    void ClearLogicalPath()
+    {
+        m_path.ClearLogicalPath();
+    }
+
     size_t GetNumberOfFrames() const
     {
         return m_path.numframes();
     }
 
-    wstring GetKey() const
+    string GetKey() const
     {
-        std::wstring filename(m_path);
-        return filename.substr(0, filename.find_last_of(L"."));
-    }
-
-    void AssignToChunk(size_t chunkId, size_t indexInsideChunk, size_t frameInsideChunk)
-    {
-        m_chunkId = chunkId;
-        m_indexInsideChunk = indexInsideChunk;
-        m_startFrameIndexInsideChunk = frameInsideChunk;
+        return m_path.GetLogicalPath();
     }
 
     size_t GetId() const  { return m_id; }
     void SetId(size_t id) { m_id = id; }
-
-    size_t GetChunkId() const  { return m_chunkId; }
-    size_t GetIndexInsideChunk() const { return m_indexInsideChunk;}
-    size_t GetStartFrameIndexInsideChunk() const { return m_startFrameIndexInsideChunk; }
-
-    void SetStartFrameInsideChunk(size_t startFrameIndexInsideChunk)
-    {
-        m_startFrameIndexInsideChunk = startFrameIndexInsideChunk;
-    }
 };
 
 }}}

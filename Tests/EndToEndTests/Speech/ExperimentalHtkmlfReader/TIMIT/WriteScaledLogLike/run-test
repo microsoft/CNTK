@@ -1,0 +1,63 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+OriginalTestDir=../../../../Examples/Speech/TIMIT/WriteScaledLogLike
+
+# Note: can directly use run-timit-test-common since it lives at the same level
+# in the directory hierarchy.
+. $TEST_DIR/$OriginalTestDir/../run-timit-test-common
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# Train:
+cntkrun TIMIT_TrainSimpleNetwork.cntk  "TIMIT_TrainSimple=[reader=[readerType=ExperimentalHTKMLFReader]] $CntkArguments" || exit $?
+
+# Copy the test data to the test run directory, so that we do not damage anything
+DataDir=$TEST_RUN_DIR/TestData
+mkdir $DataDir
+cp -R $DataSourceDir/* $DataDir || exit $?
+
+# Write:
+# TODO TIMIT_WriteScaledLogLike=[writer=[writerType=ExperimentalHTKMLFReader]] 
+cntkrun TIMIT_WriteScaledLogLike.cntk "TIMIT_WriteScaledLogLike=[reader=[readerType=ExperimentalHTKMLFReader]] TIMIT_WriteScaledLogLike=[reader=[readMethod=none]] TIMIT_WriteScaledLogLike=[reader=[features=[scpFile=\$ScpDir\$/TIMIT.core.scp.fbank.fullpath.rnn]]] $CntkArguments"
+ExitCode=$?
+
+if [ $ExitCode == 0 ]; then
+  echo Write succeeded.
+
+  # Restore DataDir prior to modification through cntkrun (on Cygwin)
+  DataDir=$TEST_RUN_DIR/TestData
+
+  # Compare the output files
+  OutputDir=$DataDir/scaledloglike
+
+  # TODO need to watch this for a while. If this turns out to be
+  # non-deterministic we need to disable this / find a different output
+  # validation.
+  if [ "$OS" == "Windows_NT" ]; then
+      ExpectedOutputFile=$TEST_DIR/$OriginalTestDir/expected_output_md5sum.windows.txt
+      echo MD5 check disabled on Windows.
+  else
+      ExpectedOutputFile=$TEST_DIR/$OriginalTestDir/expected_output_md5sum.linux.txt
+
+      cd $OutputDir && md5sum --quiet -c $ExpectedOutputFile
+      ExitCode=$?
+      if [ $ExitCode == 0 ]; then
+        echo MD5 check succeeded.
+      else
+        # Using explicit path to find to disambiguate from find.exe on Windows
+        /usr/bin/find $OutputDir -type f -print0 | xargs -0 md5sum
+        echo Error: Output files are different. More info above.
+      fi
+  fi
+fi
+
+# Delete the test data
+rm -rf $DataDir
+
+exit $ExitCode
