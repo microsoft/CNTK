@@ -190,3 +190,11 @@ Source/CNTK/buildinfo.h$$
 # Unit test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
+
+# Examples config and output files
+/Examples/Text/PennTreebank/Config/
+/Examples/Text/PennTreebank/Output/
+
+# Visual studio db files
+/CNTK.VC.VC.opendb
+/CNTK.VC.db

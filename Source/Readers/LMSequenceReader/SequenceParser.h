@@ -614,8 +614,8 @@ public:
 // structure to describe how to find an input sentence in the 'labels' vector which is a concatenation of all
 struct SentenceInfo
 {
-    size_t sLen;    // TODO: say what these are
-    size_t sBegin;
+    size_t sLen;    // length of sentence
+    size_t sBegin;  // begin index of sentence
 };
 
 // language model sequence parser
