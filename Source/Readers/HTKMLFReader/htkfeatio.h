@@ -298,11 +298,9 @@ public:
 #else
         W.close(numframes);
 #endif
-#ifdef _WIN32 // BUGBUG: and on Linux??
         // rename to final destination
         // (This would only fail in strange circumstances such as accidental multiple processes writing to the same file.)
         renameOrDie(tmppath, path);
-#endif
     }
 };
 

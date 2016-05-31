@@ -56,6 +56,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // A collection of chunk descriptors, each containing
     // a collection of sequence descriptors for the corresponding
-    // chunk of the input data. 
-    typedef std::vector<ChunkDescriptor> Index;
+    // chunk of the input data.
+    // It also stores a mapping of keys into sequence descriptors.
+    struct Index
+    {
+        std::vector<ChunkDescriptor> m_chunks;                                  // chunks
+        std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;     // sequence key -> sequence location in chunk
+        const size_t m_maxChunkSize;                                            // maximum chunk size in bytes
+
+        explicit Index(size_t chunkSize) : m_maxChunkSize(chunkSize)
+        {}
+
+        // Adds sequence (metadata) to the index. Additionally, it
+        // assigns an appropriate chunk id to the sequence descriptor,
+        // ensures that chunks do not exceed the maximum allowed size
+        // (except when a sequence size is greater than the maximum chunk size)
+        void AddSequence(SequenceDescriptor& sd)
+        {
+            assert(!m_chunks.empty());
+            ChunkDescriptor* chunk = &m_chunks.back();
+            if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
+            {
+                // Creating a new chunk if the size is exceeded.
+                m_chunks.push_back({});
+                chunk = &m_chunks.back();
+                chunk->m_id = m_chunks.size() - 1;
+            }
+
+            chunk->m_byteSize += sd.m_byteSize;
+            chunk->m_numberOfSequences++;
+            chunk->m_numberOfSamples += sd.m_numberOfSamples;
+            sd.m_chunkId = chunk->m_id;
+            sd.m_id = chunk->m_sequences.size();
+            auto location = std::make_pair(chunk->m_id, sd.m_id);
+            m_keyToSequenceInChunk.insert(std::make_pair(sd.m_key.m_sequence, location));
+            chunk->m_sequences.push_back(sd);
+        }
+
+        // Reserves inner structures for the specified number of bytes.
+        void Reserve(size_t sizeInBytes)
+        {
+            if (m_maxChunkSize > 0)
+            {
+                m_chunks.reserve((sizeInBytes + m_maxChunkSize - 1) / m_maxChunkSize);
+            }
+
+            m_chunks.push_back({});
+        }
+
+        // Checks if the index is empty.
+        bool IsEmpty() const
+        {
+            return m_chunks.empty();
+        }
+
+        DISABLE_COPY_AND_MOVE(Index);
+    };
 }}}

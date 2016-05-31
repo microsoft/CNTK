@@ -21,6 +21,20 @@ Min(a,b) = if a < b then a else b
 Max(a,b) = if a > b then a else b 
 Fac(n) = if n > 1 then Fac(n-1) * n else 1 
 IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
+Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
+IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
+
+
+##############################################################################
+# comparison functions
+##############################################################################
+
+Less         = CNTK2.Less
+Equal        = CNTK2.Equal
+Greater      = CNTK2.Greater
+GreaterEqual = CNTK2.GreaterEqual
+NotEqual     = CNTK2.NotEqual
+LessEqual    = CNTK2.LessEqual
 
 ##############################################################################
 # ComputationNodes
@@ -58,6 +72,21 @@ CNTK2 = [
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
     Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    Slice(_, beginIndex, endIndex, axis=1, tag='') =
+        if axis < 0 then [ # time axis: specify -1
+            beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, _)) else                 BS.Loop.IsLastN  (-beginIndex, _)
+            endFlags   = if endIndex   > 0 then                 BS.Loop.IsFirstN (endIndex,   _)  else BS.Boolean.Not (BS.Loop.IsLastN  (-endIndex,   _))
+            flags = if      beginIndex == 0 then endFlags
+                    else if endIndex   == 0 then beginFlags
+                    else                         BS.Boolean.And (beginFlags, endFlags)
+            out = if beginIndex == 0 && endIndex == 0
+                  then _
+                  else BS.Sequences.Gather (flags, _)
+        ].out
+        else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
+
+    // Swap two axes of a tensor
+    TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
@@ -70,10 +99,14 @@ CNTK2 = [
     Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
     ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
     ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
+    Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _ /*plus the function args*/ ]
     Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
+    Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _ /*plus the function args*/ ]
     Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
     Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
     Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
+    Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
+    Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions
@@ -95,6 +128,7 @@ CNTK2 = [
     Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+    Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
@@ -102,8 +136,17 @@ CNTK2 = [
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
 
+    // 13. Comparison nodes
+    Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
+    Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
+    Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
+    GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
+    NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
+    LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
+
+    // 13. Others
     // 12. Others
-    // None so far.
+    Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
 LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
@@ -246,7 +289,7 @@ SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; 
 # ^^ TODO: Rename to ReduceSumMB?
 Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
-Trace (node, say='', logFrequency=traceFrequency, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
+Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 

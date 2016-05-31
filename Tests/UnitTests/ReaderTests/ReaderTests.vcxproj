@@ -188,6 +188,9 @@
     <Text Include="Data\CNTKTextFormatReader\1x1_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\1x1_sparse.txt" />
     <Text Include="Data\CNTKTextFormatReader\200x200x2_seq2seq_dense.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x10_and_5x5_jagged.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt" />
+    <Text Include="Data\CNTKTextFormatReader\5x5_jagged.txt" />
     <Text Include="Data\CNTKTextFormatReader\contains_blank_lines.txt" />
     <Text Include="Data\CNTKTextFormatReader\duplicate_inputs.txt" />
     <Text Include="Data\CNTKTextFormatReader\empty_samples.txt" />
@@ -219,6 +222,18 @@
     <None Include="Config\CNTKTextFormatReader\dense.cntk" />
     <None Include="Config\CNTKTextFormatReader\edge_cases.cntk" />
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk" />
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk" />
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk" />
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk" />
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />
@@ -246,7 +261,7 @@
   </PropertyGroup>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\experimentalhtkmlfreader.dll;$(UnitTestDlls);$(ImageReaderDependencies);" />
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\experimentalhtkmlfreader.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

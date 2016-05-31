@@ -83,7 +83,7 @@ enum ElementWiseOperator
     // binary
     opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
     opMax, opMin,
-    opLT, opEQ, opGT, opGE, opNE, opLE, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
+    opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
@@ -131,12 +131,12 @@ enum ElementWiseOperator
     Macro(LogSum);                                                    \
     Macro(Max);                                                       \
     Macro(Min);                                                       \
-    Macro(EQ);                                                        \
-    Macro(NE);                                                        \
-    Macro(GT);                                                        \
-    Macro(LT);                                                        \
-    Macro(GE);                                                        \
-    Macro(LE);                                                        \
+    Macro(Equal);                                                     \
+    Macro(NotEqual);                                                  \
+    Macro(Greater);                                                   \
+    Macro(Less);                                                      \
+    Macro(GreaterEqual);                                              \
+    Macro(LessEqual);                                                 \
     Macro(And);                                                       \
     Macro(Or);                                                        \
     Macro(Xor);                                                       \

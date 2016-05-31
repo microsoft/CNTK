@@ -92,6 +92,137 @@ def error_prediction(target_vector, output_vector, name=None):
     from cntk.ops.cntk2 import ErrorPrediction
     return ErrorPrediction(target_vector, output_vector, name = name)
 
+################################################################################
+# comparison ops
+################################################################################
+
+def less(left, right, name=None):
+    """
+    Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0. 
+
+    Example:
+       >>> C.eval(C.less([41., 42., 43.], [42., 42., 42.]))
+         [array([[1., 0., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Less
+    return Less(left, right, name=name)
+
+
+def equal(left, right, name=None):
+    """
+    Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise. 
+
+    Example:
+        >>> C.eval(C.equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [1]))
+        [array([[0., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Equal
+    return Equal(left, right, name=name)
+
+def greater(left, right, name=None):
+    """
+    Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0. 
+
+    Example:
+        >>> C.eval(C.greater([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 0., 1.]])]
+        
+        >>> C.eval(C.greater([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Greater
+    return Greater(left, right, name=name)
+
+
+def greater_equal(left, right, name=None):
+    """
+    Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0. 
+
+    Example:
+        >>> C.eval(C.greater_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[0., 1., 1.]])]
+        
+        >>> C.eval(C.greater_equal([-1,0,1], [0]))
+        [array([[0., 1., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import GreaterEqual
+    return GreaterEqual(left, right, name=name)
+
+def not_equal(left, right, name=None):
+    """
+    Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0. 
+
+    Example:
+        >>> C.eval(C.not_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 0., 1.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 0., 1.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import NotEqual
+    return NotEqual(left, right, name=name)
+
+def less_equal(left, right, name=None):
+    """
+    Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0. 
+
+    Example:
+        >>> C.eval(C.less_equal([41., 42., 43.], [42., 42., 42.]))
+        [array([[1., 1., 0.]])]
+        
+        >>> C.eval(C.eq([-1,0,1], [0]))
+        [array([[1., 1., 0.]])]
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name: the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import LessEqual
+    return LessEqual(left, right, name=name)
 
 ################################################################################
 # linear ops
@@ -99,9 +230,9 @@ def error_prediction(target_vector, output_vector, name=None):
 
 def plus(left, right, name=None):
     """
-    Tensor addition operation. The output of this operation is the sum of the 
-    two input tensors. It supports broadcasting. In case of scalars its backward
-    pass propagates the received gradient. 
+    The output of this operation is the sum of the two input tensors. It supports broadcasting. 
+    In case of scalars its backward pass propagates the received gradient. 
+    The operator (+) has been overloaded and can equally be used instead of plus()
 
     Example:
         >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
@@ -123,9 +254,9 @@ def plus(left, right, name=None):
 
 def minus(left, right, name=None):
     """
-    Tensor subtraction operation. The output of this operation is left minus
-    right tensor. It supports broadcasting. In case of scalars its backward
-    pass propagates the received gradient. 
+    The output of this operation is left minus right tensor. It supports broadcasting. 
+    In case of scalars its backward pass propagates the received gradient. 
+    The operator (-) has been overloaded and can equally be used instead of minus()
 
     Example:
         >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
@@ -149,10 +280,10 @@ def minus(left, right, name=None):
 
 def element_times(left, right, name=None):
     """
-    Element-wise multiplication operation. The output of this operation is the
-    element-wise product of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates right 
+    The output of this operation is the element-wise product of the two input 
+    tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right 
     times the received gradient and vice versa.
+    The operator (*) has been overloaded and can equally be used instead of element_times().    
     
     Example:
         >>> C.eval(C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
@@ -174,11 +305,13 @@ def element_times(left, right, name=None):
 
 def element_divide(left, right, name=None):
     """
-    Element-wise division operation. The output of this operation is the
-    element-wise division of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates :math:`1/right` 
-    times the received gradient, and the backward pass to right propagates 
+    The output of this operation is the element-wise division of the two input 
+    tensors. It supports broadcasting. In case of scalars its backward pass to 
+    left propagates :math:`1/right` times the received gradient, and the backward 
+    pass to right propagates. 
+    The operator (/) has been overloaded and can equally be used instead of element_divide().
     :math:`(-left/right^2)` times the received gradient. 
+    
 
     Example:
         >>> C.eval(C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
@@ -198,32 +331,65 @@ def element_divide(left, right, name=None):
     return ElementDivide(left, right, name=name)
 
 
-def times(left, right, name=None):
+def times(left, right, output_rank=1, name=None):
     """
-    Tensor times operation. The output of this operation is the
-    tensor product of the two input tensors. It supports broadcasting. In
-    case of scalars its backward pass to left propagates right
-    times the received gradient and vice versa.
+    The output of this operation is the matrix product of the two input matrices.
+    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
         [array([[ 17.,  39.]])]
         
-        >>> C.eval(C.times([[1,2],[3,4],[5,6]], [[0.5,0.25],[0.25,0.5]]))
-        [array([[[ 1.  ,  1.25],
-                 [ 2.5 ,  2.75],
-                 [ 4.  ,  4.25]]])]
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=1))        
+        [array([[[ 28.,  34.],
+        [ 76.,  98.]]])]
+        
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
+        [array([[[[[  4.,   5.],
+          [  6.,   7.]],
+
+         [[ 12.,  17.],
+          [ 22.,  27.]]],
+
+
+        [[[ 20.,  29.],
+          [ 38.,  47.]],
+
+         [[ 28.,  41.],
+          [ 54.,  67.]]]]])]
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        left: left side matrix or tensor
+        right: right side matrix or tensor
+        output_rank: in case we have tensors as arguemnts, output_rank represents
+            the number of axes to be collapsed in order to transform the tensors
+            into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
+
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Times
-    return Times(left, right, name=name)
+    return Times(left, right, outputRank=output_rank, name=name)
 
+def identity(x, name=None):
+    """
+    The identity function. It returns an identical tensor to the input tensor `x`: 
+
+    :math:`pass_tensor(x) = x`
+
+    Example:
+        >>> C.eval(C.pass_tensor([0., 1.]))
+        [array([[ 0.      ,  1.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Identity
+    return Identity(x, name=name)
 
 ################################################################################
 # non_diff ops
@@ -232,9 +398,8 @@ def times(left, right, name=None):
 
 def floor(arg, name=None):
     """
-    Floor operation. The output of this operation is the
-    element wise value rounded to the largest integer less than
-    or equal to the input.
+    The output of this operation is the element wise value rounded to the largest 
+    integer less than or equal to the input.
 
     Example:
         >>> C.eval(C.floor([0.2, 1.3, 4., 5.5, 0.0]))
@@ -263,9 +428,8 @@ def floor(arg, name=None):
 
 def ceil(arg, name=None):
     """
-    Ceil operation. The output of this operation is the
-    element wise value rounded to the smallest integer greater than
-    or equal to the input.
+    The output of this operation is the element wise value rounded to the smallest 
+    integer greater than or equal to the input.
 
     Example:
         >>> C.eval(C.ceil([0.2, 1.3, 4., 5.5, 0.0]))
@@ -287,9 +451,8 @@ def ceil(arg, name=None):
 
 def round(arg, name=None):
     """
-    Round operation. The output of this operation is the
-    element wise value rounded to the nearest integer. In case
-    of tie, where element can have exact fractional part of 0.5
+    The output of this operation is the element wise value rounded to the nearest integer. 
+    In case of tie, where element can have exact fractional part of 0.5
     this operation follows "round half-up" tie breaking strategy.
     This is different from the round operation of numpy which follows
     round half to even.
@@ -320,13 +483,13 @@ def round(arg, name=None):
 
 
 ################################################################################
-# non_linear ops
+# non_linear and nn ops
 ################################################################################
 
 
 def clip(x, min_value, max_value, name=None):
     """
-    Clip operation. Computes a tensor with all of its values clipped to fall
+    Computes a tensor with all of its values clipped to fall
     between `min_value` and `max_value`, i.e.
     ``min(max(x, min_value), max_value)``.
 
@@ -376,7 +539,7 @@ def relu(x, name=None):
 
 def sigmoid(x, name=None):
     """
-    Sigmoid operation. Computes the element-wise sigmoid of `x`: 
+    Computes the element-wise sigmoid of `x`: 
 
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
 
@@ -397,7 +560,7 @@ def sigmoid(x, name=None):
 
 def tanh(x, name=None):
     """
-    Tanh operation. Computes the element-wise tanh of `x`: 
+    Computes the element-wise tanh of `x`: 
 
     The output tensor has the same shape as `x`.
     
@@ -417,7 +580,7 @@ def tanh(x, name=None):
 
 def softmax(x, name=None):
     """
-    Softmax operation. Squashes the input values `x` such that they add up to 1: 
+    Squashes the input values `x` such that they add up to 1: 
 
     :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
 
@@ -439,10 +602,32 @@ def softmax(x, name=None):
     from cntk.ops.cntk2 import Softmax
     return Softmax(x)
 
+# unittests might require training and testing at the same time ? which 
+# sounds more like end2end test ?
+def dropout(x, name=None):
+    """
+    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
+    that are set to zero are randomly chosen. This is commonly used to prevent 
+    overfitting during the training process.
+
+    The output tensor has the same shape as `x`, but with `dropoutRate` of the
+    elements set to zero (droped out).
+    
+    
+    Examples:
+        TBA
+            
+    Args:        
+        x: source tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import Dropout
+    return Dropout(x, name = name)
 
 def exp(x, name=None):
     """
-    Exp operation. Computes the element-wise exponential of `x`: 
+    Computes the element-wise exponential of `x`: 
 
     :math:`exp(x) = {e^x}`
 
@@ -455,13 +640,72 @@ def exp(x, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk1 import Exp
+    from cntk.ops.cntk2 import Exp
     return Exp(x, name=name)
 
+def log(x, name=None):
+    """
+    Computes the element-wise the natural logarithm of `x`: 
+    
+    Example:
+        >>> C.eval(C.log([1., 2.]))
+        [array([[ 0.      ,  0.69314718056]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+                
+    Note:
+        CNTK returns -85.1 for log(x) if `x` is negative or zero. The reason is that 
+        it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float 
+        number for `log`, because this is the only guaranteed precision across 
+        platforms. This will be changed to return `NaN` and `-inf`.
+    """
+    from cntk.ops.cntk2 import Log
+    return Log(x, name=name)
+
+def sqrt(x, name=None):
+    """
+    Computes the element-wise square-root of `x`: 
+
+    :math:`sqrt(x) = {\sqrt[2]{x}}`
+
+    Example:
+        >>> C.eval(C.sqrt([0., 4.]))
+        [array([[ 0.      ,  2.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`        
+        
+    Note:
+        CNTK returns zero for sqrt of negative nubmers, this will be changed to 
+        return NaN
+    """
+    from cntk.ops.cntk2 import Sqrt
+    return Sqrt(x, name=name)
+
+def square(x, name=None):
+    """
+    Computes the element-wise square of `x`:     
+
+    Example:
+        >>> C.eval(C.square([1., 10.]))
+        [array([[ 1.      ,  100.]])]
+
+    Args:
+        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk2 import Square
+    return Square(x, name=name)
 
 def abs(x, name=None):
     """
-    Abs operation. Computes the element-wise absolute of `x`: 
+    Computes the element-wise absolute of `x`: 
 
     :math:`abs(x) = |x|`
 
@@ -500,13 +744,10 @@ def cond(flag, value_if_true, value_if_false, name=None):
     from cntk.ops.cntk1 import If
     return If(flag, value_if_true, value_if_false, name = name)
 
-
+    
 ################################################################################
 # recurrent ops
 ################################################################################
-
-
-
 
 def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
@@ -601,6 +842,76 @@ def reshape(x, shape, name=None):
     """    
     from cntk.ops.cntk1 import NewReshape
     return NewReshape(x, shape, 0, 0, name = name)
+    
+def transpose_dimensions(x, axis1, axis2, name=None):
+    """
+    Reverses two axes of the tensor. The output tensor has the same data but with
+    axis1 and axis2 swaped.
+    
+    The backward pass propagates the received gradient for the output-shape to the input shape.
+    
+    Note:
+        axes are zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+        
+    Examples:
+        >>> C.eval(C.transpose_dimensions([[0,1],[2,3],[4,5]], 1,2))
+        [array([[[ 0.,  4.,  3.],
+                 [ 2.,  1.,  5.]]])]
+            
+    Args:        
+        x: tensor to be reshaped
+        axis1: the axis to swap with axis2
+        axis2: the axis to swap with axis1
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import TransposeDimensions
+    cntk_axis1 = axis1+1
+    cntk_axis2 = axis2+1
+    return TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
+
+def slice(x, begin_index, end_index, axis=0, name=None): 
+    '''
+    Slice the input along an axis.
+
+    Note:
+        `axis` is zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+
+    Examples:
+        >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.asarray([[[1, 2, -3],
+        ...                     [4, 5,  6]]])
+        >>> x = C.input_numpy(data)
+        >>> # slice index 1 (second) at first axis
+        >>> C.eval(C.slice(x, 1, 2, 0))
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> # slice index 0 (first) at second axis
+        >>> C.eval(C.slice(x, 0, 1, 1))
+        [array([[[ 1.],
+                 [ 4.]]])]        
+
+    NumPy's way of slicing works, too:
+
+    Examples:
+        >>> C.eval(x[1])
+        [array([[[ 4.,  5.,  6.]]])]
+        >>> C.eval(x[:,:2,:])
+        [array([[[ 1.,  2.],
+                 [ 4.,  5.]]])]
+
+    Args:
+        arg: input tensor
+        axis (int): axis along which `begin_index` and `end_index` will be used to slice the data. 
+
+    See also:
+        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import Slice
+    cntk_axis = axis+1
+    return Slice(x, begin_index, end_index, cntk_axis, name=name)
 
 ################################################################################
 # training ops
@@ -628,7 +939,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from .. import utils
-    if utils.is_tensor_list(value) or utils.is_tensor(value):
+    if utils.is_tensor(value) or utils.is_tensor_list(value):
         value = np.asarray(value)
         if dynamic_axis:
             cntk_shape = value[0].shape[1:]
@@ -638,7 +949,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         if len(cntk_shape) == 0:
             raise ValueError('value should be an array of input samples')
             
-        node = input(cntk_shape, dynamic_axis=dynamic_axis)
+        node = input(cntk_shape, dynamic_axis=dynamic_axis, name=name)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(
             value,
@@ -666,6 +977,77 @@ def input(shape, dynamic_axis='', name=None):
 
     from cntk.ops.cntk1 import Input
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
+
+
+def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name=None):
+    '''
+    Creates an input node from a sparse input tensors described by a list of indices
+    and a list of values having a shape. The tensors represent one
+    sample and can have sequences of different lengths. 
+
+    Example:
+
+        >>>
+        # Creating a dense matrix 
+        # [[ 10, 20]
+        #  [ 30, 40]]
+        # Note that we need to specify a batch of samples of sequences (all
+        # having sequence length 1 in this example).
+        >>> dense = C.input_numpy([[[10,20,30], 
+                                    [40,50,60]]])
+        # Creating a sparse array 
+        # [0, 0.1, 0]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[ 2.,  5.]])]
+        #  Creating a sparse matrix
+        # [[0  ], 
+           [0.1],
+           [0  ]]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,1))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[[ 2.],
+                 [ 5.]]])]
+
+    Args:
+        indices (list): list (batch) of tuples (indices), which are positions of the values after flattening the tensor with `order='F'`
+        values (list): list (batch) of tuples of values corresponding to indices
+        shape (tuple): shape of the input
+        alias (str): alias to be used in the data file
+        dynamic_axis (str): whether the tensor has already the data
+        alias (str): optional the alias to be used when serializing the data into an intermediate file
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+
+    node = sparse_input(shape, dynamic_axis=dynamic_axis, name=name)
+    from ..reader import LazySparseInputReader
+    node.reader = LazySparseInputReader(
+        indices,
+        values,
+        shape,
+        input_alias=alias,
+        dynamic_axis=dynamic_axis,
+        node=node)
+
+    return node
+
+
+def sparse_input(shape, dynamic_axis='', name=None):
+    """
+    It creates a sparse input node. The graph requires a separate reader that will be
+    fed to this input.
+
+    Args:
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import SparseInput
+    return SparseInput(shape, dynamicAxis=dynamic_axis, name=name)
 
 
 def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
@@ -720,7 +1102,7 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
     param_shape = value.shape if value.shape else (1,)
     literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
 
-    literal_array = np.reshape(value, literal_shape)
+    literal_array = np.reshape(value, literal_shape, order = 'F')
 
     from io import BytesIO
     s = BytesIO()
@@ -785,3 +1167,4 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
     return ReconcileDynamicAxis(data_input, layout_input, name=name)
+

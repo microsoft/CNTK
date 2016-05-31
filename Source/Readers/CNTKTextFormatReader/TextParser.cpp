@@ -56,8 +56,12 @@ struct TextParser<ElemType>::StreamInfo
 };
 
 template <class ElemType>
-TextParser<ElemType>::TextParser(const TextConfigHelper& helper) :
-TextParser(helper.GetFilePath(), helper.GetStreams())
+TextParser<ElemType>::TextParser(const TextConfigHelper& helper) : TextParser(std::make_shared<CorpusDescriptor>(), helper)
+{}
+
+template <class ElemType>
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper) :
+TextParser(corpus, helper.GetFilePath(), helper.GetStreams())
 {
     SetTraceLevel(helper.GetTraceLevel());
     SetMaxAllowedErrors(helper.GetMaxAllowedErrors());
@@ -67,8 +71,9 @@ TextParser(helper.GetFilePath(), helper.GetStreams())
     Initialize();
 }
 
+
 template <class ElemType>
-TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<StreamDescriptor>& streams) : 
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams) :
     m_filename(filename),
     m_file(nullptr),
     m_streamInfos(streams.size()),
@@ -84,7 +89,8 @@ TextParser<ElemType>::TextParser(const std::wstring& filename, const vector<Stre
     m_hadWarnings(false),
     m_numAllowedErrors(0),
     m_skipSequenceIds(false),
-    m_numRetries(5)
+    m_numRetries(5),
+    m_corpus(corpus)
 {
     assert(streams.size() > 0);
 
@@ -162,11 +168,8 @@ void TextParser<ElemType>::Initialize()
 
         m_indexer = make_unique<Indexer>(m_file, m_skipSequenceIds, m_chunkSizeBytes);
 
-        m_indexer->Build();
+        m_indexer->Build(m_corpus);
     });
-
-    // it's still possible that the actual input data does not have sequence id column.
-    m_skipSequenceIds = !m_indexer->HasSequenceIds();
 
     assert(m_indexer != nullptr);
 
@@ -188,8 +191,8 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
     const auto& index = m_indexer->GetIndex();
 
     ChunkDescriptions result;
-    result.reserve(index.size());
-    for (auto const& chunk : index)
+    result.reserve(index.m_chunks.size());
+    for (auto const& chunk : index.m_chunks)
     {
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
@@ -206,7 +209,7 @@ template <class ElemType>
 void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
 {
     const auto& index = m_indexer->GetIndex();
-    const auto& chunk = index[chunkId];
+    const auto& chunk = index.m_chunks[chunkId];
     result.reserve(chunk.m_sequences.size());
 
     for (auto const& s : chunk.m_sequences)
@@ -271,7 +274,7 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 {
-    const auto& chunkDescriptor = m_indexer->GetIndex()[chunkId];
+    const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
     auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, this);
 
     attempt(m_numRetries, [this, &textChunk, &chunkDescriptor]()
@@ -294,7 +297,7 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
     {
         chunk->m_sequenceMap.insert(make_pair(
             sequenceDescriptor.m_id,
-            LoadSequence(!m_skipSequenceIds, sequenceDescriptor)));
+            LoadSequence(sequenceDescriptor)));
     }
 }
 
@@ -353,7 +356,7 @@ void TextParser<ElemType>::SetFileOffset(int64_t offset)
 }
 
 template <class ElemType>
-typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence(bool verifyId, const SequenceDescriptor& sequenceDsc)
+typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence(const SequenceDescriptor& sequenceDsc)
 {
     auto fileOffset = sequenceDsc.m_fileOffsetBytes;
 
@@ -365,17 +368,6 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     size_t bufferOffset = fileOffset - m_fileOffsetStart;
     m_pos = m_bufferStart + bufferOffset;
     size_t bytesToRead = sequenceDsc.m_byteSize;
-
-    if (verifyId)
-    {
-        size_t id;
-        if (!TryReadUint64(id, bytesToRead) || id != sequenceDsc.m_id)
-        {
-            PrintWarningNotification();
-            RuntimeError("Did not find the expected sequence (id = %" PRIu64 ") %ls.",
-                sequenceDsc.m_id, GetFileInfo().c_str());
-        }
-    }
 
     SequenceBuffer sequence;
 
@@ -407,8 +399,10 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Could not read a row (# %" PRIu64 ")"
-                    " while loading sequence (id = %" PRIu64 ") %ls.\n",
-                    i + 1, sequenceDsc.m_id, GetFileInfo().c_str());
+                    " while loading sequence (id = %ls) %ls.\n",
+                    i + 1,
+                    GetSequenceKey(sequenceDsc).c_str(),
+                    GetFileInfo().c_str());
             }
         }
 
@@ -418,9 +412,10 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Exhausted all input"
-                    " expected for the current sequence (id = %" PRIu64 ") %ls,"
+                    " expected for the current sequence (id = %ls) %ls,"
                     " but only read %" PRIu64 " out of %" PRIu64 " expected rows.\n",
-                    sequenceDsc.m_id, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
+                    GetSequenceKey(sequenceDsc).c_str(),
+                    GetFileInfo().c_str(), numRowsRead, expectedRowCount);
             }
             break;
         }
@@ -435,8 +430,8 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (sequence[i]->m_numberOfSamples == 0)
         {
             fprintf(stderr,
-                "ERROR: Input ('%ls') is empty in sequence (id = %" PRIu64 ") %ls.\n",
-                m_streams[i]->m_name.c_str(), sequenceDsc.m_id, GetFileInfo().c_str());
+                "ERROR: Input ('%ls') is empty in sequence (id = %ls) %ls.\n",
+                m_streams[i]->m_name.c_str(), GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
 
@@ -447,9 +442,9 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
-                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %" PRIu64 ") %ls.\n",
+                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %ls) %ls.\n",
                     m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
-                    sequenceDsc.m_id, GetFileInfo().c_str());
+                    GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             }
         }
         maxInputLength = max(sequence[i]->m_numberOfSamples, maxInputLength);
@@ -470,9 +465,10 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (ShouldWarn())
         {
             fprintf(stderr,
-                "WARNING: Maximum per-input number of samples for sequence (id = %" PRIu64 ") %ls"
+                "WARNING: Maximum per-input number of samples for sequence (id = %ls) %ls"
                 " is less than expected (%" PRIu64 " vs. %" PRIu64 ").\n",
-                sequenceDsc.m_id, GetFileInfo().c_str(), maxInputLength, expectedRowCount);
+                GetSequenceKey(sequenceDsc).c_str(),
+                GetFileInfo().c_str(), maxInputLength, expectedRowCount);
         }
         IncrementNumberOfErrorsOrDie();
     }
@@ -480,9 +476,9 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     if (m_traceLevel >= Info)
     {
         fprintf(stderr,
-            "INFO: Finished loading sequence (id = %" PRIu64 ") %ls,"
+            "INFO: Finished loading sequence (id = %ls) %ls,"
             " successfully read %" PRIu64 " out of expected %" PRIu64 " rows.\n",
-            sequenceDsc.m_id, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
+            GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
     return sequence;
@@ -1194,6 +1190,28 @@ std::wstring TextParser<ElemType>::GetFileInfo()
     std::wstringstream info;
     info << L"at offset " << GetFileOffset() << L" in the input file (" << m_filename << L")";
     return info.str();
+}
+
+static SequenceDescription s_InvalidSequence{0, 0, 0, false, {0, 0}};
+
+template <class ElemType>
+void TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+{
+    const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;
+    auto sequenceLocation = keys.find(key.m_sequence);
+    if (sequenceLocation == keys.end())
+    {
+        result = s_InvalidSequence;
+        return;
+    }
+
+    result = m_indexer->GetIndex().m_chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
+}
+
+template <class ElemType>
+const wstring& TextParser<ElemType>::GetSequenceKey(const SequenceDescriptor& s) const
+{
+    return m_corpus->GetStringRegistry()[s.m_key.m_sequence];
 }
 
 template class TextParser<float>;

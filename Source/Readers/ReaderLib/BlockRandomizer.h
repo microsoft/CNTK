@@ -121,6 +121,15 @@ private:
     bool m_multithreadedGetNextSequences;
 
     // General configuration
+    // TODO generalize those for ReaderLib / Reader / CNTK
+    enum VerbosityLevel
+    {
+        Warning = 0,
+        Notification = 1,
+        Information = 2,
+        Debug = 3,
+    };
+
     int m_verbosity;
 };
 
