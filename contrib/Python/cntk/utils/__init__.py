@@ -38,7 +38,8 @@ def cntk_to_numpy_shape(shape):
     if not shape:
         shape = (1,)
 
-    return shape
+    # cntk uses column major, thus we reverse the axes
+    return tuple(reversed(shape))
 
 
 def aggregate_readers(readers):
