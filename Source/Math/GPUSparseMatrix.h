@@ -220,6 +220,8 @@ public:
 	// SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
     inline ElemType* Data() const
     {
+      fprintf(stderr, "sparse nz count: %d\n", (int)GetNumNZElements());
+      fflush(stderr);
         return (Buffer() +
             ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0) : 0));
     }
