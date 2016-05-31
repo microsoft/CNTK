@@ -13,13 +13,9 @@
 
 ### Getting the data
 
-CIFAR-10 dataset is not included in CNTK distribution but can be easily downloaded and converted by running the following commands from this folder:
+CIFAR-10 dataset is not included in CNTK distribution but can be easily downloaded and converted by running the following command from this folder:
 
-```
-python CIFAR_convert.py [-f <format: cudnn|legacy>]
-python ../../../../Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py -in Train.txt  --output_file Train_cntk_text.txt -ls 0 -ld 1 --num_labels=10 -fs 1 -fd 3072 -lt Category
-python ../../../../Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py -in Test.txt  --output_file Test_cntk_text.txt -ls 0 -ld 1 --num_labels=10 -fs 1 -fd 3072 -lt Category
-```
+`python CIFAR_convert.py [-f <format: cudnn|legacy>]`
 
 The script will download all required files and convert them to CNTK-supported format.
 In case you don't have a Python installed, there are 2 options:
