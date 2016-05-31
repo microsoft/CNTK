@@ -111,27 +111,9 @@ namespace Microsoft {
 			template<class ElemType>
 			DenseBinaryInput<ElemType>::DenseBinaryInput(std::wstring fileName) : m_fileName(fileName), m_readOrder(nullptr), m_readOrderLength(0), m_randomize(false),
 				m_startBlock(0), m_unzippedBuffer(nullptr), m_zippedFileBlockBuffer(nullptr), m_unzippedBufferLen(0), m_sampleCntInUnzippedBuffer(0), m_lastValidPosOfUnzippedBuffer(-1), m_firstValidPosOfUnzippedBuffer(0), m_blockCntBeenRead(0),
-				m_blockCntBeenCopied(0), m_dThreadCnt(0), m_batchCntBeenCopied(0), m_processedBlockCnt(0){
-				std::string name = msra::strfun::utf8(m_fileName);
-
-				//m_inFile.open(name, ifstream::binary | ifstream::in);
-
-				for (int i = 0; i < this->m_readThread; ++i) {
-					ifstream inFile;
-					inFile.open(name, ifstream::binary | ifstream::in);
-					if (inFile) {
-						this->m_inFiles.push_back(std::move(inFile));
-					}
-					else{
-						break;
-					}
-				}
-
-				if (this->m_inFiles.empty()) {
-					RuntimeError("open file %s failed", name.c_str());
-				}
-
-				cerr << "read thread:" << this->m_inFiles.size() << endl;
+				m_blockCntBeenCopied(0), m_dThreadCnt(0), m_batchCntBeenCopied(0), m_processedBlockCnt(0) {
+				this->m_readFileName = msra::strfun::utf8(m_fileName);
+				//m_inFile.open(this->m_readFileName, ifstream::binary | ifstream::in);
 			}
 
 			template<class ElemType>
@@ -142,6 +124,23 @@ namespace Microsoft {
 			template<class ElemType>
 			template<class ConfigRecordType>
 			void DenseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename, const ConfigRecordType & config) {
+
+				//open file stream
+				m_readThread = (size_t)config(L"readThread", (size_t)(1));
+				for (int i = 0; i < this->m_readThread; ++i) {
+					this->m_inFiles.push_back(ifstream());
+					auto& inFile = this->m_inFiles.back();
+					inFile.open(this->m_readFileName, ifstream::binary | ifstream::in);
+					if (!inFile) {
+						cerr << "open " << this->m_readFileName << " failed at thread " << i << endl;
+						this->m_inFiles.pop_back();
+						break;
+					}
+				}
+				if (this->m_inFiles.empty()) {
+					RuntimeError("open file %s failed", this->m_readFileName.c_str());
+				}
+				cerr << "read thread, actual: " << this->m_inFiles.size() << ", config: " << m_readThread << endl;
 
 				GetZippedFileInfo();
 
@@ -154,11 +153,6 @@ namespace Microsoft {
 
 				//cache is disabled by default
 				m_maxCacheSize = ((size_t)config(L"maxCacheSize", (size_t)(0))) * 1024 * 1024;
-
-				m_readThread = (size_t)config(L"readThread", (size_t)(1));
-				if (m_readThread == 0) {
-					RuntimeError("invalid readThread");
-				}
 
 				m_blockSizeOfUnzippedBuffer = 4;
 				size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize);
@@ -626,9 +620,9 @@ namespace Microsoft {
 				for (int i = 0; i < numToRead; ++i) {
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 					cerr << "read cached data:"
-						<< this->m_zipedDataToProduce.size()
+						<< "produce:" << this->m_zipedDataToProduce.size()
 						<< ","
-						<< this->m_zipedDataToConsume.size()
+						<< "consume:" << this->m_zipedDataToConsume.size()
 						<< endl;
 
 					size_t readSize = m_blockSizeInByte[read_order[i]];
@@ -655,9 +649,9 @@ namespace Microsoft {
 				for (int i = 0; i < numToRead; i++) {
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
 					cerr << "read zip data:"
-						<< this->m_zipedDataToProduce.size()
+						<< "produce:" << this->m_zipedDataToProduce.size()
 						<< ","
-						<< this->m_zipedDataToConsume.size()
+						<< "consume:" << this->m_zipedDataToConsume.size()
 						<< endl;
 
 					size_t readSize = m_blockSizeInByte[read_order[i]];

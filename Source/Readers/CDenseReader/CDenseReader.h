@@ -148,6 +148,7 @@ namespace Microsoft {
 				size_t m_cachedBlockNum;
 
 				size_t m_readThread;
+				std::string m_readFileName;
 
 				std::wstring m_fileName;
 				size_t m_fileSize;
