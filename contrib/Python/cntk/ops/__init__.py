@@ -773,7 +773,7 @@ def cond(flag, value_if_true, value_if_false, name=None):
 # recurrent ops
 ################################################################################
 
-def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
+def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
     This function op =s the future value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -793,7 +793,7 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
                 [  0.1,   0.1,   0.1,   0.1]])]
     
     Args:        
-        dims: dimensions of the input `x`
+        shape: dimensions of the input `x`
         x: the tensor from which the future value is obtained
         time_step: the number of time steps to look into the future (default 1)
         default_hidden_activation: the default value to use when no future value 
@@ -803,11 +803,11 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
     """    
     
     from cntk.ops.cntk1 import FutureValue
-    op = FutureValue(dims, x, time_step, default_hidden_activation, name = name)
-    op.rank = x.rank
+    op = FutureValue(shape, x, time_step, default_hidden_activation, name = name)
+    op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
     
-def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
+def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
     This function op =s the past value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -827,7 +827,7 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
                 [ 5. ,  6. ,  7. ,  8. ]])]
     
     Args:        
-        dims: dimensions of the input `x`
+        shape: dimensions of the input `x`
         x: the tensor from which the past value is obtained
         time_step: the number of time steps to look into the past (default 1)
         default_hidden_activation: the default value to use when no past value 
@@ -837,8 +837,8 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
     """    
     
     from cntk.ops.cntk1 import PastValue
-    op = PastValue(dims, x, time_step, default_hidden_activation, name = name)
-    op.rank = x.rank
+    op = PastValue(shape, x, time_step, default_hidden_activation, name = name)
+    op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
 
 ################################################################################
@@ -1118,6 +1118,9 @@ def sparse_input(shape, dynamic_axis='', name=None):
     """
 
     from cntk.ops.cntk1 import SparseInput
+    if not np.isscalar(shape):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))
     op = SparseInput(shape, dynamicAxis=dynamic_axis, name=name)
     op.rank = 0 if np.isscalar(shape) else len(shape)
     return op

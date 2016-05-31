@@ -77,7 +77,7 @@ def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
                        learning_rates_per_mb=0.1, max_epochs=30, momentum_per_mb=0)
 
     # Create a context or re-use if already there
-    with C.LocalExecutionContext('mnist_one_layer', clean_up=False) as ctx:
+    with C.LocalExecutionContext('mnist_one_layer', clean_up=True) as ctx:
         # CNTK actions
          ctx.train(
             root_nodes=[ec, eval],
