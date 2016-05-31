@@ -366,8 +366,9 @@ class LazyInputReader(_LazyInputReaderBase):
         shape = shapes_in_tensor.pop()
         if not shape:
             shape = (1,)
-
-        self.shape = self.node.shape = shape
+        
+        # cntk uses column major, thus we reverse the shape
+        self.shape = self.node.shape = tuple(reversed(shape))
 
         self.param_dict = {}
         self.param_dict['dim'] = np.multiply.reduce(self.shape)

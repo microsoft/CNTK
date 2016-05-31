@@ -69,7 +69,7 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
     my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25,
             learning_rates_per_mb=0.1, max_epochs=3)
 
-    with C.LocalExecutionContext('logreg_numpy', device_id=device_id, clean_up=False) as ctx:
+    with C.LocalExecutionContext('logreg_numpy', device_id=device_id, clean_up=True) as ctx:
         ctx.train(
                 root_nodes=[ce,eval], 
                 training_params=my_sgd)
