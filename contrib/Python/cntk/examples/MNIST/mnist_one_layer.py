@@ -68,7 +68,7 @@ def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
     ec.name = criterion_name
     ec.tag = 'criterion'
     
-    eval = C.ops.square_error(labels, out)
+    eval = C.ops.error_prediction(labels, out)
     eval.name = eval_name
     eval.tag = 'eval'
     
@@ -96,9 +96,9 @@ def _test_mnist_onelayer_from_file():
 
     TOLERANCE_ABSOLUTE = 1E-06
     assert result['SamplesSeen'] == 10000
-    assert np.allclose(result['Perplexity'], 7.6323031, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 2.0323896, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 1.9882504, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['Perplexity'], 1.000002, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.0, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 0.000002581, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_mnist_onelayer_from_file('crit_node', 'eval_node'))
