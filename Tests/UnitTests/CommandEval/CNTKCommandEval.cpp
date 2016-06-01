@@ -1,4 +1,4 @@
-// CNTKEvalTest.cpp : Defines the entry point for the console application.
+// CNTKCommandEval.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
