@@ -101,8 +101,7 @@ def seqcla():
     embed_dim = 50    
 
     t = C.dynamic_axis(name='t')
-    # temporarily using cntk1 SparseInput because cntk2's Input() will simply allow sparse as a parameter
-    features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
+    features = C.sparse_input(vocab, dynamic_axis=t, name='features')    
     labels = C.input(num_labels, name='labels')
    
     train_reader = C.CNTKTextFormatReader(train_file)
@@ -120,7 +119,8 @@ def seqcla():
     # add a softmax layer on top
     w = C.parameter((num_labels, output_dim), name='w')
     b = C.parameter((num_labels), name='b')
-    z = C.plus(C.times(w, L), b, name='z')
+    z = C.times(w, L) + b
+    z.name='z'
     z.tag = "output"
     
     # and reconcile the shared dynamic axis

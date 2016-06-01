@@ -111,7 +111,7 @@ private:
     std::map<size_t, ChunkPtr> m_chunks;
 
     // Last seen data chunk id.
-    size_t m_lastSeenChunkId;
+    ChunkIdType m_lastSeenChunkId;
 
     // Decimation mode.
     DecimationMode m_decimationMode;

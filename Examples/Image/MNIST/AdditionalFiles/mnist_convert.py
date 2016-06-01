@@ -6,6 +6,9 @@ import os
 import struct
 import numpy as np
 
+sys.path.append("../../../../Source/Readers/CNTKTextFormatReader")
+from uci_to_cntk_text_format_converter import convert
+
 def loadData(src, cimg):
     print ('Downloading ' + src)
     gzfname, h = urllib.urlretrieve(src, './delete.me')
@@ -57,10 +60,14 @@ if __name__ == "__main__":
     trn = np.hstack((trnLbl, trnData))
     print 'Writing train text file...'
     np.savetxt(r'./../Data/Train-28x28.txt', trn, fmt = '%u', delimiter='\t')
+    convert(r'./../Data/Train-28x28.txt', r'./../Data/Train-28x28_cntk_text.txt', 1, 784, 0, 1, 10)
+    os.remove(r'./../Data/Train-28x28.txt');
     print 'Done.'
     testData = loadData('http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz', 10000)
     testLbl = loadLabels('http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz', 10000)
     test = np.hstack((testLbl, testData))
     print 'Writing test text file...'
     np.savetxt(r'./../Data/Test-28x28.txt', test, fmt = '%u', delimiter='\t')
+    convert(r'./../Data/Test-28x28.txt', r'./../Data/Test-28x28_cntk_text.txt', 1, 784, 0, 1, 10)
+    os.remove(r'./../Data/Test-28x28.txt');
     print 'Done.'
