@@ -10,7 +10,7 @@ testCases:
   CNTK Run must be completed:
     patterns:
       - __COMPLETED__
-      
+
   Must train epochs in exactly same order and parameters:
     patterns:
       - Starting Epoch {{integer}}
