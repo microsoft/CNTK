@@ -231,8 +231,7 @@ def wrap_numpy_arrays(node):
     into input and constant nodes
     
     Args:
-        node (:class:`cntk.graph.ComputationNode`): the computation node that will
-        get its inputs wraped
+        node (:class:`cntk.graph.ComputationNode`): the computation node that will get its inputs wraped
     '''
     from ..graph import ComputationNode, _InputComputationNodeBase
     from ..ops import input_numpy, constant
