@@ -931,8 +931,8 @@ def transpose_dimensions(x, axis1, axis2, name=None):
     from cntk.ops.cntk2 import TransposeDimensions
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    cntk_axis1 = x.rank - axis1
-    cntk_axis2 = x.rank - axis2
+    cntk_axis1 = abs(axis1) if axis1<0 else x.rank - axis1
+    cntk_axis2 = abs(axis2) if axis2<0 else x.rank - axis2
     op = TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
     wrap_numpy_arrays(op)            
     op.rank = op._.rank
@@ -980,7 +980,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     from cntk.ops.cntk2 import Slice
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    cntk_axis = x.rank - axis
+    cntk_axis = abs(axis) if axis<0 else x.rank - axis
     op = Slice(x, begin_index, end_index, cntk_axis, name=name)
     op.rank = op._.rank
     return op

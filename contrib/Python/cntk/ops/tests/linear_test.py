@@ -236,7 +236,7 @@ def test_op_identity(tensor, device_id, precision):
 TIMES_PAIRS = [
     #([[30.]], [[10.]]),
     #([[1.5, 2.1]], [[10.], [20.]]),
-    ([[10.], [20.]], [[100., 200.]]),
+    ([[100., 200.]], [[10.], [20.]]),
 ]
 
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
