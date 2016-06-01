@@ -20,6 +20,7 @@
 
 #include <map>
 #include <set>
+#include <algorithm>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -1950,6 +1951,8 @@ template <class ElemType>
     Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE) functionValues.GetDeviceId());
     if (noiseStd > 0)
     {
+      fprintf(stderr, "noisestd \n");
+      fflush(stderr);
         // get the gradient structure since gradient is sparse
         sgdUpdateNoise.SetValue(gradientValues);
 
@@ -1960,31 +1963,53 @@ template <class ElemType>
 
     // L2 regularizer
     if (L2RegWeight > 0)
-    {
+      fprintf(stderr, "l2 \n");
+    fflush(stderr); {
         // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
         Matrix<ElemType>::ScaleAndAdd((ElemType)(L2RegWeight * actualMBSize), functionValues, gradientValues);
     }
 
+
     if (adpType == GradientsUpdateType::None)
     {
+        ElemType* debugParametersBefore = nullptr; 
+        if (gradientValues.GetMatrixType() == MatrixType::SPARSE)
+        {
+         debugParametersBefore  = functionValues.CopyToArray();
+        }
         smoothedGradient.NormalGrad(gradientValues, functionValues,
                                     (ElemType) learnRatePerSample, (ElemType) momentum, useNesterovMomentum);
+
+        if (gradientValues.GetMatrixType() == MatrixType::SPARSE)
+        {
+          ElemType* debugParametersAfter = functionValues.CopyToArray();
+          size_t sizeofElement = functionValues.GetNumElements();
+          std::transform(debugParametersBefore, debugParametersBefore + sizeofElement, debugParametersAfter, debugParametersAfter, std::minus<ElemType>());
+          size_t zeroNum = std::count(debugParametersAfter, debugParametersAfter + sizeofElement, 0.0f);
+          fprintf(stderr, "function value after update : %d zero number \n", (int)zeroNum);
+          fflush(stderr);
+        }
     }
     else if (adpType == GradientsUpdateType::AdaGrad ||
              (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
              (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
     {
         // rmsprop for sparse is not implemented yet, delegate it with adagrad
-
+      fprintf(stderr, "adagrad \n");
+      fflush(stderr);
         double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
     else if (adpType == GradientsUpdateType::FSAdaGrad)
     {
+      fprintf(stderr, "fsadagrad \n");
+    fflush(stderr); 
         smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType) learnRatePerSample, (ElemType) momentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
+      fprintf(stderr, "rmsprop \n");
+      fflush(stderr);
         double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) sgd->m_rpi.gamma,
                                                         (ElemType) sgd->m_rpi.inc, (ElemType) sgd->m_rpi.max,
                                                         (ElemType) sgd->m_rpi.dec, (ElemType) sgd->m_rpi.min, needAveMultiplier);
@@ -1993,12 +2018,15 @@ template <class ElemType>
 
     if (noiseStd > 0)
     {
+      fprintf(stderr, "noisestd\n");
+      fflush(stderr);
         Matrix<ElemType>::ScaleAndAdd(1.0, sgdUpdateNoise, functionValues);
     }
 
     // L1 regularizer with proximal gradient descent method
     if (L1RegWeight > 0)
-    {
+    {      fprintf(stderr, "adagrad \n");
+      fflush(stderr);
         // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
         functionValues.InplaceSoftThreshold((ElemType)(learnRatePerSample * L1RegWeight * actualMBSize));
     }
