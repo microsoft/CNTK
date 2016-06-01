@@ -140,23 +140,28 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Source\CNTK\BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="MathTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Warning Condition="!$(HasBoost)" Text="EvalTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <PropertyGroup>
       <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
     </ItemGroup>
     <ItemGroup Condition="$(GpuBuild)">
-      <UnitTestDependencies Include="$(OutDir)..\CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
+      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
