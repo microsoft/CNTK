@@ -43,7 +43,7 @@
         <!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
       </PropertyGroup>
     </When>
-    <When Condition="'$(CNTK_MKL)' == '1' And '$(CNTK_SEQUENTIAL)' == '1'">
+    <When Condition="'$(CNTK_MKL)' == '1'">
       <PropertyGroup>    
         <MKLCustomVersion>1</MKLCustomVersion>
         <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
@@ -53,31 +53,30 @@
         <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
         <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
         <MathDefine>USE_MKL</MathDefine>
-        <MathLibrayName>CNTK-Custom MKL Parallel (Version: $(MKLCustomVersion))</MathLibrayName>
-        <MathLibraryPath>$(MKLDropDirectory)\x64\parallel</MathLibraryPath>
-        <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
-        <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
-        <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
-        <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
       </PropertyGroup>
-    </When>
-    <When Condition="'$(CNTK_MKL)' == '1' And '$(CNTK_SEQUENTIAL)' != '1'">
-      <PropertyGroup>            
-        <MKLCustomVersion>1</MKLCustomVersion>
-        <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
-        <!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
-        <!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
-        <!-- this allows for multiple version of the custom DLLs present on the machine -->
-        <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
-        <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
-        <MathDefine>USE_MKL</MathDefine>
-        <MathLibrayName>CNTK-Custom MKL Sequential (Version: $(MKLCustomVersion))</MathLibrayName>
-        <MathLibraryPath>$(MKLDropDirectory)\x64\sequential</MathLibraryPath>
-        <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
-        <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
-        <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
-        <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>      
-      </PropertyGroup>
+      <Choose>
+        <When Condition="'$(CNTK_SEQUENTIAL)' != '1'">
+          <PropertyGroup>    
+            <MathLibrayName>CNTK-Custom MKL Parallel (Version: $(MKLCustomVersion))</MathLibrayName>
+            <MathLibraryPath>$(MKLDropDirectory)\x64\parallel</MathLibraryPath>
+            <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
+            <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+            <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
+            <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+          </PropertyGroup>
+        </When>
+        <When Condition="'$(CNTK_SEQUENTIAL)' == '1'">
+          <PropertyGroup>            
+            <MathLibrayName>CNTK-Custom MKL Sequential (Version: $(MKLCustomVersion))</MathLibrayName>
+            <MathLibraryPath>$(MKLDropDirectory)\x64\sequential</MathLibraryPath>
+            <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
+            <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+            <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
+            <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>      
+          </PropertyGroup>
+        </When>
+      
+      </Choose>
     </When>
   </Choose>
   
