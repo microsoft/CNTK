@@ -22,6 +22,7 @@
     <ProjectGuid>{731312A8-6DA3-4841-AFCD-57520BA1BF8E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>EvalTest</RootNamespace>
+    <ProjectName>CommandEval</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
