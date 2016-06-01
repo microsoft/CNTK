@@ -34,11 +34,19 @@ echo Copying Builder-LIB directory
 xcopy /s /e /y /i "%MKLROOT%\tools\builder\lib" lib 
 
 echo.
-echo Calling NMAKE libintel64 export=cntklist.txt MKLROOT="%MKLROOT%"
-NMAKE /f "%MKLROOT%\tools\builder\makefile" libintel64 export=cntklist.txt MKLROOT="%MKLROOT%"
+echo Calling NMAKE libintel64 export=cntklist.txt threading=parallel name=mkl_cntk_p MKLROOT="%MKLROOT%"
+NMAKE /f "%MKLROOT%\tools\builder\makefile" libintel64 export=cntklist.txt threading=parallel name=mkl_cntk_p MKLROOT="%MKLROOT%"
 
 if errorlevel 1 (
-  echo Error: NMAKE.exe failed.
+  echo Error: NMAKE.exe for threading=parallel failed.
+  exit /b 1
+)
+
+echo Calling NMAKE libintel64 export=cntklist.txt threading=sequential name=mkl_cntk_s MKLROOT="%MKLROOT%"
+NMAKE /f "%MKLROOT%\tools\builder\makefile" libintel64 export=cntklist.txt threading=sequential name=mkl_cntk_s MKLROOT="%MKLROOT%"
+
+if errorlevel 1 (
+  echo Error: NMAKE.exe for threading=sequential failed.
   exit /b 1
 )
 
@@ -53,13 +61,17 @@ echo Copying into Publish\%CURRENTVER%
 
 rmdir /s /q Publish
 md Publish\%CURRENTVER%\x64
+md Publish\%CURRENTVER%\x64\parallel
+md Publish\%CURRENTVER%\x64\sequential
 md Publish\%CURRENTVER%\include
 
-move mkl_custom.dll Publish\%CURRENTVER%\x64
-move mkl_custom.lib Publish\%CURRENTVER%\x64
+move mkl_cntk_p.dll Publish\%CURRENTVER%\x64\parallel
+move mkl_cntk_p.lib Publish\%CURRENTVER%\x64\parallel
+move mkl_cntk_s.dll Publish\%CURRENTVER%\x64\sequential
+move mkl_cntk_s.lib Publish\%CURRENTVER%\x64\sequential
 del mkl_custom.exp
 del *.manifest
-copy "%MKLROOT%\..\redist\intel64_win\compiler\libiomp5md.dll" Publish\%CURRENTVER%\x64
+copy "%MKLROOT%\..\redist\intel64_win\compiler\libiomp5md.dll" Publish\%CURRENTVER%\x64\parallel
 
 rem MKL Include files needed to build CNTK
 
