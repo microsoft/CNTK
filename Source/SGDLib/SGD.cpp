@@ -357,6 +357,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
           new MultiversoHelper<ElemType>(learnableNodes,
                                          m_mpi->NumNodesInUse(),
                                          m_isPipeline,
+                                         m_isSimulateMA,
                                          m_adjustlearningrateatbeginning,
                                          m_adjustcoefficient,
                                          m_adjustnbminibatch,
@@ -1122,13 +1123,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // using parameter server for parameter update
         if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
-            if (m_nEpochBarrier[epochNumber] > 0 && epochNumber % m_nEpochBarrier[epochNumber] == 0)
-            {
-                // simulating BSP
-                m_pMultiversoHelper->WaitAsyncBuffer();
-                m_pMultiversoHelper->WaitAll();
-            }
-
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
             {
@@ -2735,7 +2729,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
             m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
             m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
-            m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", ConfigRecordType::Array(intargvector(vector<int>{0})));
+            m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false);
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
             {
                 const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
