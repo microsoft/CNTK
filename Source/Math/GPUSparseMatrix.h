@@ -430,6 +430,7 @@ public:
     // For these two, I should also add a version which would return GPUSparseMatrix, since Dense.*Sparse =Sparse.*Dense=Sparse
     static GPUMatrix<ElemType> ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
     static GPUMatrix<ElemType> ElementProductOf(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
+    static GPUSparseMatrix<ElemType> ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
 
 public:
     // See: http://stackoverflow.com/questions/4660123/overloading-friend-operator-for-template-class/4661372#4661372
