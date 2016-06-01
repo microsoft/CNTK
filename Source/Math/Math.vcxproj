@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -26,6 +26,14 @@
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  
+  <PropertyGroup>
+    <HasOpenCV>false</HasOpenCV>
+    <HasOpenCV Condition="Exists('$(OPENCV_PATH)')">true</HasOpenCV>
+    <UseZip>false</UseZip>
+    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+  </PropertyGroup>
+  
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -215,4 +223,7 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
+  <Target Name="CheckDependencies">
+    <Warning Condition="'$(CNTK_MKL)' == '1' And !Exists('$(MKLDropDirectory)')" Text="The Math project requires that the custom CNTK MKL library is installed on your system. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows for instructions." />
+  </Target>
 </Project>

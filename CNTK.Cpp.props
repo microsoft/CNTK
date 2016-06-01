@@ -55,7 +55,7 @@
         <MathDefine>USE_MKL</MathDefine>
       </PropertyGroup>
       <Choose>
-        <When Condition="'$(CNTK_SEQUENTIAL)' != '1'">
+        <When Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
           <PropertyGroup>    
             <MathLibrayName>CNTK-Custom MKL Parallel (Version: $(MKLCustomVersion))</MathLibrayName>
             <MathLibraryPath>$(MKLDropDirectory)\x64\parallel</MathLibraryPath>
@@ -65,7 +65,7 @@
             <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
           </PropertyGroup>
         </When>
-        <When Condition="'$(CNTK_SEQUENTIAL)' == '1'">
+        <When Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
           <PropertyGroup>            
             <MathLibrayName>CNTK-Custom MKL Sequential (Version: $(MKLCustomVersion))</MathLibrayName>
             <MathLibraryPath>$(MKLDropDirectory)\x64\sequential</MathLibraryPath>
