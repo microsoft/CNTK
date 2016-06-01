@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import numpy as np
+from ..utils import wrap_numpy_arrays
 
 ################################################################################
 # convolution ops
@@ -40,6 +41,7 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
     op = CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
+    wrap_numpy_arrays(op)
     op.rank = 0
     return op
 
@@ -66,6 +68,7 @@ def square_error(target_matrix, output_matrix, name=None):
     """
     from cntk.ops.cntk1 import SquareError
     op = SquareError(target_matrix, output_matrix, name = name)
+    wrap_numpy_arrays(op)
     op.rank = 0
     return op
     
@@ -95,6 +98,7 @@ def error_prediction(target_vector, output_vector, name=None):
     """
     from cntk.ops.cntk2 import ErrorPrediction
     op = ErrorPrediction(target_vector, output_vector, name = name)
+    wrap_numpy_arrays(op)
     op.rank = 0
     return op
 
@@ -122,7 +126,8 @@ def less(left, right, name=None):
     """
     from cntk.ops.cntk2 import Less
     op = Less(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def equal(left, right, name=None):
@@ -145,7 +150,8 @@ def equal(left, right, name=None):
     """
     from cntk.ops.cntk2 import Equal
     op = Equal(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def greater(left, right, name=None):
@@ -168,7 +174,8 @@ def greater(left, right, name=None):
     """
     from cntk.ops.cntk2 import Greater
     op = Greater(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def greater_equal(left, right, name=None):
@@ -191,7 +198,8 @@ def greater_equal(left, right, name=None):
     """
     from cntk.ops.cntk2 import GreaterEqual
     op = GreaterEqual(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def not_equal(left, right, name=None):
@@ -214,7 +222,8 @@ def not_equal(left, right, name=None):
     """
     from cntk.ops.cntk2 import NotEqual
     op = NotEqual(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def less_equal(left, right, name=None):
@@ -237,7 +246,8 @@ def less_equal(left, right, name=None):
     """
     from cntk.ops.cntk2 import LessEqual
     op = LessEqual(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 ################################################################################
@@ -266,7 +276,8 @@ def plus(left, right, name=None):
     """
     from cntk.ops.cntk2 import Plus
     op = Plus(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def minus(left, right, name=None):
@@ -293,7 +304,8 @@ def minus(left, right, name=None):
 
     from cntk.ops.cntk2 import Minus
     op = Minus(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def element_times(left, right, name=None):
@@ -319,7 +331,8 @@ def element_times(left, right, name=None):
     """
     from cntk.ops.cntk2 import ElementTimes
     op = ElementTimes(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def element_divide(left, right, name=None):
@@ -348,7 +361,8 @@ def element_divide(left, right, name=None):
     """
     from cntk.ops.cntk2 import ElementDivide
     op = ElementDivide(left, right, name=name)
-    op.rank = max(left.rank, right.rank)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
     return op
 
 def times(left, right, output_rank=1, name=None):
@@ -394,7 +408,8 @@ def times(left, right, output_rank=1, name=None):
     # CNTK uses column vectors and column major representation, thus we reverse
     # params    
     op = Times(right, left, outputRank=output_rank, name=name)
-    op.rank = left.rank + right.rank -2
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank + op.y.rank - 2    
     return op
 
 def identity(x, name=None):
@@ -414,7 +429,8 @@ def identity(x, name=None):
     """
     from cntk.ops.cntk2 import Identity
     op = Identity(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank   
     return op
 
 ################################################################################
@@ -450,7 +466,8 @@ def floor(arg, name=None):
     """
     from cntk.ops.cntk2 import Floor
     op = Floor(arg, name = name)
-    op.rank = arg.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
     return op
 
 def ceil(arg, name=None):
@@ -474,7 +491,8 @@ def ceil(arg, name=None):
     """
     from cntk.ops.cntk2 import Ceil
     op = Ceil(arg, name = name)
-    op.rank = arg.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
     return op
 
 def round(arg, name=None):
@@ -508,7 +526,8 @@ def round(arg, name=None):
     """
     from cntk.ops.cntk2 import Round
     op = Round(arg, name = name)
-    op.rank = arg.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
     return op
 
 ################################################################################
@@ -544,7 +563,8 @@ def clip(x, min_value, max_value, name=None):
     """    
     from cntk.ops.cntk2 import Clip
     op = Clip(x, min_value, max_value, name = name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
     return op
 
 def relu(x, name=None):
@@ -565,6 +585,7 @@ def relu(x, name=None):
     """
     from cntk.ops.cntk2 import Relu
     op = Relu(x, name=name)
+    wrap_numpy_arrays(op)    
     op.rank = 0
     return op
 
@@ -587,6 +608,7 @@ def sigmoid(x, name=None):
     """
     from cntk.ops.cntk2 import Sigmoid
     op = Sigmoid(x, name=name)
+    wrap_numpy_arrays(op)        
     op.rank = 0
     return op
 
@@ -608,6 +630,7 @@ def tanh(x, name=None):
     """
     from cntk.ops.cntk2 import Tanh
     op = Tanh(x, name=name)
+    wrap_numpy_arrays(op)        
     op.rank = 0
     return op
 
@@ -634,6 +657,7 @@ def softmax(x, name=None):
     """
     from cntk.ops.cntk2 import Softmax
     op = Softmax(x)
+    wrap_numpy_arrays(op)        
     op.rank = 0
     return op
 
@@ -654,7 +678,8 @@ def exp(x, name=None):
     """
     from cntk.ops.cntk2 import Exp
     op = Exp(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
     return op
 
 def log(x, name=None):
@@ -678,7 +703,8 @@ def log(x, name=None):
     """
     from cntk.ops.cntk2 import Log
     op = Log(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
     return op
 
 def sqrt(x, name=None):
@@ -702,7 +728,8 @@ def sqrt(x, name=None):
     """
     from cntk.ops.cntk2 import Sqrt
     op = Sqrt(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
     return op
 
 def square(x, name=None):
@@ -720,7 +747,8 @@ def square(x, name=None):
     """
     from cntk.ops.cntk2 import Square
     op = Square(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
     return op
 
 def abs(x, name=None):
@@ -740,7 +768,8 @@ def abs(x, name=None):
     """
     from cntk.ops.cntk2 import Abs
     op = Abs(x, name=name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
     return op
 
 def cond(flag, value_if_true, value_if_false, name=None):
@@ -764,7 +793,8 @@ def cond(flag, value_if_true, value_if_false, name=None):
     """    
     from cntk.ops.cntk1 import If
     op = If(flag, value_if_true, value_if_false, name = name)
-    op.rank = max(flag.rank(max(value_if_false,value_if_true)))
+    wrap_numpy_arrays(op)        
+    op.rank = max(op.cond.rank(max(op.thenVal,op.elseVal)))
     return op
     
 ################################################################################
@@ -802,6 +832,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None
     
     from cntk.ops.cntk1 import FutureValue
     op = FutureValue(shape, x, time_step, default_hidden_activation, name = name)
+    wrap_numpy_arrays(op)            
     op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
     
@@ -836,6 +867,7 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     
     from cntk.ops.cntk1 import PastValue
     op = PastValue(shape, x, time_step, default_hidden_activation, name = name)
+    wrap_numpy_arrays(op)            
     op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
 
@@ -870,6 +902,7 @@ def reshape(x, shape, name=None):
         # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))    
     op = NewReshape(x, shape, 0, 0, name = name)
+    wrap_numpy_arrays(op)            
     op.rank = 0 if np.isscalar(shape) else len(shape)
     return op
     
@@ -901,7 +934,8 @@ def transpose_dimensions(x, axis1, axis2, name=None):
     cntk_axis1 = x.rank - axis1
     cntk_axis2 = x.rank - axis2
     op = TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)            
+    op.rank = op._.rank
     return op
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
@@ -948,7 +982,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     # python in reverse
     cntk_axis = x.rank - axis
     op = Slice(x, begin_index, end_index, cntk_axis, name=name)
-    op.rank = x.rank
+    op.rank = op._.rank
     return op
 
 ################################################################################
@@ -977,7 +1011,8 @@ def dropout(x, name=None):
     """    
     from cntk.ops.cntk2 import Dropout
     op = Dropout(x, name = name)
-    op.rank = x.rank
+    wrap_numpy_arrays(op)            
+    op.rank = op._.rank
     return op
 
 ################################################################################
