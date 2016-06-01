@@ -36,7 +36,7 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
         over the labels.
         output_vector: the unscaled computed output values from the network
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
@@ -63,7 +63,7 @@ def square_error(target_matrix, output_matrix, name=None):
         hot bit corresponds to the label index
         output_matrix: the output values from the network
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import SquareError
@@ -93,7 +93,7 @@ def error_prediction(target_vector, output_vector, name=None):
         label index
         output_vector: the output values from the network
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ErrorPrediction
@@ -121,7 +121,7 @@ def less(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Less
@@ -145,7 +145,7 @@ def equal(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Equal
@@ -169,7 +169,7 @@ def greater(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Greater
@@ -193,7 +193,7 @@ def greater_equal(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import GreaterEqual
@@ -217,7 +217,7 @@ def not_equal(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import NotEqual
@@ -241,7 +241,7 @@ def less_equal(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import LessEqual
@@ -271,7 +271,7 @@ def plus(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Plus
@@ -298,7 +298,7 @@ def minus(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
@@ -326,7 +326,7 @@ def element_times(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementTimes
@@ -356,7 +356,7 @@ def element_divide(left, right, name=None):
         left: left side tensor
         right: right side tensor
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementDivide
@@ -401,7 +401,7 @@ def times(left, right, output_rank=1, name=None):
             into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
 
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Times   
@@ -424,7 +424,7 @@ def identity(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Identity
@@ -461,7 +461,7 @@ def floor(arg, name=None):
     Args:
         arg: input tensor
         name: the name of the node in the network (optional)
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Floor
@@ -486,7 +486,7 @@ def ceil(arg, name=None):
     Args:
         arg: input tensor
         name: the name of the node in the network (optional)
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Ceil
@@ -521,7 +521,7 @@ def round(arg, name=None):
     Args:
         arg: input tensor
         name: the name of the node in the network (optional)
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Round
@@ -558,7 +558,7 @@ def clip(x, min_value, max_value, name=None):
         min_value: the minimum value to clip element values to
         max_value: the maximum value to clip element values to
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import Clip
@@ -580,7 +580,7 @@ def relu(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Relu
@@ -603,7 +603,7 @@ def sigmoid(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Sigmoid
@@ -625,7 +625,7 @@ def tanh(x, name=None):
     
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Tanh
@@ -652,7 +652,7 @@ def softmax(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Softmax
@@ -673,7 +673,7 @@ def exp(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Exp
@@ -692,7 +692,7 @@ def log(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
                 
     Note:
@@ -719,7 +719,7 @@ def sqrt(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`        
         
     Note:
@@ -742,7 +742,7 @@ def square(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Square
@@ -763,7 +763,7 @@ def abs(x, name=None):
 
     Args:
         x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Abs
@@ -788,7 +788,7 @@ def cond(flag, value_if_true, value_if_false, name=None):
         value_if_true: tensor
         value_if_false: tensor
         name: the name of the node in the network          
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import If
@@ -826,7 +826,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None
         time_step: the number of time steps to look into the future (default 1)
         default_hidden_activation: the default value to use when no future value 
         is available (default 0.1)
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     
@@ -861,7 +861,7 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
         time_step: the number of time steps to look into the past (default 1)
         default_hidden_activation: the default value to use when no past value 
         is available (default 0.1)
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     
@@ -894,7 +894,7 @@ def reshape(x, shape, name=None):
         x: tensor to be reshaped
         shape: a tuple defining the resulting shape
         name: the name of the node in the network            
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import NewReshape
@@ -925,7 +925,7 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         x: tensor to be reshaped
         axis1: the axis to swap with axis2
         axis2: the axis to swap with axis1
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
@@ -974,7 +974,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Slice
@@ -1006,7 +1006,7 @@ def dropout(x, name=None):
             
     Args:        
         x: source tensor
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import Dropout
@@ -1033,7 +1033,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         alias (str): alias to be used in the data file
         dynamic_axis (str): whether the tensor has already the data
         alias (str): optional the alias to be used when serializing the data into an intermediate file
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     '''
     from .. import utils    
@@ -1070,7 +1070,7 @@ def input(shape, dynamic_axis='', name=None):
         shape (tuple): the shape of the input tensor
         dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
         name (str): the name of the node in the network
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
@@ -1120,7 +1120,7 @@ def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name
         alias (str): alias to be used in the data file
         dynamic_axis (str): whether the tensor has already the data
         alias (str): optional the alias to be used when serializing the data into an intermediate file
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     '''
 
@@ -1145,7 +1145,7 @@ def sparse_input(shape, dynamic_axis='', name=None):
         shape (tuple): the shape of the input tensor
         dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
         name (str): the name of the node in the network
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
@@ -1169,7 +1169,7 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
         init_from_file_path (str): the file that contains the initial tensor value. Used only if ``value=None``.
         name (str, optional): the name of the node in the network
 
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
@@ -1243,7 +1243,7 @@ def constant(value, name=None):
     Args:
         value: the tensor constant passed as numpy array
         name: the name of the node in the network
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
 
@@ -1261,7 +1261,7 @@ def dynamic_axis(name=None):
     
     Args:
         name: the name of the node in the network
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     
@@ -1284,7 +1284,7 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
         data_input: the tensor to have its dynamic axis layout adapted
         layout_input: the tensor layout to use for adapting `data_input`s layout
         name: the name of the node in the network
-    returns:
+    Returns:
         :class:`cntk.graph.ComputationNode`
     """
     
