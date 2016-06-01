@@ -29,36 +29,58 @@
 
   </PropertyGroup>
 
-  <PropertyGroup Condition="Exists('$(ACML_PATH)')">
-    <MathLibrayName>ACML</MathLibrayName>
-    <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
-    <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
-    <MathLinkLibrary>libacml_mp_dll.lib</MathLinkLibrary>
-    <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
-    <MathPostBuildPath>$(ACML_PATH)\lib\*.dll</MathPostBuildPath>
-    <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
-    <MathDefine>USE_ACML</MathDefine>
-    <!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(CNTK_MKL)' == '1'">
-    <MKLCustomVersion>1</MKLCustomVersion>
-    <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
-    <!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
-    <!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
-    <!-- this allows for multiple version of the custom DLLs present on the machine -->
-    <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
-    <MathLibrayName>CNTK-Custom MKL (Version: $(MKLCustomVersion))</MathLibrayName>
-    <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
-    <MathLibraryPath>$(MKLDropDirectory)\x64</MathLibraryPath>
-    <MathLinkLibrary>mkl_custom.lib</MathLinkLibrary>
-    <MathDelayLoad>mkl_custom.dll</MathDelayLoad>
-    <!-- mkl custom dll, lib, header files not yet added to build/jenkins machines -->
-    <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
-    <UnitTestDlls>$(OutDir)mkl_custom.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
-    <MathDefine>USE_MKL</MathDefine>
-  </PropertyGroup>
-
+  <Choose>
+    <When Condition="Exists('$(ACML_PATH)')">
+      <PropertyGroup>
+        <MathLibrayName>ACML</MathLibrayName>
+        <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
+        <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
+        <MathLinkLibrary>libacml_mp_dll.lib</MathLinkLibrary>
+        <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
+        <MathPostBuildPath>$(ACML_PATH)\lib\*.dll</MathPostBuildPath>
+        <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
+        <MathDefine>USE_ACML</MathDefine>
+        <!-- TODO remove USE_ACML and USE_MKL once we remove all the dependencies on ACML -->    
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(CNTK_MKL)' == '1' And '$(CNTK_SEQUENTIAL)' == '1'">
+      <PropertyGroup>    
+        <MKLCustomVersion>1</MKLCustomVersion>
+        <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
+        <!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
+        <!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
+        <!-- this allows for multiple version of the custom DLLs present on the machine -->
+        <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
+        <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
+        <MathDefine>USE_MKL</MathDefine>
+        <MathLibrayName>CNTK-Custom MKL Parallel (Version: $(MKLCustomVersion))</MathLibrayName>
+        <MathLibraryPath>$(MKLDropDirectory)\x64\parallel</MathLibraryPath>
+        <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
+        <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+        <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
+        <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(CNTK_MKL)' == '1' And '$(CNTK_SEQUENTIAL)' != '1'">
+      <PropertyGroup>            
+        <MKLCustomVersion>1</MKLCustomVersion>
+        <MKLDropDirectory>$(CNTK_MKL_PATH)\$(MKLCustomVersion)</MKLDropDirectory>
+        <!-- The prebuild custom MKL DLLs and header files have to be precopied into the directory defined by the user defined CNTK_MKL_PATH environment variable -->
+        <!-- inside this directory the MKLCustomVersion defines the version of the custom MKL DLLs to use in this project -->
+        <!-- this allows for multiple version of the custom DLLs present on the machine -->
+        <!-- TODO: check if MKLDropDirectory is existing, report error/warning if not found -->
+        <MathIncludePath>$(MKLDropDirectory)\include</MathIncludePath>
+        <MathDefine>USE_MKL</MathDefine>
+        <MathLibrayName>CNTK-Custom MKL Sequential (Version: $(MKLCustomVersion))</MathLibrayName>
+        <MathLibraryPath>$(MKLDropDirectory)\x64\sequential</MathLibraryPath>
+        <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
+        <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+        <MathPostBuildPath>$(MathLibraryPath)\*.dll</MathPostBuildPath>
+        <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>      
+      </PropertyGroup>
+    </When>
+  </Choose>
+  
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
