@@ -45,7 +45,6 @@ int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warn
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
-
 #include <memory>
 #include "CrossProcessMutex.h"
 
@@ -122,6 +121,8 @@ public:
     static const int AllDevices = -1;                                                         // can be used to specify all GPUs in GetDevices() call
     static const int RequeryDevices = -2;                                                     // Requery refreshing statistics and picking the same number as last query
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal); // get multiple devices
+    std::vector<ProcessorData *> GetProcessorData();
+
 private:
     bool LockDevice(int deviceId, bool trial = true);
 };
@@ -525,6 +526,33 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     }
 
     return best; // return the array of the best GPUs
+}
+
+std::vector<GpuData> GetGpusData()
+{
+    std::vector<GpuData> data;
+
+    auto bestGpu = make_unique<BestGpu>();
+
+    std::vector<ProcessorData*> processorData = bestGpu->GetProcessorData();
+    if (!processorData.empty())
+    {
+        for (ProcessorData* pd : processorData)
+        {
+            GpuData gpuData;
+            gpuData.major = pd->deviceProp.major;
+            gpuData.minor = pd->deviceProp.minor;
+            gpuData.cudaCores = pd->cores;
+            gpuData.deviceId = pd->deviceId;
+            data.push_back(gpuData);
+         }
+    }
+
+    return std::move(data);
+}
+
+std::vector<ProcessorData*> BestGpu::GetProcessorData(){
+    return m_procData;
 }
 
 // QueryNvmlData - Query data from the Nvidia Management Library, and accumulate counters,
