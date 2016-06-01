@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 
-// TODO: more details when tracing warnings 
+// TODO: more details when tracing warnings
 // (e.g., buffer content around the char that triggered the warning)
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
@@ -28,27 +28,27 @@ public:
     ~TextParser();
 
     // Retrieves a chunk of data.
-    ChunkPtr GetChunk(size_t chunkId) override;
+    ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Get information about chunks.
     ChunkDescriptions GetChunkDescriptions() override;
 
     // Get information about particular chunk.
-    void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
 
-    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
     // Builds an index of the input data.
     void Initialize();
 
-    // A buffer to keep data for all samples in a (variable length) sequence 
+    // A buffer to keep data for all samples in a (variable length) sequence
     // from a single input stream.
     struct InputStreamBuffer
     {
         virtual ~InputStreamBuffer() { };
 
-        size_t m_numberOfSamples = 0;
+        uint32_t m_numberOfSamples = 0;
         std::vector<ElemType> m_buffer;
     };
 
@@ -61,8 +61,8 @@ private:
         }
     };
 
-    // In case of sparse input, we also need a vector of 
-    // indices (one index for each input value) and a vector 
+    // In case of sparse input, we also need a vector of
+    // indices (one index for each input value) and a vector
     // of NNZ counts (one for each sample).
     struct SparseInputStreamBuffer : InputStreamBuffer
     {
@@ -76,10 +76,10 @@ private:
 
     // A chunk of input data in the text format.
     class TextDataChunk;
-    
+
     typedef std::shared_ptr<TextDataChunk> TextChunkPtr;
 
-    enum TraceLevel 
+    enum TraceLevel
     {
         Error = 0,
         Warning = 1,
@@ -115,13 +115,13 @@ private:
     bool m_hadWarnings;
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
-    unsigned int m_numRetries; // specifies the number of times an unsuccessful 
+    unsigned int m_numRetries; // specifies the number of times an unsuccessful
     // file operation should be repeated (default value is 5).
 
     // Corpus descriptor.
     CorpusDescriptorPtr m_corpus;
 
-    // throws runtime exception when number of parsing errors is 
+    // throws runtime exception when number of parsing errors is
     // greater than the specified threshold
     void IncrementNumberOfErrorsOrDie();
 
@@ -188,7 +188,7 @@ private:
 
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
 
-    const std::wstring& GetSequenceKey(const SequenceDescriptor& s) const;
+    const std::string& GetSequenceKey(const SequenceDescriptor& s) const;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };
