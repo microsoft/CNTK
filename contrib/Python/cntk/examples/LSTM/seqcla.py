@@ -132,7 +132,6 @@ def seqcla():
     my_sgd = C.SGDParams(epoch_size=0, minibatch_size=10, learning_rates_per_mb=0.1, max_epochs=3)    
     
     with C.LocalExecutionContext('seqcla') as ctx:
-        ctx.clean_up=False
         # train the model
         ctx.train(root_nodes=[ce], training_params=my_sgd, input_map=train_reader.map(
                   features, alias='x', dim=vocab, format='Sparse').map(

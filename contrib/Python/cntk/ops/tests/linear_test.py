@@ -240,7 +240,7 @@ TIMES_PAIRS = [
 ]
 
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
-def test_op_times(left_operand, right_operand, device_id, precision,
+def _test_op_times(left_operand, right_operand, device_id, precision,
         left_matrix_type, right_matrix_type):
     if right_matrix_type == 'sparse':
         pytest.skip('second operator of times() has to be dense')
