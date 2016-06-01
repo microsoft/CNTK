@@ -234,8 +234,8 @@ def test_op_identity(tensor, device_id, precision):
 
 
 TIMES_PAIRS = [
-    #([[30.]], [[10.]]),
-    #([[1.5, 2.1]], [[10.], [20.]]),
+    ([[30.]], [[10.]]),
+    ([[1.5, 2.1]], [[10.], [20.]]),
     ([[100., 200.]], [[10.], [20.]]),
 ]
 
@@ -266,7 +266,7 @@ def test_op_times(left_operand, right_operand, device_id, precision,
     right_as_input = times(constant(left_operand), b)
 
     unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=False, backward_pass=False)
+                    precision=precision, clean_up=True, backward_pass=False)
 
     unittest_helper(right_as_input, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)
