@@ -1098,6 +1098,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{25E144C1-0
 		Examples\SequenceToSequence\CMUDict\Data\README.txt = Examples\SequenceToSequence\CMUDict\Data\README.txt
 		Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md = Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md
 	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "05_ConvLocal", "05_ConvLocal", "{3F77BF79-E0D3-4D60-8685-5A449F164081}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.linux.txt
