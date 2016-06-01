@@ -49,7 +49,7 @@ namespace Microsoft {
 				size_t m_cachedSize;
 				size_t m_maxCapacity;
 				size_t m_readIndex;
-				void* m_memBlock;
+				char* m_memBlock;
 			};
 		}
 	}

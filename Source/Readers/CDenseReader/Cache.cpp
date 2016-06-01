@@ -111,7 +111,7 @@ namespace Microsoft {
 
 			void MemCache::AllocMem(int maxCapacity) {
 				while (maxCapacity > 0) {
-					this->m_memBlock = malloc(maxCapacity);
+					this->m_memBlock = (char*)malloc(maxCapacity);
 					if (this->m_memBlock != NULL) {
 						this->m_maxCapacity = maxCapacity;
 						break;
@@ -132,7 +132,7 @@ namespace Microsoft {
 				if (size + this->m_cachedSize > this->m_maxCapacity) {
 					return false;
 				}
-				void* memBlock = (char*)m_memBlock + m_cachedSize;
+				void* memBlock = m_memBlock + m_cachedSize;
 				memcpy(memBlock, buffer, size);
 				this->m_blocks.push_back({ memBlock, size });
 				this->m_cachedSize += size;
