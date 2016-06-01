@@ -109,14 +109,14 @@ namespace Microsoft {
 				this->AllocMem(maxCapacity);
 			}
 
-			void MemCache::AllocMem(int maxCapacity) {
+			void MemCache::AllocMem(size_t maxCapacity) {
 				while (maxCapacity > 0) {
 					this->m_memBlock = (char*)malloc(maxCapacity);
 					if (this->m_memBlock != NULL) {
 						this->m_maxCapacity = maxCapacity;
 						break;
 					}
-					maxCapacity = (int)(maxCapacity * 0.8f);
+					maxCapacity = (size_t)(maxCapacity * 0.8);
 				}
 			}
 

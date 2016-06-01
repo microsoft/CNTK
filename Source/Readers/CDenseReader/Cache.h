@@ -42,7 +42,7 @@ namespace Microsoft {
 				~MemCache();
 
 			private:
-				void AllocMem(int maxCapacity);
+				void AllocMem(size_t maxCapacity);
 
 			private:
 				std::vector<std::pair<void*, size_t> > m_blocks;
