@@ -475,7 +475,8 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 
 CDENSEREADER_SRC =\
 	$(SOURCEDIR)/Readers/CDenseReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/CDenseReader/CDenseReader.cpp
+	$(SOURCEDIR)/Readers/CDenseReader/CDenseReader.cpp \
+	$(SOURCEDIR)/Readers/CDenseReader/Cache.cpp
 
 CDENSEREADER_CSRC =\
 	$(SOURCEDIR)/Readers/CDenseReader/LzmaDec.c \

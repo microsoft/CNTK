@@ -120,6 +120,10 @@ namespace Microsoft {
 				}
 			}
 
+			size_t MemCache::Capacity() {
+				return this->m_maxCapacity;
+			}
+
 			MemCache::~MemCache() {
 				delete[] this->m_memBlock;
 			}

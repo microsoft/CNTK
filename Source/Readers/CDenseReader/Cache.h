@@ -38,6 +38,7 @@ namespace Microsoft {
 				void ResetReadPos();
 				size_t Read(void* buffer);
 				size_t CachedBlocksNum();
+				size_t Capacity();
 				~MemCache();
 
 			private:

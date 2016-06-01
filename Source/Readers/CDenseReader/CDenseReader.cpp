@@ -164,6 +164,10 @@ namespace Microsoft {
 				}
 				if (memCacheSize > 0) {
 					this->m_memCache = new MemCache(memCacheSize);
+					cerr << "MemCache capacity: "
+						<< this->m_memCache->Capacity()
+						<< ", config: " << memCacheSize
+						<< endl;
 				}
 
 				m_blockSizeOfUnzippedBuffer = 4;
