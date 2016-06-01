@@ -2744,6 +2744,42 @@ __global__ void _sparseCSRElemMulDense(
 }
 
 template <class ElemType>
+__global__ void _sparseCSCElemMulsparseCSC(
+    const int m,
+    const CUDA_LONG n,
+    const ElemType* a_dVal,
+    const int* a_dRow,
+    const int* a_dCol,
+    const ElemType* b_dVal,
+    const int* b_dRow,
+    const int* b_dCol,
+    ElemType* c)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    int startA = a_dCol[id];
+    int endA = a_dCol[id + 1];
+
+    int startB = b_dCol[id];
+    int endB = b_dCol[id + 1];
+
+    while (startA < endA && startB < endB)
+    {
+        int aRow = a_dRow[startA];
+        int bRow = b_dRow[startB];
+
+        if (aRow == bRow)
+        {
+            c[IDX2C(aRow, id, m)] = a_dVal[startA] * b_dVal[startB];
+            startA++;
+        }
+        else if (aRow < bRow) startA++;
+        else startB++;     
+    }
+}
+
+template <class ElemType>
 __global__ void _isValid(
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,

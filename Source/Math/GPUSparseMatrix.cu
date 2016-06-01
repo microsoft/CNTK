@@ -2006,6 +2006,30 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
     return GPUSparseMatrix<ElemType>::ElementProductOf(b, a);
 }
 
+// sparse x sparse = sparse
+template <class ElemType>
+GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+    if (a.GetFormat() != matrixFormatSparseCSC)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+        LogicError("ElementProductOf: matrix dimensions mismatch");
+
+    b.PrepareDevice();
+    GPUMatrix<ElemType> c(b.GetNumRows(), b.GetNumCols(), b.GetComputeDeviceId());
+
+    int m = (int)a.GetNumRows();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _sparseCSCElemMulsparseCSC<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock >>>(m, n, a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation(), c.Data());
+
+    // convert dense to sparse CSC
+    GPUSparseMatrix<ElemType> cs(c, MatrixFormat::matrixFormatSparseCSC);
+    return cs;
+}
+
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
