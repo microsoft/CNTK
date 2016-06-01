@@ -190,9 +190,9 @@ def test_op_slice_overload(device_id, precision):
 TRANSPOSE_DIMS_TEST_CASES = [
     #(input_shape, axis1, axis2, expected_output_shape)
     ([2, 3],     0, 1, [3, 2]),
-    #([2, 3],    1, 0, [3, 2]),    
-    #([2, 3, 5], 0, 2, [5, 3, 2]), 
-    #([2, 2, 2], 0, 1, [2, 2, 2]),
+    ([2, 3],    1, 0, [3, 2]),    
+    ([2, 3, 5], 0, 2, [5, 3, 2]), 
+    ([2, 2, 2], 0, 1, [2, 2, 2]),
 ]
 
 @pytest.mark.parametrize("input_shape, axis1, axis2, expected_output_shape", TRANSPOSE_DIMS_TEST_CASES)
