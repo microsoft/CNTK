@@ -3,6 +3,7 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "RandomOrdering.h"
+#include "Cache.h"
 #include <string>
 #include <map>
 #include <vector>
@@ -137,18 +138,18 @@ namespace Microsoft {
 				int GetMinimumEpochSizeCrossAllWorker(size_t mbSize, size_t subsetNum, size_t numSubsets);
 				int32_t Copy2Buffer(void *bufferInProduce, size_t numToRead);
 
-				size_t ReadZipData(ifstream& ifile, size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache); //return: cached block num
+				void ReadZipData(bool saveToCache); 
+				void ReadMemCache(size_t limit);
+				void ReadDiskCache(size_t limit);
 
-				void ReadCachedZipData(size_t* read_order, size_t numToTread);
+				void PrintZipDataQueueStat(const string& tag);
+				void IncBlockCntBeenRead();
 
-				std::vector<ifstream*> m_inFiles;
+				MemCache *m_memCache;
+				DiskCache *m_diskCache;
+				std::vector<size_t> m_zipFileReadOrder; // = original read_order - memCache - diskCache
 
-				fstream m_cacheFile;
-				size_t m_maxCacheSize; //MB
-				size_t m_cachedBlockNum;
-
-				size_t m_readThread;
-				std::string m_readFileName;
+				ifstream m_inFile;
 
 				std::wstring m_fileName;
 				size_t m_fileSize;

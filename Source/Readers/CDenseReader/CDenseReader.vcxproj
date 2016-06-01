@@ -105,6 +105,7 @@
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="7zTypes.h" />
+    <ClInclude Include="Cache.h" />
     <ClInclude Include="CDenseReader.h" />
     <ClInclude Include="crc32.h" />
     <ClInclude Include="deflate.h" />
@@ -145,6 +146,7 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="adler32.c" />
+    <ClCompile Include="Cache.cpp" />
     <ClCompile Include="CDenseReader.cpp" />
     <ClCompile Include="compress.c" />
     <ClCompile Include="crc32.c" />

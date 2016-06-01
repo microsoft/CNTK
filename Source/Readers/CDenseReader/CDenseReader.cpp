@@ -45,6 +45,22 @@ namespace Microsoft {
 			DWORD HIDWORD(size_t size) { return size >> 32; }
 			DWORD LODWORD(size_t size) { return size & 0xFFFFFFFF; }
 
+			string FormatTime(time_t tm) {
+				char buffer[9] = { 0 };
+				strftime(buffer, 9, "%H:%M:%S", localtime(&tm));
+				return buffer;
+			}
+
+			void PrintTime(std::function<void()> fn, const std::string& tag) {
+				auto start = time(0);
+				cerr << tag << " started at " << FormatTime(start) << endl;
+
+				fn();
+
+				auto end = time(0);
+				cerr << tag << " finished at " << FormatTime(end) << ",in " << end - start << "s" << endl;
+			}
+
 			template <class ElemType>
 			SDenseBinaryMatrix<ElemType>::SDenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols) : BDenseBinaryMatrix<ElemType>(name, deviceID, numRows, numCols) {
 				//this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
@@ -112,8 +128,11 @@ namespace Microsoft {
 			DenseBinaryInput<ElemType>::DenseBinaryInput(std::wstring fileName) : m_fileName(fileName), m_readOrder(nullptr), m_readOrderLength(0), m_randomize(false),
 				m_startBlock(0), m_unzippedBuffer(nullptr), m_zippedFileBlockBuffer(nullptr), m_unzippedBufferLen(0), m_sampleCntInUnzippedBuffer(0), m_lastValidPosOfUnzippedBuffer(-1), m_firstValidPosOfUnzippedBuffer(0), m_blockCntBeenRead(0),
 				m_blockCntBeenCopied(0), m_dThreadCnt(0), m_batchCntBeenCopied(0), m_processedBlockCnt(0) {
-				this->m_readFileName = msra::strfun::utf8(m_fileName);
-				//m_inFile.open(this->m_readFileName, ifstream::binary | ifstream::in);
+				auto name = msra::strfun::utf8(m_fileName);
+				m_inFile.open(name, ifstream::binary | ifstream::in);
+				if (!m_inFile) {
+					RuntimeError("open file %s failed", name.c_str());
+				}
 			}
 
 			template<class ElemType>
@@ -125,23 +144,6 @@ namespace Microsoft {
 			template<class ConfigRecordType>
 			void DenseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename, const ConfigRecordType & config) {
 
-				//open file stream
-				m_readThread = (size_t)config(L"readThread", (size_t)(1));
-				for (int i = 0; i < this->m_readThread; ++i) {
-					auto inFile = new ifstream();
-					inFile->open(this->m_readFileName, ifstream::binary | ifstream::in);
-					if (!*inFile) {
-						cerr << "open " << this->m_readFileName << " failed at thread " << i << endl;
-						delete inFile;
-						break;
-					}
-					this->m_inFiles.push_back(inFile);
-				}
-				if (this->m_inFiles.empty()) {
-					RuntimeError("open file %s failed", this->m_readFileName.c_str());
-				}
-				cerr << "read thread, actual: " << this->m_inFiles.size() << ", config: " << m_readThread << endl;
-
 				GetZippedFileInfo();
 
 				m_dThreadCnt = config(L"dThreadCnt", (int32_t)4);
@@ -152,7 +154,17 @@ namespace Microsoft {
 				m_mbSize = (size_t)m_microBatchSize;
 
 				//cache is disabled by default
-				m_maxCacheSize = ((size_t)config(L"maxCacheSize", (size_t)(0))) * 1024 * 1024;
+				size_t diskCacheSize = ((size_t)config(L"diskCacheSize", (size_t)(0))) * 1024 * 1024;
+				size_t memCacheSize = ((size_t)config(L"memCacheSize", (size_t)(0))) * 1024 * 1024;
+
+				this->m_diskCache = NULL;
+				this->m_memCache = NULL;
+				if (diskCacheSize > 0) {
+					this->m_diskCache = new DiskCache(diskCacheSize);
+				}
+				if (memCacheSize > 0) {
+					this->m_memCache = new MemCache(memCacheSize);
+				}
 
 				m_blockSizeOfUnzippedBuffer = 4;
 				size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize);
@@ -216,10 +228,6 @@ namespace Microsoft {
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::GetZippedFileInfo()
 			{
-				auto& m_inFile = *this->m_inFiles[0];
-
-				cout << "GetZippedFileInfo Begin" << endl;
-
 				m_inFile.seekg(0, ios::end);
 				m_fileSize = (size_t)m_inFile.tellg();
 				if (m_fileSize <= 0)
@@ -270,8 +278,7 @@ namespace Microsoft {
 					m_blockSize = max(m_blockSize, block_size + 8);
 					m_blockSampleCnt = max(m_blockSampleCnt, block_sample_cnt);
 				}
-
-				cout << "GetZippedFileInfo End" << endl;
+				cout << "GetZippedFileInfo finished" << endl;
 			}
 
 			template<class ElemType>
@@ -349,21 +356,6 @@ namespace Microsoft {
 				return minEpochSize;
 			}
 
-			void InitCacheDir(const char* dirPath, int maxFileIndex = 100) {
-				//std C++ has no protable code to iterate a dir
-#ifdef _WIN32
-				int flag = _mkdir(dirPath);
-#else
-				int flag = mkdir(dirPath, 0755);
-#endif
-				if (flag != 0) {
-					char buf[255];
-					for (int i = 0; i < maxFileIndex; ++i) {
-						sprintf(buf, "%s/%d", dirPath, i);
-						remove(buf);
-					}
-				}
-			}
 
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t subsetNum, size_t numSubsets) {
@@ -404,78 +396,45 @@ namespace Microsoft {
 					m_bQueueBufferAllocated = true;
 				}
 
-				bool enableCache = (this->m_maxCacheSize != 0);
-
 				if (firstEpoch) {
-					if (enableCache){
-						//init cache dir
-#ifdef _WIN32
-						const char dirName[] = "./cache";
-#else
-						const char dirName[] = "/tmp/cachefromcdensereader";
-#endif
-						InitCacheDir(dirName);
-
-						//open cache file
-						char buf[255];
-						for (int i = 0; i < 100; ++i) {
-							sprintf(buf, "%s/%d", dirName, i);
-							this->m_cacheFile.open(buf, ios::in | ios::out | ios::binary | ios::trunc);
-
-							if (this->m_cacheFile) {
-								break;
-							}
-						}
-
-						if (!this->m_cacheFile) {
-							RuntimeError("allocate cache file failed");
-						}
+					for (int i = 0; i < m_readOrderLength; ++i) {
+						this->m_zipFileReadOrder.push_back(m_readOrder[i]);
 					}
-					this->m_cachedBlockNum = 0;
+				}
+
+				int totBufferCnt = this->m_zipedDataToConsume.size() + this->m_zipedDataToProduce.size();
+
+				//zip file
+				std::thread readZipData([this](bool firstEpoch)
+				{
+					PrintTime([=]{
+						ReadZipData(firstEpoch);
+					}, "Zip");
+				}, firstEpoch);
+				readZipData.detach();
+
+				//mem cache
+				if (this->m_memCache && !firstEpoch) {
+					std::thread tReadMemCache([this](int limit) {
+						PrintTime([=] {
+							ReadMemCache(limit);
+						}, "Mem");
+					}, totBufferCnt / 2);
+					tReadMemCache.detach();
+				}
+
+				//disk cache
+				if (this->m_diskCache && !firstEpoch) {
+					std::thread tReadDiskCache([this](int limit) {
+						PrintTime([=] {
+							ReadDiskCache(limit);
+						}, "Disk");
+					}, 0);
+					tReadDiskCache.detach();
 				}
 
 
-				//read thread
-				bool writeCache = (firstEpoch && enableCache);
-
-				//if write cache, only start 1 thread
-				size_t threadNum = writeCache ? 1 : this->m_inFiles.size();
-
-				//read threads
-				for (size_t i = 0; i < threadNum; ++i) {
-					std::thread readZipData([this](bool writeCache, size_t idx, size_t num)
-					{
-						//only the first thread write cache
-						writeCache &= (idx == 0);
-
-						//compute the start index & length
-						const size_t delta = (this->m_readOrderLength - this->m_cachedBlockNum) / num;
-						int skip = delta * idx + this->m_cachedBlockNum;
-						int readNum = (idx != (num - 1)) ? delta : this->m_readOrderLength - skip;
-
-						if (readNum > 0) {
-							size_t writedBlockNum = this->ReadZipData(
-								*this->m_inFiles[idx], m_readOrder + skip,
-								readNum, this->m_maxCacheSize, writeCache);
-
-							if (writeCache) {
-								this->m_cachedBlockNum = writedBlockNum;
-							}
-						}
-					}, writeCache, i, threadNum);
-					readZipData.detach();
-				}
-
-				//cache thread
-				if (!firstEpoch && enableCache && this->m_cachedBlockNum > 0) {
-					std::thread readCacheData([this]
-					{
-						this->ReadCachedZipData(this->m_readOrder, this->m_cachedBlockNum);
-					});
-					readCacheData.detach();
-				}
-
-
+				//unzip
 				for (m_dIndex = 0; m_dIndex < m_dThreadCnt; m_dIndex++){
 					m_unzipThreads[m_dIndex] = std::thread([this](int idx) { this->UnzipData(idx, m_numBlocks); }, m_dIndex);
 					m_unzipThreads[m_dIndex].detach();
@@ -609,76 +568,91 @@ namespace Microsoft {
 
 
 			template<class ElemType>
-			void DenseBinaryInput<ElemType>::ReadCachedZipData(size_t* read_order, size_t numToRead) {
+			void DenseBinaryInput<ElemType>::IncBlockCntBeenRead() {
+				this->m_blockCntLocker.lock();
+				m_blockCntBeenRead += 1;
+				this->m_blockCntLocker.unlock();
+			}
 
-				size_t limit = (this->m_zipedDataToConsume.size() + this->m_zipedDataToProduce.size()) / 2;
-
-				this->m_cacheFile.seekg(0, ios::beg);
-
-				time_t start = time(0);
-
-				for (int i = 0; i < numToRead; ++i) {
-					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
-					cerr << "read cached data:"
-						<< "produce:" << this->m_zipedDataToProduce.size()
-						<< ","
-						<< "consume:" << this->m_zipedDataToConsume.size()
-						<< endl;
-
-					size_t readSize = m_blockSizeInByte[read_order[i]];
-					this->m_cacheFile.read((char*)zipDataBuffer, readSize);
-
-					m_zipedDataToConsume.push(zipDataBuffer);
-
-					m_blockCntLocker.lock();
-					m_blockCntBeenRead += 1;
-					m_blockCntLocker.unlock();
-				}
-
-				cerr << "read cached data finished in " << time(0) - start << "s" << endl;
+			template<class ElemType> 
+			void DenseBinaryInput<ElemType>::PrintZipDataQueueStat(const string& tag) {
+				cerr << tag
+					<< " read zip data:"
+					<< "produce:" << this->m_zipedDataToProduce.size()
+					<< ","
+					<< "consume:" << this->m_zipedDataToConsume.size()
+					<< endl;
 			}
 
 			template<class ElemType>
-			size_t DenseBinaryInput<ElemType>::ReadZipData(
-				ifstream& ifile, size_t* read_order, size_t numToRead, size_t maxCacheSize, bool writeToCache)
-			{
-				size_t cachedNum = 0;
-
+			void DenseBinaryInput<ElemType>::ReadZipData(bool writeToCache) {
 				time_t start = time(0);
 
-				for (int i = 0; i < numToRead; i++) {
+				std::vector<size_t> notCachedBlock;
+
+				auto& read_order = this->m_zipFileReadOrder;
+				for (size_t i = 0; i < read_order.size(); i++) {
+					//buffer
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
-					cerr << "read zip data:"
-						<< "produce:" << this->m_zipedDataToProduce.size()
-						<< ","
-						<< "consume:" << this->m_zipedDataToConsume.size()
-						<< endl;
-
 					size_t readSize = m_blockSizeInByte[read_order[i]];
-					ifile.seekg(m_blockOffset[read_order[i]], ios::beg);
 
-					ifile.read((char*)zipDataBuffer, readSize);
+					this->PrintZipDataQueueStat("Zip");
+
+					//read
+					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
+					this->m_inFile.read((char*)zipDataBuffer, readSize);
 					m_zipedDataToConsume.push(zipDataBuffer);
+					this->IncBlockCntBeenRead();
 
-					this->m_blockCntLocker.lock();
-					m_blockCntBeenRead += 1;
-					this->m_blockCntLocker.unlock();
+					//cache
+					bool cached = false;
 
-
-					if (writeToCache && maxCacheSize >= readSize) {
-						this->m_cacheFile.write((char*)zipDataBuffer, readSize);
-						cachedNum += 1;
-						maxCacheSize -= readSize;
+					if (writeToCache) {
+						if (this->m_memCache && !cached) {
+							cached = this->m_memCache->Write(zipDataBuffer, readSize);
+						}
+						if (this->m_diskCache && !cached) {
+							cached = this->m_diskCache->Write(zipDataBuffer, readSize);
+						}
 					}
-					else {
-						//stop caching
-						writeToCache = false;
+
+					if (!cached) {
+						notCachedBlock.push_back(read_order[i]);
 					}
+
 				}
 
-				cerr << "read zip finished in " << time(0) - start << "s" << endl;
+				read_order = notCachedBlock;
+			}
 
-				return cachedNum;
+			template<class ElemType>
+			void DenseBinaryInput<ElemType>::ReadMemCache(size_t limit) {
+				auto& cache = *this->m_memCache;
+				cache.ResetReadPos();
+				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
+					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
+
+					this->PrintZipDataQueueStat("Mem");
+
+					cache.Read(zipDataBuffer);
+					this->m_zipedDataToConsume.push(zipDataBuffer);
+					this->IncBlockCntBeenRead();
+				}
+			}
+
+			template<class ElemType>
+			void DenseBinaryInput<ElemType>::ReadDiskCache(size_t limit) {
+				auto& cache = *this->m_diskCache;
+				cache.ResetReadPos();
+				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
+					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
+
+					this->PrintZipDataQueueStat("Disk");
+
+					cache.Read(zipDataBuffer);
+					this->m_zipedDataToConsume.push(zipDataBuffer);
+					this->IncBlockCntBeenRead();
+				}
 			}
 
 
