@@ -370,6 +370,27 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
+void PrintGpuInfo()
+{
+    std::vector<GpuData> gpusData = GetGpusData();
+
+    if (gpusData.empty())
+    {
+        return;
+    }
+
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "GPU info: \n\n");
+
+    for (GpuData data : gpusData)
+    {
+        LOGPRINTF(stderr, "\t\tDevice ID: %d\n", data.deviceId);
+        LOGPRINTF(stderr, "\t\tGPU Compute Capability: %d.%d\n", data.major, data.minor);
+        LOGPRINTF(stderr, "\t\tCUDA cores: %d\n\n", data.cudaCores);
+    }
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+}
+
 // ---------------------------------------------------------------------------
 // main() for use with BrainScript
 // ---------------------------------------------------------------------------
@@ -499,6 +520,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // echo config info to log
     PrintBuiltInfo();
 
+    //echo gpu info to log
+    PrintGpuInfo();
+
     // execute the actions
     // std::string type = config(L"precision", "float");
     int numCPUThreads = config(L"numCPUThreads", 0);
@@ -599,6 +623,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     PrintBuiltInfo(); // this one goes to log file
+    PrintGpuInfo();
+
     std::string timestamp = TimeDateStamp();
 
     // dump config info
