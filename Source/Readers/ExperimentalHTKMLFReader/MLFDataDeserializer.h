@@ -24,18 +24,18 @@ public:
     MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const std::wstring& streamName);
 
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
-    void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& s) override;
+    bool GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& s) override;
 
     // Gets description of all chunks.
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Get sequence descriptions of a particular chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& s) override;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& s) override;
 
     // Retrieves a chunk with data.
     // TODO: Currently it is a single chunk => all labels are loaded into memory.
     // TODO: After we switch the timeline to work in chunks, we will also introduce chunking of labels.
-    virtual ChunkPtr GetChunk(size_t) override;
+    virtual ChunkPtr GetChunk(ChunkIdType) override;
 
 private:
     class MLFChunk;

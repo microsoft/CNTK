@@ -11,6 +11,9 @@ import getopt
 ImgSize = 32
 NumFeat = ImgSize * ImgSize * 3
 
+sys.path.append("../../../../Source/Readers/CNTKTextFormatReader")
+from uci_to_cntk_text_format_converter import convert
+
 def readBatch(src, outFmt):
     with open(src, 'rb') as f:
         d = cp.load(f)
@@ -88,7 +91,11 @@ if __name__ == "__main__":
     trn, tst = loadData('http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz', fmt)
     print ('Writing train text file...')
     np.savetxt(r'./Train.txt', trn, fmt = '%u', delimiter='\t')
+    convert(r'./Train.txt', r'./Train_cntk_text.txt', 1, 3072, 0, 1, 10)
+    os.remove(r'./Train.txt');
     print ('Done.')
     print ('Writing test text file...')
     np.savetxt(r'./Test.txt', tst, fmt = '%u', delimiter='\t')
+    convert(r'./Test.txt', r'./Test_cntk_text.txt', 1, 3072, 0, 1, 10)
+    os.remove(r'./Test.txt');
     print ('Done.')

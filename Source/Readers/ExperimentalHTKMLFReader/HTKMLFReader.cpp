@@ -184,7 +184,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             // Old config, the truncation length is specified as the minibatch size.
             // In this case the truncation size is mbSize
             // and the real minibatch size is truncation size * nbruttsineachrecurrentiter
-            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.");
+            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.\n");
             truncationLength = minibatchSize;
             size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
             minibatchSize = numParallelSequences * truncationLength;
