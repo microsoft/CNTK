@@ -59,3 +59,14 @@ def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
 def test_is_tensor(data, expected):
     assert is_tensor(data) == expected
 
+@pytest.mark.parametrize("data, expected", [
+    ([], False),
+    ([1], False),
+    ([[1, 2]], False),
+    ([[]], False),
+    ([[AA([1, 2])]], False),
+    ([AA([1, 2])], True),
+    ([AA([1, 2]), AA([])], True),
+])
+def test_is_tensor_list(data, expected):
+    assert is_tensor_list(data) == expected

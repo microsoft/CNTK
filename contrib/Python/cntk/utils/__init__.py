@@ -156,9 +156,6 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
 
     return '\n'.join(lines)
 
-
-
-
 def is_tensor(data):
     '''
     Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
@@ -198,6 +195,14 @@ def is_tensor(data):
 
     return True
 
+def is_tensor_list(data):
+    '''
+    Checks whether the data is a CNTK sequence, which is expressed in Python as
+    a list of varying sized NumPy objects.
+    '''
+    is_list = isinstance(data, list)
+    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray) 
+
 def get_temp_filename(directory=None):
     '''
     Create and return a temporary filename.
@@ -221,6 +226,14 @@ def get_temp_filename(directory=None):
     return tf.name
 
 def wrap_numpy_arrays(node):
+    '''
+    for a given computation node, wrapes its tensor inputs that are numpy arrays
+    into input and constant nodes
+    
+    Args:
+        node (:class:`cntk.graph.ComputationNode`): the computation node that will
+        get its inputs wraped
+    '''
     from ..graph import ComputationNode, _InputComputationNodeBase
     from ..ops import input_numpy, constant
     
@@ -231,7 +244,7 @@ def wrap_numpy_arrays(node):
         for p in node.params:
             if p in node.inputs:
                 val = getattr(node, p)
-                if not isinstance(val, ComputationNode):
+                if not (isinstance(val, ComputationNode) or isinstance(val, str)):
                     # One param needs to be an Input() node. This will be fixed in 
                     # CNTK soon, so that we can remove this workaround and evaluate a 
                     # network with no inputs.
