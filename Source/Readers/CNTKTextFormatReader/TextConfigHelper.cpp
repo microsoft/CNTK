@@ -117,10 +117,12 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 
     m_filepath = msra::strfun::utf16(config(L"file"));
 
-    // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput.
     wstring randomizeString = config(L"randomize", wstring());
     if (!_wcsicmp(randomizeString.c_str(), L"none")) // TODO: don't support case-insensitive option strings in the new reader
     {
+        // "none" is only accepted to be backwards-compatible (DoWriteOutput() in EvalActions.cpp
+        // inserts this magic constant into the reader config to prevent it from shuffling the input).
+        // In user-defined configurations, 'randomize' should be a boolean.
         m_randomizationWindow = randomizeNone;
     }
     else

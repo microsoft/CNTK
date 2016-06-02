@@ -28,10 +28,10 @@ def train_eval_logistic_regression_from_file(criterion_name=None,
     X = C.input(2)
     y = C.input(3)
     
-    W = C.parameter(value=np.zeros(shape=(3, 2)))
-    b = C.parameter(value=np.zeros(shape=(3, 1)))
+    W = C.parameter(value=np.zeros(shape=(2, 3)))
+    b = C.parameter(value=np.zeros(shape=(1, 3)))
 
-    out = C.times(W, X) + b
+    out = C.times(X, W) + b
     out.tag = 'output'
     ce = C.cross_entropy_with_softmax(y, out)
     ce.name = criterion_name
