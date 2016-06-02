@@ -89,13 +89,16 @@ public:
 template <typename ElemType>
 class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExtended<ElemType>
 {
+public:
+    CNTKEvalExtended() : CNTKEvalBase<ElemType>(), m_started(false) {}
+
     virtual VariableSchema GetOutputSchema() const override;
 
-    virtual void StartForwardEvaluation(std::vector<wstring> outputs) override;
+    virtual void StartForwardEvaluation(const std::vector<wstring>& outputs) override;
 
     virtual VariableSchema GetInputSchema() const override;
 
-    virtual void ForwardPass(const Variables<ElemType>& inputs, Variables<ElemType>& output) override;
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) override;
 
     virtual void Destroy() override;
 
@@ -114,5 +117,6 @@ private:
     std::shared_ptr<ScopedNetworkOperationMode> m_scopedNetworkOperationMode;
     std::vector<ComputationNodeBasePtr> m_inputNodes;
     StreamMinibatchInputs m_inputMatrices;
+    bool m_started;
 };
 } } }
