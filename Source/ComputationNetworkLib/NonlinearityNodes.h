@@ -634,8 +634,8 @@ public:                                                                 \
     DeclareConstructorFromConfigWithNumInputs(ClassName);               \
     ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
             : Base(deviceId, name)                                      \
-        {                                                               \
-        }                                                               \
+    {                                                                   \
+    }                                                                   \
 };                                                                      \
                                                                         \
 template class ClassName<float>;                                        \
