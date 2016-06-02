@@ -50,16 +50,16 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_areMatricesAllocated(false),
+        m_isCompiled(false),
+        m_areMatricesAllocated(false),
         m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
-    ComputationNetwork(DEVICEID_TYPE deviceId)
-        : ComputationNetwork()
+    ComputationNetwork(DEVICEID_TYPE deviceId) :
+        ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
@@ -82,6 +82,7 @@ public:
 
 protected:
     void ConstructFromRoots(DEVICEID_TYPE deviceId, std::deque<ComputationNodeBasePtr>&& roots, const map<ComputationNodeBasePtr, ComputationNodeBasePtr>& replacements);
+    void ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& roots);
 
 public:
     // -----------------------------------------------------------------------
