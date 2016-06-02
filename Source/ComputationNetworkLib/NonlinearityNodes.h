@@ -578,9 +578,9 @@ private:
     // Index corresponds to different comparison operations. 
     const static int index = 1 + compType + 3 * polarity;
 
-	// The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
-	// This ordering is checked below:
-	static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
+    // The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
+    // This ordering is checked below:
+    static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
     static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGreater has wrong value relative to ElementWiseOperator::opLess");
     static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGreaterEqual has wrong value relative to ElementWiseOperator::opLess");
     static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNotEqual has wrong value relative to ElementWiseOperator::opLess");
@@ -591,7 +591,7 @@ public:
 
     static const std::wstring TypeName()
     {
-		const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
+    const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
         return names[index];
     }
 
