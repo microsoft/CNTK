@@ -63,13 +63,12 @@ namespace Microsoft {
 
 			template <class ElemType>
 			SDenseBinaryMatrix<ElemType>::SDenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols) : BDenseBinaryMatrix<ElemType>(name, deviceID, numRows, numCols) {
-				//this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
-				this->m_values = (ElemType*)CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType)*numRows*numCols, deviceID);
-				//			if (this->m_values == nullptr)
-				//			{
-				//cpu only
-				//				this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
-				//			}
+				if (deviceID >= 0) {
+					this->m_values = (ElemType*)CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType)*numRows*numCols, deviceID);
+				}
+				else{
+					this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
+				}
 			}
 
 			template <class ElemType>
@@ -80,16 +79,14 @@ namespace Microsoft {
 			template <class ElemType>
 			void SDenseBinaryMatrix<ElemType>::Dispose() {
 				if (this->m_values != nullptr) {
-					//free(this->m_values);
-					CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
+					if (this->m_deviceID >= 0){
+						CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
+					}
+					else{
+						free(this->m_values);
+					}
+					this->m_values = nullptr;
 				}
-
-				//			if (this->m_values != nullptr) {
-				//cpu only
-				//				free(this->m_values);
-				//			}
-
-				this->m_values = nullptr;
 			}
 
 
