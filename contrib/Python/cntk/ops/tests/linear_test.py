@@ -236,14 +236,14 @@ def test_op_identity(tensor, device_id, precision):
 TIMES_PAIRS = [
     ([[30.]], [[10.]]),
     ([[1.5, 2.1]], [[10.], [20.]]),
-    ([[100., 200.], [300., 400.]], [[10.], [20.]]),
+    ([[100., 200.]], [[10.], [20.]]),
 ]
 
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
 def test_op_times(left_operand, right_operand, device_id, precision,
         left_matrix_type, right_matrix_type):
-    if left_matrix_type == 'sparse':
-        pytest.skip('first operator of times() has to be dense')
+    if right_matrix_type == 'sparse':
+        pytest.skip('second operator of times() has to be dense')
 
     dt = PRECISION_TO_TYPE[precision]
     # Forward pass test
@@ -253,13 +253,13 @@ def test_op_times(left_operand, right_operand, device_id, precision,
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
     expected = [[np.dot(AA(left_operand, dtype=dt), AA(right_operand, dtype=dt))]]
-
-    a = I([left_operand])
-
-    if right_matrix_type == 'sparse':
-        b = SI(*batch_dense_to_sparse([right_operand]))
+    
+    if left_matrix_type == 'sparse':
+        a = SI(*batch_dense_to_sparse([left_operand]))
     else:
-        b = I([right_operand])
+        a = I([left_operand])
+
+    b = I([right_operand])
 
     from cntk.ops import times, constant
     left_as_input = times(a, constant(right_operand))

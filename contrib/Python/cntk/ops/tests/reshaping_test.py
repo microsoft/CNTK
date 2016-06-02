@@ -35,7 +35,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(num_tensor_elements).reshape(input_shape)
         
-    expected_tensor = input_tensor.reshape(expected_output_shape, order='F')
+    expected_tensor = input_tensor.reshape(expected_output_shape, order='C')
 
     a = I([input_tensor])
 
@@ -214,7 +214,8 @@ def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shap
     expected_tensor = input_tensor.transpose(*permutated_axes)
     
     a = I([input_tensor])
-
+    print (a.rank)
+    print ("=====================================================###############################################")
     # swap two axes
     reshaped_input = C.transpose_dimensions(a, axis1, axis2)
 

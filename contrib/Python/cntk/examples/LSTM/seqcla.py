@@ -29,7 +29,7 @@ class Last(C.ComputationNode):
         super(Last, self).__init__(params=['x'], op_name=op_name, name=name)
         self.x = x
         self.params_with_defaults = []
-
+        self.rank = x.rank
 
 def lstm_layer(output_dim, cell_dim, x, input_dim):    
         
@@ -47,23 +47,23 @@ def lstm_layer(output_dim, cell_dim, x, input_dim):
 def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
         
     # input gate (t)
-    it_w = C.times(C.parameter((cell_dim, input_dim)), x)
-    it_b = C.parameter((cell_dim))
-    it_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
-    it_c = C.parameter((cell_dim)) * prev_state_c        
+    it_w = C.times(x,C.parameter((input_dim, cell_dim)))
+    it_b = C.parameter((1,cell_dim))
+    it_h = C.times(prev_state_h,C.parameter((output_dim, cell_dim)))
+    it_c = C.parameter((1,cell_dim)) * prev_state_c        
     it = C.sigmoid((it_w + it_b + it_h + it_c), name='it')
 
     # applied to tanh of input    
-    bit_w = C.times(C.parameter((cell_dim, input_dim)), x)
-    bit_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
-    bit_b = C.parameter((cell_dim))
+    bit_w = C.times(x,C.parameter((input_dim,cell_dim)))
+    bit_h = C.times(prev_state_h,C.parameter((output_dim,cell_dim)))
+    bit_b = C.parameter((1,cell_dim))
     bit = it * C.tanh(bit_w + (bit_h + bit_b))
         
     # forget-me-not gate (t)
-    ft_w = C.times(C.parameter((cell_dim, input_dim)), x)
-    ft_b = C.parameter((cell_dim))
-    ft_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
-    ft_c = C.parameter((cell_dim)) * prev_state_c        
+    ft_w = C.times(x, C.parameter((input_dim,cell_dim)))
+    ft_b = C.parameter((1,cell_dim))
+    ft_h = C.times(prev_state_h,C.parameter((output_dim,cell_dim)))
+    ft_c = C.parameter((1,cell_dim)) * prev_state_c        
     ft = C.sigmoid((ft_w + ft_b + ft_h + ft_c), name='ft')
 
     # applied to cell(t-1)
@@ -73,10 +73,10 @@ def lstm_func(output_dim, cell_dim, x, input_dim, prev_state_h, prev_state_c):
     ct = bft + bit
         
     # output gate
-    ot_w = C.times(C.parameter((cell_dim, input_dim)), x)
-    ot_b = C.parameter((cell_dim))
-    ot_h = C.times(C.parameter((cell_dim, output_dim)), prev_state_h)
-    ot_c = C.parameter((cell_dim)) * prev_state_c        
+    ot_w = C.times(x, C.parameter((input_dim,cell_dim)))
+    ot_b = C.parameter((1,cell_dim))
+    ot_h = C.times(prev_state_h,C.parameter((output_dim,cell_dim)))
+    ot_c = C.parameter((1,cell_dim)) * prev_state_c        
     ot = C.sigmoid((ot_w + ot_b + ot_h + ot_c), name='ot')
        
     # applied to tanh(cell(t))
@@ -107,19 +107,19 @@ def seqcla():
     train_reader = C.CNTKTextFormatReader(train_file)
 
     # setup embedding matrix
-    embedding = C.parameter((embed_dim, vocab), learning_rate_multiplier=0.0, 
+    embedding = C.parameter((vocab, embed_dim), learning_rate_multiplier=0.0, 
                              init_from_file_path=embedding_file)
 
     # get the vector representing the word
-    sequence = C.times(embedding, features, name='sequence')
+    sequence = C.times(features, embedding, name='sequence')
     
     # add an LSTM layer
     L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
     
     # add a softmax layer on top
-    w = C.parameter((num_labels, output_dim), name='w')
-    b = C.parameter((num_labels), name='b')
-    z = C.times(w, L) + b
+    w = C.parameter((output_dim, num_labels), name='w')
+    b = C.parameter((1,num_labels), name='b')
+    z = C.times(L, w) + b
     z.name='z'
     z.tag = "output"
     
@@ -144,7 +144,6 @@ def seqcla():
                   
         # do some manual accuracy testing
         acc = calc_accuracy(train_file, ctx.output_filename_base)
-        
         # and test for the same number...
         TOLERANCE_ABSOLUTE = 1E-02
         assert np.allclose(acc, 0.6006415396952687, atol=TOLERANCE_ABSOLUTE)
