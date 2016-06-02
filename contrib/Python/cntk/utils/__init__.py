@@ -248,11 +248,11 @@ def wrap_numpy_arrays(node):
                     # CNTK soon, so that we can remove this workaround and evaluate a 
                     # network with no inputs.
                     if first:        
-                        ir = input_numpy([val], alias=p, name=p)
+                        ir = input_numpy([val])
                         setattr(node, p, ir)
                         first = False
                     else:
-                        setattr(node, p, constant(getattr(node, p), name=p))
+                        setattr(node, p, constant(getattr(node, p)))
                 else:
                     if isinstance(val, _InputComputationNodeBase) and first:
                         first = False    
