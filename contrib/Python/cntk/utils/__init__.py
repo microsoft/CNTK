@@ -225,6 +225,24 @@ def get_temp_filename(directory=None):
 
     return tf.name
 
+def get_rank(shape):
+    '''
+    computes the rank of a tensor.
+    
+    Args:
+        shape: it is either a tuple or an integer.
+        
+    Returns: the rank of the tensor.
+    
+    '''
+    if np.isscalar(shape):
+        if shape == 1:
+            return 0
+        else:
+            return 1
+    else:
+        return len(shape)
+        
 def wrap_numpy_arrays(node):
     '''
     for a given computation node, wrapes its tensor inputs that are numpy arrays
