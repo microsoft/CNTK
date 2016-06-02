@@ -580,11 +580,11 @@ private:
 
 	// The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
 	// This ordering is checked below:
-	static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEQ has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGT has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGE has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNE has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLE has wrong value relative to ElementWiseOperator::opLess");
+	static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGreater has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGreaterEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNotEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLessEqual has wrong value relative to ElementWiseOperator::opLess");
 
 public:
     typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
