@@ -2031,6 +2031,15 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUS
 }
 
 template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+    GPUSparseMatrix<ElemType> as = ElementProductOf(a, b);
+    *this = as;
+    return *this;
+}
+
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     GPUSparseMatrix<ElemType> res(GetComputeDeviceId(), GetFormat());

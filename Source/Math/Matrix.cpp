@@ -2189,7 +2189,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOf(const Matrix<ElemType
                             m_CPUMatrix->AssignElementProductOf(*a.m_CPUMatrix, *b.m_CPUMatrix),
                             m_GPUMatrix->AssignElementProductOf(*a.m_GPUMatrix, *b.m_GPUMatrix),
                             NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            m_GPUSparseMatrix->AssignElementProductOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix));
 
     return *this;
 }
