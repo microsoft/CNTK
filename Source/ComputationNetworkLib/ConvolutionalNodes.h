@@ -357,17 +357,18 @@ public:
         }
         else
         {
-            if (m_imageLayout != ImageLayoutKind::CHW)
-            {
-                InvalidArgument(
-                    "%ls %ls supports only cuDNN (CHW) data layout. "
-                    "Please specify imageLayout=\"cudnn\" in %ls node in your script "
-                    "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-            }
+            //if (m_imageLayout != ImageLayoutKind::CHW)
+            //{
+            //    InvalidArgument(
+            //        "%ls %ls supports only cuDNN (CHW) data layout. "
+            //        "Please specify imageLayout=\"cudnn\" in %ls node in your script "
+            //        "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
+            //}
             inputShape = GetInputSampleLayout(inputIdx);
             auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-            SetDims(outDims, HasMBLayout());
+            //SetDims(outDims, HasMBLayout());
+            SetDims(ImageDimensions(outDims, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
 
         if (isFinalValidationPass)
