@@ -1,7 +1,6 @@
 #ifndef MULTIVERSO_ZOO_H_
 #define MULTIVERSO_ZOO_H_
 
-#include <atomic>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -14,10 +13,9 @@ namespace multiverso {
 
 class NetInterface;
 
-// The dashboard
-// 1. Manage all components in the system, include all actors, and network env
-// 2. Maintain system information, provide method to access this information
-// 3. Control the system, to start and end
+//  Zoo Manage all components in the system, include all actors, and network
+//  Maintain system information, provide method to access this information
+//  Control the system, to start and end
 class Zoo {
 public:
   ~Zoo();
@@ -62,10 +60,7 @@ public:
   int RegisterTable(WorkerTable* worker_table);
   int RegisterTable(ServerTable* server_table);
 
-  void RegisterActor(const std::string name, Actor* actor) {
-    CHECK(zoo_[name] == nullptr);
-    zoo_[name] = actor;
-  }
+  void RegisterActor(const std::string name, Actor* actor);
 
 private:
   // private constructor
@@ -87,9 +82,6 @@ private:
 
   int num_workers_;
   int num_servers_;
-
-  // bool restart_;
-  // int store_each_k_;
 };
 
 }  // namespace multiverso

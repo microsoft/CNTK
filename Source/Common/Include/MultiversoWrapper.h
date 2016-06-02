@@ -3,8 +3,9 @@
 // the header files located in Source\Multiverso\include
 #include <multiverso/multiverso.h>
 #include <multiverso/table/matrix_table.h>
-#include <multiverso/util/configure.h>
 #include <multiverso/table/sparse_matrix_table.h>
+#include <multiverso/util/configure.h>
+#include <multiverso/util/log.h>
 #include <multiverso/updater/updater.h>
 
 #pragma comment(lib, "Multiverso.lib")

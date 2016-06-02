@@ -1,8 +1,8 @@
 #ifndef MULTIVERSO_TABLE_FACTORY_H_
 #define MULTIVERSO_TABLE_FACTORY_H_
 
-#include "table_interface.h"
-#include "zoo.h"
+#include "multiverso/table_interface.h"
+#include "multiverso/zoo.h"
 
 #include <string>
 

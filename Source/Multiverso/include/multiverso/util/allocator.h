@@ -1,9 +1,10 @@
 #ifndef MULTIVERSO_ALLOCATOR_H_
 #define MULTIVERSO_ALLOCATOR_H_
 
-#include <mutex>
 #include <atomic>
 #include <unordered_map>
+
+namespace std { class mutex; }
 
 namespace multiverso {
 
@@ -19,7 +20,7 @@ public:
 private:
   MemoryBlock* free_ = nullptr;
   size_t size_;
-  std::mutex mutex_;
+  std::mutex* mutex_;
 };
 
 class MemoryBlock {
@@ -49,13 +50,14 @@ private:
 
 class SmartAllocator : public Allocator {
 public:
+  SmartAllocator();
+  ~SmartAllocator();
   char* Alloc(size_t size);
   void Free(char* data);
   void Refer(char *data);
-  ~SmartAllocator();
 private:
   std::unordered_map<size_t, FreeList*> pools_;
-  std::mutex mutex_;
+  std::mutex* mutex_;
 };
 
 } // namespace multiverso

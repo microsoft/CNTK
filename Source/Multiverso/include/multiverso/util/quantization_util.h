@@ -116,8 +116,7 @@ namespace multiverso {
         // set value
         result.As<data_type>(1) = in_blob.As<data_type>(0);
         *out_blob = result;
-      }
-      else {
+      } else {
         Blob result(non_zero_count * 2 * sizeof(data_type));
         auto result_index = 0;
         for (auto i = 0; i < data_count; ++i) {

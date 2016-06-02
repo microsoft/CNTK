@@ -35,7 +35,7 @@ public:
   std::unordered_map<Key, Val>& raw() { return table_; }
    
   int Partition(const std::vector<Blob>& kv, 
-    std::unordered_map<int, std::vector<Blob> >* out) override {
+    MsgType, std::unordered_map<int, std::vector<Blob> >* out) override {
     CHECK(kv.size() == 1 || kv.size() == 2);
     CHECK_NOTNULL(out);
     std::unordered_map<int, int> counts;
@@ -99,23 +99,23 @@ public:
   }
 
   void Store(Stream* s) override{
-    size_t size = table_.size();
-    s->Write(&size, sizeof(size_t));
-    for (auto& i : table_){
-      s->Write(&i.first, sizeof(Key));
-      s->Write(&i.second, sizeof(Val));
-    }
+    // size_t size = table_.size();
+    // s->Write(&size, sizeof(size_t));
+    // for (auto& i : table_){
+    //   s->Write(&i.first, sizeof(Key));
+    //   s->Write(&i.second, sizeof(Val));
+    // }
   }
   void Load(Stream* s) override{
-    size_t count;
-    Key k;
-    Val v;
-    s->Read(&count, sizeof(size_t));
-    for (int i = 0; i < count; ++i){
-      s->Read(&k, sizeof(Key));
-      s->Read(&v, sizeof(Val));
-      table_[k] = v;
-    }
+    // size_t count;
+    // Key k;
+    // Val v;
+    // s->Read(&count, sizeof(size_t));
+    // for (int i = 0; i < count; ++i){
+    //   s->Read(&k, sizeof(Key));
+    //   s->Read(&v, sizeof(Val));
+    //   table_[k] = v;
+    // }
   }
 
 private:

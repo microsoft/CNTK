@@ -1,14 +1,15 @@
 #ifndef MULTIVERSO_TABLE_INTERFACE_H_
 #define MULTIVERSO_TABLE_INTERFACE_H_
 
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <cctype>
 
 #include "multiverso/blob.h"
-#include "multiverso/io/io.h"
+#include "multiverso/message.h"
+
+namespace std { class mutex; }
 
 namespace multiverso {
 
@@ -17,12 +18,13 @@ typedef int32_t integer_t;
 class Waiter;
 struct AddOption;
 struct GetOption;
+enum MsgType;
 
 // User implementent this
 class WorkerTable {
 public:
   WorkerTable();
-  virtual ~WorkerTable() = default;
+  virtual ~WorkerTable();
 
   void Get(Blob keys, const GetOption* option = nullptr);
   void Add(Blob keys, Blob values, const AddOption* option = nullptr);
@@ -37,7 +39,8 @@ public:
   void Notify(int id);
 
   virtual int Partition(const std::vector<Blob>& kv,
-    std::unordered_map<int, std::vector<Blob> >* out) = 0;
+   MsgType partition_type,
+   std::unordered_map<int, std::vector<Blob> >* out) = 0;
 
   virtual void ProcessReplyGet(std::vector<Blob>&) = 0;
 
@@ -46,8 +49,9 @@ private:
   std::string table_name_;
   // assuming there are at most 2^32 tables
   int table_id_;
-  std::mutex m_;
+  std::mutex* m_;
   std::vector<Waiter*> waitings_;
+  // assuming there are at most 2^32 msgs waiting in line
   int msg_id_;
 };
 

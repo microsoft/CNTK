@@ -99,7 +99,7 @@ public:
 
   void Finalize() override {
     active_ = false;
-    zmq_term(context_);
+    // zmq_term(context_);
     zmq_close(receiver_);
     for (auto& p : senders_) if (p) zmq_close(p);
     zmq_ctx_destroy(context_);
