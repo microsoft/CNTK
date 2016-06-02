@@ -234,9 +234,9 @@ class ComputationNode(object):
                 if hasattr(p_value, '_to_config') and p_name or \
                         p_name == 'inputs':
                         # TODO this is under the assumption that RowStack's
-                        # inputs parameter gets a tuple of inputs
+                        # or Splice's inputs parameter gets a tuple of inputs
 
-                    if p_name == 'inputs' and isinstance(self, RowStack):
+                    if p_name == 'inputs' and self.op_name in ['RowStack', 'Splice']:
                         # Special treatment for special operator.
                         # Used like RowStack(v0:v1:v2)
                         inputs_param = p_value
