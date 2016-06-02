@@ -28,18 +28,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //
 enum ProfilerEvents
 {
-    profilerEvtEpoch = 0,
-    profilerEvtForwardPass,
-    profilerEvtBackwardPass,
-    profilerEvtGradientAggregation,
-    profilerEvtWeightUpdate,
-    profilerEvtInputProcessing,
+    // Main thread events
+    profilerSepMainThread = 0,
+    profilerSepSpace0,
+
+    profilerEvtMainEpoch,
+    profilerEvtMainMinibatch,
+    profilerEvtMainGetMinibatch,
+    profilerEvtMainFB,
+    profilerEvtMainGradient,
+    profilerEvtMainWeights,
+    profilerEvtMainPost,
+
+    // MPI/Gradient aggregation multithreaded events
+    profilerSepSpace1,
+    profilerSepMPI,
+    profilerSepSpace2,
+
+    profilerEvtGradient1,
+    profilerEvtGradientAsyncComm11,
+    profilerEvtGradientWaitGradients1,
+    profilerEvtGradientWaitHeaders1,
+    profilerEvtGradientAsyncComm21,
+    profilerEvtGradientWaitAggGradients1,
+    profilerEvtGradientWaitAggHeaders1,
+    profilerEvtGradientWaitCompletion1,
+    
+    profilerEvtGradient32,
+    profilerEvtGradientAsyncComm132,
+    profilerEvtGradientWaitHeaders32,
+    profilerEvtGradientAsyncComm232,
+    profilerEvtGradientWaitGradients32,
+    profilerEvtGradientWaitCompletion32,
+
+    // ImageReader multithreaded events
+    profilerSepSpace3,
+    profilerSepImageReader,
+    profilerSepSpace4,
+
     profilerEvtImageDecoding,
-    profilerEvtMPIProcessing,
-    profilerEvtMPIWait,
-    profilerEvtMPIThroughput,
-    profilerEvtImageReaderThroughput,
-    profilerEvtMax,
+    profilerEvtZipReaderThroughput,
+
+    profilerEvtMax
 };
 
 //
@@ -54,10 +84,16 @@ struct ProfilerThroughputEventRecord
 //
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
-// delaySeconds: Number of seconds since this call to wait to start profiling.
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
+// logSuffix: Suffix string to append to log files.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySeconds, const unsigned long long customEventBufferBytes);
+void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes, const char* logSuffix);
+
+//
+// Enable/disable profiling.
+// By default, profiling is disabled after a ProfilerInit call.
+//
+void PERF_PROFILER_API ProfilerEnable(bool enable);
 
 //
 // Measure time for either a fixed or a custom event.
@@ -99,9 +135,9 @@ void PERF_PROFILER_API ProfilerClose();
 //
 struct ProfilerContext
 {
-    void Init(const char* profilerDir = nullptr, const float delaySeconds = 0.0f, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024))
+    void Init(const char* profilerDir = nullptr, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const char* logSuffix = "")
     {
-        ProfilerInit(profilerDir, delaySeconds, customEventBufferBytes);
+        ProfilerInit(profilerDir, customEventBufferBytes, logSuffix);
     }
 
     ~ProfilerContext()
@@ -135,7 +171,7 @@ public:
     }
 };
 
-#define PROFILE_SCOPE(eventId)      ScopeProfile __sp(eventId);
+#define PROFILE_SCOPE(eventId)      ScopeProfile __sp##eventId(eventId);
 #define PROFILE_FUNCTION            ScopeProfile __fsp(__FUNCTION__);
 
 
@@ -161,7 +197,7 @@ public:
     }
 };
 
-#define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st(eventId, bytes);
+#define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st##eventId(eventId, bytes);
 
 
 //
@@ -186,7 +222,8 @@ struct CudaProfilerTimer
         m_syncIterations = syncIterations;
         m_maxIterations = maxIterations;
         m_iterationCnt = 0;
-        SyncCudaScopeSetFlags(true, true);
+        m_iterationCntTotal = 0;
+        SyncCudaScopeSetFlags(false, false);
     }
 
     //

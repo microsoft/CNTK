@@ -72,13 +72,13 @@ void TestCn(const ConfigParameters& config);
 
 // Setup profiling
 template <typename ConfigParamType>
-void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config)
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
 {
     if (config(L"profilerEnabled", true))
     {
         profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(),
-                             config(L"profilerDelay", 0.0f),
-                             config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)));
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)),
+                             std::to_string(nodeRank).c_str());
     }
 }
 
@@ -485,10 +485,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (config.Find(L"type"))
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
 
-    // Setup profiling
-    ProfilerContext profilerContext;
-    SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config);
-
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     bool paralleltrain = config(L"parallelTrain", false);
@@ -515,6 +511,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo config info to log
     PrintBuiltInfo();
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -656,7 +656,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // Setup profiling
     ProfilerContext profilerContext;
-    SetupProfiling<ConfigParameters>(profilerContext, config);
+    SetupProfiling<ConfigParameters>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // run commands
     std::string type = config(L"precision", "float");

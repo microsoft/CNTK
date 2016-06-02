@@ -312,8 +312,6 @@ public:
         // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
-            PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)totalnumelements * sizeof(*dataptr));
             MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
         }
     }
@@ -324,8 +322,6 @@ public:
     {
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
-            PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(ElemType));
             MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
         }
     }
@@ -335,8 +331,6 @@ public:
     {
         if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
         {
-            PROFILE_SCOPE(profilerEvtMPIProcessing);
-            THROUGHPUT_SCOPE(profilerEvtMPIThroughput, (long long)nData * sizeof(ElemType));
             MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
         }
     }
@@ -344,7 +338,6 @@ public:
     // wait for all ranks to reach here
     void WaitAll()
     {
-        PROFILE_SCOPE(profilerEvtMPIWait);
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
 };

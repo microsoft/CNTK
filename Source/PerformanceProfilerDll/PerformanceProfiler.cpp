@@ -31,30 +31,61 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define PROFILER_DIR        "./profiler"
-#define PROFILER_SUMMARY    "summary.txt"
-#define PROFILER_DETAIL     "detail.csv"
 
 enum ProfilerEvtType
 {
     profilerEvtTime = 0,
-    profilerEvtThroughput
+    profilerEvtThroughput,
+    profilerEvtSeparator
 };
 
 static const char* c_profilerEvtDesc[profilerEvtMax] = {  
-    "Epoch Time",
-    "Forward Pass Time",
-    "Backward Pass Time",
-    "Gradient Aggregation Time",
-    "Weight Update Time",
-    "Input Data Processing Time",
-    "Image Decoding Time",
-    "MPI Processing Time",
-    "MPI Wait Time",
-    "MPI Throughput",
+    "Main Thread",
+    "",
+    "Epoch",
+    "-Minibatch Iteration",
+    "--Get Minibatch",
+    "--Forward + Backward",
+    "--Gradient Aggregation",
+    "--Weight Update",
+    "--Post Processing",
+    "",
+    "Gradient Aggregation Thread & MPI",
+    "",
+    "Gradient Aggregation (1bit)",
+    "-Async Communcation 1",
+    "-Wait for Gradients",
+    "-Wait for Headers",
+    "-Async Communication 2",
+    "-Wait for Agg. Gradients",
+    "-Wait for Agg. Headers",
+    "-Wait for Completion",
+    "Gradient Aggregation (32bit)",
+    "-Async Communication 1",
+    "-Wait for Headers",
+    "-Async Communication 2",
+    "-Wait for Gradients",
+    "-Wait for Completion",
+    "",
+    "ImageReader Thread",
+    "",
+    "Image Decoding",
     "ImageReader Throughput"
 };
 
 static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
+    profilerEvtSeparator,
+    profilerEvtSeparator,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtSeparator,
+    profilerEvtSeparator,
+    profilerEvtSeparator,
     profilerEvtTime,
     profilerEvtTime,
     profilerEvtTime,
@@ -64,7 +95,15 @@ static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
     profilerEvtTime,
     profilerEvtTime,
     profilerEvtTime,
-    profilerEvtThroughput,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtTime,
+    profilerEvtSeparator,
+    profilerEvtSeparator,
+    profilerEvtSeparator,
+    profilerEvtTime,
     profilerEvtThroughput
 };
 
@@ -109,8 +148,9 @@ struct CustomEventRecordEnd
 struct ProfilerState
 {
     bool                    init = false;
+    bool                    enabled = false;
     char                    profilerDir[256];
-    long long               startClock;
+    char                    logSuffix[64];
     long long               clockFrequency;
     FixedEventRecord        fixedEvents[profilerEvtMax];
     unsigned long long      uniqueId;
@@ -159,10 +199,10 @@ struct ScopeLock
 //
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
-// delaySeconds: Number of seconds since this call to wait to start profiling.
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
+// logSuffix: Suffix string to append to log files.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySeconds, const unsigned long long customEventBufferBytes)
+void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes, const char* logSuffix)
 {
     memset(&g_profilerState, 0, sizeof(g_profilerState));
 
@@ -175,14 +215,30 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySe
     {
         strncpy(g_profilerState.profilerDir, PROFILER_DIR, sizeof(g_profilerState.profilerDir) - 1);
     }
+    g_profilerState.profilerDir[sizeof(g_profilerState.profilerDir) - 1] = 0;
+
+    strncpy(g_profilerState.logSuffix, logSuffix, sizeof(g_profilerState.logSuffix) - 1);
+    g_profilerState.logSuffix[sizeof(g_profilerState.logSuffix) - 1] = 0;
 
     g_profilerState.customEventBufferBytes = customEventBufferBytes;
     g_profilerState.customEventBuffer = new char[customEventBufferBytes];
 
     g_profilerState.clockFrequency = GetClockFrequency();
-    g_profilerState.startClock = GetClock() + (long long)((double)delaySeconds * (double)g_profilerState.clockFrequency);
 
+    g_profilerState.enabled = false;
     g_profilerState.init = true;
+}
+
+//
+// Enable/disable profiling.
+// By default, profiling is disabled after a ProfilerInit call.
+//
+void PERF_PROFILER_API ProfilerEnable(bool enable)
+{
+    if (g_profilerState.init)
+        g_profilerState.enabled = enable;
+    else
+        g_profilerState.enabled = false;
 }
 
 //
@@ -192,7 +248,7 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const float delaySe
 //
 unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const int eventId)
 {
-    if (!g_profilerState.init || GetClock() < g_profilerState.startClock) return INVALID_STATE_ID;
+    if (!g_profilerState.init || !g_profilerState.enabled) return INVALID_STATE_ID;
 
     unsigned long long stateId = ProfilerTimeBegin(c_profilerEvtDesc[eventId]);
     if (stateId == INVALID_STATE_ID) return INVALID_STATE_ID;
@@ -267,7 +323,7 @@ void PERF_PROFILER_API ProfilerTimeCancel(unsigned long long* stateId)
 
 unsigned long long ProfilerTimeBeginInt(const char* eventDescription, const long long customClock = -1ll)
 {
-    if (!g_profilerState.init || GetClock() < g_profilerState.startClock) return INVALID_STATE_ID;
+    if (!g_profilerState.init || !g_profilerState.enabled) return INVALID_STATE_ID;
 
     LOCK
 
@@ -341,7 +397,7 @@ void PERF_PROFILER_API ProfilerThroughputBegin(const int eventId, ProfilerThroug
 void PERF_PROFILER_API ProfilerThroughputEnd(const long long bytes, ProfilerThroughputEventRecord* profilerThroughputEventRecord)
 {
     long long endClock = GetClock();
-    if (!g_profilerState.init || endClock < g_profilerState.startClock) return;
+    if (!g_profilerState.init || !g_profilerState.enabled) return;
 
     LOCK
 
@@ -384,11 +440,11 @@ void PERF_PROFILER_API ProfilerClose()
     strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H-%M-%S", timeInfo);
 
     char fileName[256];
-    sprintf_s(fileName, sizeof(fileName)-1, "%s/%s_" PROFILER_SUMMARY, g_profilerState.profilerDir, timeStr);
+    sprintf_s(fileName, sizeof(fileName)-1, "%s/%s_summary_%s.txt", g_profilerState.profilerDir, timeStr, g_profilerState.logSuffix);
     ProfilerGenerateReport(fileName, timeInfo);
 
     // Generate detailed event file
-    sprintf_s(fileName, sizeof(fileName) - 1, "%s/%s_" PROFILER_DETAIL, g_profilerState.profilerDir, timeStr);
+    sprintf_s(fileName, sizeof(fileName) - 1, "%s/%s_detail_%s.csv", g_profilerState.profilerDir, timeStr, g_profilerState.logSuffix);
     ProfilerGenerateDetailFile(fileName);
 
     delete[] g_profilerState.customEventBuffer;
@@ -409,7 +465,11 @@ static bool g_SyncCudaScope_profilingEnabled = false;
 // Helper functions to set/get Sync flags.
 void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled)
 {
+#ifdef NO_SYNC
     g_SyncCudaScope_syncEnabled = syncEnabled;
+#else
+    g_SyncCudaScope_syncEnabled = true;
+#endif
     g_SyncCudaScope_profilingEnabled = profilingEnabled;
 }
 
@@ -561,74 +621,81 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
 
     for (int evtIdx = 0; evtIdx < profilerEvtMax; evtIdx++)
     {
-        fprintfOrDie(f, "%-26s: ", c_profilerEvtDesc[evtIdx]);
+        bool printLine = false;
 
         switch (c_profilerEvtType[evtIdx])
         {
         case profilerEvtTime:
+            if (g_profilerState.fixedEvents[evtIdx].refCnt == 0 && g_profilerState.fixedEvents[evtIdx].cnt > 0)
             {
-                if (g_profilerState.fixedEvents[evtIdx].refCnt == 0 && g_profilerState.fixedEvents[evtIdx].cnt > 0)
-                {
-                    char str[32];
+                printLine = true;
+                fprintfOrDie(f, "%-26s: ", c_profilerEvtDesc[evtIdx]);
 
-                    double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt) / (double)g_profilerState.clockFrequency;
-                    FormatTimeStr(str, sizeof(str), mean);
-                    fprintfOrDie(f, "%s ", str);
+                char str[32];
 
-                    double sum = (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency;
-                    double sumsq = g_profilerState.fixedEvents[evtIdx].sumsq / (double)g_profilerState.clockFrequency / (double)g_profilerState.clockFrequency;
-                    double stdDev = sumsq - (pow(sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
-                    if (stdDev < 0.0) stdDev = 0.0;
-                    stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
-                    FormatTimeStr(str, sizeof(str), stdDev);
-                    fprintfOrDie(f, "%s ", str);
+                double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt) / (double)g_profilerState.clockFrequency;
+                FormatTimeStr(str, sizeof(str), mean);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min / (double)g_profilerState.clockFrequency);
-                    fprintfOrDie(f, "%s ", str);
+                double sum = (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency;
+                double sumsq = g_profilerState.fixedEvents[evtIdx].sumsq / (double)g_profilerState.clockFrequency / (double)g_profilerState.clockFrequency;
+                double stdDev = sumsq - (pow(sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                if (stdDev < 0.0) stdDev = 0.0;
+                stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                FormatTimeStr(str, sizeof(str), stdDev);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max / (double)g_profilerState.clockFrequency);
-                    fprintfOrDie(f, "%s ", str);
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min / (double)g_profilerState.clockFrequency);
+                fprintfOrDie(f, "%s ", str);
 
-                    fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max / (double)g_profilerState.clockFrequency);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency);
-                    fprintfOrDie(f, "%s", str);
-                }
+                fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency);
+                fprintfOrDie(f, "%s", str);
             }
             break;
 
         case profilerEvtThroughput:
+            if (g_profilerState.fixedEvents[evtIdx].cnt > 0)
             {
-                if (g_profilerState.fixedEvents[evtIdx].cnt > 0)
-                {
-                    char str[32];
+                printLine = true;
+                fprintfOrDie(f, "%-26s: ", c_profilerEvtDesc[evtIdx]);
 
-                    double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt);
-                    FormatThroughputStr(str, sizeof(str), mean);
-                    fprintfOrDie(f, "%s ", str);
+                char str[32];
 
-                    double stdDev = g_profilerState.fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState.fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
-                    if (stdDev < 0.0) stdDev = 0.0;
-                    stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
-                    FormatThroughputStr(str, sizeof(str), stdDev);
-                    fprintfOrDie(f, "%s ", str);
+                double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                FormatThroughputStr(str, sizeof(str), mean);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min);
-                    fprintfOrDie(f, "%s ", str);
+                double stdDev = g_profilerState.fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState.fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                if (stdDev < 0.0) stdDev = 0.0;
+                stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                FormatThroughputStr(str, sizeof(str), stdDev);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max);
-                    fprintfOrDie(f, "%s ", str);
+                FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min);
+                fprintfOrDie(f, "%s ", str);
 
-                    fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+                FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max);
+                fprintfOrDie(f, "%s ", str);
 
-                    FormatBytesStr(str, sizeof(str), g_profilerState.fixedEvents[evtIdx].totalBytes);
-                    fprintfOrDie(f, "%s", str);
-                }
+                fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+
+                FormatBytesStr(str, sizeof(str), g_profilerState.fixedEvents[evtIdx].totalBytes);
+                fprintfOrDie(f, "%s", str);
             }
+            break;
+        
+        case profilerEvtSeparator:
+            printLine = true;
+            fprintfOrDie(f, "%s", c_profilerEvtDesc[evtIdx]);
             break;
         }
 
-        fprintfOrDie(f, "\n");
+        if(printLine) fprintfOrDie(f, "\n");
     }
 
     fclose(f);
@@ -645,7 +712,7 @@ void FormatTimeStr(char* str, size_t strLen, double value)
     }
     else
     {
-        sprintf_s(str, strLen, "    %02d:%02d:%02.3f", (int)value / 3600, ((int)value / 60) % 60, fmod(value, 60.0));
+        sprintf_s(str, strLen, "    %02d:%02d:%06.3f", (int)value / 3600, ((int)value / 60) % 60, fmod(value, 60.0));
     }
 }
 
@@ -656,13 +723,13 @@ void FormatThroughputStr(char* str, size_t strLen, double value)
 
 void FormatBytesStr(char* str, size_t strLen, long long bytes)
 {
-    if (bytes < (1024 * 1024 * 1024))
+    if (bytes < (1024ll * 1024ll))
     {
-        sprintf_s(str, strLen, "%13lld MB", bytes >> 20);
+        sprintf_s(str, strLen, "%13lld KB", bytes >> 10);
     }
     else
     {
-        sprintf_s(str, strLen, "%13lld GB", bytes >> 30);
+        sprintf_s(str, strLen, "%13lld MB", bytes >> 20);
     }
 }
 
