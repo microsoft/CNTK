@@ -334,10 +334,8 @@ def element_divide(left, right, name=None):
 def times(left, right, output_rank=1, name=None):
     """
     The output of this operation is the matrix product of the two input matrices.
-    It supports broadcasting. In case of scalars its backward pass to left propagates right
-    times the received gradient and vice versa.
-    The operator (@) has been overloaded and can equally be used instead of times().
-    However, it is supported in python versions 3.5 or above.
+    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
@@ -368,6 +366,7 @@ def times(left, right, output_rank=1, name=None):
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
+
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -950,7 +949,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         if len(cntk_shape) == 0:
             raise ValueError('value should be an array of input samples')
             
-        node = input(cntk_shape, dynamic_axis=dynamic_axis)
+        node = input(cntk_shape, dynamic_axis=dynamic_axis, name=name)
         from ..reader import LazyInputReader
         node.reader = LazyInputReader(
             value,
@@ -978,6 +977,77 @@ def input(shape, dynamic_axis='', name=None):
 
     from cntk.ops.cntk1 import Input
     return Input(shape, dynamicAxis=dynamic_axis, name=name)
+
+
+def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name=None):
+    '''
+    Creates an input node from a sparse input tensors described by a list of indices
+    and a list of values having a shape. The tensors represent one
+    sample and can have sequences of different lengths. 
+
+    Example:
+
+        >>>
+        # Creating a dense matrix 
+        # [[ 10, 20]
+        #  [ 30, 40]]
+        # Note that we need to specify a batch of samples of sequences (all
+        # having sequence length 1 in this example).
+        >>> dense = C.input_numpy([[[10,20,30], 
+                                    [40,50,60]]])
+        # Creating a sparse array 
+        # [0, 0.1, 0]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[ 2.,  5.]])]
+        #  Creating a sparse matrix
+        # [[0  ], 
+           [0.1],
+           [0  ]]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,1))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[[ 2.],
+                 [ 5.]]])]
+
+    Args:
+        indices (list): list (batch) of tuples (indices), which are positions of the values after flattening the tensor with `order='F'`
+        values (list): list (batch) of tuples of values corresponding to indices
+        shape (tuple): shape of the input
+        alias (str): alias to be used in the data file
+        dynamic_axis (str): whether the tensor has already the data
+        alias (str): optional the alias to be used when serializing the data into an intermediate file
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+
+    node = sparse_input(shape, dynamic_axis=dynamic_axis, name=name)
+    from ..reader import LazySparseInputReader
+    node.reader = LazySparseInputReader(
+        indices,
+        values,
+        shape,
+        input_alias=alias,
+        dynamic_axis=dynamic_axis,
+        node=node)
+
+    return node
+
+
+def sparse_input(shape, dynamic_axis='', name=None):
+    """
+    It creates a sparse input node. The graph requires a separate reader that will be
+    fed to this input.
+
+    Args:
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import SparseInput
+    return SparseInput(shape, dynamicAxis=dynamic_axis, name=name)
 
 
 def parameter(shape=None, value=None, learning_rate_multiplier=1.0,

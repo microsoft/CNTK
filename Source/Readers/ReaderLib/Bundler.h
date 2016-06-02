@@ -23,10 +23,10 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for a particular chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
 
     // Gets a chunk with data.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
 private:
     DISABLE_COPY_AND_MOVE(Bundler);
@@ -58,6 +58,9 @@ private:
     // Used for optimization when sequences between different deserializers are of the same length
     // (i.e. often in speech)
     bool m_takePrimarySequenceLength;
+
+    // General configuration
+    int m_verbosity;
 };
 
 }}}

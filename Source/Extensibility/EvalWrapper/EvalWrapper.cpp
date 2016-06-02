@@ -96,7 +96,7 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     void CreateNetwork(String^ networkDescription)
     {
@@ -118,7 +118,22 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("{0}\n{1}", outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     /// <param name="deviceId">The device ID to specify for the network</param>
     void CreateNetwork(String^ networkDescription, int deviceId)
@@ -128,7 +143,23 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        this->CreateNetwork(String::Format("deviceId={0}\n{1}", deviceId, networkDescription));
+        this->CreateNetwork(networkDescription, deviceId, nullptr);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="deviceId">The device ID to specify for the network</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, int deviceId, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("deviceId={0}\n{1}\n{2}", deviceId, outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
@@ -594,6 +625,8 @@ void emit()
     f.Evaluate("");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
+    f.CreateNetwork("", nullptr);
+    f.CreateNetwork("", 0, nullptr);
     f.GetNodeDimensions(NodeGroup::nodeSpecified);
 
     IEvaluateModelManagedD d;
@@ -603,6 +636,8 @@ void emit()
     d.Evaluate("");
     d.CreateNetwork("");
     d.CreateNetwork("", 0);
+    d.CreateNetwork("", nullptr);
+    d.CreateNetwork("", 0,nullptr);
     d.GetNodeDimensions(NodeGroup::nodeSpecified);
 
     // Deprecated code, hush warnings locally only

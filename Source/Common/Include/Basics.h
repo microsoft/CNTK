@@ -653,9 +653,43 @@ public:
     }
 };
 #endif
+
+template <typename EF>
+struct ScopeExit {
+    explicit ScopeExit(EF &&f) :
+        m_exitFunction(std::move(f)), m_exitOnDestruction(true) 
+    {}
+
+    ~ScopeExit() 
+    {
+        if (m_exitOnDestruction)
+            m_exitFunction(); 
+    }
+
+    ScopeExit(ScopeExit&& other)
+        : m_exitFunction(std::move(other.m_exitFunction)), m_exitOnDestruction(other.m_exitOnDestruction)
+    {
+        other.m_exitOnDestruction = false;
+    }
+
+private:
+    // Disallow copy construction, assignment
+    ScopeExit(const ScopeExit&) = delete;
+    ScopeExit& operator=(const ScopeExit&) = delete;
+
+    // Disallow move assignment
+    ScopeExit& operator=(ScopeExit&&) = delete;
+
+    EF m_exitFunction;
+    bool m_exitOnDestruction;
+};
+
+template <typename EF>
+ScopeExit<typename std::remove_reference<EF>::type> MakeScopeExit(EF&& exitFunction)
+{
+    return ScopeExit<typename std::remove_reference<EF>::type>(std::forward<EF>(exitFunction));
 }
-}
-}
+}}}
 
 #ifdef _WIN32
 // ----------------------------------------------------------------------------
