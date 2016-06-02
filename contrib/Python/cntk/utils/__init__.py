@@ -261,6 +261,7 @@ def wrap_numpy_arrays(node):
         for p in node.params:
             if p in node.inputs:
                 val = getattr(node, p)
+                #TODO: add support to list of numpy arrays, e.g. Splice()
                 if not (isinstance(val, ComputationNode) or isinstance(val, str)):
                     # One param needs to be an Input() node. This will be fixed in 
                     # CNTK soon, so that we can remove this workaround and evaluate a 
