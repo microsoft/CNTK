@@ -580,8 +580,7 @@ namespace Microsoft {
 
 			template<class ElemType> 
 			void DenseBinaryInput<ElemType>::PrintZipDataQueueStat(const string& tag) {
-				cerr << tag
-					<< " read zip data:"
+				cerr << "Read " << tag <<" Data:"
 					<< "produce:" << this->m_zipedDataToProduce.size()
 					<< ","
 					<< "consume:" << this->m_zipedDataToConsume.size()
@@ -590,11 +589,15 @@ namespace Microsoft {
 
 			template<class ElemType>
 			void DenseBinaryInput<ElemType>::ReadZipData(bool writeToCache) {
+
 				time_t start = time(0);
 
 				std::vector<size_t> notCachedBlock;
 
 				auto& read_order = this->m_zipFileReadOrder;
+
+				cerr << "Zip Blocks:" << read_order.size() << endl;
+
 				for (size_t i = 0; i < read_order.size(); i++) {
 					//buffer
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
@@ -633,6 +636,9 @@ namespace Microsoft {
 			void DenseBinaryInput<ElemType>::ReadMemCache(size_t limit) {
 				auto& cache = *this->m_memCache;
 				cache.ResetReadPos();
+
+				cerr << "Mem Blocks:" << cache.CachedBlocksNum() << endl;
+
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
@@ -648,6 +654,9 @@ namespace Microsoft {
 			void DenseBinaryInput<ElemType>::ReadDiskCache(size_t limit) {
 				auto& cache = *this->m_diskCache;
 				cache.ResetReadPos();
+
+				cerr << "Disk Blocks:" << cache.CachedBlocksNum() << endl;
+
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
