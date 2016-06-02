@@ -129,6 +129,51 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
     unittest_helper(result, None, [[expected_gradient]], device_id = device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
+SLICE_SEQ_TEST_CASES = [
+    #(input_data, slice_params(beg_index, end_index,axis), expected_result)
+    ([[[1,2,3]],[[-4,5,6]],[[7,8,9]]], (0,2), [[[1,2,3]],[[-4,5,6]]]),
+    ([[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]],[[7,8,9],[17,18,19]]], 
+        (0,2), [[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]]]),
+    ([[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]],[[7,8,9],[17,18,19]]], 
+        (1,2), [[[-4,5,6],[-14,15,16]]]),
+]
+@pytest.mark.parametrize("input_data, slice_params, expected_result", SLICE_SEQ_TEST_CASES)
+def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
+    # Forward pass test
+    #==================
+    # We compute the expected output for the forward pass.
+    # We need two surrounding brackets:
+    # The first for sequences (length=1, since we have dynamic_axis='').
+    # The second for batch of one sample.
+
+    # 1 sample with 2 sequence element of a vector of 3
+
+    t = C.dynamic_axis(name='t')
+    a = I([input_data], dynamic_axis=t)
+
+    # slice using the operator
+    result = C.slice(a, slice_params[0], slice_params[1], axis='t')
+    result = C.identity(result) # required hack because Slice doesn't propagate tag
+
+    unittest_helper(result, None, [expected_result], device_id=device_id, 
+                precision=precision, clean_up=False, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The gradient of the slice operator is a tensor of the same shape as the
+    # input tensor, having 1 for elements that were taken and 0 for elements
+    # that were dropped.
+
+    def grad_slice(x, beg_index, end_index):
+        res = np.zeros_like(x)
+        res[beg_index:end_index] = 1
+        return res
+
+    expected_gradient = grad_slice(np.asarray(input_data), *slice_params)
+    
+    unittest_helper(result, None, [expected_gradient], device_id = device_id,
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
+
 def test_op_slice_overload(device_id, precision):
     # Testing ComputationNode's __getitem__ more thoroughly
 
