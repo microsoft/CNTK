@@ -985,7 +985,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     op.rank = op._.rank
     return op
     
-def splice(inputs, begin_index, end_index, axis=0, name=None): 
+def splice(inputs, axis=0, name=None): 
     '''
     Concatenate the input tensors along an axis.    
 

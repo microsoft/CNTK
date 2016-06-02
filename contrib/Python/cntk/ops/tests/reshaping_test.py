@@ -259,8 +259,7 @@ def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shap
     expected_tensor = input_tensor.transpose(*permutated_axes)
     
     a = I([input_tensor])
-    print (a.rank)
-    print ("=====================================================###############################################")
+
     # swap two axes
     reshaped_input = C.transpose_dimensions(a, axis1, axis2)
 
