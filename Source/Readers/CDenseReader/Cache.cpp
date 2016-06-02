@@ -114,6 +114,10 @@ namespace Microsoft {
 				while (maxCapacity > 0) {
 					this->m_memBlock = (char*)malloc(maxCapacity);
 					if (this->m_memBlock != NULL) {
+						//ensure allocate success
+						cerr << "memset begin" << endl;
+						memset(m_memBlock, 0, maxCapacity); 
+						cerr << "memset end" << endl;
 						this->m_maxCapacity = maxCapacity;
 						break;
 					}
