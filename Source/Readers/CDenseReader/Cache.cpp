@@ -107,6 +107,7 @@ namespace Microsoft {
 			MemCache::MemCache(size_t maxCapacity) {
 				this->ResetReadPos();
 				this->AllocMem(maxCapacity);
+				this->m_cachedSize = 0;
 			}
 
 			void MemCache::AllocMem(size_t maxCapacity) {
