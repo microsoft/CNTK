@@ -106,11 +106,17 @@ train = [
             numPrevLearnRates = 5
             numBestSearchEpoch = 1
         ]
-		
-		parallelTrain = [
-            parallelizationMethod = "DataParallelSGD"
-			parallelizationStartEpoch = 2
-            distributedMBReading = true
+
+		ParallelTrain=[
+            parallelizationMethod=BlockMomentumSGD
+            distributedMBReading=true
+            syncPerfStats=5
+            parallelizationStartEpoch = 1
+            BlockMomentumSGD=[
+                syncPeriod = 120000
+                resetSGDMomentum = true
+                useNesterovMomentum = true
+            ]
         ]
     ]
 

@@ -193,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             // fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
 
                             std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
-                            RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int)epochSample);
+                            RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int) epochSample);
                         }
 
                         if (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence))
@@ -209,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         // use the found value, and set the appropriate location to a 1.0
                         assert(labelIn.dim > index); // if this goes off labelOut dimension is too small
-                        m_featureData.push_back((float)index);
+                        m_featureData.push_back((float) index);
                     }
                     else
                     {
@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 {
                     // check if the reading is right
-                    int jEnd = (int)m_labelIdData.size() - 1;
+                    int jEnd = (int) m_labelIdData.size() - 1;
                     LabelIdType index;
                     if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
                         RuntimeError("cannot find sentence begining label");
@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_labelInfo[index].mapIdToLabel[i] = label;
                         m_labelInfo[index].mapLabelToId[label] = i;
                     }
-                    m_labelInfo[index].numIds = (LabelIdType)arrayLabels.size();
+                    m_labelInfo[index].numIds = (LabelIdType) arrayLabels.size();
                     m_labelInfo[index].mapName = labelPath;
                 }
                 else
@@ -522,7 +522,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            m_labelInfo[index].dim = (LabelIdType)(size_t)labelConfig(L"labelDim");
+            m_labelInfo[index].dim = (LabelIdType)(size_t) labelConfig(L"labelDim");
 
             // update dimension if the file says it's bigger
             if (m_labelInfo[index].dim < m_labelInfo[index].numIds)
@@ -555,52 +555,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // unk symbol
         mUnk = readerConfig(L"unk", "<unk>");
     }
-
-#if 0
-    template <class ElemType>
-    void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
-    {
-        FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
-
-        int a = 0, ch;
-
-        while (!feof(fin))
-        {
-            ch = fgetc(fin);
-
-            if (ch == 13)
-                continue;
-
-            if ((ch == ' ') || (ch == '\t') || (ch == '\n'))
-            {
-                if (a > 0)
-                {
-                    if (ch == '\n')
-                        ungetc(ch, fin);
-                    break;
-                }
-
-                if (ch == '\n')
-                {
-                    strcpy_s(word, strlen("</s>"), (char*) "</s>");
-                    return;
-                }
-                else
-                    continue;
-            }
-
-            word[a] = (char)ch;
-            a++;
-
-            if (a >= MAX_STRING)
-            {
-                // printf("Too long word found!\n");   // truncate too long words
-                a--;
-            }
-        }
-        word[a] = 0;
-    }
-#endif
 
     template <class ElemType>
     void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& classSize,
@@ -635,7 +589,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(tokens.size() == 4);
 
             b = stoi(tokens[0]);
-            cnt = (size_t)stof(tokens[1]);
+            cnt = (size_t) stof(tokens[1]);
             strtmp = tokens[2];
             clsidx = stoi(tokens[3]);
 
@@ -651,11 +605,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Note: If users specify labelDim = 0 (->nwords) this will not fail. Later we will interpret this as "infer".
         if (idx4class.size() < nwords)
-            RuntimeError("ReadClassInfo: The actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int)idx4class.size(), (int)nwords);
+            RuntimeError("ReadClassInfo: The actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int) idx4class.size(), (int) nwords);
 
         std::vector<double> counts(idx4cnt.size());
         for (const auto& p : idx4cnt)
-            counts[p.first] = (double)p.second;
+            counts[p.first] = (double) p.second;
         m_noiseSampler = noiseSampler<long>(counts);
 
         // check if unk is the same used in vocabulary file
@@ -940,7 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                                                 // this is after getMinibatch size, which has increased m_seqIndex by 1
                                                 // so the real index is m_seqIndex - 1;
-        int seqIndex = (int)m_seqIndex - 1;
+        int seqIndex = (int) m_seqIndex - 1;
 
         // now get the labels
         const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
@@ -1005,16 +959,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // pick the right sample with randomization if desired
             size_t jRand = jSample;
             int wrd = m_labelIdData[jRand];
-            labels.SetValue(0, j, (ElemType)wrd);
+            labels.SetValue(0, j, (ElemType) wrd);
 
             if (readerMode == ReaderMode::NCE)
             {
-                labels.SetValue(1, j, (ElemType)m_noiseSampler.logprob(wrd));
+                labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
                 for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
                 {
                     int wid = m_noiseSampler.sample();
-                    labels.SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                    labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
+                    labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                    labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
                 }
             }
             else if (readerMode == ReaderMode::Class)
@@ -1022,7 +976,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int clsidx = idx4class[wrd];
                 if (m_classSize > 0)
                 {
-                    labels.SetValue(1, j, (ElemType)clsidx);
+                    labels.SetValue(1, j, (ElemType) clsidx);
                     // save the [begining ending_indx) of the class
                     labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
                     labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
@@ -1051,7 +1005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int curDevId = m_id2Prob->GetDeviceId();
         m_id2Prob->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
         for (size_t j = 0; j < nwords; j++)
-            (*m_id2Prob)((int)j, 0) = (float)m_noiseSampler.prob((int)j);
+            (*m_id2Prob)((int) j, 0) = (float) m_noiseSampler.prob((int) j);
         m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
         int oldDeviceId = idx2prob.GetDeviceId();
@@ -1083,8 +1037,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_id2classLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
         for (size_t j = 0; j < nwords; j++)
         {
-            int clsidx = idx4class[(int)j];
-            (*m_id2classLocal)(j, 0) = (float)clsidx;
+            int clsidx = idx4class[(int) j];
+            (*m_id2classLocal)(j, 0) = (float) clsidx;
         }
         m_id2classLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
@@ -1114,13 +1068,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int prvcls = -1;
         for (size_t j = 0; j < nwords; j++)
         {
-            clsidx = idx4class[(int)j];
+            clsidx = idx4class[(int) j];
             if (prvcls != clsidx && clsidx > prvcls)
             {
                 if (prvcls >= 0)
-                    (*m_classInfoLocal)(1, prvcls) = (float)j;
+                    (*m_classInfoLocal)(1, prvcls) = (float) j;
                 prvcls = clsidx;
-                (*m_classInfoLocal)(0, prvcls) = (float)j;
+                (*m_classInfoLocal)(0, prvcls) = (float) j;
             }
             else if (prvcls > clsidx)
             {
@@ -1128,7 +1082,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("LMSequenceReader::GetClassInfo probably the number of words specified is larger than the actual number of words. Check network builder and data reader. ");
             }
         }
-        (*m_classInfoLocal)(1, prvcls) = (float)nwords;
+        (*m_classInfoLocal)(1, prvcls) = (float) nwords;
 
         //    (*m_classInfoLocal).Print();
 
@@ -1173,7 +1127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (actualmbsize > m_mbSize)
         {
-            RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
+            RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int) m_mbSize, (int) actualmbsize);
         }
 
         // hit the end of the dataset,
@@ -1223,11 +1177,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const size_t jRand = jSample; // TODO: This seems unfinished.
 
                                               // vector of feature data goes into matrix column
-                size_t idx = (size_t)m_featureData[jRand];
-                m_featuresBuffer[j * labelInfo.dim + idx] = (ElemType)1;
+                size_t idx = (size_t) m_featureData[jRand];
+                m_featuresBuffer[j * labelInfo.dim + idx] = (ElemType) 1;
 
                 if (matrices.find(m_featuresName) != matrices.end())
-                    features.SetValue(idx, j, (ElemType)1);
+                    features.SetValue(idx, j, (ElemType) 1);
             }
 
             GetLabelOutput(matrices, m_mbStartSample, actualmbsize);
@@ -1258,7 +1212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>& nbs = matrices.GetInputMatrix<ElemType>(L"numberobs");
                 int curDevId = nbs.GetDeviceId();
                 nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-                nbs(0, 0) = (float)actualmbsize;
+                nbs(0, 0) = (float) actualmbsize;
                 nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
                 for (size_t i = 0; i < actualmbsize; i++)
                 {
@@ -1270,7 +1224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         catch (...)
         {
-            RuntimeError("Features size not sufficiently large. The asked minibatch size is %d. Check minibatchSize in the feature definition.", (int)actualmbsize);
+            RuntimeError("Features size not sufficiently large. The asked minibatch size is %d. Check minibatchSize in the feature definition.", (int) actualmbsize);
         }
 
         try
@@ -1500,7 +1454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         labelInfo.mapIdToLabel[i] = label;
                         labelInfo.mapLabelToId[label] = i;
                     }
-                    labelInfo.numIds = (LabelIdType)arrayLabels.size();
+                    labelInfo.numIds = (LabelIdType) arrayLabels.size();
                     labelInfo.mapName = labelPath;
                     labelInfo.fileToWrite.clear();  // (not an output, so nothing to write at end)
                 }
@@ -1524,7 +1478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             false);
 #endif
                         if (word4idx.size() != nwords) // TODO: Why not infer it at this point in time? If labelInfo.dim == 0 then set if to word4idx.size()
-                            LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file %ls is not consistent", (int)nwords, (int)word4idx.size(), wClassFile.c_str());
+                            LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file %ls is not consistent", (int) nwords, (int) word4idx.size(), wClassFile.c_str());
                         int iMax = -1;
                         int i;
                         for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
@@ -1571,7 +1525,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
         m_parser.ParseInit(pathName.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-        mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1); // 0 indicates auto-fill mbSize
+        mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t) 1); // 0 indicates auto-fill mbSize
                                                                                                  // TODO: ^^ This should depend on the sequences themselves.
     }
 
@@ -1684,7 +1638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // I guess since they all have the same length, they are then all complete
             for (int s = 0; s < mToProcess.size(); s++)
             {
-                int mp = (int)mToProcess[s];
+                int mp = (int) mToProcess[s];
                 if (mProcessed[mp])
                 {
                     mLastProcessedSentenceId = mp;
@@ -1709,7 +1663,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t maxToProcess = mRequestedNumParallelSequences > 0 ? mRequestedNumParallelSequences : SIZE_MAX; // if mRequestedNumParallelSequences is 0 then we go by MB size
         size_t maxTokens = mRequestedNumParallelSequences > 0 ? SIZE_MAX : m_mbSize;
         size_t numTokens = 0;  // token counter
-
         for (size_t seq = mLastProcessedSentenceId;
             seq < mNumRead &&                 // hit end of buffer
             mToProcess.size() < maxToProcess; // hit parallel-sequence limit
@@ -1768,7 +1721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<SequencePosition> seqPos;
             fprintf(stderr, "LMSequenceReader: Reading epoch data..."), fflush(stderr);
             mNumRead = m_parser.Parse(m_cacheBlockSize, &m_labelTemp, &m_featureTemp, &seqPos);
-            fprintf(stderr, " %d sequences read.\n", (int)mNumRead);
+            fprintf(stderr, " %d sequences read.\n", (int) mNumRead);
             firstPosInSentence = mLastPosInSentence;
             if (mNumRead == 0)
                 return false; // end
@@ -1841,7 +1794,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 						// use the found value, and set the appropriate location to a 1.0
 						assert(labelIn.dim > labelId); // if this goes off labelOut dimension is too small
-						m_featureData.push_back((float)labelId);
+						m_featureData.push_back((float) labelId);
 					}
 					else
 						RuntimeError("Input labels are expected to be category labels.");
@@ -1945,23 +1898,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // ############### BREAKING CHANGE ################
                 // We use sLen, not sLen -1, if labelOut.type is labelNone, assuming there is no output label, and all labels are inputs.
                 // ############### BREAKING CHANGE ################
-                ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
-                ptrdiff_t end = (ptrdiff_t)len - (ptrdiff_t)firstPosInSentence;
-                if (begin >= (ptrdiff_t)nT)
+                ptrdiff_t begin = -(ptrdiff_t) firstPosInSentence;
+                ptrdiff_t end = (ptrdiff_t) len - (ptrdiff_t) firstPosInSentence;
+                if (begin >= (ptrdiff_t) nT)
                     LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
                 if (end < 0)
                     LogicError("BatchSequenceReader: Sentence end outside minibatch?");
-                m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t)end);
+                m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t) end);
                 if (begin > 0)
-                    m_pMBLayout->AddGap(s, 0, (size_t)begin);
-                if (end < (ptrdiff_t)nT)
+                    m_pMBLayout->AddGap(s, 0, (size_t) begin);
+                if (end < (ptrdiff_t) nT)
                     m_pMBLayout->AddGap(s, end, nT);
             }
         }
         // copy m_featureData to matrix
         // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
-
         size_t featureDim = m_labelInfo[labelInfoIn].dim;
         auto iter = matrices.find(m_featuresName);
         if (iter != matrices.end()) // (if not found then feature matrix is not requested this time)
@@ -1987,9 +1939,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t j = 0; j < actualmbsize; ++j) // note: this is a loop over matrix columns, not time steps
             {
                 // vector of feature data goes into matrix column
-                size_t idx = (size_t)m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcessForThisWorker.size(), s=j%mToProcessForThisWorker.size())
+                size_t idx = (size_t) m_featureData[j]; // one-hot index of the word, indexed by column (i.e. already interleaved, t=j/mToProcessForThisWorker.size(), s=j%mToProcessForThisWorker.size())
 
-                features.SetValue(idx, j, (ElemType)1);
+                features.SetValue(idx, j, (ElemType) 1);
             }
 
             features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, moveMatrix, false, false);
@@ -2008,72 +1960,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // go to the next sequence
         m_seqIndex++;
 
-#if 0 // what is this?
-        // now transfer to the GPU as needed
-        // get the features array
-        if (matrices.find(m_featuresName) == matrices.end())
-        {
-            Matrix<ElemType>& nbs = *matrices[L"numberobs"]; // TODO: what is this? We fall back to a different node?
-            int curDevId = nbs.GetDeviceId();
-            nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-            nbs(0, 0) = (float)actualmbsize;
-            nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-            for (size_t i = 0; i < actualmbsize; i++)
-            {
-                std::wstring ws = msra::strfun::wstrprintf(L"feature%d", i);
-                Matrix<ElemType>& features = *matrices[ws];
-                features.SetValue(featureDim, 1, features.GetDeviceId(), &m_featuresBuffer[i * featureDim], matrixFlagNormal);
-            }
-        }
-#endif
 		assert(mToProcessForThisWorker.size() == m_pMBLayout->GetNumParallelSequences());
+
         // we read some records, so process them
         return true;
     }
-
-#if 0
-    /**
-    timePos: the time position. for example, 100 actual minibatch with 10 streams,
-    timePosition = [0,..,9] for each actual tiem
-    */
-    // This function was only called from BatchSequenceReader::TryGetMinibatch(), but no longer.
-    template <class ElemType>
-    void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int timePos)
-    {
-        // now get the labels
-        LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-        LabelIdType index = GetIdFromLabel(labelIn.beginSequence.c_str(), labelIn);
-
-        if (timePos == 0)
-        {
-            if (wrd == (int)index)
-            {
-                mSentenceBegin = true;
-                // BUGBUG: This is currently not functional. Nothing in here marks gaps, nor sets any end flags.
-                uttPos;
-                LogicError("BatchSequenceReader::SetSentenceBegin(): Disabled because this implementation seems out of date w.r.t. setting end and gap flags.");
-                // m_pMBLayout->SetWithoutOr(uttPos, timePos, MinibatchPackingFlags::SequenceStart);   // TODO: can we use Set() (with OR)?
-            }
-        }
-    }
-#endif
-
-#if 0
-    // TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
-    template <class ElemType>
-    void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t>& sentenceEnd)
-    {
-        sentenceEnd.resize(mToProcess.size());
-        if (mSentenceBegin)
-        {
-            sentenceEnd.assign(mToProcess.size(), 0);
-        }
-        else
-        {
-            sentenceEnd.assign(mToProcess.size(), m_mbSize + 2);
-        }
-    }
-#endif
 
     // note: DataEnd() must be called for each minibatch in order to propagate mSentenceEnd to mProcessed[]
     template <class ElemType>
@@ -2128,16 +2019,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // write sample value into output
             // This writes an index into a row vector. Which is wrong, we want a sparse one-hot vector.
-            labels.SetValue(0, j, (ElemType)wrd);
+            labels.SetValue(0, j, (ElemType) wrd);
 
             if (readerMode == ReaderMode::NCE)
             {
-                labels.SetValue(1, j, (ElemType)m_noiseSampler.logprob(wrd));
+                labels.SetValue(1, j, (ElemType) m_noiseSampler.logprob(wrd));
                 for (size_t noiseid = 0; noiseid < m_noiseSampleSize; noiseid++)
                 {
                     int wid = m_noiseSampler.sample();
-                    labels.SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                    labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
+                    labels.SetValue(2 * (noiseid + 1), j, (ElemType) wid);
+                    labels.SetValue(2 * (noiseid + 1) + 1, j, -(ElemType) m_noiseSampler.logprob(wid));
                 }
             }
             else if (readerMode == ReaderMode::Class)
@@ -2145,15 +2036,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int clsidx = idx4class[wrd];
                 if (m_classSize > 0)
                 {
-                    labels.SetValue(1, j, (ElemType)clsidx);
+                    labels.SetValue(1, j, (ElemType) clsidx);
 
                     // save the [begining ending_indx) of the class
-                    size_t lft = (size_t)(*m_classInfoLocal)(0, clsidx);
-                    size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
+                    size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
+                    size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
                     if (wrd < lft || lft > rgt || wrd >= rgt)
                     {
                         LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
-                            (int)wrd, (int)lft, (int)rgt, (int)lft, (int)wrd, (int)rgt);
+                            (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
                     }
                     labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
                     labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
@@ -2162,51 +2053,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (readerMode == ReaderMode::Softmax)
             {
                 if (wrd == 0)
-                    labels.SetValue(0, j, epsilon + (ElemType)wrd);
+                    labels.SetValue(0, j, epsilon + (ElemType) wrd);
             }
             else if (readerMode == ReaderMode::Unnormalize)
             {
-                labels.SetValue(0, j, -(ElemType)wrd);
+                labels.SetValue(0, j, -(ElemType) wrd);
                 if (wrd == 0)
-                    labels.SetValue(0, j, -epsilon - (ElemType)wrd);
+                    labels.SetValue(0, j, -epsilon - (ElemType) wrd);
             }
-
-#if 0   // This is fragile--if a line does not end with </s>, we will never get out of here. Instead, this is now set in GetMinibatchData().
-            // keep track of sentence ends. mSentenceEnd is read only in DataEnd(), which will then reset mProcessed[].
-            if (j == actualmbsize - 1) // if last entry then set mSentenceEnd to whether the word is the sentence-end symbol
-            {
-                // find numeric index of sentence-end token
-                LabelInfo& labelIn = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut]; // m_labelInfo[labelInfoIn]; <-- This is what it was before, which triggered a bug and I think is wrong wrd comes from m_labelIdData, which is the output.
-                LabelIdType endSequenceIndex = GetIdFromLabel(labelIn.endSequence, labelIn);
-
-                mSentenceEnd = (wrd == (int)endSequenceIndex);
-            }
-#endif
         }
         // send it back to where it came from
         // Note: This may leave this object in BOTH locations, which is desirable for
         // class-based models which access the information on the CPU.
         labels.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
     }
-
-#if 0
-    template <class ElemType>
-    int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
-    {
-
-        // now get the labels
-        LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-        auto found = word4idx.find(labelIn.endSequence);
-
-        // not yet found, add to the map
-        if (found != word4idx.end())
-        {
-            return (int)found->second;
-        }
-        else
-            return -1;
-    }
-#endif
 
     template class BatchSequenceReader<double>;
     template class BatchSequenceReader<float>;
