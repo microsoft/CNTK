@@ -935,10 +935,7 @@ def transpose_dimensions(x, axis1, axis2, name=None):
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
     '''
-    Slice the input along an axis.
-
-    Note:
-        `axis` is zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+    Slice the input along an axis.    
 
     Examples:
         >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
@@ -963,8 +960,12 @@ def slice(x, begin_index, end_index, axis=0, name=None):
                  [ 4.,  5.]]])]
 
     Args:
-        arg: input tensor
-        axis (int): axis along which `begin_index` and `end_index` will be used to slice the data. 
+        x: input tensor
+        begin_index (int): the index along axis where the slicing starts
+        end_index (int): the index along axis where the slicing ends
+        axis (int): axis along which `begin_index` and `end_index` will be used 
+        to slice the data. To slice on the dynamic (time) axis, pass a string 
+        with the dynamic axis name or '*' for the default dynamic axis
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -975,7 +976,10 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     from cntk.ops.cntk2 import Slice
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    cntk_axis = abs(axis) if axis<0 else x.rank - axis
+    if isinstance(axis, str):
+        cntk_axis = -1 # time axis
+    else:
+        cntk_axis = abs(axis) if axis<0 else x.rank - axis
     op = Slice(x, begin_index, end_index, cntk_axis, name=name)
     op.rank = op._.rank
     return op
