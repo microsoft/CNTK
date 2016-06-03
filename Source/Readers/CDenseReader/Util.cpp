@@ -1,5 +1,6 @@
 ﻿#include "Util.h"
-#include <time.h>
+#include <ctime>
+#include <climits>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,20 +30,41 @@ void PrintTime(std::function<void()> fn, const std::string& tag) {
 
 #ifdef _WIN32
 
+static LONGLONG InitTimeVal() {
+	static bool flag = true;
+	static LARGE_INTEGER time;
+	if (flag) {
+		flag = false;
+		QueryPerformanceCounter(&time);
+	}
+	return time.QuadPart;
+}
+
 float GetTime() {
 	LARGE_INTEGER time;
 	QueryPerformanceFrequency(&time);
 	LONGLONG freq = time.QuadPart;
 	QueryPerformanceCounter(&time);
-	return time.QuadPart * 1000.0f / freq; //millisec
+	return (time.QuadPart - InitTimeVal()) * 1000.0f / freq;
 }
 
+
 #else
+
+static time_t InitTimeVal() {
+	static bool flag = true;
+	static timeval time;
+	if(flag) {
+		flag = false;
+		gettimeofday(&time, NULL);
+	}
+	return time.tv_sec;
+}
 
 float GetTime() {
 	timeval time;
 	gettimeofday(&time, NULL);
-	return time.tv_sec * 1000.0f + time.tv_usec / 1000.0f; //millisec
+	return (time.tv_sec - InitTimeVal()) * 1000.0f + time.tv_usec / 1000.0f; 
 }
 
 #endif
