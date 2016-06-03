@@ -268,8 +268,8 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     def grad_splice(x):
         return np.ones_like(x)
 
-    expected_gradient1 = grad_slice(np.asarray(input_data1))
-    expected_gradient2 = grad_slice(np.asarray(input_data2))
+    expected_gradient1 = grad_splice(np.asarray(input_data1))
+    expected_gradient2 = grad_splice(np.asarray(input_data2))
     
     unittest_helper(result, None, [[expected_gradient1]], device_id = device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
