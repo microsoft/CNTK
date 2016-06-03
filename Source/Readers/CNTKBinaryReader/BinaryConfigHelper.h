@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include "Config.h"
 #include "Reader.h"
 
@@ -20,7 +21,7 @@ public:
     explicit BinaryConfigHelper(const ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
-    const vector<StreamDescription>& GetStreams() const { return m_streams; }
+    const std::map<std::wstring, std::wstring>& GetRename() const { return m_rename; }
 
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
@@ -35,7 +36,7 @@ public:
 
 private:
     std::wstring m_filepath;
-    std::vector<StreamDescription> m_streams;
+    std::map<std::wstring, std::wstring> m_rename;
     size_t m_randomizationWindow;
     unsigned int m_traceLevel;
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
