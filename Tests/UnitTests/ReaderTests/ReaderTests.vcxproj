@@ -234,6 +234,7 @@
     <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk" />
     <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk" />
     <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk" />
+    <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />

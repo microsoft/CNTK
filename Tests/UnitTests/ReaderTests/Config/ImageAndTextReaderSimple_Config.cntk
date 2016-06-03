@@ -20,7 +20,7 @@ reader = [
         verbosity=0
         randomize=true
 
-        deserializers=[
+        deserializers=(
             [
                 type="CNTKTextFormatDeserializer"
                 module="CNTKTextFormatReader"
@@ -65,6 +65,6 @@ reader = [
                     ]
                 ]
             ]
-        ]
+        )
     ]
 ]

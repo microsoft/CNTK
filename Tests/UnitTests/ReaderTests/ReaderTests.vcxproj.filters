@@ -412,6 +412,9 @@
     <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk">
       <Filter>Config\ExperimentalHTKMLF</Filter>
     </None>
+    <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Data\ImageNet1K_intensity.xml">
