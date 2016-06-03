@@ -252,9 +252,6 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     a = I([input_data1])
     b = I([input_data2])
     
-    def op_splice(x, y, axis):
-        return np.concatenate((x,y), axis)
-
     # splice using the operator
     result = C.splice((a, b), axis)
 
