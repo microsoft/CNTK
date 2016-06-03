@@ -929,7 +929,7 @@ def transpose_dimensions(x, axis1, axis2, name=None):
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
     op.axis1 = abs(axis1) if axis1<0 else op._.rank - axis1
-    op.axis2 = abs(axis2) if axis2<0 else op.y.rank - axis2    
+    op.axis2 = abs(axis2) if axis2<0 else op._.rank - axis2    
     op.rank = op._.rank
     return op
 
