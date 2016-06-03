@@ -31,9 +31,7 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
         #[1.84]
     
     Args:
-        target_vector: usually it is one-hot vector where the hot bit 
-        corresponds to the label index. But it can be any probability distribution
-        over the labels.
+        target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. But it can be any probability distribution over the labels.
         output_vector: the unscaled computed output values from the network
         name: the name of the node in the network            
     Returns:
@@ -59,8 +57,7 @@ def square_error(target_matrix, output_matrix, name=None):
         #[0.]
     
     Args:
-        target_matrix: target matrix, it is usually a one-hot vector where the 
-        hot bit corresponds to the label index
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         output_matrix: the output values from the network
         name: the name of the node in the network            
     Returns:
@@ -89,8 +86,7 @@ def error_prediction(target_vector, output_vector, name=None):
         #[1.]
     
     Args:
-        target_vector: it is one-hot vector where the hot bit corresponds to the 
-        label index
+        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         output_vector: the output values from the network
         name: the name of the node in the network            
     Returns:
@@ -824,8 +820,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None
         shape: dimensions of the input `x`
         x: the tensor from which the future value is obtained
         time_step: the number of time steps to look into the future (default 1)
-        default_hidden_activation: the default value to use when no future value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no future value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -859,8 +854,7 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
         shape: dimensions of the input `x`
         x: the tensor from which the past value is obtained
         time_step: the number of time steps to look into the past (default 1)
-        default_hidden_activation: the default value to use when no past value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no past value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -963,8 +957,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         x: input tensor
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
-        axis (int or str): axis along which `begin_index` and `end_index` 
-        will be used. If axis is of type `str` then the time axis will be used.
+        axis (int or str): axis along which `begin_index` and `end_index` will be used. If axis is of type `str` then the time axis will be used.
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
