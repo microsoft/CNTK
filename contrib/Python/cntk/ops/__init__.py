@@ -378,15 +378,12 @@ def times(left, right, output_rank=1, name=None):
         >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
         [array([[[[[  4.,   5.],
                    [  6.,   7.]],
-         [[ 12.,  17.],
-          [ 22.,  27.]]],
-
-
-        [[[ 20.,  29.],
-          [ 38.,  47.]],
-
-         [[ 28.,  41.],
-          [ 54.,  67.]]]]])]
+                  [[ 12.,  17.],
+                   [ 22.,  27.]]],
+                 [[[ 20.,  29.],
+                   [ 38.,  47.]],
+                  [[ 28.,  41.],
+                   [ 54.,  67.]]]]])]
 
     Args:
         left: left side matrix or tensor
