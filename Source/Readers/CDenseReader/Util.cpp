@@ -17,32 +17,53 @@ string FormatTime(time_t tm) {
 }
 
 void PrintTime(std::function<void()> fn, const std::string& tag) {
-	auto start = time(0);
-	cerr << tag << " started at " << FormatTime(start) << endl;
+	float start = GetTime();
+	cerr << tag << " started at " << FormatTime(time(0)) << endl;
 
 	fn();
 
-	auto end = time(0);
-	cerr << tag << " finished at " << FormatTime(end) << ",in " << end - start << "s" << endl;
+	float end = GetTime();
+	cerr << tag << " finished at " << FormatTime(time(0)) << ",in " << (end - start) / 1000.0f << "s" << endl;
 }
 
 
 #ifdef _WIN32
+
+static LONGLONG InitTimeVal() {
+	static bool flag = true;
+	static LARGE_INTEGER time;
+	if (flag) {
+		flag = false;
+		QueryPerformanceCounter(&time);
+	}
+	return time.QuadPart;
+}
 
 float GetTime() {
 	LARGE_INTEGER time;
 	QueryPerformanceFrequency(&time);
 	LONGLONG freq = time.QuadPart;
 	QueryPerformanceCounter(&time);
-	return time.QuadPart * 1000.0f / freq; //millisec
+	return (time.QuadPart - InitTimeVal()) * 1000.0f / freq;
 }
 
+
 #else
+
+static time_t InitTimeVal() {
+	static bool flag = true;
+	static timeval time;
+	if (flag) {
+		flag = false;
+		gettimeofday(&time, NULL);
+	}
+	return time.tv_sec;
+}
 
 float GetTime() {
 	timeval time;
 	gettimeofday(&time, NULL);
-	return time.tv_sec * 1000.0f + time.tv_usec / 1000.0f; //millisec
+	return (time.tv_sec - InitTimeVal()) * 1000.0f + time.tv_usec / 1000.0f;
 }
 
 #endif
