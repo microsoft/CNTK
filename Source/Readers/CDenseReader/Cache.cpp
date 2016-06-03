@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #else
 #include <direct.h>
 #endif
@@ -114,10 +115,19 @@ namespace Microsoft {
 				while (maxCapacity > 0) {
 					this->m_memBlock = (char*)malloc(maxCapacity);
 					if (this->m_memBlock != NULL) {
-						//ensure allocate success
-						cerr << "memset begin" << endl;
+						//force allocate all mem in advance
+						cerr << "MemCache: begin memset" << endl;
 						memset(m_memBlock, 0, maxCapacity); 
-						cerr << "memset end" << endl;
+						cerr << "MemCache: finish memset" << endl;
+#ifndef _WIN32
+						//prevent swap (need sudo)
+						int flag = mlock(m_memBlock, maxCapacity);
+						if (flag == 0) {
+							cerr << "mlock success" << endl;
+						}else{
+							cerr << "mlock failed" << endl;
+						}
+#endif
 						this->m_maxCapacity = maxCapacity;
 						break;
 					}

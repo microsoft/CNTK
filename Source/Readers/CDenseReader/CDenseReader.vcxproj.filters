@@ -91,6 +91,7 @@
       <Filter>7z</Filter>
     </ClCompile>
     <ClCompile Include="Cache.cpp" />
+    <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
@@ -154,5 +155,6 @@
       <Filter>7z</Filter>
     </ClInclude>
     <ClInclude Include="Cache.h" />
+    <ClInclude Include="Util.h" />
   </ItemGroup>
 </Project>

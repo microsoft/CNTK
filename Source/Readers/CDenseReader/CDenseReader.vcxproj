@@ -118,6 +118,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="trees.h" />
+    <ClInclude Include="Util.h" />
     <ClInclude Include="zconf.h" />
     <ClInclude Include="zlib.h" />
     <ClInclude Include="zutil.h" />
@@ -172,6 +173,7 @@
     </ClCompile>
     <ClCompile Include="trees.c" />
     <ClCompile Include="uncompr.c" />
+    <ClCompile Include="Util.cpp" />
     <ClCompile Include="zutil.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

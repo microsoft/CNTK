@@ -142,7 +142,7 @@ namespace Microsoft {
 				void ReadMemCache(size_t limit);
 				void ReadDiskCache(size_t limit);
 
-				void PrintZipDataQueueStat(const string& tag);
+				void PrintStatInfo(const string& tag, float requestBufTime, float fillBufTime, int blockIdx, int blockNum);
 				void IncBlockCntBeenRead();
 
 				MemCache *m_memCache;

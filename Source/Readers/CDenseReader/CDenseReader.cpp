@@ -22,6 +22,7 @@
 #include <thread>
 #include "LzmaDec.h"
 #include "zlib.h"
+#include "Util.h"
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -45,21 +46,7 @@ namespace Microsoft {
 			DWORD HIDWORD(size_t size) { return size >> 32; }
 			DWORD LODWORD(size_t size) { return size & 0xFFFFFFFF; }
 
-			string FormatTime(time_t tm) {
-				char buffer[9] = { 0 };
-				strftime(buffer, 9, "%H:%M:%S", localtime(&tm));
-				return buffer;
-			}
 
-			void PrintTime(std::function<void()> fn, const std::string& tag) {
-				auto start = time(0);
-				cerr << tag << " started at " << FormatTime(start) << endl;
-
-				fn();
-
-				auto end = time(0);
-				cerr << tag << " finished at " << FormatTime(end) << ",in " << end - start << "s" << endl;
-			}
 
 			template <class ElemType>
 			SDenseBinaryMatrix<ElemType>::SDenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols) : BDenseBinaryMatrix<ElemType>(name, deviceID, numRows, numCols) {
@@ -141,8 +128,6 @@ namespace Microsoft {
 			template<class ConfigRecordType>
 			void DenseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rename, const ConfigRecordType & config) {
 
-				GetZippedFileInfo();
-
 				m_dThreadCnt = config(L"dThreadCnt", (int32_t)4);
 				m_cAlgo = config(L"cAlgo", "7z");  //accapt value, "7z" or "gz"
 
@@ -166,6 +151,8 @@ namespace Microsoft {
 						<< ", config: " << memCacheSize
 						<< endl;
 				}
+
+				GetZippedFileInfo();
 
 				m_blockSizeOfUnzippedBuffer = 4;
 				size_t maxSampleNum = std::max(m_blockSampleCnt, m_microBatchSize);
@@ -575,9 +562,13 @@ namespace Microsoft {
 				this->m_blockCntLocker.unlock();
 			}
 
-			template<class ElemType> 
-			void DenseBinaryInput<ElemType>::PrintZipDataQueueStat(const string& tag) {
-				cerr << "Read " << tag <<" Data:"
+			template<class ElemType>
+			void  DenseBinaryInput<ElemType>::PrintStatInfo(const string& tag, float requestBufTime,
+				float fillBufTime, int blockIdx, int blockNum) {
+				cerr << "Read " << tag << " Data:"
+					<< "requestBuf:" << requestBufTime << "ms,"
+					<< "fillBuf:" << fillBufTime << "ms,"
+					<< "progress:" << blockIdx << "/" << blockNum << ","
 					<< "produce:" << this->m_zipedDataToProduce.size()
 					<< ","
 					<< "consume:" << this->m_zipedDataToConsume.size()
@@ -596,17 +587,21 @@ namespace Microsoft {
 				cerr << "Zip Blocks:" << read_order.size() << endl;
 
 				for (size_t i = 0; i < read_order.size(); i++) {
+					float time1 = GetTime();
+
 					//buffer
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
-					size_t readSize = m_blockSizeInByte[read_order[i]];
 
-					this->PrintZipDataQueueStat("Zip");
+					float time2 = GetTime();
 
 					//read
+					size_t readSize = m_blockSizeInByte[read_order[i]];
 					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
 					this->m_inFile.read((char*)zipDataBuffer, readSize);
-					m_zipedDataToConsume.push(zipDataBuffer);
-					this->IncBlockCntBeenRead();
+
+					float time3 = GetTime();
+
+					this->PrintStatInfo("Zip", time2 - time1, time3 - time2, i, read_order.size());
 
 					//cache
 					bool cached = false;
@@ -624,6 +619,8 @@ namespace Microsoft {
 						notCachedBlock.push_back(read_order[i]);
 					}
 
+					m_zipedDataToConsume.push(zipDataBuffer);
+					this->IncBlockCntBeenRead();
 				}
 
 				read_order = notCachedBlock;
@@ -637,11 +634,18 @@ namespace Microsoft {
 				cerr << "Mem Blocks:" << cache.CachedBlocksNum() << endl;
 
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
+					float time1 = GetTime();
+
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
-					this->PrintZipDataQueueStat("Mem");
+					float time2 = GetTime();
 
 					cache.Read(zipDataBuffer);
+
+					float time3 = GetTime();
+
+					this->PrintStatInfo("Mem",  time2 - time1, time3 - time2,  i, cache.CachedBlocksNum());
+
 					this->m_zipedDataToConsume.push(zipDataBuffer);
 					this->IncBlockCntBeenRead();
 				}
@@ -655,11 +659,18 @@ namespace Microsoft {
 				cerr << "Disk Blocks:" << cache.CachedBlocksNum() << endl;
 
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
+					float time1 = GetTime();
+
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
-					this->PrintZipDataQueueStat("Disk");
+					float time2 = GetTime();
 
 					cache.Read(zipDataBuffer);
+
+					float time3 = GetTime();
+
+					this->PrintStatInfo("Disk", time2 - time1, time3 - time2, i, cache.CachedBlocksNum());
+
 					this->m_zipedDataToConsume.push(zipDataBuffer);
 					this->IncBlockCntBeenRead();
 				}
