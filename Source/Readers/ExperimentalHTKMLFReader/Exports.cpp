@@ -16,6 +16,7 @@
 #include "HeapMemoryProvider.h"
 #include "HTKDataDeserializer.h"
 #include "MLFDataDeserializer.h"
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -39,11 +40,11 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
 {
-    if (type == L"HTKDataDeserializer")
+    if (type == L"HTKDeserializer")
     {
         *deserializer = new HTKDataDeserializer(corpus, deserializerConfig, primary);
     }
-    else if (type == L"MLFDataDeserializer")
+    else if (type == L"MLFDeserializer")
     {
         *deserializer = new MLFDataDeserializer(corpus, deserializerConfig, primary);
     }

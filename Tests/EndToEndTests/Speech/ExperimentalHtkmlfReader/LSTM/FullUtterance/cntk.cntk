@@ -38,7 +38,7 @@ speechTrain = [
         # A list of deserializers to use.
         deserializers = (
             [   
-                type = "HTKDataDeserializer"        
+                type = "HTKDeserializer"        
                 module = "ExperimentalHTKMLFReader"
 
                 # Description of input streams
@@ -51,7 +51,7 @@ speechTrain = [
                 ]
             ]:
             [
-                type = "MLFDataDeserializer"                
+                type = "MLFDeserializer"                
                 module = "ExperimentalHTKMLFReader"
                 input = [
                     labels = [

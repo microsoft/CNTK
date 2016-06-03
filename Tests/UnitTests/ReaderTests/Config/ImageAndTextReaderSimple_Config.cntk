@@ -33,7 +33,7 @@ reader = [
                     ]
                 ]
             ]:[
-                type="ImageDataDeserializer"
+                type="ImageDeserializer"
                 module="ImageReader"
                 file = "$RootDir$/ImageAndTextReaderSimple_map.txt"
 

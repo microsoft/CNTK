@@ -11,7 +11,7 @@ Train=[
         # A list of deserializers to use.
         deserializers=(
             [   
-                type="ImageDataDeserializer"
+                type="ImageDeserializer"
                 module="ImageReader"
 
                 # Map file which maps images to labels using the following format:
@@ -67,7 +67,7 @@ Test=[
         # A list of deserializers to use.
         deserializers=(
             [
-                type="ImageDataDeserializer"
+                type="ImageDeserializer"
                 module="ImageReader"
                 file=$ConfigDir$/val_map.txt
 
