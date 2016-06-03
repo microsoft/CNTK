@@ -80,7 +80,7 @@ public:
 
 private:
     // Builds an index of the input data.
-    void Initialize(map<wstring, wstring>& rename);
+    void Initialize(const std::map<std::wstring, std::wstring>& rename);
 
     // Reads the offsets table from disk into memory
     void ReadOffsetsTable(FILE* infile, size_t startOffset, size_t numBatches);
@@ -89,7 +89,7 @@ private:
     // Reads a chunk from disk into buffer
     unique_ptr<byte[]> ReadChunk(size_t chunkId);
 
-    BinaryChunkDeserializer(const wstring& filename, const vector<StreamDescription>& streams);
+    BinaryChunkDeserializer(const wstring& filename);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -110,6 +110,8 @@ private:
     int32_t m_numInputs;
     
     unsigned int m_traceLevel;
+
+    friend class CNTKBinaryReaderTestRunner;
 
     DISABLE_COPY_AND_MOVE(BinaryChunkDeserializer);
 };

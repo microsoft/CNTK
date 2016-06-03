@@ -43,17 +43,16 @@ void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t startOffset,
 }
 
 BinaryChunkDeserializer::BinaryChunkDeserializer(const BinaryConfigHelper& helper) :
-    BinaryChunkDeserializer(helper.GetFilePath(), helper.GetStreams())
+    BinaryChunkDeserializer(helper.GetFilePath())
 {
     SetTraceLevel(helper.GetTraceLevel());
 
     // Rename/alias not yet implemented
-    map<wstring, wstring> rename;
-    Initialize(rename);
+    Initialize(helper.GetRename());
 }
 
 
-BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename, const vector<StreamDescription>& streams) : 
+BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename) : 
     m_filename(filename),
     m_file(nullptr),
     m_offsetStart(0),
@@ -61,7 +60,6 @@ BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename, c
     m_traceLevel(0)
 {
     // streams will be used for rename when it's implemented.
-    (void)streams;
 
 }
 
@@ -71,7 +69,7 @@ BinaryChunkDeserializer::~BinaryChunkDeserializer()
         fclose(m_file);
 }
 
-void BinaryChunkDeserializer::Initialize(map<wstring, wstring>& rename)
+void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename)
 {
     if (m_file)
         fclose(m_file);
@@ -119,7 +117,7 @@ void BinaryChunkDeserializer::Initialize(map<wstring, wstring>& rename)
         if (rename.find(wname) == rename.end())
             streamDescription->m_name = wname;
         else
-            streamDescription->m_name = rename[wname];
+            streamDescription->m_name = rename.at(wname);
 
         // Read the matrix type. Then instantiate the appropriate BinaryDataDeserializer, and have it read in its parameters
         // Note: Is there a better way to do this?

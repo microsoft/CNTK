@@ -1,0 +1,65 @@
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+# note we're only using 2 inputs here, and we're using b because it's smaller
+SparseSeqPart = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        file = "sparseseqoutput.bin"
+
+        input = [
+            features = [ original="b" ]
+            labels = [ original="d" ]
+        ]
+        randomize = false
+    ]
+]
+
+SparseSeq = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        file = "sparseseqoutput.bin"
+
+        input = [
+            features1 = [ original="a" ]
+            features2 = [ original="b" ]
+            labels1 = [ original="c" ]
+            labels2 = [ original="d" ]
+        ]
+        randomize = false
+    ]
+]
+
+Sparse = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        file = "sparseoutput.bin"
+
+        input = [
+            features1 = [ original="a" ]
+            features2 = [ original="b" ]
+            labels1 = [ original="c" ]
+            labels2 = [ original="d" ]
+        ]
+        randomize = false
+    ]
+]
+
+Simple = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        file = "simple.bin"
+
+        input = [
+            features1 = [ original="a" ]
+            features2 = [ original="b" ]
+            features3 = [ original="c" ]
+            features4 = [ original="d" ]
+        ]
+        randomize = false
+    ]
+]
