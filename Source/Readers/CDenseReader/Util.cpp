@@ -1,5 +1,6 @@
 ﻿#include "Util.h"
-#include <time.h>
+#include <ctime>
+#include <climits>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -53,7 +54,7 @@ float GetTime() {
 static time_t InitTimeVal() {
 	static bool flag = true;
 	static timeval time;
-	if (flag) {
+	if(flag) {
 		flag = false;
 		gettimeofday(&time, NULL);
 	}
