@@ -85,6 +85,16 @@ CNTK2 = [
         ].out
         else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
+    Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
+		if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
+		else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
+		else [ # workaround: swap 'axis' to first position, RowStack, swap back
+			ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
+				inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
+			].inputsT
+			out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
+		].out
+
     // Swap two axes of a tensor
     TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
 
@@ -170,14 +180,14 @@ Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag=
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
-Splice (inputs, axis=1) = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
+Splice (inputs, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
     if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-    else if axis == 1 then RowStack (inputs)
+    else if axis == 1 then [tag1=tag; out = RowStack (inputs, tag=tag1)].out
     else [ # workaround: swap 'axis' to first position, RowStack, swap back
         ArrayTransposeDimensions (inputs, axis1, axis2) = [ # transpose each element of a BS array
             inputsT[i:0..Length(inputs)-1] = TransposeDimensions (inputs[i], axis1, axis2)
         ].inputsT
-        out = TransposeDimensions (RowStack (ArrayTransposeDimensions (inputs, 1, axis)), 1, axis)
+        out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (inputs, 1, axis)), 1, axis, tag=tag)].out
     ].out
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
 NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
