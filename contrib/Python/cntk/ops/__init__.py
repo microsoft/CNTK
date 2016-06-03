@@ -963,9 +963,8 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         x: input tensor
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
-        axis (int): axis along which `begin_index` and `end_index` will be used 
-        to slice the data. To slice on the dynamic (time) axis, pass a string 
-        with the dynamic axis name or '*' for the default dynamic axis
+        axis (int or str): axis along which `begin_index` and `end_index` 
+        will be used. If axis is of type `str` then the time axis will be used.
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
