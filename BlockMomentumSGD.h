@@ -42,8 +42,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         double blockMomentumAsTimeConstant, size_t syncPeriod)
             :IMASGD<ElemType>(pMPI, reportFreq, devID)
         {
-            m_syncPeriod = syncPeriod;
-            m_blockMomentumAsTimeConstant = blockMomentumAsTimeConstant; 
+            m_syncPeriod = syncPeriod/pMPI->NumNodesInUse();
+            m_blockMomentumAsTimeConstant = blockMomentumAsTimeConstant/pMPI->NumNodesInUse(); 
             m_useNesterovMomentum = useNestrovMomentum;
             m_resetSGDMomentumAfterAggregation = resetSGDM; 
             m_blockLearningRate = blockLearningRate;
@@ -79,9 +79,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             fprintf(stderr, "Parallel training (%d workers) using BlockMomentumSGD with "
                             "block momentum = %6.4f ,"
-                            "block momentum time constant = %6.4f ,"
+                            "block momentum time constant (per worker) = %6.4f ,"
                             "block learning rate = %6.4f ,"
-                            "sync period = %d samples ,"
+                            "block size per worker = %d samples ,"
                             "%s"
                             "%s"
                             "\n",
@@ -90,8 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_blockMomentumAsTimeConstant,
                 m_blockLearningRate, 
                 (int)m_syncPeriod, 
-                m_useNesterovMomentum ? ", using Nesterov style block momentum" : "" , 
-                m_resetSGDMomentumAfterAggregation ? ", resetting SGD momentum after sync" : ""
+                m_useNesterovMomentum ? "using Nesterov style block momentum ," : "" , 
+                m_resetSGDMomentumAfterAggregation ? "resetting SGD momentum after sync" : ""
                 );
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 
@@ -289,9 +289,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
        }
        static double Momentum2TimeConstant(double bm, size_t syncPeroid)
        {
-           if (bm >= 1.0 || bm <= 0.0)
+           if (bm >= 1.0 || bm < 0.0)
            {
-               InvalidArgument("Unexpected block momentum (%.2f). Block momentum should be in the range of (0,1)\n", bm);
+               InvalidArgument("Unexpected block momentum (%.2f). Block momentum should be in the range of [0,1)\n", bm);
            }
            return -(double)syncPeroid / log(bm); 
        }
