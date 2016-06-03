@@ -27,15 +27,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             const ConfigParameters& input = config(L"input");
 
-            map<string, wstring> aliasToInputMap;
             for (const pair<string, ConfigParameters>& section : input)
             {
                 ConfigParameters input = section.second;
                 wstring name = msra::strfun::utf16(section.first);
 
                 // alias is optional
-                if (input.ExistsCurrent(L"alias"))
+                if (input.ExistsCurrent(L"original"))
                 {
+                    wstring original = msra::strfun::utf16(input(L"original"));
+                    m_rename[original] = name;
                 }
             }
         }
