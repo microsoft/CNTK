@@ -271,6 +271,7 @@ class If(ComputationNode):
         self.thenVal = thenVal
         self.elseVal = elseVal
         self.params_with_defaults = []
+        self.inputs = ['cond', 'thenVal', 'elseVal']
 
 """
 

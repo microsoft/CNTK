@@ -673,8 +673,9 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                 if (ShouldWarn())
                 {
                     fprintf(stderr,
-                        "WARNING: Invalid input name ('%s') %ls.\n",
-                        name.c_str(), GetFileInfo().c_str());
+                        "WARNING: Invalid input ('%s') %ls. "
+                        "Input name '%s' was not specified in the reader config section.\n",
+                        name.c_str(), GetFileInfo().c_str(), name.c_str());
                 }
             }
             else if (ShouldWarn())

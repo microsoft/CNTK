@@ -67,7 +67,7 @@ CNTK2 = [
     // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
-    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
@@ -149,10 +149,10 @@ CNTK2 = [
     Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
-LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 Parameter = LearnableParameter // deprecated 
 # TODO: make Parameter take tensor dims?
-ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
 Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]

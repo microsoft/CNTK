@@ -571,7 +571,7 @@ class LocalExecutionContext(AbstractContext):
                 continue
             else:
                 data = LocalExecutionContext._sanitized_asarray(
-                    data).reshape(shape, order='F')
+                    data).reshape(shape, order='C')
 
             tensor_seq.append(data)
 
@@ -755,12 +755,12 @@ class LocalExecutionContext(AbstractContext):
                         action_name = action_name)
 
         out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.')
+        node.tag = orig_node_tag
         if backward_pass:
-            n = input_name.name if isinstance(
-                input_name, ComputationNode) else input_name
+            n = input_name.name if isinstance(input_name, ComputationNode)\
+                    else input_name
             out_name += n + '.grad'
-        else:
-            node.tag = orig_node_tag
+        else:            
             out_name += node.name
 
         result_content = open(out_name).read()
