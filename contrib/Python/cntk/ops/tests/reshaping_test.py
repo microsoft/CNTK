@@ -265,7 +265,7 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     # ==================
     # The gradient of the splice operator is all ones in the shape of the input
 
-    def grad_slice(x):
+    def grad_splice(x):
         return np.ones_like(x)
 
     expected_gradient1 = grad_slice(np.asarray(input_data1))
