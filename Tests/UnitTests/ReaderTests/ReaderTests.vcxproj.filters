@@ -9,6 +9,7 @@
     <ClInclude Include="SequentialDeserializer.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
@@ -22,6 +23,7 @@
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
       <Filter>Linked Source</Filter>
     </ClCompile>
+    <ClCompile Include="CNTKBinaryReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -437,5 +439,8 @@
     <Xml Include="Data\ImageNet1K_intensity.xml">
       <Filter>Data</Filter>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ReaderTests.rc" />
   </ItemGroup>
 </Project>
