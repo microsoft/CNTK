@@ -39,7 +39,7 @@ reader = [
 
                 input=[
                     features=[
-                        transforms=[
+                        transforms=(
                             [
                                 type="Crop"
                                 cropType=Center
@@ -56,7 +56,7 @@ reader = [
                             ]:[
                                 type="Transpose"
                             ]
-                        ]
+                        )
                     ]
 
                     # Currently the image deserializer always has labels, we read but ignore them.

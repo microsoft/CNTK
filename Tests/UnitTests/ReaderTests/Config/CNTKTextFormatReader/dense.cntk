@@ -298,7 +298,7 @@ Simple = [
     precision = "double"
     reader = [
         randomize = true
-        deserializers = [
+        deserializers = (
             [
                 type="CNTKTextFormatDeserializer"
                 module="CNTKTextFormatReader"
@@ -316,7 +316,7 @@ Simple = [
                     ]
                 ]
             ]
-        ]
+        )
     ]
 ]
 
@@ -324,7 +324,7 @@ Simple = [
     precision = "double"
     reader = [
         randomize = true
-        deserializers = [
+        deserializers = (
             [
                 type="CNTKTextFormatDeserializer"
                 module="CNTKTextFormatReader"
@@ -348,6 +348,6 @@ Simple = [
                     ]
                 ]
             ]
-        ]
+        )
     ]
 ]

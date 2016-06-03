@@ -36,7 +36,7 @@ speechTrain = [
         ]
 
         # A list of deserializers to use.
-        deserializers = [
+        deserializers = (
             [   
                 type = "HTKDataDeserializer"        
                 module = "ExperimentalHTKMLFReader"
@@ -62,7 +62,7 @@ speechTrain = [
                     ]
                 ]
             ]
-        ]
+        )
     ]
 
     # TODO share this section ../../../LSTM/cntk.cntk
