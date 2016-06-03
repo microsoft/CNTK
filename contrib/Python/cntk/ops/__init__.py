@@ -377,8 +377,7 @@ def times(left, right, output_rank=1, name=None):
         
         >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
         [array([[[[[  4.,   5.],
-          [  6.,   7.]],
-
+                   [  6.,   7.]],
          [[ 12.,  17.],
           [ 22.,  27.]]],
 
@@ -1321,6 +1320,6 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
     op = ReconcileDynamicAxis(data_input, layout_input, name=name)
-    op.rank = None
+    op.rank = data_input.rank
     return op
 
