@@ -49,9 +49,11 @@ DataWriter::DataWriter(const ConfigRecordType& config)
     {
         writerType = L"HTKMLFReader";
     }
-    else if (writerType == L"ExperimentalHTKMLFWriter" || writerType == L"ExperimentalHTKMLFReader")
+    // TODO: this is currently a workaround to support old config with write command,
+    // We still expose the reader from the HTKMLFDeserializer library.
+    else if (writerType == L"ExperimentalHTKMLFWriter" || writerType == L"HTKMLFDeserializer")
     {
-        writerType = L"ExperimentalHTKMLFReader";
+        writerType = L"HTKMLFDeserializer";
     }
     else if (writerType == L"BinaryWriter" || writerType == L"BinaryReader")
     {

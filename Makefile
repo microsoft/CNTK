@@ -1,4 +1,4 @@
-# Makefile for a Linux/GCC build of CNTK
+﻿# Makefile for a Linux/GCC build of CNTK
 #
 # The Linux and Windows versions are not different branches, but rather build off the same
 # source files, using different makefiles. This current makefile has the purpose of enabling
@@ -368,25 +368,25 @@ $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
-# ExperimentalHTKMLFReader plugin
+# HTKMLFDeserializer plugin
 ########################################
 
-EXPERIMENTALHTKMLFREADER_SRC =\
+HTKMLFDESERIALIZER_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFDeserializer/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFDeserializer/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFDeserializer/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFDeserializer/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFDeserializer/MLFDataDeserializer.cpp \
 
-EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFDESERIALIZER_SRC))
 
-EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
-ALL+=$(EXPERIMENTALHTKMLFREADER)
-SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+HTKMLFDESERIALIZER:=$(LIBDIR)/HTKMLFDeserializer.so
+ALL+=$(HTKMLFDESERIALIZER)
+SRC+=$(HTKMLFDESERIALIZER_SRC)
 
-$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKMLFDeserializer.so: $(HTKMLFDESERIALIZER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 

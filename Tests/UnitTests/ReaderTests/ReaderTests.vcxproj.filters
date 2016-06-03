@@ -376,41 +376,41 @@
     <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop1_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop3_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop4_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop5_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop8_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop9_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop10_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop11_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop14_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop19_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop20_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKMLFDeserializerSimpleDataLoop21_Config.cntk">
+      <Filter>Config\HTKMLFDeserializer</Filter>
     </None>
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
       <Filter>Config</Filter>
