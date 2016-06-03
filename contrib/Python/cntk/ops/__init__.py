@@ -924,12 +924,12 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
+    op = TransposeDimensions(x, axis1, axis2, name = name)    
+    wrap_numpy_arrays(op)            
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    cntk_axis1 = abs(axis1) if axis1<0 else x.rank - axis1
-    cntk_axis2 = abs(axis2) if axis2<0 else x.rank - axis2
-    op = TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
-    wrap_numpy_arrays(op)            
+    op.axis1 = abs(axis1) if axis1<0 else op._.rank - axis1
+    op.axis2 = abs(axis2) if axis2<0 else op.y.rank - axis2    
     op.rank = op._.rank
     return op
 
@@ -974,15 +974,17 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Slice
+    op = Slice(x, begin_index, end_index, axis, name=name)
+    wrap_numpy_arrays(op)                
+    op.rank = op._.rank
+    
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
     if isinstance(axis, str):
-        cntk_axis = -1 # time axis
+        op.axis = -1 # time axis
     else:
-        cntk_axis = abs(axis) if axis<0 else x.rank - axis
-    op = Slice(x, begin_index, end_index, cntk_axis, name=name)
-    wrap_numpy_arrays(op)            
-    op.rank = op._.rank
+        op.axis = abs(axis) if axis<0 else op._.rank - axis
+        
     return op
     
 def splice(inputs, axis=0, name=None): 
@@ -1015,12 +1017,14 @@ def splice(inputs, axis=0, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Splice, Identity
-    #cntk uses column major, thus it will read the indices of data passed from 
-    # python in reverse
-    cntk_axis = abs(axis) if axis<0 else inputs[0].rank - axis
-    op = Splice(inputs, cntk_axis, name=name)
+    op = Splice(inputs, axis, name=name)
     wrap_numpy_arrays(op)            
     op.rank = op._[0].rank
+
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    op.axis = abs(axis) if axis<0 else op._[0].rank - axis
+
     # Splice is implemented using BrainScript code that results in nested nodes,
     # if it gets tag='output' the file name might differ depending on the execution
     # path in BS. Thus we wrap it by Identity to have a fixed name.
