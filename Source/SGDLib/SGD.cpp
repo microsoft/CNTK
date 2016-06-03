@@ -357,6 +357,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Awlays skip the first epoch for profiling to avoid startup behavior
         if (i > startEpoch) ProfilerEnable(true);
+        PROFILE_SCOPE(profilerEvtMainEpochExt);
 
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
@@ -753,7 +754,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     CudaProfilerTimer& cudaProfilerTimer,
                                     const std::string& prefixMsg)
 {
-    PROFILE_SCOPE(profilerEvtMainEpoch);
+    PROFILE_SCOPE(profilerEvtMainEpochInt);
 
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 

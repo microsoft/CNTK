@@ -32,7 +32,8 @@ enum ProfilerEvents
     profilerSepMainThread = 0,
     profilerSepSpace0,
 
-    profilerEvtMainEpoch,
+    profilerEvtMainEpochExt,
+    profilerEvtMainEpochInt,
     profilerEvtMainMinibatch,
     profilerEvtMainGetMinibatch,
     profilerEvtMainFB,
