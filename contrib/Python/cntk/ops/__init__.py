@@ -1004,7 +1004,7 @@ def splice(inputs, axis=0, name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from cntk.ops.cntk2 import Splice, Identity
+    from cntk.ops.cntk2 import Splice
     op = Splice(inputs, axis, name=name)
     wrap_numpy_arrays(op)            
     op.rank = op._[0].rank
@@ -1016,7 +1016,7 @@ def splice(inputs, axis=0, name=None):
     # Splice is implemented using BrainScript code that results in nested nodes,
     # if it gets tag='output' the file name might differ depending on the execution
     # path in BS. Thus we wrap it by Identity to have a fixed name.
-    return Identity(op) 
+    return identity(op) 
 
 ################################################################################
 # training ops
