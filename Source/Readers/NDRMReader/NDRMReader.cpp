@@ -189,16 +189,15 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 
     m_qEmbHndl = open(msra::strfun::utf8(m_qEmbeddingsFile).c_str(), O_RDONLY);
     if (m_qEmbHndl == -1)
-        RuntimeError("Unable to Open/Create file %ls", file.c_str());
-    struct stat sb;
+        RuntimeError("Unable to Open/Create file %ls", m_qEmbeddingsFile.c_str());
     if (fstat(m_qEmbHndl, &sb) == -1)
-        RuntimeError("Unable to Retrieve file size for file %ls", file.c_str());
+        RuntimeError("Unable to Retrieve file size for file %ls", m_qEmbeddingsFile.c_str());
     m_qEmbFilePositionMax = sb.st_size;
     m_qEmbDataBuffer = (char*)mmap(nullptr, m_qEmbFilePositionMax, PROT_READ, MAP_PRIVATE, m_qEmbHndl, 0);
     if (m_qEmbDataBuffer == MAP_FAILED)
     {
         m_qEmbDataBuffer = nullptr;
-        RuntimeError("Could not memory map file %ls", file.c_str());
+        RuntimeError("Could not memory map file %ls", m_qEmbeddingsFile.c_str());
     }
 
     if (m_qEmbeddingsFile == m_dEmbeddingsFile)
@@ -209,16 +208,15 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     {
         m_dEmbHndl = open(msra::strfun::utf8(m_dEmbeddingsFile).c_str(), O_RDONLY);
         if (m_dEmbHndl == -1)
-            RuntimeError("Unable to Open/Create file %ls", file.c_str());
-        struct stat sb;
+            RuntimeError("Unable to Open/Create file %ls", m_dEmbeddingsFile.c_str());
         if (fstat(m_dEmbHndl, &sb) == -1)
-            RuntimeError("Unable to Retrieve file size for file %ls", file.c_str());
+            RuntimeError("Unable to Retrieve file size for file %ls", m_dEmbeddingsFile.c_str());
         m_dEmbFilePositionMax = sb.st_size;
         m_dEmbDataBuffer = (char*)mmap(nullptr, m_dEmbFilePositionMax, PROT_READ, MAP_PRIVATE, m_dEmbHndl, 0);
         if (m_dEmbDataBuffer == MAP_FAILED)
         {
             m_dEmbDataBuffer = nullptr;
-            RuntimeError("Could not memory map file %ls", file.c_str());
+            RuntimeError("Could not memory map file %ls", m_dEmbeddingsFile.c_str());
         }
     }
 #endif
