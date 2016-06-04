@@ -49,6 +49,8 @@ class NDRMReader : public DataReaderBase
     HANDLE m_dEmbFilemap;
 #else
     int m_hndl;
+    int m_qEmbHndl;
+    int m_dEmbHndl;
 #endif
     void* m_dataBuffer;
     void* m_qEmbDataBuffer;
