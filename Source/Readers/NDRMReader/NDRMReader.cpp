@@ -279,17 +279,14 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
             size_t numRows = m_vectorSize * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
             features.Resize(numRows, m_miniBatchSize);
+            memset((j == 0 ? m_qValues : m_dValues), 0, m_bytesPerVector * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) * m_miniBatchSize);
 
             for (int k = 0; k < (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
                 char* tgtAddr = (j == 0 ? m_qValues : m_dValues) + k * m_bytesPerVector;
 
-                if (wordId == 0)
-                {
-                    memset(tgtAddr, 0, m_bytesPerVector);
-                }
-                else
+                if (wordId != 0)
                 {
                     wordId--;
                     int64_t srcOffset = wordId * m_bytesPerVector;
