@@ -487,6 +487,24 @@ $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# NDRMReader plugin
+########################################
+
+NDRMREADER_SRC =\
+	$(SOURCEDIR)/Readers/NDRMReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/NDRMReader/NDRMReader.cpp \
+
+NDRMREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(NDRMREADER_SRC))
+
+NDRMREADER:=$(LIBDIR)/NDRMReader.so
+ALL += $(NDRMREADER)
+SRC+=$(NDRMREADER_SRC)
+
+$(NDRMREADER): $(NDRMREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
 # CNTKTextFormatReader plugin
 ########################################
 
