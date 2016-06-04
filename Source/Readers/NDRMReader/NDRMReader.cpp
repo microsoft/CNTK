@@ -239,8 +239,8 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, s
         m_dValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
     }
 
-    m_numMbPerEpoch = requestedEpochSamples;
-    m_currMb = 0;
+    m_numSamplesPerEpoch = requestedEpochSamples;
+    m_numSamplesCurrEpoch = 0;
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
@@ -254,10 +254,10 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     if (m_miniBatchSize == 0)
         return false;
 
-    m_currMb++;
-    if (m_currMb == m_numMbPerEpoch)
+    m_numSamplesCurrEpoch += m_miniBatchSize;
+    if (m_numSamplesCurrEpoch > m_numSamplesPerEpoch)
     {
-        m_currMb = 0;
+        m_numSamplesCurrEpoch = 0;
         return false;
     }
 

@@ -60,8 +60,8 @@ class NDRMReader : public DataReaderBase
     int64_t m_qEmbFilePositionMax;
     int64_t m_dEmbFilePositionMax;
     int64_t m_currOffset;
-    size_t m_numMbPerEpoch;
-    size_t m_currMb;
+    size_t m_numSamplesPerEpoch;
+    size_t m_numSamplesCurrEpoch;
     int m_traceLevel;
 
     std::map<LabelIdType, LabelType> m_mapIdToLabel;
