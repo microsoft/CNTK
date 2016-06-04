@@ -227,7 +227,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 // epoch - [in] epoch number for this loop --ignored
 // requestedEpochSamples - [in] number of samples to randomize --ignored
 template <class ElemType>
-void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
+void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
     if (m_values == NULL || m_miniBatchSize != mbSize)
     {
@@ -238,6 +238,9 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, s
         m_qValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
         m_dValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
     }
+
+    m_numMbPerEpoch = requestedEpochSamples;
+    m_currMb = 0;
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
@@ -251,13 +254,23 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     if (m_miniBatchSize == 0)
         return false;
 
-    if (m_currOffset >= m_filePositionMax)
+    m_currMb++;
+    if (m_currMb == m_numMbPerEpoch)
+    {
+        m_currMb = 0;
+        return false;
+    }
+
+    if (((m_filePositionMax - m_currOffset) / m_bytesPerSample) < m_miniBatchSize)
+    {
+        if (m_currOffset == 0)
+            RuntimeError("Not enough data to fill even a single mini-batch");
         m_currOffset = 0;
+    }
 
-    size_t actualMiniBatchSize = min(m_miniBatchSize, (m_filePositionMax - m_currOffset) / m_bytesPerSample);
-    memcpy(m_values, (char*)m_dataBuffer + m_currOffset, m_bytesPerSample * actualMiniBatchSize);
+    memcpy(m_values, (char*)m_dataBuffer + m_currOffset, m_bytesPerSample * m_miniBatchSize);
 
-    for (int i = 0; i <= actualMiniBatchSize; i++)
+    for (int i = 0; i <= m_miniBatchSize; i++)
     {
         for (int j = 0; j <= m_numDocs; j++)
         {
@@ -265,7 +278,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             int64_t embFilePositionMax = (j == 0 ? m_qEmbFilePositionMax : m_dEmbFilePositionMax);
             Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
             size_t numRows = m_vectorSize * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
-            features.Resize(numRows, actualMiniBatchSize);
+            features.Resize(numRows, m_miniBatchSize);
 
             for (int k = 0; k < (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
             {
@@ -293,25 +306,25 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 m_currOffset += sizeof(int32_t);
             }
 
-            features.SetValue(numRows, actualMiniBatchSize, features.GetDeviceId(), (ElemType*)(j == 0 ? m_qValues : m_dValues), matrixFlagNormal);
+            features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)(j == 0 ? m_qValues : m_dValues), matrixFlagNormal);
         }
     }
 
     if (matrices.HasInput(L"L"))
     {
         Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(L"L");
-        labels.Resize(1, actualMiniBatchSize);
+        labels.Resize(1, m_miniBatchSize);
         labels.SetValue((ElemType)1);
     }
 
     // create the MBLayout
     // Each sample consists of a "sequence" of 'm_microBatchSize' samples.
     // TODO: They are not really temporally ordered, so a better way would be to use tensors, once that is ready.
-    m_pMBLayout->Init(actualMiniBatchSize, 1);
-    for (size_t i = 0; i < actualMiniBatchSize; i++)
+    m_pMBLayout->Init(m_miniBatchSize, 1);
+    for (size_t i = 0; i < m_miniBatchSize; i++)
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, 0, 1);
 
-    return (actualMiniBatchSize == m_miniBatchSize);
+    return true;
 }
 
 template <class ElemType>
