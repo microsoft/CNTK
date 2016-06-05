@@ -62,21 +62,21 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
     size_t iterationCount = 4;
     unsigned int randSeed = 2;
     srand(randSeed);
-    size_t numSamples = 1;
+    size_t numSamples = 3;
     for (size_t i = 0; i < iterationCount; ++i)
     {
         std::vector<float> inputData(inputDim * numSamples);
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((float)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, numSamples };
+        NDShape inputShape = { inputDim, 1, numSamples };
         ValuePtr inputValue = new Value(new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i = 0; i < numSamples; ++i)
             labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
-        NDShape labelShape = { numOutputClasses, numSamples };
+        NDShape labelShape = { numOutputClasses, 1, numSamples };
         ValuePtr labelValue = new Value(new NDArrayView(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
@@ -119,10 +119,10 @@ void TestTimesAndPlus(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, numSamples };
+        NDShape inputShape = { inputDim, 1, numSamples };
         ValuePtr inputValue = new Value(new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = { outputDim, numSamples };
+        NDShape outputShape = { outputDim, 1, numSamples };
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
         if (usePreAllocatedOutputs)

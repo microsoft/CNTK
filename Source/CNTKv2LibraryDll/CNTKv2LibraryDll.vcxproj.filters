@@ -9,6 +9,7 @@
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="Variable.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="NDMask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

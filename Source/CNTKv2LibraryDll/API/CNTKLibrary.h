@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <string>
 
 namespace CNTK
 {
@@ -24,6 +25,7 @@ namespace CNTK
     ///
     enum class DataType
     {
+        Unknown,
         Float,
         Double,
 
@@ -413,13 +415,13 @@ namespace CNTK
         /// Static method to construct a new NDArrayView object whose contents are drawn from a normal distribution with the specified mean and standard deviation..
         ///
         template <typename ElementType>
-        static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
         ///
         /// Static method to construct a new NDArrayView object whose contents are drawn from a uniform distribution in the specified value range.
         ///
         template <typename ElementType>
-        static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
     private:
         // Disallow copy construction and assignment
@@ -431,16 +433,19 @@ namespace CNTK
         NDArrayView(NDArrayView&& other) = delete;
 
     private:
+        static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
+
+    private:
         NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl() const;
+        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(size_t rowColSplitPoint) const;
 
         template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix() const;
+        std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix();
+        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
         const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
@@ -461,9 +466,91 @@ namespace CNTK
         void* m_tensorView;
     };
 
+    ///
+    /// Denotes a multi-dimensional mask used for specifying specific sections of a NDArrayView object as masked/invalid.
+    /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDMask instance.
+    ///
+    class CNTK_API NDMask final : public _Internal::_ReferenceCounter
+    {
+        friend class CompositeFunction;
+
+    public:
+        ///
+        /// Construct a new Mask object of specified shape
+        /// 
+        explicit NDMask(const NDShape& shape, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+        ///
+        /// Destruct 'this' mask object
+        /// 
+        ~NDMask();
+
+        ///
+        /// Mask out the specified sub-section of 'this' mask
+        ///
+        void MaskSection(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape);
+
+        ///
+        /// Clear the mask; i.e. unmask all currently masked values
+        ///
+        void Clear();
+
+        ///
+        /// Returns the descriptor of the device that 'this' mask resides on
+        ///
+        DeviceDescriptor Device() const
+        {
+            return m_device;
+        }
+
+        ///
+        /// Returns the shape 'this' mask.
+        ///
+        NDShape Shape() const
+        {
+            return m_maskShape;
+        }
+
+        ///
+        /// Creates a new NDMask with newly allocated storage on the same device as 'this' mask and copies 'this' mask's contents into the newly allocated mask.
+        ///
+        NDMaskPtr DeepClone() const;
+
+        ///
+        /// Creates a new NDMask which is an alias of 'this' mask.
+        ///
+        NDMaskPtr Alias() const;
+
+        ///
+        /// Copies the contents of the 'source' NDMask to 'this' mask.
+        /// The shapes of the 'source' mask and 'this' mask must be identical.
+        ///
+        void CopyFrom(const NDMask& source);
+
+    private:
+        NDMask(const NDShape& shape, Microsoft::MSR::CNTK::Matrix<char>* matrix);
+        Microsoft::MSR::CNTK::Matrix<char>* GetMatrix() const;
+
+        // Disallow copy construction and assignment
+        NDMask(const NDMask&) = delete;
+        NDMask& operator=(const NDMask&) = delete;
+
+        // Disallow move construction and assignment
+        NDMask& operator=(NDMask&&) = delete;
+        NDMask(NDMask&& other) = delete;
+
+    private:
+        DeviceDescriptor m_device;
+        NDShape m_maskShape;
+
+        Microsoft::MSR::CNTK::Matrix<char>* m_matrixView;
+    };
+
     /// 
-    /// Denotes a multi-dimensional array with an optional mask and is
-    /// the actual data fed into or produced from a computation.
+    /// Denotes a multi-dimensional array with an optional mask and is the actual data fed into or produced from a computation.
+    /// The mask is typically lower dimensionailty than the data, meaning data is masked in coarse individual sample units where
+    /// sample shape is data.Shape().SubShape(0, data.Shape().NumAxes() - mask.Shape().NumAxes)
+    /// Also, note that the size of the data's trailing mask.Shape().NumAxes() dimensions must match the mask shape dimensions.
     /// 
     class CNTK_API Value : public _Internal::_ReferenceCounter
     {
@@ -474,6 +561,18 @@ namespace CNTK
         Value(const NDArrayViewPtr& data);
 
         ///
+        /// A multi-dimensional value with an associated mask.
+        ///
+        Value(const NDArrayViewPtr& data, const NDMaskPtr& mask);
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        template <typename ElementType>
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<const std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
         /// Destruct 'this' Value object.
         ///
         virtual ~Value();
@@ -482,6 +581,27 @@ namespace CNTK
         /// Returns the NDArrayView object corresponding to the data contents of 'this value object.
         ///
         virtual NDArrayViewPtr Data() const;
+
+        ///
+        /// Returns the NDMask object corresponding to the mask associated with 'this value object.
+        ///
+        virtual NDMaskPtr Mask() const;
+
+        ///
+        /// Creates a new Value with newly allocated storage on the same device as 'this' Value and copies 'this' Value's contents into the newly allocated Value.
+        ///
+        virtual ValuePtr DeepClone(bool readOnly = false) const;
+
+        ///
+        /// Creates a new Value which is an alias of 'this' Value.
+        ///
+        virtual ValuePtr Alias(bool readOnly = false) const;
+
+        ///
+        /// Copies the contents of the 'source' Value to 'this' Value.
+        /// The shapes of the 'source' Value's data and mask must be identical to 'this' Value's data and mask.
+        ///
+        virtual void CopyFrom(const Value& source);
 
     private:
         // Disallow copy construction and assignment
@@ -494,7 +614,169 @@ namespace CNTK
 
     private:
         NDArrayViewPtr m_data;
+        NDMaskPtr m_mask;
     };
+
+    ///
+    /// Denotes an Axis of a Variable and is used for specifying the axes parameters of certain Functions such as reductions.
+    /// Besides the static axes corresponding to each of the axes of the Variable's shape, Input and Output Variables
+    /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
+    /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
+    ///
+    class Axis final
+    {
+    public:
+        ///
+        /// Construct an Axis object denoting a static axis with the specified index.
+        ///
+        Axis(size_t staticAxisIdx)
+            : m_staticAxisIdx(staticAxisIdx)
+        {
+            const wchar_t* staticAxisNamePrefix = L"staticAxis_";
+            std::wstring tempName = staticAxisNamePrefix;
+            tempName = tempName + std::to_wstring(staticAxisIdx);
+            m_name = CopyString(tempName.c_str());
+        }
+
+        ///
+        /// Construct a dynamic axis with the specified name.
+        ///
+        Axis(const std::wstring& name)
+            : m_staticAxisIdx(SIZE_MAX)
+        {
+            m_name = CopyString(name.c_str());
+        }
+
+        ///
+        /// Copy constructor.
+        ///
+        Axis(const Axis& other)
+            : m_staticAxisIdx(SIZE_MAX), m_name(nullptr)
+        {
+            *this = other;
+        }
+
+        ///
+        /// Copy assignment.
+        ///
+        Axis& operator=(const Axis& other)
+        {
+            if (this != &other)
+            {
+                delete[] m_name;
+
+                m_staticAxisIdx = other.m_staticAxisIdx;
+                m_name = (other.m_name != nullptr) ? CopyString(other.m_name) : other.m_name;
+            }
+
+            return *this;
+        }
+
+        ///
+        /// Move constructor.
+        ///
+        Axis(Axis&& other)
+            : m_staticAxisIdx(SIZE_MAX), m_name(nullptr)
+        {
+            *this = std::move(other);
+        }
+
+        ///
+        /// Move assignment.
+        ///
+        Axis& operator=(Axis&& other)
+        {
+            assert(this != &other);
+
+            delete[] m_name;
+
+            m_staticAxisIdx = other.m_staticAxisIdx;
+            m_name = other.m_name;
+
+            other.m_staticAxisIdx = SIZE_MAX;
+            other.m_name = nullptr;
+
+            return *this;
+        }
+
+        ///
+        /// Returns a boolean indicating if 'this' Axis corresponds to a static axis
+        ///
+        bool IsStaticAxis() const
+        {
+            return m_staticAxisIdx == SIZE_MAX;
+        }
+
+        ///
+        /// Returns the axis index if 'this' Axis is a static axis. Throws an exception otherwise.
+        ///
+        size_t StaticAxisIndex() const
+        {
+            if (!IsStaticAxis())
+                InvalidArgument("Cannot query the static axis index for a non-static axis");
+
+            return m_staticAxisIdx;
+        }
+
+        ///
+        /// Static Axis object representing the default dynamic axis.
+        ///
+        static Axis DefaultDynamicAxis;
+
+        ///
+        /// Static Axis object representing the batch axis.
+        ///
+        static Axis BatchAxis;
+
+        ///
+        /// Special Axis object denoting all the axes of the Value object in whose context it is used.
+        ///
+        static Axis AllAxes;
+
+        ///
+        /// Name of 'this' axis
+        ///
+        std::wstring Name() const
+        {
+            return m_name;
+        }
+
+        ///
+        /// Destructor
+        ///
+        ~Axis()
+        {
+            delete[] m_name;
+        }
+
+        ///
+        /// Default constructor; results in an invalid axis object.
+        ///
+        Axis()
+            : m_staticAxisIdx(SIZE_MAX), m_name(nullptr)
+        {
+        }
+
+    private:
+        size_t m_staticAxisIdx;
+        wchar_t* m_name;
+    };
+
+    inline bool operator==(const Axis& first, const Axis& second)
+    {
+        if (first.IsStaticAxis() != second.IsStaticAxis())
+            return false;
+
+        if (first.IsStaticAxis())
+            return first.StaticAxisIndex() == second.StaticAxisIndex();
+        else
+            return first.Name() == second.Name();
+    }
+
+    inline bool operator!=(const Axis& first, const Axis& second)
+    {
+        return !(first == second);
+    }
 
     ///
     /// Enumeration type denoting the kind of a symbolic Variable object
@@ -504,7 +786,8 @@ namespace CNTK
         Input,
         Output,
         Parameter,
-        Constant
+        Constant,
+        Placeholder
     };
 
     ///
@@ -524,7 +807,7 @@ namespace CNTK
         /// Create an 'Input' Variable.
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, name)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, name)
         {
         }
 
@@ -532,15 +815,15 @@ namespace CNTK
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, name)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, name)
         {
         }
 
         ///
         /// Create an 'Output' variable
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, name)
+        Variable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
+            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, name)
         {
         }
 
@@ -559,6 +842,14 @@ namespace CNTK
         }
 
         ///
+        /// Returns the dynamic axes of 'this' variable
+        ///
+        std::vector<Axis> DynamicAxes() const
+        {
+            return m_dataFields->m_dynamicAxes;
+        }
+
+        ///
         /// Returns the VariableKind of 'this' variable
         ///
         VariableKind Kind() const
@@ -567,7 +858,7 @@ namespace CNTK
         }
 
         ///
-        /// Returns a boolean value indicating if 'this' variable is a parameter
+        /// Returns a boolean value indicating if 'this' variable is a Parameter
         ///
         bool IsParameter() const
         {
@@ -575,11 +866,19 @@ namespace CNTK
         }
 
         ///
-        /// Returns a boolean value indicating if 'this' variable is a constant
+        /// Returns a boolean value indicating if 'this' variable is a Constant
         ///
         bool IsConstant() const
         {
             return Kind() == VariableKind::Constant;
+        }
+
+        ///
+        /// Returns a boolean value indicating if 'this' variable is a Placeholder
+        ///
+        bool IsPlaceholder() const
+        {
+            return Kind() == VariableKind::Placeholder;
         }
 
         ///
@@ -624,9 +923,8 @@ namespace CNTK
         }
 
     protected:
-        // Create an 'Input' Variable
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::wstring& name)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, name)
+        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
+            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, name)
         {
         }
 
@@ -637,14 +935,14 @@ namespace CNTK
         }
 
     private:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::wstring& name)
-            : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
+        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
+            : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
         {
         }
 
     private:
 
-        struct _VariableFields : public _Internal::_ReferenceCounter
+        struct _VariableFields final : public _Internal::_ReferenceCounter
         {
             NDShape m_shape;
             VariableKind m_varKind;
@@ -653,9 +951,10 @@ namespace CNTK
             NDArrayViewPtr m_value;
             bool m_needsGradient;
             wchar_t* m_name;
+            _Internal::_SimpleVector<Axis> m_dynamicAxes;
 
-            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const wchar_t* name)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_name(nullptr)
+            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const wchar_t* name)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_name(nullptr)
             {
                 if (name != nullptr)
                     m_name = CopyString(name);
@@ -665,6 +964,15 @@ namespace CNTK
             {
                 delete[] m_name;
             }
+
+        private:
+            // Disallow copy construction and assignment
+            _VariableFields(const _VariableFields&) = delete;
+            _VariableFields& operator=(const _VariableFields& other) = delete;
+
+            // Disallow move construction and assignment
+            _VariableFields(_VariableFields&&) = delete;
+            _VariableFields& operator=(_VariableFields&&) = delete;
         };
         typedef _Internal::_ReferenceCounterSharedPtr<_VariableFields> _VariableFieldsPtr;
 
@@ -689,7 +997,7 @@ namespace CNTK
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Parameter, value->DataType(), value->DeepClone(), true, name)
+            : Variable(value->Shape(), VariableKind::Parameter, value->DataType(), value->DeepClone(), true, {}, name)
         {
         }
 
@@ -700,7 +1008,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), true, name)
+            : Variable(shape, VariableKind::Parameter, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), true, {}, name)
         {
         }
 
@@ -738,7 +1046,7 @@ namespace CNTK
         /// Contruct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Constant, value->DataType(), value->DeepClone(true), false, name)
+            : Variable(value->Shape(), VariableKind::Constant, value->DataType(), value->DeepClone(true), false, {}, name)
         {
         }
 
@@ -749,7 +1057,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), false, name)
+            : Variable(shape, VariableKind::Constant, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), false, {}, name)
         {
         }
 
@@ -774,6 +1082,38 @@ namespace CNTK
 
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what it's base type 'Variable' has.");
 
+    ///
+    /// Denotes a Placeholder input to a Function.
+    /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
+    ///
+    class CNTK_API Placeholder final : public Variable
+    {
+        template <typename T>
+        friend struct std::hash;
+        
+        friend class Function;
+
+    public:
+        ///
+        /// Contruct a Placeholder with the specified NDShape
+        ///
+        explicit Placeholder(const NDShape& shape, const std::wstring& name = L"")
+            : Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, {Axis::DefaultDynamicAxis}, name)
+        {
+        }
+
+        ///
+        /// DownCast a Variable to a Placeholder. Only allowed if the VariableKind is Placeholder and throws an exception otherwise.
+        ///
+        explicit Placeholder(const Variable& variable)
+            : Variable(variable)
+        {
+            if (!IsPlaceholder())
+                InvalidArgument("A non-placeholder Variable being converted to a Placeholder");
+        }
+    };
+
+    static_assert(sizeof(Placeholder) == sizeof(Variable), "The Placeholder type should not have any data fields beyond what it's base type 'Variable' has.");
 #pragma warning(pop)
 }
 
@@ -801,6 +1141,14 @@ namespace std {
             return std::hash<CNTK::Variable>()(x);
         }
     };
+
+    template <> struct hash<CNTK::Placeholder>
+    {
+        size_t operator()(const CNTK::Placeholder& x) const
+        {
+            return std::hash<CNTK::Variable>()(x);
+        }
+    };
 }
 
 namespace CNTK
@@ -822,7 +1170,7 @@ namespace CNTK
         BackPropState(const FunctionPtr& function) : m_function(function) {}
 
     private:
-        virtual void _ForceRTTIGeneration()
+        virtual void _ForceRTTIGeneration() final
         {
             LogicError("This is an internal method that is never supposed to be called");
         }
@@ -832,6 +1180,9 @@ namespace CNTK
     };
     typedef _Internal::_ReferenceCounterSharedPtr<BackPropState> BackPropStatePtr;
 
+#pragma warning(push)
+#pragma warning(disable : 4251 4275)
+
     ///
     /// Represents a function (optionally differentiable)
     /// A Function is a symbolic entity with zero or more input arguments and one or more outputs. 
@@ -839,8 +1190,10 @@ namespace CNTK
     /// A Function effectively is an arbitrary computation graph composed of other primitive Functions, where Variable objects
     /// for the edges and leaves of the graph.
     ///
-    class Function : public _Internal::_ReferenceCounter
+    class CNTK_API Function : public _Internal::_ReferenceCounter
     {
+        friend class CompositeFunction;
+
     public:
         ///
         /// Computes and stores the values of speficied variables in the 'outputs' map, using provided 'inputs' values corresponding
@@ -944,7 +1297,7 @@ namespace CNTK
         ///
         std::vector<Variable> Inputs() const
         {
-            return m_inputs;
+            return _Inputs();
         }
 
         ///
@@ -971,7 +1324,9 @@ namespace CNTK
         ///
         std::unordered_set<Variable> Arguments() const
         {
-            return m_arguments;
+            return FilteredInputs<Variable>([](const Variable& var) {
+                return ((var.Kind() == VariableKind::Input) || (var.Kind() == VariableKind::Output));
+            });
         }
 
         ///
@@ -979,7 +1334,9 @@ namespace CNTK
         ///
         std::unordered_set<Parameter> Parameters() const
         {
-            return m_parameters;
+            return FilteredInputs<Parameter>([](const Variable& var) {
+                return (var.Kind() == VariableKind::Parameter);
+            });
         }
 
         ///
@@ -987,10 +1344,57 @@ namespace CNTK
         ///
         std::unordered_set<Constant> Constants() const
         {
-            return m_constants;
+            return FilteredInputs<Constant>([](const Variable& var) {
+                return (var.Kind() == VariableKind::Constant);
+            });
+        }
+
+        ///
+        /// Returns the set of all Constant variables of 'this' Function.
+        ///
+        std::unordered_set<Placeholder> Placeholders() const
+        {
+            return FilteredInputs<Placeholder>([](const Variable& var) {
+                return (var.Kind() == VariableKind::Placeholder);
+            });
+        }
+
+        FunctionPtr ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements)
+        {
+            // Cannot be called on primitive functions
+            if (RootFunction() == nullptr)
+                InvalidArgument("ReplacePlaceholders should never be called on primitive functions");
+
+            _Internal::_SimpleSet<const Function*> visitedFunctions;
+            _Internal::_SimpleSet<Placeholder> replacedPlaceholders;
+            auto abiSafePlaceholderReplacementsMap = _Internal::_SimpleMap<Placeholder, Variable>::CreateSimpleMap(placeholderReplacements);
+            _ReplacePlaceholders(abiSafePlaceholderReplacementsMap, visitedFunctions, replacedPlaceholders);
+
+            if (abiSafePlaceholderReplacementsMap.Keys() != replacedPlaceholders)
+                InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
+
+            return this;
         }
 
     private:
+
+        template <typename VariableType, typename FilterFunction>
+        std::unordered_set<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
+        {
+            std::unordered_set<VariableType> filteredInputs;
+            auto inputs = Inputs();
+            for (size_t i = 0; i < inputs.size(); ++i)
+            {
+                if (filterFunc(inputs[i]))
+                    filteredInputs.insert(VariableType(inputs[i]));
+            }
+
+            return filteredInputs;
+
+        }
+
+        _Internal::_SimpleVector<Variable> _Inputs() const;
+        virtual void _ReplacePlaceholders(const _Internal::_SimpleMap<Placeholder, Variable>& placeholderReplacements, _Internal::_SimpleSet<const Function*>& visitedFunctions, _Internal::_SimpleSet<Placeholder>& replacedPlaceholders);
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete;
@@ -1010,21 +1414,13 @@ namespace CNTK
             {
                 m_inputs.PushBack(inputs[i]);
 
-                switch (inputs[i].Kind())
+                if ((inputs[i].Kind() != VariableKind::Input) &&
+                    (inputs[i].Kind() != VariableKind::Output) &&
+                    (inputs[i].Kind() != VariableKind::Parameter) &&
+                    (inputs[i].Kind() != VariableKind::Constant) &&
+                    (inputs[i].Kind() != VariableKind::Placeholder))
                 {
-                case VariableKind::Input:
-                case VariableKind::Output:
-                    m_arguments.Insert(inputs[i]);
-                    break;
-                case VariableKind::Parameter:
-                    m_parameters.Insert(*(reinterpret_cast<const Parameter*>(&(inputs[i]))));
-                    break;
-                case VariableKind::Constant:
-                    m_constants.Insert(*(reinterpret_cast<const Constant*>(&(inputs[i]))));
-                    break;
-                default:
                     InvalidArgument("Function input has invalid VariableKind!");
-                    break;
                 }
             }
 
@@ -1054,13 +1450,11 @@ namespace CNTK
 
         _Internal::_SimpleVector<Variable> m_inputs;
         _Internal::_SimpleVector<Variable> m_outputs;
-        _Internal::_SimpleSet<Variable> m_arguments;
-        _Internal::_SimpleSet<Parameter> m_parameters;
-        _Internal::_SimpleSet<Constant> m_constants;
 
         FunctionPtr m_rootFunction;
         wchar_t* m_name;
     };
+#pragma warning(pop)
 
     CNTK_API FunctionPtr _Combine(const _Internal::_SimpleVector<FunctionPtr>& operands, const std::wstring& name = L"");
 
@@ -1081,6 +1475,11 @@ namespace CNTK
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
     
     ///
+    /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///
     CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& output, const Variable& labels, const std::wstring& name = L"");
@@ -1089,6 +1488,35 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
     CNTK_API FunctionPtr PredictionError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise exp operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Exp(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
+    /// Throws an exception of the operand has more than one dynamic axis.
+    ///
+    CNTK_API FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
+
+    //CNTK_API FunctionPtr PastValue(const Variable& initialState, const Variable& operand, Axis axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
+    /// Throws an exception of the operand has more than one dynamic axis.
+    ///
+    CNTK_API FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
+    ///
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 

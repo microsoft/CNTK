@@ -6313,8 +6313,10 @@ template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template char* CPUMatrix<char>::CopyToArray(void) const;
 
 template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+template void CPUMatrix<char>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 template CPUMatrix<int>::~CPUMatrix();

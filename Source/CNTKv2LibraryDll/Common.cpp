@@ -13,4 +13,8 @@ namespace CNTK
         // TODO: Should return the global default device.
         return GPUDevice(0);
     }
+
+    /*static*/ Axis Axis::DefaultDynamicAxis = Axis(L"defaultDynamicAxis");
+    /*static*/ Axis Axis::BatchAxis = Axis(L"batchAxis");
+    /*static*/ Axis Axis::AllAxes = Axis(L"allAxes");
 }

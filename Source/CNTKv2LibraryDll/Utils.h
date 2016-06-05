@@ -233,8 +233,21 @@ namespace CNTK
             return operator[](key.c_str());
         }
 
-    private:
         DictionaryValue& operator[](const wchar_t* key);
+
+        DictionaryValue operator[](const std::wstring& key) const
+        {
+            return operator[](key.c_str());
+        }
+
+        DictionaryValue operator[](const wchar_t* key) const;
+
+        bool Contains(const std::wstring& key) const
+        {
+            return Contains(key.c_str());
+        }
+
+        bool Contains(const wchar_t* key) const;
 
     private:
         std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
@@ -307,5 +320,17 @@ namespace CNTK
         }
 
         return shapeString + "]";
+    }
+
+    inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
+    {
+        // Ensure none of the shape dimensions are unknown
+        if (viewShape.HasInferredDimension())
+            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
+
+        size_t matrixRowSize = (viewShape.NumAxes() > 0) ? viewShape[0] : 1;
+        size_t matrixColSize = (viewShape.NumAxes() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
+
+        return{ matrixRowSize, matrixColSize };
     }
 }

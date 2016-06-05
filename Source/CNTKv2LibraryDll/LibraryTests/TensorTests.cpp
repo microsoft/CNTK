@@ -29,17 +29,17 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     for (size_t i = 0; i < leftInputData.size(); ++i)
         leftInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-    auto leftInputValueShape = leftInputShape.AppendShape({ 1 });
+    auto leftInputValueShape = leftInputShape.AppendShape({ 1, 1 });
     ValuePtr leftInputValue = new Value(new NDArrayView(leftInputValueShape, leftInputData, true));
 
     std::vector<ElementType> rightInputData(rightInputShape.TotalSize());
     for (size_t i = 0; i < rightInputData.size(); ++i)
         rightInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-    auto rightInputValueShape = rightInputShape.AppendShape({ 1 });
+    auto rightInputValueShape = rightInputShape.AppendShape({ 1, 1 });
     ValuePtr rightInputValue = new Value(new NDArrayView(rightInputValueShape, rightInputData, true));
 
-    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1 });
+    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1, 1 });
     std::vector<ElementType> outputData(outputShape.TotalSize());
     ValuePtr outputValue = new Value(new NDArrayView(outputShape, outputData, false));
 

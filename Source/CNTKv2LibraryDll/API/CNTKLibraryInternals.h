@@ -51,6 +51,7 @@ namespace CNTK
 {
     // Forward declarations
     class CompositeFunction;
+    class Function;
 
     namespace _Internal
     {
@@ -233,6 +234,8 @@ namespace CNTK
             template <typename ValueType>
             friend CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
 
+            friend class Function;
+
         public:
             _SimpleVector();
             _SimpleVector(size_t numElements, const T& initVal = T());
@@ -361,6 +364,8 @@ namespace CNTK
         class CNTK_API _SimpleMap final
         {
             friend class CompositeFunction;
+            friend class Function;
+
         public:
             _SimpleMap();
             ~_SimpleMap();
@@ -397,6 +402,9 @@ namespace CNTK
     // Forward declarations
     class NDArrayView;
     typedef _Internal::_ReferenceCounterSharedPtr<NDArrayView> NDArrayViewPtr;
+
+    class NDMask;
+    typedef _Internal::_ReferenceCounterSharedPtr<NDMask> NDMaskPtr;
 
     class Value;
     typedef _Internal::_ReferenceCounterSharedPtr<Value> ValuePtr;

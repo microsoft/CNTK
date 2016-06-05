@@ -141,6 +141,7 @@
     </ClCompile>
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
+    <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

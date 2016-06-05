@@ -5404,6 +5404,8 @@ template void Matrix<char>::SetValue(const Matrix<char>&);
 template void Matrix<char>::AssignValuesOf   (const Matrix<char>&);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<char>::Reshape(const size_t, const size_t);
+template char* Matrix<char>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

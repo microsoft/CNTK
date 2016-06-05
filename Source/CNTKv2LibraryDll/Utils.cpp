@@ -215,6 +215,7 @@ namespace CNTK
         // Explicit template instantiations
         template class _SimpleSet<FunctionPtr>;
         template class _SimpleSet<Variable>;
+        template class _SimpleSet<const Function*>;
 
         template bool operator==(const _SimpleSet<Variable>& first, const _SimpleSet<Variable>& second);
 
@@ -314,6 +315,7 @@ namespace CNTK
 
         // Explicit template instantiations
         template class _SimpleMap<Variable, const ValuePtr>;
+        template class _SimpleMap<Placeholder, Variable>;
 
 #pragma endregion _SimpleMap
 
@@ -350,5 +352,15 @@ namespace CNTK
     DictionaryValue& Dictionary::operator[](const wchar_t* key)
     {
         return (*m_dictionaryData)[key];
+    }
+
+    DictionaryValue Dictionary::operator[](const wchar_t* key) const
+    {
+        return m_dictionaryData->at(key);
+    }
+
+    bool Dictionary::Contains(const wchar_t* key) const
+    {
+        return (m_dictionaryData->find(key) != m_dictionaryData->end());
     }
 }

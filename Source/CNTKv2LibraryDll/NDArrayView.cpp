@@ -15,18 +15,6 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
-    static std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
-    {
-        // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasInferredDimension())
-            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
-
-        size_t matrixRowSize = (viewShape.NumAxes() > 0) ? viewShape[0] : 1;
-        size_t matrixColSize = (viewShape.NumAxes() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
-
-        return{ matrixRowSize, matrixColSize };
-    }
-
     template <typename ElementType>
     static void* AllocateTensorView(const NDShape& viewShape,
                                     const DeviceDescriptor& device,
@@ -103,30 +91,34 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl() const
+    std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(size_t rowColSplitPoint) const
     {
         const TensorView<ElementType>* tensorView = GetTensorView<ElementType>();
         auto tensorShape = tensorView->GetShape();
         if (tensorShape.GetRank() <= 2)
             return tensorView->AsMatrix();
 
-        // Determine the split point
-        std::vector<bool> dimsToDrop(tensorShape.GetRank(), false);
-        for (size_t k = 1; k < tensorShape.GetRank(); ++k)
-            if (tensorShape.CanFlatten(k))
-                dimsToDrop[k - 1] = true;
+        size_t splitPoint = rowColSplitPoint;
+        if (splitPoint == AutoSelectRowColSplitPoint)
+        {
+            // Determine the split point
+            std::vector<bool> dimsToDrop(tensorShape.GetRank(), false);
+            for (size_t k = 1; k < tensorShape.GetRank(); ++k)
+                if (tensorShape.CanFlatten(k))
+                    dimsToDrop[k - 1] = true;
 
-        // There should be at most 2 dims we cannot drop
-        auto numDimsThatCannotBeDropped = std::count_if(dimsToDrop.begin(), dimsToDrop.end(), [](const bool& val) {
-            return !val;
-        });
+            // There should be at most 2 dims we cannot drop
+            auto numDimsThatCannotBeDropped = std::count_if(dimsToDrop.begin(), dimsToDrop.end(), [](const bool& val) {
+                return !val;
+            });
 
-        if (numDimsThatCannotBeDropped > 2)
-            LogicError("The TensorView underlying this NDArrayView cannot be flattened to a Matrix");
+            if (numDimsThatCannotBeDropped > 2)
+                LogicError("The TensorView underlying this NDArrayView cannot be flattened to a Matrix");
 
-        size_t splitPoint = 0;
-        while (dimsToDrop[splitPoint])
-            splitPoint++;
+            splitPoint = 0;
+            while (dimsToDrop[splitPoint])
+                splitPoint++;
+        }
 
         tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::GetMatrix");
 
@@ -134,18 +126,18 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix() const
+    std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
     {
-        return GetMatrixImpl<ElementType>();
+        return GetMatrixImpl<ElementType>(rowColSplitPoint);
     }
 
     template <typename ElementType>
-    std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix()
+    std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
     {
         if (IsReadOnly())
             LogicError("NDArrayView::GetWritableMatrix: Cannot get writable Matrix from a read-only NDArrayView");
 
-        return GetMatrixImpl<ElementType>();
+        return GetMatrixImpl<ElementType>(rowColSplitPoint);
     }
 
     template <typename ElementType>
@@ -168,7 +160,7 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::DeepClone(bool readOnly/* = false*/) const
     {
-        NDArrayViewPtr newView = new NDArrayView(this->DataType(), this->Shape(), nullptr, 0, this->Device(), readOnly);
+        NDArrayViewPtr newView(new NDArrayView(this->DataType(), this->Shape(), nullptr, 0, this->Device(), readOnly), [](_ReferenceCounter* ptr) { delete ptr; });
         switch (m_dataType)
         {
         case DataType::Float:
@@ -242,9 +234,7 @@ namespace CNTK
         }
 
         auto aliasView = new NDArrayView(DataType(), Device(), StorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);;
-        return NDArrayViewPtr(aliasView, [](_ReferenceCounter* ptr) {
-            delete ptr;
-        });
+        return NDArrayViewPtr(aliasView, [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
     // TODO: This could actually be strided?
@@ -278,18 +268,16 @@ namespace CNTK
         auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShape(shape));
 
         auto view = new NDArrayView(GetDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
-        return NDArrayViewPtr(view, [](_ReferenceCounter* ptr) {
-            delete ptr;
-        });
+        return NDArrayViewPtr(view, [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
     // Explicit template instantiations
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
 
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();
-
 }
