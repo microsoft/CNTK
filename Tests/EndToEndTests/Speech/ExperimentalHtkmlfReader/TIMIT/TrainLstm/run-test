@@ -1,0 +1,18 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+OriginalTestDir=../../../../Examples/Speech/TIMIT/TrainLstm
+
+# Note: can directly use run-timit-test-common since it lives at the same level
+# in the directory hierarchy.
+. $TEST_DIR/$OriginalTestDir/../run-timit-test-common
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# Running only 3 epochs (~1000s gpu release), because full run takes a lot of time.
+cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[cvReader=[readerType=ExperimentalHTKMLFReader]] TIMIT_TrainLSTM=[reader=[readerType=ExperimentalHTKMLFReader]] TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?

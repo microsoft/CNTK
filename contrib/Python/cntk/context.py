@@ -1,53 +1,62 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-# Licensed under the MIT license. See LICENSE.md file in the project root 
+# Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
-#TODO: Settle on a centralized location for all the documentation that is in docstrings
-
+# TODO: Settle on a centralized location for all the documentation that is in docstrings
+# TODO: Take out the saved model from the context
 
 from abc import ABCMeta, abstractmethod
 import os
 import re
-import sys
 import subprocess
 import numpy as np
 import shutil as sh
 
 from cntk.graph import ComputationNode
-from cntk.ops.cntk1 import NewReshape
-from cntk.utils import get_cntk_cmd, MODEL_INDENTATION
-from .utils import cntk_to_numpy_shape, aggregate_readers
+from cntk.utils import get_cntk_cmd
+from .utils import cntk_to_numpy_shape
 from .utils import with_metaclass
+from .reader import InputMap
 
 CNTK_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 CNTK_TRAIN_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_train_template.cntk")
 CNTK_TEST_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_test_template.cntk")
-CNTK_INFER_TEMPLATE_PATH = os.path.join(
-    CNTK_TEMPLATE_DIR, "cntk_infer_template.cntk")
+CNTK_WRITE_TEMPLATE_PATH = os.path.join(
+    CNTK_TEMPLATE_DIR, "cntk_write_template.cntk")
 CNTK_EVAL_TEMPLATE_PATH = os.path.join(
     CNTK_TEMPLATE_DIR, "cntk_eval_template.cntk")
 CNTK_TRAIN_CONFIG_FILENAME = "train.cntk"
 CNTK_TEST_CONFIG_FILENAME = "test.cntk"
-CNTK_INFER_CONFIG_FILENAME = "infer.cntk"
+CNTK_WRITE_CONFIG_FILENAME = "write.cntk"
 CNTK_EVAL_CONFIG_FILENAME = "eval.cntk"
-CNTK_OUTPUT_FILENAME = "out.txt"
+CNTK_OUTPUT_FILENAME = "out"
 
 # TODO: add validate method
 # TODO: overload action methods to support numpy matrices as inputs
 # TODO: overload action methods to have versions that do not need reader
+# TODO: clean_up should become a property of train()
 # or numpy inputs
 
 _CONTEXT = {}
 
 
-def get_context(handle='default'):
+def get_context(handle):
+    '''
+    If the context for the current handle is already built it returns it. Otherwise,
+    it will build new context and return it.
+    Args:
+        handle (str): context name
+    Returns:
+        :class:`cntk.context.LocalExecutionContext`
+    '''    
+    
     # TODO: we need more sanity in the model handling here
     if handle not in _CONTEXT:
-        _CONTEXT[handle] = Context(handle)
+        _CONTEXT[handle] = LocalExecutionContext(handle)
 
     return _CONTEXT[handle]
 
@@ -63,21 +72,16 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
     '''
     This is the abstract CNTK context. It provides an API to run CNTK actions.
+
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
+        precision (str): either float or double
     '''
 
     def __init__(self, name,
-                 device_id=-1,                 
-                 precision="float",
-                 clean_up=True):      
-        '''
-        AbstractContext Constructer
-
-        :param name: context name
-        :param device_id: whether to use CPU or a specific GPU. -1 for CPU larger values        
-        :param clean_up: whether the temporary directory should be removed when the context is left        
-        are the GPUs indices.                
-        :param precision: either float or double
-        '''
+                 device_id=-1,
+                 precision="float"):
         if isinstance(name, str):
             tmpdir = name
         else:
@@ -94,237 +98,374 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         self.name = name
         self.device_id = device_id
         self.precision = precision
-        self.clean_up = clean_up
-        self.input_nodes = set()    
+        self.input_nodes = set()
 
-    def __enter__(self):
-        _CONTEXT[self.name] = self
-
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        del _CONTEXT[self.name]
-
-        if self.clean_up:
-            sh.rmtree(self.directory)
-
-    @abstractmethod
-    def train(self, root_nodes, optimizer, input_reader=None, override_existing=True):
+    def _save_file(self, config_file_name, config_content, action_name):
         '''
-        Abstract method for the action train.
-        :param root_nodes: the list of root nodes of the model
-        :param input_reader: map from input nodes to readers
+        Writes the content of a config file on disk.
+
+        Args:
+            config_file_name (str): the name of the configuration file
+            config_content (str): a string containing the configuration
+            action_name (str): the name of the action in cntk configuration file
+            
+        Returns:
+            the full path of the saved file
+        '''
+
+        filename = os.path.join(self.directory, config_file_name)        
+
+        with open(filename, 'w') as out:
+            out.write(config_content)
+            out.write("command=%s" %action_name)
+
+        return filename
+        
+    @abstractmethod
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
+        '''
+        Abstract method to run the train action locally.
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (dict): map from input nodes to :class:`cntk.reader.InputMap`
+            override_existing (bool): if the folder exists already override it
+
+        Returns:
+            the console output generated by the CNTK training run
         '''
         pass
 
     @abstractmethod
-    def test(self, input_reader=None):
+    def test(self, root_nodes=None, input_map=None):
         '''
         Abstract method for the action test.
-        :param input_reader: map from input nodes to readers        
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+
+        Returns:
+            dictionary containing `SamplesSeen`, `Perplexity`, and values for
+            objective and evaluation error indexed by their node names
         '''
         pass
 
     @abstractmethod
-    def infer(self, input_reader=None):
+    def write(self, input_map=None):
         '''
-        Abstract method for the action write. It evaluated the trained model on 
+        Abstract method for the action write. It evaluates the trained model on 
         the data provided by the reader.
-        :param input_reader: map from input nodes to readers
 
-        Returns the inferred output
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate.
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+
+        Returns: 
+            output generated by `node`
         '''
         pass
 
     @abstractmethod
-    def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
+    def eval(self, node, input_map=None, backward_pass=False, input_name=None):
         '''
-        Abstract method for the action write. It evaluated the passed node on the
-        data provided by the reader.
-        :param node: the node to evaluate.
-        :param input_reader: map from input nodes to readers
-        :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
-        :input_name: if backward_pass is True then input_node should contain the input name that
-        the gradient is performed with respect to.
-        Returns the output generated by `node`
+        Abstract method for the action write.  It evaluates `node` on the data
+        provided by the reader. This is useful mainly to explore the operators
+        and for convenient unit testing.
+        
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate.
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            backward_pass (bool): set to `True` if you want to output the gradient of a node (backward pass)
+            input_name (:class:`cntk.graph.ComputationNode`): if `backward_pass` is `True` then `input_node` should contain the input name that the gradient is performed with respect to.
+
+        Returns: 
+            output generated by `node`
         '''
         pass
-    
-    def _aggregate_readers(self, input_reader):
-        """ Aggregate the readers passed in the input to reader dictionary
-        """
-        return aggregate_readers([input_reader[i]._to_aggregate_form(i) for i in input_reader])
-        
-    def _generate_config(self, root_nodes=None, input_reader=None):
+
+    def _generate_config(self, root_nodes=None, input_map=None):
         '''
         Helper function to create a configuration incorporating all root nodes
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
         '''
-        has_inputs = False
 
         desc = []
         inputs = set()
-        readers = set() 
         unrolled_nodes = {}
         node_counter = 0
-        dep_inputs = tuple()
-        reconciled_cache = {}
-        
+
         if not isinstance(root_nodes, list):
             root_nodes = [root_nodes]
 
         for root_node in root_nodes:
-            var_name, node_counter, _desc, _has_inputs, _readers, _dep_inputs = \
-                root_node._to_config(input_reader,
-                        desc, 
-                        unrolled_nodes, 
-                        inputs,
-                        readers, 
-                        dep_inputs,
-                        node_counter, 
-                        reconciled_cache)
+            name, node_counter, _desc, _inputs = \
+                root_node._to_config(input_map,
+                                     desc,
+                                     unrolled_nodes,
+                                     inputs,
+                                     node_counter)
 
-            has_inputs |= _has_inputs
-            readers |= _readers
-            dep_inputs += _dep_inputs
+            inputs |= _inputs
 
         description = "\n".join(desc)
 
-        return description, has_inputs, aggregate_readers(readers)
+        return description, inputs
 
-    def _generate_train_config(self, root_nodes, optimizer, input_reader, override_existing):
+    def _generate_global_params(self, **kw):
+        '''
+        Generates key value global parameters for a CNTK configuration file.
+
+        Args:
+            kw (dict): dictionary of key values. e.g., modelPath="my/path/model"
+
+        Returns: 
+            configuration string
+        '''        
+
+        config = []        
+        for k,w in kw.items():
+            config.append('{0}={1}'.format(k, w))
+        return '\n'.join(config)
+
+    def _generate_train_config(self, root_nodes, training_params, input_map, 
+                               override_existing, action_name=None):
         '''
         Generates the configuration file for the train action.
-        :param root_nodes: list of the root nodes of the model
-        :param optimizer: the SGD optimizer to use for training
-        : param input_reader: a map from input nodes to their readers
-        :param override_existing: if the folder exists already override it
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            override_existing (bool): if the folder exists already override it
+            action_name (str): the name of the action in cntk configuration file
+
+        Returns: 
+            configuration string
         '''
 
-        model_dir = os.path.join(self.directory, 'Models')
-        if os.path.exists(model_dir):
-            if override_existing:
-                print("Overriding the existing models")
-                sh.rmtree(model_dir)
-            else:
-                raise Exception("Directory '%s' already exists, set the " + 
-                        "flag override_existing to true if you want to "
-                        "override it" % self.directory)
+        if input_map is None:
+            input_map = InputMap()
 
-        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(model_dir, self.name)
-        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
+        description, inputs = self._generate_config(root_nodes, input_map)
 
+        tmpl = open(CNTK_TRAIN_TEMPLATE_PATH, "r").read()        
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
         tmpl_dict = {
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelDescription': description,
-            'ModelPath': model_filename,
-            'Reader': '\n'.join(r.generate_config() for r in readers),
-            'SGD': optimizer.generate_config(),
+            'ActionName': action_name,
+            'ModelDescription': description,            
+            'Reader': input_map._to_config_description(self.directory),
+            'SGD': training_params._to_config_description(),
         }
-        return tmpl % tmpl_dict
 
-    def _generate_test_config(self, input_reader):
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
+
+
+    def _generate_test_config(self, root_nodes, input_map=None, action_name=None):
         '''
         Generates the configuration file for the test action.
-        :param input_reader: a map from input nodes to their readers
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            action_name (str): the name of the action in cntk configuration file
+
+        Returns:
+            configuration string
         '''
-        tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(self.directory, 'Models', self.name)
-        readers = self._aggregate_readers(input_reader)
-                
-        reader_config = '\n'.join(r.generate_config() for r in readers)
+        if input_map is None:
+            input_map = InputMap()
+
+        # we generate the config just to collect the lazy readers in input_map
+        self._generate_config(root_nodes, input_map)
+
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
+
+        tmpl = open(CNTK_TEST_TEMPLATE_PATH, "r").read()        
 
         tmpl_dict = {
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelPath': model_filename,
-            'Reader': reader_config,
+            'ActionName': action_name,
+            'Reader': input_map._to_config_description(self.directory),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
-    def _generate_infer_config(self, input_reader):
+    def _generate_write_config(self, input_map, action_name=None):
         '''
         Generates the configuration file for the write action.
         It uses the context's trained model.
-        :param input_reader: a map from input nodes to their readers
+
+        Args:
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            action_name (str): the name of the action in cntk configuration file
+
+        Returns:
+            configuration string
         '''
-        tmpl = open(CNTK_INFER_TEMPLATE_PATH, "r").read()
-        model_filename = os.path.join(self.directory, 'Models', self.name)
-        output_filename_base = os.path.join(
-            self.directory, 'Outputs', self.name)
+        if input_map is None:
+            input_map = InputMap()
 
-
-        readers = self._aggregate_readers(input_reader)
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision),
+                                                ModelPath='"{0}"'.format(self.model_path))
         
-        reader_config = '\n'.join(r.generate_config() for r in readers)
+        tmpl = open(CNTK_WRITE_TEMPLATE_PATH, "r").read()
 
         tmpl_dict = {
-            'DevideId': self.device_id,
-            'Precision': self.precision,
-            'ModelPath': model_filename,
-            'PredictOutputFile': output_filename_base,
-            'Reader': reader_config,
+            'ActionName': action_name,
+            'OutputFile': self.output_filename_base,
+            'Reader': input_map._to_config_description(self.directory),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
 
-    def _generate_eval_config(self, root_nodes, input_reader, node_unit_test=False):
-        
+    def _generate_eval_config(self, root_nodes, input_map=None, 
+                              node_unit_test=False, action_name=None):
         '''
         Generates the configuration file for write action.
-        :param root_nodes: the node to evaluate. 
-        :param input_reader: a map from input nodes to their readers
-        :param node_unit_test: set to True if you want to output the gradient of a node (backward pass)
-        '''
-        description, has_inputs, readers = self._generate_config(root_nodes, input_reader)
 
-        if not has_inputs and not readers:
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            node_unit_test (bool): set to `True` if you want to output the gradient of a node (backward pass)
+            action_name (str): the name of the action in cntk configuration file
+
+        Returns: 
+            configuration string
+        '''
+        if input_map is None:
+            input_map = InputMap()
+
+        description, inputs = self._generate_config(root_nodes, input_map)
+
+        if len(inputs) == 0:
             # add dummy input to keep CNTK happy
             # TODO relieve this requirement on CNTK side
-            data = [[1, 2], [3, 4]]
-            fn = os.path.join(self.directory, 'dummy_input.txt')
-            from .reader import NumPyReader
-            reader = NumPyReader(data, fn)
-            from .ops.cntk1 import Input
-            dummy_input_node = Input(2, var_name='dummy_node')
-            reader.add_input(dummy_input_node, 0, 2)
-            description += "\n" + " "*MODEL_INDENTATION + "dummy_node = Input(2, tag='output')"
-            readers.append(reader)
+            #import ipdb;ipdb.set_trace()
+            from cntk.ops import input_numpy
+            dummy_input = input_numpy([[[1]]])
+            dummy_input.name='_dummy_input'
+            input_map._add_unmapped(dummy_input)
+            desc, _inputs = dummy_input._to_config_description(input_map)
+            description += '\n\n' + desc
+
+        g_params = self._generate_global_params(DevideId=self.device_id,
+                                                Precision='"{0}"'.format(self.precision))                                                
 
         tmpl = open(CNTK_EVAL_TEMPLATE_PATH, "r").read()
-        output_filename = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
+        
         tmpl_dict = {
-            'DevideId': self.device_id,
-            'Precision': self.precision,
+            'ActionName': action_name,
             'NodeUnitTest': node_unit_test,
-            'OutputFile': output_filename,
+            'OutputFile': self.output_filename_base,
             'ModelDescription': description,
-            'Reader': '\n'.join(r.generate_config() for r in readers),
+            'Reader': input_map._to_config_description(self.directory),
         }
-        return tmpl % tmpl_dict
+        return "{0}\n{1}".format(g_params, tmpl % tmpl_dict)
+
+class LocalExecutionContext(AbstractContext):
+
+    '''
+    This is a sub-class of AbstractContext, use it to run CNTK locally.
+        
+    Args:
+        name (str): context name
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
+        precision (str): either float or double
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
+    '''
+
+    def __init__(self, name,
+                 device_id=-1,
+                 precision="float",
+                 clean_up=True):
+        super(self.__class__,self).__init__(name, device_id, precision)
+        self.clean_up = clean_up
+        self.model_dir = os.path.join(self.directory, 'Models')
+        self.model_path = os.path.join(self.model_dir, self.name)
+        self.output_filename_base = os.path.join(self.directory, CNTK_OUTPUT_FILENAME)
+
+    def __enter__(self):
+        _CONTEXT[self.name] = self
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        del _CONTEXT[self.name]
+        if self.clean_up:
+            sh.rmtree(self.directory)
+        
+    def _call_cntk(self, config_file_name, config_content, action_name):
+        '''
+        Calls the CNTK executable on the `config_content`.
+
+        Args:
+            config_file_name (str): the name of the configuration file
+            config_content (str): a string containing the configuration
+            action_name (str): the name of the action in cntk configuration file
+
+        Returns:
+            the output generated by the CNTK executable, which is used to retrieve the node shapes.
+        '''
+        
+        filename = self._save_file(config_file_name, config_content, action_name)
+
+        try:
+            output_bytes = subprocess.check_output(
+                [get_cntk_cmd(), 'configFile=%s' % filename],
+                stderr=subprocess.STDOUT)
+            output = output_bytes.decode('utf-8')
+            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
+                log.write(output)
+
+        except subprocess.CalledProcessError as e:
+            with open('error.txt', 'w') as f:
+                f.write(e.output.decode('utf-8'))
+            print("=" * 50)
+            print(e.output.decode('utf-8'))
+            print("=" * 50)
+            raise
+
+        if not output:
+            raise ValueError('no output returned')
+        
+        return output
 
     '''
     Regular expression to parse the shape information of the nodes out of
     CNTK's output
     '''
-    VAR_SHAPE_REGEX = re.compile(
-        '^Validating --> (?P<var_name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
-    SHAPE_STRIDE_REGEX = re.compile('\{.*?\}')
+    _VAR_SHAPE_REGEX = re.compile(
+        '^Validating --> (?P<name>[^ ]+) = [^>]*> \[(?P<shape>[^]]+)')
+    _SHAPE_STRIDE_REGEX = re.compile('\{.*?\}')
 
     @staticmethod
     def _parse_shapes_from_output(output):
         '''
         Parse CNTK's output and look for shape information that is then passed
-        as a dictionary {var_name -> shape tuple}
+        as a dictionary {name -> shape tuple}
+
+        Args:
+            output (str): output from CNTK
+
+        Returns:
+            dictionary mapping node names to shapes
         '''
         var_shape = {}
         for line in output.split('\n'):
-            mo = Context.VAR_SHAPE_REGEX.match(line)
+            mo = LocalExecutionContext._VAR_SHAPE_REGEX.match(line)
             if not mo:
                 continue
-            var_name, shape = mo.group('var_name'), mo.group('shape')
+            name, shape = mo.group('name'), mo.group('shape')
             # In Debug mode, an additional stride information is printed
-            shape = Context.SHAPE_STRIDE_REGEX.sub('', shape)
+            shape = LocalExecutionContext._SHAPE_STRIDE_REGEX.sub('', shape)
 
             shape_list = []
             for x in shape.split('x'):
@@ -334,9 +475,47 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
                 else:
                     shape_list.append(int(x))
 
-            var_shape[var_name] = tuple(shape_list)
+            var_shape[name] = tuple(shape_list)
 
         return var_shape
+
+    @staticmethod
+    def _sanitized_asarray(data):
+        '''
+        Data returned from CNTK might contain infinity or NaNs in the form of
+        `1.#IND -1.#IND 1.#INF -1.#INF` on Windows or `nan -nan inf -inf` on
+        Linux. While the Linux versions are automatically handled by NumPy, the
+        Windows versions are not. This function maps those values to NumPy's 
+        `nan` and `inf` and returns a NumPy array with dtype=float.
+
+        Args:
+            data : Python list of strings 
+              Numbers to be converted or inf/nans
+
+        Returns:
+            out (ndarray): NumPy array with NaNs and Infs mapped to NumPy versions of them.
+
+        See also:
+            http://www.johndcook.com/blog/IEEE_exceptions_in_cpp/
+        '''
+        try:
+            return np.asarray(data, dtype=float)
+        except ValueError:
+
+            for i in range(len(data)):
+                try:
+                    data[i] = float(data[i])
+                except ValueError:
+                    if data[i].startswith('1.#IND'):
+                        data[i] = np.nan
+                    elif data[i].startswith('-1.#IND'):
+                        data[i] = -np.nan
+                    elif data[i].startswith('1.#INF'):
+                        data[i] = np.inf
+                    elif data[i].startswith('-1.#INF'):
+                        data[i] = -np.inf
+
+            return np.asarray(data, dtype=float)
 
     @staticmethod
     def _parse_result_output(output):
@@ -352,7 +531,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
             ]
 
         this method will parse the output of the form
-        
+
             0	|w.shape 1 1
             0	|w 60.000000
             1	|w.shape 1 2
@@ -367,7 +546,7 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         tensor_seq = []
         shape = None
         for line in output.splitlines():
-            parts = line.split('|')
+            parts = line.strip().split('|')
 
             seq_idx = parts[0].strip()
             payload = parts[1]
@@ -377,10 +556,12 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
             if seq_idx != last_seq_idx:
                 if not info == 'w.shape':
-                    raise ValueError('expected shape information, but got "%s"'%line) 
+                    raise ValueError(
+                        'expected shape information, but got "%s"' % line)
 
                 if tensor_seq:
-                    list_of_tensors.append(np.asarray(tensor_seq))
+                    list_of_tensors.append(
+                        LocalExecutionContext._sanitized_asarray(tensor_seq))
                     tensor_seq = []
 
                 last_seq_idx = seq_idx
@@ -389,7 +570,8 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
                 continue
             else:
-                data = np.asarray(data, dtype=float).reshape(shape, order='F')
+                data = LocalExecutionContext._sanitized_asarray(
+                    data).reshape(shape, order='C')
 
             tensor_seq.append(data)
 
@@ -397,38 +579,28 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
 
         return list_of_tensors
 
-    TEST_RESULT_REGEX = re.compile('(?P<name>[^:]+): [^=]+ = (?P<number>[0-9.]+)')
+    _FINAL_RESULTS_REGEX = re.compile(
+            'Final Results: Minibatch\[.*?\]: (?P<results>.*)')
 
     @staticmethod
     def _parse_test_result(output):
         result = {}
 
-        PREAMPLE = 'Final Results: Minibatch[1-1]: '
+        final_results = None
         for line in output.splitlines():
 
-            if not line.startswith(PREAMPLE):
-                continue
+            fo = LocalExecutionContext._FINAL_RESULTS_REGEX.match(line)
+            if fo:
+                final_results = fo.group('results')
 
-            line = line[len(PREAMPLE):]
+        parts = [p.strip() for p in final_results.split(';')]
 
-            if not line.startswith('SamplesSeen = '):
-                raise ValueError('expected SamplesSeen but got "%s"'%line)
+        for p in parts:
+            k, v = p.split('=')
+            if '*' in v:
+                v = v.split('*')[0].strip()
 
-            line = line[len('SamplesSeen = '):]
-            number_ends = line.index(' ')
-            result['SamplesSeen'] = int(line[:number_ends])
-            line = line[number_ends:]
-
-            perplexity_idx = line.index('Perplexity = ')
-            result['Perplexity'] = float(line[perplexity_idx+len('Perplexity = '):])
-
-            line = line[:perplexity_idx]
-
-            mo = Context.TEST_RESULT_REGEX.match(line)
-            while mo:
-                result[mo.group('name').strip()] = float(mo.group('number').strip())
-                line = line[mo.span()[1]:]
-                mo = Context.TEST_RESULT_REGEX.match(line)
+            result[k.strip()] = float(v)
 
         return result
 
@@ -437,25 +609,27 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
         Calculates the expected shape and size from the CNTK output and the
         retrieved data.
 
-        :param node: the node that was evaluated.
-        :param data: the resulting data from `eval()`
-        :param shapes: dictionary of node names to shape tuples
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node that was evaluated.
+            data (ndarray): the resulting data from `eval()`
+            shapes (dict): dictionary of node names to shape tuples as returned by CNTK
 
-        Returns the expected size and shape
+        Returns:
+            expected size and shape
         '''
 
-        # We got a single-dimensional array back, so we have to check whether
-        # we need to reshape it based on CNTK's shape output.
+        # We need to reshape it based on CNTK's shape output.
 
-        expected_shape = np.asarray(shapes[node.var_name])
+        expected_shape = np.asarray(shapes[node.name])
 
-        if sum(np.isnan(expected_shape))>1:
+        if sum(np.isnan(expected_shape)) > 1:
             raise ValueError("for node '%s' we received shape '%s', but " +
-                    "at most one dimension can be left unspecified."%\
-                            (node.var_name, expected_shape))
+                             "at most one dimension can be left unspecified." %
+                             (node.name, expected_shape))
 
-        expected_size = np.multiply.reduce(expected_shape[~np.isnan(expected_shape)])
-        if sum(np.isnan(expected_shape))==1:
+        expected_size = np.multiply.reduce(
+            expected_shape[~np.isnan(expected_shape)])
+        if sum(np.isnan(expected_shape)) == 1:
             if data.size == expected_size:
                 # We received all the data we need, so we have sequences of
                 # length 1. For convenience, we ignore it.
@@ -474,118 +648,259 @@ class AbstractContext(with_metaclass(ABCMeta, object)):
                 raise ValueError('unable to retrieve expected size')
 
         # Move last dimension to the beginning: this is the time dimension
-        #expected_shape = np.roll(expected_shape, 1) 
+        #expected_shape = np.roll(expected_shape, 1)
 
         return expected_shape, expected_size
-        
-class Context(AbstractContext):
 
-    '''
-    This is a sub-class of AbstractContext, use it to run CNTK locally.
-    '''
-
-    def _call_cntk(self, config_file_name, config_content):
-        '''
-        Calls the CNTK exe
-        :param config_file_name: the name of the configuration file
-        :param config_content: a string containing the configuration
-
-        Returns the output generated by the CNTK executable, which is used to
-        retrieve the node shapes.
-        '''
-        filename = os.path.join(self.directory, config_file_name)
-        filename = os.path.relpath(filename)
-
-        with open(filename, 'w') as out:
-            out.write(config_content)
-
-        try:
-            output_bytes = subprocess.check_output(
-                [get_cntk_cmd(), 'configFile=%s' % filename],
-                stderr=subprocess.STDOUT)
-            output = output_bytes.decode('utf-8')
-            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
-                log.write(output)
-
-        except subprocess.CalledProcessError as e:
-            with open('error.txt', 'w') as f:
-                f.write(e.output.decode('utf-8'))
-            print("="*50)
-            print(e.output.decode('utf-8'))
-            print("="*50)
-            raise
-
-        if not output:
-            raise ValueError('no output returned')
-
-        return output
-
-    def train(self, root_nodes, optimizer, input_reader=None, override_existing=True):
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
         '''
         Run the train action locally.
-        :param root_nodes: the list of root nodes of the model
-        :param optimizer: the SGD optimizer to use for training
-        :param input_reader: map from input nodes to readers
-        :param override_existing: if the folder exists already override it
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            override_existing (bool): if the folder exists already override it
+
+        Returns:
+            the console output generated by the CNTK training run
         '''
+        action_name = "Train"
+        if os.path.exists(self.model_dir):
+            if override_existing:
+                print("Overriding the existing models")
+                sh.rmtree(self.model_dir)
+            else:
+                raise Exception("Directory '%s' already exists, set the " +
+                                "flag override_existing to true if you want to "
+                                "override it" % self.directory)
 
         config_content = self._generate_train_config(
-            root_nodes, optimizer, input_reader, override_existing)
-        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content)
+            root_nodes, training_params, input_map, override_existing, action_name = action_name)
 
-    def test(self, input_reader=None):
+        return self._call_cntk(CNTK_TRAIN_CONFIG_FILENAME, config_content,
+                               action_name = action_name)
+
+    def test(self, root_nodes=None, input_map=None):
         '''
         Run the test action locally.
-        :param input_reader: map from input nodes to readers
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+
+        Returns:
+            dictionary containing `SamplesSeen`, `Perplexity`, and values for
+            objective and evaluation error indexed by their node names
         '''
-        config_content = self._generate_test_config(input_reader)
-        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content)
+        
+        if root_nodes is None and input_map is None:
+            raise ValueError('if input_map is None, you have to specify root_nodes.')        
+        
+        action_name = "Test"
+        config_content = self._generate_test_config(root_nodes, input_map, 
+                                                    action_name = action_name)
+        output = self._call_cntk(CNTK_TEST_CONFIG_FILENAME, config_content,
+                                 action_name = action_name)
 
-        return Context._parse_test_result(output)
+        return LocalExecutionContext._parse_test_result(output)
 
-
-    def infer(self, input_reader=None):
+    def write(self, input_map=None):
         '''
-        Run the write action locally, use the trained model of this context.
-        :param input_reader: map from input nodes to readers
+        It evaluates the trained model on the data provided by the reader.
 
-        Returns the inferred output
-        '''
-        config_content = self._generate_infer_config(input_reader)
-        return self._call_cntk(CNTK_INFER_CONFIG_FILENAME, config_content)
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate.
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
 
-    def eval(self, node, input_reader=None, backward_pass=False, input_name=None):
+        Returns: 
+            output generated by `node`
         '''
-        Run the write action locally to evaluate the passed node and returning
-        the data it produced.
+        action_name = "Write"
+        config_content = self._generate_write_config(input_map, action_name = action_name)
+        return self._call_cntk(CNTK_WRITE_CONFIG_FILENAME, config_content,
+                               action_name = action_name)
 
-        :param node: the node to evaluate.
-        :param input_reader: map from input nodes to readers
-        :param backward_pass: set to True if you want to output the gradient of a node (backward pass)
-        :input_name: if backward_pass is True then input_node should contain the input name that
-        the gradient is performed with respect to.
-        Returns the output generated by `node`
+    def eval(self, node, input_map=None, backward_pass=False, input_name=None):
         '''
+        It evaluates `node` on the data provided by the reader. This is useful
+        mainly to explore the operators and for convenient unit testing. 
+        
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            backward_pass (bool): set to `True` if you want to output the gradient of a node (backward pass)
+            input_name (:class:`cntk.graph.ComputationNode`): if `backward_pass` is `True` then `input_node` should contain the input name that the gradient is performed with respect to.
+
+        Returns: 
+            output generated by `node`
+        '''
+        action_name = "Eval"
         if not isinstance(node, ComputationNode):
             raise ValueError(
                 'node is not of type ComputationNode, but %s' % type(node))
+
+        if backward_pass and input_name is None:
+            raise ValueError(
+                'an input name is required when backward pass is enabled')
 
         # Taking note of the original tag of this node to restore it later
         orig_node_tag = node.tag if hasattr(node, 'tag') else None
         node.tag = 'output'
 
-        config_content = self._generate_eval_config(node, input_reader, backward_pass)
-        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content)
+        config_content = self._generate_eval_config(
+            node, input_map, backward_pass, action_name = action_name)
+        self._call_cntk(CNTK_EVAL_CONFIG_FILENAME, config_content,
+                        action_name = action_name)
 
+        out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.')
         node.tag = orig_node_tag
-
-        n = input_name.var_name if isinstance(input_name, ComputationNode) else input_name
-        out_name = os.path.join(
-            self.directory, CNTK_OUTPUT_FILENAME + '.' + \
-                ((n + '.grad') if backward_pass  else node.var_name))        
-
+        if backward_pass:
+            n = input_name.name if isinstance(input_name, ComputationNode)\
+                    else input_name
+            out_name += n + '.grad'
+        else:            
+            out_name += node.name
 
         result_content = open(out_name).read()
-        data = Context._parse_result_output(result_content)
+        data = LocalExecutionContext._parse_result_output(result_content)
 
         return data
+
+class DeferredExecutionContext(AbstractContext):
+
+    '''
+    This is a sub-class of AbstractContext, use it to generate CNTK configuration,
+    that would be executed on different enviroment (e.g., on a cluster) rather than 
+    the machine that generated them.
+        
+    Args:        
+        device_id (int): whether to use CPU (-1) or GPU if `device_id>=0`, in which case it denotes the GPU index
+        precision (str): either 'float' or 'double'
+    '''
+    
+    def __init__(self, 
+                 device_id=-1,
+                 precision="float"):        
+                
+        self.device_id = device_id
+        self.precision = precision
+        self.input_nodes = set()        
+        self.directory = None
+        self.model_path = os.path.join("$ModelDir$", "model")
+        self.output_filename_base = os.path.join("$DataDir$", CNTK_OUTPUT_FILENAME)
+        self.config = []
+        self.actions = []
+
+    def __enter__(self):        
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+        
+    def _append_config(self, action_name, config_content):
+        '''
+        Append the config to the existing one
+
+        Args:            
+            action_name (str): the name of the action in cntk configuration file
+            config_content (str): a string containing the configuration
+        '''
+        self.config.append(config_content)
+        self.actions.append(action_name)
+
+    def train(self, root_nodes, training_params, input_map=None, override_existing=True):
+        '''
+        Prepare the training configuration to be run on a different environment 
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            training_params (instance of :class:`cntk.sgd.SGDParams`): the SGD training parameters to use for training
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+            override_existing (bool): if the folder exists already override it
+
+        '''
+        #TODO: for this action and others as well, use a counter with the 
+        # action name to avoid name collision in case we generate a config 
+        #file with more than one action type 
+        
+        action_name = "Train"
+        config_content = self._generate_train_config(
+            root_nodes, training_params, input_map, override_existing, action_name)
+        self._append_config(action_name, config_content)        
+
+
+    def test(self, root_nodes=None, input_map=None):
+        '''
+        Prepare the testing configuration to be run on a different environment 
+
+        Args:
+            root_nodes (:class:`cntk.graph.ComputationNode` or list thereof): node(s) to start the graph generation from (most likely evaluation and criterion nodes)
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+        '''
+        if root_nodes is None and input_map is None:
+            raise ValueError('if input_map is None, you have to specify root_nodes.')
+
+        action_name = "Test"
+        config_content = self._generate_test_config(root_nodes, input_map, action_name)
+        self._append_config(action_name, config_content)        
+
+
+    def write(self, input_map=None):
+        '''
+        Prepare the write action configuration to be run on a different environment 
+
+        Args:
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+        '''
+        action_name = "Write"
+        config_content = self._generate_write_config(input_map, action_name)
+        self._append_config(action_name, config_content)        
+
+    def eval(self, node, input_map=None):
+        '''
+        Prepare the evaluation configuration to be run on a different environment. 
+
+        Args:
+            node (:class:`cntk.graph.ComputationNode`): the node to evaluate
+            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
+        '''
+        action_name = "Eval"
+        if not isinstance(node, ComputationNode):
+            raise ValueError(
+                'node is not of type ComputationNode, but %s' % type(node))
+
+        node.tag = 'output'
+
+        config_content = self._generate_eval_config(
+            node, input_map, False, action_name)
+        self._append_config(action_name, config_content)        
+    
+    def export(self, name):
+        '''
+        Exports the requested actions (via function calls like train()) to 
+        a signle cntk configuration file that will be executed on the cluster
+
+        Returns: 
+            name (str): context name, which is also the name of the output folder that contains the configuration filename to which the configuration has been exported
+        '''                
+                
+        self.directory = os.path.abspath(name)
+
+        if os.path.exists(self.directory):
+            print("Directory '%s' already exists" %
+                  self.directory)
+        else:
+            os.mkdir(self.directory)
+        
+        
+        filename = '%s.cntk' %name
+        filename = os.path.join(self.directory,  filename)            
+
+        with open(filename, 'w') as out:            
+            out.write('\n'.join(self.config))
+            out.write("command=%s" % ":".join(self.actions))
+                    
+        return filename

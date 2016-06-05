@@ -17,15 +17,35 @@ cp -R $DataSourceDir/* $DataDir || exit $?
 cntkrun TIMIT_WriteScaledLogLike.cntk "$CntkArguments"
 ExitCode=$?
 
-# Compare the output files
-OutputDir=$DataDir/scaledloglike
+if [ $ExitCode == 0 ]; then
+  echo Write succeeded.
 
-cd $OutputDir && md5sum --quiet -c $TEST_DIR/expected_output.txt
-if [ $? != 0 ]; then
-  echo Error: Output files are different.
-  $ExitCode = 1
-fi 
-echo MD5 check succeeded.
+  # Restore DataDir prior to modification through cntkrun (on Cygwin)
+  DataDir=$TEST_RUN_DIR/TestData
+
+  # Compare the output files
+  OutputDir=$DataDir/scaledloglike
+
+  # TODO need to watch this for a while. If this turns out to be
+  # non-deterministic we need to disable this / find a different output
+  # validation.
+  if [ "$OS" == "Windows_NT" ]; then
+      ExpectedOutputFile=$TEST_DIR/expected_output_md5sum.windows.txt
+      echo MD5 check disabled on Windows.
+  else
+      ExpectedOutputFile=$TEST_DIR/expected_output_md5sum.linux.txt
+
+      cd $OutputDir && md5sum --quiet -c $ExpectedOutputFile
+      ExitCode=$?
+      if [ $ExitCode == 0 ]; then
+        echo MD5 check succeeded.
+      else
+        # Using explicit path to find to disambiguate from find.exe on Windows
+        /usr/bin/find $OutputDir -type f -print0 | xargs -0 md5sum
+        echo Error: Output files are different. More info above.
+      fi
+  fi
+fi
 
 # Delete the test data
 rm -rf $DataDir

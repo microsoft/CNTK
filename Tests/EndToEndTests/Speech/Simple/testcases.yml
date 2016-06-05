@@ -3,7 +3,8 @@ tags:
      # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
      - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
      # running unconditionally on every Nightly job in 'S' leg
-     - nightly-s (build_sku == 'gpu')
+     # TODO Windows Debug on CPU is flaky (depending on hardware?)
+     - nightly-s (build_sku == 'gpu') and ((flavor=='release') or (device=='gpu') or (os=='linux'))
 
 testCases:
   CNTK Run must be completed:
@@ -19,14 +20,14 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErrPerSample = {{float,tolerance=.1%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
+      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
+      - " * {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
+      - EvalErrorPrediction = {{float,tolerance=.1%}}
 

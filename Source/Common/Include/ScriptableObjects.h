@@ -25,11 +25,11 @@ class ScriptingException : public runtime_error
 {
 public:
     template <typename M>
-    ScriptingException(const M &msg)
-        : runtime_error(msg)
+    ScriptingException(const M &msg) :
+        runtime_error(msg)
     {
     }
-    virtual void PrintError() const = 0;
+    virtual void PrintError(const std::wstring& linePrefix) const = 0;
 };
 
 // -----------------------------------------------------------------------

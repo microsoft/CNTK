@@ -198,10 +198,12 @@ class minibatchutterancesourcemulti : public minibatchsource
             }
             catch (...)
             {
-                releasedata();
+                // Clean up in a non-throwable way in order not to hide the original exception.
+                cleandata();
                 throw;
             }
         }
+
         // page out data for this chunk
         void releasedata() const
         {
@@ -209,6 +211,12 @@ class minibatchutterancesourcemulti : public minibatchsource
                 LogicError("releasedata: cannot page out virgin block");
             if (!isinram())
                 LogicError("releasedata: called when data is not memory");
+            cleandata();
+        }
+
+    private:
+        void cleandata() const
+        {
             // release frames
             frames.resize(0, 0);
             // release lattice data

@@ -168,7 +168,10 @@ public:
     {
         NOT_IMPLEMENTED;
     };
-    virtual size_t GetNumParallelSequences() = 0;
+
+    // TODO: Should be removed when BPTT follows proper minibatch size.
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() = 0;
+
     //virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz)
     {
@@ -272,25 +275,22 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
-    // Sample format below for UCIReader:
+    // Sample format below for CNTKTextFormatReader:
     // # Parameter values for the reader
     // reader=[
     //  # reader to use
-    //  readerType="UCIFastReader"
-    //  miniBatchMode="partial"
-    //  randomize=None
-    //  features=[
-    //    dim=784
-    //    start=1
-    //    file="c:\speech\mnist\mnist_test.txt"
-    //  ]
-    //  labels=[
-    //    dim=1
-    //      start=0
-    //      file="c:\speech\mnist\mnist_test.txt"
-    //      labelMappingFile="c:\speech\mnist\labels.txt"
-    //      labelDim=10
-    //      labelType="category"
+    //  readerType="CNTKTextFormatReader"
+    //  randomize=false
+    //  file="c:\speech\mnist\mnist_test_cntk_text.txt"
+    //  input=[
+    //    features=[
+    //      dim=784
+    //      format="dense"
+    //    ]
+    //    labels=[
+    //      dim=10
+    //      format="dense"
+    //    ]
     //  ]
     //]
     template <class ConfigRecordType>
@@ -337,7 +337,7 @@ public:
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
-    size_t GetNumParallelSequences();
+    size_t GetNumParallelSequencesForFixingBPTTMode();
     //int GetSentenceEndIdFromOutputLabel();
     //bool RequireSentenceSeg() const override;
 

@@ -35,7 +35,7 @@
 // thread local storage to access the current stream, initalize to default stream
 __declspec(thread)
 #endif
-    extern cudaStream_t t_stream;
+extern cudaStream_t t_stream;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -43,7 +43,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TensorView support
 // =======================================================================
 
-// To save time, this makes extensive use of templates and macros.
+// TensorView computes element-wise tensor operations.
+//  - supports general strides
+//  - input broadcasting is supported by stride=0
+//  - the operation is denoted by an opCode
+//  - reduction is supported, including summation (dual to broadcasting when computing gradients)
+//  - reduction operation is given by an opCode. Only a few specific opCodes may be used for reduction.
+//    Note: reduction opCodes are not implemented yet, only summation is supported.
+//
+// This library makes extensive use of templates and macros.
+// Specifically, templates are used recursively to recurse over tensor dimensions.
+// For example, a tensor op of rank K is computed by looping over the last dimension
+// and then calling the same function template recursively with K-1.
+// Template specializations exist in order to:
+//  - terminate recursion
+//  - optimize for thread-parallel reduction where elements are consecutive in memory
+//
+// The general algorithm is very straight forward:
+//
+//     for all output dimensions [###]:                                 // TensorOp()
+//         output[###] *= beta
+//         for all reduction dimensions [***]:                          // TensorOpWithReduction()
+//             output[###] += op(input1[###,***], input1[###,***], ...) * alpha
+//
+// Indices and dimensions used throughout this code:
+//  - N = ariness; number of arguments *including output* (binary op: N=3)
+//  - K = rank of output elements, regularOpDims.size(). K=0 means scalar.
+//  - k = -1..K-1 = recursion index
+//  - M = reduction rank, reducingOpDims.size(). M=0 means no reduction.
+//  - m = -1..M-1 = recursion index
+//
+// Other frequently used variable names:
+//  - alpha, beta: BLAS-style weights: outVal = beta * outVal + alpha * f(inVals)
+//                 where beta=0 is an assignment (0 * outVal := 0, even e.g. if outVal = NaN)
+//  - pointers[N]:          pointer to first element, for each argument
+//  - regularOpDims[K]:     tensor dimensions of output elements to produce
+//  - regularStrides[N,K]:  strides; multiply index[k] with strides[n,k] to get element offset for this dimension
+//                          Broadcasting of inputs is implemented by a stride being 0.
+//  - reducingOpDims[M]:    tensor dimensions of input elements to reduce over
+//  - reducingStrides[N,M]: strides for input reduction. Always 0 for output argument.
+//
+// This code uses two custom structs, FixedArray<> and FixedMatrix<>, which
+// are templated equivalents to vector<> and vector<vector<>> for CUDA code.
 
 // -----------------------------------------------------------------------
 // simple fixed-size arrays for passing dimension information by value
@@ -221,11 +262,11 @@ struct TensorOps
 };
 
 // -----------------------------------------------------------------------
-// function to compute the value for a given output location (this version performs reduction if needed)
+// function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
 
 //#define ReduceElemType double
-#define ReduceElemType ElemType
+#define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
 
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorOpReduce
@@ -266,7 +307,8 @@ struct TensorOpReduce<ElemType, N, M, /*m=*/-1>
 };
 
 // -----------------------------------------------------------------------
-// function to compute one constituent of the value for a given output location (this version has reduction done outside)
+// function to compute one constituent of the value for a given output location
+// (reduction is not done here, but by calling into here multiple times)
 // -----------------------------------------------------------------------
 
 template <class ElemType, C_size_t N, C_int M, C_int m>
@@ -306,12 +348,6 @@ struct TensorOpParallelReduce<ElemType, N, M, /*m=*/-1>
 // -----------------------------------------------------------------------
 // perform loop over regular index k for N-nary operations (N counting the output)
 // -----------------------------------------------------------------------
-
-// The canonical case, vector op without reduction, is this PTX function:
-// _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi3ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
-//                                   float ^      ^ aggregate loop
-//                                      args? ^       ^ input dims
-// _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi2ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
 template <class ElemType, C_size_t N, C_int M, C_int K, bool parallelReduce, C_int k>
@@ -355,20 +391,6 @@ struct TensorOpElement<ElemType, N, M, K, parallelReduce, /*k=*/0>
     }
 };
 
-//// apply beta and alpha and save
-//template<class ElemType, class PointersType>
-//static __device__ void SetFinalValue(ElemType val, ElemType beta, const PointersType & pointers, ElemType alpha)
-//{
-//    // scale
-//    val *= alpha;
-//    // combine with previous value in target matrix, then write it out
-//    auto * pout = pointers[pointers.size() - 1];
-//    if (beta != 0)
-//        val += beta * *pout;
-//    // save
-//    *pout = val;
-//}
-
 // specialization for k = -1 terminates the template recursion, and computes reductions in a for loop
 template <class ElemType, C_size_t N, C_int M, C_int K>
 struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
@@ -393,6 +415,8 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
     }
 };
 
+#undef ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
+
 // specialization for k = -1 terminates the template recursion, and computes reductions in parallel
 template <class ElemType, C_size_t N, C_int M, C_int K>
 struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
@@ -403,8 +427,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
                                    const FixedArray<C_unsigned_int, K>& /*regularOpStrides*/, const FixedMatrix<C_int, N, K>& /*regularStrides*/,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
     {
-        CUDA_LONG reductionBlock = blockIdx.z; // block index  --larger reductions are split into blocks
-        CUDA_LONG reductionBlocks = gridDim.z; // number of blocks
+        CUDA_LONG reductionBlock = blockIdx.z; // reduction-block index  --larger reductions are split into blocks
         CUDA_LONG tid = threadIdx.x;           // thread index
         CUDA_LONG tids = blockDim.x;           // out of how many threads  --note: last block is partial
 
@@ -427,7 +450,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
-        __shared__ ReduceElemType accumulators[GridDim::maxThreadsPerBlock /*tids*/];
+        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
         accumulators[tid] = sum;
         __syncthreads();
         static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
@@ -448,12 +471,15 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
             val *= alpha;
             // combine with previous value in target matrix, then write it out
             auto* pout = pointers[pointers.size() - 1];
+#ifdef ALLOW_ATOMIC_REDUCTION
+            CUDA_LONG reductionBlocks = gridDim.z; // number of reduction blocks. If >1 we need atomicAdd
             if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
             {
                 // in this case, outer calling code must pass beta = 1
-                val = atomicAdd(pout, val);
+                atomicAdd(pout, val);
             }
             else
+#endif
             {
                 if (beta != 0)
                     val += beta * *pout;
@@ -511,11 +537,47 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
 template <class ElemType, C_size_t N, C_int M, C_int K>
 __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
                                              FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides, CUDA_LONG numElements,
-                                             FixedArray<C_unsigned_int, M> reducingOpDims, FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
+                                             FixedArray<C_unsigned_int, M> reducingOpDims, FixedMatrix<C_int, N, M> reducingStrides,
+                                             CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
 {
     CUDA_LONG id = gridDim.x * blockIdx.y + blockIdx.x; // input dimensions are Y dimension of blocks in this case, so we can use thread dim for shared-memory/parallelization
+#ifndef ALLOW_ATOMIC_REDUCTION
+    CUDA_LONG reductionBlock = blockIdx.z;                         // reduction-block index  --larger reductions are split into blocks
+    pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
+#endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
         TensorOpElement<ElemType, N, M, K, true, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
+}
+
+// helper function to provide a reduction buffer
+template <class ElemType>
+static shared_ptr<ElemType> AllocateReductionBuffer(size_t N)
+{
+    ElemType* deviceBufferPtr;
+    CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(ElemType) * N));
+    return shared_ptr<ElemType>(deviceBufferPtr, [](ElemType* deviceBufferPtr){ cudaFree((void*)deviceBufferPtr); });
+}
+
+template <class ElemType>
+static shared_ptr<ElemType> GetReductionBuffer(size_t N)
+{
+    bool dontCache = false;         // (for debugging only)
+    if (t_stream != 0 || dontCache) // we cache for the NULL stream but don't bother for others, since we only ever use the NULL stream currently
+        return AllocateReductionBuffer<ElemType>(N);
+
+    static shared_ptr<ElemType> reductionBuffersCache[32]; // cache of objects    --TODO: Do we have a #define the the max somewhere? Then also use it in CPUMatrix.cu GetOnesTensor()
+    static size_t reductionBuffersCacheSize[_countof(reductionBuffersCache)] = { 0 };
+    let deviceId = GridDim::GetCurrentDeviceId();
+    if (deviceId >= _countof(reductionBuffersCache)) // index check w.r.t. our hard-coded dimensions
+        return AllocateReductionBuffer<ElemType>(N); // out of bounds: don't cache
+    if (!reductionBuffersCache[deviceId])
+    {
+        reductionBuffersCache[deviceId] = AllocateReductionBuffer<ElemType>(N);
+        reductionBuffersCacheSize[deviceId] = N;
+    }
+    if (N > reductionBuffersCacheSize[deviceId]) // buffer size check
+        LogicError("GetReductionBuffer: Must be called with the number of multiprocs, which may not change.");
+    return reductionBuffersCache[deviceId];
 }
 
 // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
@@ -530,51 +592,84 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     C_size_t numElements = 1;
     for (C_size_t k = 0; k < regularOpDims.size(); k++)
     {
-        regularOpStrideVector.push_back(numElements);
+        regularOpStrideVector.push_back(numElements); // stride for dense representation of our output elements (if they were flattened)
         numElements *= (C_size_t) regularOpDims[k];
     }
-    FixedArray<C_unsigned_int, K> regularOpStrides(regularOpStrideVector);
-    FixedMatrix<C_int, N, K> regularStrides(regularStrideVectors);
-    FixedArray<C_unsigned_int, M> reducingOpDims(reducingOpDimVector);
-    FixedMatrix<C_int, N, M> reducingStrides(reducingStrideVectors);
+    FixedArray<C_unsigned_int,    K> regularOpStrides(regularOpStrideVector);
+    FixedMatrix<C_int,         N, K> regularStrides(regularStrideVectors);
+    FixedArray<C_unsigned_int,    M> reducingOpDims(reducingOpDimVector);
+    FixedMatrix<C_int,         N, M> reducingStrides(reducingStrideVectors);
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
     SyncGuard syncGuard;
 
     // do some optimization for reductions
+    //  - example: 30 GPU procs, warp size 32 --> 960 GPU cores
+    //  - NN elements must be computed, each involving a reduction over reductionDim elements
     // Cases:
-    //  - #output elements >= GPU procs  -->  use one proc per element, do reduction in inner loop
-    //  - reduction dimension fits into a single kernel  -->  launch it that way
-    //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc
-    //     - PlusNode: reducing to a bias for small matrices
-    //     - ScaleNode: big elementwise product reduced to a scalar (dot product)
-    //     - E.g. 3072 GPU procs:
-    //       If >= 3072 reduced output values must be computed, just loop inside.
-    //       If less, and reduction per value does not fit into a single proc,
-    //       then we break it into procs, say, 24.
-    //       This way we will need 24 atomicAdd()s of 3072/24 = 128 values.
-    //       If reduction is along stride=1, then we'd have 24 atomicAdd()s of 32 coalesced writes.
-    //       Does not sound scary at all.
-    //       Precondition: matrix cannot at the same time participate in reduction and operation.
+    //  - #output elements NN >= GPU cores  -->  use one proc per element, do reduction in inner loop
+    //    E.g. if >=960 elements are computed, each gets its own GPU thread.
+    //  - reduction dimension would benefit from multiple blocks  -->  multiple blocks work on a single output element
+    //    E.g.
+    //     - gradient of adding a bias: reducing to a bias, e.g. 512-dim
+    //     - gradient of scalar multiplication: big elementwise product reduced to a scalar (big dot product, e.g. [1024 x 1024] = 1M elements)
+    //     - softmax in seq-2-seq attention model: reduce over length of attention window (e.g. 20)
+    //     - summation of criterion value: scalar reduction over a few hundred or thousand samples in the minibatch
     C_size_t reductionDim = 1; // number of elements to reduce over
     for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
         reductionDim *= (C_size_t) reducingOpDimVector[k];
-    let& props = GridDim::GetDeviceProps();
     GridDim grid(NN);
-    if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount /*    && NN == 10 && reductionDim <= GridDim::maxThreadsPerBlock*/)
+    let& props = GridDim::GetDeviceProps();
+    // === simple case: NN large, one thread per output element
+    bool disableParallelReduction = false;                       // (for debugging)
+    if (reductionDim == 1 ||                                     // no reduction
+        grid.m_blocksPerGrid >= props.multiProcessorCount ||     // enough output elements to fill all multiprocs
+        reductionDim * numElements <= 2 * props.warpSize ||      // trivial operation not worth the trouble (2* because the more complex one also needs 2 kernel launches)
+        disableParallelReduction ||                              // (for debugging)
+        reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
+        // we got enough elements to generate: do one element per thread, and reduction inside
+        _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
+            beta, pointers, alpha, op,
+            regularOpStrides, regularStrides, grid.m_N,
+            reducingOpDims, reducingStrides);
+    }
+    // === optimization: simple case would not use all multiprocs
+    else
+    {
+        // m_blocksPerGrid can be thought of NN / 512, with appropriate rounding
+
         // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
-        // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
+        // If we get here, then
+        //  - the total number of outputs to produce is < #multiprocs * warpSize, e.g. < 960
+        //  - each output has at least two inputs, but possibly millions
+        // Examples:
+        //  (a1) NN=900
+        //        - each multiproc processes multiple elements concurrently, each reducing over its inputs inside
+        //        - use one block per output element
+        //  (a2) NN=30
+        //        - same as (a1) except 30 multiprocs run only a single block each
+        //  (a3) NN=16
+        //        - same as (a1) except only 16 multiproc run one block
+        //  (b1) NN=15
+        //        - 2 blocks work together on a single output element
+        //  (b2) NN=1    (NN < #multiprocs, e.g. NN < 30)
+        //        - multiple blocks work together on a single output element
+        //        - only this case requires memory, and only K * NN
+        //          where K = blocks that work together,
+        //          both K and NN < #multiprocs,
+        //          and K * NN = on the order of NN, but generally a bit larger due to rounding.
 
         // By how much do we underutilize?
         // We increase #blocks by that factor by breaking reduction into that many chunks.
-        let numReductionChunks = CeilDiv(props.multiProcessorCount, NN);
+        let numReductionChunks = max(props.multiProcessorCount / NN, 1); // only >1 for NN < multiProcessorCount
 
-        // NN may be too large for a single dimension
+        // distribute NN over block X and Y
         let blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
         let numBlocksX = CeilDiv(NN, blockXOverBy);
         let numBlocksY = CeilDiv(NN, numBlocksX);
+        // while block Z is for multiple blocks working together on a single output element
         let numBlocksZ = numReductionChunks;
         // Block dim is now:
         //  - X, Y: such that X*Y covers NN
@@ -584,22 +679,107 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
         let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
-        if (beta == 1 || numBlocksZ == 1)
+        // --- cases (a1) and (a2)
+        // This involves no reduction across blocks.
+        if (numReductionChunks == 1)
         {
+            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
+                beta, pointers, alpha, op,
+                regularOpStrides, regularStrides, NN,
+                reducingOpDims, reducingStrides, 0, reductionChunkSize);
+        }
+        // --- case (b)
+        // Reduction across blocks. This is the difficult one.
+#ifndef ALLOW_ATOMIC_REDUCTION // temporarily disabled to ensure it is not causing the non-reproducability
+        else
+        {
+            // we get here if NN <= #multiprocs
+            assert(NN <= props.multiProcessorCount && numBlocksX == NN && numBlocksY == 1);
+            // dims are:
+            //  - numBlocksZ = numReductionChunks = how many multiprocs work together to produce one output element
+            //  - numBlocksX = NN = number of output elements
+            //  - numThreadsX = reductionChunkSize clipped to 512; reductionChunkSize > 512 is handled by an inner for loop inside of the kernel
+
+            // we need memory for block outputs of dimension [numBlocksX x numBlocksZ]
+            //  - total elements = NN * Floor(#multiprocs / NN) = <= #multiprocs
+            let reductionBufferSize = props.multiProcessorCount;
+            assert(reductionBufferSize >= NN * numBlocksZ);
+            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(reductionBufferSize);
+
+            // 'pointers', 'regularOpStrides', and 'regularStrides' are set up to point to the target memory.
+            // We need to reroute them to point to our reductionBuffer.
+            //  - pointer[N-1] -> replace by reductionBuffer
+            //  - regularStrides -> replace [N-1] by regularOpStrides which already represent the NN elements for a dense memory layout
+            //  - beta -> 0 since we write into temp memory
+            //  - kernel must use block.z as second index into the output buffer; add (block.z * NN) to the pointer
+            FixedArray<ElemType*, N> pointers1 = pointers;
+            pointers1[N - 1] = reductionBuffer.get();
+            auto regularStrideVectors1 = regularStrideVectors;
+            for (size_t k = 0; k < regularOpStrides.size(); k++)
+                regularStrideVectors1[N - 1][k] = (ptrdiff_t)regularOpStrideVector[k];
+            FixedMatrix<C_int, N, K> regularStrides1(regularStrideVectors1);
+            ElemType beta1  = 0;
+            ElemType alpha1 = 1;
+            _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(
+                beta1, pointers1, alpha1, op,
+                regularOpStrides, regularStrides1, NN,
+                reducingOpDims, reducingStrides, /*reductionBegin*/0, reductionChunkSize);
+
+#if 1
+            // now reduce and redistribute
+            // Create a new tensor task, and execute it recursively:
+            //  - input  = reductionBuffer
+            //  - output = true output
+            //  - op dims/strides     = output elements
+            //  - reduce dims/strides = numBlocksZ
+            //  - op = opCopy
+            array<ElemType*, 2>                    pointerVector2{         reductionBuffer.get(),        pointerVector[N - 1] };
+            const array<SmallVector<ptrdiff_t>, 2> regularStrideVectors2{  regularStrideVectors1[N - 1], regularStrideVectors[N - 1] };
+            const array<SmallVector<ptrdiff_t>, 2> reducingStrideVectors2{ SmallVector<ptrdiff_t>{ NN }, SmallVector<ptrdiff_t>{ 0 } };
+            const SmallVector<size_t>              reducingOpDimVector2{ (size_t)numReductionChunks };
+            LaunchTensorOpWithReduction<ElemType, /*N=*/2, /*M=*/1, K>(
+                beta, pointerVector2, alpha, ElementWiseOperator::opCopy,
+                regularOpDims, regularStrideVectors2,
+                reducingOpDimVector2, reducingStrideVectors2);
+            // (note: ^^this will have a nested syncGuard, which is fine)
+
+#else
+            _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
+                beta, pointers, alpha, op,
+                regularOpStrides, regularStrides, grid.m_N,
+                reducingOpDims, reducingStrides);
+            //for (size_t z = 0; z < numBlocksZ; z++)
+            //    _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(z == 0 ? beta : 1, pointers, alpha, op,
+            //    regularOpStrides, regularStrides, NN,
+            //    reducingOpDims, reducingStrides, reductionChunkSize * z, reductionChunkSize);
+            vector<ElemType> peekPartial(NN * numBlocksZ, -42);
+            vector<ElemType> peekFinal(NN, -42);
+            CUDA_CALL(cudaMemcpy(peekPartial.data(), reductionBuffer,             sizeof(ElemType) * peekPartial.size(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(peekFinal.data(),   pointers[pointers.size()-1], sizeof(ElemType) * peekFinal.size(),   cudaMemcpyDeviceToHost));
+            double s1 = 0, s2 = 0;
+            for (auto v : peekPartial)
+                s1 += v;
+            for (auto v : peekFinal)
+                s2 += v;
+            sin(1.0);
+#endif
+        }
+#else
+        else if (beta == 1)
+        {
+            // no need to pre-scale; just add (common for gradients)
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            return;
         }
         else
         {
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            // We will leave it like this for a while, but eventually need to revisit using temporary memory.
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
         }
-    }
-    else
-    {
-        // we got enough elements to generate: do one element per thread, and reduction inside
-        _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
+#endif
     }
 }
 

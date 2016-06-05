@@ -43,6 +43,7 @@
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
 // CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
+// TODO: This may need to be guarded by CUDA version; newer devices may support this.
 static __inline__ __device__ double atomicAdd(double* address, double val)
 {
     unsigned long long int* address_as_ull = (unsigned long long int*) address;
@@ -95,7 +96,7 @@ static INT CeilDiv(INT a, INT2 b) // ceil(a/b)
 struct GridDim
 {
     static const CUDA_LONG maxThreadsPerBlock = 512; // use this many threads per block
-    static const CUDA_LONG maxWarpsPerBlock = 16;    // use this many warps per block
+    static const CUDA_LONG maxWarpsPerBlock = 16;    // use this many warps per block. This means 512 threads for warpSize=32
 
     // use these for launching
     //   GridDim grid(NN);
@@ -118,6 +119,7 @@ struct GridDim
         CUDA_LONG warpsPerProc = CeilDiv(N, numProcs * warpSize);
 
         // if too many warps per block then reduce #warps
+        // This limits the number of threads to 512.
         if (warpsPerProc > maxWarpsPerBlock)
         {
             CUDA_LONG overBy = CeilDiv(warpsPerProc, maxWarpsPerBlock); // we are over by this factor
@@ -125,7 +127,7 @@ struct GridDim
         }
 
         // put it back together
-        m_threadsPerBlock = warpsPerProc * warpSize;
+        m_threadsPerBlock = warpsPerProc * warpSize;        // =a multiple of 32 that is as close to 512 as makes sense given NN
         m_blocksPerGrid = CeilDiv(N, m_threadsPerBlock);
         if (m_blocksPerGrid == 1)
             m_threadsPerBlock = N; // don't launch more than necessary  --TODO: Does this make a difference at all?
@@ -146,13 +148,18 @@ struct GridDim
         return props;
     }
 
+    static size_t GetCurrentDeviceId()
+    {
+        int deviceId;
+        cudaGetDevice(&deviceId);
+        return (size_t)deviceId;
+    }
+
     // get device properties of current device
     static const cudaDeviceProp& GetDeviceProps()
     {
         static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
-        int deviceId;
-        cudaGetDevice(&deviceId);
-        return props[deviceId];
+        return props[GetCurrentDeviceId()];
     }
 
     // compute our location on the grid
@@ -3152,7 +3159,8 @@ __global__ void _scaleSparseBlockAndAddToDense(
     rhs[IDX2C(row, col, numRows)] += alpha * lhsValues[index];
 }
 
-// compute predictions in cross entory node
+#if 0
+// compute predictions in cross entropy node
 template <class ElemType>
 __global__ void _computePrediction(
     int nv,
@@ -3335,6 +3343,7 @@ __global__ void _computeGradientOfInput(
 
     atomicAdd(&grd[IDX2C(h, j, numrows)], sum);
 }
+#endif
 
 template <class ElemType>
 __global__ void computeNCEForwardProp(
@@ -3713,6 +3722,8 @@ __global__ void _assignNceDerivativeNew(
             atomicAdd(&c[wid], -er);
     }
 }
+
+#if 0
 // compute gradients of weights in cross entropy node
 template <class ElemType>
 __global__ void _computeGradientOfWeight(
@@ -3774,6 +3785,7 @@ __global__ void _computeGradientOfWeight(
         blockIds[ii] = i;
     }
 }
+#endif
 
 // used in clipping gradients
 template <class ElemType>

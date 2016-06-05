@@ -803,6 +803,40 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     }
 }
 
+template <class ElemType>
+void ComputationNetwork::PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes)
+{
+    std::map <const Matrix<ElemType>*, std::set<wstring>> memSharingStructure;
+    for (auto& n : nodes)
+    {
+        ComputationNode<ElemType>* node = n->As<ComputationNode<ElemType>>();
+        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo = node->GetMatrixInfo();
+        for (const auto&item : matrixInfo)
+        {
+            const Matrix<ElemType>* matrix = item.first;
+            if (memSharingStructure.find(matrix) == memSharingStructure.end())
+                memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<wstring>>(matrix, std::set<wstring>()));
+
+            std::set<wstring>& s = memSharingStructure[matrix];
+            s.insert(item.second);
+        }
+    }
+
+    fprintf(stderr, "\nMemory Sharing Structure:\n\n");
+    for (const auto& item : memSharingStructure)
+    {
+        const std::set<wstring>& s = item.second;
+        fprintf(stderr, "%p: {", item.first);
+        for (const auto& memShareInfo: s)
+        {
+            fprintf(stderr, "[%ls] ", memShareInfo.c_str());
+        }
+        fprintf(stderr, "}\n");
+    }
+    fprintf(stderr, "\n");
+}
+
+
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.
 // TODO: find a simple topological order and allocateEvalMatrices on that order directly
@@ -819,18 +853,22 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     VerifyIsCompiled("AllocateAllMatrices");
 
-    // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
-    MarkValueNonSharableNodes();
-
-    bool performingBackPropagation = (trainRootNode != nullptr);
-
-    // Create a composite Eval order with the specified nodes as roots
     std::vector<ComputationNodeBasePtr> forwardPropRoots;
     forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
     forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
     if (trainRootNode != nullptr)
         forwardPropRoots.push_back(trainRootNode);
 
+    // Mark all the eval, output and criterion roots as non-shareable
+    for (auto& rootNode : forwardPropRoots)
+        rootNode->MarkValueNonSharable();
+
+    // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
+    MarkValueNonSharableNodes();
+
+    bool performingBackPropagation = (trainRootNode != nullptr);
+
+    // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
@@ -947,6 +985,18 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     }
 
     m_areMatricesAllocated = true;
+
+    //print the memory sharing structure
+    std::vector<ComputationNodeBasePtr> allNodes = GetAllNodes();
+    if (allNodes.size() == 0)
+        LogicError("Network has no computation node.");
+
+    if (allNodes[0]->Is<ComputationNode<float>>())
+        PrintMemorySharingStructure<float>(allNodes);
+    else if (allNodes[0]->Is<ComputationNode<double>>())
+        PrintMemorySharingStructure<double>(allNodes);
+    else
+        LogicError("Unexpected node precision type.");
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

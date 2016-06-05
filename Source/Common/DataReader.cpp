@@ -89,6 +89,8 @@ DataReader::DataReader(const ConfigRecordType& config)
     string precision = config(L"precision", "float");
 
     bool hasMultipleReaders = config.Exists(L"readers");
+    // In case when deserializers are specified, use the new logic to compose them.
+    bool hasDeserializers = config.Exists(L"deserializers");
     if (hasMultipleReaders)
     {
         vector<wstring> ioNames = config(L"readers", ConfigRecordType::Array(stringargvector()));
@@ -96,19 +98,29 @@ DataReader::DataReader(const ConfigRecordType& config)
         for (const auto& ioName : ioNames) // inputNames should map to node names
         {
             const ConfigRecordType& thisIO = config(ioName);
-            // get the name for the reader we want to use, default to UCIFastReader
-            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"UCIFastReader"), GetReaderName(precision));
+            // get the name for the reader we want to use, default to CNTKTextFormatReader
+            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"CNTKTextFormatReader"), GetReaderName(precision));
             m_ioNames.push_back(ioName);
             assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
         }
     }
-    else // legacy
+    else if (hasDeserializers)
+    {
+        // Creating Composite Data Reader that allow to combine deserializers.
+        // This should be changed to link statically when SGD uses the new interfaces.
+        wstring ioName = L"ioName";
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"CompositeDataReader"), GetReaderName(precision));
+        m_ioNames.push_back(ioName);
+        assert(getReaderProc != nullptr);
+        getReaderProc(&m_dataReaders[ioName]);
+    }
+    else
     {
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
-        // get the name for the reader we want to use, default to UCIFastReader
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"UCIFastReader"), GetReaderName(precision));
+        // get the name for the reader we want to use, default to CNTKTextFormatReader
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"CNTKTextFormatReader"), GetReaderName(precision));
         m_ioNames.push_back(ioName);
         assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
@@ -202,7 +214,7 @@ bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
         if (nbr > 0)
             m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr); // the first one determines the param of all others --TODO: This is flimsy.
         bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch(matrices);
-        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
+        size_t thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequencesForFixingBPTTMode();
         if (nbr == 0)
             nbr = thisNbr;
         else if (thisNbr != nbr)
@@ -235,15 +247,15 @@ bool DataReader::GetHmmData(msra::asr::simplesenonehmm* hmm)
     return bRet;
 }
 
-size_t DataReader::GetNumParallelSequences()
+size_t DataReader::GetNumParallelSequencesForFixingBPTTMode()
 {
     size_t nNbr = 0;
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         IDataReader* ptr = m_dataReaders[m_ioNames[i]];
         if (nNbr == 0)
-            nNbr = ptr->GetNumParallelSequences();
-        else if (nNbr != ptr->GetNumParallelSequences())
+            nNbr = ptr->GetNumParallelSequencesForFixingBPTTMode();
+        else if (nNbr != ptr->GetNumParallelSequencesForFixingBPTTMode())
             LogicError("GetNumParallelSequences: number of slices in each minibatch not consistent for these streams");
     }
     return nNbr;

@@ -32,17 +32,18 @@ template <class ElemType>
 class SimpleEvaluator
 {
 public:
-    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-                    const size_t numSubminiBatches = 1)
-        : m_net(net), 
-          m_numMBsToShowResult(numMBsToShowResult), 
-          m_firstMBsToShowResult(firstMBsToShowResult),
-          m_traceLevel(traceLevel),
-          m_maxSamplesInRAM(maxSamplesInRAM), 
-          m_numSubminiBatches(numSubminiBatches), 
-          m_mpi(mpi), 
-          m_distGradAgg(nullptr),
-          m_gradHeader(nullptr)
+    SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
+                    const size_t numSubminiBatches = 1) :
+        m_net(net), 
+        m_numMBsToShowResult(numMBsToShowResult), 
+        m_firstMBsToShowResult(firstMBsToShowResult),
+        m_traceLevel(traceLevel),
+        m_maxSamplesInRAM(maxSamplesInRAM), 
+        m_numSubminiBatches(numSubminiBatches), 
+        m_mpi(mpi), 
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr),
+        m_enableDistributedMBReading(enableDistributedMBReading)
     {
     }
 
@@ -101,14 +102,18 @@ public:
         // evaluate through minibatches
         size_t totalEpochSamples = 0;
         size_t numMBsRun = 0;
-        size_t actualMBSize = 0;
         size_t numSamplesLastLogged = 0;
         size_t numMBsRunLastLogged = 0; // MBs run before this display
 
         std::vector<EpochCriterion> evalResultsLastLogged(evalResults.size(), EpochCriterion(0));
 
-        //TODO: we should add support for distributed reading
+        bool useParallelTrain = (m_mpi != nullptr);
+        bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
+        if (useDistributedMBReading)
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+        else
         dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
@@ -125,8 +130,24 @@ public:
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, dataReader->SupportsDistributedMBRead(), m_mpi != nullptr, inputMatrices, actualMBSize, m_mpi))
+        bool noMoreSamplesToProcess = false;
+        for (;;)
         {
+            size_t actualMBSize = 0;
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            // in case of distributed reading, we do a few more loops until all ranks have completed
+            // end of epoch
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
+                break;
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+            if (!wasDataRead)
+                actualMBSize = 0; // (undefined if !wasDataRead)
+
+            if (actualMBSize > 0)
+        {
+
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
@@ -147,15 +168,18 @@ public:
 
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
+            } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
-            size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize);
+            size_t numSamplesWithLabel = wasDataRead ? m_net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
-            if (m_mpi != nullptr)
+            if (useParallelTrain)
             {
                 if (m_gradHeader == nullptr)
                 {
-                    m_gradHeader = DistGradHeader::Create(evalNodes.size());
+                    m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
+                        DistGradHeader::Destroy(ptr);
+                    });
                     m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false, m_traceLevel);
                 }
 
@@ -177,15 +201,20 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), 0);
+                noMoreSamplesToProcess = !samplesProcessed;
+
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 for (size_t i = 0; i < evalResults.size(); i++)
                     evalResults[i] += m_gradHeader->evalErrors[i];
             }
             else
             {
+                if (actualMBSize != 0)
+                {
                 for (int i = 0; i < evalNodes.size(); i++)
                     evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                }
             }
 
             totalEpochSamples += aggregateNumSamplesWithLabel;
@@ -223,8 +252,7 @@ public:
         for (int i = 0; i < evalResultsLastLogged.size(); i++)
             evalResultsLastLogged[i] = EpochCriterion(0); // clear this since statistics display will subtract the previous value
 
-        fprintf(stderr, "Final Results: ");
-        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true);
+        DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastLogged, true, /*isFinal=*/true);
 
         return evalResults;
     }
@@ -238,14 +266,14 @@ protected:
     }
 
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
-                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false)
+                               const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false, bool isFinal = false)
     {
-        fprintf(stderr, "Minibatch[%lu-%lu]: SamplesSeen = %lu    ", startMBNum, endMBNum, numSamplesLastLogged);
+        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", startMBNum, endMBNum);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {
-            double eresult = (evalResults[i] - evalResultsLastLogged[i]).Average(); // / numSamplesLastLogged;
-            fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+            EpochCriterion criterionSinceLastLogged = evalResults[i] - evalResultsLastLogged[i];
+            criterionSinceLastLogged.LogCriterion(evalNodes[i]->NodeName(), /*addSemicolon=*/false);
 
             if (displayConvertedValue)
             {
@@ -254,8 +282,11 @@ protected:
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                    fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
+                    fprintf(stderr, "; perplexity = %.8f", std::exp(criterionSinceLastLogged.Average()));
             }
+
+            if (i + 1 < evalResults.size())
+                fprintf(stderr, "; ");
         }
 
         fprintf(stderr, "\n");
@@ -268,9 +299,10 @@ protected:
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
     MPIWrapperPtr m_mpi;
+    bool m_enableDistributedMBReading;
 
-    shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)
 };

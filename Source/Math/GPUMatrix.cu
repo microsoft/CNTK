@@ -11,7 +11,7 @@
 
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"
-#include "GPUSparseMatrix.h"
+//#include "GPUSparseMatrix.h"
 #include "GPUTensor.h"
 #include "CommonMatrix.h"
 #define TENSOR_OPS_DECL __device__ __host__
@@ -449,7 +449,7 @@ template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit();
-	SetValue(deepCopyFrom);
+    SetValue(deepCopyFrom);
 }
 
 template <class ElemType>
@@ -885,11 +885,11 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
     CUDA_LONG jOut = id / usStride; // col index into 'us' and 'idx'
 
     auto jInF = idx[jOut * idxStride]; // this is the column we need to get
-    if (jInF < 0)                      // negative index means gap
+    if (::isnan(jInF) || jInF < 0)     // negative index means gap
         return;
     size_t jIn = (size_t)jInF;
-    if (jIn >= aCols)
-        return; // actually a failure
+    //if (jIn >= aCols)
+    //    return; // actually a failure
 
     const ElemType&  ra = a[    i + jIn  *  aStride  ];
     ElemType&       rus = us[id/*i + jOut * usStride*/];
@@ -928,6 +928,21 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
     return *this;
 }
 
+// little helper for debugging
+template <class ElemType>
+static void Peek(const GPUMatrix<ElemType>& m, const char* which)
+{
+    size_t rows = m.GetNumRows();
+    size_t cols = m.GetNumCols();
+    ElemType buf[10000] = { 0 };
+    size_t n = min(rows * cols, _countof(buf));
+    CUDA_CALL(cudaMemcpy(buf, m.Data(), sizeof(ElemType) * n, cudaMemcpyDeviceToHost));
+    UNUSED(which); UNUSED(rows); UNUSED(cols); sin(1.0f); // set breakpoint here
+    //CUDA_CALL(cudaMemcpy(const_cast<ElemType*>(m.Data()), buf, sizeof(ElemType) * n, cudaMemcpyHostToDevice));
+}
+
+#define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
+
 template <class ElemType>
 __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
 {
@@ -940,33 +955,24 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
     CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
 
-    auto jOutF = idx[jIn * idxStride]; // this is the column we copy/add into
-    if (jOutF < 0)                     // negative index means gap
+    auto jOutF = idx[jIn * idxStride];  // this is the column we copy/add into
+    if (::isnan(jOutF) || jOutF < 0)    // negative index means gap
         return;
     size_t jOut = (size_t)jOutF;
-    if (jOut >= usCols)
-        return; // actually a failure  --TODO: This should not be necessary. Why is it?
+    //if (jOut >= usCols)
+    //    return; // actually a failure  --TODO: This should not be necessary. Why is it?
 
     const ElemType&  ra =  a[id/*i + jIn  *  aStride*/];
     ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
+#ifdef ALLOW_ATOMIC_SCATTER
         atomicAdd(&rus, res); // rus += res;
+#else
+        rus += res;
+#endif
     // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
-}
-
-// little helper for debugging
-template <class ElemType>
-static void Peek(const GPUMatrix<ElemType>& m, const char* which)
-{
-    size_t rows = m.GetNumRows();
-    size_t cols = m.GetNumCols();
-    ElemType buf[10000] = { 0 };
-    size_t n = min(rows * cols, _countof(buf));
-    CUDA_CALL(cudaMemcpy(buf, m.Data(), sizeof(ElemType) * n, cudaMemcpyDeviceToHost));
-    UNUSED(which); UNUSED(rows); UNUSED(cols); sin(1.0f); // set breakpoint here
-    //CUDA_CALL(cudaMemcpy(const_cast<ElemType*>(m.Data()), buf, sizeof(ElemType) * n, cudaMemcpyHostToDevice));
 }
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
@@ -985,6 +991,27 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     a.PrepareDevice();
 
     auto& us = *this;
+
+#ifndef ALLOW_ATOMIC_SCATTER // verify that atomicAdd is not needed  --this is not efficient
+    {
+        vector<ElemType> buf(idx.GetNumRows() * idx.GetNumCols()); // idx(,)are the column(s) we copy/add into
+        CUDA_CALL(cudaMemcpy(buf.data(), idx.Data(), sizeof(ElemType) * buf.size(), cudaMemcpyDeviceToHost));
+        vector<bool> writtenTo(GetNumCols(), false); // remember whether an output column is in fact a target
+        for (size_t i = 0; i < buf.size(); i++)
+        {
+            auto colF = buf[i];
+            if (std::isnan(colF) || colF < 0)
+                continue;
+            size_t col = (size_t)colF;
+            if (col >= GetNumCols())
+                LogicError("DoScatterColumnsOf: Index value out of bounds.");
+            if (writtenTo[col])
+                LogicError("DoScatterColumnsOf: #ifndef ALLOW_ATOMIC_SCATTER then columns must be unique. Column idx(%d,%d)=%d is used twice.", (int)(i % idx.GetNumCols()), (int)(i / idx.GetNumCols()), (int)col);
+            else
+                writtenTo[col] = true;
+        }
+    }
+#endif
 
     // pre-scale with beta upfront
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
@@ -1090,8 +1117,28 @@ void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.Data(), matrixFlagSetValueOnDevice);
+    SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.GetComputeDeviceId(), deepCopyFrom.Data(), matrixFlagSetValueOnDevice);
 }
+
+#if 0
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*deepCopyFrom*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& /*deepCopyFrom*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom)
+{
+    deepCopyFrom.CopyToDenseMatrix(*this);
+}
+#endif
 
 template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
@@ -1224,21 +1271,22 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {
     PrepareDevice();
-    CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+
+    GPURNGHandle* gpuRNGHandle = dynamic_cast<GPURNGHandle*>(&rngHandle);
+    assert(gpuRNGHandle != nullptr);
 
     cudaEvent_t done = nullptr;
     CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateUniform((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<float*>(Data()), GetNumElements()));
+        CURAND_CALL(curandGenerateUniform(gpuRNGHandle->Generator(), reinterpret_cast<float*>(Data()), GetNumElements()));
     else
-        CURAND_CALL(curandGenerateUniformDouble((((curandGenerator_t*) s_curandGenerator)[0]), reinterpret_cast<double*>(Data()), GetNumElements()));
+        CURAND_CALL(curandGenerateUniformDouble(gpuRNGHandle->Generator(), reinterpret_cast<double*>(Data()), GetNumElements()));
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     CUDA_CALL(cudaEventDestroy(done));
-    // CURAND_CALL(curandDestroyGenerator(gen));
 
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
@@ -1419,29 +1467,27 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
+    size_t numElements = numRows * numCols;
+    if (numElements > GetSizeAllocated() ||                 // grow allocation
+        (!growOnly && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
+    {
+        // reallocate buffer if numElements > 0
+        ElemType* pArray = nullptr;
+        if (numElements > 0)
+            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+
+        // If the buffer exists, free it
+        if (Buffer())
+            TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+
+        SetBuffer(pArray, numElements * sizeof(ElemType));
+        SetSizeAllocated(numElements);
+    }
+    
+    // success
+    m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
-
-    size_t numElements = GetNumElements();
-    if (numElements > GetSizeAllocated() || (!growOnly && numElements != GetSizeAllocated()))
-    {
-        if (IsEmpty())
-        {
-            SetSizeAllocated(0);
-            SetBuffer(nullptr, 0);
-        }
-        else
-        {
-            if (Buffer())
-            {
-                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
-            }
-            SetSizeAllocated(numElements);
-            SetBuffer(TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), m_numRows, m_numCols), numElements * sizeof(ElemType));
-            CUDA_CALL(cudaMemset(Buffer(), 0, sizeof(ElemType) * GetSizeAllocated()));
-        }
-    }
-    m_sliceViewOffset = 0;
 }
 
 template <class ElemType>
@@ -2710,7 +2756,7 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
         reinterpret_cast<uint8_t*&>(inIdx) += sizeof(uint64_t) - cbAlign;
     outIdx = inIdx + celt;
     void* ptmp = outIdx + celt;
-    assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace->Data()+ workspace->GetNumElements());
+    assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace->Data() + workspace->GetNumElements());
 
     // Initialize indices.
     const int ThreadsPerBlock = 128;
@@ -4358,7 +4404,10 @@ template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);
 template void GPUMatrix<char>::SetValue(const char);
 template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
+//template void GPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
+//template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
+//template void GPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

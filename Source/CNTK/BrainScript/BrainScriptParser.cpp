@@ -122,11 +122,10 @@ struct Issue
         issues.back().AddMarkup(symbol, location.charPos);
     }
     // print it backwards
-    if (!locations.empty()) // (be resilient to some throwers not having a TextrLocation; to be avoided)
+    if (!locations.empty()) // (be resilient to some throwers not having a TextLocation; to be avoided)
     {
         let& firstLoc = issues.front().location;
-        fprintf(stderr, "\n%ls while %ls line %d char %d of %ls\n", errorKind, kind, (int) firstLoc.lineNo + 1 /*report 1-based*/, (int) firstLoc.charPos + 1, firstLoc.GetSourceFile().path.c_str());
-        fprintf(stderr, "see location marked ^ and parent contexts marked 0..9, a..z, A..Z:\n\n");
+        fprintf(stderr, "[CALL STACK]\n");
         for (auto i = issues.rbegin(); i != issues.rend(); i++)
         {
             let& issue = *i;
@@ -135,9 +134,11 @@ struct Issue
             const auto line = (where.lineNo == lines.size()) ? L"(end)" : lines[where.lineNo].c_str();
             fprintf(stderr, "  %ls\n  %ls\n", line, issue.markup.c_str());
         }
+        fprintf(stderr, "%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int)firstLoc.lineNo + 1 /*report 1-based*/);
     }
-    fprintf(stderr, "%ls: %ls\n", errorKind, what);
-    fflush(stderr);
+    else
+        fprintf(stderr, "%ls while %ls", errorKind, kind);
+    fprintf(stderr, ": %ls\n", what), fflush(stderr);
 }
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
@@ -380,6 +381,7 @@ private:
     }
 
     // find a file either at given location or traverse include paths
+    // TODO: also allow ... syntax, where ... refers to the directory of the enclosing file
     static wstring FindSourceFile(const wstring& path, const vector<wstring>& includePaths)
     {
         if (File::Exists(path))
@@ -941,7 +943,7 @@ public:
     static void Test()
     {
         let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        ParseConfigDictFromString(parserTest, vector<wstring>())->Dump();
+        ParseConfigDictFromString(parserTest, L"Test", vector<wstring>())->Dump();
     }
 };
 
@@ -950,9 +952,9 @@ static ExpressionPtr Parse(SourceFile&& sourceFile, vector<wstring>&& includePat
 {
     return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
 }
-ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring>&& includePaths)
+ExpressionPtr ParseConfigDictFromString(wstring text, wstring location, vector<wstring>&& includePaths)
 {
-    return Parse(SourceFile(L"(command line)", text), move(includePaths));
+    return Parse(SourceFile(location, text), move(includePaths));
 }
 //ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths)
 //{

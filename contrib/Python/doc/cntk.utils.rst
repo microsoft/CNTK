@@ -4,7 +4,7 @@ cntk.utils package
 Module contents
 ---------------
 
-.. automodule:: cntk.utils
+.. automodule:: cntk.utils.eval
     :members:
     :undoc-members:
     :show-inheritance:

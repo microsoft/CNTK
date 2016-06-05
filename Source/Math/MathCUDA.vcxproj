@@ -16,19 +16,11 @@
     <RootNamespace>Math</RootNamespace>
     <ProjectName>MathCUDA</ProjectName>
   </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Choose>
     <When Condition="Exists('$(CUDNN_PATH)')">
@@ -58,37 +50,28 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
+  <PropertyGroup Condition="$(DebugBuild)">
     <CudaCodeGen>$(CNTK_CUDA_CODEGEN_DEBUG)</CudaCodeGen>
     <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_20,compute_20;compute_30,sm_30</CudaCodeGen>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
+  <PropertyGroup Condition="$(ReleaseBuild)">
     <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>
     <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(ACML_PATH)\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <OpenMPSupport>true</OpenMPSupport>
-      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CudaLibs);libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
+      <AdditionalDependencies>$(CudaLibs);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>$(CudaDlls);%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>$(OutDir);$(ACML_PATH)\lib;$(CudaLibPath);$(CuDnnLibPath)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(CudaLibPath);$(CuDnnLibPath)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CuDnnLib)</AdditionalDependencies>
     </Lib>
     <CudaCompile>
@@ -103,33 +86,21 @@
     </CudaCompile>
     <PostBuildEvent>
       <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"
-if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
+if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
-      <PreprocessorDefinitions>_DEBUG; %(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
-    <Link>
-    </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG; %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-    </Link>
     <CudaCompile>
       <HostDebugInfo>false</HostDebugInfo>
     </CudaCompile>
@@ -149,6 +120,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="GPUDataTransferer.h" />
+    <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
@@ -169,6 +141,9 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
     <CudaCompile Include="CuDnnBatchNormalization.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <CudaCompile Include="GPURNGHandle.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
@@ -183,7 +158,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
     <CudaCompile Include="GPUWatcher.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp" />
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
     <CudaCompile Include="CuDnnConvolutionEngine.cu">
@@ -222,6 +196,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" "$(OutputPath)")
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires the NVIDIA CUB library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
-    <Warning Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
+    <Error Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
   </Target>
 </Project>

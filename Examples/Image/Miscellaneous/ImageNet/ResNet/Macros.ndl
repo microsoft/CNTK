@@ -73,12 +73,12 @@ ResNetNode2AInc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, 
 ]
 
 # Standard building block for ResNet with padding (option B).
-ResNetNode2BInc(inp, outMap, inMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, bnTimeConst)
+ResNetNode2BInc(inp, outMap, inMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, bnTimeConst, stride1x1, stride3x3)
 [
     # First convolution layer.
-    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, 2, 2, wScale, bValue, scValue, bnTimeConst)
+    c1 = ConvBNReLULayer(inp, outMap, inWCount, kW, kH, stride1x1, stride1x1, wScale, bValue, scValue, bnTimeConst)
     # Second convolution layer, no ReLU.
-    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, 1, 1, wScale, bValue, scValue, bnTimeConst)
+    c2 = ConvBNLayer(c1, outMap, wCount, kW, kH, stride3x3, stride3x3, wScale, bValue, scValue, bnTimeConst)
     
     # Projection convolution layer.
     c_proj = Conv1x1(inp, outMap, inMap, 2, 2, wScale, bValue, scValue, bnTimeConst)
@@ -116,12 +116,12 @@ ResNetNode3AInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue
     y = RectifiedLinear(p)
 ]
 
-ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, projStride)
+ResNetNode3BInc(inp, inMap, convMap, outMap, convWCount, wScale, bValue, scValue, bnTimeConst, projStride, stride1x1, stride3x3)
 [
     # 1x1 reducing convolution.
-    c1 = Conv1x1ReLU(inp, convMap, inMap, projStride, projStride, wScale, bValue, scValue, bnTimeConst)
+    c1 = Conv1x1ReLU(inp, convMap, inMap, stride1x1, stride1x1, wScale, bValue, scValue, bnTimeConst)
     # 3x3 convolution.
-    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, 1, 1, wScale, bValue, scValue, bnTimeConst)
+    c2 = ConvBNReLULayer(c1, convMap, convWCount, 3, 3, stride3x3, stride3x3, wScale, bValue, scValue, bnTimeConst)
     # 1x1 expanding convolution, no ReLU.
     c3 = Conv1x1(c2, outMap, convMap, 1, 1, wScale, bValue, scValue, bnTimeConst)
     # Input-to-output mapping convolution.

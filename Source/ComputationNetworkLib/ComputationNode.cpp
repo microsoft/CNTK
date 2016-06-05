@@ -34,8 +34,11 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #if 1 // keep enabled once this works
 #if 1 // log the cases where this is needed
     if (m_needsGradient && !m_gradientInitialized)
-        //LogicError("%ls %ls operation: Backprop called with uninitialized gradient.", NodeName().c_str(), OperationName().c_str());
-        fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+    {
+        static size_t c = 0;
+        if (c++ < 100)
+            fprintf(stderr, "%ls %ls operation: Initializing gradient out of line.\n", NodeName().c_str(), OperationName().c_str());
+    }
 #endif
     if (m_needsGradient)
         LazyZeroGradient(); // set gradient to 0 if this is the first time
@@ -70,6 +73,8 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
+
+            //child->DebugLogMinibatch(/*gradient*/true);
         }
 #ifdef DISPLAY_DEBUG
         else
@@ -158,6 +163,84 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     SetDims(TensorShape(dims), HasMBLayout());
 }
 
+// N-nary zip operation, e.g. for TernaryZip for clip()
+// If allowBroadcast then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
+// This also helpfully resizes the children if not yet sized.
+void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs)
+{
+    assert(m_inputs.size() == numInputs);
+    ComputationNodeBase::Validate(isFinalValidationPass);
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+    ValidateInferNaryInputDims(numInputs);
+
+    // check minibatch layout consistency for all possible pairs (n choose 2)
+    if (isFinalValidationPass)
+        for (size_t i = 0; i < numInputs; i++)        
+            for (size_t j = i+1; j < numInputs; j++)            
+                if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
+                    LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+
+    // result has tensor shape with dimensions being the max over all inputs
+    let shape0 = GetInputSampleLayout(0);
+
+    // dims is max over all inputs
+    size_t maxRank = shape0.GetRank();    
+    for (size_t i = 1; i < numInputs; i++)
+    {
+        let shape = GetInputSampleLayout(i);
+        if (shape.GetRank() > maxRank)
+            maxRank = shape.GetRank();
+    }        
+    SmallVector<size_t> dims = shape0.GetDims();
+    dims.resize(maxRank, 1); // pad with 1
+
+    // first check for invalid dimensions
+    for (size_t k = 0; k < maxRank; k++)
+    {
+        size_t maxDim = 0;
+        TensorShape maxShape = shape0; // arbitrary; this is just used for the error message
+        for (size_t i = 0; i < numInputs; i++)
+        {
+            let currentShape = GetInputSampleLayout(i);
+            size_t currentRank = currentShape.GetRank();
+            // make sure that the rank of this input is bigger than the current index (otherwise, these are implied singleton dimensions that do not need to be checked)
+            if (currentRank > k)
+            {
+                size_t currentDim = currentShape[k];
+                if (currentDim > 1 && maxDim != currentDim && maxDim > 1) // 1=broadcasting, 0=not known yet, meant to be inferred
+                {
+                    InvalidArgument("%ls: Input dimensions [%s] and [%s] are not compatible.",
+                        NodeDescription().c_str(), string(maxShape).c_str(), string(currentShape).c_str());
+                }
+                else if (currentDim > maxDim)
+                {
+                    maxDim = currentDim;
+                    maxShape = currentShape;
+                }
+            }
+        }
+    }
+
+    // now set up the right dims
+    for (size_t k = 0; k < maxRank; k++)
+    {
+        for (size_t i = 0; i < numInputs; i++)
+        {
+            let shape = GetInputSampleLayout(i);
+
+            if (shape.GetRank() > k)
+            {
+                size_t dim = shape[k];
+                if (dims[k] <= 1 && dim != 0)
+                    dims[k] = dim;
+            }
+        }
+    }
+
+    SetDims(TensorShape(dims), HasMBLayout());
+}
+
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
 void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
 {
@@ -212,6 +295,30 @@ void ComputationNodeBase::ValidateInferBinaryInputDims()
         auto other = Input(1 - index);
         // borrow any unset dimension on one input from the other input
         in->ValidateInferInputDimsFrom(other->GetSampleLayout());
+    }
+}
+
+// as above but for N-ary cases
+void ComputationNodeBase::ValidateInferNaryInputDims(size_t numInputs)
+{
+    // limited inference of children dimensions
+    // if dimension not specified we assume two operands' dimensions should be the same
+    // NOTE: The assert is set to check if >= numInputs since this is called from nodes which have more than 'nInputs' children.
+    //      The number of children is formally verified elsewhere, so this will not break consistency.
+    assert(m_inputs.size() >= numInputs);
+    for (size_t index = 0; index < numInputs; index++)
+    {
+        const auto& in = Input(index);
+        
+        for (size_t indexOther = 0; indexOther < numInputs; indexOther++)
+        {
+            if (indexOther != index) 
+            {
+                const auto& other = Input(indexOther);
+                // borrow any unset dimension on one input from the other input
+                in->ValidateInferInputDimsFrom(other->GetSampleLayout());
+            }
+        }
     }
 }
 

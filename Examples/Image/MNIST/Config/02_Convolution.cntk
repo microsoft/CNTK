@@ -26,8 +26,6 @@ ndlMacros = "$ConfigDir$/Macros.ndl"
 traceLevel=1
 numMBsToShowResult=500
 
-prefetch=true
-
 # If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
 initOnCPUOnly=true
 
@@ -50,23 +48,19 @@ train = [
         maxEpochs = 15
     ]
     
-    # Note: this reader crashes if randomization is turned on.
     reader = [
-        readerType = "UCIFastReader"
-        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
-        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
-        file = "$DataDir$/Train-28x28.txt"
-        
+        readerType = "CNTKTextFormatReader"
+        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
         features = [
             dim = 784
-            start = 1
+                format = "dense"
         ]
-        
         labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
+                dim = 10
+                format = "dense"
+            ]
         ]
     ]    
 ]
@@ -84,19 +78,17 @@ test = [
     ]
     
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/Test-28x28.txt"
-        
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
         features = [
             dim = 784
-            start = 1
+                format = "dense"
         ]
-        
         labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
+                dim = 10
+                format = "dense"
+            ]
         ]
     ]
 ]

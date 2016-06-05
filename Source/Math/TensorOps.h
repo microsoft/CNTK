@@ -47,6 +47,7 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(floor);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -194,6 +195,7 @@ DefUnaryOp(Copy, a);
 DefUnaryOp(Negate, -a);
 DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
+DefUnaryOp(Floor, floor_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
@@ -214,7 +216,8 @@ DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
         return expr;                             \
     }
 //#define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(const ElemType & a, ElemType b, int i = 0) { UNUSED(i); return expr; }
-
+DefBinaryOp(CopyIf, a != 0 ? b : 0);
+DefBinaryOp(CopyIfNot, a == 0 ? b : 0);
 DefBinaryOp(Sum, a + b);
 DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
@@ -222,12 +225,12 @@ DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
-DefBinaryOp(EQ, a == b);
-DefBinaryOp(NE, a != b);
-DefBinaryOp(GT, a > b);
-DefBinaryOp(LT, a < b);
-DefBinaryOp(GE, a >= b);
-DefBinaryOp(LE, a <= b);
+DefBinaryOp(Equal, a == b);
+DefBinaryOp(NotEqual, a != b);
+DefBinaryOp(Greater, a > b);
+DefBinaryOp(Less, a < b);
+DefBinaryOp(GreaterEqual, a >= b);
+DefBinaryOp(LessEqual, a <= b);
 DefBinaryOp(And, (float)((!!a) && (!!b)));
 DefBinaryOp(Or, (float)((!!a) || (!!b)));
 DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
@@ -255,7 +258,8 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
     }
 
 DefTernaryOp(Cond, a ? b : c);
-DefTernaryOp(Clip, a < b ? b : (a > c ? c : a));
+DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
+DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 
 #pragma pop_macro("DefTernaryOp")

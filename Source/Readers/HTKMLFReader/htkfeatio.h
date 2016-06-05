@@ -298,11 +298,9 @@ public:
 #else
         W.close(numframes);
 #endif
-#ifdef _WIN32 // BUGBUG: and on Linux??
         // rename to final destination
         // (This would only fail in strange circumstances such as accidental multiple processes writing to the same file.)
         renameOrDie(tmppath, path);
-#endif
     }
 };
 
@@ -359,9 +357,9 @@ public:
             return archivePathStringVector[archivePathIdx];
         }
 
-        size_t s, e;         // first and last frame inside the archive file; (0, INT_MAX) if not given
         bool isarchive;      // true if archive (range specified)
         bool isidxformat;    // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
+        size_t s, e;         // first and last frame inside the archive file; (0, INT_MAX) if not given
         void malformed(const wstring& path) const
         {
             RuntimeError("parsedpath: malformed path '%ls'", path.c_str());
@@ -417,7 +415,8 @@ public:
                     if (xpath.empty())
                         malformed(pathParam);
                     e = msra::strfun::toint(consume(xpath, L"]"));
-                    if (!xpath.empty())
+                    // TODO \r should be handled elsewhere; refine this
+                    if (!xpath.empty() && xpath != L"\r")
                         malformed(pathParam);
                     isarchive = true;
                 }
@@ -442,6 +441,20 @@ public:
         wstring physicallocation() const
         {
             return archivepath();
+        }
+
+        // Gets logical path of the utterance.
+        string GetLogicalPath() const
+        {
+            assert(!logicalpath.empty());
+            return logicalpath.substr(0, logicalpath.find_last_of("."));
+        }
+
+        // Clears logical path after parsing, in order not to duplicate it 
+        // with the one stored in the corpus descriptor.
+        void ClearLogicalPath()
+        {
+            logicalpath.clear();
         }
 
         // casting to wstring yields the logical path
@@ -559,7 +572,8 @@ private:
 
         // done: swap it in
         int64_t bytepos = fgetpos(f);
-        setkind(kind, dim, H.sampperiod, ppath); // this checks consistency
+        auto location = ((std::wstring)ppath).empty() ? ppath.physicallocation() : (std::wstring)ppath;
+        setkind(kind, dim, H.sampperiod, location); // this checks consistency
         this->physicalpath.swap(physpath);
         this->physicaldatastart = bytepos;
         this->physicalframes = H.nsamples;

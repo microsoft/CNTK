@@ -98,7 +98,14 @@ public:
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr Abs(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr Greater(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr GreaterEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr NotEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr LessEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"");
+    ComputationNodePtr Clip(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
@@ -111,11 +118,13 @@ public:
     ComputationNodePtr DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName = L"");
     ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Floor(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");
 #ifdef COMING_SOON
     ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr If(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");

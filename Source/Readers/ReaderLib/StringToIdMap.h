@@ -27,14 +27,13 @@ public:
     // Adds string value to the registry.
     size_t AddValue(const TString& value)
     {
-        assert(!Contains(value));
         auto iter = m_values.insert(std::make_pair(value, m_indexedValues.size()));
         m_indexedValues.push_back(&((iter.first)->first));
         return m_indexedValues.size() - 1;
     }
 
     // Tries to get a value by id.
-    bool TryGet(const TString& value, size_t& id)
+    bool TryGet(const TString& value, size_t& id) const
     {
         const auto& it = m_values.find(value);
         if (it == m_values.end())
@@ -46,6 +45,17 @@ public:
             id = it->second;
             return true;
         }
+    }
+
+    // Get integer id for the string value, adding if not exists.
+    size_t operator[](const TString& value)
+    {
+        const auto& it = m_values.find(value);
+        if (it == m_values.end())
+        {
+            return AddValue(value);
+        }
+        return it->second;
     }
 
     // Get integer id for the string value.

@@ -50,16 +50,16 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_areMatricesAllocated(false),
+        m_isCompiled(false),
+        m_areMatricesAllocated(false),
         m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
-    ComputationNetwork(DEVICEID_TYPE deviceId)
-        : ComputationNetwork()
+    ComputationNetwork(DEVICEID_TYPE deviceId) :
+        ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
@@ -82,6 +82,7 @@ public:
 
 protected:
     void ConstructFromRoots(DEVICEID_TYPE deviceId, std::deque<ComputationNodeBasePtr>&& roots, const map<ComputationNodeBasePtr, ComputationNodeBasePtr>& replacements);
+    void ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& roots);
 
 public:
     // -----------------------------------------------------------------------
@@ -188,6 +189,7 @@ public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
+    template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
@@ -427,7 +429,7 @@ public:
 
     // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
     template <class ElemType>
-    static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
+    static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 
     template <class ElemType>
     static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
@@ -476,6 +478,47 @@ public:
             InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
         return std::vector<ComputationNodeBasePtr>{node};
     }
+
+    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
+    {
+        std::vector<ComputationNodeBasePtr> outputNodes;
+
+        if (outputNodeNames.size() == 0)
+        {
+            if (OutputNodes().size() == 0)
+                RuntimeError("There is no default output node specified in the network.");
+
+            outputNodes = OutputNodes();
+        }
+        else
+        {
+            for (int i = 0; i < outputNodeNames.size(); i++)
+                outputNodes.push_back(GetNodeFromName(outputNodeNames[i]));
+        }
+
+        return outputNodes;
+    }
+
+    // Collect all input nodes that outputNodes depend on.
+    std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<std::wstring>& outputNodeNames)
+    {
+        // use map to remove duplicated items
+        auto outputNodes = OutputNodesByName(outputNodeNames);
+
+        std::set<ComputationNodeBasePtr> inputNodesMap;
+        for (auto& onode : outputNodes)
+        {
+            for (auto& inode : InputNodes(onode))
+                inputNodesMap.insert(inode);
+        }
+
+        std::vector<ComputationNodeBasePtr> inputNodes;
+        for (auto& inode : inputNodesMap)
+            inputNodes.push_back(inode);
+
+        return inputNodes;
+    }
+
 
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }

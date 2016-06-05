@@ -57,12 +57,12 @@
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(MSMPI_INC);$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\ActionsLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK\BrainScript;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSMPI_INC);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\ActionsLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK\BrainScript;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>math.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
@@ -95,11 +95,17 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\NetworkTestHelper.h" />
@@ -110,11 +116,6 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\Config.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DataWriter.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\MPIWrapper.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

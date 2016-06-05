@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<opencv_storage>
+  <EigVal type_id="opencv-matrix">
+    <rows>1</rows>
+    <cols>3</cols>
+    <dt>f</dt>
+    <data>
+      0.2175 0.0188 0.0045
+    </data>
+  </EigVal>
+  <EigVec type_id="opencv-matrix">
+    <rows>3</rows>
+    <cols>3</cols>
+    <dt>f</dt>
+    <data>
+      -0.5675  0.7192  0.4009
+      -0.5808 -0.0045 -0.8140
+      -0.5836 -0.6948  0.4203
+    </data>
+  </EigVec>
+</opencv_storage>

@@ -659,8 +659,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
-        auto jInF = idx(0, jOut); // this is the column we need to get
-        if (jInF < 0)           // negative index means gap
+        auto jInF = idx(0, jOut);         // this is the column we need to get
+        if (std::isnan(jInF) || jInF < 0) // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
         if (jIn >= a.GetNumCols())
@@ -691,8 +691,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
-        auto jOutF = idx(0, jIn); // this is the column we copy/add into
-        if (jOutF < 0)            // negative index means gap
+        auto jOutF = idx(0, jIn);           // this is the column we copy/add into
+        if (std::isnan(jOutF) || jOutF < 0) // negative index means gap
             continue;
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
@@ -715,11 +715,12 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     }
     else
     {
-		ElemType* bufPtr = Data();
+        ElemType* bufPtr = Data();
         long m = (long) GetNumElements();
         // 2-way thread parallelism is sufficient for the memory bound
         // operation of just setting the values of an array.
         const unsigned SETVALUE_NUM_THREADS = 2;
+        UNUSED(SETVALUE_NUM_THREADS); // in case OMP is turned off.
 #pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
@@ -851,6 +852,26 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
 
 	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
+
+#if 0
+template <class ElemType>
+void CPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& /*deepCopyFrom*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom)
+{
+    deepCopyFrom.AssignColumnSliceToDense(*this, 0, deepCopyFrom.GetNumCols());
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*deepCopyFrom*/)
+{
+    NOT_IMPLEMENTED;
+}
+#endif
 
 template <class ElemType>
 void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags)
@@ -1093,18 +1114,15 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
-void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
+void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {
     if (IsEmpty())
         LogicError("SetUniformRandomValue: Matrix is empty.");
 
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    assert(cpuRNGHandle != nullptr);
+
     auto& us = *this;
-#ifdef _MSC_VER // TODO: check if available under GCC/Linux
-    std::ranlux64_base_01 generator;
-    generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-#else
-    std::default_random_engine generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-#endif
     std::uniform_real_distribution<ElemType> r(0, 1);
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
@@ -1114,19 +1132,19 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 1, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 2, j) = v <= maskRate ? 0 : scaleValue;
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i + 3, j) = v <= maskRate ? 0 : scaleValue;
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
-            v = r(generator);
+            v = r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? 0 : scaleValue;
         }
     }
@@ -1365,7 +1383,6 @@ void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 // Resize() -- change matrix size
 // This function is cheap if the matrix size does not change.
 // Current content is not preserved.
-// BUGBUG: There is code that relies on zero initialization (without, we get subtle variations of output). That is wrong--we should initialize to QNaN and see where it fails.
 // If growOnly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
 // If this object does not own its memory then new memory cannot be allocated (one can still shrink and/or reshape).
 template <class ElemType>
@@ -1394,8 +1411,9 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     }
 
     // success
-    m_numRows = numRows;
-    m_numCols = numCols;
+    m_sliceViewOffset = 0;
+    m_numRows         = numRows;
+    m_numCols         = numCols;
 }
 
 // allocated by the callee but should be deleted by the caller
@@ -4136,6 +4154,111 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOutSize, const CPUMatrix<int>& mpRowCol,
+                                                 const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    size_t batchSize = GetNumCols();
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                output.Data()[(row * batchSize + sample) * unrollCols + skip + i] = (*this)(colBase + dcol, sample);
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const CPUMatrix<int>& mpRowCol,
+                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    assert((mpRowCol.GetNumRows() % mapOutCount) == 0);
+    size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
+    size_t batchSize = GetNumCols();
+
+    size_t kernelSize = runs(1, 0);
+    assert((kernelSize % mapInCount) == 0);
+    size_t kernelMapSize = kernelSize / mapInCount;
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < std::min(size, (int)kernelMapSize); i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                size_t isrc = row;
+                size_t idst = ((colBase + dcol) * batchSize + sample) * unrollCols + ((skip + i) % kernelMapSize) * mapOutCount;
+                for (size_t outMap = 0; outMap < mapOutCount; outMap++, isrc += mapOutSize)
+                {
+                    assert(isrc < GetNumElements());
+                    assert(idst + outMap < output.GetNumElements());
+
+                    output.Data()[idst + outMap] = (*this)(isrc, sample);
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutSize, const CPUMatrix<int>& mpRowCol,
+                                                                  const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
+{
+    size_t batchSize = GetNumCols();
+    size_t unrollCols = mapOutSize * batchSize;
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    {
+        for (size_t row = 0; row < mapOutSize; row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < GetNumRows());
+
+            int i0 = mpRowRun(row, 0);
+            int skip = runs(i0++, 0);
+            int size = runs(i0++, 0);
+            int imask = i0 + size;
+            for (int i = 0; i < size; i++)
+            {
+                if (runs(imask + i, 0) == 0)
+                    continue;
+                int dcol = runs(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                size_t idst = (skip + i) * unrollCols + row * batchSize + sample;
+                assert(idst < output.GetNumElements());
+                output.Data()[idst] = (*this)(colBase + dcol, sample);
+            }
+        }
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
@@ -6185,6 +6308,10 @@ template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
 template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
 template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
+//template void CPUMatrix<char>::SetValue(GPUMatrix<char> const&);
+//template void CPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
+//template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
+template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);

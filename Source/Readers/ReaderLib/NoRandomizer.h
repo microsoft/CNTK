@@ -6,10 +6,8 @@
 #pragma once
 
 #include <vector>
-#include <map>
-#include "Transformer.h"
+#include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
-#include "SequenceRandomizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -17,13 +15,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Used training where the training data has already been pre - randomized.
 // TODO: currently this code moved from the old block randomizer.
 // TODO: The class will be further refactored and common based will be extracted with BlockRandomizer.
-// TODO: This layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
-class NoRandomizer : public Transformer
+class NoRandomizer : public SequenceEnumerator
 {
 public:
     NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false);
 
-    virtual void Initialize(TransformerPtr next, const ConfigParameters& readerConfig) override;
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t sampleCount) override;
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
@@ -36,7 +32,7 @@ private:
     std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
 
     // Get chunk index for the sample offset from the beginning of the sweep.
-    size_t GetChunkIndexOf(size_t samplePosition);
+    ChunkIdType GetChunkIndexOf(size_t samplePosition);
 
     // Moves the cursor to the sequence possibly updating the chunk.
     void MoveToNextSequence();
@@ -63,7 +59,7 @@ private:
     // Current chunk data.
     ChunkPtr m_currentChunk;
     // Current chunk data id.
-    size_t m_currentChunkId;
+    ChunkIdType m_currentChunkId;
 
     // Current window of sequence descriptions.
     std::vector<SequenceDescription> m_sequenceWindow;
@@ -73,7 +69,7 @@ private:
 
     // Current chunk position that the randomizer works with.
     // An index inside the m_chunkDescriptions.
-    size_t m_currentChunkPosition;
+    ChunkIdType m_currentChunkPosition;
 
     // Global sample position on the timeline.
     // TODO: possible recalculate it base on samplePositionInEpoch.

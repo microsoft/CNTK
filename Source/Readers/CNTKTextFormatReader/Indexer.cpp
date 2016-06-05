@@ -4,6 +4,7 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "Indexer.h"
 #include "TextReaderConstants.h"
@@ -22,7 +23,7 @@ Indexer::Indexer(FILE* file, bool skipSequenceIds, size_t chunkSize) :
     m_pos(nullptr),
     m_done(false),
     m_hasSequenceIds(!skipSequenceIds),
-    m_maxChunkSize(chunkSize)
+    m_index(chunkSize)
 {
     if (m_file == nullptr)
     {
@@ -52,24 +53,7 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::AddSequence(SequenceDescriptor& sd)
-{
-    assert(!m_chunks.empty());
-    ChunkDescriptor* chunk = &m_chunks.back();
-    if (chunk->m_byteSize > 0 && (chunk->m_byteSize + sd.m_byteSize) > m_maxChunkSize)
-    {
-        m_chunks.push_back({});
-        chunk = &m_chunks.back();
-        chunk->m_id = m_chunks.size() - 1;
-    }
-    chunk->m_byteSize += sd.m_byteSize;
-    chunk->m_numberOfSequences++;
-    chunk->m_numberOfSamples += sd.m_numberOfSamples;
-    sd.m_chunkId = chunk->m_id;
-    chunk->m_sequences.push_back(sd);
-}
-
-void Indexer::BuildFromLines()
+void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
 {
     assert(m_pos == m_bufferStart);
     m_hasSequenceIds = false;
@@ -81,14 +65,11 @@ void Indexer::BuildFromLines()
         if (m_pos)
         {
             SequenceDescriptor sd = {};
-            sd.m_id = lines;
             sd.m_numberOfSamples = 1;
-            sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            // TODO: ignore empty lines.
-            AddSequence(sd);
+            AddSequenceIfIncluded(corpus, lines, sd);
             ++m_pos;
             ++lines;
         }
@@ -97,22 +78,27 @@ void Indexer::BuildFromLines()
             RefillBuffer();
         }
     }
+
+    if (offset < m_fileOffsetEnd)
+    {
+        // There's a number of characters, not terminated by a newline,
+        // add a sequence to the index, parser will have to deal with it.
+        SequenceDescriptor sd = {};
+        sd.m_numberOfSamples = 1;
+        sd.m_fileOffsetBytes = offset;
+        sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
+        AddSequenceIfIncluded(corpus, lines, sd);
+    }
 }
 
-void Indexer::Build()
+void Indexer::Build(CorpusDescriptorPtr corpus)
 {
-    if (!m_chunks.empty())
+    if (!m_index.IsEmpty())
     {
         return;
     }
 
-    if (m_maxChunkSize > 0)
-    {
-        auto fileSize = filesize(m_file);
-        m_chunks.reserve((fileSize + m_maxChunkSize - 1) / m_maxChunkSize);
-    }
-
-    m_chunks.push_back({});
+    m_index.Reserve(filesize(m_file));
 
     RefillBuffer(); // read the first block of data
     if (m_done)
@@ -133,7 +119,7 @@ void Indexer::Build()
     if (!m_hasSequenceIds || m_bufferStart[0] == NAME_PREFIX)
     {
         // skip sequence id parsing, treat lines as individual sequences
-        BuildFromLines();
+        BuildFromLines(corpus);
         return;
     }
 
@@ -146,33 +132,43 @@ void Indexer::Build()
     }
 
     SequenceDescriptor sd = {};
-    sd.m_id = id;
     sd.m_fileOffsetBytes = offset;
-    sd.m_isValid = true;
 
+    size_t currentKey = id;
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
         offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
-        if (!m_done && TryGetSequenceId(id) && id != sd.m_id)
+        if (!m_done && TryGetSequenceId(id) && id != currentKey)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            AddSequence(sd);
+            AddSequenceIfIncluded(corpus, currentKey, sd);
+
             sd = {};
-            sd.m_id = id;
             sd.m_fileOffsetBytes = offset;
-            sd.m_isValid = true;
+            currentKey = id;
         }
     }
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    AddSequence(sd);
+    AddSequenceIfIncluded(corpus, currentKey, sd);
 }
 
+void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd)
+{
+    auto& stringRegistry = corpus->GetStringRegistry();
+    auto key = std::to_string(sequenceKey);
+    if (corpus->IsIncluded(key))
+    {
+        sd.m_key.m_sequence = stringRegistry[key];
+        sd.m_key.m_sample = 0;
+        m_index.AddSequence(sd);
+    }
+}
 
 void Indexer::SkipLine()
 {
@@ -201,40 +197,23 @@ bool Indexer::TryGetSequenceId(size_t& id)
         while (m_pos != m_bufferEnd)
         {
             char c = *m_pos;
-            // a well-formed sequence id must end in either a column delimiter 
-            // or a name prefix
-            if (c == COLUMN_DELIMITER || c == NAME_PREFIX)
-            {
-                return found;
-            }
 
             if (!isdigit(c))
             {
-                // TODO: ignore malformed sequences
-                RuntimeError("Unexpected character('%c')"
-                    " while reading a sequence id"
-                    " at the offset = %" PRIi64 "\n", c, GetFileOffset());
+                // Stop as soon as there's a non-digit character
+                return found;
             }
 
             found |= true;
-            size_t temp = id;
             id = id * 10 + (c - '0');
-            if (temp > id)
-            {
-                // TODO: ignore malformed sequences
-                RuntimeError("Size_t overflow while reading a sequence id"
-                    " at the offset = %" PRIi64 "\n", GetFileOffset());
-            }
             ++m_pos;
         }
         RefillBuffer();
     }
 
-    // TODO: ignore malformed sequences
-    // reached EOF without hitting the pipe character.
-    RuntimeError("Reached the end of file "
-        " while reading a sequence id"
-        " at the offset = %" PRIi64 "\n", GetFileOffset());
+    // reached EOF without hitting the pipe character,
+    // ignore it for not, parser will have to deal with it.
+    return false;
 }
 
 }}}

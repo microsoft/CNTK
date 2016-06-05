@@ -4,12 +4,13 @@ dataDir: ../../../../Speech/Data
 tags:
     # due to time, only in 1BitSGD, GPU and release
     - nightly-e (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu') and (os=='linux')
+    - weekly-e (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
     patterns:
       - __COMPLETED__
-      
+
   Must train epochs in exactly same order and parameters:
     patterns:
       - Starting Epoch {{integer}}
@@ -19,11 +20,13 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - Per Sample = {{float,tolerance=.1%}}
+      - " * {{integer}}; "
+      - ObjFcn.O = {{float,tolerance=.1%}}
+      - CE1 = {{float,tolerance=.1%}}
 
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=.1%}}
-      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
+      - " * {{integer}}; "
+      - ObjFcn.O = {{float,tolerance=.1%}}
+      - CE1 = {{float,tolerance=.1%}}

@@ -36,6 +36,24 @@ BOOST_AUTO_TEST_CASE(ImageReaderSimple)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageAndTextReaderSimple_Config.cntk",
+        testDataPath() + "/Control/ImageAndTextReaderSimple_Control.txt",
+        testDataPath() + "/Control/ImageAndTextReaderSimple_Output.txt",
+        "Simple_Test",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
+
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
 {
     BOOST_REQUIRE_EXCEPTION(
@@ -53,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 or 3 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadLabel)
@@ -143,6 +161,58 @@ BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
         "reader",
         10,
         10,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderIntensityTransform)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderIntensityTransform_Config.cntk",
+        testDataPath() + "/Control/ImageReaderIntensityTransform_Control.txt",
+        testDataPath() + "/Control/ImageReaderIntensityTransform_Output.txt",
+        "IntensityTransform_Test",
+        "reader",
+        1,
+        1,
+        2,
+        1,
+        0,
+        0,
+        1);
+}
+
+
+BOOST_AUTO_TEST_CASE(ImageReaderColorTransform)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderColorTransform_Config.cntk",
+        testDataPath() + "/Control/ImageReaderColorTransform_Control.txt",
+        testDataPath() + "/Control/ImageReaderColorTransform_Output.txt",
+        "ColorTransform_Test",
+        "reader",
+        1,
+        1,
+        2,
+        1,
+        0,
+        0,
+        1);
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderGrayscale)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderGrayscale_Config.cntk",
+        testDataPath() + "/Control/ImageReaderGrayscale_Control.txt",
+        testDataPath() + "/Control/ImageReaderGrayscale_Output.txt",
+        "Grayscale_Test",
+        "reader",
+        1,
+        1,
         1,
         1,
         0,

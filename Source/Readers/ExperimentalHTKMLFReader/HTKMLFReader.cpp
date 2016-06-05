@@ -13,7 +13,7 @@
 #include "StringUtil.h"
 #include "FramePacker.h"
 #include "SequencePacker.h"
-#include "BpttPacker.h"
+#include "TruncatedBpttPacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
@@ -27,9 +27,9 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     ConfigHelper config(readerConfig);
 
     config.GetDataNamesFromConfig(featureNames, labelNames, notused, notused);
-    if (featureNames.size() < 1 || labelNames.size() < 1)
+    if (featureNames.size() < 1)
     {
-        InvalidArgument("Network needs at least 1 feature and 1 label specified.");
+        InvalidArgument("Network needs at least 1 feature specified.");
     }
 
     CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
@@ -105,8 +105,9 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         LogicError("Please specify at least a single input stream.");
     }
 
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, false);
-    int verbosity = readerConfig(L"verbosity", 2);
+    bool cleanse = readerConfig(L"checkData", false);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
+    int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
     // TODO: this should be bool. Change when config per deserializer is allowed.
@@ -123,8 +124,6 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         RuntimeError("readMethod must be 'blockRandomize' or 'none'.");
     }
 
-    m_randomizer->Initialize(nullptr, readerConfig);
-
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)
     {
@@ -136,22 +135,6 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
             m_streams.push_back(stream);
         }
     }
-}
-
-std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
-{
-    assert(!m_streams.empty());
-    return m_streams;
-}
-
-void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
-{
-    if (config.m_totalEpochSizeInSamples <= 0)
-    {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
-    }
-
-    m_randomizer->StartEpoch(config);
 
     // TODO: should we unify sample and sequence mode packers into a single one.
     // TODO: functionally they are the same, the only difference is how we handle
@@ -164,20 +147,35 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
     switch (m_packingMode)
     {
     case PackingMode::sample:
-        m_packer = std::make_shared<FramePacker>(
-            m_provider,
-            m_randomizer,
-            config.m_minibatchSizeInSamples,
-            m_streams);
+        m_packer = std::make_shared<FramePacker>(m_provider, m_randomizer, m_streams);
         break;
     case PackingMode::sequence:
-        m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_randomizer,
-            config.m_minibatchSizeInSamples,
-            m_streams);
+        m_packer = std::make_shared<SequencePacker>(m_provider, m_randomizer, m_streams);
         break;
     case PackingMode::truncated:
+        m_packer = std::make_shared<TruncatedBPTTPacker>(m_provider, m_randomizer, m_streams);
+        break;
+    default:
+        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
+    }
+}
+
+std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
+{
+    assert(!m_streams.empty());
+    return m_streams;
+}
+
+void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
+{
+    if (config.m_totalEpochSizeInSamples == 0)
+    {
+        RuntimeError("Epoch size cannot be 0.");
+    }
+
+
+
+    if (m_packingMode == PackingMode::truncated)
     {
         size_t minibatchSize = config.m_minibatchSizeInSamples;
         size_t truncationLength = m_truncationLength;
@@ -186,22 +184,27 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             // Old config, the truncation length is specified as the minibatch size.
             // In this case the truncation size is mbSize
             // and the real minibatch size is truncation size * nbruttsineachrecurrentiter
-            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.");
+            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.\n");
             truncationLength = minibatchSize;
             size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
             minibatchSize = numParallelSequences * truncationLength;
         }
+        
+        EpochConfiguration bpttConfig;
+        bpttConfig.m_numberOfWorkers = config.m_numberOfWorkers;
+        bpttConfig.m_workerRank = config.m_workerRank;
+        bpttConfig.m_totalEpochSizeInSamples = config.m_totalEpochSizeInSamples;
+        bpttConfig.m_epochIndex = config.m_epochIndex;
+        bpttConfig.m_minibatchSizeInSamples = minibatchSize;
+        bpttConfig.m_truncationSize = truncationLength;
 
-        m_packer = std::make_shared<BpttPacker>(
-            m_provider,
-            m_randomizer,
-            minibatchSize,
-            truncationLength,
-            m_streams);
-        break;
+        m_randomizer->StartEpoch(bpttConfig);
+        m_packer->StartEpoch(bpttConfig);
     }
-    default:
-        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
+    else
+    {
+        m_randomizer->StartEpoch(config);
+        m_packer->StartEpoch(config);
     }
 }
 

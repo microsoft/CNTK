@@ -40,34 +40,30 @@ Simple_Demo=[
         # the training set. Must be evenly divisible 
         # into number of data frames.
         epochSize=0 
-        minibatchSize=25
-        learningRatesPerMB=0.5:0.2*20:0.1
-        momentumPerMB=0.9
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
         dropoutRate=0.0
         maxEpochs=50
+        # We are testing checkpointing, keep all checkpoint (.ckp) files
+        keepCheckPointFiles = true
     ]
-       
+
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=UCIFastReader
-      file=$DataDir$/SimpleDataTrain.txt
-
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=1   
-
-      features=[
-          dim=2      # two-dimensional input data
-          start=0    # Start with first element on line
-      ]
-
-      labels=[
-        start=2      # Skip two elements
-        dim=1        # One label dimension
-        labelDim=2   # Two labels possible
-        labelMappingFile=$DataDir$/SimpleMapping.txt
-      ]
+        # reader to use
+        readerType=CNTKTextFormatReader
+        file=$DataDir$/SimpleDataTrain_cntk_text.txt
+        input = [
+            features=[
+                dim = 2      # two-dimensional input data
+                format = "dense"
+            ]
+            labels=[
+                dim = 2 # Two-dimensional (one-hot) labels
+                format = "dense"
+            ]
+        ]
     ]
 ]
 
@@ -79,19 +75,19 @@ Simple_Demo_Output=[
 
     # Parameter values for the reader
     reader=[
-      # reader to use
-      readerType=UCIFastReader
-      file=$DataDir$/SimpleDataTest.txt
-      features=[
-          dim=2
-          start=0
-      ]
-      labels=[
-      start=2
-        dim=1
-        labelDim=2
-        labelMappingFile=$DataDir$/SimpleMapping.txt
-      ]
+        # reader to use
+        readerType=CNTKTextFormatReader
+        file=$DataDir$/SimpleDataTest_cntk_text.txt
+        input = [
+            features=[
+                dim = 2 # two-dimensional input data
+                format = "dense" 
+            ]
+            labels=[
+                dim = 2 # Two-dimensional (one-hot) labels
+                format = "dense"
+            ]
+        ]
     ]
     outputPath=$RunDir$/SimpleOutput    # Dump output as text
 ]

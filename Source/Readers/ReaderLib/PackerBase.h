@@ -7,9 +7,8 @@
 
 #include "Reader.h"
 #include "MemoryProvider.h"
-#include "Transformer.h"
+#include "SequenceEnumerator.h"
 #include "Packer.h"
-#include <deque>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -34,8 +33,7 @@ protected:
     };
 
     PackerBase(MemoryProviderPtr memoryProvider,
-               TransformerPtr transformer,
-               size_t minibatchSize,
+               SequenceEnumeratorPtr sequenceEnumerator,
                const std::vector<StreamDescriptionPtr>& streams);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
@@ -58,7 +56,7 @@ protected:
     // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
     void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
 
-    TransformerPtr m_transformer;
+    SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.
     std::vector<StreamDescriptionPtr> m_outputStreamDescriptions;
@@ -71,6 +69,10 @@ protected:
 
     // Minibatch size in samples.
     size_t m_minibatchSize;
+
+public:
+    // Sets current epoch configuration.
+    virtual void StartEpoch(const EpochConfiguration& config) override;
 };
 
 inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,

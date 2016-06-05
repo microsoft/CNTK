@@ -1,9 +1,9 @@
-=== Running /home/clemensm/CNTK/build/release/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 14 2016 04:41:02
-		Last modified date: Wed Apr 13 15:12:17 2016
+		Built time: May  3 2016 17:56:15
+		Last modified date: Tue May  3 11:36:22 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -11,38 +11,38 @@ Build info:
 		CUDA_PATH: /usr/local/cuda-7.5
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: deepbliscore/vnext
-		Build SHA1: 551a43f8ed416701bf86f27075b0979300056629
-		Built by clemensm on ubuntu
-		Build Path: /home/clemensm/cntk/CNTK
+		Build Branch: HEAD
+		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+		Built by philly on 18750d26eb32
+		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-04/15/2016 14:38:00: -------------------------------------------------------------------
-04/15/2016 14:38:00: Build info: 
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+05/03/2016 18:19:41: -------------------------------------------------------------------
+05/03/2016 18:19:41: Build info: 
 
-04/15/2016 14:38:00: 		Built time: Apr 14 2016 04:41:02
-04/15/2016 14:38:00: 		Last modified date: Wed Apr 13 15:12:17 2016
-04/15/2016 14:38:00: 		Build type: release
-04/15/2016 14:38:00: 		Build target: GPU
-04/15/2016 14:38:00: 		With 1bit-SGD: no
-04/15/2016 14:38:00: 		Math lib: acml
-04/15/2016 14:38:00: 		CUDA_PATH: /usr/local/cuda-7.5
-04/15/2016 14:38:00: 		CUB_PATH: /usr/local/cub-1.4.1
-04/15/2016 14:38:00: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/15/2016 14:38:00: 		Build Branch: deepbliscore/vnext
-04/15/2016 14:38:00: 		Build SHA1: 551a43f8ed416701bf86f27075b0979300056629
-04/15/2016 14:38:00: 		Built by clemensm on ubuntu
-04/15/2016 14:38:00: 		Build Path: /home/clemensm/cntk/CNTK
-04/15/2016 14:38:00: -------------------------------------------------------------------
+05/03/2016 18:19:41: 		Built time: May  3 2016 17:56:15
+05/03/2016 18:19:41: 		Last modified date: Tue May  3 11:36:22 2016
+05/03/2016 18:19:41: 		Build type: release
+05/03/2016 18:19:41: 		Build target: GPU
+05/03/2016 18:19:41: 		With 1bit-SGD: no
+05/03/2016 18:19:41: 		Math lib: acml
+05/03/2016 18:19:41: 		CUDA_PATH: /usr/local/cuda-7.5
+05/03/2016 18:19:41: 		CUB_PATH: /usr/local/cub-1.4.1
+05/03/2016 18:19:41: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/03/2016 18:19:41: 		Build Branch: HEAD
+05/03/2016 18:19:41: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+05/03/2016 18:19:41: 		Built by philly on 18750d26eb32
+05/03/2016 18:19:41: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/03/2016 18:19:41: -------------------------------------------------------------------
 
-04/15/2016 14:38:00: Running on localhost at 2016/04/15 14:38:00
-04/15/2016 14:38:00: Command line: 
-/home/clemensm/CNTK/build/release/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true
+05/03/2016 18:19:41: Running on localhost at 2016/05/03 18:19:41
+05/03/2016 18:19:41: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true
 
 
 
-04/15/2016 14:38:00: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/15/2016 14:38:00: RootDir = ".."
+05/03/2016 18:19:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:41: RootDir = ".."
 ConfigDir = "$RootDir$/Config"
 DataDir   = "$RootDir$/Data"
 OutputDir = "$RootDir$/Output"
@@ -50,8 +50,6 @@ ModelDir  = "$OutputDir$/Models"
 command=Train 
 deviceId = $DeviceId$
 modelPath="$ModelDir$/seqcla.dnn"
-numMBsToShowResult = 100
-firstMBsToShowResult = 10 
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -70,8 +68,8 @@ Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -95,7 +93,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -103,6 +101,7 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
@@ -149,27 +148,25 @@ Write=[
    ]    
 outputPath = "$OutputDir$/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 DeviceId=-1
 timestamping=true
 
-04/15/2016 14:38:00: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 14:38:00: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/15/2016 14:38:00: RootDir = ".."
+05/03/2016 18:19:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:41: RootDir = ".."
 ConfigDir = "../Config"
 DataDir   = "../Data"
 OutputDir = "../Output"
-ModelDir  = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models"
+ModelDir  = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models"
 command=Train 
 deviceId = -1
-modelPath="/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"
-numMBsToShowResult = 100
-firstMBsToShowResult = 10 
+modelPath="/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -188,8 +185,8 @@ Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -213,7 +210,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -221,10 +218,11 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -238,7 +236,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 Write=[
     action="test"
@@ -248,10 +246,10 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
+    modelFile = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+            file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -265,31 +263,29 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 DeviceId=-1
 timestamping=true
 
-04/15/2016 14:38:00: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 14:38:00: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:41: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: seqcla.cntk:command=Train
-configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+configparameters: seqcla.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
 configparameters: seqcla.cntk:deviceId=-1
-configparameters: seqcla.cntk:firstMBsToShowResult=10
-configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models
-configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
-configparameters: seqcla.cntk:numMBsToShowResult=100
-configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 configparameters: seqcla.cntk:RootDir=..
-configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 configparameters: seqcla.cntk:timestamping=true
 configparameters: seqcla.cntk:Train=[
     action="train"
@@ -309,8 +305,8 @@ configparameters: seqcla.cntk:Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -334,7 +330,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -342,10 +338,11 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -359,7 +356,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 
 configparameters: seqcla.cntk:Write=[
@@ -370,10 +367,10 @@ configparameters: seqcla.cntk:Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
+    modelFile = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+            file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -387,33 +384,33 @@ configparameters: seqcla.cntk:Write=[
                 ]
             ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 
-04/15/2016 14:38:00: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/15/2016 14:38:00: Commands: Train
-04/15/2016 14:38:00: Precision = "float"
-04/15/2016 14:38:00: CNTKModelPath: /tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
-04/15/2016 14:38:00: CNTKCommandTrainInfo: Train : 5
-04/15/2016 14:38:00: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+05/03/2016 18:19:41: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:41: Commands: Train
+05/03/2016 18:19:41: Precision = "float"
+05/03/2016 18:19:41: CNTKModelPath: /tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
+05/03/2016 18:19:41: CNTKCommandTrainInfo: Train : 5
+05/03/2016 18:19:41: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-04/15/2016 14:38:00: ##############################################################################
-04/15/2016 14:38:00: #                                                                            #
-04/15/2016 14:38:00: # Action "train"                                                             #
-04/15/2016 14:38:00: #                                                                            #
-04/15/2016 14:38:00: ##############################################################################
+05/03/2016 18:19:41: ##############################################################################
+05/03/2016 18:19:41: #                                                                            #
+05/03/2016 18:19:41: # Action "train"                                                             #
+05/03/2016 18:19:41: #                                                                            #
+05/03/2016 18:19:41: ##############################################################################
 
-04/15/2016 14:38:00: CNTKCommandTrainBegin: Train
+05/03/2016 18:19:41: CNTKCommandTrainBegin: Train
 
-04/15/2016 14:38:00: Creating virgin network.
+05/03/2016 18:19:41: Creating virgin network.
 
 Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
 	out = Pass()
 	t = DynamicAxis()
-	wer = ErrorPrediction()
 
 Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
 
@@ -427,16 +424,7 @@ Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
 	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z	l2.lstm.lstmState._privateInnards.ot
 	l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.ht
 
-Validating network. 70 nodes to process in pass 1.
-
-
-Validating network. 48 nodes to process in pass 2.
-
-
-Validating network. 14 nodes to process in pass 3.
-
-
-Validating network, final pass.
+Validating network. 71 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [5 x *]
 Validating --> l3.z.W = LearnableParameter() :  -> [5 x 25]
@@ -449,126 +437,248 @@ Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].Pl
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t] -> [25 x t]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [25]
-Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x 1 x t], [25] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25 x 1], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x 1 x t], [25 x 1 x t] -> [25 x 1 x t]
-Validating --> l2.result.selected.input.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t] -> [1 x 1 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x t], [0] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [0] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x t], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x t], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x t], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x t], [25 x t] -> [25 x t]
+Validating --> l2.result.selected.input.z.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x t] -> [1 x t]
 Validating --> BS.Constants.Zero = LearnableParameter() :  -> [1]
-Validating --> l2.result.selected.input = ElementTimes (l2.result.selected.input.ElementTimesArgs[0], BS.Constants.Zero) : [1 x 1 x t], [1] -> [1 x 1 x t]
-Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x 1 x t] -> [1 x 1 x t]
-Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x 1 x t] -> [1 x WhereNodeAxis]
-Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x 1 x t], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
-Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x 1 x t] -> [25 x 1 x WhereNodeAxis]
-Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l2.result.selected.input.z = ElementTimes (l2.result.selected.input.z.ElementTimesArgs[0], BS.Constants.Zero) : [1 x t], [1] -> [1 x t]
+Validating --> l2.result.selected.input = SumColumnElements (l2.result.selected.input.z) : [1 x t] -> [1 x t]
+Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x t] -> [1 x t]
+Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x t] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x t], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x t] -> [25 x WhereNodeAxis]
+Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x WhereNodeAxis] -> [5 x WhereNodeAxis]
 Validating --> l3.z.B = LearnableParameter() :  -> [5 x 1]
-Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x 1 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
 Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t]
-Validating --> wer = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+
+Validating network. 49 nodes to process in pass 2.
+
+Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t] -> [25 x t]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x t], [25] -> [25 x t]
+
+Validating network. 9 nodes to process in pass 3.
 
 
-68 out of 70 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
+
+
+
+69 out of 71 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-04/15/2016 14:38:00: Created model with 70 nodes on CPU.
+05/03/2016 18:19:41: Created model with 71 nodes on CPU.
 
-04/15/2016 14:38:00: Training criterion node(s):
-04/15/2016 14:38:00: 	ce = CrossEntropyWithSoftmax
+05/03/2016 18:19:41: Training criterion node(s):
+05/03/2016 18:19:41: 	ce = CrossEntropyWithSoftmax
 
-04/15/2016 14:38:00: Evaluation criterion node(s):
+05/03/2016 18:19:41: Evaluation criterion node(s):
 
-04/15/2016 14:38:00: 	wer = ErrorPrediction
+05/03/2016 18:19:41: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-04/15/2016 14:38:00: No PreCompute nodes found, skipping PreCompute step.
 
-04/15/2016 14:38:00: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+Memory Sharing Structure:
 
-04/15/2016 14:38:00: Starting minibatch loop.
-04/15/2016 14:38:01: Finished Epoch[ 1 of 5]: [Training Set] TrainLossPerSample = 1.5804178; TotalSamplesSeen = 1247; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.22344
-04/15/2016 14:38:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.1'
+(nil): {[BS.Constants.Zero Gradient[1]] [err Gradient[1]] [features Gradient[1 x t]] [l1.embedding Gradient[50 x 2000]] [l1.embedding.x Gradient[2000 x 50]] [l1.lookup Gradient[50 x t]] [labels Gradient[5 x *]] [out Gradient[5 x 1 x WhereNodeAxis]] [t Gradient[1 x 1 x t]] [t Value[1 x 1 x t]] }
+0x1bf4838: {[labels Value[5 x *]] }
+0x1bf9648: {[out Value[5 x 1 x WhereNodeAxis]] }
+0x1bf9a08: {[l3.z.W Value[5 x 25]] }
+0x1bfd7c8: {[BS.Constants.Zero Value[1]] }
+0x1bfe2e8: {[ce Value[1]] }
+0x1c01b38: {[l1.embedding Value[50 x 2000]] }
+0x1c045e8: {[l2.lstm.lstmState._privateInnards.ot.z Gradient[25 x t]] [l2.result.selected Value[1 x t]] [l2.result.selected.input.z Gradient[1 x t]] }
+0x1c04af8: {[l3.z.B Value[5 x 1]] }
+0x1c06fa8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x1c08768: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x1c0ab28: {[features Value[1 x t]] }
+0x1c0ae68: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x1c0ecc8: {[l1.embedding.x Value[2000 x 50]] }
+0x1c0f798: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x1c0fda8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] [l2.lstm.prevState.h Value[25 x t]] }
+0x1c11f08: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x1c12b78: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x1c148f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x1c17618: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x1c18378: {[err Value[1]] }
+0x1c18a48: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x1c18c88: {[l2.lstm.prevState.c Value[25 x t]] }
+0x1c1b2c8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x1c1dfb8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x1c1f4b8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x1c20958: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x1c22b78: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] Value[25 x 25]] }
+0x1c23ad8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] Value[25]] }
+0x1c2a868: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t]] }
+0x1c2aa28: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1c2b058: {[l1.lookup Value[50 x t]] }
+0x1c2b538: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t]] }
+0x1c2b6f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1c2b8b8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] }
+0x1c2c2a8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1c2c408: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] Value[25 x t]] [l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t]] }
+0x1c2c5c8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] Value[25 x t]] }
+0x1c2c788: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] Value[25 x t]] }
+0x1c2c948: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] Value[25 x t]] }
+0x1c2cb08: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] Value[25 x t]] }
+0x1c2ccc8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] Value[25 x t]] }
+0x1c2ce88: {[l2.lstm.lstmState._privateInnards.ft.z Value[25 x t]] }
+0x1c2d048: {[l2.lstm.lstmState._privateInnards.ft Value[25 x t]] }
+0x1c2d208: {[l2.lstm.lstmState._privateInnards.bft Value[25 x t]] }
+0x1c2d3c8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] Value[25 x t]] }
+0x1c2d588: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] Value[25 x t]] }
+0x1c2d748: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] Value[25 x t]] }
+0x1c2d908: {[l2.lstm.lstmState._privateInnards.it.z Value[25 x t]] }
+0x1c2dac8: {[l2.lstm.lstmState._privateInnards.it Value[25 x t]] }
+0x1c2dc88: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] Value[25 x t]] }
+0x1c2de48: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] Value[25 x t]] }
+0x1c2e008: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z Value[25 x t]] }
+0x1c2e1c8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] Value[25 x t]] }
+0x1c2e388: {[l2.lstm.lstmState._privateInnards.bit Value[25 x t]] }
+0x1c2e548: {[l2.lstm.lstmState._privateInnards.ct Value[25 x t]] }
+0x1c2e708: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] Value[25 x t]] }
+0x1c2e8c8: {[l2.lstm.lstmState._privateInnards.ot.z Value[25 x t]] }
+0x1c2ea88: {[l2.lstm.lstmState._privateInnards.ot Value[25 x t]] }
+0x1c2ec48: {[l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] Value[25 x t]] }
+0x1c2ee08: {[l2.lstm.lstmState._privateInnards.ht Value[25 x t]] }
+0x1c2efc8: {[l2.lstm.lstmState._privateInnards.ot Gradient[25 x t]] [l2.result.selected.input.z.ElementTimesArgs[0] Value[1 x t]] }
+0x1c2f188: {[l2.lstm.lstmState._privateInnards.ct Gradient[25 x t]] [l2.result.selected.input.z Value[1 x t]] }
+0x1c2f348: {[l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] Gradient[25 x t]] [l2.result.selected.input Value[1 x t]] [l2.result.selected.input.z.ElementTimesArgs[0] Gradient[1 x t]] }
+0x1c2f508: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] Gradient[25 x t]] [l2.result.out.indexSequence.indexSequence Value[1 x WhereNodeAxis]] [l2.result.selected.input Gradient[1 x t]] }
+0x1c2f6c8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] Gradient[25 x t]] [l2.result.out.indexSequence Value[1 x WhereNodeAxis]] [l2.result.selected Gradient[1 x t]] }
+0x1c2f888: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] [l2.result.out Value[25 x WhereNodeAxis]] [l2.result.out.indexSequence.indexSequence Gradient[1 x WhereNodeAxis]] }
+0x1c2fa48: {[l2.lstm.lstmState._privateInnards.bft Gradient[25 x t]] [l2.result.out.indexSequence Gradient[1 x WhereNodeAxis]] [l3.z.z.PlusArgs[0] Value[5 x WhereNodeAxis]] }
+0x1c2fc08: {[l3.z.W Gradient[5 x 25]] [l3.z.z Value[5 x 1 x WhereNodeAxis]] }
+0x1c2fdc8: {[l2.lstm.lstmState._privateInnards.ht Gradient[25 x t]] [l3.act Value[5 x 1 x WhereNodeAxis]] [l3.z.z.PlusArgs[0] Gradient[5 x WhereNodeAxis]] }
+0x1c2ff88: {[l2.lstm.lstmState._privateInnards.bit Gradient[25 x t]] [l2.result.out Gradient[25 x WhereNodeAxis]] [l3.z.z Gradient[5 x 1 x WhereNodeAxis]] [l3p Value[5 x 1 x *]] }
+0x1c30a68: {[ce Gradient[1]] }
+0x1c30c28: {[l2.lstm.lstmState._privateInnards.it Gradient[25 x t]] [l3p Gradient[5 x 1 x *]] }
+0x1c30de8: {[l3.act Gradient[5 x 1 x WhereNodeAxis]] [l3.z.B Gradient[5 x 1]] }
+0x1c311c8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] Gradient[25 x t]] }
+0x1c31388: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z Gradient[25 x t]] }
+0x1c314e8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] Gradient[25 x t]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] }
+0x1c316a8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] Gradient[25 x t]] }
+0x1c31868: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] Gradient[25 x t]] }
+0x1c31a28: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] Gradient[25]] }
+0x1c31be8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] Gradient[25 x 25]] }
+0x1c31da8: {[l2.lstm.prevState.h Gradient[25 x t]] }
+0x1c31f68: {[l2.lstm.lstmState._privateInnards.it.z Gradient[25 x t]] }
+0x1c32128: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] Gradient[25 x t]] }
+0x1c322e8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] Gradient[25 x t]] }
+0x1c324a8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] }
+0x1c32668: {[l2.lstm.prevState.c Gradient[25 x t]] }
+0x1c32828: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t]] }
+0x1c329e8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t]] }
+0x1c32ba8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
+0x1c32d68: {[l2.lstm.lstmState._privateInnards.ft Gradient[25 x t]] }
+0x1c32f28: {[l2.lstm.lstmState._privateInnards.ft.z Gradient[25 x t]] }
+0x1c330e8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] Gradient[25 x t]] }
+0x1c332a8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] Gradient[25 x t]] }
+0x1c33468: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] }
+0x1c33628: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t]] }
+0x1c337e8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t]] }
+0x1c339a8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
+0x1c33b68: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t]] }
+0x1c33d28: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t]] }
+0x1c33ee8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
 
-04/15/2016 14:38:01: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+05/03/2016 18:19:41: No PreCompute nodes found, skipping PreCompute step.
 
-04/15/2016 14:38:01: Starting minibatch loop.
-04/15/2016 14:38:03: Finished Epoch[ 2 of 5]: [Training Set] TrainLossPerSample = 1.495942; TotalSamplesSeen = 2494; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.73345
-04/15/2016 14:38:03: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.2'
+05/03/2016 18:19:41: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/15/2016 14:38:03: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+05/03/2016 18:19:41: Starting minibatch loop.
+05/03/2016 18:19:42: Finished Epoch[ 1 of 5]: [Training] ce = 1.58071315 * 1247; err = 0.49879711 * 1247; totalSamplesSeen = 1247; learningRatePerSample = 0.00050000002; epochTime=0.791571s
+05/03/2016 18:19:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.1'
 
-04/15/2016 14:38:03: Starting minibatch loop.
-04/15/2016 14:38:04: Finished Epoch[ 3 of 5]: [Training Set] TrainLossPerSample = 1.4256026; TotalSamplesSeen = 3741; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=1.23965
-04/15/2016 14:38:04: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.3'
+05/03/2016 18:19:42: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/15/2016 14:38:04: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+05/03/2016 18:19:42: Starting minibatch loop.
+05/03/2016 18:19:42: Finished Epoch[ 2 of 5]: [Training] ce = 1.49387495 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 2494; learningRatePerSample = 0.00050000002; epochTime=0.634722s
+05/03/2016 18:19:42: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.2'
 
-04/15/2016 14:38:04: Starting minibatch loop.
-04/15/2016 14:38:05: Finished Epoch[ 4 of 5]: [Training Set] TrainLossPerSample = 1.3731796; TotalSamplesSeen = 4988; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.807252
-04/15/2016 14:38:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'
+05/03/2016 18:19:42: Starting Epoch 3: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/15/2016 14:38:05: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+05/03/2016 18:19:42: Starting minibatch loop.
+05/03/2016 18:19:43: Finished Epoch[ 3 of 5]: [Training] ce = 1.42189928 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 3741; learningRatePerSample = 0.00050000002; epochTime=0.636987s
+05/03/2016 18:19:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.3'
 
-04/15/2016 14:38:05: Starting minibatch loop.
-04/15/2016 14:38:06: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3350673; TotalSamplesSeen = 6235; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=0.676573
-04/15/2016 14:38:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
-04/15/2016 14:38:06: CNTKCommandTrainEnd: Train
+05/03/2016 18:19:43: Starting Epoch 4: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
 
-04/15/2016 14:38:06: Action "train" complete.
+05/03/2016 18:19:43: Starting minibatch loop.
+05/03/2016 18:19:43: Finished Epoch[ 4 of 5]: [Training] ce = 1.36936852 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 4988; learningRatePerSample = 0.00050000002; epochTime=0.630519s
+05/03/2016 18:19:43: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'
 
-04/15/2016 14:38:06: __COMPLETED__
+05/03/2016 18:19:44: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+05/03/2016 18:19:44: Starting minibatch loop.
+05/03/2016 18:19:44: Finished Epoch[ 5 of 5]: [Training] ce = 1.33139241 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.810543s
+05/03/2016 18:19:44: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
+05/03/2016 18:19:44: CNTKCommandTrainEnd: Train
+
+05/03/2016 18:19:44: Action "train" complete.
+
+05/03/2016 18:19:44: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /home/clemensm/CNTK/build/release/bin/cntk configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true makeMode=true
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true makeMode=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Apr 14 2016 04:41:02
-		Last modified date: Wed Apr 13 15:12:17 2016
+		Built time: May  3 2016 17:56:15
+		Last modified date: Tue May  3 11:36:22 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -576,38 +686,38 @@ Build info:
 		CUDA_PATH: /usr/local/cuda-7.5
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: deepbliscore/vnext
-		Build SHA1: 551a43f8ed416701bf86f27075b0979300056629
-		Built by clemensm on ubuntu
-		Build Path: /home/clemensm/cntk/CNTK
+		Build Branch: HEAD
+		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+		Built by philly on 18750d26eb32
+		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-04/15/2016 14:38:06: -------------------------------------------------------------------
-04/15/2016 14:38:06: Build info: 
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+05/03/2016 18:19:44: -------------------------------------------------------------------
+05/03/2016 18:19:44: Build info: 
 
-04/15/2016 14:38:06: 		Built time: Apr 14 2016 04:41:02
-04/15/2016 14:38:06: 		Last modified date: Wed Apr 13 15:12:17 2016
-04/15/2016 14:38:06: 		Build type: release
-04/15/2016 14:38:06: 		Build target: GPU
-04/15/2016 14:38:06: 		With 1bit-SGD: no
-04/15/2016 14:38:06: 		Math lib: acml
-04/15/2016 14:38:06: 		CUDA_PATH: /usr/local/cuda-7.5
-04/15/2016 14:38:06: 		CUB_PATH: /usr/local/cub-1.4.1
-04/15/2016 14:38:06: 		CUDNN_PATH: /usr/local/cudnn-4.0
-04/15/2016 14:38:06: 		Build Branch: deepbliscore/vnext
-04/15/2016 14:38:06: 		Build SHA1: 551a43f8ed416701bf86f27075b0979300056629
-04/15/2016 14:38:06: 		Built by clemensm on ubuntu
-04/15/2016 14:38:06: 		Build Path: /home/clemensm/cntk/CNTK
-04/15/2016 14:38:06: -------------------------------------------------------------------
+05/03/2016 18:19:44: 		Built time: May  3 2016 17:56:15
+05/03/2016 18:19:44: 		Last modified date: Tue May  3 11:36:22 2016
+05/03/2016 18:19:44: 		Build type: release
+05/03/2016 18:19:44: 		Build target: GPU
+05/03/2016 18:19:44: 		With 1bit-SGD: no
+05/03/2016 18:19:44: 		Math lib: acml
+05/03/2016 18:19:44: 		CUDA_PATH: /usr/local/cuda-7.5
+05/03/2016 18:19:44: 		CUB_PATH: /usr/local/cub-1.4.1
+05/03/2016 18:19:44: 		CUDNN_PATH: /usr/local/cudnn-4.0
+05/03/2016 18:19:44: 		Build Branch: HEAD
+05/03/2016 18:19:44: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
+05/03/2016 18:19:44: 		Built by philly on 18750d26eb32
+05/03/2016 18:19:44: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/03/2016 18:19:44: -------------------------------------------------------------------
 
-04/15/2016 14:38:06: Running on localhost at 2016/04/15 14:38:06
-04/15/2016 14:38:06: Command line: 
-/home/clemensm/CNTK/build/release/bin/cntk  configFile=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu  DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
+05/03/2016 18:19:44: Running on localhost at 2016/05/03 18:19:44
+05/03/2016 18:19:44: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
 
 
 
-04/15/2016 14:38:06: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-04/15/2016 14:38:06: RootDir = ".."
+05/03/2016 18:19:44: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:44: RootDir = ".."
 ConfigDir = "$RootDir$/Config"
 DataDir   = "$RootDir$/Data"
 OutputDir = "$RootDir$/Output"
@@ -615,8 +725,6 @@ ModelDir  = "$OutputDir$/Models"
 command=Train 
 deviceId = $DeviceId$
 modelPath="$ModelDir$/seqcla.dnn"
-numMBsToShowResult = 100
-firstMBsToShowResult = 10 
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -635,8 +743,8 @@ Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -660,7 +768,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -668,6 +776,7 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
@@ -714,28 +823,26 @@ Write=[
    ]    
 outputPath = "$OutputDir$/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 DeviceId=-1
 timestamping=true
 makeMode=true
 
-04/15/2016 14:38:06: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:44: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 14:38:06: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-04/15/2016 14:38:06: RootDir = ".."
+05/03/2016 18:19:44: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:44: RootDir = ".."
 ConfigDir = "../Config"
 DataDir   = "../Data"
 OutputDir = "../Output"
-ModelDir  = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models"
+ModelDir  = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models"
 command=Train 
 deviceId = -1
-modelPath="/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"
-numMBsToShowResult = 100
-firstMBsToShowResult = 10 
+modelPath="/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"
 Train=[
     action="train"
     run=BrainScriptNetworkBuilder
@@ -754,8 +861,8 @@ Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -779,7 +886,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -787,10 +894,11 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -804,7 +912,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 Write=[
     action="test"
@@ -814,10 +922,10 @@ Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
+    modelFile = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+            file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -831,33 +939,31 @@ Write=[
                 ]
             ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
-currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
-DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 DeviceId=-1
 timestamping=true
 makeMode=true
 
-04/15/2016 14:38:06: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:44: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-04/15/2016 14:38:06: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 18:19:44: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: seqcla.cntk:command=Train
-configparameters: seqcla.cntk:ConfigDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Config
-configparameters: seqcla.cntk:currentDirectory=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
-configparameters: seqcla.cntk:DataDir=/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config
+configparameters: seqcla.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+configparameters: seqcla.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
 configparameters: seqcla.cntk:deviceId=-1
-configparameters: seqcla.cntk:firstMBsToShowResult=10
 configparameters: seqcla.cntk:makeMode=true
-configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models
-configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
-configparameters: seqcla.cntk:numMBsToShowResult=100
-configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+configparameters: seqcla.cntk:ModelDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models
+configparameters: seqcla.cntk:modelPath=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
+configparameters: seqcla.cntk:OutputDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 configparameters: seqcla.cntk:RootDir=..
-configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu
+configparameters: seqcla.cntk:RunDir=/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu
 configparameters: seqcla.cntk:timestamping=true
 configparameters: seqcla.cntk:Train=[
     action="train"
@@ -877,8 +983,8 @@ configparameters: seqcla.cntk:Train=[
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP(inputSize, outputSize, cellSize, input)
+            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
             ].result
         ]        
@@ -902,7 +1008,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        wer = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -910,10 +1016,11 @@ labels   = Input(numLabels)
       maxEpochs = 5
       momentumPerMB = 0.9
       learningRatesPerMB = 0.1
+      keepCheckPointFiles = true
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
         input = [            
             features=[
                 alias = "x"                
@@ -927,7 +1034,7 @@ labels   = Input(numLabels)
             ]
         ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 
 configparameters: seqcla.cntk:Write=[
@@ -938,10 +1045,10 @@ configparameters: seqcla.cntk:Write=[
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    modelFile = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
+    modelFile = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn"    
     reader = [
             readerType = "CNTKTextFormatReader"
-            file = "/home/clemensm/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
+            file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.txt"            
             input = [            
                 features=[
                     alias = "x"                
@@ -955,33 +1062,33 @@ configparameters: seqcla.cntk:Write=[
                 ]
             ]
    ]    
-outputPath = "/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/output.txt"        
+outputPath = "/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/output.txt"        
 ]
 
-04/15/2016 14:38:06: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-04/15/2016 14:38:06: Commands: Train
-04/15/2016 14:38:06: Precision = "float"
-04/15/2016 14:38:06: CNTKModelPath: /tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
-04/15/2016 14:38:06: CNTKCommandTrainInfo: Train : 5
-04/15/2016 14:38:06: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+05/03/2016 18:19:44: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 18:19:44: Commands: Train
+05/03/2016 18:19:44: Precision = "float"
+05/03/2016 18:19:44: CNTKModelPath: /tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn
+05/03/2016 18:19:44: CNTKCommandTrainInfo: Train : 5
+05/03/2016 18:19:44: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-04/15/2016 14:38:06: ##############################################################################
-04/15/2016 14:38:06: #                                                                            #
-04/15/2016 14:38:06: # Action "train"                                                             #
-04/15/2016 14:38:06: #                                                                            #
-04/15/2016 14:38:06: ##############################################################################
+05/03/2016 18:19:44: ##############################################################################
+05/03/2016 18:19:44: #                                                                            #
+05/03/2016 18:19:44: # Action "train"                                                             #
+05/03/2016 18:19:44: #                                                                            #
+05/03/2016 18:19:44: ##############################################################################
 
-04/15/2016 14:38:06: CNTKCommandTrainBegin: Train
+05/03/2016 18:19:44: CNTKCommandTrainBegin: Train
 
-04/15/2016 14:38:06: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'.
+05/03/2016 18:19:44: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'.
 
 Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
+	err = ErrorPrediction()
 	out = Pass()
 	t = DynamicAxis()
-	wer = ErrorPrediction()
 
 Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
 
@@ -995,16 +1102,7 @@ Loop[0] --> Loop_l2.lstm.lstmState._privateInnards.ht -> 26 nodes
 	l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]	l2.lstm.lstmState._privateInnards.ot.z	l2.lstm.lstmState._privateInnards.ot
 	l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]	l2.lstm.lstmState._privateInnards.ht
 
-Validating network. 70 nodes to process in pass 1.
-
-
-Validating network. 48 nodes to process in pass 2.
-
-
-Validating network. 9 nodes to process in pass 3.
-
-
-Validating network, final pass.
+Validating network. 71 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [5 x *]
 Validating --> l3.z.W = LearnableParameter() :  -> [5 x 25]
@@ -1017,92 +1115,213 @@ Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].Pl
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25 x 1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [25]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 50]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], l1.lookup) : [25 x 50], [50 x t1] -> [25 x t1]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [25 x 25]
 Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [25]
-Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x 1 x t1], [25] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25 x 1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x 1 x t1], [25 x 1 x t1] -> [25 x 1 x t1]
-Validating --> l2.result.selected.input.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x 1 x t1] -> [1 x 1 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z = Plus (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft = Sigmoid (l2.lstm.lstmState._privateInnards.ft.z) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bft = ElementTimes (l2.lstm.lstmState._privateInnards.ft, l2.lstm.prevState.c) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.it.z = Plus (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it = Sigmoid (l2.lstm.lstmState._privateInnards.it.z) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25], [25] -> [25]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit = ElementTimes (l2.lstm.lstmState._privateInnards.it, l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1]) : [25 x t1], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ct = Plus (l2.lstm.lstmState._privateInnards.bft, l2.lstm.lstmState._privateInnards.bit) : [25 x t1], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.lstmState._privateInnards.ct) : [25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z = Plus (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0], l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1]) : [25 x t1], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot = Sigmoid (l2.lstm.lstmState._privateInnards.ot.z) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (l2.lstm.lstmState._privateInnards.ct) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ht = ElementTimes (l2.lstm.lstmState._privateInnards.ot, l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1]) : [25 x t1], [25 x t1] -> [25 x t1]
+Validating --> l2.result.selected.input.z.ElementTimesArgs[0] = Slice (l2.lstm.lstmState._privateInnards.ht) : [25 x t1] -> [1 x t1]
 Validating --> BS.Constants.Zero = LearnableParameter() :  -> [1]
-Validating --> l2.result.selected.input = ElementTimes (l2.result.selected.input.ElementTimesArgs[0], BS.Constants.Zero) : [1 x 1 x t1], [1] -> [1 x 1 x t1]
-Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x 1 x t1] -> [1 x 1 x t1]
-Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x 1 x t1] -> [1 x WhereNodeAxis]
-Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x 1 x t1], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
-Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x 1 x t1] -> [25 x 1 x WhereNodeAxis]
-Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
+Validating --> l2.result.selected.input.z = ElementTimes (l2.result.selected.input.z.ElementTimesArgs[0], BS.Constants.Zero) : [1 x t1], [1] -> [1 x t1]
+Validating --> l2.result.selected.input = SumColumnElements (l2.result.selected.input.z) : [1 x t1] -> [1 x t1]
+Validating --> l2.result.selected = FutureValue (l2.result.selected.input) : [1 x t1] -> [1 x t1]
+Validating --> l2.result.out.indexSequence.indexSequence = Where (l2.result.selected) : [1 x t1] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out.indexSequence = PackedIndex (l2.lstm.lstmState._privateInnards.ht, l2.result.out.indexSequence.indexSequence) : [25 x t1], [1 x WhereNodeAxis] -> [1 x WhereNodeAxis]
+Validating --> l2.result.out = GatherPacked (l2.result.out.indexSequence, l2.lstm.lstmState._privateInnards.ht) : [1 x WhereNodeAxis], [25 x t1] -> [25 x WhereNodeAxis]
+Validating --> l3.z.z.PlusArgs[0] = Times (l3.z.W, l2.result.out) : [5 x 25], [25 x WhereNodeAxis] -> [5 x WhereNodeAxis]
 Validating --> l3.z.B = LearnableParameter() :  -> [5 x 1]
-Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x 1 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
+Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x WhereNodeAxis], [5 x 1] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
 Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t1]
-Validating --> wer = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+
+Validating network. 49 nodes to process in pass 2.
+
+Validating --> l2.lstm.prevState.h = PastValue (l2.lstm.lstmState._privateInnards.ht) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.prevState.c = PastValue (l2.lstm.lstmState._privateInnards.ct) : [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] = Times (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] = ElementTimes (l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0], l2.lstm.prevState.c) : [25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], l2.lstm.prevState.h) : [25 x 25], [25 x t1] -> [25 x t1]
+Validating --> l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [25 x t1], [25] -> [25 x t1]
+
+Validating network. 9 nodes to process in pass 3.
 
 
-68 out of 70 nodes do not share the minibatch layout with the input data.
+Validating network, final pass.
+
+
+
+69 out of 71 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-04/15/2016 14:38:06: Loaded model with 70 nodes on CPU.
+05/03/2016 18:19:44: Loaded model with 71 nodes on CPU.
 
-04/15/2016 14:38:06: Training criterion node(s):
-04/15/2016 14:38:06: 	ce = CrossEntropyWithSoftmax
+05/03/2016 18:19:44: Training criterion node(s):
+05/03/2016 18:19:44: 	ce = CrossEntropyWithSoftmax
 
-04/15/2016 14:38:06: Evaluation criterion node(s):
+05/03/2016 18:19:44: Evaluation criterion node(s):
 
-04/15/2016 14:38:06: 	wer = ErrorPrediction
+05/03/2016 18:19:44: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
-04/15/2016 14:38:06: No PreCompute nodes found, skipping PreCompute step.
-04/15/2016 14:38:06: Warning: checkpoint file is missing. learning parameters will be initialized from 0
 
-04/15/2016 14:38:06: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+Memory Sharing Structure:
 
-04/15/2016 14:38:06: Starting minibatch loop.
-04/15/2016 14:38:09: Finished Epoch[ 5 of 5]: [Training Set] TrainLossPerSample = 1.3416439; TotalSamplesSeen = 1247; EvalErrPerSample = 0.44667202; AvgLearningRatePerSample = 0.00050000002; EpochTime=2.70672
-04/15/2016 14:38:09: SGD: Saving checkpoint model '/tmp/cntk-test-20160415143800.113714/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
-04/15/2016 14:38:09: CNTKCommandTrainEnd: Train
+(nil): {[BS.Constants.Zero Gradient[1]] [err Gradient[1]] [features Gradient[1 x t1]] [l1.embedding Gradient[50 x 2000]] [l1.embedding.x Gradient[2000 x 50]] [l1.lookup Gradient[50 x t1]] [labels Gradient[5 x *]] [out Gradient[5 x 1 x WhereNodeAxis]] [t Gradient[1 x 1 x t1]] [t Value[1 x 1 x t1]] }
+0x17a1538: {[BS.Constants.Zero Value[1]] }
+0x17a46d8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] Value[25 x 25]] }
+0x17a56e8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] Value[25]] }
+0x17a8268: {[features Value[1 x t1]] }
+0x17a9218: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x17a9788: {[l1.embedding.x Value[2000 x 50]] }
+0x1935d78: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x19368f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x19372f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x1937a98: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x193b6b8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x193c238: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x193cc38: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x193d3d8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x19408d8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Value[25 x 50]] }
+0x1941458: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Value[25]] }
+0x1941e58: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Value[25 x 25]] }
+0x19425f8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] Value[25]] }
+0x1944328: {[l2.lstm.prevState.c Value[25 x t1]] }
+0x19456e8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] [l2.lstm.prevState.h Value[25 x t1]] }
+0x1946628: {[l2.lstm.lstmState._privateInnards.ot.z Gradient[25 x t1]] [l2.result.selected Value[1 x t1]] [l2.result.selected.input.z Gradient[1 x t1]] }
+0x19476b8: {[l3.z.B Value[5 x 1]] }
+0x1947a78: {[l3.z.W Value[5 x 25]] }
+0x1947bd8: {[labels Value[5 x *]] }
+0x194fbf8: {[out Value[5 x 1 x WhereNodeAxis]] }
+0x194fdb8: {[ce Value[1]] }
+0x1950318: {[l1.embedding Value[50 x 2000]] }
+0x19507f8: {[err Value[1]] }
+0x1955b48: {[l1.lookup Value[50 x t1]] }
+0x1955c18: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t1]] }
+0x19568f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] }
+0x1957028: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1957448: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1957608: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] }
+0x19577c8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] Gradient[25 x 50]] }
+0x1957988: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] Value[25 x t1]] [l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] }
+0x1958338: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] Value[25 x t1]] }
+0x19584f8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] Value[25 x t1]] }
+0x19586b8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] Value[25 x t1]] }
+0x1958878: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] Value[25 x t1]] }
+0x1958a38: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] Value[25 x t1]] }
+0x1958bf8: {[l2.lstm.lstmState._privateInnards.ft.z Value[25 x t1]] }
+0x1958db8: {[l2.lstm.lstmState._privateInnards.ft Value[25 x t1]] }
+0x1958f78: {[l2.lstm.lstmState._privateInnards.bft Value[25 x t1]] }
+0x1959138: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] Value[25 x t1]] }
+0x19592f8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] Value[25 x t1]] }
+0x19594b8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] Value[25 x t1]] }
+0x1959678: {[l2.lstm.lstmState._privateInnards.it.z Value[25 x t1]] }
+0x1959838: {[l2.lstm.lstmState._privateInnards.it Value[25 x t1]] }
+0x19599f8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] Value[25 x t1]] }
+0x1959bb8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] Value[25 x t1]] }
+0x1959d78: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z Value[25 x t1]] }
+0x1959f38: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] Value[25 x t1]] }
+0x195a0f8: {[l2.lstm.lstmState._privateInnards.bit Value[25 x t1]] }
+0x195a2b8: {[l2.lstm.lstmState._privateInnards.ct Value[25 x t1]] }
+0x195a478: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] Value[25 x t1]] }
+0x195a638: {[l2.lstm.lstmState._privateInnards.ot.z Value[25 x t1]] }
+0x195a7f8: {[l2.lstm.lstmState._privateInnards.ot Value[25 x t1]] }
+0x195a9b8: {[l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] Value[25 x t1]] }
+0x195ab78: {[l2.lstm.lstmState._privateInnards.ht Value[25 x t1]] }
+0x195ad38: {[l2.lstm.lstmState._privateInnards.ot Gradient[25 x t1]] [l2.result.selected.input.z.ElementTimesArgs[0] Value[1 x t1]] }
+0x195aef8: {[l2.lstm.lstmState._privateInnards.ct Gradient[25 x t1]] [l2.result.selected.input.z Value[1 x t1]] }
+0x195b0b8: {[l2.lstm.lstmState._privateInnards.ht.ElementTimesArgs[1] Gradient[25 x t1]] [l2.result.selected.input Value[1 x t1]] [l2.result.selected.input.z.ElementTimesArgs[0] Gradient[1 x t1]] }
+0x195b278: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0] Gradient[25 x t1]] [l2.result.out.indexSequence.indexSequence Value[1 x WhereNodeAxis]] [l2.result.selected.input Gradient[1 x t1]] }
+0x195b438: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1] Gradient[25 x t1]] [l2.result.out.indexSequence Value[1 x WhereNodeAxis]] [l2.result.selected Gradient[1 x t1]] }
+0x195b5f8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] [l2.result.out Value[25 x WhereNodeAxis]] [l2.result.out.indexSequence.indexSequence Gradient[1 x WhereNodeAxis]] }
+0x195b7b8: {[l2.lstm.lstmState._privateInnards.bft Gradient[25 x t1]] [l2.result.out.indexSequence Gradient[1 x WhereNodeAxis]] [l3.z.z.PlusArgs[0] Value[5 x WhereNodeAxis]] }
+0x195b978: {[l3.z.W Gradient[5 x 25]] [l3.z.z Value[5 x 1 x WhereNodeAxis]] }
+0x195bb38: {[l2.lstm.lstmState._privateInnards.ht Gradient[25 x t1]] [l3.act Value[5 x 1 x WhereNodeAxis]] [l3.z.z.PlusArgs[0] Gradient[5 x WhereNodeAxis]] }
+0x195bcf8: {[l2.lstm.lstmState._privateInnards.bit Gradient[25 x t1]] [l2.result.out Gradient[25 x WhereNodeAxis]] [l3.z.z Gradient[5 x 1 x WhereNodeAxis]] [l3p Value[5 x 1 x *]] }
+0x195c778: {[ce Gradient[1]] }
+0x195c938: {[l2.lstm.lstmState._privateInnards.it Gradient[25 x t1]] [l3p Gradient[5 x 1 x *]] }
+0x195caf8: {[l3.act Gradient[5 x 1 x WhereNodeAxis]] [l3.z.B Gradient[5 x 1]] }
+0x195ce58: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1] Gradient[25 x t1]] }
+0x195cfb8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z Gradient[25 x t1]] }
+0x195d178: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] Gradient[25 x t1]] [l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0].PlusArgs[1] Gradient[25]] }
+0x195d338: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] Gradient[25 x t1]] }
+0x195d4f8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] Gradient[25 x t1]] }
+0x195d6b8: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] Gradient[25]] }
+0x195d878: {[l2.lstm.lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] Gradient[25 x 25]] }
+0x195da38: {[l2.lstm.prevState.h Gradient[25 x t1]] }
+0x195dbf8: {[l2.lstm.lstmState._privateInnards.it.z Gradient[25 x t1]] }
+0x195ddb8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0] Gradient[25 x t1]] }
+0x195df78: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1] Gradient[25 x t1]] }
+0x195e138: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] }
+0x195e2f8: {[l2.lstm.prevState.c Gradient[25 x t1]] }
+0x195e4b8: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] }
+0x195e678: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t1]] }
+0x195e838: {[l2.lstm.lstmState._privateInnards.it.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
+0x195e9f8: {[l2.lstm.lstmState._privateInnards.ft Gradient[25 x t1]] }
+0x195ebb8: {[l2.lstm.lstmState._privateInnards.ft.z Gradient[25 x t1]] }
+0x195ed78: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0] Gradient[25 x t1]] }
+0x195ef38: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1] Gradient[25 x t1]] }
+0x195f0f8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[1].ElementTimesArgs[0] Gradient[25]] }
+0x195f2b8: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] }
+0x195f478: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t1]] }
+0x195f638: {[l2.lstm.lstmState._privateInnards.ft.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
+0x195f7f8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[0] Gradient[25 x t1]] }
+0x195f9b8: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1] Gradient[25 x t1]] }
+0x195fb78: {[l2.lstm.lstmState._privateInnards.ot.z.PlusArgs[0].PlusArgs[1].TimesArgs[0] Gradient[25 x 25]] }
 
-04/15/2016 14:38:09: Action "train" complete.
+05/03/2016 18:19:44: No PreCompute nodes found, skipping PreCompute step.
 
-04/15/2016 14:38:09: __COMPLETED__
+05/03/2016 18:19:44: Starting Epoch 5: learning rate per sample = 0.000500  effective momentum = 0.900000  momentum as time constant = 1898.2 samples
+
+05/03/2016 18:19:44: Starting minibatch loop.
+05/03/2016 18:19:45: Finished Epoch[ 5 of 5]: [Training] ce = 1.33139241 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.694169s
+05/03/2016 18:19:45: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Text_SequenceClassification@release_cpu/Models/seqcla.dnn'
+05/03/2016 18:19:45: CNTKCommandTrainEnd: Train
+
+05/03/2016 18:19:45: Action "train" complete.
+
+05/03/2016 18:19:45: __COMPLETED__

@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "DataDeserializer.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "UtteranceDescription.h"
@@ -29,17 +31,26 @@ class HTKChunkDescription
     std::vector<size_t> m_firstFrames;
 
     // Total number of frames in this chunk
-    size_t m_totalFrames;
+    size_t m_totalFrames = 0;
+
+    // Chunk id.
+    ChunkIdType m_chunkId;
 
 public:
-    HTKChunkDescription() : m_totalFrames(0)
-    {
-    }
+
+    HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
+
+    HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
     size_t GetNumberOfUtterances() const
     {
         return m_utterances.size();
+    }
+
+    ChunkIdType GetChunkId() const
+    {
+        return m_chunkId;
     }
 
     // Adds an utterance to the chunk.
@@ -67,16 +78,22 @@ public:
         return &m_utterances[index];
     }
 
+    // Get start frame index inside chunk.
+    size_t GetStartFrameIndexInsideChunk(size_t index) const
+    {
+        return m_firstFrames[index];
+    }
+
     // Get utterance by the absolute frame index in chunk.
     // Uses the upper bound to do the binary search among sequences of the chunk.
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
         auto result = std::upper_bound(
-            m_utterances.begin(),
-            m_utterances.end(),
-            frameIndex, 
-            [](size_t fi, const UtteranceDescription& a) { return fi < a.GetStartFrameIndexInsideChunk(); });
-        return result - 1 - m_utterances.begin();
+            m_firstFrames.begin(),
+            m_firstFrames.end(),
+            frameIndex,
+            [](size_t fi, const size_t& a) { return fi < a; });
+        return result - 1 - m_firstFrames.begin();
     }
 
     // Returns all frames of a given utterance.
@@ -124,18 +141,23 @@ public:
 
             if (verbosity)
             {
-                fprintf(stderr, "RequireData: %d utterances read\n", (int)m_utterances.size());
+                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                        m_chunkId,
+                        m_utterances.size(),
+                        m_totalFrames,
+                        sizeof(float) * m_frames.rows() * m_frames.cols());
             }
         }
         catch (...)
         {
-            ReleaseData();
+            // Releasing all data
+            m_frames.resize(0, 0);
             throw;
         }
     }
 
     // Pages-out data for this chunk.
-    void ReleaseData() const
+    void ReleaseData(int verbosity = 0) const
     {
         if (GetNumberOfUtterances() == 0)
         {
@@ -145,6 +167,15 @@ public:
         if (!IsInRam())
         {
             LogicError("Cannot page-out data that is not memory.");
+        }
+
+        if (verbosity)
+        {
+            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                    m_chunkId,
+                    m_utterances.size(),
+                    m_totalFrames,
+                    sizeof(float) * m_frames.rows() * m_frames.cols());
         }
 
         // release frames

@@ -324,7 +324,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
-    m_verbosity = readerConfig(L"verbosity", 2);
+    m_verbosity = readerConfig(L"verbosity", 0);
 
     if (m_frameMode && m_truncated)
     {
@@ -599,7 +599,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 }
 
 // Load all input and output data.
-// Note that the terms features imply be real-valued quanities and
+// Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
 // are inputs or targets for the network
 // TODO: lots of code dup with the other Prepare function
@@ -1947,7 +1947,7 @@ void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 }
 
 template <class ElemType>
-size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
+size_t HTKMLFReader<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     if (!m_frameMode)
         if (m_numSeqsPerMB != m_pMBLayout->GetNumParallelSequences())

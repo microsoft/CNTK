@@ -17,7 +17,6 @@
 #include "latticestorage.h"
 #include "simple_checked_arrays.h"
 #include "fileutil.h"
-#include <stdint.h>
 #include <vector>
 #include <string>
 #include <unordered_map>

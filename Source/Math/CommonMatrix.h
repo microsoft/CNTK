@@ -73,29 +73,30 @@ private:
 enum ElementWiseOperator
 {
     // nullary
-    opConstOne,
+    opConstOne, opNone,
     // unary (or binary with constant parameter)
     opCopy,
-    opNegate, opNot, opAbs, opReciprocal,
+    opNegate, opNot, opAbs, opFloor, opReciprocal,
     opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
     // binary
-    opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
+    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
     opMax, opMin,
-    opLT, opEQ, opGT, opGE, opNE, opLE, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
+    opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
-    opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative, 
+    opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     // binary ops for indexing
     // opIndex,
     // ternary
     opCond /*a ? b : c*/,
     opClip, /*clip a within interval b..c*/
-    opElementwiseProductWithLogSumDerivative
+    opElementwiseProductWithLogSumDerivative,
+    opCopyIfEqual
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -108,6 +109,7 @@ enum ElementWiseOperator
     Macro(Negate);            \
     Macro(Not);               \
     Macro(Abs);               \
+    Macro(Floor);             \
     Macro(Reciprocal);        \
     Macro(Sigmoid);           \
     Macro(Tanh);              \
@@ -120,6 +122,8 @@ enum ElementWiseOperator
     Macro(Sin);
 
 #define ForAllBinaryOps(Macro)                                        \
+    Macro(CopyIf);                                                    \
+    Macro(CopyIfNot);                                                 \
     Macro(Sum);                                                       \
     Macro(Difference);                                                \
     Macro(ElementwiseProduct);                                        \
@@ -127,12 +131,12 @@ enum ElementWiseOperator
     Macro(LogSum);                                                    \
     Macro(Max);                                                       \
     Macro(Min);                                                       \
-    Macro(EQ);                                                        \
-    Macro(NE);                                                        \
-    Macro(GT);                                                        \
-    Macro(LT);                                                        \
-    Macro(GE);                                                        \
-    Macro(LE);                                                        \
+    Macro(Equal);                                                     \
+    Macro(NotEqual);                                                  \
+    Macro(Greater);                                                   \
+    Macro(Less);                                                      \
+    Macro(GreaterEqual);                                              \
+    Macro(LessEqual);                                                 \
     Macro(And);                                                       \
     Macro(Or);                                                        \
     Macro(Xor);                                                       \
@@ -149,10 +153,11 @@ enum ElementWiseOperator
     Macro(SqrOfDifference);                                           \
     //Macro(Index);
 
-#define ForAllTernaryOps(Macro)                    \
-    Macro(Cond);                                   \
-    Macro(Clip);                                   \
-    Macro(ElementwiseProductWithLogSumDerivative);
+#define ForAllTernaryOps(Macro)                         \
+    Macro(Cond);                                        \
+    Macro(CopyIfEqual);                                 \
+    Macro(Clip);                                        \
+    Macro(ElementwiseProductWithLogSumDerivative);      
 
 // -----------------------------------------------------------------------
 // various enums to describe

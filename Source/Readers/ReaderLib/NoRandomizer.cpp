@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences)
     : m_deserializer(deserializer),
       m_samplePositionInEpoch(0),
-      m_currentChunkPosition(SIZE_MAX),
+      m_currentChunkPosition(CHUNKID_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
       m_currentSequencePositionInChunk(0),
@@ -42,14 +42,10 @@ NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreaded
     m_totalNumberOfSamples = sampleCount;
 }
 
-void NoRandomizer::Initialize(TransformerPtr, const ConfigParameters&)
-{
-}
-
-size_t NoRandomizer::GetChunkIndexOf(size_t samplePosition)
+ChunkIdType NoRandomizer::GetChunkIndexOf(size_t samplePosition)
 {
     auto result = std::upper_bound(m_chunkSampleOffset.begin(), m_chunkSampleOffset.end(), samplePosition);
-    return result - 1 - m_chunkSampleOffset.begin();
+    return (ChunkIdType) (result - 1 - m_chunkSampleOffset.begin());
 }
 
 void NoRandomizer::StartEpoch(const EpochConfiguration& config)
@@ -65,11 +61,11 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     m_globalSamplePosition = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
     size_t sweepSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
 
-    size_t chunkIndex = GetChunkIndexOf(sweepSamplePosition);
+    ChunkIdType chunkIndex = GetChunkIndexOf(sweepSamplePosition);
     if (chunkIndex != m_currentChunkPosition)
     {
         // unloading everything.
-        m_currentChunkId = SIZE_MAX;
+        m_currentChunkId = CHUNKID_MAX;
         m_currentChunk = nullptr;
 
         // Need to load descriptions for the new current chunk.
@@ -175,7 +171,7 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(subsetSize));
 
     // Collect all the chunks that we need
-    std::map<size_t, ChunkPtr> chunks;
+    std::map<ChunkIdType, ChunkPtr> chunks;
 
     if (m_currentChunk != nullptr)
     {

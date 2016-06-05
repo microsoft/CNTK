@@ -10,31 +10,16 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\Eval.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="UCIFastReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ReaderLibTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -60,6 +45,12 @@
     </Filter>
     <Filter Include="Config\CNTKTextFormatReader">
       <UniqueIdentifier>{c5c622b9-b6c3-4209-bf37-294862c64a06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Linked Source">
+      <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Config\ExperimentalHTKMLF">
+      <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -252,6 +243,78 @@
     <Text Include="Control\ImageReaderMultiView_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader\missing_trailing_newline.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\missing_trailing_newline.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\contains_blank_lines.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\space_separated.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\space_separated.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\blank_lines.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\duplicate_inputs.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\empty_samples.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\empty_samples.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\ref_data_with_escape_sequences.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\ref_data_with_escape_sequences.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\invalid_input.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\invalid_input_Control.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderColorTransform_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\ImageReaderGrayscale_map.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderGrayscale_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\ImageReaderIntensityTransform_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\100x100x3_jagged_sequences_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\200x200x2_seq2seq_dense.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\100x100x3_jagged_sequences_dense_sorted.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKTextFormatReader\200x200x2_seq2seq_dense_sorted.txt">
+      <Filter>Control\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_and_5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -267,6 +330,9 @@
       <Filter>Data\images</Filter>
     </Image>
     <Image Include="Data\images\multi.png">
+      <Filter>Data\images</Filter>
+    </Image>
+    <Image Include="Data\images\grayscale.png">
       <Filter>Data\images</Filter>
     </Image>
   </ItemGroup>
@@ -298,5 +364,58 @@
     <None Include="Config\ImageReaderMultiView_Config.cntk">
       <Filter>Config</Filter>
     </None>
+    <None Include="Config\CNTKTextFormatReader\edge_cases.cntk">
+      <Filter>Config\CNTKTextFormatReader</Filter>
+    </None>
+    <None Include="Config\ImageReaderColorTransform_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderGrayscale_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk">
+      <Filter>Config\ExperimentalHTKMLF</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Data\ImageNet1K_intensity.xml">
+      <Filter>Data</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

@@ -33,6 +33,14 @@ ref class CNTKException;
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 
+/// Enumeration for the types of nodes
+public enum class NodeGroup
+{
+    nodeInput,  // an input node
+    nodeOutput, // an output node
+    nodeSpecified
+};
+
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
 public ref class IEvaluateModelManaged : IDisposable
@@ -88,7 +96,7 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     void CreateNetwork(String^ networkDescription)
     {
@@ -110,11 +118,55 @@ public:
         }
     }
 
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("{0}\n{1}", outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="deviceId">The device ID to specify for the network</param>
+    void CreateNetwork(String^ networkDescription, int deviceId)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        this->CreateNetwork(networkDescription, deviceId, nullptr);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="deviceId">The device ID to specify for the network</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, int deviceId, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("deviceId={0}\n{1}\n{2}", deviceId, outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
+    }
+
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
     /// <param name="outputKey"></param>
     /// <param name="outputSize"></param>
     /// <returns>Results for specified layer</returns>
-    List<ElemType>^ Evaluate(String^ outputKey, int outputSize)
+    __declspec(deprecated) List<ElemType>^ Evaluate(String^ outputKey, int outputSize)
     {
         if (m_eval == nullptr)
         {
@@ -127,6 +179,75 @@ public:
         try
         {
             std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+
+            List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+            for (int i = 0; i < outputSize; i++)
+            {
+                outputs->Add(*(gcnew ElemType));
+            }
+
+            Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+            outputMap->Add(outputKey, outputs);
+
+            for each (auto item in outputMap)
+            {
+                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+                sharedOutputVectors.push_back(ptr);
+                stdOutputs.insert(MapEntry(key, ptr.get()));
+            }
+
+            try
+            {
+                m_eval->Evaluate(stdOutputs);
+            }
+            catch (const exception& ex)
+            {
+                throw GetCustomException(ex);
+            }
+
+            auto enumerator = outputMap->Keys->GetEnumerator();
+            for (auto& map_item : stdOutputs)
+            {
+                // Retrieve the layer key
+                enumerator.MoveNext();
+                String^ key = enumerator.Current;
+
+                std::vector<ElemType> &refVec = *(map_item.second);
+                int index = 0;
+
+                // Copy output to CLI structure
+                for (auto& vec : refVec)
+                {
+                    outputMap[key][index++] = vec;
+                }
+            }
+
+            return outputMap[outputKey];
+        }
+        catch (Exception^)
+        {
+            throw;
+        }
+    }
+
+    /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
+    /// <param name="outputKey"></param>
+    /// <param name="outputSize"></param>
+    /// <returns>Results for specified layer</returns>
+    List<ElemType>^ Evaluate(String^ outputKey)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
+
+        try
+        {
+            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+            int outputSize = GetNodeDimensions(NodeGroup::nodeOutput)[outputKey];
 
             List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
             for (int i = 0; i < outputSize; i++)
@@ -250,7 +371,7 @@ public:
     /// <param name="outputKey"></param>
     /// <param name="outputSize"></param>
     /// <returns>Results for specified layer</returns>
-    List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
+    __declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
     {
         List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
         for (int i = 0; i < outputSize; i++)
@@ -264,6 +385,63 @@ public:
         Evaluate(inputs, outputMap);
 
         return outputMap[outputKey];
+    }
+
+    /// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
+    /// <param name="inputs"></param>
+    /// <param name="outputKey"></param>
+    /// <returns>Results for requested layer</returns>
+    List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey)
+    {
+        auto outDims = GetNodeDimensions(NodeGroup::nodeOutput);
+        int outputSize = outDims[outputKey];
+
+        List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+        for (int i = 0; i < outputSize; i++)
+        {
+            outputs->Add(*(gcnew ElemType));
+        }
+
+        Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+        outputMap->Add(outputKey, outputs);
+
+        Evaluate(inputs, outputMap);
+
+        return outputMap[outputKey];
+    }
+
+    /// <summary>Returns the layer(s) and associated dimensions for the specified node group
+    /// <param name="nodeGroup">The node type to query for</param>
+    /// <returns>A dictionary mapping layer names to their dimension</returns>
+    Dictionary<String^, int>^ GetNodeDimensions(NodeGroup nodeGroup)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        std::map<std::wstring, size_t> stdDims;
+
+        try
+        {
+            Microsoft::MSR::CNTK::NodeGroup gr(GetNodeGroup(nodeGroup));
+            m_eval->GetNodeDimensions(stdDims, gr);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
+
+        Dictionary<String^, int>^ dims = gcnew Dictionary<String^, int>();
+
+        for (auto& map_item : stdDims)
+        {
+            String^ key = gcnew String(map_item.first.c_str());
+            int dim = static_cast<int>(map_item.second);
+            dims->Add(key, dim);
+        }
+
+        return dims;
     }
 
     ~IEvaluateModelManaged()
@@ -334,6 +512,23 @@ private:
         else
         {
             return gcnew CNTKException(gcnew System::String(ex.what()));
+        }
+    }
+
+    /// <summary Converts a managed (CLI) enum NodeGroup to a native NodeGroup
+    /// <param name="nodeGroup">The managed (CLI) NodeGroup to convert to native</param>
+    Microsoft::MSR::CNTK::NodeGroup GetNodeGroup(NodeGroup nodeGroup)
+    {
+        switch ((int)nodeGroup)
+        {
+        case Microsoft::MSR::CNTK::NodeGroup::nodeInput:
+            return Microsoft::MSR::CNTK::NodeGroup::nodeInput;
+        case Microsoft::MSR::CNTK::NodeGroup::nodeOutput:
+            return Microsoft::MSR::CNTK::NodeGroup::nodeOutput;
+        case Microsoft::MSR::CNTK::NodeGroup::nodeSpecified:
+            return Microsoft::MSR::CNTK::NodeGroup::nodeSpecified;
+        default:
+            throw gcnew CNTKRuntimeException(String::Format("Cannot convert native NodeGroup with value: {0} to corresponding managed NodeGroup.",(int)nodeGroup), "");
         }
     }
 };
@@ -420,19 +615,39 @@ public:
 // explanation to this behavior
 void emit()
 {
+    Dictionary<String^, List<float>^>^ nullDictF = nullptr;
+    Dictionary<String^, List<double>^>^ nullDictD = nullptr;
+
     IEvaluateModelManagedF f;
     f.Init("");
-    f.Evaluate(nullptr, nullptr);
-    f.Evaluate(nullptr, "", 0);
-    f.Evaluate("", 0);
+    f.Evaluate(nullptr, nullDictF);
+    f.Evaluate(nullptr, "");
+    f.Evaluate("");
     f.CreateNetwork("");
+    f.CreateNetwork("", 0);
+    f.CreateNetwork("", nullptr);
+    f.CreateNetwork("", 0, nullptr);
+    f.GetNodeDimensions(NodeGroup::nodeSpecified);
 
     IEvaluateModelManagedD d;
     d.Init("");
-    d.Evaluate(nullptr, nullptr);
+    d.Evaluate(nullptr, nullDictD);
+    d.Evaluate(nullptr, "");
+    d.Evaluate("");
+    d.CreateNetwork("");
+    d.CreateNetwork("", 0);
+    d.CreateNetwork("", nullptr);
+    d.CreateNetwork("", 0,nullptr);
+    d.GetNodeDimensions(NodeGroup::nodeSpecified);
+
+    // Deprecated code, hush warnings locally only
+#pragma warning(push)
+#pragma warning(disable: 4996)
+    f.Evaluate(nullptr, "", 0);
+    f.Evaluate("", 0);
     d.Evaluate(nullptr, "", 0);
     d.Evaluate("", 0);
-    d.CreateNetwork("");
+#pragma warning(pop)
 }
 
 }}}}}

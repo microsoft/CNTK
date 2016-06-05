@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "Transformer.h"
+#include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
@@ -31,8 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // This class is responsible for decimation and loading the data chunks in to memory.
 // Actual randomization happens in ChunkRandomizer and SequenceRandomizer.
 // TODO: The behavior can be simplified by only randomizing sequences forward.
-// TODO: The layering will be changed, when we move transformers under the randomizer, it won't be a transformer anymore.
-class BlockRandomizer : public Transformer
+class BlockRandomizer : public SequenceEnumerator
 {
 public:
     // Currently, decimation based on sequences or chunks is supported.
@@ -49,8 +48,6 @@ public:
         DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
-
-    virtual void Initialize(TransformerPtr, const ConfigParameters&) override {};
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -114,7 +111,7 @@ private:
     std::map<size_t, ChunkPtr> m_chunks;
 
     // Last seen data chunk id.
-    size_t m_lastSeenChunkId;
+    ChunkIdType m_lastSeenChunkId;
 
     // Decimation mode.
     DecimationMode m_decimationMode;
@@ -124,6 +121,15 @@ private:
     bool m_multithreadedGetNextSequences;
 
     // General configuration
+    // TODO generalize those for ReaderLib / Reader / CNTK
+    enum VerbosityLevel
+    {
+        Warning = 0,
+        Notification = 1,
+        Information = 2,
+        Debug = 3,
+    };
+
     int m_verbosity;
 };
 

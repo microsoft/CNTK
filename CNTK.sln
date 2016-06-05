@@ -7,8 +7,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "Source\CNTK\CNTK.vc
 	ProjectSection(ProjectDependencies) = postProject
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
@@ -118,6 +121,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 		Tests\EndToEndTests\Speech\Data\glob_0000.mlf = Tests\EndToEndTests\Speech\Data\glob_0000.mlf
 		Tests\EndToEndTests\Speech\Data\glob_0000.scp = Tests\EndToEndTests\Speech\Data\glob_0000.scp
 		Tests\EndToEndTests\Speech\Data\README.txt = Tests\EndToEndTests\Speech\Data\README.txt
+		Tests\EndToEndTests\Speech\Data\SimpleDataTest_cntk_text.txt = Tests\EndToEndTests\Speech\Data\SimpleDataTest_cntk_text.txt
+		Tests\EndToEndTests\Speech\Data\SimpleDataTrain_cntk_text.txt = Tests\EndToEndTests\Speech\Data\SimpleDataTrain_cntk_text.txt
 		Tests\EndToEndTests\Speech\Data\state.list = Tests\EndToEndTests\Speech\Data\state.list
 	EndProjectSection
 EndProject
@@ -129,15 +134,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-2
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputationNetworkLib", "Source\ComputationNetworkLib\ComputationNetworkLib.vcxproj", "{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}"
-	ProjectSection(ProjectDependencies) = postProject
-		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
-		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
-	ProjectSection(ProjectDependencies) = postProject
-		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
 	ProjectSection(SolutionItems) = preProject
@@ -146,8 +144,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "Paralle
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{6D1353D6-F196-466F-B886-F16D48759B20}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain.txt = Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain.txt
-		Tests\EndToEndTests\ParallelTraining\Data\SimpleMapping.txt = Tests\EndToEndTests\ParallelTraining\Data\SimpleMapping.txt
+		Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain_cntk_text.txt = Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain_cntk_text.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NoQuantization", "NoQuantization", "{B6725C9F-A6D2-4269-9B74-7888A90F7884}"
@@ -278,14 +275,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MathTests", "Tests\UnitTests\MathTests\MathTests.vcxproj", "{4701E678-5E6F-470D-B348-9CD1A2C095D1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ActionsLib", "Source\ActionsLib\ActionsLib.vcxproj", "{EB2BE26F-6BD4-4274-971F-86D080779DD1}"
-	ProjectSection(ProjectDependencies) = postProject
-		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
-		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
-		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceTraining", "SequenceTraining", "{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD}"
 	ProjectSection(SolutionItems) = preProject
@@ -305,22 +298,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{8071EF60
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{76F9323D-34A1-43A5-A594-C4798931FF21}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Image\Data\labelsmap.txt = Tests\EndToEndTests\Image\Data\labelsmap.txt
-		Tests\EndToEndTests\Image\Data\Test.txt = Tests\EndToEndTests\Image\Data\Test.txt
-		Tests\EndToEndTests\Image\Data\Train.txt = Tests\EndToEndTests\Image\Data\Train.txt
+		Tests\EndToEndTests\Image\Data\Test_cntk_text.txt = Tests\EndToEndTests\Image\Data\Test_cntk_text.txt
+		Tests\EndToEndTests\Image\Data\Train_cntk_text.txt = Tests\EndToEndTests\Image\Data\Train_cntk_text.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{2A884EB5-037C-481E-8170-BCDC8B3EDD93}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Image\QuickE2E\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Image\QuickE2E\baseline.linux.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.linux.txt
+		Tests\EndToEndTests\Image\QuickE2E\baseline.windows.txt = Tests\EndToEndTests\Image\QuickE2E\baseline.windows.txt
 		Tests\EndToEndTests\Image\QuickE2E\cntk.cntk = Tests\EndToEndTests\Image\QuickE2E\cntk.cntk
-		Tests\EndToEndTests\Image\QuickE2E\Convolution.ndl = Tests\EndToEndTests\Image\QuickE2E\Convolution.ndl
-		Tests\EndToEndTests\Image\QuickE2E\Macros.ndl = Tests\EndToEndTests\Image\QuickE2E\Macros.ndl
+		Tests\EndToEndTests\Image\QuickE2E\README.txt = Tests\EndToEndTests\Image\QuickE2E\README.txt
 		Tests\EndToEndTests\Image\QuickE2E\run-test = Tests\EndToEndTests\Image\QuickE2E\run-test
 		Tests\EndToEndTests\Image\QuickE2E\testcases.yml = Tests\EndToEndTests\Image\QuickE2E\testcases.yml
 	EndProjectSection
@@ -338,11 +325,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{669B6203-967
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Speech\Simple\baseline.cpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.cpu.txt
-		Tests\EndToEndTests\Speech\Simple\baseline.gpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\Simple\baseline.linux.cpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Speech\Simple\baseline.linux.gpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.linux.gpu.txt
 		Tests\EndToEndTests\Speech\Simple\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.windows.cpu.txt
 		Tests\EndToEndTests\Speech\Simple\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\Simple\baseline.windows.gpu.txt
 		Tests\EndToEndTests\Speech\Simple\cntk.cntk = Tests\EndToEndTests\Speech\Simple\cntk.cntk
+		Tests\EndToEndTests\Speech\Simple\README.txt = Tests\EndToEndTests\Speech\Simple\README.txt
 		Tests\EndToEndTests\Speech\Simple\run-test = Tests\EndToEndTests\Speech\Simple\run-test
 		Tests\EndToEndTests\Speech\Simple\testcases.yml = Tests\EndToEndTests\Speech\Simple\testcases.yml
 	EndProjectSection
@@ -363,6 +351,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderTests", "Tests\UnitTe
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {9BD0A711-0BBD-45B6-B81C-053F03C26CFB}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
 		{7B7A51ED-AA8E-4660-A805-D50235A02120} = {7B7A51ED-AA8E-4660-A805-D50235A02120}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
@@ -373,10 +362,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalDll", "Source\EvalDll\E
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {B3DD765E-694E-4494-BAD7-37BBF2942517}
 	EndProjectSection
 EndProject
@@ -385,46 +377,49 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibSVMBinaryReader", "Source\Readers\LibSVMBinaryReader\LibSVMBinaryReader.vcxproj", "{D667AF32-028A-4A5D-BE19-F46776F0F6B2}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BinaryReader", "Source\Readers\BinaryReader\BinaryReader.vcxproj", "{1D5787D4-52E4-45DB-951B-82F220EE0C6A}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DSSMReader", "Source\Readers\DSSMReader\DSSMReader.vcxproj", "{014DA766-B37B-4581-BC26-963EA5507931}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTKMLFReader", "Source\Readers\HTKMLFReader\HTKMLFReader.vcxproj", "{33D2FD22-DEF2-4507-A58A-368F641AEBE5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LMSequenceReader", "Source\Readers\LMSequenceReader\LMSequenceReader.vcxproj", "{9A2F2441-5972-4EA8-9215-4119FCE0FB68}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LUSequenceReader", "Source\Readers\LUSequenceReader\LUSequenceReader.vcxproj", "{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SparsePCReader", "Source\Readers\SparsePCReader\SparsePCReader.vcxproj", "{CE429AA2-3778-4619-8FD1-49BA3B81197B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIFastReader", "Source\Readers\UCIFastReader\UCIFastReader.vcxproj", "{E6646FFE-3588-4276-8A15-8D65C22711C1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalTest", "Tests\UnitTests\EvalTest\EvalTest.vcxproj", "{731312A8-6DA3-4841-AFCD-57520BA1BF8E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MathPerformanceTests", "Tests\UnitTests\MathPerformanceTests\MathPerformanceTests.vcxproj", "{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}"
@@ -651,8 +646,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{850008BC-36B0-4A0A-BD0C-B6D5C2184227}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Text\PennTreebank\Config\rnn.cntk = Examples\Text\PennTreebank\Config\rnn.cntk
-		Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk = Examples\Text\PennTreebank\Config\S2SAutoEncoder.cntk
-		Examples\Text\PennTreebank\Config\S2SLib.bs = Examples\Text\PennTreebank\Config\S2SLib.bs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{E6DC3B7D-303D-4A54-B040-D8DCF8C56E17}"
@@ -707,80 +700,59 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{439BE0E0-FABE-403D-BF2C-A41FB8A60616}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{63C6816D-66BF-487E-B541-094142C8272B}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\MNIST\run-test-common = Tests\EndToEndTests\Examples\Image\MNIST\run-test-common
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_Convolution", "02_Convolution", "{6F1D0CE1-0F18-4B4C-9581-1F2146C8D300}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\README.txt = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\README.txt
 		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\run-test
 		Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\02_Convolution\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_OneHidden", "01_OneHidden", "{A0B366FE-2EEA-4E32-9AED-12C46409C30C}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\README.txt = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\README.txt
 		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\run-test
 		Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\01_OneHidden\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_ConvBatchNorm", "03_ConvBatchNorm", "{BD783D50-47E2-485F-BDAF-29BD40D84645}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\README.txt = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\README.txt
 		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\run-test
 		Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml = Tests\EndToEndTests\Examples\Image\MNIST\03_ConvBatchNorm\testcases.yml
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderLib", "Source\Readers\ReaderLib\ReaderLib.vcxproj", "{F0A9637C-20DA-42F0-83D4-23B4704DE602}"
-	ProjectSection(ProjectDependencies) = postProject
-		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D456FA9C-A51C-48B9-87DE-0F7D8A910265}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MultiGpu", "MultiGpu", "{C86A6572-DE7A-4EBB-ADD0-A6C4906D46A3}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\README.txt = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\README.txt
 		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\run-test = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\run-test
 		Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\testcases.yml = Tests\EndToEndTests\Examples\Other\Simple2d\MultiGpu\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{E330CA6B-5954-4EBA-9C64-6058494E338A}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.release.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.debug.gpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.cpu.txt
-		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.release.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.cpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.gpu.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\README.txt = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\README.txt
 		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\run-test = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\run-test
 		Tests\EndToEndTests\Examples\Other\Simple2d\Simple\testcases.yml = Tests\EndToEndTests\Examples\Other\Simple2d\Simple\testcases.yml
 	EndProjectSection
@@ -829,18 +801,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{B72C5B0E-38E
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKTextFormatReader", "Source\Readers\CNTKTextFormatReader\CNTKTextFormatReader.vcxproj", "{91973E60-A7BE-4C86-8FDB-59C88A0B3715}"
 	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExperimentalHTKMLFReader", "Source\Readers\ExperimentalHTKMLFReader\ExperimentalHTKMLFReader.vcxproj", "{7B7A51ED-AA8E-4660-A805-D50235A02120}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageReader", "Source\Readers\ImageReader\ImageReader.vcxproj", "{9BD0A711-0BBD-45B6-B81C-053F03C26CFB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
@@ -883,23 +858,37 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetworkTests", "Tests\UnitT
 	ProjectSection(ProjectDependencies) = postProject
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {EB2BE26F-6BD4-4274-971F-86D080779DD1}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{8656B71D-E24C-4AC2-8BE4-C07B415A3E15}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceClassification", "SequenceClassification", "{E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.cpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.gpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.cpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.gpu.txt = Tests\EndToEndTests\Text\SequenceClassification\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Text\SequenceClassification\run-test = Tests\EndToEndTests\Text\SequenceClassification\run-test
+		Tests\EndToEndTests\Text\SequenceClassification\testcases.yml = Tests\EndToEndTests\Text\SequenceClassification\testcases.yml
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{8629430A-821E-43BA-AEC5-8B2CF31A2A7A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{0141526B-F257-4574-8CBE-99634726FFCE}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\run-test-common = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\run-test-common
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_Convolution", "01_Convolution", "{58286327-6742-44C4-A34E-D2583419E55E}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.cpu.txt
-		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.linux.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\README.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\README.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\run-test
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\01_Convolution\testcases.yml
 	EndProjectSection
@@ -908,6 +897,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_BatchNormConv", "02_Batc
 	ProjectSection(SolutionItems) = preProject
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.linux.gpu.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\README.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\README.txt
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\run-test
 		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv\testcases.yml
 	EndProjectSection
@@ -969,6 +959,166 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{181664AC-4C9
 		Tests\EndToEndTests\Text\SLU\rnnlu.ndl.cntk = Tests\EndToEndTests\Text\SLU\rnnlu.ndl.cntk
 		Tests\EndToEndTests\Text\SLU\run-test = Tests\EndToEndTests\Text\SLU\run-test
 		Tests\EndToEndTests\Text\SLU\testcases.yml = Tests\EndToEndTests\Text\SLU\testcases.yml
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Source\Common\Common.vcxproj", "{86883653-8A61-4038-81A0-2379FAE4200A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CompositeDataReader", "Source\Readers\CompositeDataReader\CompositeDataReader.vcxproj", "{7B7A563D-AA8E-4660-A805-D50235A02120}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SparseDSSM", "SparseDSSM", "{1FB54750-B668-4AC3-966F-ED504020AC06}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.cpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.cpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.gpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.gpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.cpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.gpu.txt = Tests\EndToEndTests\Text\SparseDSSM\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Text\SparseDSSM\dssm.cntk = Tests\EndToEndTests\Text\SparseDSSM\dssm.cntk
+		Tests\EndToEndTests\Text\SparseDSSM\dssm.ndl = Tests\EndToEndTests\Text\SparseDSSM\dssm.ndl
+		Tests\EndToEndTests\Text\SparseDSSM\run-test = Tests\EndToEndTests\Text\SparseDSSM\run-test
+		Tests\EndToEndTests\Text\SparseDSSM\testcases.yml = Tests\EndToEndTests\Text\SparseDSSM\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WriteCommand", "WriteCommand", "{3E9BD61F-1F0A-4966-BE17-803AEFD1DFA4}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.cpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.cpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.gpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.gpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.cpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.cpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.gpu.txt = tests\endtoendtests\Speech\DNN\WriteCommand\baseline.windows.gpu.txt
+		tests\endtoendtests\Speech\DNN\WriteCommand\cntk.cntk = tests\endtoendtests\Speech\DNN\WriteCommand\cntk.cntk
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.cpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.cpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.gpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.gpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.cpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.cpu
+		tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.gpu = tests\endtoendtests\Speech\DNN\WriteCommand\Output.ScaledLogLikelihood.windows.gpu
+		Tests\endtoendtests\Speech\DNN\WriteCommand\run-test = Tests\endtoendtests\Speech\DNN\WriteCommand\run-test
+		tests\endtoendtests\Speech\DNN\WriteCommand\testcases.yml = tests\endtoendtests\Speech\DNN\WriteCommand\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelBufferedAsyncGradientAggregation", "ParallelBufferedAsyncGradientAggregation", "{5560DDD4-1E6E-4F41-B9BD-F52A19DF0B31}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\baseline.windows.gpu.txt
+		Tests\endtoendtests\Speech\DNN\ParallelBufferedAsyncGradientAggregation\run-test = Tests\endtoendtests\Speech\DNN\ParallelBufferedAsyncGradientAggregation\run-test
+		tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelBufferedAsyncGradientAggregation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelCrossValidation", "ParallelCrossValidation", "{9834E864-A8CD-4D28-A3C9-F79FE0F421AE}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelCrossValidation\baseline.windows.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\cntkcv.cntk = tests\endtoendtests\speech\dnn\ParallelCrossValidation\cntkcv.cntk
+		Tests\endtoendtests\Speech\DNN\ParallelCrossValidation\run-test = Tests\endtoendtests\Speech\DNN\ParallelCrossValidation\run-test
+		tests\endtoendtests\speech\dnn\ParallelCrossValidation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelCrossValidation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelNoQuantizationBufferedAsyncGradientAggregation", "ParallelNoQuantizationBufferedAsyncGradientAggregation", "{40F65441-A7B7-4425-8E75-CD74AB262F3F}"
+	ProjectSection(SolutionItems) = preProject
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.cpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.gpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.gpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.cpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.cpu.txt
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.gpu.txt = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\baseline.windows.gpu.txt
+		Tests\endtoendtests\Speech\DNN\ParallelNoQuantizationBufferedAsyncGradientAggregation\run-test = Tests\endtoendtests\Speech\DNN\ParallelNoQuantizationBufferedAsyncGradientAggregation\run-test
+		tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\testcases.yml = tests\endtoendtests\speech\dnn\ParallelNoQuantizationBufferedAsyncGradientAggregation\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PlotDNN", "PlotDNN", "{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\endtoendtests\Speech\DNN\PlotDNN\baseline.txt = Tests\endtoendtests\Speech\DNN\PlotDNN\baseline.txt
+		tests\endtoendtests\speech\dnn\PlotDNN\cntkSpeech.dnn.dot = tests\endtoendtests\speech\dnn\PlotDNN\cntkSpeech.dnn.dot
+		tests\endtoendtests\speech\dnn\PlotDNN\plot.cntk = tests\endtoendtests\speech\dnn\PlotDNN\plot.cntk
+		Tests\endtoendtests\Speech\DNN\PlotDNN\run-test = Tests\endtoendtests\Speech\DNN\PlotDNN\run-test
+		tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml = tests\endtoendtests\speech\dnn\PlotDNN\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelBM", "ParallelBM", "{36C42845-0D48-4A46-9C67-2B593A80A09C}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.cpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.gpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.linux.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\ParallelBM\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\cntk.cntk = Tests\EndToEndTests\Speech\DNN\ParallelBM\cntk.cntk
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\run-test = Tests\EndToEndTests\Speech\DNN\ParallelBM\run-test
+		Tests\EndToEndTests\Speech\DNN\ParallelBM\testcases.yml = Tests\EndToEndTests\Speech\DNN\ParallelBM\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceToSequence", "SequenceToSequence", "{A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Source\Extensibility\CPPEvalClient\CPPEvalClient.vcxproj", "{578D52A0-3928-4405-A016-F016E8B49031}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExperimentalHtkmlfReader", "ExperimentalHtkmlfReader", "{977ECCB7-598D-4548-B95B-BACA9CC7D98B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNN", "DNN", "{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{772A0DB3-4710-4281-8AA9-A9F1F7C543D3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{FE3592CF-3EB9-4502-BB95-E2AB974C0FB5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{BA6A65C5-92A2-4040-ADC3-0727A45694F6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUtterance", "{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test
+		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{1141DC61-E014-4DEC-9157-F6B1FC055C7A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CMUDict", "CMUDict", "{EC7298E3-AAA9-4672-941F-0B342C494CB3}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\README.md = Examples\SequenceToSequence\CMUDict\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{ECED747C-86D7-4009-B2A9-0525FE5DF4EB}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\Config\G2P.cntk = Examples\SequenceToSequence\CMUDict\Config\G2P.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{25E144C1-0B7C-4CD4-811A-2E9F4943120D}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.test.txt
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21 = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-1-21.txt
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21 = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21
+		Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21.txt = Examples\SequenceToSequence\CMUDict\Data\cmudict-0.7b.train-dev-20-21.txt
+		Examples\SequenceToSequence\CMUDict\Data\README.txt = Examples\SequenceToSequence\CMUDict\Data\README.txt
+		Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md = Examples\SequenceToSequence\CMUDict\Data\ThirdPartyNotice.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "05_ConvLocal", "05_ConvLocal", "{3F77BF79-E0D3-4D60-8685-5A449F164081}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.linux.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.windows.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\README.txt = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\README.txt
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\run-test = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\run-test
+		Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\testcases.yml = Tests\EndToEndTests\Examples\Image\Miscellaneous\CIFAR-10\05_ConvLocal\testcases.yml
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalTests", "Tests\UnitTests\EvalTests\EvalTests.vcxproj", "{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CommandEval", "Tests\UnitTests\CommandEval\CommandEval.vcxproj", "{731312A8-6DA3-4841-AFCD-57520BA1BF8E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
 Global
@@ -1121,14 +1271,6 @@ Global
 		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.ActiveCfg = Release|x64
 		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.Build.0 = Release|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug|x64.ActiveCfg = Debug|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug|x64.Build.0 = Debug|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.ActiveCfg = Release|x64
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.Build.0 = Release|x64
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug|x64.ActiveCfg = Debug|x64
@@ -1193,6 +1335,46 @@ Global
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.ActiveCfg = Release|x64
 		{CDA96AA3-3252-4978-A0BF-2ACD670823CB}.Release|x64.Build.0 = Release|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Debug|x64.ActiveCfg = Debug|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Debug|x64.Build.0 = Debug|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Release|x64.ActiveCfg = Release|x64
+		{86883653-8A61-4038-81A0-2379FAE4200A}.Release|x64.Build.0 = Release|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Debug|x64.ActiveCfg = Debug|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Debug|x64.Build.0 = Debug|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release|x64.ActiveCfg = Release|x64
+		{7B7A563D-AA8E-4660-A805-D50235A02120}.Release|x64.Build.0 = Release|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug|x64.ActiveCfg = Debug|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Debug|x64.Build.0 = Debug|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release|x64.ActiveCfg = Release|x64
+		{578D52A0-3928-4405-A016-F016E8B49031}.Release|x64.Build.0 = Release|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Debug|x64.ActiveCfg = Debug|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Debug|x64.Build.0 = Debug|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Release|x64.ActiveCfg = Release|x64
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7}.Release|x64.Build.0 = Release|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug|x64.ActiveCfg = Debug|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Debug|x64.Build.0 = Debug|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.ActiveCfg = Release|x64
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1249,7 +1431,6 @@ Global
 		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{CE429AA2-3778-4619-8FD1-49BA3B81197B} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
-		{731312A8-6DA3-4841-AFCD-57520BA1BF8E} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{6E565B48-1923-49CE-9787-9BBB9D96F4C5} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{3BF59CCE-D245-420A-9F17-73CE61E284C2} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
@@ -1324,5 +1505,29 @@ Global
 		{EC780385-7580-4D15-914B-1D878A295CBC} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA} = {E53E63A0-FAA9-4416-9AD1-08A8FB87FEE1}
 		{181664AC-4C95-4798-A923-09B879215B33} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{7B7A563D-AA8E-4660-A805-D50235A02120} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{1FB54750-B668-4AC3-966F-ED504020AC06} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
+		{3E9BD61F-1F0A-4966-BE17-803AEFD1DFA4} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{5560DDD4-1E6E-4F41-B9BD-F52A19DF0B31} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{9834E864-A8CD-4D28-A3C9-F79FE0F421AE} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{40F65441-A7B7-4425-8E75-CD74AB262F3F} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{4D6F731C-4A6D-4E21-AC3C-9E1F26E5547E} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{36C42845-0D48-4A46-9C67-2B593A80A09C} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{578D52A0-3928-4405-A016-F016E8B49031} = {60F87E25-BC87-4782-8E20-1621AAEBB113}
+		{977ECCB7-598D-4548-B95B-BACA9CC7D98B} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{772A0DB3-4710-4281-8AA9-A9F1F7C543D3} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{FE3592CF-3EB9-4502-BB95-E2AB974C0FB5} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{BA6A65C5-92A2-4040-ADC3-0727A45694F6} = {977ECCB7-598D-4548-B95B-BACA9CC7D98B}
+		{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
+		{1141DC61-E014-4DEC-9157-F6B1FC055C7A} = {772A0DB3-4710-4281-8AA9-A9F1F7C543D3}
+		{EC7298E3-AAA9-4672-941F-0B342C494CB3} = {A1521DC4-C8EC-47BD-9E63-7BE30ED2EC26}
+		{ECED747C-86D7-4009-B2A9-0525FE5DF4EB} = {EC7298E3-AAA9-4672-941F-0B342C494CB3}
+		{25E144C1-0B7C-4CD4-811A-2E9F4943120D} = {EC7298E3-AAA9-4672-941F-0B342C494CB3}
+		{3F77BF79-E0D3-4D60-8685-5A449F164081} = {0141526B-F257-4574-8CBE-99634726FFCE}
+		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{731312A8-6DA3-4841-AFCD-57520BA1BF8E} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 	EndGlobalSection
 EndGlobal

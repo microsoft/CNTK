@@ -28,6 +28,32 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <typename ElemType>
+class IEvaluateModelBase 
+{
+public:
+    // 
+    // Load a model based on configuration. The syntax is the same as when calling the cntk executable.
+    // e.g. "modelFile=model.dat deviceId=0".
+    // numCPUThreads can be used to set the thread count of BLAS.
+    // 
+    virtual void Init(const std::string& config) = 0;
+
+    //
+    // Create a network based on an (NDL) network description.
+    //
+    virtual void CreateNetwork(const std::string& networkDescription) = 0;
+
+    //
+    // Free resources
+    //
+    virtual void Destroy() = 0;
+};
+
+// ------------------------------------------------------------------------
+// Basic (legacy) interface
+// ------------------------------------------------------------------------
+
 enum NodeGroup
 {
     nodeInput,  // an input node
@@ -36,33 +62,57 @@ enum NodeGroup
 };
 
 // IEvaluateModel - interface used by decoders and other components that need just evaluator functionality in DLL form
-template <class ElemType>
-class IEvaluateModel // Evaluate Model Interface
+// NOTICE: This interface is a public interface for evaluating models in CNTK. 
+//         Changes to this interface may affect other projects, such as Argon and LatGen,
+//         and therefore need to be communicated with such groups.
+template <typename ElemType>
+class IEvaluateModel : public IEvaluateModelBase<ElemType> // Evaluate Model Interface
 {
 public:
-    virtual void Init(const std::string& config) = 0;
-    virtual void Destroy() = 0;
-
-    virtual void CreateNetwork(const std::string& networkDescription) = 0;
+    //
+    // Retrieves the (flattened) dimensions 
+    //
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup) = 0;
+
+    //
+    // Allocate resources for a particular output.
+    //
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName) = 0;
+    
+    //
+    // Evaluate a model in frame mode. This does not support dynamic axes or sparse input data.
+    // Given a feature vector of dimension d, the inputs may contain n * d elements. The output will then be computed 
+    // for n samples.
+    // inputs - map from node name to array of input tensors, flattened to vector
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will
+    // happen during evaluation
+    // 
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+
+    //
+    // Evaluate - Evaluate using the network without input and provide the outputs
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
+    //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+
     virtual void ResetState() = 0;
 };
+
 
 // GetEval - get a evaluator type from the DLL
 // since we have 2 evaluator types based on template parameters, exposes 2 exports
 // could be done directly with the templated name, but that requires mangled C++ names
-template <class ElemType>
+template <typename ElemType>
 void EVAL_API GetEval(IEvaluateModel<ElemType>** peval);
 extern "C" EVAL_API void GetEvalF(IEvaluateModel<float>** peval);
 extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval);
 
+
 // Data Reader class
 // interface for clients of the Data Reader
 // mirrors the IEvaluateModel interface, except the Init method is private (use the constructor)
-template <class ElemType>
+template <typename ElemType>
 class Eval : public IEvaluateModel<ElemType>, protected Plugin
 {
 private:
@@ -81,6 +131,7 @@ public:
     // modelPath=c:\models\model.dnn (model path, if not specified, must call LoadModel() method before Evaluate()
     // minibatchSize=1024 (minibatch size used during evaluation if < passed data size)
     Eval(const std::string& config);
+
     virtual ~Eval();
 
     // CreateNetwork - create a network based on the network description
@@ -98,14 +149,148 @@ public:
 
     // Evaluate - Evaluate using the model with the given inputs and outputs
     // inputs - map from node name to input vector
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     // Evaluate - Evaluate using the network without input, and provide the outputs
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will 
+    // happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
     virtual void Init(const std::string& config);
+
     virtual void ResetState();
 };
+
+
+// ------------------------------------------------------------------------
+// Extended interface
+// ------------------------------------------------------------------------
+
+//
+// A buffer to keep data for all samples in a (variable length) sequence 
+// from a single input or output.
+// This is used for both dense and sparse data.
+//
+template<typename ElemType>
+struct VariableBuffer
+{
+    //
+    // All elements of a sequence, concatenated.
+    // For dense inputs, the number of samples is given by the the length of
+    // this vector / product of tensor dimensions. E.g. for a tensor of dimension
+    // [2,2] and 12 elements in the buffer, the number of samples is 3.
+    // For sparse inputs, the number of samples is indicated by the m_colIndices field.
+    //
+    std::vector<ElemType> m_buffer;
+
+    // In case of sparse data, the following is also used. Otherwise, the 
+    // contents are ignored.
+
+    // E.g. a sequence of three sparse vectors with 2 / 4 / 2 non-zero values
+    // could be represented as the following:
+    // colIdx:  0   2       6   8
+    //          v   v       v   v
+    // indices  1 3 2 3 5 6 2 7
+    // buffer   0 1 2 3 4 5 6 7
+
+    //
+    // For every element in buffer, an entry in this array gives its position.
+    // For every vector the entries must be ascending.
+    //
+    std::vector<int> m_indices;
+
+    //
+    // Contains numberOfsamples + 1 indices into the buffer. The first entry
+    // is always 0. The last entry points after the last element.
+    // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
+    //
+    std::vector<int> m_colIndices;
+};
+
+//
+// Meta data
+//
+struct VariableLayout
+{
+    enum DataType
+    {
+        Float32,
+        Float64
+    };
+
+    enum StorageType
+    {
+        Undetermined,
+        Dense,
+        Sparse,
+    };
+
+    // Name of the input
+    std::wstring m_name;
+
+    DataType m_dataType;
+
+    StorageType m_storageType;
+
+    // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
+    // E.g. for a tensor [2,3,*] this would be 6.
+    int m_numElements;
+
+    // Name of the axis, potentially shared between inputs. For any two inputs sharing the same
+    // dynamic axis, the sequence cardinality must be the same.
+    std::wstring m_dynamicAxisName;
+};
+
+template <typename ElemType>
+using Variables = std::vector<VariableBuffer<ElemType>>;
+
+using VariableSchema = std::vector<VariableLayout>;
+
+//
+// Extended interface, allowing for sparse input.
+//
+template <typename ElemType>
+class IEvaluateModelExtended : public IEvaluateModelBase<ElemType>
+{
+public:
+    //
+    // GetOutputSchema - retrieve information about tensor shapes and memory layout of the outputs for this
+    // model.
+    //
+    virtual VariableSchema GetOutputSchema() const = 0;
+
+    //
+    // Allocate internal state for calling ForwardPass(). The call restricts the network (inputs and outputs)
+    // to the functions represented by the output name.
+    //
+    virtual void StartForwardEvaluation(std::vector<std::wstring> outputs) = 0;
+
+    //
+    // GetVariableLayout - retrieve information about tensor shapes and memory layout of inputs necessary for a
+    // particular output. By default this returns all available inputs. After StartForwardEvaluation(), this
+    // returns all the inputs necessary to compute the outputs.
+    //
+    virtual VariableSchema GetInputSchema() const = 0;
+
+    //
+    // Evaluate - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
+    // outputs.
+    // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
+    // This method is not reentrant, as the forward pass keeps internal state.
+    // outputId - output to compute values for. See GetOutputLayouts()
+    // inputs - vector of input buffers, one for every input as given by GetInputLayouts()
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing 
+    // will happen during evaluation.
+    // Called after StartForwardEvaluation()
+    //
+    virtual void ForwardPass(const Variables<ElemType>& inputs, Variables<ElemType>& output) = 0;
+};
+
+template <typename ElemType>
+void EVAL_API GetEvalExtended(IEvaluateModelExtended<ElemType>** peval);
+extern "C" EVAL_API void GetEvalExtendedF(IEvaluateModelExtended<float>** peval);
+extern "C" EVAL_API void GetEvalExtendedD(IEvaluateModelExtended<double>** peval);
+
 } } }

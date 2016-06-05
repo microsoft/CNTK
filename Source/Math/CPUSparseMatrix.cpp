@@ -264,7 +264,67 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
         memcpy(RowLocation(), v.RowLocation(), v.RowSize());
         memcpy(ColLocation(), v.ColLocation(), v.ColSize());
     }
+    if (v.m_sliceViewOffset > 0)
+    {
+        CPUSPARSE_INDEX_TYPE* loc = (GetFormat() == matrixFormatSparseCSC) ? ColLocation() : RowLocation();
+        size_t len = (GetFormat() == matrixFormatSparseCSC) ? ColSize() : RowSize();
+        CPUSPARSE_INDEX_TYPE offset = loc[0];
+        for (size_t c = 0; c < len; c++)
+            loc[c] -= offset;
+    }
 }
+
+#if 0
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*v*/)
+{
+    NOT_IMPLEMENTED;
+}
+#endif
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+{
+    VerifyWritable(__func__);
+
+    size_t n = GetNumCols();
+    if (n != columnsMask.GetNumCols())
+        RuntimeError("Matrix and column mask must have equal number of columns.");
+
+    if (val != 0)
+        LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
+
+#ifdef _DEBUG
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        // Get the binary columns mask
+        char* maskedCols = columnsMask.Data();
+
+        // If we're CSC, we only need to verify that the columns to be zeroed are empty.
+        GPUSPARSE_INDEX_TYPE* colVector = SecondaryIndexLocation();
+
+#pragma omp parallel for
+        for (long j = 0; j < n; j++)
+            if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
+                LogicError("CPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
+    }
+    else
+        NOT_IMPLEMENTED;
+#endif
+}
+
 
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const
@@ -360,7 +420,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 }
 
 template <class ElemType>
-CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
@@ -368,8 +428,10 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
-    CPUMatrix<ElemType> slice(m_numRows, numCols);
+    // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
+    slice.RequireSize(m_numRows, numCols);
 
+    memset(slice.Data(), 0, sizeof(ElemType) * slice.GetNumElements());
 #pragma omp parallel for
     for (long j = 0; j < numCols; j++)
     {
@@ -383,6 +445,14 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
             slice(i, (size_t) j) = value;
         }
     }
+
+}
+template <class ElemType>
+CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
+{
+    CPUMatrix<ElemType> slice(m_numRows, numCols);
+
+    AssignColumnSliceToDense(slice, startColumn, numCols);
 
     return slice;
 }
@@ -1307,15 +1377,20 @@ template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const&);
 template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char>&&);
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
 template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
+//template void CPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
+//template void CPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
+//template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
 template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
+template void CPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
 template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const MatrixFormat, const bool, bool);
 template CPUSparseMatrix<char>::~CPUSparseMatrix();
 template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);

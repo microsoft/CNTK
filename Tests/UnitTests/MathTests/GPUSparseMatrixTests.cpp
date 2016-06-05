@@ -155,6 +155,48 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTimesDense, RandomSeedFixture)
     BOOST_CHECK_EQUAL(6 + 1, ccpu(3, 4));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUSparseTimesDenseRandom, RandomSeedFixture)
+{
+    const size_t dim1 = 100;
+    const size_t dim2 = 100;
+    const size_t dim3 = 100;
+    const bool matrixTransA( false );
+    const bool matrixTransB( false );
+
+    // SPARSE
+    GPUMatrix<float> lhsDense(c_deviceIdZero);
+    lhsDense.AssignTruncateBottomOf(GPUMatrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
+    // Choose Format for Sparse Matrix
+    //GPUSparseMatrix<float> lhs(lhsDense, MatrixFormat::matrixFormatSparseCSR);
+     GPUSparseMatrix<float> lhs(lhsDense, MatrixFormat::matrixFormatSparseCSC);
+
+    // DENSE
+    GPUMatrix<float> rhs = GPUMatrix<float>::RandomGaussian(dim2, dim3, c_deviceIdZero, 1.0f, 4.0f, IncrementCounter());
+
+    // RESULT of Dense x Sparse
+    GPUMatrix<float> resultSP = GPUMatrix<float>::Ones(dim1, dim3, c_deviceIdZero);
+    GPUSparseMatrix<float>::MultiplyAndWeightedAdd(1, lhs, matrixTransA, rhs, matrixTransB, 1, resultSP);
+
+    // RESULT of Dense x Dense
+    GPUMatrix<float> resultDS = GPUMatrix<float>::Ones(dim1, dim3, c_deviceIdZero);
+    GPUMatrix<float>::MultiplyAndWeightedAdd(1, lhsDense, matrixTransA, rhs, matrixTransB, 1, resultDS);
+
+    float *arrSP = resultSP.CopyToArray();
+    CPUMatrix<float> resultSP_arr(dim1, dim3, arrSP, MatrixFlags::matrixFlagNormal);
+    delete[] arrSP;
+
+    float *arrDS = resultDS.CopyToArray();
+    CPUMatrix<float> resultDS_arr(dim1, dim3, arrSP, MatrixFlags::matrixFlagNormal);
+    delete[] arrDS;
+
+    // Check correctness with CPU results
+    for (int i = 0; i < dim1; i++) {
+        for (int j = 0; j < dim3; j++) {
+            BOOST_CHECK(fabs(resultSP_arr(i, j) - resultDS_arr(i, j)) < c_epsilonFloatE4);
+        }
+    }
+}
+
 #if 0
 // TODO commented temporarily, this test (or underlying code) needs fixes
 

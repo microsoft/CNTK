@@ -47,6 +47,21 @@ size_t CountNans(const SingleMatrix& src)
     return n;
 }
 
+// Returns vector of engine config parameters: <kind, device, maxTempMemSizeInSamples>
+std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEngineConfigs()
+{
+    std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> res;
+    // Reference engine. The engine does not use temp memory so safe to set it to 0.
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, -1, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
+
+    // Gemm engine. Implemented only for CPU for now. Uses temp memory.
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 0));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 1));
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 3));
+    return res;
+}
+
 std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
 {
     std::vector<ConvolveGeometryPtr> res;
@@ -79,6 +94,18 @@ std::vector<ConvolveGeometryPtr> GenerateConvTestConfigs()
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(3, 3, 1),
         TensorShape(3, 3, 1), TensorShape(2), TensorShape(1, 1, 1),
         ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{true, true, false},
+        TensorShape(0), TensorShape(0)));
+
+    // Simple 3D convolution.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(5, 5, 5, 2),
+        TensorShape(3, 3, 3, 2), TensorShape(2), TensorShape(1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
+        TensorShape(0), TensorShape(0)));
+    // Example of 3D convolution that can be represented with 3D tensors in reference engine
+    // but requires 4D tensors in other engines.
+    res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(5, 5, 3, 1),
+        TensorShape(3, 3, 2, 1), TensorShape(2), TensorShape(1),
+        ConvolveGeometry::BoolVec{true}, ConvolveGeometry::BoolVec{false},
         TensorShape(0), TensorShape(0)));
 
     res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(16, 16, 1),
@@ -152,13 +179,15 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
     };
 
     int baseDeviceId = 0;
-    auto engKind = ConvolutionEngineKind::Reference;
-    for (int deviceId : {-1, 0})
+    for (const auto& engCfg : GetTestEngineConfigs())
     {
+        auto engKind = std::get<0>(engCfg);
+        auto deviceId = std::get<1>(engCfg);
+        auto maxTempMem = std::get<2>(engCfg);
         for (const auto& g : GenerateConvTestConfigs())
         {
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, maxTempMem, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;
@@ -166,7 +195,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
-            
+
             size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
             buf.resize(g->KernelShape().GetNumElements() * mapCount);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -180,12 +209,12 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
 
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
-            
+
             testEng->Forward(in, kernel, out, workspace);
             baseEng->Forward(inB, kernelB, outB, workspaceB);
-            
+
             std::stringstream tmsg;
-            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
+            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId << ", MaxTempMem: " << maxTempMem;
             std::string msg = " are not equal, " + tmsg.str();
             std::string msgNan = " has NaNs, " + tmsg.str();
             std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
@@ -218,13 +247,15 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
     };
 
     int baseDeviceId = 0;
-    auto engKind = ConvolutionEngineKind::Reference;
-    for (int deviceId : {-1, 0})
+    for (const auto& engCfg : GetTestEngineConfigs())
     {
+        auto engKind = std::get<0>(engCfg);
+        auto deviceId = std::get<1>(engCfg);
+        auto maxTempMem = std::get<2>(engCfg);
         for (const auto& g : GenerateConvTestConfigs())
         {
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, maxTempMem, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;
@@ -232,13 +263,13 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix srcGrad(g->OutputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix srcGradB(g->OutputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
-            
+
             size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
             buf.resize(g->KernelShape().GetNumElements() * mapCount);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix kernel(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix kernelB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
-            
+
             size_t crowGrad = g->InputShape().GetNumElements();
             SingleMatrix gradBuf(deviceId);
             SingleMatrix grad = initMat(gradBuf, crowGrad, n, buf);
@@ -246,10 +277,10 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
 
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
-            
+
             testEng->BackwardData(srcGrad, kernel, grad, workspace);
             baseEng->BackwardData(srcGradB, kernelB, gradB, workspaceB);
-            
+
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
             std::string msg = " are not equal, " + tmsg.str();
@@ -284,13 +315,15 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
     };
 
     int baseDeviceId = 0;
-    auto engKind = ConvolutionEngineKind::Reference;
-    for (int deviceId : {-1, 0})
+    for (const auto& engCfg : GetTestEngineConfigs())
     {
+        auto engKind = std::get<0>(engCfg);
+        auto deviceId = std::get<1>(engCfg);
+        auto maxTempMem = std::get<2>(engCfg);
         for (const auto& g : GenerateConvTestConfigs())
         {
             auto baseEng = ConvEng::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
-            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, 0, PoolKind::None, engKind);
+            auto testEng = ConvEng::Create(g, deviceId, ImageLayoutKind::CHW, maxTempMem, PoolKind::None, engKind);
 
             size_t n = batchSizeG(rng);
             vec buf;

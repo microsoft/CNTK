@@ -134,6 +134,11 @@ public:
     virtual void Destroy();
     UCIFastReader()
     {
+        fprintf(stderr, "********** DEPRECATED **********\n" 
+            "UCIFastReader is no longer actively maintained.\n"
+            "It is known to have defects, proceed with caution (better yet, switch to CNTKTextFormatReader)!\n"
+            "For more details please see https://github.com/Microsoft/CNTK/wiki \n");
+
         m_pMBLayout = make_shared<MBLayout>();
         m_pMBLayout->SetUniqueAxisName(L"UCIFastReader");
     }
@@ -155,7 +160,7 @@ public:
 
     bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequences()
+    size_t GetNumParallelSequencesForFixingBPTTMode()
     {
         return m_pMBLayout->GetNumParallelSequences();
     }

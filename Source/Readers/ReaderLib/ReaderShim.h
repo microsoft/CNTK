@@ -33,6 +33,13 @@ public:
 
     virtual void Destroy() override
     {
+        // Make sure there are no outstanding reads.
+        if (m_prefetchTask.valid())
+        {
+            // If there are some, give them time to finish.
+            m_prefetchTask.wait_for(std::chrono::seconds(5));
+        }
+
         delete this;
     }
 
@@ -50,7 +57,7 @@ public:
 
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
-    virtual size_t GetNumParallelSequences() override;
+    virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
 private:
     std::future<Minibatch> m_prefetchTask;

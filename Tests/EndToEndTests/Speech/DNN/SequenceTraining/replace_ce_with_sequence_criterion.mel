@@ -1,10 +1,11 @@
 m1 = LoadModel("$currModel$", format="cntk")
 SetDefaultModel(m1)
-SetProperty(cr, "criterion", false)
-Remove(cr)
+SetProperty(ce, "criterion", false)
+Remove(ce)
 
-seWithSoftmax = SequenceWithSoftmax(labels, OL.z, scaledLogLikelihood) 
-SetProperty(seWithSoftmax, criterion, true)
+# note: we use the same name, since Jenkins does not allow to specify two different node names
+ce = SequenceWithSoftmax(labels, OL.z, scaledLogLikelihood) 
+SetProperty(ce, criterion, true)
 
 SaveModel(m1, "$newModel$", format="cntk")
 Dump(m1, "$newModel$.dump.txt")

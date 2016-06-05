@@ -11,7 +11,6 @@ TrainModel=[
     # deviceId=-1 for CPU, >=0 for GPU devices
     deviceId=$DeviceNumber$
     traceLevel=1
-    useValidation=true
     NDLNetworkBuilder=[
         ndlMacros=$NdlDir$/default_macros.ndl
         networkDescription=$NdlDir$/model.ndl

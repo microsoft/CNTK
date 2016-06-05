@@ -47,6 +47,9 @@
     <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\CompositeDataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -166,6 +169,45 @@
     <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\BlockRandomizer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\Bundler.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\ChunkRandomizer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\DataDeserializer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\MemoryProvider.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\NoRandomizer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\Packer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\Reader.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\SequencePacker.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\SequenceRandomizer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\StringToIdMap.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\ReaderLib\Transformer.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\CompositeDataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -223,6 +265,9 @@
     </Filter>
     <Filter Include="BrainScript\CNTKCoreLib">
       <UniqueIdentifier>{899f31fa-5906-4485-8875-14ad2c43ed8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from ReaderLib">
+      <UniqueIdentifier>{28bc457a-d2f4-4f42-a9aa-89f22e909ab0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

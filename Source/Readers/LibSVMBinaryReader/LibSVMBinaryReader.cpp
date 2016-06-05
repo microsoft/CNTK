@@ -335,6 +335,8 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
 
     m_inFile.seekg(0, ios::end);
     m_fileSize = (size_t) m_inFile.tellg();
+    
+    m_maxMBSize = 0;
 }
 
 template <class ElemType>
@@ -436,19 +438,28 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
 
     ReadOffsets(startMB, m_windowSize);
 
-    m_maxMBSize = 0;
+    size_t maxMBSize = 0;
     for (size_t c = 0; c < m_windowSize; c++)
     {
-        m_maxMBSize = max(m_maxMBSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
+        maxMBSize = max(maxMBSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
         // fprintf(stderr, "m_offsets[%lu] = %lu\n", c, m_offsets[c]);
     }
-    // fprintf(stderr, "max mb size: %ld\n", m_maxMBSize);
-    size_t maxMem = 1024 * 1024 * 1024; // 1GB
-    size_t maxPointers = maxMem / m_maxMBSize;
-    for (size_t c = 0; c < maxPointers; c++)
+    if (maxMBSize > m_maxMBSize)
     {
-        void* dataBuffer = malloc(m_maxMBSize);
-        m_dataToProduce.push(dataBuffer);
+        m_maxMBSize = maxMBSize;
+        while (m_dataToProduce.size() > 0)
+        {
+            free(m_dataToProduce.pop());
+        }
+        // fprintf(stderr, "max mb size: %ld\n", m_maxMBSize);
+
+        size_t maxMem = 1024 * 1024 * 1024; // 1GB
+        size_t maxPointers = maxMem / m_maxMBSize;
+        for (size_t c = 0; c < maxPointers; c++)
+        {
+            void* dataBuffer = malloc(m_maxMBSize);
+            m_dataToProduce.push(dataBuffer);
+        }
     }
 
     std::thread readData([this]
