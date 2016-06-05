@@ -263,48 +263,44 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         m_currOffset = 0;
     }
 
-    for (int i = 0; i <= m_miniBatchSize; i++)
+    for (int i = 0; i <= m_numDocs; i++)
     {
-        for (int j = 0; j <= m_numDocs; j++)
+        std::wstring featureName = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
+        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
+        size_t numRows = m_vectorSize * (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
+        features.Resize(numRows, m_miniBatchSize);
+        memset((i == 0 ? m_qValues : m_dValues), 0, m_bytesPerVector * (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) * m_miniBatchSize);
+
+        for (int j = 0; j <= m_miniBatchSize; j++)
         {
-            std::wstring featureName = (j == 0 ? L"Q" : L"D" + std::to_wstring(j - 1));
-            int64_t embFilePositionMax = (j == 0 ? m_qEmbFilePositionMax : m_dEmbFilePositionMax);
-            Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
-            size_t numRows = m_vectorSize * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
-            features.Resize(numRows, m_miniBatchSize);
-            memset((j == 0 ? m_qValues : m_dValues), 0, m_bytesPerVector * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) * m_miniBatchSize);
-
-            for (int k = 0; k < (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
+            for (int k = 0; k < (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
             {
-                int32_t wordId = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
-                int64_t tgtOffset = (i * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) + k) * m_bytesPerVector;
+                int32_t wordId = *(int32_t*)((char*)m_dataBuffer
+                                                    + m_currOffset
+                                                    + j * m_bytesPerSample
+                                                    + (i > 0 ? m_numWordsPerQuery + (i - 1) * m_numWordsPerDoc : 0) * sizeof(int32_t)
+                                                    + k * sizeof(int32_t));
+                if (wordId == 0)
+                    continue;
 
-                if (tgtOffset >= (j == 0 ? m_qEmbFilePositionMax : m_dEmbFilePositionMax))
+                wordId--;
+                int64_t srcOffset = wordId * m_bytesPerVector;
+                char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer) + srcOffset;
+                char* tgtAddrBase = (char*)(i == 0 ? m_qValues : m_dValues);
+
+                for (int l = 0; l < m_vocabSize; l++)
                 {
-                    RuntimeError("Buffer overflow");
+                    char* srcAddr = srcAddrBase + l * sizeof(ElemType);
+                    char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * m_miniBatchSize + j) * sizeof(ElemType);
+                    memcpy(tgtAddr, srcAddr, sizeof(ElemType));
                 }
-
-                if (wordId != 0)
-                {
-                    wordId--;
-                    int64_t srcOffset = wordId * m_bytesPerVector;
-
-                    if (srcOffset >= embFilePositionMax)
-                    {
-                        RuntimeError("Invalid word ID %d", wordId);
-                    }
-
-                    char* srcAddr = (char*)(j == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer) + srcOffset;
-                    char* tgtAddr = (char*)(j == 0 ? m_qValues : m_dValues) + tgtOffset;
-                    memcpy(tgtAddr, srcAddr, m_bytesPerVector);
-                }
-
-                m_currOffset += sizeof(int32_t);
             }
-
-            features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)(j == 0 ? m_qValues : m_dValues), matrixFlagNormal);
         }
+
+        features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)(i == 0 ? m_qValues : m_dValues), matrixFlagNormal);
     }
+
+    m_currOffset += (m_bytesPerSample * m_miniBatchSize);
 
     if (matrices.HasInput(L"L"))
     {
