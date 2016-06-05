@@ -85,8 +85,6 @@ NDRMReader<ElemType>::~NDRMReader()
         close(m_dEmbHndl);
     }
 #endif
-    free(m_values);
-    m_values = NULL;
 }
 
 template <class ElemType>
@@ -229,12 +227,9 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 template <class ElemType>
 void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
-    if (m_values == NULL || m_miniBatchSize != mbSize)
+    if (m_miniBatchSize != mbSize)
     {
         m_miniBatchSize = mbSize;
-
-        free(m_values);
-        m_values = (int32_t*)malloc(m_bytesPerSample * m_miniBatchSize);
         m_qValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
         m_dValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
     }
@@ -268,8 +263,6 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         m_currOffset = 0;
     }
 
-    memcpy(m_values, (char*)m_dataBuffer + m_currOffset, m_bytesPerSample * m_miniBatchSize);
-
     for (int i = 0; i <= m_miniBatchSize; i++)
     {
         for (int j = 0; j <= m_numDocs; j++)
@@ -284,7 +277,12 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             for (int k = 0; k < (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
-                char* tgtAddr = (j == 0 ? m_qValues : m_dValues) + k * m_bytesPerVector;
+                int64_t tgtOffset = (i * (j == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) + k) * m_bytesPerVector;
+
+                if (tgtOffset >= (j == 0 ? m_qEmbFilePositionMax : m_dEmbFilePositionMax))
+                {
+                    RuntimeError("Buffer overflow", wordId);
+                }
 
                 if (wordId != 0)
                 {
@@ -297,6 +295,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                     }
 
                     char* srcAddr = (char*)(j == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer) + srcOffset;
+                    char* tgtAddr = (char*)(j == 0 ? m_qValues : m_dValues) + tgtOffset;
                     memcpy(tgtAddr, srcAddr, m_bytesPerVector);
                 }
 
