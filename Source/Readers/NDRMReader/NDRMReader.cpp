@@ -281,7 +281,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
                 if (tgtOffset >= (j == 0 ? m_qEmbFilePositionMax : m_dEmbFilePositionMax))
                 {
-                    RuntimeError("Buffer overflow", wordId);
+                    RuntimeError("Buffer overflow");
                 }
 
                 if (wordId != 0)
