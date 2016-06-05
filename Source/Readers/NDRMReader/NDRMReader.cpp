@@ -227,7 +227,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 template <class ElemType>
 void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
-    if (m_miniBatchSize != mbSize)
+    if (m_miniBatchSize != mbSize || m_qValues == NULL || m_dValues == NULL)
     {
         m_miniBatchSize = mbSize;
         m_qValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
@@ -288,7 +288,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer) + srcOffset;
                 char* tgtAddrBase = (char*)(i == 0 ? m_qValues : m_dValues);
 
-                for (int l = 0; l < m_vocabSize; l++)
+                for (int l = 0; l < m_vectorSize; l++)
                 {
                     char* srcAddr = srcAddrBase + l * sizeof(ElemType);
                     char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * m_miniBatchSize + j) * sizeof(ElemType);
