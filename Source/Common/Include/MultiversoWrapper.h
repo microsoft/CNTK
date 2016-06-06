@@ -163,7 +163,7 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
         {
             auto multiversoMatrix = m_matrixMap->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]));
+            multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
         }
         else
         {
@@ -180,7 +180,7 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
         {
             auto multiversoMatrix = m_matrixMap->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]));
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
         }
         else
         {
@@ -199,7 +199,7 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
         {
             auto multiversoMatrix = m_matrixMap->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]));
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
         }
         else
         {
@@ -435,8 +435,8 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 auto multiversoMatrix = m_matrixMap->at(widx);
                 ElemType* px = m_deltaArray + m_tableOffsets[widx];
                 ElemType* py = m_cpuAsyncBuffer[0] + m_tableOffsets[widx];
-                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]));
-                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[0]));
+                multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+                multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[0]);
             }
             else
             {
