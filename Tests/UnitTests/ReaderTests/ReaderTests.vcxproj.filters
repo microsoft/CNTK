@@ -49,7 +49,7 @@
     <Filter Include="Linked Source">
       <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Config\ExperimentalHTKMLF">
+    <Filter Include="Config\HTKMLFDeserializer">
       <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
