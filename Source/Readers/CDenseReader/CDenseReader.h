@@ -128,9 +128,9 @@ namespace Microsoft {
 				void FillReadOrder();
 				bool Randomize();
 				void GetZippedFileInfo();
-				int Unzip(void * input, void * output, int inputSize, int outputSize);
-				int Unzip7z(void * input, void * output, int inputSize, int outputSize);
-				int UnzipGz(void * input, void * output, int inputSize, int outputSize);
+				int Unzip(void * input, void * output, size_t inputSize, size_t& outputSize);
+				int Unzip7z(void * input, void * output, size_t inputSize, size_t& outputSize);
+				int UnzipGz(void * input, void * output, size_t inputSize, size_t& outputSize);
 				void CompactUnzipBuffer();
 				void UnzipData(int threadIndex, size_t numToRead);
 				void Print(void * buffer, int start, int end);

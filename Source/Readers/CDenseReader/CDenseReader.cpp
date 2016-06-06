@@ -471,7 +471,7 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			int DenseBinaryInput<ElemType>::UnzipGz(void * input, void * output, int inputSize, int outputSize)
+			int DenseBinaryInput<ElemType>::UnzipGz(void * input, void * output, size_t inputSize, size_t& outputSize)
 			{
 				z_stream infstream;
 				infstream.zalloc = Z_NULL;
@@ -494,15 +494,12 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			int DenseBinaryInput<ElemType>::Unzip7z(void * input, void * output, int inputSize, int outputSize)
-			{
-				size_t os = outputSize;
-				return DeCompressMem((Byte *)input, (Byte *)output, inputSize, &os);
+			int DenseBinaryInput<ElemType>::Unzip7z(void * input, void * output, size_t inputSize, size_t& outputSize) {
+				return DeCompressMem((Byte *)input, (Byte *)output, inputSize, &outputSize);
 			}
 
 			template<class ElemType>
-			int DenseBinaryInput<ElemType>::Unzip(void * input, void * output, int inputSize, int outputSize)
-			{
+			int DenseBinaryInput<ElemType>::Unzip(void * input, void * output, size_t inputSize, size_t& outputSize) {
 				if (m_cAlgo.compare("7z") == 0)
 					return Unzip7z(input, output, inputSize, outputSize);
 				else
@@ -510,9 +507,9 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			void DenseBinaryInput<ElemType>::CompactUnzipBuffer(){
+			void DenseBinaryInput<ElemType>::CompactUnzipBuffer() {
 				int cnt = 0;
-				for (int i = m_firstValidPosOfUnzippedBuffer; i <= m_lastValidPosOfUnzippedBuffer; i++){
+				for (int i = m_firstValidPosOfUnzippedBuffer; i <= m_lastValidPosOfUnzippedBuffer; i++) {
 					((char *)m_unzippedBuffer)[cnt] = ((char *)m_unzippedBuffer)[i];
 					cnt++;
 				}
@@ -522,7 +519,7 @@ namespace Microsoft {
 			}
 
 			template<class ElemType>
-			void DenseBinaryInput<ElemType>::UnzipData(int threadIndex, size_t numToRead){
+			void DenseBinaryInput<ElemType>::UnzipData(int threadIndex, size_t numToRead) {
 				while (true){
 
 					m_unzipLocker.lock();
@@ -543,14 +540,18 @@ namespace Microsoft {
 					int sampleCnt = 0;
 					memcpy(&zipBytesCnt, zipData, 4);
 					memcpy(&sampleCnt, (char *)zipData + 4, 4);
-					int unzipBytesCnt = sampleCnt * m_totalDim * 4;
-					Unzip((char *)zipData + 8, (char *)unzipData + 4, zipBytesCnt, unzipBytesCnt * 2);
+					size_t unzipBytesCnt = (size_t)(sampleCnt * m_totalDim * 4 * 2);
+					Unzip((char *)zipData + 8, (char *)unzipData + 4, zipBytesCnt, unzipBytesCnt);
+
+					//check unzipped data size
+					if (unzipBytesCnt % (m_totalDim * sizeof(ElemType)) != 0) {
+						RuntimeError("file size does not match total Dim %zd, please check your setting", m_totalDim);
+					}
 
 					memcpy(unzipData, &sampleCnt, 4);
 
 					m_unzipedDataToConsume.push(unzipData);
 					m_zipedDataToProduce.push(zipData);
-
 				}
 			}
 
