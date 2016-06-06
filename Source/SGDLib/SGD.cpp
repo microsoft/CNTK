@@ -1936,12 +1936,8 @@ template <class ElemType>
     sgd->ClipGradient(gradientValues, actualMBSize);
     if (gradientValues.GetMatrixType() == MatrixType::SPARSE)
     {
-      fprintf(stderr, "Sparse matirx: %d [%d * %d] %d\n", (int)gradientValues.GetNumElements(), (int)gradientValues.GetNumRows(), (int)gradientValues.GetNumCols(), (int)gradientValues.BufferSize());
+      fprintf(stderr, "Sparse matirx: %d [%d * %d] \n", (int)gradientValues.GetNumElements(), (int)gradientValues.GetNumRows(), (int)gradientValues.GetNumCols());
       fflush(stderr);
-      Matrix<ElemType>* debug = new Matrix<ElemType>(gradientValues, CPUDEVICE);
-      ElemType* debugbuf = debug->Data();
-      debugbuf;
-      delete debug;
     }
 
     GradientsUpdateType adpType = sgd->GradUpdateType();
