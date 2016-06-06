@@ -1,4 +1,4 @@
-﻿# Makefile for a Linux/GCC build of CNTK
+# Makefile for a Linux/GCC build of CNTK
 #
 # The Linux and Windows versions are not different branches, but rather build off the same
 # source files, using different makefiles. This current makefile has the purpose of enabling
