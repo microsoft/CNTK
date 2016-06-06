@@ -227,11 +227,18 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 template <class ElemType>
 void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
-    if (m_miniBatchSize != mbSize || m_qValues == NULL || m_dValues == NULL)
+    if (m_miniBatchSize != mbSize || m_qValues == NULL || m_dValues == NULL || m_labels == NULL)
     {
         m_miniBatchSize = mbSize;
         m_qValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
         m_dValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
+        m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
+
+        memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
+        for (int i = 0; i < m_miniBatchSize; i++)
+        {
+            ((ElemType*)m_labels)[i * m_numDocs] = (ElemType)1;
+        }
     }
 
     m_numSamplesPerEpoch = requestedEpochSamples;
@@ -265,15 +272,19 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
     for (int i = 0; i <= m_numDocs; i++)
     {
+        char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer);
+        char* tgtAddrBase = (char*)(i == 0 ? m_qValues : m_dValues);
+        size_t numWordsPerFeatureSample = (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
+        size_t numRows = m_vectorSize * numWordsPerFeatureSample;
         std::wstring featureName = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
         Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
-        size_t numRows = m_vectorSize * (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
         features.Resize(numRows, m_miniBatchSize);
-        memset((i == 0 ? m_qValues : m_dValues), 0, m_bytesPerVector * (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc) * m_miniBatchSize);
+
+        memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * m_miniBatchSize);
 
         for (int j = 0; j <= m_miniBatchSize; j++)
         {
-            for (int k = 0; k < (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc); k++)
+            for (int k = 0; k < numWordsPerFeatureSample; k++)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer
                                                     + m_currOffset
@@ -283,21 +294,16 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 if (wordId == 0)
                     continue;
 
-                wordId--;
-                int64_t srcOffset = wordId * m_bytesPerVector;
-                char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer) + srcOffset;
-                char* tgtAddrBase = (char*)(i == 0 ? m_qValues : m_dValues);
-
                 for (int l = 0; l < m_vectorSize; l++)
                 {
-                    char* srcAddr = srcAddrBase + l * sizeof(ElemType);
+                    char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector + l * sizeof(ElemType);
                     char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * m_miniBatchSize + j) * sizeof(ElemType);
                     memcpy(tgtAddr, srcAddr, sizeof(ElemType));
                 }
             }
         }
 
-        features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)(i == 0 ? m_qValues : m_dValues), matrixFlagNormal);
+        features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
     }
 
     m_currOffset += (m_bytesPerSample * m_miniBatchSize);
@@ -305,13 +311,11 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     if (matrices.HasInput(L"L"))
     {
         Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(L"L");
-        labels.Resize(1, m_miniBatchSize);
-        labels.SetValue((ElemType)1);
+        labels.Resize(m_numDocs, m_miniBatchSize);
+        labels.SetValue(m_numDocs, m_miniBatchSize, labels.GetDeviceId(), (ElemType*)m_labels, matrixFlagNormal);
     }
 
     // create the MBLayout
-    // Each sample consists of a "sequence" of 'm_microBatchSize' samples.
-    // TODO: They are not really temporally ordered, so a better way would be to use tensors, once that is ready.
     m_pMBLayout->Init(m_miniBatchSize, 1);
     for (size_t i = 0; i < m_miniBatchSize; i++)
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, 0, 1);

@@ -37,6 +37,7 @@ class NDRMReader : public DataReaderBase
     size_t m_bytesPerVector;
     char* m_qValues;
     char* m_dValues;
+    char* m_labels;
     MBLayoutPtr m_pMBLayout;
 
 #ifdef SPARSE_PCREADER_USE_WINDOWS_API
