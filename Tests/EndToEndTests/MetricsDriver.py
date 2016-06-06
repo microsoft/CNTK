@@ -50,8 +50,8 @@ class Baseline:
     startCpuInfoIndex = baselineContent.find("CPU info:")
     endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
     cpuInfo = re.search("^CPU info:\s+"
-                       "CPU Model (Name:\s*.*)\s+"                        
-                       "(Hardware threads: \d+)\s+"
+                        "CPU Model (Name:\s*.*)\s+"
+                        "(Hardware threads: \d+)\s+"
                        "Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
     if cpuInfo is None:
       return
@@ -130,7 +130,7 @@ def getExamplesMetrics():
 
   print ("CNTK - Metrics collector")  
 
-  for example in allExamples:    
+  for example in allExamples:
     baselineListForExample = example.findBaselineFilesList() 
     six.print_("Example: " + example.fullName)   
     for baseline in baselineListForExample:            
@@ -156,7 +156,7 @@ def writeMetricsToAsciidoc():
   metricsFile = open("metrics.adoc",'wb')
 
   createAsciidocExampleList(metricsFile)
-  
+
   for example in Example.allExamplesIndexedByFullName:
     if not example.baselineList:
       continue
@@ -180,9 +180,10 @@ def writeMetricsToAsciidoc():
 
     metricsFile.write("\n|====\n\n")
 
-# ======================= Entry point =======================
 six.print_("==============================================================================")
 
+# ======================= Entry point =======================
+# discover all the tests
 Example.discoverAllExamples()
 
 getExamplesMetrics()
