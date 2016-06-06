@@ -368,25 +368,25 @@ $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
-# HTKMLFDeserializer plugin
+# HTKDeserializers plugin
 ########################################
 
-HTKMLFDESERIALIZER_SRC =\
+HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFDeserializer/ConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFDeserializer/Exports.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFDeserializer/HTKDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFDeserializer/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/HTKMLFDeserializer/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
 
-HTKMLFDESERIALIZER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFDESERIALIZER_SRC))
+HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 
-HTKMLFDESERIALIZER:=$(LIBDIR)/HTKMLFDeserializer.so
-ALL+=$(HTKMLFDESERIALIZER)
-SRC+=$(HTKMLFDESERIALIZER_SRC)
+HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
+ALL+=$(HTKDESERIALIZERS)
+SRC+=$(HTKDESERIALIZERS_SRC)
 
-$(LIBDIR)/HTKMLFDeserializer.so: $(HTKMLFDESERIALIZER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 

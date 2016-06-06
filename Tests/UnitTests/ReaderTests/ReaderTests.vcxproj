@@ -79,7 +79,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>htkmlfreader.lib;HTKMLFDeserializer.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;HTKDeserializers.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -222,18 +222,18 @@
     <None Include="Config\CNTKTextFormatReader\dense.cntk" />
     <None Include="Config\CNTKTextFormatReader\edge_cases.cntk" />
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop10_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop11_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop14_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop19_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop1_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop20_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop21_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop3_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop4_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop5_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop8_Config.cntk" />
-    <None Include="Config\HTKMLFDeserializerSimpleDataLoop9_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop10_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop14_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop19_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop1_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop20_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop21_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop3_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop4_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
@@ -262,7 +262,7 @@
   </PropertyGroup>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKMLFDeserializer.dll;$(OutDir)..\compositedatareader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(ImageReaderDependencies);" />
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(ImageReaderDependencies);" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
