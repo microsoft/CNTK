@@ -43,7 +43,7 @@ printHardwareInfo()
 	gpuMem=$("$nvidiaSmiPath" --query-gpu=memory.total --format=csv,noheader)
 	fi
 
-	echo "Hardware info:
+	echo -e "Hardware info:
 		CPU Model Mame:$cpuName
 		CPU cores:$cpuCores
 		Hardware threads: $nproc

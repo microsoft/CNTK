@@ -371,7 +371,7 @@ void PrintUsageInfo()
 }
 
 void PrintGpuInfo()
-{
+{    
     std::vector<GpuData> gpusData = GetGpusData();
 
     if (gpusData.empty())
@@ -385,8 +385,8 @@ void PrintGpuInfo()
     for (GpuData data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice ID: %d\n", data.deviceId);
-        LOGPRINTF(stderr, "\t\tGPU Compute Capability: %d.%d\n", data.major, data.minor);
-        LOGPRINTF(stderr, "\t\tCUDA cores: %d\n\n", data.cudaCores);
+        LOGPRINTF(stderr, "\t\tCompute Capability: %d.%d\n", data.major, data.minor);
+        LOGPRINTF(stderr, "\t\tCUDA cores: %d\n", data.cudaCores);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
@@ -711,6 +711,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+        PrintGpuInfo();
 
         if (argc <= 1)
         {
