@@ -15,7 +15,7 @@ if [ $? != 0 ]; then
 fi
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" cntk.cntk "speechTrain=[reader=[readerType=HTKDeserializers]] speechTrain=[reader=[prefetch=true]] numCPUThreads=$NumCPUThreads"
+cntkmpirun "-n $Instances" cntk.cntk "speechTrain=[reader=[readerType=HTKDeserializers]] numCPUThreads=$NumCPUThreads"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
 sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
