@@ -889,7 +889,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             break;                                                                // end of epoch
         }
         ProfilerTimeEnd(profilerScope);
-
         profilerScope = ProfilerTimeBegin(profilerEvtMainFB);
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
@@ -975,7 +974,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }                                                        // end sub-minibatch loop
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
+
+            
         } // if (actualMBSize > 0)
+
+#ifndef CPUONLY
+        cudaDeviceSynchronize();
+#endif
 
         ProfilerTimeEnd(profilerScope);
         profilerScope = ProfilerTimeBegin(profilerEvtMainGradient);

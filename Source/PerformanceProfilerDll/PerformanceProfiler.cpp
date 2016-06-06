@@ -167,6 +167,8 @@ struct ProfilerState
 // bits 15-0: fixed event id
 #define INVALID_STATE_ID        0xffffffffffffffffull
 #define INVALID_FIXED_EVENT_ID  0xffffull
+#define CUSTOM_EVT_MASK         0xffffffffffff0000ull
+#define FIXED_EVT_MASK          0xffffull
 
 // We support one global instance of the profiler
 static ProfilerState g_profilerState;
@@ -263,13 +265,13 @@ unsigned long long PERF_PROFILER_API ProfilerTimeBegin(const int eventId)
     }
     g_profilerState.fixedEvents[eventId].refCnt++;
 
-    return (stateId & ~0xffffull) | (unsigned long long)eventId;
+    return (stateId & CUSTOM_EVT_MASK) | (unsigned long long)eventId;
 }
 
 void ProfilerTimeEndInt(const unsigned long long stateId, const long long customClock = -1ll)
 {
     long long endClock = (customClock == -1ll ? GetClock() : customClock);
-    if (!g_profilerState.init || (stateId & 0xffffffffffff0000ull) == (INVALID_STATE_ID & 0xffffffffffff0000ull)) return;
+    if (!g_profilerState.init || (stateId & CUSTOM_EVT_MASK) == (INVALID_STATE_ID & CUSTOM_EVT_MASK)) return;
 
     LOCK
 
@@ -277,7 +279,7 @@ void ProfilerTimeEndInt(const unsigned long long stateId, const long long custom
 
     CustomEventRecordEnd endRecord;
     endRecord.endClock = endClock;
-    endRecord.uniqueId = (stateId & ~0xffffull) >> 16;
+    endRecord.uniqueId = (stateId & CUSTOM_EVT_MASK) >> 16;
 
     memcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, &endRecord, sizeof(CustomEventRecordEnd));
     g_profilerState.customEventPtr += sizeof(CustomEventRecordEnd);
@@ -310,11 +312,11 @@ void PERF_PROFILER_API ProfilerTimeEnd(const unsigned long long stateId)
 
 void PERF_PROFILER_API ProfilerTimeCancel(unsigned long long* stateId)
 {
-    if (!g_profilerState.init || ((*stateId) & 0xffffffffffff0000ull) == (INVALID_STATE_ID & 0xffffffffffff0000ull)) return;
+    if (!g_profilerState.init || ((*stateId) & CUSTOM_EVT_MASK) == (INVALID_STATE_ID & CUSTOM_EVT_MASK)) return;
 
     LOCK
 
-    int eventId = (*stateId) & 0xffff;
+    int eventId = (*stateId) & FIXED_EVT_MASK;
     if (eventId != INVALID_FIXED_EVENT_ID)
     {
         g_profilerState.fixedEvents[eventId].refCnt = 0;
@@ -337,11 +339,11 @@ unsigned long long ProfilerTimeBeginInt(const char* eventDescription, const long
 
     // Increment id with wrapping around, skipping the INVALID_STATE_ID
     g_profilerState.uniqueId++;
-    g_profilerState.uniqueId &= 0xffffffffffffull;
+    g_profilerState.uniqueId &= CUSTOM_EVT_MASK >> 16;
     if (g_profilerState.uniqueId == (INVALID_STATE_ID >> 16))
     {
         g_profilerState.uniqueId++;
-        g_profilerState.uniqueId &= 0xffffffffffffull;
+        g_profilerState.uniqueId &= CUSTOM_EVT_MASK >> 16;
     }
 
     g_profilerState.customEventBuffer[g_profilerState.customEventPtr++] = CUSTOM_EVT_BEGIN_TYPE;
