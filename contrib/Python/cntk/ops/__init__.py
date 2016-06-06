@@ -415,7 +415,7 @@ def identity(x, name=None):
         [array([[ 0.      ,  1.]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -571,7 +571,7 @@ def relu(x, name=None):
         [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
     
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -594,7 +594,7 @@ def sigmoid(x, name=None):
         [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
     
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -616,7 +616,7 @@ def tanh(x, name=None):
                  [ 0.995055,  0.999329]]])]
     
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -643,7 +643,7 @@ def softmax(x, name=None):
         [array([[ 0.5,  0.5]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -664,7 +664,7 @@ def exp(x, name=None):
         [array([[ 1.      ,  2.718282]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -683,7 +683,7 @@ def log(x, name=None):
         [array([[ 0.      ,  0.69314718056]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
                 
@@ -710,7 +710,7 @@ def sqrt(x, name=None):
         [array([[ 0.      ,  2.]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`        
         
@@ -733,7 +733,7 @@ def square(x, name=None):
         [array([[ 1.      ,  100.]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -754,7 +754,7 @@ def abs(x, name=None):
         [array([[ 1.,  1.,  2.,  3.]])]
 
     Args:
-        x: any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
