@@ -14,4 +14,4 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-cntkrun TIMIT_AdaptLearnRate.cntk "TIMIT_TrainAdaptLR=[cvReader=[readerType=HTKMLFDeserializer]] TIMIT_TrainAdaptLR=[reader=[readerType=ExperimentalHTKMLFReader]] $CntkArguments" || exit $?
+cntkrun TIMIT_AdaptLearnRate.cntk "TIMIT_TrainAdaptLR=[cvReader=[readerType=HTKMLFDeserializer]] TIMIT_TrainAdaptLR=[reader=[readerType=HTKMLFDeserializer]] $CntkArguments" || exit $?
