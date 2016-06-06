@@ -805,7 +805,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKTextFormatReader", "Sou
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExperimentalHTKMLFReader", "Source\Readers\ExperimentalHTKMLFReader\ExperimentalHTKMLFReader.vcxproj", "{7B7A51ED-AA8E-4660-A805-D50235A02120}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTKDeserializers", "Source\Readers\HTKDeserializers\HTKDeserializers.vcxproj", "{7B7A51ED-AA8E-4660-A805-D50235A02120}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
@@ -1052,7 +1052,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceToSequence", "Seque
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Source\Extensibility\CPPEvalClient\CPPEvalClient.vcxproj", "{578D52A0-3928-4405-A016-F016E8B49031}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExperimentalHtkmlfReader", "ExperimentalHtkmlfReader", "{977ECCB7-598D-4548-B95B-BACA9CC7D98B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HtkDeserializers", "HtkDeserializers", "{977ECCB7-598D-4548-B95B-BACA9CC7D98B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNN", "DNN", "{1DBB2575-F5C8-43F4-B982-D05D6ADC2F9B}"
 EndProject
@@ -1064,13 +1064,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{BA6A65C5-92A
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUtterance", "{3BDF52CD-7F3C-42BC-AB78-CF5BBC5F4AB4}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.cpu.txt
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.gpu.txt
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.cpu.txt
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\cntk.cntk
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\run-test
-		Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml = Tests\EndToEndTests\Speech\ExperimentalHtkmlfReader\LSTM\FullUtterance\testcases.yml
+		Tests\EndToEndTests\Speech\HtkDeserializers\LSTM\FullUtterance\baseline.cpu.txt = Tests\EndToEndTests\Speech\HtkDeserializers\LSTM\FullUtterance\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\HtkDeserializers\LSTM\FullUtterance\baseline.gpu.txt = Tests\EndToEndTests\Speech\HtkDeserializers\LSTM\FullUtterance\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\cntk.cntk = Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\cntk.cntk
+		Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\run-test = Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\run-test
+		Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\testcases.yml = Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{1141DC61-E014-4DEC-9157-F6B1FC055C7A}"

@@ -9,9 +9,9 @@ Train=[
         useLegacy=false
 
         # A list of deserializers to use.
-        deserializers=[
+        deserializers=(
             [   
-                type="ImageDataDeserializer"
+                type="ImageDeserializer"
                 module="ImageReader"
 
                 # Map file which maps images to labels using the following format:
@@ -23,7 +23,7 @@ Train=[
                 # Description of input streams
                 input=[
                     features=[
-                        transforms=[
+                        transforms=(
                             [
                                 type="Crop"
                                 # Possible values: Center, Random. Default: Center
@@ -48,14 +48,14 @@ Train=[
                             ]:[
                                 type="Transpose"
                             ]
-                        ]
+                        )
                     ]
                     labels=[
                         labelDim=1000
                     ]
                 ]
             ]
-        ]
+        )
     ]    
 ]
 
@@ -65,16 +65,16 @@ Test=[
         randomize=false
 
         # A list of deserializers to use.
-        deserializers=[
+        deserializers=(
             [
-                type="ImageDataDeserializer"
+                type="ImageDeserializer"
                 module="ImageReader"
                 file=$ConfigDir$/val_map.txt
 
                 # Description of input streams
                 input=[
                     features=[
-                        transforms=[
+                        transforms=(
                             [
                                 type="Crop"
                                 cropType=Center
@@ -89,13 +89,13 @@ Test=[
                             ]:[
                                 type="Transpose"
                             ]
-                        ]
+                        )
                     ]
                     labels=[
                         labelDim=1000
                     ]
                 ]
             ]
-        ]
+        )
     ]        
 ]
