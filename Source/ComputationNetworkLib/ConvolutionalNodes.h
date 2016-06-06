@@ -389,13 +389,25 @@ public:
         }
     }
 
-    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
-    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    /*virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+    }
+
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+    }*/
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_tempMatrix, matrixPool);
@@ -404,6 +416,8 @@ public:
     void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
     {
         m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+        if (m_convEng != nullptr)
+            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
 
 protected:

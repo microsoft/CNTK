@@ -15,6 +15,7 @@
 #include "DeprecatedNodes.h"
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
+#include "LatticeFreeMMINode.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "PreComputeNodes.h"
@@ -159,6 +160,12 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonLessEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparsionLessNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonNotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
@@ -185,6 +192,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LatticeFreeMMINode), L"LatticeFreeMMI")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic")) ret = true;

@@ -9,9 +9,11 @@ Unit tests for linear algebra operations, each operation is tested for
 the forward and the backward pass
 """
 
+from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, AA, I, precision
+from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
+
 from ...graph import *
 from .. import *
 from ...reader import *
@@ -28,15 +30,14 @@ TENSOR_PAIRS = [
     ([[100., 200.], [300., 400.], [10., 20.]],
      [[10., 20.], [30., 40.], [1., 2.]]),
     # Test with broadcast
-    # TODO: un-expected CNTK output with the backward pass test
-    #([5], [[10, 20], [30,40], [1,2]]),
-    # TODO: enable once all branches are merged to master
+    # TODO: adjust the broadcast according to the decision on col/row major
+    #([5], [[10, 20], [30,40], [1,2]]),     
+    
     # Adding two 3x2 inputs of sequence length 1
-    #([[30,40], [1,2], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_plus(left_operand, right_operand, device_id, precision):
@@ -65,14 +66,16 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     # Backward pass test
     #==================
     # the expected results for the backward pass is all ones
-    expected = [[[np.ones_like(x) for x in left_operand]]]
+
+    expected = [[[np.ones_like(x) for x in left_operand]]]    
     unittest_helper(left_as_input, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
+    
+    expected = [[[np.ones_like(x) for x in right_operand]]]
     unittest_helper(right_as_input, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 # -- minus operation tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_minus(left_operand, right_operand, device_id, precision):
@@ -111,7 +114,6 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 # -- element times tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
@@ -152,7 +154,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 
 # -- element divide tests --
 
-
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_divide(left_operand, right_operand, device_id, precision):
 
@@ -189,3 +190,45 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
     unittest_helper(right_as_input, None, expected_right, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
+
+TENSORS = [
+    ([30.]),
+    ([[30.]]),
+    ([[1.5, 2.1]]),
+    ([[100., 200.], [300., 400.], [10., 20.]]),
+    ([[30,40], [1,2], [0.1, 0.2]])
+]
+
+# -- identity function tests --
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_identity(tensor, device_id, precision):
+
+    def numpy_op(x):
+        return AA(x, dtype=PRECISION_TO_TYPE[precision])
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = identity(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass of x is x
+    expected = np.ones_like(expected)
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)

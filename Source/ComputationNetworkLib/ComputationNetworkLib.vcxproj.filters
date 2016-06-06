@@ -49,6 +49,9 @@
     <ClCompile Include="InputAndParamNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="LatticeFreeMMINode.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
     <ClCompile Include="RNNNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
@@ -142,6 +145,9 @@
       <Filter>Environment</Filter>
     </ClInclude>
     <ClInclude Include="DeprecatedNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="LatticeFreeMMINode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="RNNNodes.h">

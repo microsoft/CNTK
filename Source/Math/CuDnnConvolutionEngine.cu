@@ -138,14 +138,15 @@ public:
         }
 
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
-#if CUDNN_MAJOR < 5
+#if CUDNN_MAJOR >= 5
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                                               CUDNN_PROPAGATE_NAN,
                                                (int)dims.size(), dims.data(), pad.data(), stride.data()));
 #else
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
-                                               (cudnnNanPropagation_t) 0, (int)dims.size(), dims.data(), pad.data(), stride.data()));
+                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
 #endif
     }
 
