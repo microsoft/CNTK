@@ -28,27 +28,27 @@ DeleteModelsAfterTest=1
 
 printHardwareInfo()
 {
-  cpuName=$(cat /proc/cpuinfo | grep -m 1 'model name' | cut -d ":" -f 2 | tr -s " ")
-  cpuCores=$(cat /proc/cpuinfo | grep -m 1 'cpu cores' | cut -d ":" -f 2 | tr -s " ")
-  totalMemory=$(cat /proc/meminfo | grep 'MemTotal' | cut -d ":" -f 2 | tr -s " ")
-  nproc=$(nproc)
-  nvidiaSmiPath="nvidia-smi"
+	cpuName=$(cat /proc/cpuinfo | grep -m 1 'model name' | cut -d ":" -f 2 | tr -s " ")
+	cpuCores=$(cat /proc/cpuinfo | grep -m 1 'cpu cores' | cut -d ":" -f 2 | tr -s " ")
+	totalMemory=$(cat /proc/meminfo | grep 'MemTotal' | cut -d ":" -f 2 | tr -s " ")
+	nproc=$(nproc)
+	nvidiaSmiPath="nvidia-smi"
 
-  if [ "$OS" == "Windows_NT" ]; then
-    nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
-  fi
+	if [ "$OS" == "Windows_NT" ]; then
+		nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
+	fi
 
-  if [ -f "$nvidiaSmiPath" ]; then
-  gpuName=$("$nvidiaSmiPath" --query-gpu=gpu_name --format=csv,noheader)
-  gpuMem=$("$nvidiaSmiPath" --query-gpu=memory.total --format=csv,noheader)
-  fi
+	if [ -f "$nvidiaSmiPath" ]; then
+	gpuName=$("$nvidiaSmiPath" --query-gpu=gpu_name --format=csv,noheader)
+	gpuMem=$("$nvidiaSmiPath" --query-gpu=memory.total --format=csv,noheader)
+	fi
 
   echo -e "Hardware info:
     CPU Model Name:$cpuName
     CPU Cores:$cpuCores
-    Hardware threads: $nproc
-    Total Memory:$totalMemory
-    GPU Model Name: $gpuName
+		Hardware threads: $nproc
+		Total Memory:$totalMemory
+		GPU Model Name: $gpuName
     GPU Memory: $gpuMem"
 }
 
