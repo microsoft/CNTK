@@ -86,7 +86,7 @@ class Example:
     self.fullName = suite + "/" + name
     self.testDir = testDir
     self.baselineList = []
-    
+
     self.gitHash = ""
 
   @staticmethod
@@ -98,7 +98,7 @@ class Example:
         exampleName = os.path.basename(dirName)
         suiteDir = os.path.dirname(dirName)
         # suite name will be derived from the path components
-        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')                    
+        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')        
 
         example = Example(suiteName,  exampleName, testDir)
         Example.allExamplesIndexedByFullName[example.fullName.lower()] = example
@@ -116,7 +116,7 @@ class Example:
         for flavor in flavors:          
           candidateName = "baseline" + o + flavor + device + ".txt"
           fullPath = td.cygpath(os.path.join(self.testDir, candidateName), relative=True)          
-          if os.path.isfile(fullPath):
+          if os.path.isfile(fullPath):            
             baseline = Baseline(fullPath);
             baselineFilesList.append(baseline)
 
@@ -130,12 +130,12 @@ def getExamplesMetrics():
 
   print ("CNTK - Metrics collector")
 
-  for example in allExamples:
-    baselineListForExample = example.findBaselineFilesList()
+  for example in allExamples:    
+    baselineListForExample = example.findBaselineFilesList()  
     six.print_("Example: " + example.fullName)
-    for baseline in baselineListForExample:        
+    for baseline in baselineListForExample:      
       with open(baseline.fullPath, "r") as f:
-        baselineContent = f.read()
+        baselineContent = f.read()        
         gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
         if gitHash is None:
           continue
@@ -182,7 +182,7 @@ def writeMetricsToAsciidoc():
 
 # ======================= Entry point =======================
 six.print_("==============================================================================")
-
+        
 Example.discoverAllExamples()
 
 getExamplesMetrics()

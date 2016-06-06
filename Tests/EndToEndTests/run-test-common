@@ -34,7 +34,7 @@ printHardwareInfo()
 {
   cpuName=$(cat /proc/cpuinfo 2> /dev/null | grep -m 1 'model name' | cut -d : -f 2- | tr -s " " | cut -c 2-)
   totalMemory=$(cat /proc/meminfo 2> /dev/null | grep 'MemTotal' | cut -d : -f 2- | tr -s " " | cut -c 2-)
-  nproc=$(nproc)
+	nproc=$(nproc)
 
   # Note that MetricsDriver.py depends on this format
   echo "CPU info:"
