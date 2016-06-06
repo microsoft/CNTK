@@ -31,9 +31,7 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
         #[1.84]
     
     Args:
-        target_vector: usually it is one-hot vector where the hot bit 
-        corresponds to the label index. But it can be any probability distribution
-        over the labels.
+        target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. But it can be any probability distribution over the labels.
         output_vector: the unscaled computed output values from the network
         name: the name of the node in the network            
     Returns:
@@ -59,8 +57,7 @@ def square_error(target_matrix, output_matrix, name=None):
         #[0.]
     
     Args:
-        target_matrix: target matrix, it is usually a one-hot vector where the 
-        hot bit corresponds to the label index
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         output_matrix: the output values from the network
         name: the name of the node in the network            
     Returns:
@@ -89,8 +86,7 @@ def error_prediction(target_vector, output_vector, name=None):
         #[1.]
     
     Args:
-        target_vector: it is one-hot vector where the hot bit corresponds to the 
-        label index
+        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         output_vector: the output values from the network
         name: the name of the node in the network            
     Returns:
@@ -381,17 +377,13 @@ def times(left, right, output_rank=1, name=None):
         
         >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
         [array([[[[[  4.,   5.],
-          [  6.,   7.]],
-
-         [[ 12.,  17.],
-          [ 22.,  27.]]],
-
-
-        [[[ 20.,  29.],
-          [ 38.,  47.]],
-
-         [[ 28.,  41.],
-          [ 54.,  67.]]]]])]
+                   [  6.,   7.]],
+                  [[ 12.,  17.],
+                   [ 22.,  27.]]],
+                 [[[ 20.,  29.],
+                   [ 38.,  47.]],
+                  [[ 28.,  41.],
+                   [ 54.,  67.]]]]])]
 
     Args:
         left: left side matrix or tensor
@@ -824,8 +816,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None
         shape: dimensions of the input `x`
         x: the tensor from which the future value is obtained
         time_step: the number of time steps to look into the future (default 1)
-        default_hidden_activation: the default value to use when no future value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no future value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -859,8 +850,7 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
         shape: dimensions of the input `x`
         x: the tensor from which the past value is obtained
         time_step: the number of time steps to look into the past (default 1)
-        default_hidden_activation: the default value to use when no past value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no past value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -924,12 +914,12 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
+    op = TransposeDimensions(x, axis1, axis2, name = name)    
+    wrap_numpy_arrays(op)            
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    cntk_axis1 = abs(axis1) if axis1<0 else x.rank - axis1
-    cntk_axis2 = abs(axis2) if axis2<0 else x.rank - axis2
-    op = TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
-    wrap_numpy_arrays(op)            
+    op.axis1 = abs(axis1) if axis1<0 else op._.rank - axis1
+    op.axis2 = abs(axis2) if axis2<0 else op._.rank - axis2    
     op.rank = op._.rank
     return op
 
@@ -963,9 +953,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         x: input tensor
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
-        axis (int): axis along which `begin_index` and `end_index` will be used 
-        to slice the data. To slice on the dynamic (time) axis, pass a string 
-        with the dynamic axis name or '*' for the default dynamic axis
+        axis (int or str): axis along which `begin_index` and `end_index` will be used. If axis is of type `str` then the time axis will be used.
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -974,22 +962,66 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Slice
+    op = Slice(x, begin_index, end_index, axis, name=name)
+    wrap_numpy_arrays(op)                
+    op.rank = op._.rank
+    
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
     if isinstance(axis, str):
-        cntk_axis = -1 # time axis
+        op.axis = -1 # time axis
     else:
-        cntk_axis = abs(axis) if axis<0 else x.rank - axis
-    op = Slice(x, begin_index, end_index, cntk_axis, name=name)
-    op.rank = op._.rank
+        op.axis = abs(axis) if axis<0 else op._.rank - axis
+        
     return op
+    
+def splice(inputs, axis=0, name=None): 
+    '''
+    Concatenate the input tensors along an axis.    
+
+    Examples:
+        >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data1 = np.asarray([[[1, 2],
+        ...                     [4, 5]]])
+        >>> x = C.input_numpy(data1)
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data2 = np.asarray([[[10, 20],
+        ...                     [30, 40],
+        ...                     [50, 60]]])
+        >>> y = C.input_numpy(data2)
+        >>> # splice both inputs on axis=0 returns a 5x2 matrix
+        >>> C.eval(C.splice([x,y], 0))
+        [array([[[1, 2],
+                 [4, 5],
+                 [10, 20],
+                 [30, 40],
+                 [50, 60]]])]        
+
+    Args:
+        inputs (list): list of input tensors
+        axis (int): axis along which the concatenation will be performed
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import Splice
+    op = Splice(inputs, axis, name=name)
+    wrap_numpy_arrays(op)            
+    op.rank = op._[0].rank
+
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    op.axis = abs(axis) if axis<0 else op._[0].rank - axis
+
+    # Splice is implemented using BrainScript code that results in nested nodes,
+    # if it gets tag='output' the file name might differ depending on the execution
+    # path in BS. Thus we wrap it by Identity to have a fixed name.
+    return identity(op) 
 
 ################################################################################
 # training ops
 ################################################################################
-
-# unittests might require training and testing at the same time ? which 
-# sounds more like end2end test ?
+ 
 def dropout(x, name=None):
     """
     Compute a new tensor with `dropoutRate` perecent set to zero. The values 
@@ -998,10 +1030,6 @@ def dropout(x, name=None):
 
     The output tensor has the same shape as `x`, but with `dropoutRate` of the
     elements set to zero (droped out).
-    
-    
-    Examples:
-        TBA
             
     Args:        
         x: source tensor
@@ -1289,6 +1317,6 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
     op = ReconcileDynamicAxis(data_input, layout_input, name=name)
-    op.rank = None
+    op.rank = data_input.rank
     return op
 

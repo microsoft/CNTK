@@ -58,6 +58,7 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
@@ -77,7 +78,8 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
                            config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
-    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, 
+        firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
@@ -124,6 +126,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches  = config(L"numSubminibatches", (size_t)1);
 
@@ -161,7 +164,8 @@ void DoCrossValidate(const ConfigParameters& config)
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
         
-        SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+        SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
+            firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
         fprintf(stderr, "Model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
