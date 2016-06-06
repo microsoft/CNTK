@@ -277,6 +277,10 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         size_t numWordsPerFeatureSample = (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
         size_t numRows = m_vectorSize * numWordsPerFeatureSample;
         std::wstring featureName = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
+
+        if (!matrices.HasInput(featureName))
+            continue;
+
         Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
         features.Resize(numRows, m_miniBatchSize);
 
