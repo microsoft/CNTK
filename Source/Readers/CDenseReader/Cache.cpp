@@ -116,17 +116,17 @@ namespace Microsoft {
 					this->m_memBlock = (char*)malloc(maxCapacity);
 					if (this->m_memBlock != NULL) {
 						//force allocate all mem in advance
-						cerr << "MemCache: begin memset" << endl;
+						//cerr << "MemCache: begin memset" << endl;
 						memset(m_memBlock, 0, maxCapacity); 
-						cerr << "MemCache: finish memset" << endl;
+						//cerr << "MemCache: finish memset" << endl;
 #ifndef _WIN32
 						//prevent swap (need sudo)
 						int flag = mlock(m_memBlock, maxCapacity);
-						if (flag == 0) {
-							cerr << "mlock success" << endl;
-						}else{
-							cerr << "mlock failed" << endl;
-						}
+						//if (flag == 0) {
+						//	cerr << "mlock success" << endl;
+						//}else{
+						//	cerr << "mlock failed" << endl;
+						//}
 #endif
 						this->m_maxCapacity = maxCapacity;
 						break;

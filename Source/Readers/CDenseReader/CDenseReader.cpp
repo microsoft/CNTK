@@ -239,14 +239,14 @@ namespace Microsoft {
 				m_blockSampleCnt = 0;
 				size_t totalSampel = 0;
 
-				int progress = -1;
+				//int progress = -1;
 				while (pos < m_fileSize)
 				{
-					int newProgress = pos * 10 / m_fileSize;
-					if (newProgress != progress) {
-						cout << "GetZippedFileInfo: " << newProgress * 10 << "%" << endl;
-						progress = newProgress;
-					}
+					//int newProgress = pos * 10 / m_fileSize;
+					//if (newProgress != progress) {
+						//cout << "GetZippedFileInfo: " << newProgress * 10 << "%" << endl;
+						//progress = newProgress;
+					//}
 
 					m_inFile.read((char *)&block_size, 4);
 					m_inFile.read((char *)&block_sample_cnt, 4);
@@ -266,7 +266,7 @@ namespace Microsoft {
 					m_blockSize = max(m_blockSize, block_size + 8);
 					m_blockSampleCnt = max(m_blockSampleCnt, block_sample_cnt);
 				}
-				cout << "GetZippedFileInfo finished" << endl;
+				//cout << "GetZippedFileInfo finished" << endl;
 			}
 
 			template<class ElemType>
@@ -361,8 +361,8 @@ namespace Microsoft {
 				size_t G1 = 1024 * 1024 * 1024 * 1.5;
 
 				size_t maxPointers = G1 / m_microbatchFileSize;
-				size_t zipQueueLen = G1 * 5 / m_blockSize;
-				size_t unzipQueueLen = G1 * 2 / (sizeof(int32_t) * m_totalDim * m_blockSampleCnt * 2);
+				size_t zipQueueLen = 2 * G1 / m_blockSize;
+				size_t unzipQueueLen = zipQueueLen / 3;
 
 				bool firstEpoch = !m_bQueueBufferAllocated;
 
@@ -373,11 +373,11 @@ namespace Microsoft {
 					}
 
 					for (size_t c = 0; c < unzipQueueLen; c++) {
-						void* unzipDataBuffer = malloc(sizeof(int32_t) * m_totalDim * m_blockSampleCnt * 2 + sizeof(int32_t)); //sample cnt
+						void* unzipDataBuffer = malloc(sizeof(ElemType) * m_totalDim * m_blockSampleCnt * 2 + 20); //sample cnt
 						m_unzipedDataToProduce.push(unzipDataBuffer);
 					}
 
-					for (size_t c = 0; c < zipQueueLen; c++){
+					for (size_t c = 0; c < zipQueueLen; c++) {
 						void* zipDataBuffer = malloc(m_blockSize);
 						m_zipedDataToProduce.push(zipDataBuffer);
 					}
@@ -395,28 +395,28 @@ namespace Microsoft {
 				//zip file
 				std::thread readZipData([this](bool firstEpoch)
 				{
-					PrintTime([=]{
-						ReadZipData(firstEpoch);
-					}, "Zip");
+					//PrintTime([=] {
+					ReadZipData(firstEpoch);
+					//}, "Zip");
 				}, firstEpoch);
 				readZipData.detach();
 
 				//mem cache
 				if (this->m_memCache && !firstEpoch) {
 					std::thread tReadMemCache([this](int limit) {
-						PrintTime([=] {
-							ReadMemCache(limit);
-						}, "Mem");
-					}, totBufferCnt / 2);
+						//PrintTime([=] {
+						ReadMemCache(limit);
+						//}, "Mem");
+					}, totBufferCnt / 3);
 					tReadMemCache.detach();
 				}
 
 				//disk cache
 				if (this->m_diskCache && !firstEpoch) {
 					std::thread tReadDiskCache([this](int limit) {
-						PrintTime([=] {
-							ReadDiskCache(limit);
-						}, "Disk");
+						//PrintTime([=] {
+						ReadDiskCache(limit);
+						//}, "Disk");
 					}, 0);
 					tReadDiskCache.detach();
 				}
@@ -540,7 +540,7 @@ namespace Microsoft {
 					int sampleCnt = 0;
 					memcpy(&zipBytesCnt, zipData, 4);
 					memcpy(&sampleCnt, (char *)zipData + 4, 4);
-					size_t unzipBytesCnt = (size_t)(sampleCnt * m_totalDim * 4 * 2);
+					size_t unzipBytesCnt = (size_t)(sampleCnt * m_totalDim * sizeof(ElemType) * 2);
 					Unzip((char *)zipData + 8, (char *)unzipData + 4, zipBytesCnt, unzipBytesCnt);
 
 					//check unzipped data size
@@ -585,24 +585,24 @@ namespace Microsoft {
 
 				auto& read_order = this->m_zipFileReadOrder;
 
-				cerr << "Zip Blocks:" << read_order.size() << endl;
+				//cerr << "Zip Blocks:" << read_order.size() << endl;
 
 				for (size_t i = 0; i < read_order.size(); i++) {
-					float time1 = GetTime();
+					//float time1 = GetTime();
 
 					//buffer
 					void * zipDataBuffer = this->m_zipedDataToProduce.pop();
 
-					float time2 = GetTime();
+					//float time2 = GetTime();
 
 					//read
 					size_t readSize = m_blockSizeInByte[read_order[i]];
 					this->m_inFile.seekg(m_blockOffset[read_order[i]], ios::beg);
 					this->m_inFile.read((char*)zipDataBuffer, readSize);
 
-					float time3 = GetTime();
+					//float time3 = GetTime();
 
-					this->PrintStatInfo("Zip", time2 - time1, time3 - time2, i, read_order.size());
+					//this->PrintStatInfo("Zip", time2 - time1, time3 - time2, i, read_order.size());
 
 					//cache
 					bool cached = false;
@@ -632,20 +632,20 @@ namespace Microsoft {
 				auto& cache = *this->m_memCache;
 				cache.ResetReadPos();
 
-				cerr << "Mem Blocks:" << cache.CachedBlocksNum() << endl;
+				//cerr << "Mem Blocks:" << cache.CachedBlocksNum() << endl;
 
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
-					float time1 = GetTime();
+					//float time1 = GetTime();
 
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
-					float time2 = GetTime();
+					//float time2 = GetTime();
 
 					cache.Read(zipDataBuffer);
 
-					float time3 = GetTime();
+					//float time3 = GetTime();
 
-					this->PrintStatInfo("Mem",  time2 - time1, time3 - time2,  i, cache.CachedBlocksNum());
+					//this->PrintStatInfo("Mem",  time2 - time1, time3 - time2,  i, cache.CachedBlocksNum());
 
 					this->m_zipedDataToConsume.push(zipDataBuffer);
 					this->IncBlockCntBeenRead();
@@ -657,20 +657,20 @@ namespace Microsoft {
 				auto& cache = *this->m_diskCache;
 				cache.ResetReadPos();
 
-				cerr << "Disk Blocks:" << cache.CachedBlocksNum() << endl;
+				//cerr << "Disk Blocks:" << cache.CachedBlocksNum() << endl;
 
 				for (int i = 0; i < cache.CachedBlocksNum(); ++i) {
-					float time1 = GetTime();
+					//float time1 = GetTime();
 
 					void* zipDataBuffer = this->m_zipedDataToProduce.pop(limit);
 
-					float time2 = GetTime();
+					//float time2 = GetTime();
 
 					cache.Read(zipDataBuffer);
 
-					float time3 = GetTime();
+					//float time3 = GetTime();
 
-					this->PrintStatInfo("Disk", time2 - time1, time3 - time2, i, cache.CachedBlocksNum());
+					//this->PrintStatInfo("Disk", time2 - time1, time3 - time2, i, cache.CachedBlocksNum());
 
 					this->m_zipedDataToConsume.push(zipDataBuffer);
 					this->IncBlockCntBeenRead();
