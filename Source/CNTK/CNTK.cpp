@@ -265,7 +265,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpnode")
+                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
                 {
                     DumpNodeInfo<ElemType>(commandParams);
                 }

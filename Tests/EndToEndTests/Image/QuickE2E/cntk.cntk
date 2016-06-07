@@ -88,7 +88,6 @@ train = [
 
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
         err = ErrorPrediction(labels, ol, tag="evaluation")
-        outputNodes = ol
     ]
 
     SGD = [

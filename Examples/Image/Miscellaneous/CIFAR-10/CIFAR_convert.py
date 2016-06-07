@@ -11,9 +11,6 @@ import getopt
 ImgSize = 32
 NumFeat = ImgSize * ImgSize * 3
 
-sys.path.append("../../../../Source/Readers/CNTKTextFormatReader")
-from uci_to_cntk_text_format_converter import convert
-
 def readBatch(src, outFmt):
     with open(src, 'rb') as f:
         d = cp.load(f)
@@ -38,7 +35,8 @@ def readBatch(src, outFmt):
             print ('Format not supported: ' + outFmt)
             usage()
             sys.exit(1)
-    return np.hstack((np.reshape(d['labels'], (len(d['labels']), 1)), feat))
+    res = np.hstack((feat, np.reshape(d['labels'], (len(d['labels']), 1))))
+    return res.astype(np.int)
 
 def loadData(src, outFmt):
     print ('Downloading ' + src)
@@ -50,7 +48,7 @@ def loadData(src, outFmt):
             tar.extractall()
         print ('Done.')
         print ('Preparing train set...')
-        trn = np.empty((0, NumFeat + 1))
+        trn = np.empty((0, NumFeat + 1), dtype=np.int)
         for i in range(5):
             batchName = './cifar-10-batches-py/data_batch_{0}'.format(i + 1)
             trn = np.vstack((trn, readBatch(batchName, outFmt)))
@@ -86,16 +84,22 @@ def parseCmdOpt(argv):
                 sys.exit(1)
             return fmt
 
+def savetxt(filename, ndarray):
+    with open(filename, 'w') as f:
+        labels = map(' '.join, np.eye(10, dtype=np.uint).astype(str))
+        for row in ndarray:
+            row_str = row.astype(str)
+            label_str = labels[row[-1]]
+            feature_str = ' '.join(row_str[:-1])
+            f.write('|labels {} |features {}\n'.format(label_str, feature_str))
+
+
 if __name__ == "__main__":
     fmt = parseCmdOpt(sys.argv[1:])
     trn, tst = loadData('http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz', fmt)
     print ('Writing train text file...')
-    np.savetxt(r'./Train.txt', trn, fmt = '%u', delimiter='\t')
-    convert(r'./Train.txt', r'./Train_cntk_text.txt', 1, 3072, 0, 1, 10)
-    os.remove(r'./Train.txt');
+    savetxt(r'./Train_cntk_text.txt', trn)
     print ('Done.')
     print ('Writing test text file...')
-    np.savetxt(r'./Test.txt', tst, fmt = '%u', delimiter='\t')
-    convert(r'./Test.txt', r'./Test_cntk_text.txt', 1, 3072, 0, 1, 10)
-    os.remove(r'./Test.txt');
+    savetxt(r'./Test_cntk_text.txt', tst)
     print ('Done.')

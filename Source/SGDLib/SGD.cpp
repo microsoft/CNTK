@@ -238,7 +238,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             // we need to keep this info to undo this later
             // TODO: After the change to shared_ptrs, this may no longer be necessary.
             refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName()); // remember so that we can restore them later
-            refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
+            refNet->ReplaceNode(featureNodes[i]->NodeName(), featureNodes[i]);
         }
         //const_cast<MBLayoutPtr&>(refNet->GetMBLayoutPtrOfNetwork()) = net->GetMBLayoutPtrOfNetwork(); // WORKAROUND
         refNet->CompileNetwork();
@@ -727,7 +727,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         for (size_t i = 0; i < refFeatureNodes.size(); i++)
         {
             // note we need to handle deletion carefully
-            refNet->ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
+            refNet->ReplaceNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
         }
     }
 
