@@ -98,6 +98,8 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
 
     if (m_traceLevel > 5)
         multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
+    else if (m_traceLevel > 4)
+        multiverso::Log::ResetLogLevel(multiverso::LogLevel::Error);
 
     if (m_isSycned)
         multiverso::SetCMDFlag("sync", true);
@@ -378,17 +380,6 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
 
             ElemType * px = m_deltaArray + m_tableOffsets[i];
             mat.CopyToArray(px, m_tableLength[i]);
-
-            if (m_isSparseArray[i])
-            {
-                size_t layerRowSize = mat.GetNumRows();
-                size_t layerColSize = mat.GetNumCols();
-                size_t layerSize = mat.GetNumElements();
-                ElemType * py = new ElemType[layerColSize * layerRowSize];
-                transpose(px, py, layerRowSize, layerColSize);
-                memcpy(px, py, layerSize* sizeof(ElemType));
-                delete[] py;
-            }
         }
 
         std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
@@ -404,7 +395,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 if (m_isSparseArray[widx])
                 {
                     ElemType * px = m_deltaArray + m_tableOffsets[widx];
-                    int countnum = std::count(px, px + m_tableLength[i], 0.0f);
+                    int countnum = std::count(px, px + m_tableLength[widx], 0.0f);
                     fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
                     fflush(stderr);
                 }
