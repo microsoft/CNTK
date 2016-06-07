@@ -2010,7 +2010,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
 {
-    if (a.GetFormat() != matrixFormatSparseCSC)
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
 
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
@@ -2023,10 +2023,17 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUS
     CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _sparseCSCElemMulsparseCSC<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock >>>(m, n, a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation(), c.Data());
+    _sparseCSCElemMulsparseCSC<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(m, n, a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation(), c.Data());
 
     // convert dense to sparse CSC
     GPUSparseMatrix<ElemType> cs(c, MatrixFormat::matrixFormatSparseCSC);
+
+    ////GPUMatrix<ElemType> ad(a.GetComputeDeviceId());
+    ////a.CopyToDenseMatrix(ad);
+    //ElemType *carr = c.CopyToArray();
+
+    //for (int i = 0; i < m*n; i++) if (carr[i] > 0.0) fprintf(stderr, "%10.4f ", carr[i]);
+
     return cs;
 }
 
@@ -2038,6 +2045,12 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignElementProductOf(con
     return *this;
 }
 
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+{
+    GPUSparseMatrix<ElemType> as = ElementProductOf(a, b);
+    c = as;
+}
 
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const

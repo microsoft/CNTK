@@ -119,7 +119,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
         opDims = TensorShape(opDims).FlattenInPlace(k).GetDims(); // (ugh)
     nope:;
     }
-    // fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+   // fprintf(stderr, "Post-flatte: %s op %s -> %s via %s\n", string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
     // remove singleton dimensions
     SmallVector<bool> toDrop(dims, false);
@@ -232,14 +232,22 @@ static bool CheckDifferentObject(const TensorView<ElemType>& a, const TensorView
 template <class ElemType>
 void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
+
+    //fprintf(stderr, "op 1: %6d\n", op);
+    //fprintf(stderr, "op 2: %6d", reductionOp);
     // static int cc = 0; if (cc++ == 0)
-    //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
+    //fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
 
     // prepare all tensor descriptor information as needed for execution
     array<size_t, 2> offsets;
     array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
     PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    //fprintf(stderr, "Offset 0: %6d\n", offsets.at(0));
+    //fprintf(stderr, "Offset 1: %6d\n", offsets.at(1));
+
+    //fprintf(stderr, "%s  op  %s  ->  %s  via  %s\n", string(shapes[0])
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
@@ -392,6 +400,13 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     if (numReducedDims * 2 != removedDims)
         InvalidArgument("DoMatrixProductOf: Ranks %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     let firstReducedDim = shapeA.GetRank() - numReducedDims;
+
+    //fprintf(stderr, "First, Remove, numReduce: %d, %d, %d\n", firstReducedDim, removedDims, numReducedDims);
+    //fprintf(stderr, "rankA, rankB, rankC: %d, %d, %d\n", shapeA.GetRank(), shapeB.GetRank(), shapeC.GetRank());
+    //for (int i = 0; i < shapeA.GetRank(); i++) fprintf(stderr, "dimA: %d ", shapeA.GetDim(i));
+    //for (int i = 0; i < shapeB.GetRank(); i++) fprintf(stderr, "dimB: %d ", shapeB.GetDim(i));
+    //for (int i = 0; i < shapeC.GetRank(); i++) fprintf(stderr, "dimC: %d ", shapeC.GetDim(i));
+
     // flatten. This updates shapeA etc.
     FlattenToMatrix(shapeA, transA, firstReducedDim);
     FlattenToMatrix(shapeB, transB, numReducedDims);
@@ -413,6 +428,50 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoMatrixElementProductOf(const TensorView& a, const TensorView& b)
+{
+    bool transA = false;
+    bool transB = false;
+    bool transC = false;
+
+    // determine integration dimension offset
+    auto shapeA = a.m_shape;
+    auto shapeB = b.m_shape;
+    auto shapeC = m_shape;
+
+    //fprintf(stderr, "Sparse Element Wise.\n");
+    //fprintf(stderr, "ElementWise rankA, rankB, rankC: %d, %d, %d\n", shapeA.GetRank(), shapeB.GetRank(), shapeC.GetRank());
+    //for (int i = 0; i < shapeA.GetRank(); i++) fprintf(stderr, "dimA: %d ", shapeA.GetDim(i));
+    //for (int i = 0; i < shapeB.GetRank(); i++) fprintf(stderr, "dimB: %d ", shapeB.GetDim(i));
+    //for (int i = 0; i < shapeC.GetRank(); i++) fprintf(stderr, "dimC: %d ", shapeC.GetDim(i));
+
+    // flatten. This updates shapeA etc.
+    FlattenToMatrix(shapeA, transA, 1);
+    FlattenToMatrix(shapeB, transB, 1);
+    FlattenToMatrix(shapeC, transC, 1);
+
+    // shapeX[transX] and shapeX[1-transX] are row and column dim, respectively, or swapped if transposed
+    if (shapeA[transA] != shapeC[transC] ||
+        shapeB[transB] != shapeC[transC] ||
+        shapeA[transA] != shapeB[transB])
+    {
+        InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
+    }
+
+    //fprintf(stderr, "After ElementWise rankA, rankB, rankC: %d, %d, %d\n", shapeA.GetRank(), shapeB.GetRank(), shapeC.GetRank());
+    //for (int i = 0; i < shapeA.GetRank(); i++) fprintf(stderr, "dimA: %d ", shapeA.GetDim(i));
+    //for (int i = 0; i < shapeB.GetRank(); i++) fprintf(stderr, "dimB: %d ", shapeB.GetDim(i));
+    //for (int i = 0; i < shapeC.GetRank(); i++) fprintf(stderr, "dimC: %d ", shapeC.GetDim(i));
+
+    // create Matrix objects out of this
+    let  A = a.Reshaped(shapeA).AsMatrix();
+    let  B = b.Reshaped(shapeB).AsMatrix();
+    auto C = Reshaped(shapeC).AsMatrix();
+
+    Matrix<ElemType>::ElementProductOf(*A, *B, *C);
 }
 
 template class TensorView<float>;
