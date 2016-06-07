@@ -561,6 +561,8 @@ public:
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
 
+    static void ElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c); 
+
 public:
     void Read(File& stream);
     void Write(File& stream) const;

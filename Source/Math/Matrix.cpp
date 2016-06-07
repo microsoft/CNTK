@@ -901,7 +901,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
 
     if (m_matrixType == newMatrixType)
         return;
-
+  
     if (!m_baseMatrix)
         keepValues = false;
 
@@ -4419,6 +4419,25 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
         }
         else
             NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
+    {
+        if (c.GetMatrixType() != MatrixType::SPARSE)
+        {
+            c.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+        }
+        GPUSparseMatrix<ElemType>::ElementProductOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
     }
 }
 
