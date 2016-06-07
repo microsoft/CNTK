@@ -104,6 +104,7 @@
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="CPURNGHandle.h">
       <Filter>CPU</Filter>
+    </ClInclude>
     <ClInclude Include="RNNCommon.h">
       <Filter>RNN</Filter>
     </ClInclude>
