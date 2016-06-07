@@ -282,7 +282,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
         memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * actualMiniBatchSize);
 
-        for (int j = 0; j <= actualMiniBatchSize; j++)
+        for (int j = 0; j < actualMiniBatchSize; j++)
         {
             for (int k = 0; k < numWordsPerFeatureSample; k++)
             {
