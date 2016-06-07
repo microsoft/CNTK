@@ -5,7 +5,7 @@ deviceId = $DeviceId$
 
 command = speechTrain
 
-// Note: These options are overridden from the command line in some test cases.
+# Note: These options are overridden from the command line in some test cases.
 frameMode = false
 truncated = true
 parallelTrain = false
@@ -29,11 +29,6 @@ speechTrain = [
     reader = [
         verbosity = 0
         randomize = true
-
-        # Description of the corpus – a file will contains all logical sequence keys that identify the same sequence across different deserializers.
-        # Possibly support other types of parameters in the future (such as regex, etc.). For now just file with id per line.
-        corpus = [
-        ]
 
         # A list of deserializers to use.
         deserializers = (

@@ -43,7 +43,7 @@ struct Minibatch;
 // corresponding set of deserializers, the corpus descriptor, transformers, randomizer and packer, providing the following functionality:
 //     - all input sequences are defined by the corpus descriptor
 //     - deserializers provide sequences according to the corpus descriptor
-//     - sequences can be transformed by the transformers applied on top of deserializer (TODO: not yet in place)
+//     - sequences can be transformed by the transformers applied on top of deserializer
 //     - deserializers are bound together using the bundler - it bundles sequences with the same sequence id retrieved from different deserializers
 //     - packer is used to pack randomized sequences into the minibatch
 // The composite reader is currently also responsible for asynchronous prefetching of the minibatch data.
