@@ -491,6 +491,9 @@ namespace CNTK
     class Function;
     typedef _Internal::_ReferenceCounterSharedPtr<Function> FunctionPtr;
 
+    class Learner;
+    typedef _Internal::_ReferenceCounterSharedPtr<Learner> LearnerPtr;
+
     inline wchar_t* CopyString(const wchar_t* source)
     {
         size_t len = wcslen(source) + 1;

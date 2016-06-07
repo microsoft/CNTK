@@ -24,8 +24,8 @@ namespace CNTK
         if (dataBuffer == nullptr)
             InvalidArgument("Cannot create a NDArrayView over a null data buffer");
 
-        if (bufferSizeInBytes < (viewShape.TotalSize() * sizeof(ElementType)))
-            InvalidArgument("Size of the specified buffer for creating the NDArrayView is smaller than the specified view shape");
+            if (bufferSizeInBytes < (viewShape.TotalSize() * sizeof(ElementType)))
+                InvalidArgument("Size of the specified buffer for creating the NDArrayView is smaller than the specified view shape");
 
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
@@ -33,14 +33,14 @@ namespace CNTK
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
-        const NDShape& viewShape,
-        const DeviceDescriptor& device,
-        void* dataBuffer,
-        size_t bufferSizeInBytes)
+                                    const NDShape& viewShape,
+                                    const DeviceDescriptor& device,
+                                    void* dataBuffer,
+                                    size_t bufferSizeInBytes)
     {
         switch (dataType)
         {
-        case DataType::Float:
+        case DataType::Float: 
             return AllocateTensorView<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
         case DataType::Double:
             return AllocateTensorView<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
@@ -150,19 +150,19 @@ namespace CNTK
         size_t splitPoint = rowColSplitPoint;
         if (splitPoint == NDArrayView::AutoSelectRowColSplitPoint)
         {
-            // Determine the split point
-            std::vector<bool> dimsToDrop(tensorShape.GetRank(), false);
-            for (size_t k = 1; k < tensorShape.GetRank(); ++k)
-                if (tensorShape.CanFlatten(k))
-                    dimsToDrop[k - 1] = true;
+        // Determine the split point
+        std::vector<bool> dimsToDrop(tensorShape.GetRank(), false);
+        for (size_t k = 1; k < tensorShape.GetRank(); ++k)
+            if (tensorShape.CanFlatten(k))
+                dimsToDrop[k - 1] = true;
 
-            // There should be at most 2 dims we cannot drop
-            auto numDimsThatCannotBeDropped = std::count_if(dimsToDrop.begin(), dimsToDrop.end(), [](const bool& val) {
-                return !val;
-            });
+        // There should be at most 2 dims we cannot drop
+        auto numDimsThatCannotBeDropped = std::count_if(dimsToDrop.begin(), dimsToDrop.end(), [](const bool& val) {
+            return !val;
+        });
 
-            if (numDimsThatCannotBeDropped > 2)
-                LogicError("The TensorView underlying this NDArrayView cannot be flattened to a Matrix");
+        if (numDimsThatCannotBeDropped > 2)
+            LogicError("The TensorView underlying this NDArrayView cannot be flattened to a Matrix");
 
             // If we can fold the entire tensor down to a vector so any of the axes can be a valid split point,
             // let's pick the split point to be 1
@@ -170,7 +170,7 @@ namespace CNTK
             if (numDimsThatCannotBeDropped > 1)
             {
                 while (dimsToDrop[splitPoint - 1])
-                    splitPoint++;
+            splitPoint++;
             }
         }
 
@@ -341,6 +341,8 @@ namespace CNTK
 
     template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
+    template TensorView<float>* NDArrayView::GetWritableTensorView<float>();
+    template TensorView<double>* NDArrayView::GetWritableTensorView<double>();
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);

@@ -322,6 +322,7 @@ namespace CNTK
         template class _SimpleMap<Variable, ValuePtr>;
         template class _SimpleMap<Variable, const ValuePtr>;
         template class _SimpleMap<Placeholder, Variable>;
+        template class _SimpleMap<Variable, ValuePtr>;
 
 #pragma endregion _SimpleMap
 

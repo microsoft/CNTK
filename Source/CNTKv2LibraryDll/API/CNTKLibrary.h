@@ -297,6 +297,7 @@ namespace CNTK
     class CNTK_API NDArrayView final : public _Internal::_ReferenceCounter
     {
         friend class CompositeFunction;
+        friend class Learner;
 
     public:
         ///
@@ -1591,4 +1592,82 @@ namespace CNTK
         auto operandVector = _Internal::_SimpleVector<FunctionPtr>::CreateSimpleVector(operands);
         return _Combine(operandVector, name);
     }
+
+
+    // Abstraction for learning a subset of parameters of a learnable function using first order gradient values
+    // For e.g momentum, AdaGrad, RmsProp etc. are different types of learners with their own algorithms for 
+    // learning parameter values using first order gradients.
+    class Learner : public _Internal::_ReferenceCounter
+    {
+    public:
+        // Method to update the parameters associated with this learner. By returning false, this method indicates that
+        // learning has stopped for all of the parameters associated with this learner
+        bool Update(std::unordered_map<Variable, ValuePtr>& parameters,
+            const std::unordered_map<Variable, const ValuePtr>& gradients,
+            size_t trainingSampleCount)
+        {
+            auto abisSafeParametersMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(parameters);
+            auto abisSafeGradientsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(gradients);
+            bool result = Update(abisSafeParametersMap, abisSafeGradientsMap, trainingSampleCount);
+
+            for (auto iter : parameters)
+            {
+                parameters[iter.first] = abisSafeParametersMap[iter.first];
+            }
+
+            return result;
+        }
+
+        std::unordered_set<Variable> Parameters() const { return m_parameters; }
+
+    protected:
+        Learner(const std::unordered_set<Variable>& parameters)
+            : m_parameters(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters))
+        {   
+        }
+
+        template <typename ElementType>
+        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr arrayView)
+        {
+            return arrayView->GetMatrix<ElementType>();
+        }
+
+        template <typename ElementType>
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(NDArrayViewPtr arrayView)
+        {
+            return arrayView->GetWritableMatrix<ElementType>();
+        }
+
+        template <typename ElementType>
+        static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr arrayView)
+        {
+            return arrayView->GetTensorView<ElementType>();
+        }
+
+        template <typename ElementType>
+        static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(NDArrayViewPtr arrayView)
+        {
+            return arrayView->GetWritableTensorView<ElementType>();
+        }
+
+
+        virtual bool Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
+            const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
+            size_t trainingSampleCount) = 0;
+
+        _Internal::_SimpleSet<Variable>  m_parameters;
+    };
+
+    // Methods to instantiate CNTK built-in learners
+    LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, 
+        double learningRatePerSample, double momentumPerSample, bool useNesterovAcceleration = false);
+
+    LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, 
+        double learningRatePerSample, bool needAveMultiplier = true);
+
+    LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
+        double learningRatePerSample, double momentumPerSample);
+
+    LearnerPtr RmsPropLearner(const std::unordered_set<Variable>& parameters, 
+        double learningRatePerSample, double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true);
 }
