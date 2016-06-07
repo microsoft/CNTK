@@ -391,6 +391,28 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 }
 
 template <class ElemType>
+GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+    GPUSparseMatrix<ElemType> c(0);
+    return c;
+}
+
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+    GPUSparseMatrix<ElemType> as = ElementProductOf(a, b);
+    *this = as;
+    return *this;
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+{
+    GPUSparseMatrix<ElemType> as = ElementProductOf(a, b);
+    c = as;
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     return *this;
