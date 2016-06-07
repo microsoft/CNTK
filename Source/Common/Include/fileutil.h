@@ -694,7 +694,7 @@ class auto_file_ptr
     FILE* f;
     FILE* operator=(auto_file_ptr&); // can't ref-count: no assignment
     auto_file_ptr(auto_file_ptr&);
-    void close() throw()
+    void close()
     {
         if (f && f != stdin && f != stdout && f != stderr)
         {
