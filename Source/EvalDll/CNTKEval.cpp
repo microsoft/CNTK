@@ -51,7 +51,7 @@ void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription
     config.Parse(networkDescription);
 
     std::vector<wstring> outputNodeNames;
-    m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNames);
+    m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNames);
     
     if (m_net == nullptr)
     {
