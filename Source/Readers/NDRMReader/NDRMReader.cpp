@@ -256,19 +256,15 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     if (m_miniBatchSize == 0)
         return false;
 
-    m_numSamplesCurrEpoch += m_miniBatchSize;
-    if (m_numSamplesCurrEpoch > m_numSamplesPerEpoch)
+    if ((m_filePositionMax - m_currOffset) < (int64_t)m_bytesPerSample)
     {
-        m_numSamplesCurrEpoch = 0;
+        if (m_currOffset == 0)
+            RuntimeError("Not enough data to fill a single minibatch");
+        m_currOffset = 0;
         return false;
     }
 
-    if (((m_filePositionMax - m_currOffset) / m_bytesPerSample) < m_miniBatchSize)
-    {
-        if (m_currOffset == 0)
-            RuntimeError("Not enough data to fill even a single mini-batch");
-        m_currOffset = 0;
-    }
+    size_t actualMiniBatchSize = min(((m_filePositionMax - m_currOffset) / m_bytesPerSample), m_miniBatchSize);
 
     for (int i = 0; i <= m_numDocs; i++)
     {
@@ -282,11 +278,11 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             continue;
 
         Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
-        features.Resize(numRows, m_miniBatchSize);
+        features.Resize(numRows, actualMiniBatchSize);
 
-        memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * m_miniBatchSize);
+        memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * actualMiniBatchSize);
 
-        for (int j = 0; j <= m_miniBatchSize; j++)
+        for (int j = 0; j <= actualMiniBatchSize; j++)
         {
             for (int k = 0; k < numWordsPerFeatureSample; k++)
             {
@@ -301,28 +297,35 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 for (int l = 0; l < m_vectorSize; l++)
                 {
                     char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector + l * sizeof(ElemType);
-                    char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * m_miniBatchSize + j) * sizeof(ElemType);
+                    char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * actualMiniBatchSize + j) * sizeof(ElemType);
                     memcpy(tgtAddr, srcAddr, sizeof(ElemType));
                 }
             }
         }
 
-        features.SetValue(numRows, m_miniBatchSize, features.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
+        features.SetValue(numRows, actualMiniBatchSize, features.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
     }
-
-    m_currOffset += (m_bytesPerSample * m_miniBatchSize);
 
     if (matrices.HasInput(L"L"))
     {
         Matrix<ElemType>& labels = matrices.GetInputMatrix<ElemType>(L"L");
-        labels.Resize(m_numDocs, m_miniBatchSize);
-        labels.SetValue(m_numDocs, m_miniBatchSize, labels.GetDeviceId(), (ElemType*)m_labels, matrixFlagNormal);
+        labels.Resize(m_numDocs, actualMiniBatchSize);
+        labels.SetValue(m_numDocs, actualMiniBatchSize, labels.GetDeviceId(), (ElemType*)m_labels, matrixFlagNormal);
     }
 
     // create the MBLayout
-    m_pMBLayout->Init(m_miniBatchSize, 1);
-    for (size_t i = 0; i < m_miniBatchSize; i++)
+    m_pMBLayout->Init(actualMiniBatchSize, 1);
+    for (size_t i = 0; i < actualMiniBatchSize; i++)
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, 0, 1);
+
+    m_currOffset += (m_bytesPerSample * actualMiniBatchSize);
+
+    m_numSamplesCurrEpoch += actualMiniBatchSize;
+    if (m_numSamplesCurrEpoch > m_numSamplesPerEpoch)
+    {
+        m_numSamplesCurrEpoch = 0;
+        return false;
+    }
 
     return true;
 }
