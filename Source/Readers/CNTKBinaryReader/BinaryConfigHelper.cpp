@@ -36,9 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (input.ExistsCurrent(L"original"))
                 {
                     wstring original = msra::strfun::utf16(input(L"original"));
-                    m_rename[original] = name;
+                    m_streams[original] = name;
                 }
+                else
+                    m_streams[name] = name;
             }
+        }
+        else
+        {
+            RuntimeError("input section not defined for the reader. This must be defined and all streams in use must be listed.");
         }
 
         m_filepath = msra::strfun::utf16(config(L"file"));

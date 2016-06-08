@@ -21,7 +21,7 @@ public:
     explicit BinaryConfigHelper(const ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
-    const std::map<std::wstring, std::wstring>& GetRename() const { return m_rename; }
+    const std::map<std::wstring, std::wstring>& GetRename() const { return m_streams; }
 
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
@@ -36,7 +36,7 @@ public:
 
 private:
     std::wstring m_filepath;
-    std::map<std::wstring, std::wstring> m_rename;
+    std::map<std::wstring, std::wstring> m_streams;
     size_t m_randomizationWindow;
     unsigned int m_traceLevel;
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory

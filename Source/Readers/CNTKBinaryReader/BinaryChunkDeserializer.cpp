@@ -6,40 +6,53 @@
 #include "stdafx.h"
 #include "BinaryChunkDeserializer.h"
 #include "BinaryDataChunk.h"
+#include "FileHelper.h"
+#include <vector>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile)
+void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t numSequences)
 {
-    ReadOffsetsTable(infile, 0, m_numBatches);
+    ReadOffsetsTable(infile, numSequences, 0, m_numBatches);
 }
 
-void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t startOffset, size_t numBatches)
+void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t numSequences, size_t startOffset, size_t numBatches)
 {
     assert((int64_t)(startOffset + numBatches) <= m_numBatches);
-    size_t startPos = startOffset * sizeof(DiskOffsetsTable) + m_offsetStart;
+
+    size_t offsetRowSize = OffsetsTable::GetOffsetRowSize(numSequences);
+    size_t startPos = startOffset * offsetRowSize + m_offsetStart;
 
     // Seek to the offsets table start
-    _fseeki64(infile, startPos, SEEK_SET);
+    CNTKBinaryFileHelper::seekOrDie(infile, startPos, SEEK_SET);
 
     // Note we create numBatches + 1 since we want to be consistent with determining the size of each chunk.
-    DiskOffsetsTable* offsetsTable = new DiskOffsetsTable[numBatches + 1];
+    byte* offsetsTable = new byte[(numBatches + 1)*offsetRowSize];
 
-    fread(offsetsTable, sizeof(DiskOffsetsTable), numBatches, infile);
+    CNTKBinaryFileHelper::readOrDie(offsetsTable, offsetRowSize, numBatches, infile);
 
     // Now read the final entry. It is either the next offset entry (if we're reading a subset and the
     // entry exists), or we just fill it with the correct information based on file size
+    if ((int64_t)(startOffset + numBatches) != m_numBatches)
+        CNTKBinaryFileHelper::readOrDie(offsetsTable + numBatches, offsetRowSize, 1, infile);
+
+    m_offsetsTable = make_unique<OffsetsTable>(numBatches, numSequences, offsetsTable);
+
     if ((int64_t)(startOffset + numBatches) == m_numBatches)
     {
-        _fseeki64(infile, 0, SEEK_END);
-        offsetsTable[numBatches].offset = _ftelli64(infile);
+        CNTKBinaryFileHelper::seekOrDie(infile, 0, SEEK_END);
+        size_t maxOffset = CNTKBinaryFileHelper::tellOrDie(infile) - m_dataStart;
+        m_offsetsTable->SetOffset(numBatches, maxOffset);
+    }
+    /*
+        CNTKBinaryFileHelper::seekOrDie(infile, 0, SEEK_END);
+        offsetsTable[numBatches].offset = CNTKBinaryFileHelper::tellOrDie(infile) - m_dataStart;
         offsetsTable[numBatches].numSamples = 0;
         offsetsTable[numBatches].numSequences = 0;
     }
     else
-        fread(offsetsTable + numBatches, sizeof(DiskOffsetsTable), 1, infile);
+    */
 
-    m_offsetsTable = make_unique<OffsetsTable>(numBatches, offsetsTable);
 }
 
 BinaryChunkDeserializer::BinaryChunkDeserializer(const BinaryConfigHelper& helper) :
@@ -66,34 +79,36 @@ BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename) :
 BinaryChunkDeserializer::~BinaryChunkDeserializer()
 {
     if (m_file)
-        fclose(m_file);
+        CNTKBinaryFileHelper::closeOrDie(m_file);
 }
 
 void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename)
 {
     if (m_file)
-        fclose(m_file);
+        CNTKBinaryFileHelper::closeOrDie(m_file);
 
-    m_file = fopenOrDie(m_filename, L"rb");
+    m_file = CNTKBinaryFileHelper::openOrDie(m_filename, L"rb");
 
     // Parse the header
-    _fseeki64(m_file, 0, SEEK_SET);
+    CNTKBinaryFileHelper::seekOrDie(m_file, 0, SEEK_SET);
 
     // First read the version number of the data file, and make sure the reader version is the same.
     int64_t versionNumber;
-    fread(&versionNumber, sizeof(versionNumber), 1, m_file);
+    CNTKBinaryFileHelper::readOrDie(&versionNumber, sizeof(versionNumber), 1, m_file);
     if (versionNumber != m_versionNumber)
         LogicError("The reader version is %d, but the data file was created for version %d.", m_versionNumber, versionNumber);
 
     // Next is the number of batches in the input file.
-    fread(&m_numBatches, sizeof(m_numBatches), 1, m_file);
+    CNTKBinaryFileHelper::readOrDie(&m_numBatches, sizeof(m_numBatches), 1, m_file);
 
     // Next is the number of inputs
-    fread(&m_numInputs, sizeof(m_numInputs), 1, m_file);
+    CNTKBinaryFileHelper::readOrDie(&m_numInputs, sizeof(m_numInputs), 1, m_file);
 
     // Reserve space for all of the inputs, and then read them in.
     m_streams.resize(m_numInputs);
     m_deserializers.resize(m_numInputs);
+    m_sequenceNum.resize(m_numInputs);
+    size_t numSequences = 0;
 
     int32_t len;
     int32_t maxLen = 100;
@@ -104,14 +119,14 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         auto streamDescription = std::make_shared<StreamDescription>();
 
         // read the name
-        fread(&len, sizeof(len), 1, m_file);
+        CNTKBinaryFileHelper::readOrDie(&len, sizeof(len), 1, m_file);
         if (len + 1 > maxLen)
         {
             maxLen = len + 1;
             delete[] tempName;
             tempName = new char[maxLen];
         }
-        fread(tempName, sizeof(char), len, m_file);
+        CNTKBinaryFileHelper::readOrDie(tempName, sizeof(char), len, m_file);
         tempName[len] = '\0';
         wstring wname = msra::strfun::utf16(tempName);
         if (rename.find(wname) == rename.end())
@@ -122,7 +137,7 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         // Read the matrix type. Then instantiate the appropriate BinaryDataDeserializer, and have it read in its parameters
         // Note: Is there a better way to do this?
         int32_t matType;
-        fread(&matType, sizeof(matType), 1, m_file);
+        CNTKBinaryFileHelper::readOrDie(&matType, sizeof(matType), 1, m_file);
         if (matType == 0)
             m_deserializers[c] = make_shared<DenseBinaryDataDeserializer>(m_file);
         else if (matType == 1)
@@ -134,20 +149,32 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         streamDescription->m_elementType  = m_deserializers[c]->GetElementType();
         streamDescription->m_storageType  = m_deserializers[c]->GetStorageType();
         streamDescription->m_sampleLayout = m_deserializers[c]->GetSampleLayout();
-        m_streams[c] = streamDescription;
+        m_streams[c]                      = streamDescription;
+
+        if (m_deserializers[c]->IsSequence())
+        {
+            m_sequenceNum[c] = (int32_t)numSequences;
+            numSequences++;
+            // This is a hack. We're in essence turning this stream off by making it's sequenceNum = - 1 if it doesn't exist in the config.
+            //  Hopefully we'll be able to remove this later. If not, this should be redone.
+            if (rename.find(wname) == rename.end())
+                m_sequenceNum[c] = -1;
+        }
+        else
+            m_sequenceNum[c] = -1;
     }
     delete[] tempName;
 
     // We just finished the header. So we're now at the offsets table.
-    m_offsetStart = _ftelli64(m_file);
+    m_offsetStart = CNTKBinaryFileHelper::tellOrDie(m_file);
 
     // After the header is the data start. Compute that now.
-    m_dataStart = m_offsetStart + m_numBatches * sizeof(DiskOffsetsTable);
+    m_dataStart = m_offsetStart + m_numBatches * OffsetsTable::GetOffsetRowSize(numSequences);
 
     // We only have to read in the offsets table once, so do that now.
     // Note it's possible in distributed reading mode to only want to read
     // a subset of the offsets table.
-    ReadOffsetsTable(m_file);
+    ReadOffsetsTable(m_file, numSequences);
 }
 
 ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
@@ -158,10 +185,14 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
 
     for (int64_t c = 0; c < m_numBatches; c++ ) 
     {
+        int32_t maxNumSamples = -1;
+        for (int32_t index : m_sequenceNum)
+            maxNumSamples = max(maxNumSamples, m_offsetsTable->GetNumSamples(c, index));
+
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
                 c,
-                m_offsetsTable->GetNumSamples(c),
+                maxNumSamples,
                 m_offsetsTable->GetNumSequences(c)
         }));
     }
@@ -204,7 +235,7 @@ void BinaryChunkDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<S
 unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(size_t chunkId)
 {
     // Seek to the start of the chunk
-    _fseeki64(m_file, m_dataStart + m_offsetsTable->GetOffset(chunkId), SEEK_SET);
+    CNTKBinaryFileHelper::seekOrDie(m_file, m_dataStart + m_offsetsTable->GetOffset(chunkId), SEEK_SET);
 
     // Determine how big the chunk is.
     size_t chunkSize = m_offsetsTable->GetChunkSize(chunkId);
@@ -213,7 +244,7 @@ unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(size_t chunkId)
     unique_ptr<byte[]> buffer = make_unique<byte[]>(chunkSize);
 
     // Read the chunk from disk
-    fread(buffer.get(), sizeof(byte), chunkSize, m_file);
+    CNTKBinaryFileHelper::readOrDie(buffer.get(), sizeof(byte), chunkSize, m_file);
 
     return buffer;
 }
