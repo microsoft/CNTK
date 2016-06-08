@@ -49,12 +49,14 @@ class Txt2CftConverter:
         return result
 
     def _convertInputFiles(self, dictionaries):
+        if len(self.inputFiles) == 0:
+            return self._convertInputFile(dictionaries, sys.stdin)
         for inputFile in self.inputFiles:
-            self._convertInputFile(dictionaries, inputFile)
+            self._convertInputFile(dictionaries, open(inputFile))
 
-    def _convertInputFile(self, dictionaries, inputFile):
+    def _convertInputFile(self, dictionaries, input):
         sequenceId = 0
-        for line in open(inputFile):
+        for line in input:
             line = line.rstrip('\r\n')
             streams = line.split("\t")
             if len(streams) != len(dictionaries):
@@ -92,16 +94,19 @@ if __name__ == "__main__":
     parser.add_argument('--map', help='List of dictionaries,given in the same order as streams in the input files', required=True)
     parser.add_argument('--sep', help='Stream separator, default TAB', default="\t", required=False)
     parser.add_argument('--comment', help='Whether to annotate indexes with tokens. Default is false', choices=["True", "False"], default="False", required=False)
-    parser.add_argument('--out', help='Name of the output file, stdout if not given', default="", required=False)
-    parser.add_argument('inputFiles', nargs=argparse.REMAINDER)
+    parser.add_argument('--output', help='Name of the output file, stdout if not given', default="", required=False)
+    parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", required=False)
     args = parser.parse_args()
 
     # cleaning dictionaryFiles from commas
-    dictionaryFiles = "".join(str(x) for x in args.map).split(",")
+    dictionaryFiles = "".join(str(x) for x in args.map).split(",")    
+    inputFiles = []
+    if args.input != "":
+        inputFiles = "".join(str(x) for x in args.input).split(",")
 
     output = sys.stdout
-    if args.out != "":
-        output = open(output, "w")
+    if args.output != "":
+        output = open(args.output, "w")
 
-    converter = Txt2CftConverter(dictionaryFiles, args.inputFiles, output, args.sep, args.comment == "True")
+    converter = Txt2CftConverter(dictionaryFiles, inputFiles, output, args.sep, args.comment == "True")
     converter.convert()
