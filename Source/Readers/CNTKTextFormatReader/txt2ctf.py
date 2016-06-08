@@ -60,7 +60,7 @@ class Txt2CftConverter:
             line = line.rstrip('\r\n')
             streams = line.split("\t")
             if len(streams) != len(dictionaries):
-                raise Exception("Number of dictionaries %(n) does no correspond to the number of streams in the line: %(line)" % (len(dictionaries), line))
+                raise Exception("Number of dictionaries {0} does no correspond to the number of streams in the line: {1}".format(len(dictionaries), line))
             self._convertStreams(dictionaries, streams, sequenceId)
             sequenceId += 1
 
