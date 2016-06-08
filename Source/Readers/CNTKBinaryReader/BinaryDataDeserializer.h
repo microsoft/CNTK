@@ -182,7 +182,7 @@ public:
                 // Now that we've found it's sample, fix up the index.
                 rowOffsets[curRow] %= m_numCols;
             }
-            sequence->m_numberOfSamples = sequence->m_nnzCounts.size();
+            sequence->m_numberOfSamples = (uint32_t)sequence->m_nnzCounts.size();
             // update values, rowOffsets pointers
             values = (byte*)values + sequence->m_totalNnzCount * elemSize;
             rowOffsets += sequence->m_totalNnzCount;
