@@ -309,3 +309,21 @@ class TransposeDimensions(ComputationNode):
         self.axis2 = axis2
         self.params_with_defaults = []
         self.inputs = ['_']        
+
+class ReduceSum(ComputationNode):
+    def __init__(self, _, axis=0, op_name='CNTK2.ReduceSum',
+            name=None):
+        super(ReduceSum, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
+class ReduceLogSum(ComputationNode):
+    def __init__(self, _, axis=0, op_name='CNTK2.ReduceLogSum',
+            name=None):
+        super(ReduceLogSum, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']

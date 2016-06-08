@@ -916,11 +916,11 @@ def transpose_dimensions(x, axis1, axis2, name=None):
     from cntk.ops.cntk2 import TransposeDimensions
     op = TransposeDimensions(x, axis1, axis2, name = name)    
     wrap_numpy_arrays(op)            
+    op.rank = op._.rank
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    op.axis1 = abs(axis1) if axis1<0 else op._.rank - axis1
-    op.axis2 = abs(axis2) if axis2<0 else op._.rank - axis2    
-    op.rank = op._.rank
+    op.axis1 = abs(axis1) if axis1<0 else op.rank - axis1
+    op.axis2 = abs(axis2) if axis2<0 else op.rank - axis2        
     return op
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
@@ -971,7 +971,7 @@ def slice(x, begin_index, end_index, axis=0, name=None):
     if isinstance(axis, str):
         op.axis = -1 # time axis
     else:
-        op.axis = abs(axis) if axis<0 else op._.rank - axis
+        op.axis = abs(axis) if axis<0 else op.rank - axis
         
     return op
     
@@ -990,7 +990,7 @@ def splice(inputs, axis=0, name=None):
         ...                     [50, 60]]])
         >>> y = C.input_numpy(data2)
         >>> # splice both inputs on axis=0 returns a 5x2 matrix
-        >>> C.eval(C.splice([x,y], 0))
+        >>> C.eval(C.splice((x,y), 0))
         [array([[[1, 2],
                  [4, 5],
                  [10, 20],
@@ -998,7 +998,7 @@ def splice(inputs, axis=0, name=None):
                  [50, 60]]])]        
 
     Args:
-        inputs (list): list of input tensors
+        inputs (list): tuple of input tensors
         axis (int): axis along which the concatenation will be performed
 
     Returns:
@@ -1011,12 +1011,87 @@ def splice(inputs, axis=0, name=None):
 
     #cntk uses column major, thus it will read the indices of data passed from 
     # python in reverse
-    op.axis = abs(axis) if axis<0 else op._[0].rank - axis
+    op.axis = abs(axis) if axis<0 else op.rank - axis
 
     # Splice is implemented using BrainScript code that results in nested nodes,
     # if it gets tag='output' the file name might differ depending on the execution
     # path in BS. Thus we wrap it by Identity to have a fixed name.
     return identity(op) 
+
+################################################################################
+# reduction ops
+################################################################################
+
+def reduce_sum(x, axis=0, name=None): 
+    '''
+    Computes the sum of the input tensor's elements across one axis. if `axis==rank`,
+    then the sum will be computed over all axes, that is, the output is a scalar,
+    which is the sum of tensor's elements.
+
+    Examples:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]        
+        
+        >>> # reduce over the first axis
+        >>> C.eval(C.reduce_sum(data, 0))
+        [array([[[  90.,  120.]]])]     
+        
+        >>> # reduce over the second axis
+        >>> C.eval(C.reduce_sum(data, 1))
+        [array([[[  30.],
+                 [  70.],
+                 [ 110.]]])]        
+        
+        >>> # reduce over the all axes
+        >>> C.eval(C.reduce_sum(data, 2))
+        [array([[ 210.]])]       
+
+    Args:
+        x: input tensor
+        axis (int): axis along which the reduction will be performed
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import ReduceSum
+    op = ReduceSum(x, axis, name=name)
+    wrap_numpy_arrays(op)            
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    op.axis = abs(axis) if axis<0 else op._[0].rank - axis
+    op.rank = 0 if op.axis == 0 else op._[0].rank    
+    return op
+
+def reduce_log_sum(inputs, name=None): 
+    '''
+    Computes the log sum of the input tensor's elements. The output is a scalar,
+    which is the log sum of tensor's elements.
+
+    Examples:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]        
+        
+        >>> # reduce over the all axes
+        >>> C.eval(C.reduce_sum(data))
+        [array([[ 60.000046]])]       
+
+    Args:
+        x: input tensor        
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import ReduceLogSum
+    op = ReduceLogSum(inputs, 0, name=name)
+    wrap_numpy_arrays(op)            
+    
+    #TODO: Once axis != 0 is supported, expose it as argument, and compute the 
+    #rank similar to reduce_sum
+    op.rank = 0   
+    #reduce_log_sum is implemented using BrainScript code that results in nested nodes,
+    #We wrap it by Identity to guarantee that the tag 'output' is passed over and with a fixed name.
+    return identity(op) 
+
 
 ################################################################################
 # training ops

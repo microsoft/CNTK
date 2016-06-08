@@ -87,14 +87,14 @@ CNTK2 = [
         else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
     Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
-		if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-		else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
-		else [ # workaround: swap 'axis' to first position, RowStack, swap back
-			ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
-				inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
-			].inputsT
-			out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
-		].out
+        if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
+        else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
+        else [ # workaround: swap 'axis' to first position, RowStack, swap back
+            ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
+                inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
+            ].inputsT
+            out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
+        ].out
 
     // Swap two axes of a tensor
     TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
@@ -121,7 +121,10 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions
-    // None so far
+    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    # the following is a temporary workaround until we have the C++ version
+    ReduceLogSum (_, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
+    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, _ - LogSoftmax (_), tag=tag1) ].out
 
     // 7. Control flow (if, composite etc.)
     // None so far
