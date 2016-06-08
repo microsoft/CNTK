@@ -294,12 +294,9 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 if (wordId == 0)
                     continue;
 
-                for (int l = 0; l < m_vectorSize; l++)
-                {
-                    char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector + l * sizeof(ElemType);
-                    char* tgtAddr = tgtAddrBase + ((k * m_vectorSize + l) * actualMiniBatchSize + j) * sizeof(ElemType);
-                    memcpy(tgtAddr, srcAddr, sizeof(ElemType));
-                }
+                char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector;
+                char* tgtAddr = tgtAddrBase + (j * numWordsPerFeatureSample + k) * m_bytesPerVector;
+                memcpy(tgtAddr, srcAddr, m_bytesPerVector);
             }
         }
 
