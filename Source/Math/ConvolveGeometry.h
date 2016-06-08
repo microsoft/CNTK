@@ -21,6 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // arbitrary configurations and dimensions. In such case the generic implementation becomes very simple and invariant
 // wrt convolution configuration and dimensionality. For specific cases like 2D/3D convolutions and full sharing,
 // highly optimized implementations (e.g. cuDNN) are used.
+// TODO: rename to ConvolutionGeometry
 class ConvolveGeometry final
 {
 public:
@@ -426,6 +427,7 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
+    // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
     {
@@ -492,6 +494,8 @@ public:
         return dimsOut;
     }
 
+    // Computes input shape given output shape and other convolution parameters.
+    // Used in deconvolution operation.
     static TensorShape ComputeInputShape(const TensorShape& outputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                          const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
     {

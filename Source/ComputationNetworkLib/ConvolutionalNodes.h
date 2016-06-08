@@ -272,6 +272,22 @@ public:
         }
     }
 
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        if (!m_transpose)
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        else
+        {
+            // BackwardData adds results to the output so need to zero them out first.
+            // REVIEW alexeyk: should be rolled into BackwardData itself.
+            sliceOutputValue.SetValue(0);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        }
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
@@ -298,22 +314,6 @@ public:
         }
     }
 
-    void ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
-        if (!m_transpose)
-            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
-        else
-        {
-            // BackwardData adds results to the output so need to zero them out first.
-            // REVIEW alexeyk: should be rolled into BackwardData itself.
-            sliceOutputValue.SetValue(0);
-            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
-        }
-    }
-
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
@@ -322,6 +322,7 @@ public:
         size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape;
         TensorShape outputShape;
+        // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
         if (m_convolution2D)
         {
             // Need to update some tensors with correct input dims.
@@ -350,19 +351,9 @@ public:
 
             outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-            // ConvolveGeometry always uses CHW.
-            SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
         else
         {
-            if (m_imageLayout != ImageLayoutKind::CHW)
-            {
-                InvalidArgument(
-                    "%ls %ls supports only cuDNN (CHW) data layout. "
-                    "Please specify imageLayout=\"cudnn\" in %ls node in your script "
-                    "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-            }
-
             inputShape = GetInputSampleLayout(inputIdx);
             if (!m_transpose)
             {
@@ -376,8 +367,9 @@ public:
                 outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             }
-            SetDims(outputShape, HasMBLayout());
         }
+        // ConvolveGeometry always uses CHW.
+        SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
 
         if (isFinalValidationPass)
         {
@@ -420,6 +412,7 @@ public:
     }
 
 protected:
+    // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
 };
 
@@ -459,6 +452,13 @@ public:
     }
 
 public:
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
+        m_convEng->ForwardPooling(input0, sliceOutputValue);
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
@@ -473,13 +473,6 @@ public:
     {
         // The PoolingNode requires output values only for max pooling.
         return m_poolKind == PoolKind::Max;
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
-        m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -522,6 +515,12 @@ protected:
 // -----------------------------------------------------------------------
 // MaxPoolingMaskNode (inputFeature)
 // Computes activation mask for max pooling operation.
+// The node takes one input and produces an output of the same size and shape
+// where each element is an integer index relative to the kernel size.
+// For example, if pooling kernel has dimensions of [X, Y, 1] then 
+// index will be in the range of [0, X*Y - 1].
+// The main usage scenario for this node is to be used in max unpooling
+// operation as an input to MaxUnpoolingNode.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -554,6 +553,13 @@ public:
     }
 
 public:
+    void ForwardProp(const FrameRange& fr) override
+    {
+        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        m_convEng->MaxPoolingMask(input0, sliceOutputValue);
+    }
+
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // There is nothing to backpropagate.
@@ -561,17 +567,7 @@ public:
         UNUSED(fr);
     }
 
-    bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        m_convEng->MaxPoolingMask(input0, sliceOutputValue);
-    }
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     void Validate(bool isFinalValidationPass) override
     {
@@ -595,7 +591,14 @@ public:
 
 // -----------------------------------------------------------------------
 // MaxUnpoolingNode (inputFeature, mask)
-// Peforms "unpooling" operation for max pooling.
+// Performs "max unpooling" operation. Max unpooling mirrors the operation
+// performed by max pooling node and depends on the values provided to
+// the max pooling node (so unlike deconvolution operation, it is not
+// completely independent). Unpooling takes 2 inputs: features, which
+// tensor has the same shape as corresponding max pooling node output
+// and mask which is the output of MaxPoolingMaskNode. Unpooling node
+// produces an output which has the same dimensions as input to the
+// corresponding max pooling node.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -603,10 +606,7 @@ class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<
 {
     typedef ConvolutionNodeBase<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"MaxUnpooling";
-    }
+    static const std::wstring TypeName() { return L"MaxUnpooling"; }
 
 public:
     MaxUnpoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -628,22 +628,6 @@ public:
     }
 
 public:
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        if (inputIndex != 0)
-            return;
-
-        auto sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-        // REVIEW alexeyk: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
-        m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
-    }
-
-    bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-
     void ForwardProp(const FrameRange& fr) override
     {
         const Matrix<ElemType>& input = Input(0)->ValueFor(fr);
@@ -651,6 +635,19 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         m_convEng->MaxUnpooling(input, mask, sliceOutputValue);
     }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex != 0)
+            return;
+
+        auto sliceOutputGrad = GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        // BUGBUG: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
+        m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
+    }
+
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     void Validate(bool isFinalValidationPass) override
     {
@@ -760,6 +757,14 @@ public:
         }
     }
 
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
+    }
+
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
@@ -769,14 +774,6 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
     }
 
     void Validate(bool isFinalValidationPass) override

@@ -38,7 +38,7 @@ DNN=[
     pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
     
     #unpool1
-    unpool1 = MaxNDUnpooling(pool1, conv1, pool1W, pool1H, pool1hStride, pool1vStride)
+    unpool1 = MaxUnpool(pool1, conv1, pool1W, pool1H, pool1hStride, pool1vStride)
     
     # deconv1
     lpad1 = 2

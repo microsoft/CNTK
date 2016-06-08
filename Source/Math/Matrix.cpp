@@ -4228,6 +4228,9 @@ void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<in
     DecideAndMoveToRightDevice(*this, input);
 
     // REVIEW alexeyk: setting values to zero may cause inconsistency when negative values are unpooled.
+    // To see why, let's assume we have just one input with negative value and output of, for example, 2x2.
+    // As a result of unpooling, there will be 3 zero values and one negative. If we now apply max pooling
+    // operation to the output then we get 0 as the output, not the original negative value.
     // In practice this will not happen as pooling layers usually go right after ReLU layer.
     input.SetValue(0);
 

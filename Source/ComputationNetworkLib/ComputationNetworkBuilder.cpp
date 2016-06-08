@@ -130,6 +130,8 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
 #if 1
     else if (nodeType == OperationNameOf(LegacyReshapeNode))                    return New<LegacyReshapeNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
+    else if (nodeType == OperationNameOf(MaxPoolingMaskNode))                   return New<MaxPoolingMaskNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MaxUnpoolingNode))                     return New<MaxUnpoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
 }
 
@@ -147,8 +149,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MaxPoolingNode))           return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MaxPoolingMaskNode))       return New<MaxPoolingMaskNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MaxUnpoolingNode))         return New<MaxUnpoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 

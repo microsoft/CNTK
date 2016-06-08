@@ -11,6 +11,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// -----------------------------------------------------------------------
+// The file contains CUDA kernels that are used in reference convolution
+// engine. All these kernels look very similar as they use the same
+// idea of precomputed maps described in ConvolveGeometry.h
+// That is, 'mpRowCol' maps each convolution output to the start of the
+// input. 'mpRowIwht', 'mpRowRun' and 'runs' provide maps that allow
+// to get indices of the active weight when applying the convolution.
+// See ConvolveGeometry.h (MpRowCol, MpRowIwht etc) for more details.
+// -----------------------------------------------------------------------
+
 template <typename ElemType>
 __global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ kernel,
                                     const int* mpRowCol, const int* mpRowIwht,
