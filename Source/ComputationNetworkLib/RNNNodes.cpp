@@ -229,8 +229,11 @@ void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matri
     MBLayoutPtr mb = this->GetMBLayout();
     if (mb->HasSequenceBeyondBegin())
         RuntimeError("Invalid MBLayout: Only whole-utterance processing is supported");
+#if 0
+    BUGBUG: Disable this check to mask a problem with the way EvalReader creates segments.
     if (mb->HasSequenceBeyondEnd())
         RuntimeError("Invalid MBLayout: Only whole-utterance processing is supported");
+#endif
 
     // retrieve only the non-gap sequences
     vector<MBLayout::SequenceInfo> seq;
@@ -259,6 +262,9 @@ void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matri
     );
 
     size_t maxSeqLength = seq[sequenceOrder[0]].GetNumTimeSteps();
+    // BUGBUG: This forces the sequences to fit, due to a very bad convention in the evaldll interface.
+    if (maxSeqLength > mb->GetNumTimeSteps())
+        maxSeqLength = mb->GetNumTimeSteps();
 
     // a count of how many sequnces are packed for a particular frame.
     // reset to zero, and compute from current layout information
