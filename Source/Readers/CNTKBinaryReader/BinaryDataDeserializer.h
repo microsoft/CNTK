@@ -9,6 +9,7 @@
 #include "BinaryConfigHelper.h"
 #include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
+#include "FileHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -20,6 +21,7 @@ public:
     StorageType GetStorageType() { return m_matType; }
     ElementType GetElementType() { return m_elemType; }
     TensorShapePtr GetSampleLayout() { return make_shared<TensorShape>(m_numCols); }
+    virtual bool IsSequence() { return false; }
 
     size_t GetElemSizeBytes()
     {
@@ -50,7 +52,7 @@ public:
 
         // Read the element type, note it's stored as an int32
         int32_t elemType;
-        fread(&elemType, sizeof(elemType), 1, infile);
+        CNTKBinaryFileHelper::readOrDie(&elemType, sizeof(elemType), 1, infile);
         if (elemType == 0)
             m_elemType = ElementType::tfloat;
         else if (elemType == 1)
@@ -60,7 +62,7 @@ public:
 
         // Read the number of columns
         int32_t numCols;
-        fread(&numCols, sizeof(numCols), 1, infile);
+        CNTKBinaryFileHelper::readOrDie(&numCols, sizeof(numCols), 1, infile);
         m_numCols = numCols;
     }
 
@@ -94,7 +96,7 @@ public:
         // Read the storage type. Currently we only support sparse_csc, 
         // but for future compatability allow it to be a parameter.
         int32_t storageType;
-        fread(&storageType, sizeof(storageType), 1, infile);
+        CNTKBinaryFileHelper::readOrDie(&storageType, sizeof(storageType), 1, infile);
         if (storageType == 0)
             m_matType = StorageType::sparse_csc;
         else
@@ -102,7 +104,7 @@ public:
 
         // Read the element type, note it's stored as an int32
         int32_t elemType;
-        fread(&elemType, sizeof(elemType), 1, infile);
+        CNTKBinaryFileHelper::readOrDie(&elemType, sizeof(elemType), 1, infile);
         if (elemType== 0)
             m_elemType = ElementType::tfloat;
         else if (elemType == 1)
@@ -110,12 +112,23 @@ public:
         else
             RuntimeError("Error, the reader read element type %d, but only 0 (float) and 1 (double) are valid.", elemType);
 
+        int32_t isSequence;
+        CNTKBinaryFileHelper::readOrDie(&isSequence, sizeof(isSequence), 1, infile);
+        if (isSequence == 0)
+            m_isSequence = false;
+        else if (isSequence == 1)
+            m_isSequence = true;
+        else
+            RuntimeError("Error, the reader read is sequence %d, but only 0 (false) and 1 (true) are valid.", isSequence);
+
         // Read the number of columns
         int32_t numCols;
-        fread(&numCols, sizeof(numCols), 1, infile);
+        CNTKBinaryFileHelper::readOrDie(&numCols, sizeof(numCols), 1, infile);
         m_numCols = numCols;
     }
     
+    bool IsSequence() override { return m_isSequence; }
+
     // The format of data is: 
     // int32_t: nnz for the entire chunk
     // ElemType[nnz]: the values for the sparse sequences
@@ -182,6 +195,10 @@ public:
         // sizeof(int32_t) + totalNNz * sizeof(ElemType) + totalNNz * sizeof(int32_t) + numSequences * sizeof(int32_t)
         return sizeof(int32_t) + totalNNz * (elemSize + sizeof(int32_t)) + (numSequences + 1) * sizeof(int32_t);
     }
+
+private:
+    bool m_isSequence;
+
 
 };
 
