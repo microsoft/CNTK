@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class BinaryDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
 {
 public:
-    explicit BinaryDataChunk(size_t chunkId, size_t startSequence, size_t numSequences, unique_ptr<byte[]> buffer, std::vector<BinaryDataDeserializerPtr> deserializer)
+    explicit BinaryDataChunk(ChunkIdType chunkId, size_t startSequence, size_t numSequences, unique_ptr<byte[]> buffer, std::vector<BinaryDataDeserializerPtr> deserializer)
         : m_chunkId(chunkId), m_startSequence(startSequence), m_numSequences(numSequences), m_buffer(std::move(buffer)), m_deserializers(deserializer)
     {
         m_data.clear();
@@ -33,9 +33,9 @@ public:
             result[c] = m_data[c][sequenceId - m_startSequence];
     }
 
-    size_t GetNumSamples(size_t sequenceId)
+    uint32_t GetNumSamples(size_t sequenceId)
     {
-        size_t numSamples = 0;
+        uint32_t numSamples = 0;
         for (size_t c = 0; c < m_data.size(); c++)
         {
             numSamples = max(numSamples, m_data[c].at(sequenceId)->m_numberOfSamples);
@@ -61,7 +61,7 @@ protected:
     }
 
     // chunk id (copied from the descriptor)
-    size_t m_chunkId;
+    ChunkIdType m_chunkId;
 
     // start id for sequences in this chunk. 
     size_t m_numSequences;

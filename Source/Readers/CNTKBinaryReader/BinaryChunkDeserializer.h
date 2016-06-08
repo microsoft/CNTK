@@ -6,7 +6,6 @@
 #pragma once
 
 #include "DataDeserializerBase.h"
-#include "DataDeserializer.h"
 #include "BinaryConfigHelper.h"
 #include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
@@ -86,16 +85,16 @@ public:
     ~BinaryChunkDeserializer();
 
     // Retrieves a chunk of data.
-    ChunkPtr GetChunk(size_t chunkId) override;
+    ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Get information about chunks.
     ChunkDescriptions GetChunkDescriptions() override;
 
     // Get information about particular chunk.
-    void GetSequencesForChunk(size_t chunkId, vector<SequenceDescription>& result) override;
+    void GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result) override;
 
     // Parses buffer into a BinaryChunkPtr
-    void ParseChunk(size_t chunkId, unique_ptr<byte[]> const& buffer, std::vector<std::vector<SequenceDataPtr>>& data);
+    void ParseChunk(ChunkIdType chunkId, unique_ptr<byte[]> const& buffer, std::vector<std::vector<SequenceDataPtr>>& data);
 
 private:
     // Builds an index of the input data.
@@ -106,7 +105,7 @@ private:
     void ReadOffsetsTable(FILE* infile, size_t numSequences);
 
     // Reads a chunk from disk into buffer
-    unique_ptr<byte[]> ReadChunk(size_t chunkId);
+    unique_ptr<byte[]> ReadChunk(ChunkIdType chunkId);
 
     BinaryChunkDeserializer(const wstring& filename);
 
