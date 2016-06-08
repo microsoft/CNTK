@@ -1326,10 +1326,12 @@ public:
         m_result->AssignProductOf((ElemType) 2.0, *m_result);
 
         /* Now compute result = 2*y*p + (1-y) */
-        m_result->AssignSumOf(*m_result, classZeroLabels);
+        //m_result->AssignSumOf(*m_result, classZeroLabels);
+        *m_result += classZeroLabels;
 
         /* Finally compute result = 2*y*p + (1-y) - p */
-        m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
+        //m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
+        *m_result -= classOneProbabilities;
 
         // compute the log, resulting in y*log(p) + (1-y)*log(1-p)
         m_temp->AssignLogOf(*m_result);
