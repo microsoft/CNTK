@@ -183,7 +183,10 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
     ChunkDescriptions result;
     result.reserve(m_numBatches);
 
-    for (int64_t c = 0; c < m_numBatches; c++ ) 
+    if (m_numBatches > CHUNKID_MAX)
+        RuntimeError("Currently CNTK does not support %d batches. The maximum number of batches allowed is %d.", m_numBatches, CHUNKID_MAX);
+
+    for (ChunkIdType c = 0; c < (ChunkIdType)m_numBatches; c++ ) 
     {
         int32_t maxNumSamples = -1;
         for (int32_t index : m_sequenceNum)
@@ -200,7 +203,7 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
     return result;
 }
 
-void BinaryChunkDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
 {
     // Reserve space for each sequence
     result.reserve(m_offsetsTable->GetNumSequences(chunkId));
@@ -215,24 +218,24 @@ void BinaryChunkDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<S
     {
         // BUGBUG: This is inefficient, but we don't have a choice. Why do we need this at all? Why can't
         // this information just be gotten from the chunks? It's not clear.
-        size_t numSamples = 0;
+        uint32_t numSamples = 0;
         temp.clear();
         chunk->GetSequence(m_offsetsTable->GetStartIndex(chunkId) + c, temp);
         for (size_t i = 0; i < temp.size(); i++) 
             numSamples = max(numSamples, temp[i]->m_numberOfSamples);
 
-        result.push_back(
-        {
-            startId + c,
-            numSamples,
-            chunkId,
-            true,
-            { startId + c, 0 }
-        });
+        SequenceDescription sd = {};
+        sd.m_id = startId + c;
+        sd.m_numberOfSamples = numSamples;
+        sd.m_chunkId = chunkId;
+        sd.m_key.m_sequence = startId + c;
+        sd.m_key.m_sample = 0;
+
+        result.push_back(sd);
     }
 }
 
-unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(size_t chunkId)
+unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(ChunkIdType chunkId)
 {
     // Seek to the start of the chunk
     CNTKBinaryFileHelper::seekOrDie(m_file, m_dataStart + m_offsetsTable->GetOffset(chunkId), SEEK_SET);
@@ -250,7 +253,7 @@ unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(size_t chunkId)
 }
 
 
-ChunkPtr BinaryChunkDeserializer::GetChunk(size_t chunkId)
+ChunkPtr BinaryChunkDeserializer::GetChunk(ChunkIdType chunkId)
 {
     // Read the chunk into memory
     unique_ptr<byte[]> chunkBuffer = ReadChunk(chunkId);
