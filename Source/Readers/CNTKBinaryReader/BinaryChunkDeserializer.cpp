@@ -96,7 +96,7 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     int64_t versionNumber;
     CNTKBinaryFileHelper::readOrDie(&versionNumber, sizeof(versionNumber), 1, m_file);
     if (versionNumber != m_versionNumber)
-        LogicError("The reader version is %d, but the data file was created for version %d.", m_versionNumber, versionNumber);
+        LogicError("The reader version is %d, but the data file was created for version %d.", (int)m_versionNumber, (int)versionNumber);
 
     // Next is the number of batches in the input file.
     CNTKBinaryFileHelper::readOrDie(&m_numBatches, sizeof(m_numBatches), 1, m_file);
@@ -184,7 +184,7 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
     result.reserve(m_numBatches);
 
     if (m_numBatches > CHUNKID_MAX)
-        RuntimeError("Currently CNTK does not support %d batches. The maximum number of batches allowed is %d.", m_numBatches, CHUNKID_MAX);
+        RuntimeError("Currently CNTK does not support %d batches. The maximum number of batches allowed is %d.", (int)m_numBatches, (int)CHUNKID_MAX);
 
     for (ChunkIdType c = 0; c < (ChunkIdType)m_numBatches; c++ ) 
     {
@@ -195,8 +195,8 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
                 c,
-                maxNumSamples,
-                m_offsetsTable->GetNumSequences(c)
+                (size_t)maxNumSamples,
+                (size_t)m_offsetsTable->GetNumSequences(c)
         }));
     }
 
@@ -244,7 +244,8 @@ unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(ChunkIdType chunkId)
     size_t chunkSize = m_offsetsTable->GetChunkSize(chunkId);
     
     // Create buffer
-    unique_ptr<byte[]> buffer = make_unique<byte[]>(chunkSize);
+    unique_ptr<byte[]> buffer(new byte[chunkSize]);
+
 
     // Read the chunk from disk
     CNTKBinaryFileHelper::readOrDie(buffer.get(), sizeof(byte), chunkSize, m_file);
