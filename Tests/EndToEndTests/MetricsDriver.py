@@ -76,7 +76,7 @@ class Baseline:
 
   @staticmethod
   def getLastTrainResult(line):  
-    epochsInfo, parameters = line[0], line[1]
+    epochsInfo, parameters = line[0], line[1]  
     return epochsInfo + '\n' + parameters.replace('; ', '\n')
 
 class Example:
@@ -89,7 +89,7 @@ class Example:
     self.fullName = suite + "/" + name
     self.testDir = testDir
     self.baselineList = []
-
+    
     self.gitHash = ""
 
   @staticmethod
@@ -102,7 +102,7 @@ class Example:
         suiteDir = os.path.dirname(dirName)
         # suite name will be derived from the path components
         suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')        
-
+        
         example = Example(suiteName,  exampleName, testDir)
         Example.allExamplesIndexedByFullName[example.fullName.lower()] = example
 
@@ -127,32 +127,32 @@ class Example:
         for flavor in flavors:          
           candidateName = "baseline" + o + flavor + device + ".txt"
           fullPath = cygpath(os.path.join(self.testDir, candidateName), relative=True)          
-          if os.path.isfile(fullPath):            
+          if os.path.isfile(fullPath):
             baseline = Baseline(fullPath, o[1:], device[1:], flavor[1:]);            
             baselineFilesList.append(baseline)
 
     return baselineFilesList
 
-def getExamplesMetrics():  
+def getExamplesMetrics():
   Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))
 
   allExamples = Example.allExamplesIndexedByFullName
 
-  print ("CNTK - Metrics collector")
+  print ("CNTK - Metrics collector")  
 
-  for example in allExamples:    
-    baselineListForExample = example.findBaselineFilesList()  
+  for example in allExamples:
+    baselineListForExample = example.findBaselineFilesList()
     six.print_("Example: " + example.fullName)   
     for baseline in baselineListForExample:      
       with open(baseline.fullPath, "r") as f:
-        baselineContent = f.read()        
-          gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})\s', baselineContent)
+        baselineContent = f.read()
+        gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})\s', baselineContent)
         if gitHash is None:
           continue
         example.gitHash = gitHash.group(1) 
         baseline.getHardwareInfo(baselineContent)
         baseline.getResultsInfo(baselineContent)                 
-      example.baselineList.append(baseline)    
+      example.baselineList.append(baseline)
         
 def createAsciidocExampleList(file):
   for example in Example.allExamplesIndexedByFullName:
@@ -166,7 +166,7 @@ def writeMetricsToAsciidoc():
 
   createAsciidocExampleList(metricsFile)
 
-  for example in Example.allExamplesIndexedByFullName:
+  for example in Example.allExamplesIndexedByFullName: 
     if not example.baselineList:
       continue
     metricsFile.write("".join(["===== ", example.fullName, "\n"]))
@@ -179,12 +179,12 @@ def writeMetricsToAsciidoc():
                                  baseline.fullPath.split("/")[-1], "] .2+|", baseline.trainResult.replace("\n", " "), " .2+|",
                                  baseline.testResult.replace("\n", " "), "|\n"]))
       metricsFile.write("".join(["CPU: ", re.sub("[\r]?\n", ' ', baseline.cpuInfo), "GPU: ", re.sub("[\r]?\n", ' ', baseline.gpuInfo)]))
-
+      
     metricsFile.write("\n|====\n\n")
 
 # ======================= Entry point =======================
 six.print_("==============================================================================")
-        
+
 Example.discoverAllExamples()
 
 getExamplesMetrics()
