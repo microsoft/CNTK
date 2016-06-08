@@ -82,6 +82,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CNTKException.h" />
+    <ClCompile Include="EvalExtendedWrapper.cpp" />
     <ClCompile Include="EvalWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>

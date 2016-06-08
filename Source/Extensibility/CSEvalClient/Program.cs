@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using Microsoft.MSR.CNTK.Extensibility.Managed;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
@@ -43,6 +45,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         {
             initialDirectory = Environment.CurrentDirectory;
 
+            EvaluateExtendedNetworkSingleLayerNoInput();
+            /*
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -54,7 +58,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
             EvaluateNetworkSingleLayerNoInput();
-
+            */
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
         }
@@ -231,6 +235,65 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 }
 
                 OutputResults("ol", outputs);
+            }
+            catch (CNTKException ex)
+            {
+                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+        }
+
+        /// <summary>
+        /// Evaluates an extended network (without a model and without input) and obtains a single layer output
+        /// This sample uses Sparse data instead of Dense data
+        /// </summary>
+        private static void EvaluateExtendedNetworkSingleLayerNoInput()
+        {
+            string modelDefinition = "precision = \"float\" \n" +
+                "traceLevel = 1 \n" +
+                "run=NDLNetworkBuilder \n" +
+                "NDLNetworkBuilder=[ \n" +
+                "v1 = Constant(1) \n" +
+                "v2 = Constant(2, tag=\"output\") \n" +
+                "ol = Plus(v1, v2, tag=\"output\") \n" +
+                "FeatureNodes = (v1) \n" +
+                "] \n";
+
+            try
+            {
+                // The examples assume the executable is running from the data folder
+                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
+                Environment.CurrentDirectory = initialDirectory;
+
+                using (var model = new IEvaluateModelExtendedManagedF())
+                {
+                    // Create the network
+                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // operating over a two constants, therefore no input is necessary.
+                    //string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
+                    model.CreateNetwork(modelDefinition);
+
+                    var outputSchema = model.GetOutputSchema();
+
+                    model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
+
+                    List<VariableBuffer<float>> outputBuffer = Enumerable.Range(1, outputSchema.Count)
+                        .Select(s => new VariableBuffer<float>()).ToList();
+                    List<VariableBuffer<float>> inputBuffer = new List<VariableBuffer<float>>();
+
+                    // We can call the evaluate method and get back the results...
+                    model.ForwardPass(inputBuffer, outputBuffer);
+
+                    List<float> expected = new List<float>() { 2, 3 /* 1 + 2 */ };
+                    var buf = outputBuffer[0].m_buffer;
+
+                    Console.WriteLine("Expected values: {0}", string.Join(" - ", expected));
+                    Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.m_buffer)).ToList<string>()));
+                }
             }
             catch (CNTKException ex)
             {
