@@ -44,8 +44,8 @@ printHardwareInfo()
 	fi
 
 	echo -e "Hardware info:
-		CPU Model Mame:$cpuName
-		CPU cores:$cpuCores
+		CPU Model Name:$cpuName
+		CPU Cores:$cpuCores
 		Hardware threads: $nproc
 		Total Memory:$totalMemory
 		GPU Model Name: $gpuName
