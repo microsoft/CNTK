@@ -1268,7 +1268,7 @@ public:
     {
         FrameRange fr(InputRef(0).GetMBLayout());
         if (inputIndex != 1)
-            InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation cannot compute the gradient for its first input.", NodeName().c_str(), OperationName().c_str());
 
         // BackpropToRight(m_temp, InputRef(0).Value(), InputRef(2).Value(), InputRef(inputIndex).Gradient(), Gradient(), m_classZeroLabels, m_result);
         // Create vector with 1 for class 1, and -1 for class 0
