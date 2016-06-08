@@ -229,7 +229,7 @@ vector<wstring> ConfigHelper::GetSequencePaths()
     //  scriptPath = "gzip -c -d FILE.txt |", or do a popen with C++ streams, so that we can have a generic open function that returns an ifstream.
     ifstream scp(msra::strfun::utf8(scriptPath).c_str());
     if (!scp)
-        RuntimeError("Failed to open input file: %s", msra::strfun::utf8(scriptPath).c_str());
+        RuntimeError("Failed to open input file: %ls", scriptPath.c_str());
 
     string line;
     while (getline(scp, line))
@@ -238,7 +238,7 @@ vector<wstring> ConfigHelper::GetSequencePaths()
     }
 
     if (scp.bad())
-        RuntimeError("An error occurred while reading input file: %s", msra::strfun::utf8(scriptPath).c_str());
+        RuntimeError("An error occurred while reading input file: %ls", scriptPath.c_str());
 
     fprintf(stderr, " %d entries\n", static_cast<int>(filelist.size()));
 
