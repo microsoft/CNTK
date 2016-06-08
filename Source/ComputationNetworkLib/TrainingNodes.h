@@ -1272,7 +1272,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         if (inputIndex != 1)
-            InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation cannot compute the gradient for its first input.", NodeName().c_str(), OperationName().c_str());
 
         // BackpropToRight(m_temp, Input(0)->Value(), Input(2)->Value(), Input(inputIndex)->Gradient(), Gradient(), m_classZeroLabels, m_result);
         // Create vector with 1 for class 1, and -1 for class 0
