@@ -362,6 +362,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                          m_adjustcoefficient,
                                          m_adjustnbminibatch,
                                          m_traceLevel,
+                                         m_syncStatsTrace,
                                          m_mpi);
         m_pMultiversoHelper->InitModel(learnableNodes);
         m_pMultiversoHelperBarrier = false;

@@ -61,12 +61,13 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
     double adjustcoef = 0.2,
     size_t adjustnbmb = 600,
     int traceLevel = 0,
+    int syncPerfStats = 0,
     const MPIWrapperPtr& pMPI = nullptr)
     : m_modelSyncCount(0), m_adjustLearningRateAtBeginningType(adjusttype),
     m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
     m_totalClientNumber(MPINodeNum), m_isUseAsyncBuffered(isAsyncBuffered),
     m_traceLevel(traceLevel), m_isAverage(isSimulatingMA), m_isSycned(false),
-    m_pMPI(pMPI)
+    m_pMPI(pMPI), m_syncPerfStats(syncPerfStats)
 {
     if (m_isAverage)
     {
@@ -166,53 +167,24 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
             auto multiversoMatrix = m_matrixMap->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
             multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[0]);
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
+            WaitAll();
+            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
         }
         else
         {
             auto multiversoMatrix = m_matrixMap->at(widx);
             ElemType* px = m_deltaArray + m_tableOffsets[widx];
             multiversoMatrix->Add(px, m_tableLength[widx]);
-        }
-    }
-
-    // TODO[qiwye] remove this fake get when multiverso has fix the initial problem
-    for (int widx = 0; widx < m_tableCount; widx++)
-    {
-        if (m_isSparseArray[widx])
-        {
-            auto multiversoMatrix = m_matrixMap->at(widx);
-            ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
-        }
-        else
-        {
-            auto multiversoMatrix = m_matrixMap->at(widx);
-            ElemType* px = m_deltaArray + m_tableOffsets[widx];
             multiversoMatrix->Get(px, m_tableLength[widx]);
-        }
-    }
-
-    // TODO[qiwye] doesn't work well in async model.
-    WaitAll(); // initial model for every client should be identical
-
-    for (int widx = 0; widx < m_tableCount; widx++)
-    {
-        if (m_isSparseArray[widx])
-        {
-            auto multiversoMatrix = m_matrixMap->at(widx);
-            ElemType* px = m_deltaArray + m_tableOffsets[widx];
-            multiversoMatrix->Get(px, m_tableLength[widx], m_getOptions[0]);
-        }
-        else
-        {
-            auto multiversoMatrix = m_matrixMap->at(widx);
-            ElemType* px = m_deltaArray + m_tableOffsets[widx];
+            WaitAll();
             multiversoMatrix->Get(px, m_tableLength[widx]);
         }
     }
 
     if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
         multiverso::Log::Info("multiverso initial model loaded.\n");
+    m_reportTimer.Start();
 }
 
 //ASGD logic
@@ -384,35 +356,19 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
 
         std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
 
-#pragma warning( push )
-#pragma warning( disable : 4244)
-
-
-        if (m_traceLevel > 3)
-        {
-            for (int widx = 0; widx < m_tableCount; widx++)
-            {
-                if (m_isSparseArray[widx])
-                {
-                    ElemType * px = m_deltaArray + m_tableOffsets[widx];
-                    int countnum = std::count(px, px + m_tableLength[widx], 0.0f);
-                    fprintf(stderr, "\t\t(model averaging) zero number = %d\n", (int)countnum);
-                    fflush(stderr);
-                }
-            }
-        }
-#pragma warning( pop ) 
-
         // lr decay
         if (m_isAverage)
         {
             factor = ModelAggregationCoefficient(sampleSinceLastSynced);
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
-            if (m_traceLevel > 2)
+            if (m_traceLevel > 2 && m_syncPerfStats != 0)
             {
-                fprintf(stderr, "\t\t(model averaging) sampleSinceLastSynced = %d, factor = %f.\n", (int)sampleSinceLastSynced, factor);
-                fflush(stderr);
+                if (m_modelSyncCount % m_syncPerfStats == 0)
+                    ReportPerfStats(m_totalClientNumber * m_sampleSinceLastReport, m_sampleSinceLastReport);
+                else
+                    m_sampleSinceLastReport += sampleSinceLastSynced;
             }
+
         }
         else
         {
@@ -610,6 +566,23 @@ private:
         }
     }
 
+    void ReportPerfStats(size_t totalSamplesProcessedSinceLastReport,
+                           size_t localSamplesProcessedSinceLastReport)
+    {
+        m_reportTimer.Stop();
+        double secondsSinceLastReport = m_reportTimer.ElapsedSeconds();
+        m_reportTimer.Restart();
+
+        float totalThroughput = secondsSinceLastReport > 0 ? (float)totalSamplesProcessedSinceLastReport / ((float)secondsSinceLastReport * 1000.0f) : 0.0f;
+        float throughputPerWorker = totalThroughput / m_totalClientNumber;
+
+        string prefix = "\t\t(sim-model aggregation stats) %d-th sync: %8.2f seconds since last report ; %d samples processed by %d workers (%d by me);\n"
+            "\t\t(sim-model aggregation stats) %d-th sync: totalThroughput = %.2fk samplesPerSecond , throughputPerWorker = %.2fk samplesPerSecond\n";
+        fprintf(stderr, prefix.c_str(), (int)m_modelSyncCount, secondsSinceLastReport, (int)totalSamplesProcessedSinceLastReport, (int)m_totalClientNumber, (int)localSamplesProcessedSinceLastReport,
+            (int)m_modelSyncCount, totalThroughput, throughputPerWorker);
+        m_sampleSinceLastReport = 0;
+
+    }
     std::vector<multiverso::MatrixWorker<ElemType>*>* m_matrixMap;
     std::vector<multiverso::MatrixServer<ElemType>*>* m_serverMap;
     std::vector<bool> m_isSparseArray;
@@ -621,6 +594,10 @@ private:
 
     int m_totalClientNumber;
     int m_traceLevel;
+    int m_syncPerfStats;
+    Timer m_reportTimer;
+    size_t m_modelSyncCount;
+    size_t m_sampleSinceLastReport;
 
     bool m_isUseAsyncBuffered;
     int m_localCacheNumber;
@@ -629,7 +606,6 @@ private:
     std::vector< multiverso::GetOption*> m_getOptions; // used by sparse table
     std::vector< multiverso::AddOption*> m_addOptions; // used by sparse table
 
-    size_t m_modelSyncCount;
 
     AdjustLearningRateatBeginning m_adjustLearningRateAtBeginningType;
     double m_adjustCoefficient;
