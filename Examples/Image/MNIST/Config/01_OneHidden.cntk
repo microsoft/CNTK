@@ -33,7 +33,10 @@ initOnCPUOnly = true
 train = [
     action = "train"
 
-    BrainScriptNetworkBuilder = [
+    # BrainScript version as described in Tutorial II.
+    # This is currently disabled. To run this, please remove the "_disabled" from "BrainScriptNetworkBuilder_disabled"
+    # and comment out the NDLNetworkBuilder below.
+    BrainScriptNetworkBuilder_disabled = [
 
         # macros to include
         include "Shared.bs"
@@ -67,9 +70,7 @@ train = [
         outputNodes     = (z)
     ]
 
-    # deprecated NDL version.
-    # TODO: remove this (currently kept around since BS has different randomization seeds and thus not identical results)
-    # comment out this section to run Tutorial II
+    # deprecated NDL version
     NDLNetworkBuilder = [
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/01_OneHidden.ndl"

@@ -64,20 +64,9 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     bool enableDistributedMBReading = config(L"distributedMBReading", false);
 
-#if 0
-    ConfigArray evalNodeNames = config(L"evalNodeNames", "");
-    vector<wstring> evalNodeNamesVector;
-    for (int i = 0; i < evalNodeNames.size(); ++i)
-    {
-        evalNodeNamesVector.push_back(evalNodeNames[i]);
-    }
-
-    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
-#else
     vector<wstring> evalNodeNamesVector;
 
     let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
-#endif
 
     // set tracing flags
     net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
