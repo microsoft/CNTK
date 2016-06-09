@@ -20,7 +20,7 @@ precision = "float"
 modelPath = "$modelDir$/01_OneHidden"
 ndlMacros = "$configDir$/Macros.ndl"
 
-# uncomment the following line to write logs to a file 
+# uncomment the following line to write logs to a file
 # stderr = "$outputDir$/01_OneHidden_out"
 traceLevel = 1
 numMBsToShowResult = 500
@@ -44,9 +44,7 @@ train = [
         labelDim = 10                               # number of distinct labels
 
         features = Input (featDim)
-        #featScaled = Constant (1.0 / 256.0) .* features
-        featScale = Constant (0.00390625) # TODO: 1/256?
-        featScaled = Scale (featScale, features)  # TODO: ElementTimes
+        featScaled = Constant (1.0 / 256.0) .* features
         labels = Input (labelDim)
 
         hiddenDim = 200
@@ -81,10 +79,8 @@ train = [
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        #learningRatesPerSample = 0.003125
-        #momentumAsTimeConstant = 0
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
         maxEpochs = 30
     ]
 
@@ -111,7 +107,7 @@ train = [
 
 test = [
     action = "test"
-    minibatchSize = 16      # TODO: make this MUCH larger!!
+    minibatchSize = 1024
 
     # TODO: this requires latest master build; not supported in 1.5 release
     #BrainScriptNetworkBuilder = (new ComputationNetwork [
