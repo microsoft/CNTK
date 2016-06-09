@@ -58,7 +58,9 @@ train = [
         ce   = CrossEntropyWithSoftmax (labels, z)
         errs = ErrorPrediction         (labels, z)
 
-        # set top5errs as an evaluation node to compute the top-5 error rate (currently inactive since expensive)
+        # set top5errs as an evaluation node to compute the top-5 error rate
+        # This is not marked tag="evaluation" since expensive during training.
+        # We explicitly select it as an output node in the "test" command.
         top5errs = ErrorPrediction (labels, z, topN=5)
 
         # declare special nodes
@@ -69,10 +71,13 @@ train = [
         outputNodes     = (z)
     ]
 
-    #NDLNetworkBuilder = [
-    #    networkDescription = "$ConfigDir$/01_OneHidden.ndl"
-    #]
-    
+    # deprecated NDL version.
+    # TODO: remove this (currently kept around since BS has different randomization seeds and thus not identical results)
+    # comment out this section to run Tutorial II
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
+    ]
+
     SGD = [
         epochSize = 60000
         minibatchSize = 32
@@ -108,14 +113,17 @@ test = [
     action = "test"
     minibatchSize = 16      # TODO: make this MUCH larger!!
 
-    BrainScriptNetworkBuilder = (new ComputationNetwork [
-        network = BS.Network.Load ("$modelPath$")
-        errrs = Pass (network.errs, tag="evaluation")   # Pass() creates a new top-level name, so that it shows as "errs"
-        #top5errs = Pass (network.top5errs, tag="evaluation")
-        top5errrs = ErrorPrediction (network.labels, network.errs.inputs[1] /* network.z*/, topN=5, tag="evaluation")
+    # TODO: this requires latest master build; not supported in 1.5 release
+    #BrainScriptNetworkBuilder = (new ComputationNetwork [
+    #    network = BS.Network.Load ("$modelPath$")
+    #    errrs = Pass (network.errs, tag="evaluation")   # Pass() creates a new top-level name, so that it shows as "errs"
+    #    #top5errs = Pass (network.top5errs, tag="evaluation")
+    #    top5errrs = ErrorPrediction (network.labels, network.errs.inputs[1] /* network.z*/, topN=5, tag="evaluation")
+    #
+    #    #evaluationNodes = (errs : top5errs)   # TODO: make this work as well
+    #])
 
-        #evaluationNodes = (errs : top5errs)   # TODO: make this work as well
-    ])
+    evalNodeNames = errs:top5errs
 
     reader = [
         readerType = "CNTKTextFormatReader"

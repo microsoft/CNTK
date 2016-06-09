@@ -56,8 +56,9 @@ CNTK2 = [
     // 1. Inputs
     // Changes: dims -> shape
     DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+    # TODO: Is it a good idea to default to "feature"?
     Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
-    
+
     // 2. Variables and constants
     // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
     // Python API: 

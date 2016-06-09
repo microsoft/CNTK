@@ -1,16 +1,17 @@
 # Shared.bs -- macros shared by all MNIST examples
 
-DNNSigmoidLayer(inDim, outDim, x, parmScale) = [
+DNNSigmoidLayer(inDim, outDim, x, parmScale) = [    # TODO: share with DNNLayer?
     W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
-    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+    b = LearnableParameter(outDim, 1,     init="fixedValue", value=0)
     t = Times(W, x)
     z = Plus(t, b)
     y = Sigmoid(z)
+    # TODO: y = Sigmoid (W * x + b)
 ].y
 
 DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
     W = ImageParameter(outDim, inW, inH, inC, init="uniform", initValueScale=parmScale, initOnCPUOnly=true /* , imageLayout=$imageLayout$*/)
-    b = LearnableParameter(outDim, 1,         init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+    b = LearnableParameter(outDim, 1,         init="fixedValue", value=0)
     t = Times(W, x)
     z = Plus(t, b)
     y = Sigmoid(z)
@@ -18,17 +19,17 @@ DNNImageSigmoidLayer(inW, inH, inC, outDim, x, parmScale) = [
 
 DNNLayer(inDim, outDim, x, parmScale) = [
     W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
-    b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+    b = LearnableParameter(outDim, 1,     init="fixedValue", value=0)
     t = Times(W, x)
     z = Plus(t, b)
 ].z
 
 DnnBNReLULayer(inDim, outDim, x, wScale, bValue, scValue, bnTimeConst) = [
-    W = LearnableParameter(outDim, inDim, init = Gaussian, initValueScale = wScale, initOnCPUOnly=true) 
-    b = LearnableParameter(outDim, 1, init = fixedValue, value = bValue) 
-    sc = LearnableParameter(outDim, 1, init = fixedValue, value = scValue) 
-    m = LearnableParameter(outDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
-    isd = LearnableParameter(outDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    W = LearnableParameter(outDim, inDim, init = "gaussian", initValueScale = wScale, initOnCPUOnly=true) 
+    b = LearnableParameter(outDim, 1, init = "fixedValue", value = bValue) 
+    sc = LearnableParameter(outDim, 1, init = "fixedValue", value = scValue) 
+    m = LearnableParameter(outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
+    isd = LearnableParameter(outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
     t = Times(W, x)
     bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, normalizationTimeConstant = bnTimeConst)
     y = RectifiedLinear(bn)
@@ -58,11 +59,11 @@ ConvNDReLULayer (inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, wScale,
     out = RectifiedLinear (c + b);
 ].out
 
-ConvBNLayerW (W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst) = [
-    b = LearnableParameter(outMap, 1, init=fixedValue, value=bValue)
-    sc = LearnableParameter(outMap, 1, init=fixedValue, value=scValue)
-    m = LearnableParameter(outMap, 1, init=fixedValue, value=0, learningRateMultiplier=0)
-    isd = LearnableParameter(outMap, 1, init=fixedValue, value=0, learningRateMultiplier=0)
+ConvBNLayerW (W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst) = [   # TODO: delete if not needed
+    b = LearnableParameter(outMap, 1, init="fixedValue", value=bValue)
+    sc = LearnableParameter(outMap, 1, init="fixedValue", value=scValue)
+    m = LearnableParameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
+    isd = LearnableParameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true /* , imageLayout=$imageLayout$*/)
     y = BatchNormalization(c, sc, b, m, isd, eval=false, spatial=true, normalizationTimeConstant=bnTimeConst /* , imageLayout=$imageLayout$*/)
