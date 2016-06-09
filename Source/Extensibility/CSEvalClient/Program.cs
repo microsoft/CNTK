@@ -277,13 +277,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     //string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
                     model.CreateNetwork(modelDefinition);
 
-                    var outputSchema = model.GetOutputSchema();
+                    VariableSchema outputSchema = model.GetOutputSchema();
 
                     model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
 
-                    List<VariableBuffer<float>> outputBuffer = Enumerable.Range(1, outputSchema.Count)
-                        .Select(s => new VariableBuffer<float>()).ToList();
-                    List<VariableBuffer<float>> inputBuffer = new List<VariableBuffer<float>>();
+                    List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
+                    List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>();
 
                     // We can call the evaluate method and get back the results...
                     model.ForwardPass(inputBuffer, outputBuffer);

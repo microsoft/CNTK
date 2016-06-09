@@ -45,12 +45,12 @@ public enum class NodeGroup
 // This is used for both dense and sparse data.
 //
 generic<class ElemType>
-public ref class VariableBuffer
+public ref class ValueBuffer
 {
 public:
-    VariableBuffer()
+    ValueBuffer(int size)
     {
-        m_buffer = gcnew List<ElemType>();
+        m_buffer = gcnew array<ElemType>(size);
         m_indices = gcnew List<int>();
         m_colIndices = gcnew List<int>();
     }
@@ -62,7 +62,7 @@ public:
     // [2,2] and 12 elements in the buffer, the number of samples is 3.
     // For sparse inputs, the number of samples is indicated by the m_colIndices field.
     //
-    List<ElemType>^ m_buffer;
+    array<ElemType>^ m_buffer;
 
     // In case of sparse data, the following is also used. Otherwise, the 
     // contents are ignored.
@@ -116,21 +116,51 @@ public ref struct VariableLayout
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
     int m_numElements;
+};
 
-    // Name of the axis, potentially shared between inputs. For any two inputs sharing the same
-    // dynamic axis, the sequence cardinality must be the same.
-    String^ m_dynamicAxisName;
+public ref class VariableSchema : List<VariableLayout^>
+{
+public:
+    generic<typename ElemType>
+    List<ValueBuffer<ElemType>^>^ CreateBuffers(List<int>^ maxLengths)
+    {
+        if (maxLengths->Count != this->Count)
+        {
+            throw gcnew CNTKRuntimeException("Expected max lengths for all variables.", String::Empty);
+        }
+
+        List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
+        for (int i = 0; i < this->Count; i++)
+        {
+            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements * maxLengths[i]));
+        }
+
+        return buffers;
+    }
+
+    // Creates minimum size buffers based on schema
+    generic<typename ElemType>
+        List<ValueBuffer<ElemType>^>^ CreateBuffers()
+        {
+            List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
+            for (int i = 0; i < this->Count; i++)
+            {
+                buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements));
+            }
+
+            return buffers;
+        }
 };
 
 /*
 template <typename ElemType>
-using Variables = List<VariableBuffer<ElemType>^>^;
+using Variables = List<ValueBuffer<ElemType>^>^;
 
 template <typename ElemType>
-using VariableBufferNat = Microsoft::MSR::CNTK::VariableBuffer<ElemType>;
+using ValueBufferNat = Microsoft::MSR::CNTK::ValueBuffer<ElemType>;
 
 template <typename ElemType>
-using VariablesNat = std::vector<VariableBufferNat<ElemType>>;
+using VariablesNat = std::vector<ValueBufferNat<ElemType>>;
 
 using VariableSchema = List<VariableLayout^>^;
 */
@@ -194,7 +224,7 @@ public:
     // GetOutputSchema - retrieve information about tensor shapes and memory layout of the outputs for this
     // model.
     //
-    List<VariableLayout^>^ GetOutputSchema()
+    VariableSchema^ GetOutputSchema()
     {
         if (m_eval == nullptr)
         {
@@ -203,14 +233,13 @@ public:
 
         auto outputLayout = m_eval->GetOutputSchema();
 
-        auto outputSchema = gcnew List<VariableLayout^>();
+        auto outputSchema = gcnew VariableSchema();
         for (auto& lay : outputLayout)
         {
             VariableLayout^ layout = gcnew VariableLayout();
             layout->m_name = gcnew String(lay.m_name.c_str());
             layout->m_dataType = GetDataType(lay.m_dataType);
             layout->m_numElements = lay.m_numElements;
-            layout->m_dynamicAxisName = gcnew String(lay.m_dynamicAxisName.c_str());
 
             outputSchema->Add(layout);
         }
@@ -259,7 +288,6 @@ public:
             layout->m_name = gcnew String(lay.m_name.c_str());
             layout->m_dataType = GetDataType(lay.m_dataType);
             layout->m_numElements = lay.m_numElements;
-            layout->m_dynamicAxisName = gcnew String(lay.m_dynamicAxisName.c_str());
 
             inputSchema->Add(layout);
         }
@@ -277,7 +305,7 @@ public:
     // will happen during evaluation.
     // Called after StartForwardEvaluation()
     //
-    void ForwardPass(List<VariableBuffer<ElemType>^>^ inputs, List<VariableBuffer<ElemType>^>^ outputs)
+    void ForwardPass(List<ValueBuffer<ElemType>^>^ inputs, List<ValueBuffer<ElemType>^>^ outputs)
     {
         if (m_eval == nullptr)
         {
@@ -293,9 +321,8 @@ public:
 
         try
         {
-
-            std::vector<Microsoft::MSR::CNTK::VariableBuffer<ElemType>> stdInputs;
-            std::vector<Microsoft::MSR::CNTK::VariableBuffer<ElemType>> stdOutputs;
+            std::vector<Microsoft::MSR::CNTK::ValueBuffer<ElemType>> stdInputs;
+            std::vector<Microsoft::MSR::CNTK::ValueBuffer<ElemType>> stdOutputs;
 
             // TODO: Pin the memories prior to passing the pointer to the native side
             for each (auto item in inputs)
@@ -329,26 +356,13 @@ public:
                 throw GetCustomException(ex);
             }
 
+            // Once memory is pinned, the output values should already be in the outputs list
             for (int varIndex = 0; varIndex < stdOutputs.size(); varIndex++)
             {
-                if (outputs->Count <= varIndex)
-                {
-                    outputs->Add(gcnew VariableBuffer<ElemType>());
-                }
-
                 for (int bufIndex = 0; bufIndex < stdOutputs[varIndex].m_buffer.size(); bufIndex++)
                 {
                     auto out = stdOutputs[varIndex].m_buffer[bufIndex];
-                    VariableBuffer<ElemType>^ item = outputs[varIndex];
-                    if (item->m_buffer->Count <= bufIndex)
-                    {
-                        item->m_buffer->Add(out);
-                    }
-                    else
-                    {
-                        item->m_buffer[bufIndex] = out;
-                    }
-                    //outputs[varIndex]->m_buffer[bufIndex] = out;
+                    outputs[varIndex]->m_buffer[bufIndex] = out;
                 }
             }
         }
@@ -387,6 +401,20 @@ private:
     /// <returns>A native vector of items</returns>
     template<typename ElemType>
     shared_ptr<std::vector<ElemType>> CopyList(List<ElemType>^ list)
+    {
+        shared_ptr<std::vector<ElemType>> lower(new std::vector<ElemType>());
+        if (list != nullptr)
+        {
+            for each (ElemType item in list)
+            {
+                lower->push_back(item);
+            }
+        }
+        return lower;
+    }
+
+    template<typename ElemType>
+    shared_ptr<std::vector<ElemType>> CopyList(array<ElemType>^ list)
     {
         shared_ptr<std::vector<ElemType>> lower(new std::vector<ElemType>());
         if (list != nullptr)
