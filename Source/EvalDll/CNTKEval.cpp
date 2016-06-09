@@ -301,7 +301,8 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 }
 
 template<typename ElemType>
-void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
+template<template<typename> class ValueContainer>
+void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ValueContainer, ElemType> >& inputs, std::vector<ValueBuffer<ValueContainer, ElemType> >& outputs)
 {
     if (!m_started)
         RuntimeError("ForwardPass() called before StartForwardEvaluation()");
@@ -315,7 +316,9 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
     size_t i = 0;
     for (auto& input : m_inputMatrices)
     {
-        ValueBuffer<ElemType> buffer = inputs[i];
+        // const cast: The matrix class takes this over without copying and could theoretically change the contents,
+        // though it doesn't in this case.
+        ValueBuffer<ValueContainer, ElemType>& buffer = const_cast<ValueBuffer<ValueContainer, ElemType>&>(inputs[i]);
         shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
         auto type = matrix->GetMatrixType();
         int numRows = input.second.sampleLayout.GetNumElements();
@@ -333,7 +336,7 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[0] != 0)
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
-            if (buffer.m_colIndices[buffer.m_colIndices.size()-1] != buffer.m_indices.size())
+            if (buffer.m_colIndices[buffer.m_colIndices.size() - 1] != buffer.m_indices.size())
                 RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
         }
 
@@ -341,7 +344,7 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
         assert(numCols >= 1);
         input.second.pMBLayout->Init(1, numCols);
         input.second.pMBLayout->AddSequence(0, 0, 0, numCols);
-       
+
         if (type == MatrixType::DENSE)
         {
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
@@ -357,14 +360,14 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
     }
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
-    
+
     for (size_t i = 0; i < m_outputNodes.size(); ++i)
     {
         auto node = m_outputNodes[i];
         m_net->ForwardProp(node);
         shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
-        if (!pMBLayout) 
+        if (!pMBLayout)
         {
             pMBLayout = make_shared<MBLayout>();
             pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
@@ -376,8 +379,8 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
             RuntimeError("Only 1 output sequence supported by this API");
         }
 
-        std::vector<ElemType>& vec = outputs[i].m_buffer;
-        
+        ValueContainer<ElemType>& vec = outputs[i].m_buffer;
+
         size_t numElements = outputMatrix->GetNumElements();
 
         if (vec.capacity() < numElements)
@@ -390,6 +393,18 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
         ElemType* data = const_cast<ElemType*>(vec.data());
         outputMatrix->CopyToArray(data, numElements);
     }
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
+{
+    ForwardPassT(inputs, outputs);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs)
+{
+    ForwardPassT(inputs, outputs);
 }
 
 template <typename ElemType>
