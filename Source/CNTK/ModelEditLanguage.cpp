@@ -10,6 +10,7 @@
 #include "ModelEditLanguage.h"
 #include "ConvolutionalNodes.h"
 #include "InputAndParamNodes.h"
+#include "Quantizers.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -604,6 +605,29 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
             pParamNode->ReviseFromFile(msra::strfun::utf16(paramPath));
             fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
+        }
+    }
+    else if (EqualInsensitive(name, "Quantize"))
+    {
+        std::string nodeName = params[0];
+        NetNdl<ElemType>* netNdl;
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+
+        for (auto& pNodes : nodes)
+        {
+            if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
+            {
+                fprintf(stderr, "WARNING: you want to quantize the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
+                    pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
+                continue;
+            }
+            shared_ptr<LearnableParameter<ElemType>> pParamNode = std::dynamic_pointer_cast<LearnableParameter<ElemType>>(pNodes);
+            std::vector<ElemType> input(100);
+            //SymmetricQuantizer<ElemType, short>* quantizer = new SymmetricQuantizer<ElemType, short>(input, 0);
+            shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(input, 0));
+            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pNodes, quantizer));
+
+            fprintf(stderr, "Quantize node %ls\n", pNodes->NodeName().c_str());
         }
     }
     else

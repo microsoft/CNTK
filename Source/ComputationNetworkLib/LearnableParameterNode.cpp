@@ -74,7 +74,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
 // initialize with random numbers
 // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
 template <class ElemType>
-void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
+/*virtual*/ void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
                                                 const unsigned long randomSeed,
                                                 const ElemType initValueScale,
                                                 bool initOnCPUOnly)
@@ -107,7 +107,7 @@ void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
-void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
+/*virtual*/ void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
     auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
@@ -160,6 +160,35 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
     Value().SetValue(numRows, numCols, m_deviceId, const_cast<ElemType*>(array.data()), matrixFlagNormal);
     // TODO: Get rid of that const_cast, as soon as after Ryan's Matrix-lib refactoring separated out SetValue() from external vs. from deep copy
     VerifyDataSize(Value());      // sanity check
+}
+
+template <class ElemType>
+void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFromFilePath)
+{
+#if 1
+    try
+    {
+        InitFromFile(reviseFromFilePath);
+    }
+    catch (const std::exception & e)
+    {
+        RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
+    }
+#else
+    size_t numRows, numCols;
+    auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
+    size_t nRows, nCols;
+    DetermineDataSize(nRows, nCols); // BUGBUG: private
+
+    if (numRows != nRows || numCols != nCols)
+    {
+        RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
+            m_nodeName.c_str(), reviseFromFilePath.c_str(), (int)nRows, (int)nCols, (int)numRows, (int)numCols);
+    }
+
+    Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+    VerifyDataSize(Value());      // sanity check
+#endif
 }
 
 template <class ElemType>

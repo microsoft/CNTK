@@ -714,35 +714,22 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 
     File fstream(outFile, FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
-    // get precompute node
-    vector<ComputationNodeBasePtr> PreComputedNodes;
+    vector<ComputationNodeBasePtr> preComputedNodes;
+    vector<ComputationNodeBasePtr> pastValueNodes;
+    vector<ComputationNodeBasePtr> futureValueNodes;
+    vector<ComputationNodeBasePtr> learnableParameters;
     vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
     for (const auto& n : allnodes)
     {
         if (n->RequiresPreCompute())
-            PreComputedNodes.push_back(n);
-    }
+            preComputedNodes.push_back(n);
 
-    // get PastValue node
-    vector<ComputationNodeBasePtr> pastValueNodes;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
+        const std::wstring operationName = n->OperationName();
+        if (operationName == OperationNameOf(PastValueNode) || operationName == L"Delay")
             pastValueNodes.push_back(n);
-    }
-
-    // get FuturetValue node
-    vector<ComputationNodeBasePtr> futureValueNodes;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(FutureValueNode))
+        else if (operationName == OperationNameOf(FutureValueNode))
             futureValueNodes.push_back(n);
-    }
-    // get learnableParameters
-    vector<ComputationNodeBasePtr> learnableParameters;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(LearnableParameter))
+        else if (operationName == OperationNameOf(LearnableParameter))
             learnableParameters.push_back(n);
     }
 
@@ -763,7 +750,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     // critera
     fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_criterionNodes);
     // pre-compute nodes
-    fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
+    fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, preComputedNodes);
     // PastValue nodes
     fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
     // FutureValue nodes
