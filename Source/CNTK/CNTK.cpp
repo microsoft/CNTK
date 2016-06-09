@@ -371,7 +371,7 @@ void PrintUsageInfo()
 }
 
 void PrintGpuInfo()
-{    
+{
     std::vector<GpuData> gpusData = GetGpusData();
 
     if (gpusData.empty())
@@ -382,7 +382,7 @@ void PrintGpuInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
     LOGPRINTF(stderr, "GPU info: \n\n");
 
-    for (GpuData data : gpusData)
+    for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice ID: %d\n", data.deviceId);
         LOGPRINTF(stderr, "\t\tCompute Capability: %d.%d\n", data.major, data.minor);
