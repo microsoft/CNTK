@@ -572,7 +572,7 @@ Memory Sharing Structure:
 00000093D1CA6D40: {[h1.m Value[128 x 1]] }
 00000093D1CA6DE0: {[labels Value[10 x *1]] }
 
-05/13/2016 08:17:32: Final Results: Minibatch[1-313]: err = 0.00710000 * 10000; ce = 0.02063067 * 10000; perplexity = 1.02084496
+05/13/2016 08:17:32: Final Results: Minibatch[1-313]: errs = 0.71% * 10000; ce = 0.02063067 * 10000; perplexity = 1.02084496
 
 05/13/2016 08:17:32: Action "test" complete.
 

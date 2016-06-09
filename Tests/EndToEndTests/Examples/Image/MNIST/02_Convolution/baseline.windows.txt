@@ -515,7 +515,7 @@ Memory Sharing Structure:
 000000CBB08381F0: {[ce Value[1]] }
 000000CBB08383D0: {[conv1.c.c Value[28 x 28 x 16 x *1]] }
 
-05/13/2016 08:16:51: Final Results: Minibatch[1-625]: err = 0.01520000 * 10000; ce = 0.04488435 * 10000; perplexity = 1.04590689
+05/13/2016 08:16:51: Final Results: Minibatch[1-625]: errs = 1.52% * 10000; ce = 0.04488435 * 10000; perplexity = 1.04590689
 
 05/13/2016 08:16:51: Action "test" complete.
 
