@@ -122,7 +122,7 @@ private:
     bool m_started;
 
     template<template<typename> class ValueContainer> 
-    void ForwardPassT(const std::vector < ValueBuffer<ValueContainer, ElemType> >& inputs,
-                      std::vector < ValueBuffer<ValueContainer, ElemType> >& outputs);
+    void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
+                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs);
 };
 } } }

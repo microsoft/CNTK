@@ -166,12 +166,17 @@ public:
 // Extended interface
 // ------------------------------------------------------------------------
 
+
+// Partial instantiation of vector to reduce to one argument.
+template <typename ElemType>
+using Vector = std::vector<ElemType, std::allocator<ElemType>>;
+
 //
 // A buffer to keep data for all samples in a (variable length) sequence 
 // from a single input or output.
 // This is used for both dense and sparse data.
 //
-template<template<typename> class Container, typename ElemType>
+template<typename ElemType, template<typename> class Container = Vector>
 struct ValueBuffer
 {
     //
@@ -207,25 +212,22 @@ struct ValueBuffer
     Container<int> m_colIndices;
 };
 
-template <typename ElemType>
-using Vector = std::vector<ElemType, std::allocator<ElemType>>;
-
-template <typename ElemType>
-using Values = std::vector<ValueBuffer<Vector, ElemType>>;
-
+//
+// Helper class that can be used in exchange of a std::vector if the memory is managed externally.
+//
 template <typename ElemType>
 struct VectorRef
 {
     ElemType* m_vector;
-    size_t m_capacity;
-    size_t m_size;
+    size_t m_capacity;   // ElemTypes allocated
+    size_t m_size;       // ElemTypes used.
 
     VectorRef() : m_vector(nullptr), m_capacity(0), m_size(0) {}
     void InitFrom(std::vector<ElemType>& src) { m_vector = src.data(); m_capacity = src.capacity(); m_size = src.size(); }
     size_t size() const { return m_size; }
     size_t capacity() const { return m_capacity; }
     ElemType* data() { return m_vector; }
-//    const ElemType* data() const { return m_vector; }
+    const ElemType* data() const { return m_vector; }
     ElemType* begin() { return m_vector; }
     ElemType* end() { return m_vector + m_size; }
     void resize(size_t size) { m_size = size; }
@@ -234,7 +236,10 @@ struct VectorRef
 };
 
 template <typename ElemType>
-using ValueRefs = std::vector<ValueBuffer<VectorRef, ElemType>>;
+using Values = std::vector<ValueBuffer<ElemType, Vector>>;
+
+template <typename ElemType>
+using ValueRefs = std::vector<ValueBuffer<ElemType, VectorRef>>;
 
 //
 // Meta data
@@ -326,6 +331,10 @@ public:
     //
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) = 0;
 
+    //
+    // Same as above, but takes references to static arrays instead of std::vector 
+    // (e.g. when vectors are manages by .net)
+    // 
     virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) = 0;
 };
 

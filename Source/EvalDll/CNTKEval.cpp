@@ -302,7 +302,7 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 
 template<typename ElemType>
 template<template<typename> class ValueContainer>
-void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ValueContainer, ElemType> >& inputs, std::vector<ValueBuffer<ValueContainer, ElemType> >& outputs)
+void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs)
 {
     if (!m_started)
         RuntimeError("ForwardPass() called before StartForwardEvaluation()");
@@ -318,7 +318,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Valu
     {
         // const cast: The matrix class takes this over without copying and could theoretically change the contents,
         // though it doesn't in this case.
-        ValueBuffer<ValueContainer, ElemType>& buffer = const_cast<ValueBuffer<ValueContainer, ElemType>&>(inputs[i]);
+        auto& buffer = const_cast<ValueBuffer<ElemType, ValueContainer>&>(inputs[i]);
         shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
         auto type = matrix->GetMatrixType();
         int numRows = input.second.sampleLayout.GetNumElements();
@@ -326,7 +326,8 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Valu
         if (type == MatrixType::DENSE)
         {
             if (buffer.m_buffer.size() % numRows != 0)
-                RuntimeError("Input %ls: Expected input data to be a multiple of %ld, but it is %ld", m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
+                RuntimeError("Input %ls: Expected input data to be a multiple of %ld, but it is %ld", 
+                             m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
             if (buffer.m_buffer.size() == 0)
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
         }
@@ -337,7 +338,9 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Valu
             if (buffer.m_colIndices[0] != 0)
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[buffer.m_colIndices.size() - 1] != buffer.m_indices.size())
-                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
+                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", 
+                             m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), 
+                             buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
         }
 
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
@@ -346,14 +349,13 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Valu
         input.second.pMBLayout->AddSequence(0, 0, 0, numCols);
 
         if (type == MatrixType::DENSE)
-        {
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
-        }
         else if (type == MatrixType::SPARSE)
         {
             // In the sparse case the m_data layout is identical to CUDA's CSC layout
             // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
-            matrix->SetMatrixFromCSCFormat(buffer.m_colIndices.data(), buffer.m_indices.data(), buffer.m_buffer.data(), buffer.m_buffer.size(), numRows, numCols);
+            matrix->SetMatrixFromCSCFormat(buffer.m_colIndices.data(), buffer.m_indices.data(), buffer.m_buffer.data(),
+                                           buffer.m_buffer.size(), numRows, numCols);
         }
 
         ++i;
@@ -375,9 +377,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Valu
 
         const auto& seq = pMBLayout->GetAllSequences();
         if (seq.size() != 1)
-        {
             RuntimeError("Only 1 output sequence supported by this API");
-        }
 
         ValueContainer<ElemType>& vec = outputs[i].m_buffer;
 
