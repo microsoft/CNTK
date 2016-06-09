@@ -22,39 +22,39 @@ class Txt2CftConverter:
        Each token for a stream should be inside the corresponding dictionary file, a token per line, so the line number of the token becomes
        the numeric index written into the cntk text format output file"""
 
-    def __init__(self, dictionaryFiles, inputFiles, output, streamSeparator, comment):
-        self.dictionaryFiles = dictionaryFiles
-        self.inputFiles = inputFiles
+    def __init__(self, dictionaries, inputs, output, streamSeparator, comment):
+        self.dictionaries = dictionaries
+        self.inputs = inputs
         self.streamSeparator = streamSeparator
         self.output = output
         self.comment = comment
 
     def convert(self):
         dictionaries = self._createDictionaries()
-        self._convertInputFiles(dictionaries)
+        self._convertInputs(dictionaries)
 
     def _createDictionaries(self):
         dictionaries = []
-        for dic in self.dictionaryFiles:
+        for dic in self.dictionaries:
             dictionaries.append(self._createDictionary(dic))
         return dictionaries
 
-    def _createDictionary(self, dictionaryFile):
+    def _createDictionary(self, dictionary):
         result = {}
         counter = 0
-        for line in open(dictionaryFile):
+        for line in dictionary:
             line = line.rstrip('\r\n').strip('\t ')
             result[line] = counter
             counter += 1
         return result
 
-    def _convertInputFiles(self, dictionaries):
-        if len(self.inputFiles) == 0:
-            return self._convertInputFile(dictionaries, sys.stdin)
-        for inputFile in self.inputFiles:
-            self._convertInputFile(dictionaries, open(inputFile))
+    def _convertInputs(self, dictionaries):
+        if len(self.inputs) == 0:
+            return self._convertInput(dictionaries, sys.stdin)
+        for input in self.inputs:
+            self._convertInput(dictionaries, input)
 
-    def _convertInputFile(self, dictionaries, input):
+    def _convertInput(self, dictionaries, input):
         sequenceId = 0
         for line in input:
             line = line.rstrip('\r\n')
@@ -83,10 +83,10 @@ class Txt2CftConverter:
                     continue
                 token = tokenizedStreams[streamIndex][sampleIndex]
                 value = dictionaries[streamIndex][token]
+                self.output.write(self.streamSeparator)
                 self.output.write("|S" + str(streamIndex) + " "+ str(value) + ":1")
                 if self.comment:
                     self.output.write("|# " + token)
-                self.output.write(self.streamSeparator)
             self.output.write("\n")
 
 if __name__ == "__main__":
@@ -98,15 +98,45 @@ if __name__ == "__main__":
     parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", required=False)
     args = parser.parse_args()
 
-    # cleaning dictionaryFiles from commas
+    # creating dictionaries
     dictionaryFiles = "".join(str(x) for x in args.map).split(",")    
-    inputFiles = []
+    dictionaries = open(d) for d in dictionaryFiles
+    
+    # creating inputs
+    inputs = [sys.stdin]
     if args.input != "":
         inputFiles = "".join(str(x) for x in args.input).split(",")
+        inputs = open(i) for i in inputFiles
 
+    # creating outputs
     output = sys.stdout
     if args.output != "":
         output = open(args.output, "w")
 
-    converter = Txt2CftConverter(dictionaryFiles, inputFiles, output, args.sep, args.comment == "True")
+    converter = Txt2CftConverter(dictionaries, inputs, output, args.sep, args.comment == "True")
     converter.convert()
+
+# Test
+import StringIO
+
+def test_sanityCheck():
+    dictionary1 = StringIO.StringIO()
+    dictionary1.write("hello\nmy\nworld\nof\nnothing\n")
+    
+    dictionary2 = StringIO.StringIO()
+    dictionary2.write("let\nme\nbe\nclear\nabout\nit\n")
+    
+    input = StringIO.StringIO()
+    input.write("hello my\tclear about\nworld of\tit let clear\n")
+
+    output = StringIO.StringIO()
+    converter = Txt2CftConverter([dictionary1, dictionary2], [input], output, "\t", False)
+    
+    expectedOutput = StringIO.StringIO()
+    expectedOutput.write("0\t|S0 0:1\t|S1 3:1\n")
+    expectedOutput.write("0\t|S0 1:1\t|S1 4:1\n")
+    expectedOutput.write("1\t|S0 2:1\t|S1 5:1\n")
+    expectedOutput.write("1\t|S0 3:1\t|S1 0:1\n")
+    expectedOutput.write("1\t\t|S1 3:1")
+    
+    assert expectedOutput.content() == output.content()
