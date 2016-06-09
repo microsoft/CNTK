@@ -577,6 +577,14 @@ BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop3)
         1);
 };
 
+BOOST_AUTO_TEST_CASE(HTKDeserializers_NonExistingScpFile)
+{
+    HelperRunReaderTestWithException<float, std::runtime_error>(
+        testDataPath() + "/Config/HTKDeserializers_NonExistingScpFile.cntk",
+        "Simple_Test",
+        "reader");
+};
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 

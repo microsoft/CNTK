@@ -183,6 +183,11 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         m_totalNumberOfFrames / (double)m_chunks.size(),
         allUtterances / (double)m_chunks.size(),
         allFrames / (double)m_chunks.size());
+
+    if (utterances.empty())
+    {
+        RuntimeError("HTKDataDeserializer: No utterances to process.");
+    }
 }
 
 // Describes exposed stream - a single stream of htk features.

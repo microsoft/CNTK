@@ -300,10 +300,10 @@ Simple = [
         randomize = true
         deserializers = (
             [
-                type="CNTKTextFormatDeserializer"
-                module="CNTKTextFormatReader"
-                file="5x10_and_5x5_jagged.txt"
-                input=[
+                type = "CNTKTextFormatDeserializer"
+                module = "CNTKTextFormatReader"
+                file = "5x10_and_5x5_jagged.txt"
+                input = [
                     features1 = [
                         alias = "F0"
                         dim = 10
@@ -326,10 +326,10 @@ Simple = [
         randomize = true
         deserializers = (
             [
-                type="CNTKTextFormatDeserializer"
-                module="CNTKTextFormatReader"
-                file="5x10_jagged.txt"
-                input=[
+                type = "CNTKTextFormatDeserializer"
+                module = "CNTKTextFormatReader"
+                file = "5x10_jagged.txt"
+                input = [
                     features1 = [
                         alias = "F0"
                         dim = 10
@@ -337,10 +337,10 @@ Simple = [
                     ]
                 ]                
             ]:[
-                type="CNTKTextFormatDeserializer"
-                module="CNTKTextFormatReader"
-                file="5x5_jagged.txt"
-                input=[
+                type = "CNTKTextFormatDeserializer"
+                module = "CNTKTextFormatReader"
+                file = "5x5_jagged.txt"
+                input = [
                     features2 = [
                         alias = "F1"
                         dim = 5

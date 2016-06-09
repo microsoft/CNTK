@@ -12,4 +12,4 @@ if [ $? != 0 ]; then
 fi
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk_dpt.cntk 'reader=[readerType=HTKDeserializers] reader=[prefetch=true]' || exit $?
+cntkrun cntk_dpt.cntk 'reader=[readerType=HTKDeserializers]' || exit $?

@@ -244,30 +244,38 @@ VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNod
                                 matrix->GetMatrixType() == MatrixType::SPARSE ? VariableLayout::Sparse : 
                                 VariableLayout::Undetermined :
                                 VariableLayout::Undetermined,
-        /* dimension */     n->GetSampleLayout().GetNumElements(),
-        /* dynamic axis */  wstring(n->GetMBLayout() ? n->GetMBLayout()->GetAxisName() : L"*")
+        /* dimension */     n->GetSampleLayout().GetNumElements()
     };
 }
 
 
 template<typename ElemType>
-void CNTKEvalExtended<ElemType>::StartForwardEvaluation(std::vector<wstring> outputNodeNames)
+void CNTKEvalExtended<ElemType>::StartForwardEvaluation(const std::vector<wstring>& outputNodeNames)
 {
     m_scopedNetworkOperationMode = make_shared<ScopedNetworkOperationMode>(m_net, NetworkOperationMode::inferring);
-    // allocate memory for forward computation
     m_outputNodes  = m_net->OutputNodesByName(outputNodeNames);
     m_inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
     // allocate memory for forward computation
     m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
     m_net->StartEvaluateMinibatchLoop(m_outputNodes);
     m_inputMatrices = DataReaderHelpers::RetrieveInputMatrices(m_inputNodes);
-} 
+
+    for (const auto& node : m_outputNodes)
+    {
+        shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
+        if (outputMatrix->GetMatrixType() != MatrixType::DENSE)
+            RuntimeError("Sparse outputs are not supported by this API.");
+    }
+
+    m_started = true;
+}
 
 template<typename ElemType>
 VariableSchema CNTKEvalExtended<ElemType>::GetOutputSchema() const
 {
     VariableSchema schema;
-    for (const auto& n : m_net->OutputNodes())
+    auto& nodes = m_started ? m_outputNodes : m_net->OutputNodes();
+    for (const auto& n : nodes)
     {
         schema.push_back(ToVariableLayout(n));
     }
@@ -293,17 +301,21 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 }
 
 template<typename ElemType>
-void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, Variables<ElemType>& output)
+void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
 {
-    if (inputs.size() != (size_t)std::distance(m_inputMatrices.begin(), m_inputMatrices.end()))
-    {
-        RuntimeError("Expected %d inputs, but got %d", (int)std::distance(m_inputMatrices.begin(), m_inputMatrices.end()), (int)inputs.size());
-    }
+    if (!m_started)
+        RuntimeError("ForwardPass() called before StartForwardEvaluation()");
 
-    int i = 0;
+    if (inputs.size() != (size_t)std::distance(m_inputMatrices.begin(), m_inputMatrices.end()))
+        RuntimeError("Expected %d inputs, but got %d.", (int)std::distance(m_inputMatrices.begin(), m_inputMatrices.end()), (int)inputs.size());
+
+    if (outputs.size() != m_outputNodes.size())
+        RuntimeError("Expected %d outputs, but got %d.", (int)m_outputNodes.size(), (int)outputs.size());
+
+    size_t i = 0;
     for (auto& input : m_inputMatrices)
     {
-        VariableBuffer<ElemType> buffer = inputs[i];
+        ValueBuffer<ElemType> buffer = inputs[i];
         shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
         auto type = matrix->GetMatrixType();
         int numRows = input.second.sampleLayout.GetNumElements();
@@ -311,28 +323,18 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, 
         if (type == MatrixType::DENSE)
         {
             if (buffer.m_buffer.size() % numRows != 0)
-            {
                 RuntimeError("Input %ls: Expected input data to be a multiple of %ld, but it is %ld", m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
-            }
             if (buffer.m_buffer.size() == 0)
-            {
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
-            }
         }
         else if (type == MatrixType::SPARSE)
         {
             if (buffer.m_colIndices.size() < 2)
-            {
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
-            } 
             if (buffer.m_colIndices[0] != 0)
-            {
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
-            }
             if (buffer.m_colIndices[buffer.m_colIndices.size()-1] != buffer.m_indices.size())
-            {
                 RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
-            }
         }
 
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
@@ -356,7 +358,7 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, 
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
     
-    for (int i = 0; i < m_outputNodes.size(); ++i)
+    for (size_t i = 0; i < m_outputNodes.size(); ++i)
     {
         auto node = m_outputNodes[i];
         m_net->ForwardProp(node);
@@ -371,13 +373,21 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Variables<ElemType>& inputs, 
         const auto& seq = pMBLayout->GetAllSequences();
         if (seq.size() != 1)
         {
-            RuntimeError("Only 1 sequence supported by this API"); // TODO
+            RuntimeError("Only 1 output sequence supported by this API");
         }
-        std::vector<ElemType>& vec = output[i].m_buffer;
+
+        std::vector<ElemType>& vec = outputs[i].m_buffer;
         
-        vec.resize(outputMatrix->GetNumElements());
-        ElemType* data = const_cast<ElemType*>(vec.data());
         size_t numElements = outputMatrix->GetNumElements();
+
+        if (vec.capacity() < numElements)
+        {
+            // Bad luck - we can't reallocate memory of an external object at this point.
+            RuntimeError("Not enough space in output buffer for output '%ls'.", node->GetName().c_str());
+        }
+
+        vec.resize(numElements);
+        ElemType* data = const_cast<ElemType*>(vec.data());
         outputMatrix->CopyToArray(data, numElements);
     }
 }

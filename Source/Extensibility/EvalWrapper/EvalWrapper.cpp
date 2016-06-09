@@ -23,6 +23,7 @@ using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Runtime::Serialization;
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
@@ -555,7 +556,8 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
+[Serializable]
+public ref class CNTKException : Exception, ISerializable
 {
 public:
     CNTKException() : Exception()
@@ -568,8 +570,23 @@ public:
     {}
 
     const String^ NativeCallStack;
+
+
+    [System::Security::Permissions::SecurityPermissionAttribute
+        (System::Security::Permissions::SecurityAction::LinkDemand,
+        Flags = System::Security::Permissions::SecurityPermissionFlag::SerializationFormatter)]
+    virtual void GetObjectData(SerializationInfo^ info, StreamingContext context) override
+    {
+        Exception::GetObjectData(info, context);
+    }
+
+protected:
+
+    CNTKException(SerializationInfo^ info, StreamingContext context) : Exception(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKRuntimeException : CNTKException
 {
 public:
@@ -578,8 +595,14 @@ public:
 
     CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKRuntimeException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKLogicErrorException : CNTKException
 {
 public:
@@ -588,8 +611,14 @@ public:
 
     CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKLogicErrorException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKInvalidArgumentException : CNTKException
 {
 public:
@@ -598,8 +627,14 @@ public:
 
     CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKInvalidArgumentException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKBadAllocException : CNTKException
 {
 public:
@@ -607,6 +642,11 @@ public:
     {}
 
     CNTKBadAllocException(String^ message) : CNTKException(message)
+    {}
+
+protected:
+
+    CNTKBadAllocException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
     {}
 };
 

@@ -176,6 +176,7 @@ private:
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
+    void ChangeNodeInputs(ComputationNodeBasePtr fromNode, ComputationNodeBasePtr toNode);
 
 private:
     void DetermineSetOfAllRoots();
@@ -361,7 +362,8 @@ public:
     void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew);
     void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName);
     void DeleteNode(const std::wstring& nodeName);
-    void ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void InsertNode(wstring nodeName, ComputationNodeBasePtr newNode, const std::set<std::wstring>& newNodeTags);
     void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
@@ -502,7 +504,7 @@ public:
     // Collect all input nodes that outputNodes depend on.
     std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<std::wstring>& outputNodeNames)
     {
-        // use map to remove duplicated items
+        // use set to remove duplicated items
         auto outputNodes = OutputNodesByName(outputNodeNames);
 
         std::set<ComputationNodeBasePtr> inputNodesMap;
@@ -608,6 +610,28 @@ public:
                 parents[child].insert(node);
         }
         return parents;
+    }
+
+    // Return set of immediate output (parent) nodes for given input (child) node
+    // TODO: there should be a map from output nodes to inputs, so that this operation doesn't take square time
+    std::vector<ComputationNodeBasePtr> GetParentNodes(const std::wstring& inputNodeName)
+    {
+        std::set<ComputationNodeBasePtr> outputNodes;
+        for (const auto& iter : m_nameToNodeMap)
+        {
+            const auto& node = iter.second;
+
+            //Iterate over inputs of this node
+            for (const auto& inputNode : node->GetInputs())
+            {
+                if (inputNode->GetName() == inputNodeName)
+                {
+                    outputNodes.insert(node);
+                }
+            }
+        }
+
+        return std::vector<ComputationNodeBasePtr>(outputNodes.begin(), outputNodes.end());
     }
 
     std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
