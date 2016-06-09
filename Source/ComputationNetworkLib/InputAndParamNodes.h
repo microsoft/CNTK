@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "Quantizers.h"
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
@@ -27,6 +28,8 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     static const std::wstring TypeName() { return L"LearnableParameter"; }
 
     void InitShape(const TensorShape& shape);
+    // helper to initialize from a matrix read from a text file or a string literal
+    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 
 public:
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
@@ -50,44 +53,15 @@ public:
 
     // initialize with random numbers
     // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    virtual void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
 
     // initialize by reading a matrix from a text file
-    void InitFromFile(const std::wstring& initFromFilePath);
-
-    // helper to initialize from a matrix read from a text file or a string literal
-    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
+    virtual void InitFromFile(const std::wstring& initFromFilePath);
 
     // reload parameters from file
     // This is called from MEL.
     // TODO: Move this error check there, since this is called only from one place.
-    void ReviseFromFile(const std::wstring& reviseFromFilePath)
-    {
-#if 1
-        try
-        {
-            InitFromFile(reviseFromFilePath);
-        }
-        catch(const std::exception & e)
-        {
-            RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
-        }
-#else
-        size_t numRows, numCols;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
-        size_t nRows, nCols;
-        DetermineDataSize(nRows, nCols); // BUGBUG: private
-
-        if (numRows != nRows || numCols != nCols)
-        {
-            RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                         m_nodeName.c_str(), reviseFromFilePath.c_str(), (int) nRows, (int) nCols, (int) numRows, (int) numCols);
-        }
-
-        Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
-        VerifyDataSize(Value());      // sanity check
-#endif
-    }
+    void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
@@ -106,6 +80,46 @@ public:
     void InferInputDimsFrom(const TensorShape& otherShape);
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override;
+};
+
+// -----------------------------------------------------------------------
+// LearnableParameterQuantized (/*no input*/)
+// Represents quantized weight matrices and biases
+// This node is for inference only and should not be used during training
+// Expected workflow: 
+//    (1) Train a model with LearnableParameter
+//    (2) To prepare the model for runtime, use BS to convert desired LearnableParameter nodes to LearnableParameterQuantized
+// TODO: add -Node to the class name
+// -----------------------------------------------------------------------
+template <class ElemType, class QuantizedType>
+class LearnableParameterQuantized : public LearnableParameter<ElemType>
+{
+public:
+    LearnableParameterQuantized(ComputationNodeBasePtr& learnableParameterNode,
+        std::shared_ptr<SymmetricQuantizer<ElemType, QuantizedType>>&  quantizer) : LearnableParameter<ElemType>(learnableParameterNode->GetDeviceId(), learnableParameterNode->GetName())
+    {
+        /*
+        if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
+        {
+        */
+        /*auto pLearnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(learnableParameterNode);
+        if (!pLearnableParameterNode)
+        LogicError("Can not construct LearnableParameterQuantized from node %ls. Only LearnableParameter node can be used as an input to the constructor.",
+        learnableParameterNode->GetName().c_str());
+
+        TensorShape learnParShape = pLearnableParameterNode->GetSampleLayout();
+        SetDims(learnParShape, false);
+        LogicError("Not finished");*/
+    }
+
+    virtual void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly) override;
+
+    virtual void InitFromFile(const std::wstring& initFromFilePath) override;
+
+    virtual void Save(File& fstream) const override;
+    virtual void Load(File& fstream, size_t modelVersion) override;
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 };
 
 // -----------------------------------------------------------------------

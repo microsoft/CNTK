@@ -148,6 +148,7 @@
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
     <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h" />
+    <ClInclude Include="..\Common\Include\Quantizers.h" />
     <ClInclude Include="..\Common\Include\StringUtil.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />

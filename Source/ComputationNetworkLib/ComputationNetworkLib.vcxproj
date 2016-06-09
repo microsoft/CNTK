@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClInclude Include="..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\Common\Include\Basics.h" />
+	<ClInclude Include="..\Common\Include\Quantizers.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\Config.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
@@ -120,7 +121,8 @@
     <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ComputationNodeScripting.cpp" />
-    <ClCompile Include="InputAndParamNodes.cpp" />
+    <ClCompile Include="LearnableParameterNode.cpp" />
+    <ClCompile Include="LearnableParameterQuantizedNode.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
