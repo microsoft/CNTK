@@ -349,6 +349,9 @@ public:
     // Legacy version that is for random only.
     void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly = false) const;
 
+    template <class ElemType>
+    void InitLearnableParametersWithBilinearFill(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
+
     template <typename N>
     static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr& inode)
     {
