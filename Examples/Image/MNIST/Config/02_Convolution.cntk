@@ -19,12 +19,9 @@ precision = "float"
 modelPath = "$modelDir$/02_Convolution"
 
 # uncomment the following line to write logs to a file 
- stderr = "$outputDir$/02_Convolution_out"
+# stderr = "$outputDir$/02_Convolution_out"
 traceLevel = 1
 numMBsToShowResult = 500
-
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly = true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -34,6 +31,8 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/02_Convolution.ndl"
     ]
@@ -74,6 +73,8 @@ test = [
     minibatchSize = 16        # TODO: 1024
 
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/02_Convolution.ndl"
     ]
