@@ -166,12 +166,17 @@ public:
 // Extended interface
 // ------------------------------------------------------------------------
 
+
+// Partial instantiation of vector to reduce to one argument.
+template <typename ElemType>
+using Vector = std::vector<ElemType, std::allocator<ElemType>>;
+
 //
 // A buffer to keep data for all samples in a (variable length) sequence 
 // from a single input or output.
 // This is used for both dense and sparse data.
 //
-template<typename ElemType>
+template<typename ElemType, template<typename> class Container = Vector>
 struct ValueBuffer
 {
     //
@@ -181,7 +186,7 @@ struct ValueBuffer
     // [2,2] and 12 elements in the buffer, the number of samples is 3.
     // For sparse inputs, the number of samples is indicated by the m_colIndices field.
     //
-    std::vector<ElemType> m_buffer;
+    Container<ElemType> m_buffer;
 
     // In case of sparse data, the following is also used. Otherwise, the 
     // contents are ignored.
@@ -197,19 +202,44 @@ struct ValueBuffer
     // For every element in buffer, an entry in this array gives its position.
     // For every vector the entries must be ascending.
     //
-    std::vector<int> m_indices;
+    Container<int> m_indices;
 
     //
     // Contains numberOfsamples + 1 indices into the buffer. The first entry
     // is always 0. The last entry points after the last element.
     // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
     //
-    std::vector<int> m_colIndices;
+    Container<int> m_colIndices;
 };
 
+//
+// Helper class that can be used in exchange of a std::vector if the memory is managed externally.
+//
+template <typename ElemType>
+struct VectorRef
+{
+    ElemType* m_vector;
+    size_t m_capacity;   // ElemTypes allocated
+    size_t m_size;       // ElemTypes used.
+
+    VectorRef() : m_vector(nullptr), m_capacity(0), m_size(0) {}
+    void InitFrom(std::vector<ElemType>& src) { m_vector = src.data(); m_capacity = src.capacity(); m_size = src.size(); }
+    size_t size() const { return m_size; }
+    size_t capacity() const { return m_capacity; }
+    ElemType* data() { return m_vector; }
+    const ElemType* data() const { return m_vector; }
+    ElemType* begin() { return m_vector; }
+    ElemType* end() { return m_vector + m_size; }
+    void resize(size_t size) { m_size = size; }
+    ElemType& operator[](size_t idx) { return m_vector[idx]; }
+    const ElemType& operator[](size_t idx) const { return m_vector[idx]; }
+};
 
 template <typename ElemType>
-using Values = std::vector<ValueBuffer<ElemType>>;
+using Values = std::vector<ValueBuffer<ElemType, Vector>>;
+
+template <typename ElemType>
+using ValueRefs = std::vector<ValueBuffer<ElemType, VectorRef>>;
 
 //
 // Meta data
@@ -290,7 +320,7 @@ public:
     virtual VariableSchema GetInputSchema() const = 0;
 
     //
-    // Evaluate - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
+    // ForwardPass - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
     // outputs.
     // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
     // Output must be preallocated and sized to avoid memory allocation / deallocation across DLL
@@ -300,6 +330,12 @@ public:
     // outputs - vector of output buffers. Must be sized to fit output schema.
     //
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) = 0;
+
+    //
+    // Same as above, but takes references to static arrays instead of std::vector 
+    // (e.g. when vectors are manages by .net)
+    // 
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) = 0;
 };
 
 template <typename ElemType>
