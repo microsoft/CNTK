@@ -73,6 +73,11 @@ test = [
     action = test
     minibatchSize = 16        # TODO: 1024
 
+    NDLNetworkBuilder = [
+        ndlMacros = "$configDir$/Macros.ndl"
+        networkDescription = "$ConfigDir$/02_Convolution.ndl"
+    ]
+
     #evalNodeNames = errs:top5errs
 
     reader = [
