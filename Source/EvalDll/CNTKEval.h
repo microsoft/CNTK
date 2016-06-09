@@ -100,6 +100,8 @@ public:
 
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) override;
 
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) override;
+
     virtual void Destroy() override;
 
     virtual void CreateNetwork(const std::string& networkDescription) override
@@ -118,5 +120,9 @@ private:
     std::vector<ComputationNodeBasePtr> m_inputNodes;
     StreamMinibatchInputs m_inputMatrices;
     bool m_started;
+
+    template<template<typename> class ValueContainer> 
+    void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
+                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs);
 };
 } } }
