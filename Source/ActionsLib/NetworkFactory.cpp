@@ -153,6 +153,14 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const w
     // first try if a NetworkBuilder is present
     function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
     bool gotIt = TryGetNetworkFactory<ConfigRecordType, ElemType>(config, createNetworkFn);
+
+
+#if 1
+    if (outputNodeNamesConfig  == L"evalNodeNames")
+        gotIt = false;
+#endif
+
+
     if (gotIt)
     {
         // We have several ways to create a network.

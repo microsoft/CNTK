@@ -78,9 +78,9 @@ test = [
 
     modelPath=$ModelDir$/03_ConvBatchNorm
 
-    #NDLNetworkBuilder = [
-    #    networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
-    #]
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
+    ]
 
     reader = [
         readerType = "CNTKTextFormatReader"
