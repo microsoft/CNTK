@@ -475,7 +475,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // Setup profiling
     ProfilerContext profilerContext;
     if (config(L"profilerEnabled", true))
-        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", (uint64_t)(16ull * 1024ull * 1024ull)));
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
@@ -645,7 +645,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // Setup profiling
     ProfilerContext profilerContext;
     if (config(L"profilerEnabled", true))
-        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", 16ull * 1024ull * 1024ull));
+        profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(), config(L"profilerDelay", 0.0f), config(L"profilerBufferSize", (uint64_t)(16ull * 1024ull * 1024ull)));
 
     // run commands
     std::string type = config(L"precision", "float");

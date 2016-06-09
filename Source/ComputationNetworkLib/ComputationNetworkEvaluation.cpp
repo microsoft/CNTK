@@ -71,7 +71,9 @@ class NodePerfScope
         auto it = g_nodes.find(name);
         if (it != g_nodes.end())
         {
+#if 0
             fprintf(stderr, ".");
+#endif
             return it->second;
         }
         fprintf(stderr, "*** %ls: unknown\n", name.c_str());
