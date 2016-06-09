@@ -23,6 +23,9 @@ modelPath = "$modelDir$/02_Convolution"
 traceLevel = 1
 numMBsToShowResult = 500
 
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+
 #######################################
 #  TRAINING CONFIG                    #
 #######################################
@@ -31,8 +34,6 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
-        imageLayout = "cudnn"
-        #initOnCPUOnly = true
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/02_Convolution.ndl"
     ]
