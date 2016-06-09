@@ -451,7 +451,7 @@ Memory Sharing Structure:
 0x7f0d4bd02f98: {[features Value[784 x *1]] }
 0x7f0d4bd03c78: {[h1.W Value[200 x 784]] }
 
-05/13/2016 15:10:10: Final Results: Minibatch[1-625]: errTop1 = 0.07140000 * 10000; err = 0.07140000 * 10000; ce = 0.25287636 * 10000; perplexity = 1.28772405
+05/13/2016 15:10:10: Final Results: Minibatch[1-625]: top5errs = 0.07140000 * 10000; errs = 0.07140000 * 10000; ce = 0.25287636 * 10000; perplexity = 1.28772405
 
 05/13/2016 15:10:10: Action "test" complete.
 

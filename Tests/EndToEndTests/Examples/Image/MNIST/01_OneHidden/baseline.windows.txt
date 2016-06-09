@@ -449,7 +449,7 @@ Memory Sharing Structure:
 00000078767795C0: {[h1.y Value[200 x 1 x *1]] }
 00000078767797A0: {[featScaled Value[784 x 1 x *1]] }
 
-05/13/2016 08:16:11: Final Results: Minibatch[1-625]: errTop1 = 0.07460000 * 10000; err = 0.07460000 * 10000; ce = 0.26425332 * 10000; perplexity = 1.30245809
+05/13/2016 08:16:11: Final Results: Minibatch[1-625]: top5errs = 0.07460000 * 10000; errs = 0.07460000 * 10000; ce = 0.26425332 * 10000; perplexity = 1.30245809
 
 05/13/2016 08:16:11: Action "test" complete.
 
