@@ -69,7 +69,11 @@ namespace CNTK
         else if (variable.Kind() == VariableKind::Input)
         {
             // TODO: Specify dynamic axis
-            computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+            if (variable.IsSparseInput())
+                computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+            else
+                computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+
             if (variable.NeedsGradient())
             {
                 // Set a dummy learning rate multiplier to force gradient computation for the input computation node since by default
@@ -305,6 +309,13 @@ namespace CNTK
         if (GetDataType<ElementType>() != value->Data()->DataType())
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->Data()->DataType()));
 
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
+        if (var.IsSparseInput() && !value->Data()->IsSparse())
+            InvalidArgument("Dense input data supplied for a sparse input Variable");
+
+        if (var.IsSparseInput() && (value->Data()->StorageFormat() != StorageFormat::SparseCSC))
+            InvalidArgument("Sparse Input data must be in SparseCSC format");
+
         if (value->Data()->Shape().NumAxes() == var.Shape().NumAxes())
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
@@ -382,8 +393,20 @@ namespace CNTK
                 LogicError("The number of sequences in the packed MBLayout does not match the sequence count in the Value object");
 
             // Now generate the gather indices
-            auto matrixData = std::make_shared<Matrix<ElementType>>(var.Shape().TotalSize(), layout->GetNumCols(), AsCNTKImplDeviceId(value->Data()->Device()));
-            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), 0);
+            auto matrixData = std::make_shared<Matrix<ElementType>>(var.Shape().TotalSize(),
+                                                                    layout->GetNumCols(),
+                                                                    AsCNTKImplDeviceId(value->Data()->Device()),
+                                                                    value->Data()->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
+                                                                    AsCNTKMatrixFormat(value->Data()->StorageFormat()));
+
+            std::vector<size_t> sequencesShorterThanLongestSequence;
+            for (size_t i = 0; i < numSequences; ++i)
+                if (sequenceLengths[i] != maxNumTimeSteps)
+                    sequencesShorterThanLongestSequence.push_back(i);
+
+            // Set the source location for all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
+            size_t sourceColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
+            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), (ElementType)sourceColIdxForInvalidColumns);
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t targetParallelStreamIdx = placement[i].first;
@@ -418,12 +441,8 @@ namespace CNTK
         if ((layout == nullptr) || (layout->GetNumTimeSteps() == 1) || (layout->GetNumSequences() == 1))
         {
             // Just create a view over the existing matrix itself
-
-            if ((matrix.GetFormat() != matrixFormatDense) || (matrix.GetFormat() != matrixFormatColMajor))
-                LogicError("Only dense and column-major data storage format is currently supported");
-
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = NDArrayViewPtr(new NDArrayView(GetDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
+            auto data = NDArrayViewPtr(new NDArrayView(GetDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
             return ValuePtr(new Value(data), [](_ReferenceCounter* ptr) { delete ptr; });
         }
 
@@ -511,6 +530,8 @@ namespace CNTK
                 layout = CNTKMatrixAndMBLayout.second;
 
                 auto& nodeData = argumentComputationNode->As<ComputationNode<float>>()->Value();
+                // Switch the node matrix to the right matrix type
+                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
                 nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
                 break;
             }
@@ -520,6 +541,8 @@ namespace CNTK
                 layout = CNTKMatrixAndMBLayout.second;
 
                 auto& nodeData = argumentComputationNode->As<ComputationNode<double>>()->Value();
+                // Switch the node matrix to the right matrix type
+                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
                 nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
                 break;
             }
@@ -619,7 +642,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(iter->first, computationNodePtr->As<ComputationNode<float>>()->Value(), computationNodePtr->GetMBLayout());
                 if (outputValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](_ReferenceCounter* ptr) { delete ptr; }) : nullptr;
                     outputValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -631,7 +654,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(iter->first, computationNodePtr->As<ComputationNode<double>>()->Value(), computationNodePtr->GetMBLayout());
                 if (outputValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](_ReferenceCounter* ptr) { delete ptr; }) : nullptr;
                     outputValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -682,7 +705,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(iter->first, computationNodePtr->As<ComputationNode<float>>()->Gradient(), computationNodePtr->GetMBLayout());
                 if (gradientValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](_ReferenceCounter* ptr) { delete ptr; });
                     gradientValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -694,7 +717,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(iter->first, computationNodePtr->As<ComputationNode<double>>()->Gradient(), computationNodePtr->GetMBLayout());
                 if (gradientValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](_ReferenceCounter* ptr) { delete ptr; });
                     gradientValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
 

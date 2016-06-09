@@ -70,7 +70,6 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
 
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 
-    //TODO: Verify backprop results
     auto& smallerInputGradients = (numAxesLeftOperand < numAxesRightOperand) ? leftInputGradientsData : rightInputGradientsData;
     auto& largerInputGradients = (numAxesLeftOperand < numAxesRightOperand) ? rightInputGradientsData : leftInputGradientsData;
     std::vector<ElementType> expectedLargerInputGradientValues(largerInputGradients.size(), (ElementType)1);

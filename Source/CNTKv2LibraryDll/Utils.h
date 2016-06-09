@@ -274,6 +274,30 @@ namespace CNTK
             NOT_IMPLEMENTED;
     }
 
+    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKMatrixFormat(StorageFormat storageFormat)
+    {
+        if (storageFormat == StorageFormat::Dense)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense;
+        else if (storageFormat == StorageFormat::SparseCSC)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC;
+        else if (storageFormat == StorageFormat::SparseBlockCol)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseBlockCol;
+        else
+            NOT_IMPLEMENTED;
+    }
+
+    inline StorageFormat AsStorageFormat(Microsoft::MSR::CNTK::MatrixFormat matrixFormat)
+    {
+        if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense)
+            return StorageFormat::Dense;
+        else if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC)
+            return StorageFormat::SparseCSC;
+        else if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseBlockCol)
+            return StorageFormat::SparseBlockCol;
+        else
+            NOT_IMPLEMENTED;
+    }
+
     inline DeviceDescriptor AsDeviceDescriptor(DEVICEID_TYPE deviceId)
     {
         if (deviceId == CPUDEVICE)

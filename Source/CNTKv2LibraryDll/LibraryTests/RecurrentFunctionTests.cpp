@@ -230,12 +230,17 @@ void TestSimpleRecurrence(size_t inputDim,
                           const DeviceDescriptor& device,
                           size_t numIterations,
                           bool useFutureValue,
+                          bool useSparseInputs,
+                          bool useOneHotSparseInputs = false,
                           unsigned int seed = 1)
 {
+    if (useOneHotSparseInputs && !useSparseInputs)
+        throw std::exception("useOneHotSparseInputs option can only be true when useSparseInputs is true");
+
     Parameter timesParam(new NDArrayView((ElementType)0.5, { outputDim, inputDim }, device));
     Parameter plusParam(new NDArrayView((ElementType)0.1, { outputDim }, device));
 
-    Variable inputVar({ inputDim }, GetDataType<ElementType>(), true, L"input");
+    Variable inputVar({ inputDim }, useSparseInputs, GetDataType<ElementType>(), true, L"input");
 
     auto placeholder = Placeholder({ outputDim });
     auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)));
@@ -263,28 +268,63 @@ void TestSimpleRecurrence(size_t inputDim,
                 maxActualSequenceLength = sequenceLengths[i];
         }
 
+        NDShape inputShape = { inputDim, maxActualSequenceLength, numSequences };
+        ValuePtr inputValue;
         size_t totalNumInputSamples = maxActualSequenceLength * numSequences;
-        std::vector<ElementType> inputData(inputDim * totalNumInputSamples, std::numeric_limits<ElementType>::quiet_NaN());
-        for (size_t i = 0; i < numSequences; ++i)
+        std::vector<ElementType> inputData(inputDim * totalNumInputSamples, useSparseInputs ? 0 : std::numeric_limits<ElementType>::quiet_NaN());
+        if (useOneHotSparseInputs)
         {
-            for (size_t j = 0; j < maxActualSequenceLength; ++j)
+            std::vector<const std::vector<size_t>> oneHotSequences;
+            for (size_t i = 0; i < numSequences; ++i)
             {
-                size_t sampleIdx = (i * maxActualSequenceLength) + j;
-                for (size_t k = 0; k < inputDim; ++k)
+                std::vector<size_t> currentSequence(sequenceLengths[i]);
+                for (size_t j = 0; j < sequenceLengths[i]; ++j)
                 {
-                    if (j < sequenceLengths[i])
-                        inputData[(sampleIdx * inputDim) + k] = ((ElementType)rand()) / RAND_MAX;
+                    size_t hotRowIndex = rand() % inputDim;
+                    currentSequence[j] = hotRowIndex;
+                    size_t sampleIdx = (i * maxActualSequenceLength) + j;
+                    inputData[(sampleIdx * inputDim) + hotRowIndex] = 1;
+                }
+
+                oneHotSequences.push_back(std::move(currentSequence));
+            }
+
+            inputValue = Value::Create<ElementType>({ inputDim }, oneHotSequences, DeviceDescriptor::CPUDevice(), true);
+        }
+        else
+        {
+            for (size_t i = 0; i < numSequences; ++i)
+            {
+                for (size_t j = 0; j < maxActualSequenceLength; ++j)
+                {
+                    size_t sampleIdx = (i * maxActualSequenceLength) + j;
+                    size_t maxNumberOfNonZeroValuesPerSparseInputSample = std::max<size_t>(inputDim / 200, 1);
+                    size_t numActualValuesWritten = 0;
+                    for (size_t k = 0; k < inputDim; ++k)
+                    {
+                        if ((j < sequenceLengths[i]) && (!useSparseInputs || ((numActualValuesWritten < maxNumberOfNonZeroValuesPerSparseInputSample) && ((rand() % inputDim) < maxNumberOfNonZeroValuesPerSparseInputSample))))
+                        {
+                            numActualValuesWritten++;
+                            inputData[(sampleIdx * inputDim) + k] = ((ElementType)rand()) / RAND_MAX;
+                        }
+                    }
                 }
             }
+
+            NDArrayViewPtr inputValueData = new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true);
+            if (useSparseInputs)
+            {
+                NDArrayViewPtr sparseInputValueData = new NDArrayView(GetDataType<ElementType>(), StorageFormat::SparseCSC, inputShape, DeviceDescriptor::CPUDevice());
+                sparseInputValueData->CopyFrom(*inputValueData);
+                inputValueData = sparseInputValueData->Alias(true);
+            }
+
+            NDMaskPtr inputMask = new NDMask({ maxActualSequenceLength, numSequences }, DeviceDescriptor::CPUDevice());
+            for (size_t i = 0; i < numSequences; ++i)
+                inputMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+
+            inputValue = new Value(inputValueData, inputMask);
         }
-
-        NDShape inputShape = { inputDim, maxActualSequenceLength, numSequences };
-
-        NDMaskPtr inputMask = new NDMask({ maxActualSequenceLength, numSequences }, DeviceDescriptor::CPUDevice());
-        for (size_t i = 0; i < numSequences; ++i)
-            inputMask->MaskSection({ sequenceLengths[i], i }, {NDShape::InferredDimension, 1});
-
-        ValuePtr inputValue = new Value(new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true), inputMask);
 
         NDShape reducedOutputShape = {};
         std::vector<ElementType> reducedOutputData(reducedOutputShape.TotalSize());
@@ -292,7 +332,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
         NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
         std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
-        ValuePtr plusOutputValue = new Value(new NDArrayView(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), new NDMask(inputMask->Shape(), inputMask->Device()));
+        ValuePtr plusOutputValue = new Value(new NDArrayView(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), new NDMask(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput->Output(), reducedOutputValue }, { plusOutput->Output(), plusOutputValue } };
         auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput->Output() });
@@ -312,14 +352,14 @@ void TestSimpleRecurrence(size_t inputDim,
             }
         }
 
-        ValuePtr rootGradientValue = new Value(new NDArrayView(plusOutputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true), inputMask->DeepClone());
+        ValuePtr rootGradientValue = new Value(new NDArrayView(plusOutputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true), inputValue->Mask()->DeepClone());
 
         std::vector<ElementType> plusParameterGradientData(plusParam.Shape().TotalSize());
         std::vector<ElementType> timesParameterGradientData(timesParam.Shape().TotalSize());
         std::vector<ElementType> inputGradientData(inputShape.TotalSize());
         ValuePtr plusParameterGradientValue = new Value(new NDArrayView(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
         ValuePtr timesParameterGradientValue = new Value(new NDArrayView(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
-        ValuePtr inputGradientValue = new Value(new NDArrayView(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputMask->DeepClone());
+        ValuePtr inputGradientValue = new Value(new NDArrayView(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
 
         std::unordered_map<Variable, ValuePtr> outGradients = { { inputVar, inputGradientValue }, { plusParam, plusParameterGradientValue }, { timesParam, timesParameterGradientValue } };
         rootFunc->Backward(backpropState, { { plusOutput->Output(), rootGradientValue } }, outGradients);
@@ -433,8 +473,13 @@ void TestSimpleRecurrence(size_t inputDim,
 
 void RecurrentFunctionTests()
 {
-    TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), 3, false);
-    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), 5, true);
+    TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), 3, false, false);
+    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), 5, true, false);
+    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), 2, true, true);
+    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), 3, false, true);
+    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), 3, true, true, true);
+    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), 2, false, true, true);
+
     TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0));
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice());
 }

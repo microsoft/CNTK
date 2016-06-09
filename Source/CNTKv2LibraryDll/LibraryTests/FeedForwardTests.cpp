@@ -131,7 +131,7 @@ void TestTimesAndPlus(size_t inputDim,
             if (outputAllocationDevice.Type() == DeviceType::CPU)
                 outputValue = new Value(new NDArrayView(outputShape, outputData.data(), outputData.size(), outputAllocationDevice, false));
             else
-                outputValue = new Value(new NDArrayView(GetDataType<ElementType>(), outputShape, nullptr, 0, outputAllocationDevice, false));
+                outputValue = new Value(new NDArrayView(GetDataType<ElementType>(), outputShape, outputAllocationDevice));
         }
 
         std::unordered_map<Variable, ValuePtr> outputs = { { timesAndPlusFunc->Output(), outputValue } };
@@ -148,7 +148,7 @@ void TestTimesAndPlus(size_t inputDim,
         else
         {
             NDArrayViewPtr cpuArrayView = new NDArrayView(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
-            NDArrayViewPtr gpuArrayView = new NDArrayView(GetDataType<ElementType>(), outputShape, nullptr, 0, device, false);
+            NDArrayViewPtr gpuArrayView = new NDArrayView(GetDataType<ElementType>(), outputShape, device);
             gpuArrayView->CopyFrom(*cpuArrayView);
             rootGradientValue = new Value(gpuArrayView);
         }
@@ -166,8 +166,8 @@ void TestTimesAndPlus(size_t inputDim,
             }
             else
             {
-                plusParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), nullptr, 0, outputAllocationDevice, false));
-                timesParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), nullptr, 0, outputAllocationDevice, false));
+                plusParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), outputAllocationDevice));
+                timesParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), outputAllocationDevice));
             }
         }
 
@@ -203,12 +203,12 @@ void TestTimesAndPlus(size_t inputDim,
         // Verify backward prop results
         if (device.Type() != DeviceType::CPU)
         {
-            NDArrayViewPtr cpuArrayView = new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), nullptr, 0, DeviceDescriptor::CPUDevice(), false);
+            NDArrayViewPtr cpuArrayView = new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*plusParameterGradientValue->Data());
             const ElementType* cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(plusParameterGradientData.data(), cpuArrayViewBuffer, plusParam.Shape().TotalSize() * sizeof(ElementType));
 
-            cpuArrayView = new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), nullptr, 0, DeviceDescriptor::CPUDevice(), false);
+            cpuArrayView = new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*timesParameterGradientValue->Data());
             cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(timesParameterGradientData.data(), cpuArrayViewBuffer, timesParam.Shape().TotalSize() * sizeof(ElementType));

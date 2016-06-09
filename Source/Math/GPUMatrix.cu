@@ -4411,6 +4411,7 @@ template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 
 template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
 template void GPUMatrix<char>::Reshape(const size_t, const size_t);
+template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

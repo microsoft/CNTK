@@ -130,9 +130,77 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     });
 }
 
+template <typename ElementType>
+void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
+{
+    srand(1);
+
+    size_t maxDimSize = 15;
+    NDShape viewShape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+        viewShape[i] = (rand() % maxDimSize) + 1;
+
+    size_t numMatrixCols = (numAxes > 0) ? viewShape.SubShape(1).TotalSize() : 1;
+    size_t numMatrixRows = (numAxes > 0) ? viewShape[0] : 1;
+    std::unique_ptr<int[]> colsStarts(new int[numMatrixCols + 1]);
+    colsStarts[0] = 0;
+    int numNonZeroValues = 0;
+    for (size_t i = 1; i <= numMatrixCols; ++i)
+    {
+        int numValuesInCurrentCol = (rand() % numMatrixRows) + (rand() % 1);
+        numNonZeroValues += numValuesInCurrentCol;
+        colsStarts[i] = colsStarts[i - 1] + numValuesInCurrentCol;
+    }
+
+    // Now fill the actual values
+    std::unique_ptr<ElementType[]> nonZeroValues(new ElementType[numNonZeroValues]);
+    std::unique_ptr<int[]> rowIndices(new int[numNonZeroValues]);
+    size_t nnzIndex = 0;
+    std::vector<ElementType> referenceDenseData(viewShape.TotalSize(), 0);
+    for (size_t j = 0; j < numMatrixCols; ++j)
+    {
+        size_t numRowsWithValuesInCurrentCol = colsStarts[j + 1] - colsStarts[j];
+        size_t numValuesWritten = 0;
+        std::unordered_set<int> rowsWrittenTo;
+        while (numValuesWritten < numRowsWithValuesInCurrentCol)
+        {
+            int rowIndex = rand() % numMatrixRows;
+            if (rowsWrittenTo.insert(rowIndex).second)
+            {
+                ElementType value = ((ElementType)rand()) / RAND_MAX;
+                nonZeroValues[nnzIndex] = value;
+                referenceDenseData[(j * numMatrixRows) + rowIndex] = value;
+                rowIndices[nnzIndex] = rowIndex;
+                numValuesWritten++;
+                nnzIndex++;
+            }
+        }
+    }
+
+    NDArrayView sparseCSCArrayView(viewShape, colsStarts.get(), rowIndices.get(), nonZeroValues.get(), numNonZeroValues, device, true);
+
+    // Copy it out to a dense matrix on the CPU and verify the data
+    std::vector<ElementType> copiedDenseData(viewShape.TotalSize());
+    NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
+    denseCPUTensor.CopyFrom(sparseCSCArrayView);
+    if (copiedDenseData != referenceDenseData)
+        throw std::exception("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+
+    NDArrayView emptySparseCSCArrayView(GetDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
+    emptySparseCSCArrayView.CopyFrom(denseCPUTensor);
+    NDArrayView newDenseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
+    newDenseCPUTensor.CopyFrom(emptySparseCSCArrayView);
+    if (copiedDenseData != referenceDenseData)
+        throw std::exception("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+}
+
 void NDArrayViewTests()
 {
     TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
     TestNDArrayView<float>(0, DeviceDescriptor::GPUDevice(0));
     TestNDArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
+
+    TestSparseCSCArrayView<float>(1, DeviceDescriptor::GPUDevice(0));
+    TestSparseCSCArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
+    TestSparseCSCArrayView<float>(2, DeviceDescriptor::CPUDevice());
 }
