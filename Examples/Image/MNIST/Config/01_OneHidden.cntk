@@ -10,7 +10,6 @@ outputDir = "$rootDir$/Output"
 modelDir  = "$outputDir$/Models"
 
 deviceId = 0
-imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
@@ -18,7 +17,6 @@ command = train:test
 
 precision = "float"
 modelPath = "$modelDir$/01_OneHidden"
-ndlMacros = "$configDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file
 # stderr = "$outputDir$/01_OneHidden_out"
@@ -73,6 +71,7 @@ train = [
     # TODO: remove this (currently kept around since BS has different randomization seeds and thus not identical results)
     # comment out this section to run Tutorial II
     NDLNetworkBuilder = [
+        ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
 
