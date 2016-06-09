@@ -18,7 +18,7 @@ command = train:test
 precision = "float"
 modelPath = "$modelDir$/02_Convolution"
 
-# uncomment the following line to write logs to a file 
+# uncomment the following line to write logs to a file
 # stderr = "$outputDir$/02_Convolution_out"
 traceLevel = 1
 numMBsToShowResult = 500
@@ -72,14 +72,7 @@ test = [
     action = test
     minibatchSize = 16        # TODO: 1024
 
-    NDLNetworkBuilder = [
-        imageLayout = "cudnn"
-        initOnCPUOnly = true
-        ndlMacros = "$configDir$/Macros.ndl"
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
-    ]
-
-    #evalNodeNames = errs:top5errs
+    #evalNodeNames = errs:top5errs   # TODO: in BS version
 
     reader = [
         readerType = "CNTKTextFormatReader"
