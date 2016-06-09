@@ -108,33 +108,15 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::MaxPoolingMask(const Mat& in, Mat& mask)
+void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
-    assert(g.OutputShape().GetNumElements() == mask.GetNumRows());
-    size_t batchSize = in.GetNumCols();
-    assert(batchSize == mask.GetNumCols());
-#ifdef NDEBUG
-    UNUSED(g);
-    UNUSED(batchSize);
-#endif
-
-    EnsureCompatible();
-    EnsurePoolingInitialized();
-    MaxPoolingMaskCore(in, mask);
-}
-
-template <class ElemType>
-void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& mask, Mat& in)
-{
-    const auto& g = *m_geometry;
-    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.InputShape().GetNumElements() == poolIn.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
-    assert(g.OutputShape().GetNumElements() == mask.GetNumRows());
     size_t batchSize = in.GetNumCols();
     assert(batchSize == out.GetNumCols());
-    assert(batchSize == mask.GetNumCols());
+    assert(batchSize == poolIn.GetNumCols());
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -142,7 +124,7 @@ void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& mask, 
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    MaxUnpoolingCore(out, mask, in);
+    MaxUnpoolingCore(out, poolIn, in);
 }
 
 //------------------------------------------------------------------
@@ -248,14 +230,9 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
     {
-        in.MaxPoolingMask(m_mpRowCol, *m_mpRowIndices, *m_indices, mask);
-    }
-
-    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
-    {
-        out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, mask, in);
+        out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, poolIn, in);
     }
 
 protected:
@@ -548,18 +525,10 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
-    {
-        UNUSED(in);
-        UNUSED(mask);
-        // Not implemented but potentially can make a fallback to reference engine.
-        LogicError("MaxPoolingMask is not implemented for legacy engine.");
-    }
-
-    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
     {
         UNUSED(out);
-        UNUSED(mask);
+        UNUSED(poolIn);
         UNUSED(in);
         // Not implemented but potentially can make a fallback to reference engine.
         LogicError("MaxUnpooling is not implemented for legacy engine.");

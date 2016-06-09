@@ -88,13 +88,8 @@ public:
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                ImageLayoutKind imageLayout,
                                const std::wstring nodeName = L"");
-    ComputationNodePtr MaxPoolingMask(const ComputationNodePtr inputValues, 
-                                      const TensorShape& kernelShape, const TensorShape& strideShape,
-                                      const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                      ImageLayoutKind imageLayout,
-                                      const std::wstring nodeName = L"");
-    ComputationNodePtr MaxUnpooling(const ComputationNodePtr inputValues,
-                                    const ComputationNodePtr mask,
+    ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
+                                    const ComputationNodePtr poolInputValues,
                                     const TensorShape& kernelShape, const TensorShape& strideShape,
                                     const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                     ImageLayoutKind imageLayout,

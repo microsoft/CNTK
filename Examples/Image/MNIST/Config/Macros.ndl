@@ -100,6 +100,5 @@ MaxNDPooling(inp, kW, kH, hStride, vStride) = [
 ]
 
 MaxUnpool(inp, poolInp, kW, kH, hStride, vStride) = [
-    mask = MaxPoolingMask(poolInp, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
-    up = MaxUnpooling(inp, mask, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={false, false, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+    up = MaxUnpooling(inp, poolInp, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={false, false, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]

@@ -306,18 +306,10 @@ protected:
                                         m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
-    void MaxPoolingMaskCore(const Mat& in, Mat& mask) override
-    {
-        UNUSED(in);
-        UNUSED(mask);
-        // Not implemented but potentially can make a fallback to reference engine.
-        LogicError("MaxPoolingMask is not implemented for cuDNN engine.");
-    }
-
-    void MaxUnpoolingCore(const Mat& out, const Mat& mask, Mat& in) override
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
     {
         UNUSED(out);
-        UNUSED(mask);
+        UNUSED(poolIn);
         UNUSED(in);
         // Not implemented but potentially can make a fallback to reference engine.
         LogicError("MaxUnpooling is not implemented for cuDNN engine.");

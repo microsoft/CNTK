@@ -499,70 +499,6 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
     }
 }
 
-BOOST_AUTO_TEST_CASE(MaxPoolingMask)
-{
-    using IntMatrix = Matrix<int>;
-
-    std::mt19937 rng(0);
-    std::uniform_int_distribution<> batchSizeG(1, 8);
-    std::normal_distribution<float> nd;
-
-    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
-    {
-        data.resize(r * 3 * c);
-        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
-        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
-        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
-        // Get center slice.
-        return buf.ColumnSlice(c, c);
-    };
-
-    int cpuDeviceId = -1;
-    int gpuDeviceId = 0;
-
-    for (const auto& g : GeneratePoolTestConfigs())
-    {
-        size_t n = batchSizeG(rng);
-        vec buf;
-        buf.resize(g->InputShape().GetNumElements() * n);
-        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
-        SingleMatrix inC(g->InputShape().GetNumElements(), n, buf.data(), cpuDeviceId, matrixFlagNormal);
-        SingleMatrix inG(g->InputShape().GetNumElements(), n, buf.data(), gpuDeviceId, matrixFlagNormal);
-
-        IntMatrix mpRowColC(g->MpRowCol().size(), 1, (int*)g->MpRowCol().data(), cpuDeviceId, matrixFlagDontOwnBuffer);
-        IntMatrix mpRowIdxC(g->MpRowIndices().size(), 1, (int*)g->MpRowIndices().data(), cpuDeviceId, matrixFlagDontOwnBuffer);
-        IntMatrix idxC(g->Indices().size(), 1, (int*)g->Indices().data(), cpuDeviceId, matrixFlagDontOwnBuffer);
-        
-        IntMatrix mpRowColG(g->MpRowCol().size(), 1, (int*)g->MpRowCol().data(), gpuDeviceId, matrixFlagNormal);
-        IntMatrix mpRowIdxG(g->MpRowCol().size(), 1, (int*)g->MpRowIndices().data(), gpuDeviceId, matrixFlagNormal);
-        IntMatrix idxG(g->Indices().size(), 1, (int*)g->Indices().data(), gpuDeviceId, matrixFlagNormal);
-
-        size_t crowOut = g->OutputShape().GetNumElements();
-        SingleMatrix outBufC(cpuDeviceId);
-        SingleMatrix outC = initMat(outBufC, crowOut, n, buf);
-        SingleMatrix outBufG(outBufC.DeepClone(), gpuDeviceId);
-        SingleMatrix outG = initMat(outBufG, crowOut, n, buf);
-
-        inC.MaxPoolingMask(mpRowColC, mpRowIdxC, idxC, outC);
-        inG.MaxPoolingMask(mpRowColG, mpRowIdxG, idxG, outG);
-
-        std::stringstream tmsg;
-        tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
-        std::string msg = " are not equal, " + tmsg.str();
-        std::string msgNan = " has NaNs, " + tmsg.str();
-        std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
-
-        float relErr = 0;
-        float absErr = 0;
-        std::string emsg;
-
-        BOOST_REQUIRE_MESSAGE(!outC.HasNan("outC"), "outC" << msgNan);
-        BOOST_REQUIRE_MESSAGE(!outG.HasNan("outG"), "outG" << msgNan);
-        BOOST_REQUIRE_MESSAGE(CheckEqual(outC, outG, emsg, relErr, absErr), "out" << msg << ". " << emsg);
-        BOOST_REQUIRE_MESSAGE(CountNans(outBufC) == crowOut * 2 * n, "outBufC" << msgNotNan);
-    }
-}
-
 BOOST_AUTO_TEST_CASE(MaxUnpooling)
 {
     using IntMatrix = Matrix<int>;
@@ -602,14 +538,10 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
         // First, compute max pooling output and corresponding mask.
         SingleMatrix outC(g->OutputShape().GetNumElements(), n, cpuDeviceId);
         SingleMatrix outG(g->OutputShape().GetNumElements(), n, gpuDeviceId);
-        SingleMatrix maskC(g->OutputShape().GetNumElements(), n, cpuDeviceId);
-        SingleMatrix maskG(g->OutputShape().GetNumElements(), n, gpuDeviceId);
 
         cpuEng->ForwardPooling(inC, outC);
         gpuEng->ForwardPooling(inG, outG);
-        cpuEng->MaxPoolingMask(inC, maskC);
-        gpuEng->MaxPoolingMask(inG, maskG);
-
+        
         // Second, do the unpooling.
         size_t crowIn = g->InputShape().GetNumElements();
         SingleMatrix inUBufC(cpuDeviceId);
@@ -617,8 +549,8 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
         SingleMatrix inUBufG(inUBufC.DeepClone(), gpuDeviceId);
         SingleMatrix inUG = initMat(inUBufG, crowIn, n, buf);
 
-        cpuEng->MaxUnpooling(outC, maskC, inUC);
-        gpuEng->MaxUnpooling(outG, maskG, inUG);
+        cpuEng->MaxUnpooling(outC, inC, inUC);
+        gpuEng->MaxUnpooling(outG, inG, inUG);
 
         // Check that CPU/GPU results are the same.
         std::stringstream tmsg;

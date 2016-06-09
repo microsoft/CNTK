@@ -4316,46 +4316,8 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::MaxPoolingMask(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
-{
-#pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
-    {
-        for (size_t row = 0; row < output.GetNumRows(); row++)
-        {
-            int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
-
-            assert(std::numeric_limits<ElemType>::has_infinity);
-            ElemType curMax = -std::numeric_limits<ElemType>::infinity();
-            ElemType prevMax = curMax;
-            ElemType imax = (ElemType)-1;
-
-            int i0 = mpRowIndices(row, 0);
-            int size = indices(i0++, 0);
-            assert(size > 0);
-            for (int i = 0; i < size; i++)
-            {
-                int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
-                curMax = std::max(curMax, (*this)(colBase + dcol, sample));
-                if (curMax > prevMax)
-                {
-                    prevMax = curMax;
-                    // The conversion below is safe as we store index relative to the size of the kernel
-                    // (which is usually small).
-                    assert(i <= (1 << 24));
-                    imax = (ElemType)i;
-                }
-            }
-            output(row, sample) = imax;
-        }
-    }
-}
-
-template <class ElemType>
 void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
-                                       const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& mask,
+                                       const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput,
                                        CPUMatrix<ElemType>& input) const
 {
 #pragma omp parallel for
@@ -4369,11 +4331,31 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
             assert(size > 0);
-            int i = (int)mask(row, sample);
-            assert(0 <= i && i < size);
-            int dcol = indices(i0 + i, 0);
+
+            ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
+            ElemType prevMax = curMax;
+            int imax = 0;
+            for (int i = 1; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < poolInput.GetNumRows());
+                curMax = std::max(curMax, poolInput(colBase + dcol, sample));
+                if (curMax > prevMax)
+                {
+                    prevMax = curMax;
+                    imax = i;
+                }
+            }
+
+            int dcol = indices(i0 + imax, 0);
             assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
             input(colBase + dcol, sample) = (*this)(row, sample);
+
+            //int i = (int)poolIn(row, sample);
+            //assert(0 <= i && i < size);
+            //int dcol = indices(i0 + i, 0);
+            //assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            //input(colBase + dcol, sample) = (*this)(row, sample);
         }
     }
 }

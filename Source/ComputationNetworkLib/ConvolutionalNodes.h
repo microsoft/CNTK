@@ -513,92 +513,15 @@ protected:
 };
 
 // -----------------------------------------------------------------------
-// MaxPoolingMaskNode (inputFeature)
-// Computes activation mask for max pooling operation.
-// The node takes one input and produces an output of the same size and shape
-// where each element is an integer index relative to the kernel size.
-// For example, if pooling kernel has dimensions of [X, Y, 1] then 
-// index will be in the range of [0, X*Y - 1].
-// The main usage scenario for this node is to be used in max unpooling
-// operation as an input to MaxUnpoolingNode.
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class MaxPoolingMaskNode : public PoolingNode<ElemType>
-{
-    typedef PoolingNode<ElemType> Base;
-    UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"MaxPoolingMask";
-    }
-
-public:
-    MaxPoolingMaskNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-    MaxPoolingMaskNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
-                       const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                       ImageLayoutKind imageLayout)
-                       : Base(deviceId, name, PoolKind::Max, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout)
-    {
-    }
-    MaxPoolingMaskNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : MaxPoolingMaskNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"),
-                             configp->Get(L"strideShape"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                             ImageLayoutKindFrom(configp->Get(L"imageLayout")))
-    {
-        AttachInputsFromConfig(configp, GetExpectedNumInputs());
-    }
-
-public:
-    void ForwardProp(const FrameRange& fr) override
-    {
-        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        m_convEng->MaxPoolingMask(input0, sliceOutputValue);
-    }
-
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        // There is nothing to backpropagate.
-        UNUSED(inputIndex);
-        UNUSED(fr);
-    }
-
-    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
-    void Validate(bool isFinalValidationPass) override
-    {
-        auto inputShape = GetInputSampleLayout(0);
-        ValidatePooling(inputShape, isFinalValidationPass);
-        if (isFinalValidationPass)
-        {
-            if (m_convEng == nullptr)
-            {
-                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                // Create reference engine as it's the only engine that implements mask computation.
-                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::Reference,
-                                                                NodeName());
-            }
-        }
-    }
-};
-
-// -----------------------------------------------------------------------
-// MaxUnpoolingNode (inputFeature, mask)
+// MaxUnpoolingNode (unpoolInputValues, poolInputValues)
 // Performs "max unpooling" operation. Max unpooling mirrors the operation
 // performed by max pooling node and depends on the values provided to
 // the max pooling node (so unlike deconvolution operation, it is not
-// completely independent). Unpooling takes 2 inputs: features, which
-// tensor has the same shape as corresponding max pooling node output
-// and mask which is the output of MaxPoolingMaskNode. Unpooling node
+// completely independent). Unpooling takes 2 inputs: features to be unpooled,
+// which tensor has the same shape as corresponding max pooling node output
+// and inputs for the original pooling node. Unpooling node
 // produces an output which has the same dimensions as input to the
-// corresponding max pooling node.
+// corresponding max pooling node (i.e. poolInputValues).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -630,10 +553,10 @@ public:
 public:
     void ForwardProp(const FrameRange& fr) override
     {
-        const Matrix<ElemType>& input = Input(0)->ValueFor(fr);
-        const Matrix<ElemType>& mask = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& unpoolInput = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& poolInput = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        m_convEng->MaxUnpooling(input, mask, sliceOutputValue);
+        m_convEng->MaxUnpooling(unpoolInput, poolInput, sliceOutputValue);
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -674,7 +597,7 @@ public:
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(outputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                // Create reference engine as it's the only engine that implements mask computation.
+                // Create reference engine as it's the only engine that implements unpooling.
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::Reference,

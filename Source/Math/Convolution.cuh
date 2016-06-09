@@ -214,61 +214,17 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
 }
 
 template <typename ElemType>
-__global__ void kMaxPoolingMask(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                                const ElemType* __restrict__ src, int srcVecSize,
-                                ElemType* dst, int dstVecSize)
-{
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row >= dstVecSize)
-        return;
-
-    src += blockIdx.y * srcVecSize;
-    dst += blockIdx.y * dstVecSize;
-
-    for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
-    {
-        int colBase = mpRowCol[row];
-        assert(0 <= colBase && colBase < srcVecSize);
-
-        int i0 = mpRowIndices[row];
-        int size = indices[i0++];
-        ElemType curMax = src[colBase + indices[i0]];
-        ElemType prevMax = curMax;
-        ElemType imax = 0;
-        for (int i = 1; i < size; i++)
-        {
-            int dcol = indices[i0 + i];
-            assert(0 <= colBase + dcol && colBase + dcol < srcVecSize);
-            curMax = max(curMax, src[colBase + dcol]);
-            if (curMax > prevMax)
-            {
-                prevMax = curMax;
-                // The conversion below is safe as we store index relative to the size of the kernel
-                // (which is usually small).
-                assert(i <= (1 << 24));
-                imax = (ElemType)i;
-            }
-
-        }
-        dst[row] = imax;
-
-        src += blockDim.y * srcVecSize;
-        dst += blockDim.y * dstVecSize;
-    }
-}
-
-template <typename ElemType>
 __global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
-                              const ElemType* __restrict__ src, const ElemType* mask, int srcVecSize,
+                              const ElemType* __restrict__ src, const ElemType* poolIn, int srcVecSize,
                               ElemType* dst, int dstVecSize)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= srcVecSize)
         return;
 
-    src  += blockIdx.y * srcVecSize;
-    mask += blockIdx.y * srcVecSize;
-    dst  += blockIdx.y * dstVecSize;
+    src    += blockIdx.y * srcVecSize;
+    poolIn += blockIdx.y * dstVecSize;
+    dst    += blockIdx.y * dstVecSize;
 
     for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
     {
@@ -277,16 +233,30 @@ __global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpR
 
         int i0 = mpRowIndices[row];
         int size = indices[i0++];
-        int i = (int)mask[row];
-        assert(0 <= i && i < size);
-        int dcol = indices[i0 + i];
+        ElemType curMax = poolIn[colBase + indices[i0]];
+        ElemType prevMax = curMax;
+        int imax = 0;
+        for (int i = 1; i < size; i++)
+        {
+            int dcol = indices[i0 + i];
+            assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+            curMax = max(curMax, poolIn[colBase + dcol]);
+            if (curMax > prevMax)
+            {
+                prevMax = curMax;
+                imax = i;
+            }
+
+        }
+
+        int dcol = indices[i0 + imax];
         assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
 
         dst[colBase + dcol] = src[row];
 
-        src  += blockIdx.y * srcVecSize;
-        mask += blockIdx.y * srcVecSize;
-        dst  += blockIdx.y * dstVecSize;
+        src    += blockIdx.y * srcVecSize;
+        poolIn += blockIdx.y * dstVecSize;
+        dst    += blockIdx.y * dstVecSize;
     }
 }
 

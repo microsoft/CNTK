@@ -4201,25 +4201,7 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 }
 
 template <class ElemType>
-void Matrix<ElemType>::MaxPoolingMask(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
-{
-    assert(mpRowCol.GetNumCols() == 1);
-    assert(mpRowIndices.GetNumCols() == 1);
-    assert(indices.GetNumCols() == 1);
-
-    DecideAndMoveToRightDevice(*this, output);
-
-    // REVIEW alexeyk: add sparse version.
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
-                            m_CPUMatrix->MaxPoolingMask(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix)),
-                            m_GPUMatrix->MaxPoolingMask(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(output.m_GPUMatrix)),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& mask, Matrix<ElemType>& input) const
+void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4237,8 +4219,8 @@ void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<in
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->MaxUnpooling(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(mask.m_CPUMatrix), *(input.m_CPUMatrix)),
-                            m_GPUMatrix->MaxUnpooling(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(mask.m_GPUMatrix), *(input.m_GPUMatrix)),
+                            m_CPUMatrix->MaxUnpooling(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(poolInput.m_CPUMatrix), *(input.m_CPUMatrix)),
+                            m_GPUMatrix->MaxUnpooling(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(poolInput.m_GPUMatrix), *(input.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
