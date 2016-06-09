@@ -73,7 +73,7 @@ class Baseline:
 
   @staticmethod
   def formatLastTrainResult(line):
-    epochsInfo, parameters = line[0], line[1]  
+    epochsInfo, parameters = line[0], line[1]
     return epochsInfo + '\n' + parameters.replace('; ', '\n')
 
 class Example:
@@ -98,8 +98,8 @@ class Example:
         exampleName = os.path.basename(dirName)
         suiteDir = os.path.dirname(dirName)
         # suite name will be derived from the path components
-        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')        
-        
+        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')                    
+
         example = Example(suiteName,  exampleName, testDir)
         Example.allExamplesIndexedByFullName[example.fullName.lower()] = example
 
@@ -123,17 +123,17 @@ class Example:
     return baselineFilesList
 
 # extracts information for every example and stores it in Example.allExamplesIndexedByFullName
-def getExamplesMetrics():
-  Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))
+def getExamplesMetrics():  
+  Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))  
 
   allExamples = Example.allExamplesIndexedByFullName
 
   print ("CNTK - Metrics collector")  
 
-  for example in allExamples:
-    baselineListForExample = example.findBaselineFilesList()
+  for example in allExamples:    
+    baselineListForExample = example.findBaselineFilesList() 
     six.print_("Example: " + example.fullName)   
-    for baseline in baselineListForExample:      
+    for baseline in baselineListForExample:            
       with open(baseline.fullPath, "r") as f:
         baselineContent = f.read()
         gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
@@ -142,7 +142,7 @@ def getExamplesMetrics():
         example.gitHash = gitHash.group(1) 
         baseline.extractHardwareInfo(baselineContent)
         baseline.extractResultsInfo(baselineContent)
-      example.baselineList.append(baseline)
+      example.baselineList.append(baseline)    
         
 # creates a list with links to each example result
 def createAsciidocExampleList(file):
@@ -156,8 +156,8 @@ def writeMetricsToAsciidoc():
   metricsFile = open("metrics.adoc",'wb')
 
   createAsciidocExampleList(metricsFile)
-
-  for example in Example.allExamplesIndexedByFullName: 
+  
+  for example in Example.allExamplesIndexedByFullName:
     if not example.baselineList:
       continue
     metricsFile.write("".join(["===== ", example.fullName, "\n"]))
@@ -177,7 +177,7 @@ def writeMetricsToAsciidoc():
         metricsFile.write("".join([cpuInfo, " GPU: ", gpuInfo]))
       else:
         metricsFile.write(cpuInfo)
-      
+
     metricsFile.write("\n|====\n\n")
 
 # ======================= Entry point =======================

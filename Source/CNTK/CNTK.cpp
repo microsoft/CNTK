@@ -389,7 +389,7 @@ void PrintUsageInfo()
 
 // print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
 void PrintGpuInfo()
-{
+{    
 #ifndef CPUONLY
     std::vector<GpuData> gpusData = GetAllGpusData();
 
