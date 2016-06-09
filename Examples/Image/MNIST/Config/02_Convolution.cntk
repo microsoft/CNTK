@@ -23,9 +23,6 @@ modelPath = "$modelDir$/02_Convolution"
 traceLevel = 1
 numMBsToShowResult = 500
 
-        imageLayout = "cudnn"
-        initOnCPUOnly = true
-
 #######################################
 #  TRAINING CONFIG                    #
 #######################################
@@ -34,6 +31,8 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/02_Convolution.ndl"
     ]
@@ -71,9 +70,7 @@ train = [
 
 test = [
     action = test
-    minibatchSize = 16        # TODO: 1024
-
-    #evalNodeNames = errs:top5errs   # TODO: in BS version
+    minibatchSize = 1024
 
     reader = [
         readerType = "CNTKTextFormatReader"

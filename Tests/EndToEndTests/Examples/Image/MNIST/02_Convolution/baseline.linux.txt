@@ -517,7 +517,7 @@ Memory Sharing Structure:
 0x7f427f4fd3e8: {[ol.t Value[10 x 1 x *1]] }
 0x7f427f4fd5a8: {[ol.z Value[10 x 1 x *1]] }
 
-05/13/2016 15:10:28: Final Results: Minibatch[1-625]: errs = 1.46% * 10000; ce = 0.04549626 * 10000; perplexity = 1.04654709
+05/13/2016 15:10:28: Final Results: Minibatch[1-10]: errs = 1.46% * 10000; ce = 0.04549626 * 10000; perplexity = 1.04654709
 
 05/13/2016 15:10:28: Action "test" complete.
 

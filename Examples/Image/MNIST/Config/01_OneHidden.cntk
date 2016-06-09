@@ -23,9 +23,6 @@ modelPath = "$modelDir$/01_OneHidden"
 traceLevel = 1
 numMBsToShowResult = 500
 
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly = true
-
 #######################################
 #  TRAINING CONFIG                    #
 #######################################
@@ -72,6 +69,8 @@ train = [
 
     # deprecated NDL version
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
         ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
@@ -108,16 +107,6 @@ train = [
 test = [
     action = "test"
     minibatchSize = 1024
-
-    # TODO: this requires latest master build; not supported in 1.5 release
-    #BrainScriptNetworkBuilder = (new ComputationNetwork [
-    #    network = BS.Network.Load ("$modelPath$")
-    #    errrs = Pass (network.errs, tag="evaluation")   # Pass() creates a new top-level name, so that it shows as "errs"
-    #    #top5errs = Pass (network.top5errs, tag="evaluation")
-    #    top5errrs = ErrorPrediction (network.labels, network.errs.inputs[1] /* network.z*/, topN=5, tag="evaluation")
-    #
-    #    #evaluationNodes = (errs : top5errs)   # TODO: make this work as well
-    #])
 
     evalNodeNames = errs:top5errs
 

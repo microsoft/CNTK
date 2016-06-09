@@ -574,7 +574,7 @@ Memory Sharing Structure:
 0x7f50d5609d38: {[featScale Value[1 x 1]] }
 0x7f50d560a658: {[features Value[28 x 28 x 1 x *1]] }
 
-05/13/2016 15:10:47: Final Results: Minibatch[1-313]: errs = 0.66% * 10000; ce = 0.02083102 * 10000; perplexity = 1.02104950
+05/13/2016 15:10:47: Final Results: Minibatch[1-10]: errs = 0.66% * 10000; ce = 0.02083102 * 10000; perplexity = 1.02104950
 
 05/13/2016 15:10:47: Action "test" complete.
 
