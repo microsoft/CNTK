@@ -107,7 +107,7 @@ template <class ElemType>
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
+void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
     auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
@@ -315,7 +315,36 @@ template <class ElemType>
     PrintNodeValuesToFile(printValues, printMetadata, fstream);
 }
 
+//template class LearnableParameter<short>;
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
+
+template <class ElemType, class QuantizedType>
+void LearnableParameterQuantized<ElemType, QuantizedType>::InitFromFile(const std::wstring& initFromFilePath) /*override*/
+{
+    LogicError("To be implemented");
+}
+
+template <class ElemType, class QuantizedType>
+void LearnableParameterQuantized<ElemType, QuantizedType>::Save(File& fstream) const /*override*/
+{
+    LogicError("To be implemented");
+}
+
+template <class ElemType, class QuantizedType>
+void LearnableParameterQuantized<ElemType, QuantizedType>::Load(File& fstream, size_t modelVersion) /*override*/
+{
+    LogicError("To be implemented");
+}
+
+template <class ElemType, class QuantizedType>
+void LearnableParameterQuantized<ElemType, QuantizedType>::Validate(bool isFinalValidationPass) /*override*/
+{
+    LogicError("To be implemented");
+}
+
+template class LearnableParameterQuantized<float, short>;
+template class LearnableParameterQuantized<double, short>;
+
 
 }}}

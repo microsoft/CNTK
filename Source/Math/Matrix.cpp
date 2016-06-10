@@ -5401,6 +5401,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED);
 }
 
+//template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
 

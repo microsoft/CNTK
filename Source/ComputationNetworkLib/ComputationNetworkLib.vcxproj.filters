@@ -37,10 +37,7 @@
     <ClCompile Include="SpecialPurposeNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
-    <ClCompile Include="LearnableParameterNode.cpp">
-      <Filter>Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="LearnableParameterQuantizedNode.cpp">
+    <ClCompile Include="InputAndParamNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
   </ItemGroup>

@@ -53,7 +53,7 @@ public:
 
     // initialize with random numbers
     // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    virtual void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
 
     // initialize by reading a matrix from a text file
     virtual void InitFromFile(const std::wstring& initFromFilePath);
@@ -95,24 +95,15 @@ template <class ElemType, class QuantizedType>
 class LearnableParameterQuantized : public LearnableParameter<ElemType>
 {
 public:
-    LearnableParameterQuantized(ComputationNodeBasePtr& learnableParameterNode,
-        std::shared_ptr<SymmetricQuantizer<ElemType, QuantizedType>>&  quantizer) : LearnableParameter<ElemType>(learnableParameterNode->GetDeviceId(), learnableParameterNode->GetName())
+    LearnableParameterQuantized(shared_ptr<LearnableParameter<ElemType>> learnableParameterNode, DEVICEID_TYPE deviceId, std::wstring nodeName, std::shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer) :
+        LearnableParameter<ElemType>(deviceId, nodeName)
     {
-        /*
-        if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
-        {
-        */
-        /*auto pLearnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(learnableParameterNode);
-        if (!pLearnableParameterNode)
-        LogicError("Can not construct LearnableParameterQuantized from node %ls. Only LearnableParameter node can be used as an input to the constructor.",
-        learnableParameterNode->GetName().c_str());
+        // create a temp array for demonstration before we figure out how to store quantized matrix
+        QuantizedType* quantizedData = new QuantizedType[learnableParameterNode->Value().GetNumElements()];
+        quantizer->Quantize(learnableParameterNode->Value().Data(), quantizedData, learnableParameterNode->Value().GetNumElements());
 
-        TensorShape learnParShape = pLearnableParameterNode->GetSampleLayout();
-        SetDims(learnParShape, false);
-        LogicError("Not finished");*/
+        delete[] quantizedData;
     }
-
-    virtual void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly) override;
 
     virtual void InitFromFile(const std::wstring& initFromFilePath) override;
 

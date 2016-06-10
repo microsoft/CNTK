@@ -806,6 +806,7 @@ template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<d
 // instantiate the core class templates
 // -----------------------------------------------------------------------
 
+//template class ComputationNode<short>;
 template class ComputationNode<float>;
 template class ComputationNode<double>;
 

@@ -592,7 +592,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::string paramPath = params[1];
 
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(nodeName, netNdl);
 
         for (auto& pNodes : nodes)
         {
@@ -609,25 +609,52 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     }
     else if (EqualInsensitive(name, "Quantize"))
     {
-        std::string nodeName = params[0];
-        NetNdl<ElemType>* netNdl;
-        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+        int numFixedParams = 1;
+        int numOptParams = 1;
+        // Default quantizer is short, symmetric
+        //TODO: add regex pattern for the node name
+        if (params.size() > numFixedParams + numOptParams || params.size() < numFixedParams)
+            RuntimeError("Invalid number of parameters. Valid parameters: Quantize(nodeName, [extrabits=[0-5]])).");
 
-        for (auto& pNodes : nodes)
+        std::string nodeName = params[0];
+        int extraBits = 0;
+        std::string propName, value;
+        if (OptionalParameter(params[params.size() - 1], propName, value))
         {
-            if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
+            try
+            {
+                extraBits = std::stoi(value);
+                if (!EqualInsensitive(propName, "extrabits") || extraBits < 0 || extraBits > 5)
+                {
+                    throw std::invalid_argument("");
+                }
+            }
+            catch (std::logic_error&)
+            {
+                LogicError("Invalid optional parameter %s, valid optional parameters: extrabits=[0-5]", propName.c_str());
+            }
+        }
+        NetNdl<ElemType>* netNdl;
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(nodeName, netNdl);
+
+        for (auto& pNode : nodes)
+        {
+            if (pNode->OperationName() != LearnableParameter<ElemType>::TypeName())
             {
                 fprintf(stderr, "WARNING: you want to quantize the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
-                    pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
+                    pNode->NodeName().c_str(), pNode->OperationName().c_str());
                 continue;
             }
-            shared_ptr<LearnableParameter<ElemType>> pParamNode = std::dynamic_pointer_cast<LearnableParameter<ElemType>>(pNodes);
-            std::vector<ElemType> input(100);
-            //SymmetricQuantizer<ElemType, short>* quantizer = new SymmetricQuantizer<ElemType, short>(input, 0);
-            shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(input, 0));
-            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pNodes, quantizer));
+            auto pParamNode = std::dynamic_pointer_cast<LearnableParameter<ElemType>>(pNode);
 
-            fprintf(stderr, "Quantize node %ls\n", pNodes->NodeName().c_str());
+            wstring quantizedNodeName = pNode->NodeName() + L"_quantized";
+            // Quantization to <short> is the only currently supported
+            shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(pParamNode->Value().Data(), pParamNode->Value().GetNumElements(), extraBits));
+
+            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pParamNode, pNode->GetDeviceId(), quantizedNodeName, quantizer));
+            pNode->CopyTo(pParamNodeQuant, quantizedNodeName, CopyNodeFlags::copyNodeValue);
+
+            fprintf(stderr, "Quantize node %ls\n", pNode->NodeName().c_str());
         }
     }
     else
