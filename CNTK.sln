@@ -1128,6 +1128,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{6826
 		Scripts\txt2ctf.py = Scripts\txt2ctf.py
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedEvalTests", "Tests\UnitTests\ManagedEvalTests\ManagedEvalTests.csproj", "{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1382,6 +1384,14 @@ Global
 		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.ActiveCfg = Release|x64
 		{731312A8-6DA3-4841-AFCD-57520BA1BF8E}.Release|x64.Build.0 = Release|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Debug|x64.ActiveCfg = Debug|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Debug|x64.Build.0 = Debug|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release|x64.ActiveCfg = Release|x64
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1536,5 +1546,6 @@ Global
 		{3F77BF79-E0D3-4D60-8685-5A449F164081} = {0141526B-F257-4574-8CBE-99634726FFCE}
 		{82125DA1-1CD7-45B5-9281-E6AE7C287CB7} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{731312A8-6DA3-4841-AFCD-57520BA1BF8E} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 	EndGlobalSection
 EndGlobal

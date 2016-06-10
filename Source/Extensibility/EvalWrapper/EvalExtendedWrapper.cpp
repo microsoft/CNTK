@@ -23,9 +23,10 @@ using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
-using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
+
+namespace Native = Microsoft::MSR::CNTK;
 
 // Used for retrieving the appropriate model for the element type (float / double)
 template<typename ElemType>
@@ -45,16 +46,16 @@ public enum class NodeGroup
 // This is used for both dense and sparse data.
 //
 generic<class ElemType>
-public ref class ValueBuffer
-{
-public:
-    ValueBuffer(int size)
+    public ref class ValueBuffer
     {
-        m_buffer = gcnew array<ElemType>(size);
-        m_indices = gcnew array<int>(size);
-        m_colIndices = gcnew array<int>(size);
-        m_size = size;
-    }
+    public:
+        ValueBuffer(int size)
+        {
+            m_buffer = gcnew array<ElemType>(size);
+            m_indices = gcnew array<int>(size);
+            m_colIndices = gcnew array<int>(size);
+            m_size = size;
+        }
 
     int m_size;
 
@@ -143,30 +144,17 @@ public:
 
     // Creates minimum size buffers based on schema
     generic<typename ElemType>
-        List<ValueBuffer<ElemType>^>^ CreateBuffers()
+    List<ValueBuffer<ElemType>^>^ CreateBuffers()
+    {
+        List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
+        for (int i = 0; i < this->Count; i++)
         {
-            List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
-            for (int i = 0; i < this->Count; i++)
-            {
-                buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements));
-            }
-
-            return buffers;
+            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements));
         }
+
+        return buffers;
+    }
 };
-
-/*
-template <typename ElemType>
-using Variables = List<ValueBuffer<ElemType>^>^;
-
-template <typename ElemType>
-using ValueBufferNat = Microsoft::MSR::CNTK::ValueBuffer<ElemType>;
-
-template <typename ElemType>
-using VariablesNat = std::vector<ValueBufferNat<ElemType>>;
-
-using VariableSchema = List<VariableLayout^>^;
-*/
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
@@ -265,7 +253,6 @@ public:
 
         for each (String^ output in outputs)
         {
-            //std::wstring name = context.marshal_as<std::wstring>(output);
             outputNodeNames.push_back(context.marshal_as<std::wstring>(output));
         }
 
@@ -275,7 +262,7 @@ public:
     //
     // GetInputSchema - 
     //
-    List<VariableLayout^>^ GetInputSchema()
+    VariableSchema^ GetInputSchema()
     {
         if (m_eval == nullptr)
         {
@@ -284,7 +271,7 @@ public:
 
         auto inputLayout = m_eval->GetInputSchema();
 
-        auto inputSchema = gcnew List<VariableLayout^>();
+        auto inputSchema = gcnew VariableSchema();
         for (auto& lay : inputLayout)
         {
             VariableLayout^ layout = gcnew VariableLayout();
@@ -304,8 +291,7 @@ public:
     // This method is not reentrant, as the forward pass keeps internal state.
     // outputId - output to compute values for. See GetOutputLayouts()
     // inputs - vector of input buffers, one for every input as given by GetInputLayouts()
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing 
-    // will happen during evaluation.
+    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller
     // Called after StartForwardEvaluation()
     //
     void ForwardPass(List<ValueBuffer<ElemType>^>^ inputs, List<ValueBuffer<ElemType>^>^ outputs)
@@ -315,20 +301,13 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        //std::vector<shared_ptr<std::vector<ElemType>>> stdSharedBufferInputs;
-        //std::vector<shared_ptr<std::vector<int>>> stdSharedIndicesInputs;
-        //std::vector<shared_ptr<std::vector<int>>> stdSharedColIndicesInputs;
-        std::vector<shared_ptr<std::vector<ElemType>>> stdSharedBufferOutputs;
-        std::vector<shared_ptr<std::vector<int>>> stdSharedIndicesOutputs;
-        std::vector<shared_ptr<std::vector<int>>> stdSharedColIndicesOutputs;
-
         try
         {
-            Microsoft::MSR::CNTK::ValueRefs<ElemType> stdInputs;
-            Microsoft::MSR::CNTK::ValueRefs<ElemType> stdOutputs;
-            Microsoft::MSR::CNTK::ValueBuffer<ElemType, Microsoft::MSR::CNTK::VectorRef>* vb = new Microsoft::MSR::CNTK::ValueBuffer<ElemType, Microsoft::MSR::CNTK::VectorRef>();
+            Native::ValueRefs<ElemType> stdInputs;
+            Native::ValueRefs<ElemType> stdOutputs;
+            Native::ValueBuffer<ElemType, Native::VectorRef>* vb = new Native::ValueBuffer<ElemType, Native::VectorRef>();
 
-            // TODO: Pin the memories prior to passing the pointer to the native side
+            // Map the managed space into the native space, results will be written directly into the managed memory space
             for each (auto item in inputs)
             {
                 pin_ptr<ElemType> pb = &(item->m_buffer[0]);
@@ -338,14 +317,6 @@ public:
                 vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
                 vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
                 stdInputs.push_back(*vb);
-
-                //shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList<ElemType>(item->m_buffer);
-                //stdSharedBufferInputs.push_back(ptrBuffer);
-                //shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
-                //stdSharedIndicesInputs.push_back(ptrIndices);
-                //shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
-                //stdSharedColIndicesInputs.push_back(ptrColIndices);
-                //stdInputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
             }
 
             for each (auto item in outputs)
@@ -357,14 +328,6 @@ public:
                 vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
                 vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
                 stdOutputs.push_back(*vb);
-
-                //shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList(item->m_buffer);
-                //stdSharedBufferOutputs.push_back(ptrBuffer);
-                //shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
-                //stdSharedIndicesOutputs.push_back(ptrIndices);
-                //shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
-                //stdSharedColIndicesOutputs.push_back(ptrColIndices);
-                //stdOutputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
             }
 
             try
@@ -374,16 +337,6 @@ public:
             catch (const exception& ex)
             {
                 throw GetCustomException(ex);
-            }
-
-            // Once memory is pinned, the output values should already be in the outputs list
-            for (int varIndex = 0; varIndex < stdOutputs.size(); varIndex++)
-            {
-                for (int bufIndex = 0; bufIndex < stdOutputs[varIndex].m_buffer.size(); bufIndex++)
-                {
-                    auto out = stdOutputs[varIndex].m_buffer[bufIndex];
-                    outputs[varIndex]->m_buffer[bufIndex] = out;
-                }
             }
         }
         catch (Exception^)
@@ -415,38 +368,7 @@ protected:
 private:
     // Native model evaluation instance
     IEvaluateModelExtended<ElemType> *m_eval;
-
-    /// <summary>Copies a list of element types from a CLI structure to a native structure</summary>
-    /// <param name="list">The CLI list of items</param>
-    /// <returns>A native vector of items</returns>
-    template<typename ElemType>
-    shared_ptr<std::vector<ElemType>> CopyList(List<ElemType>^ list)
-    {
-        shared_ptr<std::vector<ElemType>> lower(new std::vector<ElemType>());
-        if (list != nullptr)
-        {
-            for each (ElemType item in list)
-            {
-                lower->push_back(item);
-            }
-        }
-        return lower;
-    }
-
-    template<typename ElemType>
-    shared_ptr<std::vector<ElemType>> CopyList(array<ElemType>^ list)
-    {
-        shared_ptr<std::vector<ElemType>> lower(new std::vector<ElemType>());
-        if (list != nullptr)
-        {
-            for each (ElemType item in list)
-            {
-                lower->push_back(item);
-            }
-        }
-        return lower;
-    }
-
+    
     /// <summary> Throws a CLR exception based on a native exception</summary>
     /// <param name="ex">The native exception to throw as a CLR exception</param>
     /// <returns>A CLR exception</returns>
