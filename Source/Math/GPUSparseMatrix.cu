@@ -2037,9 +2037,10 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUS
     CUDA_CALL(cudaMalloc((void**)&dev_agg, sizeof(GPUSPARSE_INDEX_TYPE)));
     CUDA_CALL(cudaMemset((void *)dev_agg, 0, sizeof(GPUSPARSE_INDEX_TYPE)));
 
-    for (int i = 0; i < blocksPerGrid; i++)
+    int nSegs = (int)ceil(1.0 * n / 1024);
+    for (int i = 0; i < nSegs; i++)
     {
-        _sparseCSCElemMulsparseCSC_Scan<GridDim::maxThreadsPerBlock, ElemType> << <1, GridDim::maxThreadsPerBlock >> >(i, n, aCopy.ColLocation(), dev_agg);
+        _sparseCSCElemMulsparseCSC_Scan<1024, ElemType> << <1, 1024>> >(i, n, aCopy.ColLocation(), dev_agg);
     }
     //cudaMemcpy(tmp, aCopy.ColLocation(), sizeof(int) * (n + 1), cudaMemcpyDeviceToHost);
     //for (int i = 0; i <= n; i++)

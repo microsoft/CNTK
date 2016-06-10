@@ -2807,7 +2807,7 @@ __global__ void _sparseCSCElemMulsparseCSC_Mark(
 		int aRow = a_dRow[startA];
 		if (startB >= endB)
 		{
-			a_dVal[startA] = (ElemType)0;
+			//a_dVal[startA] = (ElemType)0;
 			a_dRow[startA] = -1;
 			startA++;
 			NZCounter--;
@@ -2823,13 +2823,13 @@ __global__ void _sparseCSCElemMulsparseCSC_Mark(
 			startB++;
 		else
 		{
-			a_dVal[startA] = (ElemType)0;
+			//a_dVal[startA] = (ElemType)0;
 			a_dRow[startA] = -1;
 			startA++;
 			NZCounter--;
 		}
 	}
-    assert(NZCounter >= 0);
+    //assert(NZCounter >= 0);
 	a_dCol[id+1] = NZCounter;
 }
 
@@ -2838,11 +2838,7 @@ __global__ void _sparseCSCElemMulsparseCSC_Scan(const int segIdx, const CUDA_LON
 {
     typedef cub::BlockScan<int, BlockSize> BlockScanT;
     __shared__ typename BlockScanT::TempStorage tmp;
-    int cur = 0;
-    if (BlockSize * segIdx + threadIdx.x < n)
-    {
-        cur = c[BlockSize*segIdx + threadIdx.x + 1];
-    }
+    int cur = BlockSize * segIdx + threadIdx.x < n ? c[BlockSize*segIdx + threadIdx.x + 1] : 0;
     int block_aggregate = 0;
     BlockScanT(tmp).InclusiveSum(cur, cur, block_aggregate);
     if (BlockSize * segIdx + threadIdx.x < n)
@@ -2874,14 +2870,14 @@ __global__ void _sparseCSCElemMulsparseCSC_Update(
     int in_end = in_dCol_res[id + 1];
 
     int out_start = out_dCol[id];
-    int out_end = out_dCol[id + 1];
+    //int out_end = out_dCol[id + 1];
 
     while (in_start < in_end)
     {
         int rowIdx = in_dRow[in_start];
         if (rowIdx  >= 0) 
         {
-            assert(out_start < out_end);
+            //assert(out_start < out_end);
             out_dRow[out_start] = in_dRow[in_start];
             out_dVal[out_start] = in_dVal[in_start];
             out_start++;
