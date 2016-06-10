@@ -1,111 +1,78 @@
 #!/usr/bin/env python
 
-# This script takes a list of dictionaries and the input file with text and converts the text file to cntk text format
+# This script takes a list of dictionary files and a plain text file and converts this text input file to CNTK text format.
 #
-# Input file should be in the following form:
+# The input text file can contain N streams per line (N TAB-separated "columns") and should be accompanied by N dictionary files.
+# The input text file should be in the following form:
 #    text1 TAB text2 TAB ... TAB textN
-# where each line represents one sequence across all input streams (N)
-# Each text consists of space separated tokens (samples)
+#    .....
+# where each line represents one sequence across all N input streams.
+# Each text consists of one or more space-separated word tokens (samples).
 #
-# Dictionaries are text files that are specified for all streams, so the #dictionaries = #columns in the input file.
-# A dictionary contain a single token per line. The line number becomes the numeric index of the token.
+# Dictionary files are text files that are specified for all streams, so the #dictionaries = #columns in the input file.
+# A dictionary contains a single token per line. The zero-based line number becomes the numeric index of the token in the output CNTK text format file.
 
-# The converter takes the input file and create the corresponding cntk format file using the numeric indexes of tokens.
+# Example usage:
+#    sed -e 's/^/<s> /' -e 's/$/ <\/s>/' < en.txt > en.txt1
+#    sed -e 's/^/<s> /' -e 's/$/ <\/s>/' < fr.txt > fr.txt1
+#    paste en.txt1 fr.txt1 | txt2ctf.py --map en.dict,fr.dict > en-fr.ctf
+#
 
 import sys
 import argparse
 
-class Txt2CftConverter:
-    """Class that converts tab separated sequences into cntk text format
-       Each line in the input file should be of form <text1 TAB ... TAB textN>, where N is the number of streams
-       Each text is a list of space separated tokens(samples)
-       Each token for a stream should be inside the corresponding dictionary file, a token per line, so the line number of the token becomes
-       the numeric index written into the cntk text format output file"""
+def convert(dictionaryStreams, inputs, output, annotated):
+    # create in memory dictionaries
+    dictionaries = [{ line.rstrip('\r\n').strip():index for index, line in enumerate(dic) } for dic in dictionaryStreams]
 
-    def __init__(self, dictionaries, inputs, output, comment):
-        self.dictionaries = dictionaries
-        self.inputs = inputs
-        self.output = output
-        self.comment = comment
-
-    def convert(self):
-        dictionaries = []
-        for dic in self.dictionaries:
-            dictionaries.append(self._createDictionary(dic))
-
-        if len(self.inputs) == 0:
-            return self._convertInput(dictionaries, sys.stdin)
-        for input in self.inputs:
-            self._convertInput(dictionaries, input)
-
-    def _createDictionary(self, dictionary):
-        result = {}
-        counter = 0
-        for line in dictionary:
-            line = line.rstrip('\r\n').strip('\t ')
-            result[line] = counter
-            counter += 1
-        return result
-
-    def _convertInput(self, dictionaries, input):
+    # convert inputs
+    for input in inputs:
         sequenceId = 0
-        for line in input:
+        for index, line in enumerate(input):
             line = line.rstrip('\r\n')
-            streams = line.split("\t")
-            if len(streams) != len(dictionaries):
-                raise Exception("Number of dictionaries {0} does no correspond to the number of streams in the line: {1}".format(len(dictionaries), line))
-            self._convertStreams(dictionaries, streams, sequenceId)
+            columns = line.split("\t")
+            if len(columns) != len(dictionaries):
+                raise Exception("Number of dictionaries {0} does not correspond to the number of streams in line {1}:'{2}'".format(len(dictionaries), index, line))
+            _convertSequence(dictionaries, columns, sequenceId, output, annotated)
             sequenceId += 1
 
-    def _convertStreams(self, dictionaries, streams, sequenceId):
-        tokenizedStreams = []
-        maxLen = 0
-        for index, stream in enumerate(streams):
-            streamTokens = stream.strip(' ').split(' ')
-            streamTokens = [t for t in streamTokens if t != ""]
-            tokenizedStreams.append(streamTokens)
-            if len(streamTokens) > maxLen:
-                maxLen = len(streamTokens)
+def _convertSequence(dictionaries, streams, sequenceId, output, annotated):
+    tokensPerStream = [[t for t in s.strip(' ').split(' ') if t != ""] for s in streams]
+    maxLen = max(len(tokens) for tokens in tokensPerStream)
 
-        # writing to the output file
-        for sampleIndex in range(maxLen):
-            self.output.write(str(sequenceId))
-            for streamIndex in range(len(tokenizedStreams)):
-                if len(tokenizedStreams[streamIndex]) <= sampleIndex:
-                    self.output.write("\t")
-                    continue
-                token = tokenizedStreams[streamIndex][sampleIndex]
-                value = dictionaries[streamIndex][token]
-                self.output.write("\t|S" + str(streamIndex) + " "+ str(value) + ":1")
-                if self.comment:
-                    self.output.write(" |# " + token)
-            self.output.write("\n")
+    # writing to the output file
+    for sampleIndex in range(maxLen):
+        output.write(str(sequenceId))
+        for streamIndex in range(len(tokensPerStream)):
+            if len(tokensPerStream[streamIndex]) <= sampleIndex:
+                output.write("\t")
+                continue
+            token = tokensPerStream[streamIndex][sampleIndex]
+            value = dictionaries[streamIndex][token]
+            output.write("\t|S" + str(streamIndex) + " "+ str(value) + ":1")
+            if annotated:
+                output.write(" |# " + token)
+        output.write("\n")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Transforms text file given  dictionaries into cntk text format.")
-    parser.add_argument('--map', help='List of dictionaries,given in the same order as streams in the input files', required=True)
-    parser.add_argument('--comment', help='Whether to annotate indexes with tokens. Default is false', choices=["True", "False"], default="False", required=False)
+    parser = argparse.ArgumentParser(description="Transforms text file given dictionaries into CNTK text format.")
+    parser.add_argument('--map', help='List of dictionaries, given in the same order as streams in the input files', nargs="+", required=True)
+    parser.add_argument('--annotated', help='Whether to annotate indices with tokens. Default is false', choices=["True", "False"], default="False", required=False)
     parser.add_argument('--output', help='Name of the output file, stdout if not given', default="", required=False)
-    parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", required=False)
+    parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", nargs="*", required=False)
     args = parser.parse_args()
 
-    # creating dictionaries
-    dictionaryFiles = "".join(str(x) for x in args.map).split(",")
-    dictionaries = [open(d) for d in dictionaryFiles]
-    
     # creating inputs
     inputs = [sys.stdin]
-    if args.input != "":
-        inputFiles = "".join(str(x) for x in args.input).split(",")
-        inputs = [open(i) for i in inputFiles]
+    if len(args.input) != 0:
+        inputs = [open(i) for i in args.input]
 
-    # creating outputs
+    # creating output
     output = sys.stdout
     if args.output != "":
         output = open(args.output, "w")
 
-    converter = Txt2CftConverter(dictionaries, inputs, output, args.comment == "True")
-    converter.convert()
+    convert([open(d) for d in args.map], inputs, output, args.annotated == "True")
 
 
 #####################################################################################################
@@ -117,12 +84,10 @@ import StringIO
 def test_simpleSanityCheck():
     dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
     dictionary2 = StringIO.StringIO("let\nme\nbe\nclear\nabout\nit\n")
-
     input = StringIO.StringIO("hello my\tclear about\nworld of\tit let clear\n")
-
     output = StringIO.StringIO()
-    converter = Txt2CftConverter([dictionary1, dictionary2], [input], output, False)
-    converter.convert()
+
+    convert([dictionary1, dictionary2], [input], output, False)
 
     expectedOutput = StringIO.StringIO()
     expectedOutput.write("0\t|S0 0:1\t|S1 3:1\n")
