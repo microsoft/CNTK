@@ -2568,7 +2568,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         {
             // some users may forget to specify useParallelTrain option 
             // in this case, falling back to normal SGD
-            fprintf(stderr, "useParallelTrain option is not enabled. ParallelTrain config will be ignored and plain SGD is used instead.");
+            fprintf(stderr, "useParallelTrain option is not enabled. ParallelTrain config will be ignored.");
         }
         else
         {
@@ -2586,7 +2586,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
                 m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
                 m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-                if ((m_numGradientBits < 1) || (m_numGradientBits >(8 * sizeofElemType)))
+                if ( m_numGradientBits < 1 || m_numGradientBits > (8 * sizeofElemType) )
                 {
                     InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
@@ -2609,15 +2609,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 }
                 else
                 {
-                    m_modelAggregationBlockSize = 40000*numMPIWorkers;    // default value 
+                    m_modelAggregationBlockSize = 40000 * numMPIWorkers;    // default value 
                 }
 #if 1  // legacy option 
                 if (configMASGD.Exists(L"syncFrequencyInFrames"))
                 {
                     if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
-                    {
                         InvalidArgument("syncFrequencyInFrames is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
-                    }
                     m_modelAggregationBlockSize = configMASGD(L"syncFrequencyInFrames");
                     m_modelAggregationBlockSize *= numMPIWorkers;
                     fprintf(stderr, "WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead\n");
@@ -2690,7 +2688,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #endif 
                 else /*if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant"))*/
                 {
-                    double blockMomentum = 1.0 - 1.0 / (double)numMPIWorkers;
+                    double blockMomentum = 1.0 - 1.0 / (double)numMPIWorkers;   // this is a default value which ensures each block update contributes equally
                     m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
                 }
 #endif 
@@ -2698,7 +2696,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 
             }
         } // if (!pMPI)
-    }// if (configSGD.Exists(L"ParallelTrain"))
+    } // if (configSGD.Exists(L"ParallelTrain"))
 }
 
 static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
@@ -2729,7 +2727,7 @@ void SGDParams::InitializeAndCheckBlockMomentumSGDParameters()
     }
     if (blockMomentum == 0.0)
     {
-        fprintf(stderr, "WARNING: blockMomentum equals to zero -- fall back to modelAveragingSGD\n");
+        fprintf(stderr, "WARNING: blockMomentum equals to zero. \n");
     }
 #else
     // don't need do anything here 

@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_reportFrequency; 
         size_t m_totalSamplesProcessedSinceLastReport; 
         size_t m_localSamplesProcessedSinceLastReport; 
-        double  m_accumulatedSecondsOnSyncPointInOneEpoch;
+        double m_accumulatedSecondsOnSyncPointInOneEpoch;
         size_t m_syncPointHitCounterInOneEpoch;
         Timer  m_Timer; 
 
@@ -70,32 +70,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSyncPerformedInCurrentEpoch++;
             m_totalSamplesProcessedSinceLastReport += totalSamplesProcessedSinceLastSync; 
             m_localSamplesProcessedSinceLastReport += localSamplesProcessedSinceLastSync; 
-            if ((m_reportFrequency > 0) && 
-                ((m_numSyncPerformedInCurrentEpoch % m_reportFrequency == 0) || (m_numSyncPerformedInCurrentEpoch <=5))
+            if ( m_reportFrequency > 0 && 
+                ( m_numSyncPerformedInCurrentEpoch % m_reportFrequency == 0 || m_numSyncPerformedInCurrentEpoch <=5 )
                )
                 // reporting condition: 
                 // 1. if m_reportFrequency == 0 , no reporting 
                 // 2. if m_reportFrequence >0   , report MA perf Stats every m_reportFrequency model aggregation are performed 
                 //                                and the first 5 perf stats within each epoch is always reported 
             {
-                ReportMAPerfStats(
-                    m_totalSamplesProcessedSinceLastReport, 
-                    m_localSamplesProcessedSinceLastReport, 
-                    secondsOnCommunication
-                );
+                ReportMAPerfStats(m_totalSamplesProcessedSinceLastReport, 
+                                  m_localSamplesProcessedSinceLastReport, 
+                                  secondsOnCommunication );
 
                 m_totalSamplesProcessedSinceLastReport = 0; 
                 m_localSamplesProcessedSinceLastReport = 0; 
             }
         }
-        void OnArriveAtSyncPoint(double secondOnSyncPoint, bool ready2sync)
+        void OnArriveAtSyncPoint(double secondOnSyncPoint, bool printMessage)
         {
-            if (ready2sync)
+            if (printMessage)
             {
                 m_accumulatedSecondsOnSyncPointInOneEpoch += secondOnSyncPoint;
                 m_syncPointHitCounterInOneEpoch++;
                 fprintf(stderr, "\t\t(model aggregation stats): %d-th sync point was hit, introducing a %.2f-seconds latency this time; accumulated time on sync point = %.2f seconds , average latency = %.2f seconds\n",
-                    m_syncPointHitCounterInOneEpoch, secondOnSyncPoint, m_accumulatedSecondsOnSyncPointInOneEpoch, m_accumulatedSecondsOnSyncPointInOneEpoch / m_syncPointHitCounterInOneEpoch);
+                        m_syncPointHitCounterInOneEpoch, 
+                        secondOnSyncPoint, 
+                        m_accumulatedSecondsOnSyncPointInOneEpoch, 
+                        m_accumulatedSecondsOnSyncPointInOneEpoch / m_syncPointHitCounterInOneEpoch);
             }
         }
 
@@ -152,9 +153,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          {
              m_MAworkerStatus[m_myRank] = MAWorkerStatus::DataEnd;
              Timer syncPointTimer; syncPointTimer.Start(); 
-             bool read2sync=UpdateWorkerStatus(MAWorkerStatus::DataEnd);
+             bool read2sync = UpdateWorkerStatus(MAWorkerStatus::DataEnd);
              syncPointTimer.Stop();
-
+             m_perfReporter.OnArriveAtSyncPoint(syncPointTimer.ElapsedSeconds(), true);
              // assert(read2sync); 
              size_t totalSamplesProcessed = 0;
              float secondsOnCommunication = 0.0f; 
