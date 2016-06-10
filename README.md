@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-06-10.* See CNTK v.1.5 binary release announcement in the official [Microsoft Research Blog](https://blogs.msdn.microsoft.com/msr_er/2016/06/10/microsoft-improves-programming-flexibility-of-its-ai-toolkit/)
+
 *2016-06-08.* V 1.5 Binary release
 CNTK v.1.5 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
@@ -9,8 +11,6 @@ CNTK v.1.5 binaries are on the [CNTK Releases page](https://github.com/Microsoft
 *2016-05-19.* A 1-hour talk describing CNTK, how to use it, and how it works, has been posted at [Presentations](https://github.com/Microsoft/CNTK/wiki/Presentations).
 
 *2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
-
-*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
