@@ -14,6 +14,8 @@
 #include <random>
 #include <set>
 
+#include "PerformanceProfiler.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 BlockRandomizer::BlockRandomizer(
@@ -96,6 +98,8 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 // Gets next sequences not exceeding sampleCount.
 Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 {
+	PROFILE_SCOPE(profilerEvtGetNextSeqs);
+
     // Get next sequence descriptions.
     Sequences result;
     std::vector<RandomizedSequenceDescription> sequences;
@@ -121,6 +125,8 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 #pragma omp parallel for ordered schedule(dynamic)
     for (int i = 0; i < decimated.size(); ++i)
     {
+		PROFILE_SCOPE(profilerEvtReadOneSeq);
+
         const auto& description = decimated[i];
         std::vector<SequenceDataPtr> sequence;
         auto it = m_chunks.find(description.m_chunk->m_chunkId);

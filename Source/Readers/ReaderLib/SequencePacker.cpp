@@ -11,6 +11,8 @@
 #include "SequencePacker.h"
 #include "ElementTypeUtils.h"
 
+#include "PerformanceProfiler.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
@@ -37,6 +39,8 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
+	PROFILE_SCOPE(profilerEvtReadMinibatch);
+
     auto sequences = m_transformer->GetNextSequences(m_minibatchSize);
     const auto& batch = sequences.m_data;
 

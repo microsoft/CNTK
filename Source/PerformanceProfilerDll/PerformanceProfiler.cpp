@@ -71,7 +71,13 @@ static const char* c_profilerEvtDesc[profilerEvtMax] = {
     "ImageReader Thread",
     "",
     "Image Decoding",
-    "ImageReader Throughput"
+    "ImageReader Throughput",
+
+	"ShimGetMinibatch",
+	"PrefetchTask",
+	"EvtReadMinibatch",
+	"EvtGetNextSeqs",
+	"EvtReadOneSeq"
 };
 
 static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
@@ -106,7 +112,12 @@ static const ProfilerEvtType c_profilerEvtType[profilerEvtMax] = {
     profilerEvtSeparator,
     profilerEvtSeparator,
     profilerEvtTime,
-    profilerEvtThroughput
+    profilerEvtThroughput,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime,
+	profilerEvtTime
 };
 
 struct FixedEventRecord

@@ -18,6 +18,8 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 
+#include "PerformanceProfiler.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -103,6 +105,7 @@ string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
 template <class ElemType>
 bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 {
+	PROFILE_SCOPE(profilerShimGetMinibatch);
     // TODO: verify that the set of matrix names is identical 
     // to the set of reader input names. Warn if it's a subset, throw
     // if it's a superset.
@@ -188,6 +191,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     {
         m_prefetchTask = std::async(m_launchType, [this]()
         {
+			PROFILE_SCOPE(profilerPrefetchTask);
             return m_reader->ReadMinibatch();
         });
     }

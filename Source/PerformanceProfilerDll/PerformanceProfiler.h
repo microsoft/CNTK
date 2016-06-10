@@ -70,6 +70,12 @@ enum ProfilerEvents
     profilerEvtImageDecoding,
     profilerEvtZipReaderThroughput,
 
+	profilerShimGetMinibatch,
+	profilerPrefetchTask,
+	profilerEvtReadMinibatch,
+	profilerEvtGetNextSeqs,
+	profilerEvtReadOneSeq,
+
     profilerEvtMax
 };
 
