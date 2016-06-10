@@ -54,10 +54,10 @@ train = [
         ce   = CrossEntropyWithSoftmax (labels, z)
         errs = ErrorPrediction         (labels, z)
 
-        # set top5errs as an evaluation node to compute the top-5 error rate
+        # set top5Errs as an evaluation node to compute the top-5 error rate
         # This is not marked tag="evaluation" since expensive during training.
         # We explicitly select it as an output node in the "test" command.
-        top5errs = ErrorPrediction (labels, z, topN=5)
+        top5Errs = ErrorPrediction (labels, z, topN=5)
 
         # declare special nodes
         featureNodes    = (features)
@@ -108,7 +108,7 @@ test = [
     action = "test"
     minibatchSize = 1024
 
-    evalNodeNames = errs:top5errs
+    evalNodeNames = errs:top5Errs
 
     reader = [
         readerType = "CNTKTextFormatReader"

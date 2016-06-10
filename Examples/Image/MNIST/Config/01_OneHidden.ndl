@@ -23,7 +23,7 @@ DNN = [
 
     ce = CrossEntropyWithSoftmax(labels, ol)
     errs = ErrorPrediction(labels, ol)
-    top5errs = ErrorPrediction(labels, ol, Const(5), tag="eval")  # only used in testing
+    top5Errs = ErrorPrediction(labels, ol, Const(5), tag="eval")  # only used in testing
 
     # Special Nodes
     FeatureNodes = (features)
