@@ -36,7 +36,6 @@ GreaterEqual            = CNTK2.GreaterEqual
 NotEqual                = CNTK2.NotEqual
 LessEqual               = CNTK2.LessEqual
 Splice                  = CNTK2.Splice
-NewReshape              = CNTK2.Reshape
 TransposeDimensions     = CNTK2.TransposeDimensions
 Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
@@ -217,6 +216,7 @@ Slice(beginIndex, endIndex, input, axis=1, tag='') =
     ].out
     else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ] # non-time axis
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
+NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
 FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
