@@ -108,7 +108,7 @@ test = [
     action = "test"
     minibatchSize = 1024
 
-    evalNodeNames = errs:top5Errs
+    evalNodeNames = ce:errs:top5Errs
 
     reader = [
         readerType = "CNTKTextFormatReader"
