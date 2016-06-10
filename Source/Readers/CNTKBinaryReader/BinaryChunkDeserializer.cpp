@@ -218,11 +218,14 @@ void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vec
     {
         // BUGBUG: This is inefficient, but we don't have a choice. Why do we need this at all? Why can't
         // this information just be gotten from the chunks? It's not clear.
-        uint32_t numSamples = 0;
+        // Note numSamples is 1 if there are no sequences.
+        uint32_t numSamples = 1;
         temp.clear();
         chunk->GetSequence(m_offsetsTable->GetStartIndex(chunkId) + c, temp);
-        for (size_t i = 0; i < temp.size(); i++) 
-            numSamples = max(numSamples, temp[i]->m_numberOfSamples);
+        // Only take the max over streams that are actually in use.
+        for (size_t i = 0; i < temp.size(); i++)
+            if (m_sequenceNum[i] >= 0)
+                numSamples = max(numSamples, temp[i]->m_numberOfSamples);
 
         SequenceDescription sd = {};
         sd.m_id = startId + c;
@@ -245,7 +248,6 @@ unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(ChunkIdType chunkId)
     
     // Create buffer
     unique_ptr<byte[]> buffer(new byte[chunkSize]);
-
 
     // Read the chunk from disk
     CNTKBinaryFileHelper::readOrDie(buffer.get(), sizeof(byte), chunkSize, m_file);
