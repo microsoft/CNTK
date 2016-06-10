@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_accumulatedSecondsOnSyncPointInOneEpoch += secondOnSyncPoint;
                 m_syncPointHitCounterInOneEpoch++;
                 fprintf(stderr, "\t\t(model aggregation stats): %d-th sync point was hit, introducing a %.2f-seconds latency this time; accumulated time on sync point = %.2f seconds , average latency = %.2f seconds\n",
-                        m_syncPointHitCounterInOneEpoch, 
+                        (int)m_syncPointHitCounterInOneEpoch, 
                         secondOnSyncPoint, 
                         m_accumulatedSecondsOnSyncPointInOneEpoch, 
                         m_accumulatedSecondsOnSyncPointInOneEpoch / m_syncPointHitCounterInOneEpoch);
