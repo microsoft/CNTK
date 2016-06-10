@@ -13,9 +13,9 @@
 # A dictionary contains a single token per line. The zero-based line number becomes the numeric index of the token in the output CNTK text format file.
 
 # Example usage:
-#    sed -e 's/^/<s> /' -e 's/$/ <\/s>/' < en.txt > en.txt1
-#    sed -e 's/^/<s> /' -e 's/$/ <\/s>/' < fr.txt > fr.txt1
-#    paste en.txt1 fr.txt1 | txt2ctf.py --map en.dict,fr.dict > en-fr.ctf
+#    sed -e 's/^<\/s> //' -e 's/ <\/s>$//' < en.txt > en.txt1
+#    sed -e 's/^<\/s> //' -e 's/ <\/s>$//' < fr.txt > fr.txt1
+#    paste en.txt1 fr.txt1 | txt2ctf.py --map en.dict fr.dict > en-fr.ctf
 #
 
 import sys
