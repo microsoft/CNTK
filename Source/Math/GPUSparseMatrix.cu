@@ -2026,13 +2026,6 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUS
 	SyncGuard syncGuard;
 	_sparseCSCElemMulsparseCSC_Mark<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock >> >(m, n, aCopy.Data(), aCopy.RowLocation(), aCopy.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation());
 
-    //int* tmp = new int[100];
-    //cudaMemcpy(tmp, aCopy.ColLocation(), sizeof(int) * (aCopy.GetNumCols()+1), cudaMemcpyDeviceToHost);
-
-    //for (int i = 0; i <= n; i++)
-    //    cout << tmp[i] << " " << endl;
-	// reduce the segemented column index to obtain the correct column index
-
     GPUSPARSE_INDEX_TYPE* dev_agg = 0;
     CUDA_CALL(cudaMalloc((void**)&dev_agg, sizeof(GPUSPARSE_INDEX_TYPE)));
     CUDA_CALL(cudaMemset((void *)dev_agg, 0, sizeof(GPUSPARSE_INDEX_TYPE)));
@@ -2042,9 +2035,6 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUS
     {
         _sparseCSCElemMulsparseCSC_Scan<1024, ElemType> << <1, 1024>> >(i, n, aCopy.ColLocation(), dev_agg);
     }
-    //cudaMemcpy(tmp, aCopy.ColLocation(), sizeof(int) * (n + 1), cudaMemcpyDeviceToHost);
-    //for (int i = 0; i <= n; i++)
-    //    cout << tmp[i] << " " << endl;
 
     int newNumNZ = 0;
     CUDA_CALL(cudaMemcpy(&newNumNZ, dev_agg, sizeof(int), cudaMemcpyDeviceToHost));
