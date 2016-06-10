@@ -724,8 +724,8 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
         if (n->RequiresPreCompute())
             preComputedNodes.push_back(n);
 
-        const std::wstring operationName = n->OperationName();
-        if (operationName == OperationNameOf(PastValueNode) || operationName == L"Delay")
+        const auto operationName = n->OperationName();
+        if (operationName == OperationNameOf(PastValueNode) || operationName == L"Delay"/*legacy*/) 
             pastValueNodes.push_back(n);
         else if (operationName == OperationNameOf(FutureValueNode))
             futureValueNodes.push_back(n);

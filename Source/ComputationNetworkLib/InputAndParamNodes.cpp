@@ -107,7 +107,7 @@ template <class ElemType>
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
+void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
     auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
@@ -320,8 +320,5 @@ template <class ElemType>
 {
     SetLearningRateMultiplier(0);
 }
-
-template class LearnableParameter<float>;
-template class LearnableParameter<double>;
 
 }}}

@@ -176,12 +176,6 @@
       <Filter>from ReaderLib</Filter>
     </ClInclude>
     <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
-    <ClInclude Include="Quantizers.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Common\Include\Quantizers.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
