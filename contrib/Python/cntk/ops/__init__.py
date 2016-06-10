@@ -416,6 +416,7 @@ def identity(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -547,8 +548,8 @@ def clip(x, min_value, max_value, name=None):
     
     Args:        
         x: tensor to be clipped
-        min_value: the minimum value to clip element values to
-        max_value: the maximum value to clip element values to
+        min_value: a scalar or a tensor which represents the minimum value to clip element values to
+        max_value: a scalar or a tensor which represents the maximum value to clip element values to
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -572,6 +573,7 @@ def relu(x, name=None):
     
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -595,6 +597,7 @@ def sigmoid(x, name=None):
     
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -617,6 +620,7 @@ def tanh(x, name=None):
     
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -644,6 +648,7 @@ def softmax(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -665,6 +670,7 @@ def exp(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -684,6 +690,7 @@ def log(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
                 
@@ -711,6 +718,7 @@ def sqrt(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`        
         
@@ -734,6 +742,7 @@ def square(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -755,6 +764,7 @@ def abs(x, name=None):
 
     Args:
         x: numpy array or any :class:`cntk.graph.ComputationNode` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -815,8 +825,9 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None
     Args:        
         shape (tuple): dimensions of the input `x`, the shape will be inferred if zero is passed.
         x: the tensor (or its name) from which the future value is obtained. 
-        time_step: the number of time steps to look into the future (default 1)
-        default_hidden_activation: the default value to use when no future value is available (default 0.1)
+        time_step (int): the number of time steps to look into the future (default 1)
+        default_hidden_activation (number): the default value to use when no future value is available (default 0.1)
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -849,8 +860,9 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     Args:        
         shape (tuple): dimensions of the input `x`, the shape will be inferred if zero is passed.
         x: the tensor (or its name) from which the past value is obtained
-        time_step: the number of time steps to look into the past (default 1)
-        default_hidden_activation: the default value to use when no past value is available (default 0.1)
+        time_step (int): the number of time steps to look into the past (default 1)
+        default_hidden_activation (number): the default value to use when no past value is available (default 0.1)
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -910,6 +922,7 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         x: tensor to be reshaped
         axis1 (int): the axis to swap with axis2
         axis2 (int): the axis to swap with axis1
+        name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -954,7 +967,8 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
         axis (int or str): axis along which `begin_index` and `end_index` will be used. If axis is of type `str` then the time axis will be used.
-
+        name (str): the name of the node in the network
+        
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
@@ -1000,6 +1014,7 @@ def splice(inputs, axis=0, name=None):
     Args:
         inputs (list): tuple of input tensors
         axis (int): axis along which the concatenation will be performed
+        name (str): the name of the node in the network
 
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -1049,6 +1064,7 @@ def reduce_sum(x, axis=0, name=None):
     Args:
         x: input tensor
         axis (int): axis along which the reduction will be performed
+        name (str): the name of the node in the network
 
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -1077,6 +1093,7 @@ def reduce_log_sum(inputs, name=None):
 
     Args:
         x: input tensor        
+        name (str): the name of the node in the network
 
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -1108,6 +1125,8 @@ def dropout(x, name=None):
             
     Args:        
         x: source tensor
+        name (str): the name of the node in the network
+                
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
@@ -1135,6 +1154,8 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         alias (str): alias to be used in the data file
         dynamic_axis (str): whether the tensor has already the data
         alias (str): optional the alias to be used when serializing the data into an intermediate file
+        name (str): the name of the node in the network
+        
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
@@ -1172,6 +1193,7 @@ def input(shape, dynamic_axis='', name=None):
         shape (tuple): the shape of the input tensor
         dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
         name (str): the name of the node in the network
+        
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
@@ -1222,6 +1244,8 @@ def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name
         alias (str): alias to be used in the data file
         dynamic_axis (str): whether the tensor has already the data
         alias (str): optional the alias to be used when serializing the data into an intermediate file
+        name (str): the name of the node in the network
+                
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
