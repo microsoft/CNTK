@@ -224,6 +224,7 @@ struct VectorRef
 
     VectorRef() : m_vector(nullptr), m_capacity(0), m_size(0) {}
     void InitFrom(std::vector<ElemType>& src) { m_vector = src.data(); m_capacity = src.capacity(); m_size = src.size(); }
+    void InitFrom(ElemType* data, size_t capacity, size_t size) { m_vector = data; m_capacity = capacity; m_size = size; }
     size_t size() const { return m_size; }
     size_t capacity() const { return m_capacity; }
     ElemType* data() { return m_vector; }

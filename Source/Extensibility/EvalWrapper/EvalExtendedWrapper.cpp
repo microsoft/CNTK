@@ -51,9 +51,12 @@ public:
     ValueBuffer(int size)
     {
         m_buffer = gcnew array<ElemType>(size);
-        m_indices = gcnew List<int>();
-        m_colIndices = gcnew List<int>();
+        m_indices = gcnew array<int>(size);
+        m_colIndices = gcnew array<int>(size);
+        m_size = size;
     }
+
+    int m_size;
 
     //
     // All elements of a sequence, concatenated.
@@ -78,14 +81,14 @@ public:
     // For every element in buffer, an entry in this array gives its position.
     // For every vector the entries must be ascending.
     //
-    List<int>^ m_indices;
+    array<int>^ m_indices;
 
     //
     // Contains numberOfsamples + 1 indices into the buffer. The first entry
     // is always 0. The last entry points after the last element.
     // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
     //
-    List<int>^ m_colIndices;
+    array<int>^ m_colIndices;
 };
 
 //
@@ -295,7 +298,7 @@ public:
     }
 
     //
-    // Evaluate - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
+    // Forward Pass - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
     // outputs.
     // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
     // This method is not reentrant, as the forward pass keeps internal state.
@@ -312,39 +315,56 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        std::vector<shared_ptr<std::vector<ElemType>>> stdSharedBufferInputs;
-        std::vector<shared_ptr<std::vector<int>>> stdSharedIndicesInputs;
-        std::vector<shared_ptr<std::vector<int>>> stdSharedColIndicesInputs;
+        //std::vector<shared_ptr<std::vector<ElemType>>> stdSharedBufferInputs;
+        //std::vector<shared_ptr<std::vector<int>>> stdSharedIndicesInputs;
+        //std::vector<shared_ptr<std::vector<int>>> stdSharedColIndicesInputs;
         std::vector<shared_ptr<std::vector<ElemType>>> stdSharedBufferOutputs;
         std::vector<shared_ptr<std::vector<int>>> stdSharedIndicesOutputs;
         std::vector<shared_ptr<std::vector<int>>> stdSharedColIndicesOutputs;
 
         try
         {
-            std::vector<Microsoft::MSR::CNTK::ValueBuffer<ElemType>> stdInputs;
-            std::vector<Microsoft::MSR::CNTK::ValueBuffer<ElemType>> stdOutputs;
+            Microsoft::MSR::CNTK::ValueRefs<ElemType> stdInputs;
+            Microsoft::MSR::CNTK::ValueRefs<ElemType> stdOutputs;
+            Microsoft::MSR::CNTK::ValueBuffer<ElemType, Microsoft::MSR::CNTK::VectorRef>* vb = new Microsoft::MSR::CNTK::ValueBuffer<ElemType, Microsoft::MSR::CNTK::VectorRef>();
 
             // TODO: Pin the memories prior to passing the pointer to the native side
             for each (auto item in inputs)
             {
-                shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList<ElemType>(item->m_buffer);
-                stdSharedBufferInputs.push_back(ptrBuffer);
-                shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
-                stdSharedIndicesInputs.push_back(ptrIndices);
-                shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
-                stdSharedColIndicesInputs.push_back(ptrColIndices);
-                stdInputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
+                pin_ptr<ElemType> pb = &(item->m_buffer[0]);
+                pin_ptr<int> pi = &(item->m_indices[0]);
+                pin_ptr<int> pci = &(item->m_colIndices[0]);
+                vb->m_buffer.InitFrom(pb, item->m_size, item->m_size);
+                vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
+                vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
+                stdInputs.push_back(*vb);
+
+                //shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList<ElemType>(item->m_buffer);
+                //stdSharedBufferInputs.push_back(ptrBuffer);
+                //shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
+                //stdSharedIndicesInputs.push_back(ptrIndices);
+                //shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
+                //stdSharedColIndicesInputs.push_back(ptrColIndices);
+                //stdInputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
             }
 
             for each (auto item in outputs)
             {
-                shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList(item->m_buffer);
-                stdSharedBufferOutputs.push_back(ptrBuffer);
-                shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
-                stdSharedIndicesOutputs.push_back(ptrIndices);
-                shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
-                stdSharedColIndicesOutputs.push_back(ptrColIndices);
-                stdOutputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
+                pin_ptr<ElemType> pb = &(item->m_buffer[0]);
+                pin_ptr<int> pi = &(item->m_indices[0]);
+                pin_ptr<int> pci = &(item->m_colIndices[0]);
+                vb->m_buffer.InitFrom(pb, item->m_size, item->m_size);
+                vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
+                vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
+                stdOutputs.push_back(*vb);
+
+                //shared_ptr<std::vector<ElemType>> ptrBuffer = CopyList(item->m_buffer);
+                //stdSharedBufferOutputs.push_back(ptrBuffer);
+                //shared_ptr<std::vector<int>> ptrIndices = CopyList<int>(item->m_indices);
+                //stdSharedIndicesOutputs.push_back(ptrIndices);
+                //shared_ptr<std::vector<int>> ptrColIndices = CopyList<int>(item->m_colIndices);
+                //stdSharedColIndicesOutputs.push_back(ptrColIndices);
+                //stdOutputs.push_back({*ptrBuffer.get(), *ptrIndices.get(), *ptrColIndices.get()});
             }
 
             try
@@ -545,6 +565,10 @@ void emitExtended()
     d.GetInputSchema();
     d.StartForwardEvaluation(nullptr);
     d.ForwardPass(nullptr, nullptr);
+
+    VariableSchema sc;
+    sc.CreateBuffers<float>();
+    sc.CreateBuffers<double>();
 }
 
 }}}}}
