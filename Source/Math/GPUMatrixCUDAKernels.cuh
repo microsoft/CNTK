@@ -2743,39 +2743,150 @@ __global__ void _sparseCSRElemMulDense(
     }
 }
 
+//template <class ElemType>
+//__global__ void _sparseCSCElemMulsparseCSC(
+//    const int m,
+//    const CUDA_LONG n,
+//    const ElemType* a_dVal,
+//    const int* a_dRow,
+//    const int* a_dCol,
+//    const ElemType* b_dVal,
+//    const int* b_dRow,
+//    const int* b_dCol,
+//    ElemType* c)
+//{
+//    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+//    if (id >= n)
+//        return;
+//    int startA = a_dCol[id];
+//    int endA = a_dCol[id + 1];
+//
+//    int startB = b_dCol[id];
+//    int endB = b_dCol[id + 1];
+//
+//    while (startA < endA && startB < endB)
+//    {
+//        int aRow = a_dRow[startA];
+//        int bRow = b_dRow[startB];
+//
+//        if (aRow == bRow)
+//        {
+//            c[IDX2C(aRow, id, m)] = a_dVal[startA] * b_dVal[startB];
+//            startA++;
+//        }
+//        else if (aRow < bRow) startA++;
+//        else startB++;     
+//    }
+//}
+
+
 template <class ElemType>
-__global__ void _sparseCSCElemMulsparseCSC(
-    const int m,
+__global__ void _sparseCSCElemMulsparseCSC_Mark(
+	const int m,
+	const CUDA_LONG n,
+	ElemType* a_dVal,
+	int* a_dRow,
+	int* a_dCol,
+	const ElemType* b_dVal,
+	const int* b_dRow,
+	const int* b_dCol
+	)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= n)
+		return;
+	int startA = a_dCol[id];
+	int endA = a_dCol[id + 1];
+
+	int startB = b_dCol[id];
+	int endB = b_dCol[id + 1];
+	int NZCounter = endA - startA;
+
+	while (startA < endA)
+	{
+		int aRow = a_dRow[startA];
+		if (startB >= endB)
+		{
+			a_dVal[startA] = (ElemType)0;
+			a_dRow[startA] = -1;
+			startA++;
+			NZCounter--;
+			continue;
+		}
+		int bRow = b_dRow[startB];
+		if (aRow == bRow)
+		{
+			a_dVal[startA] *= b_dVal[startB];
+			startA++;
+		}
+		else if (aRow > bRow)
+			startB++;
+		else
+		{
+			a_dVal[startA] = (ElemType)0;
+			a_dRow[startA] = -1;
+			startA++;
+			NZCounter--;
+		}
+	}
+    assert(NZCounter >= 0);
+	a_dCol[id+1] = NZCounter;
+}
+
+template <int BlockSize, class ElemType>
+__global__ void _sparseCSCElemMulsparseCSC_Scan(const int segIdx, const CUDA_LONG n, GPUSPARSE_INDEX_TYPE* c, GPUSPARSE_INDEX_TYPE* aggregate)
+{
+    typedef cub::BlockScan<int, BlockSize> BlockScanT;
+    __shared__ typename BlockScanT::TempStorage tmp;
+    int cur = 0;
+    if (BlockSize * segIdx + threadIdx.x < n)
+    {
+        cur = c[BlockSize*segIdx + threadIdx.x + 1];
+    }
+    int block_aggregate = 0;
+    BlockScanT(tmp).InclusiveSum(cur, cur, block_aggregate);
+    if (BlockSize * segIdx + threadIdx.x < n)
+    {
+        c[BlockSize*segIdx + threadIdx.x + 1] = cur + *aggregate;
+    }
+    if (threadIdx.x == 0) *aggregate += block_aggregate;
+}
+
+template <class ElemType>
+__global__ void _sparseCSCElemMulsparseCSC_Update(
     const CUDA_LONG n,
-    const ElemType* a_dVal,
-    const int* a_dRow,
-    const int* a_dCol,
-    const ElemType* b_dVal,
-    const int* b_dRow,
-    const int* b_dCol,
-    ElemType* c)
+    ElemType* in_dVal,
+    int* in_dRow,
+    int* in_dCol,
+    int* in_dCol_res,
+    ElemType* out_dVal,
+    int* out_dRow,
+    int* out_dCol
+    )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= n)
         return;
-    int startA = a_dCol[id];
-    int endA = a_dCol[id + 1];
+    out_dCol[id] = in_dCol[id];
+    if (id == n - 1) out_dCol[n] = in_dCol[n];
 
-    int startB = b_dCol[id];
-    int endB = b_dCol[id + 1];
+    int in_start = in_dCol_res[id];
+    int in_end = in_dCol_res[id + 1];
 
-    while (startA < endA && startB < endB)
+    int out_start = out_dCol[id];
+    int out_end = out_dCol[id + 1];
+
+    while (in_start < in_end)
     {
-        int aRow = a_dRow[startA];
-        int bRow = b_dRow[startB];
-
-        if (aRow == bRow)
+        int rowIdx = in_dRow[in_start];
+        if (rowIdx  >= 0) 
         {
-            c[IDX2C(aRow, id, m)] = a_dVal[startA] * b_dVal[startB];
-            startA++;
+            assert(out_start < out_end);
+            out_dRow[out_start] = in_dRow[in_start];
+            out_dVal[out_start] = in_dVal[in_start];
+            out_start++;
         }
-        else if (aRow < bRow) startA++;
-        else startB++;     
+        in_start++;
     }
 }
 

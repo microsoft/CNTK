@@ -18,7 +18,7 @@
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
 #include <assert.h>
-
+#include <cub/cub.cuh>
 typedef unsigned char byte;
 
 #pragma warning(disable : 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
@@ -2006,36 +2006,85 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
     return GPUSparseMatrix<ElemType>::ElementProductOf(b, a);
 }
 
+// use cun lib
 // sparse x sparse = sparse
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
 {
-    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
+	if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+		NOT_IMPLEMENTED;
 
-    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-        LogicError("ElementProductOf: matrix dimensions mismatch");
+	if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+		LogicError("ElementProductOf: matrix dimensions mismatch");
 
-    b.PrepareDevice();
-    GPUMatrix<ElemType> c(b.GetNumRows(), b.GetNumCols(), b.GetComputeDeviceId());
+	b.PrepareDevice();
+	GPUSparseMatrix<ElemType> aCopy(a);
 
-    int m = (int)a.GetNumRows();
-    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
-    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
-    _sparseCSCElemMulsparseCSC<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(m, n, a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation(), c.Data());
+	int m = (int)a.GetNumRows();
+	CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+	int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+	SyncGuard syncGuard;
+	_sparseCSCElemMulsparseCSC_Mark<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock >> >(m, n, aCopy.Data(), aCopy.RowLocation(), aCopy.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation());
 
-    // convert dense to sparse CSC
-    GPUSparseMatrix<ElemType> cs(c, MatrixFormat::matrixFormatSparseCSC);
+    //int* tmp = new int[100];
+    //cudaMemcpy(tmp, aCopy.ColLocation(), sizeof(int) * (aCopy.GetNumCols()+1), cudaMemcpyDeviceToHost);
 
-    ////GPUMatrix<ElemType> ad(a.GetComputeDeviceId());
-    ////a.CopyToDenseMatrix(ad);
-    //ElemType *carr = c.CopyToArray();
+    //for (int i = 0; i <= n; i++)
+    //    cout << tmp[i] << " " << endl;
+	// reduce the segemented column index to obtain the correct column index
 
-    //for (int i = 0; i < m*n; i++) if (carr[i] > 0.0) fprintf(stderr, "%10.4f ", carr[i]);
+    GPUSPARSE_INDEX_TYPE* dev_agg = 0;
+    CUDA_CALL(cudaMalloc((void**)&dev_agg, sizeof(GPUSPARSE_INDEX_TYPE)));
+    CUDA_CALL(cudaMemset((void *)dev_agg, 0, sizeof(GPUSPARSE_INDEX_TYPE)));
 
-    return cs;
+    for (int i = 0; i < blocksPerGrid; i++)
+    {
+        _sparseCSCElemMulsparseCSC_Scan<GridDim::maxThreadsPerBlock, ElemType> << <1, GridDim::maxThreadsPerBlock >> >(i, n, aCopy.ColLocation(), dev_agg);
+    }
+    //cudaMemcpy(tmp, aCopy.ColLocation(), sizeof(int) * (n + 1), cudaMemcpyDeviceToHost);
+    //for (int i = 0; i <= n; i++)
+    //    cout << tmp[i] << " " << endl;
+
+    int newNumNZ = 0;
+    CUDA_CALL(cudaMemcpy(&newNumNZ, dev_agg, sizeof(int), cudaMemcpyDeviceToHost));
+    GPUSparseMatrix<ElemType> c(a.GetNumRows(), a.GetNumCols(), newNumNZ, a.GetComputeDeviceId(), MatrixFormat::matrixFormatSparseCSC);
+    _sparseCSCElemMulsparseCSC_Update<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, aCopy.Data(), aCopy.RowLocation(), aCopy.ColLocation(), a.ColLocation(), c.Data(), c.RowLocation(), c.ColLocation());
+	
+    CUDA_CALL(cudaFree(dev_agg));
+    return c;
 }
+
+
+//// sparse x sparse = sparse
+//template <class ElemType>
+//GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+//{
+//    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+//        NOT_IMPLEMENTED;
+//
+//    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+//        LogicError("ElementProductOf: matrix dimensions mismatch");
+//
+//    b.PrepareDevice();
+//    GPUMatrix<ElemType> c(b.GetNumRows(), b.GetNumCols(), b.GetComputeDeviceId());
+//
+//    int m = (int)a.GetNumRows();
+//    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+//    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+//    SyncGuard syncGuard;
+//    _sparseCSCElemMulsparseCSC<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(m, n, a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), b.RowLocation(), b.ColLocation(), c.Data());
+//
+//    // convert dense to sparse CSC
+//    GPUSparseMatrix<ElemType> cs(c, MatrixFormat::matrixFormatSparseCSC);
+//
+//    ////GPUMatrix<ElemType> ad(a.GetComputeDeviceId());
+//    ////a.CopyToDenseMatrix(ad);
+//    //ElemType *carr = c.CopyToArray();
+//
+//    //for (int i = 0; i < m*n; i++) if (carr[i] > 0.0) fprintf(stderr, "%10.4f ", carr[i]);
+//
+//    return cs;
+//}
 
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
