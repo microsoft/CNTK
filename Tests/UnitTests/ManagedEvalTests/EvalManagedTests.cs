@@ -3,14 +3,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.MSR.CNTK.Extensibility.Managed;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.MSR.CNTK.Managed;
 
-namespace Microsoft.MSR.CNTK.Managed.Tests
+namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 {
     [TestClass]
     public class EvalManagedTests

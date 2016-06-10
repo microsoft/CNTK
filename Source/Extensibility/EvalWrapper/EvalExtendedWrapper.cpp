@@ -402,16 +402,16 @@ private:
 
     /// <summary Converts a managed (CLI) enum NodeGroup to a native NodeGroup
     /// <param name="nodeGroup">The managed (CLI) NodeGroup to convert to native</param>
-    Microsoft::MSR::CNTK::NodeGroup GetNodeGroup(NodeGroup nodeGroup)
+    Native::NodeGroup GetNodeGroup(NodeGroup nodeGroup)
     {
         switch ((int)nodeGroup)
         {
-        case Microsoft::MSR::CNTK::NodeGroup::nodeInput:
-            return Microsoft::MSR::CNTK::NodeGroup::nodeInput;
-        case Microsoft::MSR::CNTK::NodeGroup::nodeOutput:
-            return Microsoft::MSR::CNTK::NodeGroup::nodeOutput;
-        case Microsoft::MSR::CNTK::NodeGroup::nodeSpecified:
-            return Microsoft::MSR::CNTK::NodeGroup::nodeSpecified;
+        case Native::NodeGroup::nodeInput:
+            return Native::NodeGroup::nodeInput;
+        case Native::NodeGroup::nodeOutput:
+            return Native::NodeGroup::nodeOutput;
+        case Native::NodeGroup::nodeSpecified:
+            return Native::NodeGroup::nodeSpecified;
         default:
             throw gcnew CNTKRuntimeException(String::Format("Cannot convert native NodeGroup with value: {0} to corresponding managed NodeGroup.", (int)nodeGroup), "");
         }

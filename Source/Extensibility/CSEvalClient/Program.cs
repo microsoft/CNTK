@@ -45,8 +45,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         {
             initialDirectory = Environment.CurrentDirectory;
 
-            EvaluateExtendedNetworkSingleLayerNoInput();
-            /*
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -58,7 +56,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
             EvaluateNetworkSingleLayerNoInput();
-            */
+
+            Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
+            EvaluateExtendedNetworkSingleLayerNoInput();
+            
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
         }
@@ -248,7 +249,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
         /// <summary>
         /// Evaluates an extended network (without a model and without input) and obtains a single layer output
-        /// This sample uses Sparse data instead of Dense data
         /// </summary>
         private static void EvaluateExtendedNetworkSingleLayerNoInput()
         {
@@ -287,10 +287,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // We can call the evaluate method and get back the results...
                     model.ForwardPass(inputBuffer, outputBuffer);
 
-                    List<float> expected = new List<float>() { 2, 3 /* 1 + 2 */ };
-                    var buf = outputBuffer[0].m_buffer;
+                    // We expect two outputs: the v2 constant, and the ol Plus result
+                    float[][] expected = {new float[]{2}, new float[]{3}};
 
-                    Console.WriteLine("Expected values: {0}", string.Join(" - ", expected));
+                    Console.WriteLine("Expected values: {0}", string.Join(" - ", expected.Select(b => string.Join(", ", b)).ToList<string>()));
                     Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.m_buffer)).ToList<string>()));
                 }
             }
