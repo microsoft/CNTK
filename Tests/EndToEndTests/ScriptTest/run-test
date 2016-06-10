@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. $TEST_ROOT_DIR/run-test-common
-
 SCRIPTSDIR=$TEST_ROOT_DIR/../../Scripts
 
 pushd $SCRIPTSDIR

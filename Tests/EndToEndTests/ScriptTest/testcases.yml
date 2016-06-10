@@ -10,4 +10,3 @@ testCases:
   PyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):
     patterns:
       - __COMPLETED__
-
