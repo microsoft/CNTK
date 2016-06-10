@@ -35,6 +35,18 @@ namespace CNTK
         double m_momentumPerSample;
 
         size_t m_sampleCount;
+
+        // TODO: the following methods are needed for backwards compatibility until sgd.cpp is updated to v2.
+#pragma region _temporary_back_compat
+        virtual double GetLearningRate() const { return m_learningRatePerSample; }
+        virtual double GetMomentum() const override { return m_momentumPerSample; }
+        virtual void SetLearningRate(double value) override { m_learningRatePerSample = value; }
+        virtual void SetMomentum(double value) override { m_momentumPerSample = value; }
+        virtual _Internal::_SimpleVector<ValuePtr>  SmoothedGradients() const override
+        {
+            return m_smoothedGradients.Values();
+        }
+#pragma endregion _temporary_back_compat
     };
 
     class SGD : public LearnerBase

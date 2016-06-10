@@ -318,6 +318,16 @@ namespace CNTK
             return keys;
         }
 
+        template <typename KeyType, typename ValueType>
+        _SimpleVector<ValueType> _SimpleMap<KeyType, ValueType>::Values() const
+        {
+            _SimpleVector<ValueType> values;
+            for (auto iter = m_map->begin(); iter != m_map->end(); ++iter)
+                values.PushBack(iter->second);
+
+            return values;
+        }
+
         // Explicit template instantiations
         template class _SimpleMap<Variable, ValuePtr>;
         template class _SimpleMap<Variable, const ValuePtr>;

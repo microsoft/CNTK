@@ -1155,6 +1155,8 @@ public:
     MatrixBasePtr GradientPtr() const { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
+
+
 private:
 
     template<class E>

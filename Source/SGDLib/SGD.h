@@ -19,6 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
+//#include "CNTKLibrary.h"
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
@@ -561,6 +562,14 @@ protected:
     std::shared_ptr<struct DistGradHeader> m_gradHeader;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
+
+    
+    //// only one learner for the time being.
+    //// TODO: for v2, replace with a list of ler
+    //::CNTK::LearnerPtr m_learner;
+
+    //// a list of variables, one for each learnable node
+    //std::list<::CNTK::Variable> m_variables;
 
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();

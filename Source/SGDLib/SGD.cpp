@@ -18,6 +18,8 @@
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
+#include "CNTKLibrary.h"
+
 #include <map>
 #include <set>
 
@@ -250,15 +252,54 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
+    
+    /// make this a member in the SGD class
     std::list<Matrix<ElemType>> smoothedGradients;
 
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+
+
+        //auto nodeValue = node->Value();
+        //m_variables.push_back(Variable({ nodeValue.GetNumRows(), nodeValue.GetNumCols() },
+        //    GetDataType<ElemType>(), node->NodeName()));
+
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
     }
+
+    //GradientsUpdateType adpType = sgd->GradUpdateType();
+   
+    //if (adpType == GradientsUpdateType::None)
+    //{
+    //    m_learners.push_back(SGDLearner(m_variables, net->))
+    //    smoothedGradient.NormalGrad(gradientValues, functionValues,
+    //        (ElemType)learnRatePerSample, (ElemType)momentum, useNesterovMomentum);
+    //}
+    //else if (adpType == GradientsUpdateType::AdaGrad ||
+    //    (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
+    //    (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
+    //{
+    //    // rmsprop for sparse is not implemented yet, delegate it with adagrad
+
+    //    double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
+    //    Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
+    //}
+    //else if (adpType == GradientsUpdateType::FSAdaGrad)
+    //{
+    //    smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType)learnRatePerSample, (ElemType)momentum);
+    //}
+    //else if (adpType == GradientsUpdateType::RmsProp)
+    //{
+    //    double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
+    //        (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
+    //        (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
+    //    Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
+    //}
+    
+    
 
     double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();

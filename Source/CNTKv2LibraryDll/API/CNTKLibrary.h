@@ -1620,6 +1620,31 @@ namespace CNTK
 
         std::unordered_set<Variable> Parameters() const { return m_parameters; }
 
+// TODO: the following methods are needed for backwards compatibility until sgd.cpp is updated to v2.
+#pragma region _temporary_back_compat
+        virtual double GetLearningRate() const = 0;
+        virtual double GetMomentum() const = 0;
+        virtual void SetLearningRate(double value) = 0;
+        virtual void SetMomentum(double value) = 0;
+
+        template <typename ElementType>
+        std::list<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>> GetSmoothedGradientsMatrices()
+        {
+            std::list<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>> list;
+            auto gradients = SmoothedGradients();
+            for (size_t i = 0; i < gradients.Size(); ++i)
+            {
+                list.push_back(GetWritableMatrix<ElementType>(gradients[i]))
+            }
+            return list;
+        }
+
+    protected:
+
+        virtual _Internal::_SimpleVector<ValuePtr>  SmoothedGradients() const = 0;
+
+#pragma endregion _temporary_back_compat
+
     protected:
         Learner(const std::unordered_set<Variable>& parameters)
             : m_parameters(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters))

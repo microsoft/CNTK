@@ -20,9 +20,10 @@ LearnerBase::LearnerBase(const std::unordered_set<Variable>& parameters,
 {
     for (auto parameter : parameters)
     {
+        // TODO: get the device info from the parameters, allocate smoothed gradients on the same device?
         if (parameter.DataType() == DataType::Float)
         {
-            m_smoothedGradients[parameter] = new Value(new NDArrayView(0.0f, parameter.Shape()));
+            m_smoothedGradients[parameter] = new Value(new NDArrayView(0.0f, parameter.Shape())); 
         }
         else
         {
@@ -113,7 +114,6 @@ void FSAdaGrad::Update(const ValuePtr smoothedGradient, const ValuePtr gradient,
     smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix,
         ElementType(m_learningRatePerSample), ElementType(momentum));
 }
-
 
 
 RmsProp::RmsProp(const std::unordered_set<Variable>& parameters, double learningRatePerSample, 

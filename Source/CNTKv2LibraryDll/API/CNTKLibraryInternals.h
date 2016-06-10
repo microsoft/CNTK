@@ -13,7 +13,9 @@
 #else
 #define CNTK_API __declspec(dllimport)
 #endif
+#ifndef _SCL_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
+#endif
 #else // no DLLs on Linux
 #define CNTK_API
 #endif
@@ -463,6 +465,8 @@ namespace CNTK
             size_t Size() const;
 
             _SimpleSet<KeyType> Keys() const;
+
+            _SimpleVector<ValueType> Values() const;
 
             static _SimpleMap<KeyType, ValueType> CreateSimpleMap(const std::unordered_map<KeyType, ValueType>& initMap)
             {
