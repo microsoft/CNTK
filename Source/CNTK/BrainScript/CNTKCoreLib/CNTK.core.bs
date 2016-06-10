@@ -37,7 +37,6 @@ NotEqual                = CNTK2.NotEqual
 LessEqual               = CNTK2.LessEqual
 Splice                  = CNTK2.Splice
 NewReshape              = CNTK2.Reshape
-Slice                   = CNTK2.Slice
 TransposeDimensions     = CNTK2.TransposeDimensions
 Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
@@ -205,6 +204,18 @@ Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag=
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+Slice(beginIndex, endIndex, input, axis=1, tag='') =
+    if axis < 0 then [ # time axis: specify -1
+        beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
+        endFlags   = if endIndex   > 0 then                 BS.Loop.IsFirstN (endIndex,   input)  else BS.Boolean.Not (BS.Loop.IsLastN  (-endIndex,   input))
+        flags = if      beginIndex == 0 then endFlags
+                else if endIndex   == 0 then beginFlags
+                else                         BS.Boolean.And (beginFlags, endFlags)
+        out = if beginIndex == 0 && endIndex == 0
+              then input
+              else BS.Sequences.Gather (flags, input)
+    ].out
+    else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ] # non-time axis
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
 ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
 FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
