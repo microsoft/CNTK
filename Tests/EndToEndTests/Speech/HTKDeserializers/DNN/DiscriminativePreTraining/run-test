@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+OriginalTestDir=../../../DNN/DiscriminativePreTraining
+ConfigDir=$TEST_DIR/$OriginalTestDir
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk_dpt.cntk 'reader=[readerType=HTKDeserializers]' || exit $?

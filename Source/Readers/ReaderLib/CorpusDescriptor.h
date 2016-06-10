@@ -24,7 +24,7 @@ public:
         // Add all sequence ids.
         for (msra::files::textreader r(file); r;)
         {
-            m_sequenceIds.insert(m_stringRegistry[r.wgetline()]);
+            m_sequenceIds.insert(m_stringRegistry[r.getline()]);
         }
     }
 
@@ -33,7 +33,7 @@ public:
     {}
 
     // Checks if the specified sequence should be used for reading.
-    bool IsIncluded(const std::wstring& sequenceKey)
+    bool IsIncluded(const std::string& sequenceKey)
     {
         if (m_includeAll)
         {
@@ -50,13 +50,13 @@ public:
     }
 
     // Gets the string registry
-    WStringToIdMap& GetStringRegistry()
+    StringToIdMap& GetStringRegistry()
     {
         return m_stringRegistry;
     }
 
     // Gets the string registry
-    const WStringToIdMap& GetStringRegistry() const
+    const StringToIdMap& GetStringRegistry() const
     {
         return m_stringRegistry;
     }
@@ -64,7 +64,7 @@ public:
 private:
     DISABLE_COPY_AND_MOVE(CorpusDescriptor);
 
-    WStringToIdMap m_stringRegistry;
+    StringToIdMap m_stringRegistry;
 };
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;

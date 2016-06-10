@@ -193,9 +193,6 @@
     <ClInclude Include="..\Readers\ReaderLib\Reader.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
-    <ClInclude Include="..\Readers\ReaderLib\SampleModePacker.h">
-      <Filter>from ReaderLib</Filter>
-    </ClInclude>
     <ClInclude Include="..\Readers\ReaderLib\SequencePacker.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
@@ -206,9 +203,6 @@
       <Filter>from ReaderLib</Filter>
     </ClInclude>
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h">
-      <Filter>from ReaderLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Readers\ReaderLib\TransformerBase.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\CompositeDataReader.h">

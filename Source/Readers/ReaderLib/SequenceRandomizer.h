@@ -20,7 +20,7 @@ struct RandomizedSequenceDescription
     // Sequence id.
     size_t m_id;
     // Number of samples in sequence.
-    size_t m_numberOfSamples;
+    uint32_t m_numberOfSamples;
     // Randomized chunk this sequence belongs to.
     const RandomizedChunk* m_chunk;
 };
@@ -32,6 +32,7 @@ class SequenceRandomizer
 {
 public:
     SequenceRandomizer(
+        int verbosity,
         IDataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer);
 
@@ -47,8 +48,10 @@ public:
     std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
 
     // Gets the current randomized chunk window.
-    const std::deque<RandomizedChunk>& GetChunkWindow() const
+    const std::deque<RandomizedChunk>& GetChunkWindow(size_t& randomizedIndex) const
     {
+        assert(m_chunkWindow.size() >= m_randomizationCursor - m_chunkWindowBegin);
+        randomizedIndex = m_randomizationCursor - m_chunkWindowBegin;
         return m_chunkWindow;
     }
 
@@ -65,13 +68,13 @@ private:
     bool IsValidForPosition(size_t targetPosition, const RandomizedSequenceDescription& seqDesc) const;
 
     // Gets randomized chunk index using a sequence position in the sweep.
-    size_t GetChunkIndexForSequencePosition(size_t sequencePosition) const;
+    ChunkIdType GetChunkIndexForSequencePosition(size_t sequencePosition) const;
 
     // Gets randomized sequence by the sequence id.
     RandomizedSequenceDescription& GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId);
 
     // Add randomizes sequences for the chunk with a given index.
-    void AddRandomizedSequencesForChunk(size_t chunkIndex);
+    void AddRandomizedSequencesForChunk(ChunkIdType chunkIndex);
 
     // Move the chunk cursor to the next chunk, randomizing more sequences if necessary.
     void MoveChunkCursor();
@@ -141,6 +144,7 @@ private:
     // sequenced randomized.
     std::deque<ChunkInfo> m_randomizedChunkInfo;
 
+    // TODO consider to change to ChunkIdType where appropriate
     // Index of the first chunk in the window (inclusive).
     size_t m_chunkWindowBegin;
 
@@ -156,7 +160,10 @@ private:
     size_t m_randomizationCursor;
 
     // Index of the last chunk in the window (exclusive).
-    size_t m_chunkWindowEnd;
+    ChunkIdType m_chunkWindowEnd;
+
+    // General configuration
+    int m_verbosity;
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;

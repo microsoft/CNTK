@@ -19,7 +19,7 @@ downloaded and converted by running the following command from the 'AdditionalFi
 `python mnist_convert.py`
 
 The script will download all required files and convert them to CNTK-supported format. 
-The resulting files (Train-28x28.txt and Test-28x28.txt) will be stored in the 'Data' folder. 
+The resulting files (Train-28x28_cntk_text.txt and Test-28x28_cntk_text.txt) will be stored in the 'Data' folder.
 In case you don't have Python installed, there are 2 options:
 
 1. Download and install latest version of Python 2.7 from: https://www.python.org/downloads/ 

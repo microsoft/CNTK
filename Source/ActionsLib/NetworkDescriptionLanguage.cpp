@@ -159,12 +159,12 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonLessEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparsionLessNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonNotEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;

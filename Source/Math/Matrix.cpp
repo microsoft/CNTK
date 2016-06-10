@@ -617,7 +617,10 @@ void Matrix<ElemType>::Read(File& stream)
     {
         if (M.GetDeviceId() < 0)
         {
-            NOT_IMPLEMENTED; // You might want to tranfer your matrix to GPU
+            if (M.m_CPUSparseMatrix == NULL)
+                M.m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSR);
+            stream >> (*M.m_CPUSparseMatrix);
+            M.SetDataLocation(CPU, SPARSE);
         }
         else
         {

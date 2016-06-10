@@ -1446,13 +1446,15 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
 // sparse X dense = dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
-                                                       const GPUMatrix<ElemType>& b, const bool transposeD, ElemType beta, GPUMatrix<ElemType>& c)
+                                                       const GPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
 {
-    if (a.GetFormat() != matrixFormatSparseCSR)
+    if (transposeB)
         NOT_IMPLEMENTED;
 
-    if (transposeD)
+    // Note: This function is written for 'a' being in CSR format. If 'a' is CSC, we reinterpret it as CSR by transposing it.
+    if (a.GetFormat() != matrixFormatSparseCSR && a.GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
+    const bool reinterpretAsCSR = a.GetFormat() == matrixFormatSparseCSC;
 
     if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || (b.GetComputeDeviceId() != a.GetComputeDeviceId()))
         RuntimeError("MultiplyAndWeightedAdd: All matrices must be on the same GPU");
@@ -1464,24 +1466,28 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     CUSPARSE_CALL(cusparseCreateMatDescr(&descr));
     cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
-    cusparseOperation_t oper = transposeA ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE;
 
-    int m = (int) a.GetNumRows();
-    int n = (int) b.GetNumCols();
+    cusparseOperation_t oper = (transposeA != reinterpretAsCSR) ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE;
+
+    int n = (int)b.GetNumCols();
+    int m = (int)(reinterpretAsCSR ? a.GetNumCols() : a.GetNumRows());
+    int k = (int)(reinterpretAsCSR ? a.GetNumRows() : a.GetNumCols());
     assert(n == (int) c.GetNumCols());
-    int k = (int) a.GetNumCols();
+
+    const auto& aRowLocation = reinterpretAsCSR ? a.ColLocation() : a.RowLocation();
+    const auto& aColLocation = reinterpretAsCSR ? a.RowLocation() : a.ColLocation();
 
     SyncGuard syncGuard;
     if (sizeof(ElemType) == sizeof(float))
     {
         CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
-                                     a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(b.Data()),
+                                     aRowLocation, aColLocation, reinterpret_cast<float*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.Data()), (int) c.GetNumRows()));
     }
     else
     {
         CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
-                                     a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(b.Data()),
+                                     aRowLocation, aColLocation, reinterpret_cast<double*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(c.Data()), (int) c.GetNumRows()));
     }
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));

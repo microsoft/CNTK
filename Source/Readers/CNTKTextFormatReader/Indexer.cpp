@@ -66,7 +66,6 @@ void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
         {
             SequenceDescriptor sd = {};
             sd.m_numberOfSamples = 1;
-            sd.m_isValid = true;
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
@@ -86,7 +85,6 @@ void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
         // add a sequence to the index, parser will have to deal with it.
         SequenceDescriptor sd = {};
         sd.m_numberOfSamples = 1;
-        sd.m_isValid = true;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
         AddSequenceIfIncluded(corpus, lines, sd);
@@ -135,7 +133,6 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
 
     SequenceDescriptor sd = {};
     sd.m_fileOffsetBytes = offset;
-    sd.m_isValid = true;
 
     size_t currentKey = id;
     while (!m_done)
@@ -152,7 +149,6 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
 
             sd = {};
             sd.m_fileOffsetBytes = offset;
-            sd.m_isValid = true;
             currentKey = id;
         }
     }
@@ -165,7 +161,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
 void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd)
 {
     auto& stringRegistry = corpus->GetStringRegistry();
-    auto key = msra::strfun::utf16(std::to_string(sequenceKey));
+    auto key = std::to_string(sequenceKey);
     if (corpus->IsIncluded(key))
     {
         sd.m_key.m_sequence = stringRegistry[key];

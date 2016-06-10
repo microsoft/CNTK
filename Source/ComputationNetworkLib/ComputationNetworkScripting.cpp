@@ -46,6 +46,10 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int) config[L"deviceId"];
 
     deque<ComputationNodeBasePtr> workList;
+
+    // process 'special nodes'
+    ProcessSpecialNodes(config, workList);
+
     // flatten the set of all nodes
     // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
     // TODO: This currently only supports nodes of the same ElemType. We could allow conversion operators.
@@ -60,6 +64,30 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
 
     // construct from roots
     ConstructFromRoots(deviceId, move(workList), map<ComputationNodeBasePtr, ComputationNodeBasePtr>()/*no mapping*/);
+}
+
+// process the special-nodes parameters
+void ComputationNetwork::ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& workList)
+{
+    set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
+
+    for (let& id : config.GetMemberIds())
+    {
+        let pos = id.find(L"Nodes");
+        if (pos == wstring::npos || pos != id.size() - 5)  // special node name = node-group name + L"Nodes"
+            continue;
+        let nodeGroup = id.substr(0, id.size() - 5);
+        if (nodeGroupNames.find(nodeGroup) == nodeGroupNames.end())
+            continue;
+
+        let nodeSet = config[id];
+        let nodes = ScriptableObjects::ConfigArray::FlattenedVectorFrom<ComputationNodeBasePtr>(nodeSet);
+        for (let& node : nodes)
+        {
+            node->SetTag(nodeGroup);
+            workList.push_back(node);
+        }
+    }
 }
 
 // construct a network from a list of roots (passed in 'workList')
