@@ -122,8 +122,11 @@ namespace CNTK
         // Explicit template instantiations
         template class _SimpleVector<Variable>;
         template class _SimpleVector<size_t>;
+        template class _SimpleVector<Axis>;
         template class _SimpleVector<FunctionPtr>;
 
+        template bool operator==(const _SimpleVector<size_t>& first, const _SimpleVector<size_t>& second);
+	
 #pragma endregion _SimpleVector
 
 #pragma region _SimpleSet
@@ -215,9 +218,11 @@ namespace CNTK
         // Explicit template instantiations
         template class _SimpleSet<FunctionPtr>;
         template class _SimpleSet<Variable>;
+        template class _SimpleSet<Placeholder>;
         template class _SimpleSet<const Function*>;
 
         template bool operator==(const _SimpleSet<Variable>& first, const _SimpleSet<Variable>& second);
+        template bool operator==(const _SimpleSet<Placeholder>& first, const _SimpleSet<Placeholder>& second);
 
 #pragma endregion _SimpleSet
 
@@ -314,6 +319,7 @@ namespace CNTK
         }
 
         // Explicit template instantiations
+        template class _SimpleMap<Variable, ValuePtr>;
         template class _SimpleMap<Variable, const ValuePtr>;
         template class _SimpleMap<Placeholder, Variable>;
 

@@ -75,7 +75,7 @@ namespace CNTK
             : m_valueType(GetValueType<T>())
         {
             static_assert(std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>::value,
+                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
                 "Unsupported ValueType");
 
             AllocateDataPtr(value);

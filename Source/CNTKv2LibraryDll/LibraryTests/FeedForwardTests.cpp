@@ -50,13 +50,13 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
 
     // Now test the structure
     if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     if (ffNet->Arguments().size() != 2)
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
 
     if (ffNet->Outputs().size() != 3)
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Output count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
     // Run Forward and backward a few times
     size_t iterationCount = 4;
@@ -109,7 +109,7 @@ void TestTimesAndPlus(size_t inputDim,
     Parameter timesParam(new NDArrayView((ElementType)0.5, { outputDim, inputDim }, device));
     Parameter plusParam(new NDArrayView((ElementType)1.2, { outputDim }, device));
 
-    Variable inputVar({ inputDim }, GetDataType<ElementType>(), L"input");
+    Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
 
     srand(seed);
@@ -131,7 +131,7 @@ void TestTimesAndPlus(size_t inputDim,
             if (outputAllocationDevice.Type() == DeviceType::CPU)
                 outputValue = new Value(new NDArrayView(outputShape, outputData.data(), outputData.size(), outputAllocationDevice, false));
             else
-                outputValue = new Value(new NDArrayView(GetDataType<ElementType>(), outputShape, outputAllocationDevice));
+                outputValue = new Value(new NDArrayView(AsDataType<ElementType>(), outputShape, outputAllocationDevice));
         }
 
         std::unordered_map<Variable, ValuePtr> outputs = { { timesAndPlusFunc->Output(), outputValue } };
@@ -148,7 +148,7 @@ void TestTimesAndPlus(size_t inputDim,
         else
         {
             NDArrayViewPtr cpuArrayView = new NDArrayView(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
-            NDArrayViewPtr gpuArrayView = new NDArrayView(GetDataType<ElementType>(), outputShape, device);
+            NDArrayViewPtr gpuArrayView = new NDArrayView(AsDataType<ElementType>(), outputShape, device);
             gpuArrayView->CopyFrom(*cpuArrayView);
             rootGradientValue = new Value(gpuArrayView);
         }
@@ -166,8 +166,8 @@ void TestTimesAndPlus(size_t inputDim,
             }
             else
             {
-                plusParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), outputAllocationDevice));
-                timesParameterGradientValue = new Value(new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), outputAllocationDevice));
+                plusParameterGradientValue = new Value(new NDArrayView(AsDataType<ElementType>(), plusParam.Shape(), outputAllocationDevice));
+                timesParameterGradientValue = new Value(new NDArrayView(AsDataType<ElementType>(), timesParam.Shape(), outputAllocationDevice));
             }
         }
 
@@ -203,12 +203,12 @@ void TestTimesAndPlus(size_t inputDim,
         // Verify backward prop results
         if (device.Type() != DeviceType::CPU)
         {
-            NDArrayViewPtr cpuArrayView = new NDArrayView(GetDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr cpuArrayView = new NDArrayView(AsDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*plusParameterGradientValue->Data());
             const ElementType* cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(plusParameterGradientData.data(), cpuArrayViewBuffer, plusParam.Shape().TotalSize() * sizeof(ElementType));
 
-            cpuArrayView = new NDArrayView(GetDataType<ElementType>(), timesParam.Shape(), DeviceDescriptor::CPUDevice());
+            cpuArrayView = new NDArrayView(AsDataType<ElementType>(), timesParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*timesParameterGradientValue->Data());
             cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(timesParameterGradientData.data(), cpuArrayViewBuffer, timesParam.Shape().TotalSize() * sizeof(ElementType));
@@ -216,7 +216,7 @@ void TestTimesAndPlus(size_t inputDim,
 
         for (size_t i = 0; i < outputDim; ++i)
             if (plusParameterGradientData[i] != numSamples)
-                throw std::exception("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+                throw std::runtime_error("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize());
         for (size_t i = 0; i < inputDim; ++i)

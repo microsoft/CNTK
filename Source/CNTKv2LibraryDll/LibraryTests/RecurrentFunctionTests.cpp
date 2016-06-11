@@ -145,10 +145,10 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
     const size_t hiddenDim = 512;
     const size_t numOutputClasses = 9304;
 
-    Variable features({ inputDim }, GetDataType<ElementType>(), L"Features");
+    Variable features({ inputDim }, AsDataType<ElementType>(), L"Features");
     auto classifierOutputFunction = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device);
 
-    Variable labelsVar = Variable({ numOutputClasses }, GetDataType<ElementType>(), L"Labels");
+    Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"Labels");
     auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
     auto predictionFunction = PredictionError(classifierOutputFunction, labelsVar, L"predictionError");
 
@@ -156,13 +156,13 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
 
     // Now test the structure
     if (LSTMClassifier->Arguments().size() != 2)
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
 
     if (LSTMClassifier->Outputs().size() != 3)
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Output count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
     if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * 28) + 3))
-        throw std::exception("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     // Run Forward and backward a few times
     size_t iterationCount = 3;
@@ -181,7 +181,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
                 maxActualSequenceLength = sequenceLengths[i];
         }
 
-        std::vector<const std::vector<ElementType>> inputSequences;
+        std::vector<std::vector<ElementType>> inputSequences;
         for (size_t i = 0; i < numSequences; ++i)
         {
             std::vector<ElementType> currentSequence(inputDim * sequenceLengths[i]);
@@ -193,7 +193,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
 
         ValuePtr inputValue = Value::Create({ inputDim }, inputSequences, device, true);
 
-        std::vector<const std::vector<ElementType>> labelsData;
+        std::vector<std::vector<ElementType>> labelsData;
         for (size_t i = 0; i < numSequences; ++i)
         {
             std::vector<ElementType> currentSequence(numOutputClasses * sequenceLengths[i]);
@@ -235,12 +235,12 @@ void TestSimpleRecurrence(size_t inputDim,
                           unsigned int seed = 1)
 {
     if (useOneHotSparseInputs && !useSparseInputs)
-        throw std::exception("useOneHotSparseInputs option can only be true when useSparseInputs is true");
+        throw std::runtime_error("useOneHotSparseInputs option can only be true when useSparseInputs is true");
 
     Parameter timesParam(new NDArrayView((ElementType)0.5, { outputDim, inputDim }, device));
     Parameter plusParam(new NDArrayView((ElementType)0.1, { outputDim }, device));
 
-    Variable inputVar({ inputDim }, useSparseInputs, GetDataType<ElementType>(), true, L"input");
+    Variable inputVar({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
     auto placeholder = Placeholder({ outputDim });
     auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)));
@@ -274,7 +274,7 @@ void TestSimpleRecurrence(size_t inputDim,
         std::vector<ElementType> inputData(inputDim * totalNumInputSamples, useSparseInputs ? 0 : std::numeric_limits<ElementType>::quiet_NaN());
         if (useOneHotSparseInputs)
         {
-            std::vector<const std::vector<size_t>> oneHotSequences;
+            std::vector<std::vector<size_t>> oneHotSequences;
             for (size_t i = 0; i < numSequences; ++i)
             {
                 std::vector<size_t> currentSequence(sequenceLengths[i]);
@@ -314,7 +314,7 @@ void TestSimpleRecurrence(size_t inputDim,
             NDArrayViewPtr inputValueData = new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true);
             if (useSparseInputs)
             {
-                NDArrayViewPtr sparseInputValueData = new NDArrayView(GetDataType<ElementType>(), StorageFormat::SparseCSC, inputShape, DeviceDescriptor::CPUDevice());
+                NDArrayViewPtr sparseInputValueData = new NDArrayView(AsDataType<ElementType>(), StorageFormat::SparseCSC, inputShape, DeviceDescriptor::CPUDevice());
                 sparseInputValueData->CopyFrom(*inputValueData);
                 inputValueData = sparseInputValueData->Alias(true);
             }
@@ -423,7 +423,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
         for (size_t k = 0; k < plusParam.Shape().TotalSize(); ++k)
             if (plusParameterGradientData[k] != expectedPlusParameterGradientValue)
-                throw std::exception("TestSimpleRecurrence: Backprop prop results do not match expected results for Plus params gradients");
+                throw std::runtime_error("TestSimpleRecurrence: Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize(), 0);
         for (size_t i = 0; i < numSequences; ++i)

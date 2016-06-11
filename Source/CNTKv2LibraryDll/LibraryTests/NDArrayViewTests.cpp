@@ -18,7 +18,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     std::array<ElementType, 1> arrayData = { 3 };
     auto arrayDataView = new NDArrayView({}, arrayData);
     if (arrayDataView->DataBuffer<ElementType>() != arrayData.data())
-        throw std::exception("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
+        throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
     std::vector<ElementType> data(viewShape.TotalSize());
     ElementType scale = 19.0;
@@ -28,19 +28,19 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 
     auto cpuDataView = new NDArrayView(viewShape, data);
     if (cpuDataView->DataBuffer<ElementType>() != data.data())
-        throw std::exception("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
+        throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
     NDArrayViewPtr dataView;
     if ((device.Type() == DeviceType::CPU))
         dataView = cpuDataView;
     else
     {
-        dataView = new NDArrayView(GetDataType<ElementType>(), viewShape, device);
+        dataView = new NDArrayView(AsDataType<ElementType>(), viewShape, device);
         dataView->CopyFrom(*cpuDataView);
     }
 
     if (dataView->Device() != device)
-        throw std::exception("Device of NDArrayView does not match 'device' it was created on");
+        throw std::runtime_error("Device of NDArrayView does not match 'device' it was created on");
 
     // Test clone
     auto clonedView = dataView->DeepClone(false);
@@ -50,13 +50,13 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     if ((device.Type() == DeviceType::CPU))
     {
         if (dataView->DataBuffer<ElementType>() != data.data())
-            throw std::exception("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
+            throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
         first = clonedView->WritableDataBuffer<ElementType>();
     }
     else
     {
-        temp1CpuDataView = new NDArrayView(GetDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp1CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp1CpuDataView->CopyFrom(*clonedView);
 
         first = temp1CpuDataView->WritableDataBuffer<ElementType>();
@@ -65,7 +65,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     for (size_t i = 0; i < viewShape.TotalSize(); ++i)
     {
         if (first[i] != second[i])
-            throw std::exception("The contents of the clone do not match expected");
+            throw std::runtime_error("The contents of the clone do not match expected");
     }
 
     first[0] += 1;
@@ -79,28 +79,28 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     }
     else
     {
-        temp1CpuDataView = new NDArrayView(GetDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp1CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp1CpuDataView->CopyFrom(*clonedView);
         first = temp1CpuDataView->WritableDataBuffer<ElementType>();
 
-        temp2CpuDataView = new NDArrayView(GetDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp2CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp2CpuDataView->CopyFrom(*dataView);
         second = temp2CpuDataView->DataBuffer<ElementType>();
     }
 
     if (first[0] != (second[0] + 1))
-        throw std::exception("The clonedView's contents do not match expected");
+        throw std::runtime_error("The clonedView's contents do not match expected");
 
     // Test alias
     auto aliasView = clonedView->Alias(true);
     const ElementType* aliasViewBuffer = aliasView->DataBuffer<ElementType>();
     const ElementType* clonedDataBuffer = clonedView->DataBuffer<ElementType>();
     if (aliasViewBuffer != clonedDataBuffer)
-        throw std::exception("The buffers underlying the alias view and the view it is an alias of are different!");
+        throw std::runtime_error("The buffers underlying the alias view and the view it is an alias of are different!");
 
     clonedView->CopyFrom(*dataView);
     if (aliasViewBuffer != clonedDataBuffer)
-        throw std::exception("The buffers underlying the alias view and the view it is an alias of are different!");
+        throw std::runtime_error("The buffers underlying the alias view and the view it is an alias of are different!");
 
     // Test readonliness
     auto verifyException = [](const std::function<void()>& functionToTest) {
@@ -115,7 +115,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
         }
 
         if (!error)
-            throw std::exception("Was incorrectly able to get a writable buffer pointer from a readonly view");
+            throw std::runtime_error("Was incorrectly able to get a writable buffer pointer from a readonly view");
     };
 
     // Should not be able to get the WritableDataBuffer for a read-only view
@@ -184,14 +184,14 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
     NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
     denseCPUTensor.CopyFrom(sparseCSCArrayView);
     if (copiedDenseData != referenceDenseData)
-        throw std::exception("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+        throw std::runtime_error("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
 
-    NDArrayView emptySparseCSCArrayView(GetDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
+    NDArrayView emptySparseCSCArrayView(AsDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
     emptySparseCSCArrayView.CopyFrom(denseCPUTensor);
     NDArrayView newDenseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
     newDenseCPUTensor.CopyFrom(emptySparseCSCArrayView);
     if (copiedDenseData != referenceDenseData)
-        throw std::exception("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+        throw std::runtime_error("The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
 }
 
 void NDArrayViewTests()

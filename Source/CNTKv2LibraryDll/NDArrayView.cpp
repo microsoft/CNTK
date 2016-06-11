@@ -88,7 +88,7 @@ namespace CNTK
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(GetDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device))
+        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format initial data specified for NDArrayView construction");
@@ -194,7 +194,7 @@ namespace CNTK
     template <typename ElementType>
     const TensorView<ElementType>* NDArrayView::GetTensorView() const
     {
-        if (GetDataType<ElementType>() != m_dataType)
+        if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetWritableTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         return (const TensorView<ElementType>*)(m_tensorView);
@@ -211,7 +211,7 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::DeepClone(bool readOnly/* = false*/) const
     {
-        NDArrayViewPtr newView(new NDArrayView(this->DataType(), this->StorageFormat(), this->Shape(), this->Device()), [](_ReferenceCounter* ptr) { delete ptr; });
+        NDArrayViewPtr newView(new NDArrayView(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device()), [](_ReferenceCounter* ptr) { delete ptr; });
         switch (m_dataType)
         {
         case DataType::Float:
@@ -285,7 +285,7 @@ namespace CNTK
             break;
         }
 
-        auto aliasView = new NDArrayView(DataType(), Device(), StorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);;
+        auto aliasView = new NDArrayView(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);;
         return NDArrayViewPtr(aliasView, [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
@@ -303,7 +303,7 @@ namespace CNTK
     template <typename ElementType>
     const ElementType* NDArrayView::DataBuffer() const
     {
-        if (GetDataType<ElementType>() != m_dataType)
+        if (AsDataType<ElementType>() != m_dataType)
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
@@ -322,7 +322,7 @@ namespace CNTK
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeStart, (ElementType)rangeEnd, seed));
         auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShape(shape));
 
-        auto view = new NDArrayView(GetDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
+        auto view = new NDArrayView(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
         return NDArrayViewPtr(view, [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
@@ -336,8 +336,11 @@ namespace CNTK
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();
 
-    template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template std::shared_ptr<const Matrix<float>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
+    template std::shared_ptr<const Matrix<double>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
+
+    template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
+    template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);

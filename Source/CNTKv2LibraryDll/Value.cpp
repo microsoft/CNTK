@@ -28,7 +28,7 @@ namespace CNTK
     }
 
     template <typename T>
-    static NDMaskPtr CreateMask(size_t sampleSize, const std::vector<const std::vector<T>>& sequences, const DeviceDescriptor& device)
+    static NDMaskPtr CreateMask(size_t sampleSize, const std::vector<std::vector<T>>& sequences, const DeviceDescriptor& device)
     {
         size_t numSequences = sequences.size();
         std::vector<size_t> sequenceLengths(numSequences);
@@ -58,7 +58,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ ValuePtr Value::Create(size_t vocabularySize, const std::vector<const std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
+    /*static*/ ValuePtr Value::Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, device);
         size_t maxSequenceLength = (deviceValueMask == nullptr) ? oneHotSequences[0].size() : deviceValueMask->Shape()[0];
@@ -91,7 +91,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ ValuePtr Value::Create(const NDShape& sampleShape, const std::vector<const std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
+    /*static*/ ValuePtr Value::Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         size_t sampleSize = sampleShape.TotalSize();
         NDMaskPtr deviceValueMask = CreateMask(sampleSize, sequences, device);
@@ -99,7 +99,7 @@ namespace CNTK
 
         size_t numSequences = sequences.size();
         NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
-        NDArrayViewPtr valueData(new NDArrayView(GetDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice()), [](_ReferenceCounter* ptr) { delete ptr; });
+        NDArrayViewPtr valueData(new NDArrayView(AsDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice()), [](_ReferenceCounter* ptr) { delete ptr; });
         ElementType* dataBuffer = valueData->WritableDataBuffer<ElementType>();
         for (size_t i = 0; i < numSequences; ++i)
             std::copy(sequences[i].data(), sequences[i].data() + sequences[i].size(), dataBuffer + (maxSequenceLength * i * sampleSize));
@@ -114,7 +114,7 @@ namespace CNTK
         }
         else
         {
-            deviceValueData = NDArrayViewPtr(new NDArrayView(GetDataType<ElementType>(), valueDataShape, device), [](_ReferenceCounter* ptr) { delete ptr; });
+            deviceValueData = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), valueDataShape, device), [](_ReferenceCounter* ptr) { delete ptr; });
             deviceValueData->CopyFrom(*valueData);
             if (readOnly)
                 deviceValueData = deviceValueData->Alias(true);
@@ -171,8 +171,8 @@ namespace CNTK
     }
 
     // Explicit template instantiations
-    template /*static*/ CNTK_API ValuePtr Value::Create<float>(const NDShape& sampleShape, const std::vector<const std::vector<float>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<const std::vector<double>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t vocabSize, const std::vector<const std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<const std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<float>(const NDShape& sampleShape, const std::vector<std::vector<float>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/);
 }

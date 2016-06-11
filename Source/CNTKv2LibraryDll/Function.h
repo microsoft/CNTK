@@ -150,7 +150,7 @@ namespace CNTK
         static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
         {
             if (reductionAxes.size() > operandShape.NumAxes())
-                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %s of the reduction operation %s", reductionAxes.size(), AsString(operandShape).c_str(), PrimitiveOpTypeName(op));
+                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %s of the reduction operation %s", (int)reductionAxes.size(), AsString(operandShape).c_str(), PrimitiveOpTypeName(op));
 
             size_t numOutputAxes = operandShape.NumAxes() - reductionAxes.size();
             std::vector<size_t> outputDims(numOutputAxes);
@@ -171,7 +171,7 @@ namespace CNTK
             std::vector<Variable> outputs;
 
             // TODO: We are just using the input[0]'s DataType as output node's DataType. This is not always correct
-            DataType outputDataType = inputs[0].DataType();
+            DataType outputDataType = inputs[0].GetDataType();
 
             // We currently require that the inputs' dynamic axes if any match
             std::vector<Axis> outputDynamicAxes = inputs[0].DynamicAxes();

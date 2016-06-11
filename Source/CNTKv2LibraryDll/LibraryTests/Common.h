@@ -15,6 +15,6 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
         ElementType rightVal = second[i];
         ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, ((ElementType)relativeTolerance) * leftVal);
         if (std::abs(leftVal - rightVal) > allowedTolerance)
-            throw std::exception(message);
+            throw std::runtime_error(message);
     }
 }
