@@ -17,7 +17,7 @@ public:
     DataDeserializerBase()
     {}
 
-    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
+    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
     {
         NOT_IMPLEMENTED;
     }

@@ -271,6 +271,7 @@ class If(ComputationNode):
         self.thenVal = thenVal
         self.elseVal = elseVal
         self.params_with_defaults = []
+        self.inputs = ['cond', 'thenVal', 'elseVal']
 
 """
 
@@ -292,6 +293,15 @@ class Slice(ComputationNode):
         self._ = _
         self.beginIndex = beginIndex
         self.endIndex = endIndex
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
+class Splice(ComputationNode):
+    def __init__(self, _, axis=1, op_name='CNTK2.Splice',
+            name=None):
+        super(Splice, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
         self.axis = axis
         self.inputs = ['_']
         self.params_with_defaults = ['axis']

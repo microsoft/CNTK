@@ -356,10 +356,10 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop22)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop1)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop1)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop1_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop1_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_Output.txt",
         "Simple_Test",
@@ -373,10 +373,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop1)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop5)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop5)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop5_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop5_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop5_Output.txt",
         "Simple_Test",
@@ -390,10 +390,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop5)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop11)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop11)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop11_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop11_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop1_5_11_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop11_Output.txt",
         "Simple_Test",
@@ -407,10 +407,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop11)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_0)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop21_0)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop21_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop21_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_0_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_0_Output.txt",
         "Simple_Test",
@@ -424,10 +424,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_0)
         2);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_1)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop21_1)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop21_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop21_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_1_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop21_1_Output.txt",
         "Simple_Test",
@@ -441,12 +441,12 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop21_1)
         2);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop4)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop4)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop4_Config.cntk",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Control.txt",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop4_Output.txt",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop4_Config.cntk",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop4_Control.txt",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop4_Output.txt",
         "Simple_Test",
         "reader",
         500,
@@ -458,10 +458,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop4)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop8)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop8)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop8_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop8_Output.txt",
         "Simple_Test",
@@ -475,10 +475,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop8)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop14)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop14)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop14_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop4_8_14_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop14_Output.txt",
         "Simple_Test",
@@ -492,12 +492,12 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop14)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop9)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop9)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop9_Config.cntk",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_Output.txt",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop9_Config.cntk",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop9_Output.txt",
         "Simple_Test",
         "reader",
         2000,
@@ -509,12 +509,12 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop9)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop19)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop19_Config.cntk",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop9_19_Control.txt",
-        testDataPath() + "/Control/ExperimentalHTKMLFReaderSimpleDataLoop19_Output.txt",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop19_Config.cntk",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop9_19_Control.txt",
+        testDataPath() + "/Control/HTKDeserializersSimpleDataLoop19_Output.txt",
         "Simple_Test",
         "reader",
         2000,
@@ -526,10 +526,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop19)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop10)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop10)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop10_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop10_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop10_20_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop10_Output.txt",
         "Simple_Test",
@@ -543,10 +543,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop10)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop20)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop20)
 {
     HelperRunReaderTest<double>(
-        testDataPath() + "/Config/ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop20_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop10_20_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop20_Output.txt",
         "Simple_Test",
@@ -560,10 +560,10 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop20)
         1);
 };
 
-BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop3)
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop3)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk",
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop3_Config.cntk",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_13_Control.txt",
         testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop3_Output.txt",
         "Simple_Test",
@@ -575,6 +575,14 @@ BOOST_AUTO_TEST_CASE(ExperimentalHTKMLFReaderSimpleDataLoop3)
         0,
         0,
         1);
+};
+
+BOOST_AUTO_TEST_CASE(HTKDeserializers_NonExistingScpFile)
+{
+    HelperRunReaderTestWithException<float, std::runtime_error>(
+        testDataPath() + "/Config/HTKDeserializers_NonExistingScpFile.cntk",
+        "Simple_Test",
+        "reader");
 };
 
 BOOST_AUTO_TEST_SUITE_END()

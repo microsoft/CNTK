@@ -38,7 +38,8 @@ def cntk_to_numpy_shape(shape):
     if not shape:
         shape = (1,)
 
-    return shape
+    # cntk uses column major, thus we reverse the axes
+    return tuple(reversed(shape))
 
 
 def aggregate_readers(readers):
@@ -104,12 +105,11 @@ def with_metaclass(meta, *bases):
 
 
 def dense_to_str(data):
-    return ' '.join(data.ravel(order='F').astype(np.str))
+    return ' '.join(data.ravel(order='C').astype(np.str))
 
 
 def sparse_to_str(data):
-    # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
-    raise NotImplementedError
+    return ' '.join('%s:%s'%(k,v) for k,v in sorted(data.items()))
 
 
 def tensors_to_text_format(sample_idx, alias_tensor_map):
@@ -144,18 +144,17 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
                 if not isinstance(tensor, np.ndarray):
                     tensor = np.asarray(tensor)
                 to_str = dense_to_str
+            elif isinstance(tensor, list) and isinstance(tensor[0], dict):
+                to_str = sparse_to_str
             else:
                 raise ValueError(
-                    'expected a tensor, but got "%s"' % type(tensor))
+                    'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
 
             line.append('%s %s' % (alias, to_str(tensor[seq_idx])))
 
         lines.append('%i\t|' % sample_idx + ' |'.join(line))
 
     return '\n'.join(lines)
-
-
-
 
 def is_tensor(data):
     '''
@@ -196,7 +195,6 @@ def is_tensor(data):
 
     return True
 
-
 def is_tensor_list(data):
     '''
     Checks whether the data is a CNTK sequence, which is expressed in Python as
@@ -204,7 +202,6 @@ def is_tensor_list(data):
     '''
     is_list = isinstance(data, list)
     return is_list and len(data) > 0 and isinstance(data[0], np.ndarray) 
-
 
 def get_temp_filename(directory=None):
     '''
@@ -227,3 +224,56 @@ def get_temp_filename(directory=None):
     tf.close()
 
     return tf.name
+
+def get_rank(shape):
+    '''
+    computes the rank of a tensor.
+    
+    Args:
+        shape: it is either a tuple or an integer.
+        
+    Returns: the rank of the tensor.
+    
+    '''
+    if np.isscalar(shape):
+        if shape == 1:
+            return 0
+        else:
+            return 1
+    else:
+        return len(shape)
+        
+def wrap_numpy_arrays(node):
+    '''
+    for a given computation node, wrapes its tensor inputs that are numpy arrays
+    into input and constant nodes
+    
+    Args:
+        node (:class:`cntk.graph.ComputationNode`): the computation node that will get its inputs wraped
+    '''
+    from ..graph import ComputationNode, _InputComputationNodeBase
+    from ..ops import input_numpy, constant
+    
+    # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
+    # wrap them with input and parameter nodes.
+    first = True
+    if node.params:
+        for p in node.params:
+            if p in node.inputs:
+                val = getattr(node, p)
+                #TODO: add support to tuple of numpy arrays, e.g. Splice(). 
+                #So each tuple element will be wrapped
+                if not (isinstance(val, ComputationNode) or isinstance(val, str)
+                    or isinstance(val, tuple)):
+                    # One param needs to be an Input() node. This will be fixed in 
+                    # CNTK soon, so that we can remove this workaround and evaluate a 
+                    # network with no inputs.
+                    if first:        
+                        ir = input_numpy([val])
+                        setattr(node, p, ir)
+                        first = False
+                    else:
+                        setattr(node, p, constant(getattr(node, p)))
+                else:
+                    if isinstance(val, _InputComputationNodeBase) and first:
+                        first = False    

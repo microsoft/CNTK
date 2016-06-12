@@ -33,14 +33,14 @@ BlockRandomizer::BlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
-      m_lastSeenChunkId(SIZE_MAX),
+      m_lastSeenChunkId(CHUNKID_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence)
 {
     assert(deserializer != nullptr);
 
     m_streams = m_deserializer->GetStreamDescriptions();
-    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(m_deserializer, m_chunkRandomizer);
+    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(verbosity, m_deserializer, m_chunkRandomizer);
 
     // Calculate total number of samples.
     m_sweepTotalNumberOfSamples = 0;
@@ -53,7 +53,7 @@ BlockRandomizer::BlockRandomizer(
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    m_lastSeenChunkId = SIZE_MAX;
+    m_lastSeenChunkId = CHUNKID_MAX;
 
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
@@ -92,7 +92,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
     if (m_sweep != sweep)
     {
         if (m_verbosity >= Notification)
-            fprintf(stderr, "BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep %d in\n",
+            fprintf(stderr, "BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep %d\n",
                     (int) sweep);
 
         m_sweep = sweep;
@@ -106,7 +106,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 
         // Unloading all chunk data from memory.
         m_chunks.clear();
-        m_lastSeenChunkId = SIZE_MAX;
+        m_lastSeenChunkId = CHUNKID_MAX;
     }
 }
 
@@ -238,13 +238,14 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
-    const auto& window = m_sequenceRandomizer->GetChunkWindow();
-    if (window.back().m_chunkId == m_lastSeenChunkId)
+    size_t randomizedEnd = 0;
+    const auto& window = m_sequenceRandomizer->GetChunkWindow(randomizedEnd);
+    if (window[randomizedEnd - 1].m_chunkId == m_lastSeenChunkId)
     {
         return; // nothing to retrieve.
     }
 
-    m_lastSeenChunkId = window.back().m_chunkId;
+    m_lastSeenChunkId = window[randomizedEnd - 1].m_chunkId;
 
     // in the loop we are building a new map of currently loaded chunks:
     // we are iterating thru all chunks in the window and if they are not in m_chunks map -
@@ -252,8 +253,9 @@ void BlockRandomizer::RetrieveDataChunks()
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;
     size_t numLoadedChunks = m_chunks.size();
-    for (auto const& chunk : window)
+    for (size_t i = 0; i < randomizedEnd; ++i)
     {
+        auto const& chunk = window[i];
         if (m_decimationMode == DecimationMode::chunk && chunk.m_chunkId % m_config.m_numberOfWorkers != m_config.m_workerRank)
         {
             continue;
@@ -269,7 +271,7 @@ void BlockRandomizer::RetrieveDataChunks()
             chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->m_id);
 
             if (m_verbosity >= Information)
-                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %" PRIu64 " (original chunk: %" PRIu64"), now %" PRIu64 " chunks in memory\n",
+                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                         chunk.m_chunkId,
                         chunk.m_original->m_id,
                         ++numLoadedChunks);
@@ -281,7 +283,7 @@ void BlockRandomizer::RetrieveDataChunks()
     m_chunks.swap(chunks);
 
     if (m_verbosity >= Notification)
-        fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%" PRIu64 "..%" PRIu64 "]\n",
+        fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",
                 m_chunks.size(),
                 window.front().m_chunkId,
                 window.back().m_chunkId);
