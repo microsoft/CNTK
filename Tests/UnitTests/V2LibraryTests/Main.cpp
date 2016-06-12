@@ -12,4 +12,7 @@ int main()
     TensorTests();
     FeedForwardTests();
     RecurrentFunctionTests();
+
+    fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
+    fflush(stderr);
 }

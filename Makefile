@@ -379,13 +379,13 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 CNTKLIBRARY_TESTS_SRC =\
-	$(SOURCEDIR)/CNTKv2LibraryDll/LibraryTests/FeedForwardTests.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/LibraryTests/Main.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/LibraryTests/NDArrayViewTests.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/LibraryTests/RecurrentFunctionTests.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/LibraryTests/TensorTests.cpp \
+	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
+	Tests/UnitTests/V2LibraryTests/Main.cpp \
+	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
+	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
+	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
 
-CNTKLIBRARY_TESTS:=$(BINDIR)/cntklibrarytests
+CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
 
 ALL+=$(CNTKLIBRARY_TESTS)
