@@ -140,6 +140,7 @@ public:
     void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     void DoMatrixElementProductOf(const TensorView& a, const TensorView& b);
+    void DoMatrixElementAndXOf(const TensorView& a, const TensorView& b);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
 

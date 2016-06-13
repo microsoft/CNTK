@@ -2886,6 +2886,59 @@ __global__ void _sparseCSCElemMulsparseCSC_Update(
     }
 }
 
+// sparse AndX sparse = sparse
+template <class ElemType>
+__global__ void _sparseCSCElemAndXsparseCSC_Mark(
+    const int m,
+    const CUDA_LONG n,
+    ElemType* a_dVal,
+    int* a_dRow,
+    int* a_dCol,
+    const ElemType* b_dVal,
+    const int* b_dRow,
+    const int* b_dCol
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    int startA = a_dCol[id];
+    int endA = a_dCol[id + 1];
+
+    int startB = b_dCol[id];
+    int endB = b_dCol[id + 1];
+    int NZCounter = endA - startA;
+
+    while (startA < endA)
+    {
+        int aRow = a_dRow[startA];
+        if (startB >= endB)
+        {
+            a_dRow[startA] = -1;
+            startA++;
+            NZCounter--;
+            continue;
+        }
+        int bRow = b_dRow[startB];
+        if (aRow == bRow)
+        {
+            //a_dVal[startA] *= b_dVal[startB];
+            startA++;
+        }
+        else if (aRow > bRow)
+            startB++;
+        else
+        {
+            a_dRow[startA] = -1;
+            startA++;
+            NZCounter--;
+        }
+    }
+    a_dCol[id + 1] = NZCounter;
+}
+
+
+
 template <class ElemType>
 __global__ void _isValid(
     const GPUSPARSE_INDEX_TYPE* rowIndex,

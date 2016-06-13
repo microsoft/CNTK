@@ -4442,6 +4442,25 @@ template <class ElemType>
 }
 
 template <class ElemType>
+/*static*/ void Matrix<ElemType>::ElementAndXOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
+    {
+        if (c.GetMatrixType() != MatrixType::SPARSE)
+        {
+            c.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+        }
+        GPUSparseMatrix<ElemType>::ElementAndXOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
 /*static*/ void Matrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c)
 {
     // special case: a is a 1x1 matrix

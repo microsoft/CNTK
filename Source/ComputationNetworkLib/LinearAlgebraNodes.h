@@ -230,47 +230,9 @@ public:
     {
     }
 
-private:
-    // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
-    // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
-    TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
-    {
-        auto input = inputIndex < 0 ? this : Input(inputIndex).get();
-        auto data = gradient ? input->GradientPtr() : input->ValuePtr();
-        size_t rank = input->GetSampleLayout().GetRank();
-
-        //if (inputIndex == 0 && m_transpose && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
-        //    rank = 2;
-        if (!Input(0)->HasMBLayout()) // left input is no MB data: run normally
-            return input->DataTensorFor(data, rank, fr);
-        auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
-        return TensorView<ElemType>(data, tensorShape);
-    }
-
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //// If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
-        //// This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
-        //if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
-        //{
-        //     recursively call ourselves for each individual time and sequence
-        //    auto timeRange = fr.GetTimeRange();
-        //    auto sequenceRange = fr.GetSequenceRange();
-        //    for (auto t = timeRange.first; t < timeRange.second; t++)
-        //        for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
-        //            ForwardProp(fr.WithTimeStep(t).Sequence(s));
-        //    return;
-        //}
-
-        //// TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
-        //// and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
-        //// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
-        //auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-        //auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
-        //auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        //output.DoMatrixElementProductOf(input0, input1);
-
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -286,6 +248,45 @@ public:
 
 template class SparseElementTimesNode<float>;
 template class SparseElementTimesNode<double>;
+
+
+// ElementWise Sparse ORX: output = (x>0 && y>0) ? x:0 
+template <class ElemType>
+class SparseElementAndXNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"SparseElementAndX";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SparseElementAndXNode);
+    SparseElementAndXNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.DoMatrixElementAndXOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseElementAndXNode");
+    }
+};
+
+template class SparseElementAndXNode<float>;
+template class SparseElementAndXNode<double>;
+
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
