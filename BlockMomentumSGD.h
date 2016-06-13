@@ -85,13 +85,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             "%s"
                             "%s"
                             "\n",
-                (int)m_pMPI->NumNodesInUse(),      
-                BlockMomentumSGD<double>::TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker), 
-                m_blockMomentumAsTimeConstantPerWorker,
-                m_blockLearningRate, 
-                (int)m_syncPeriodPerWorker, 
-                m_useNesterovMomentum ? "using Nesterov style block momentum, " : "" , 
-                m_resetSGDMomentumAfterAggregation ? "resetting SGD momentum after sync." : "."
+                            (int)m_pMPI->NumNodesInUse(),      
+                            BlockMomentumSGD<double>::TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker), 
+                            m_blockMomentumAsTimeConstantPerWorker,
+                            m_blockLearningRate, 
+                            (int)m_syncPeriodPerWorker, 
+                            m_useNesterovMomentum ? "using Nesterov-style block momentum, " : "" , 
+                            m_resetSGDMomentumAfterAggregation ? "resetting SGD momentum after sync." : "."
                 );
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 
