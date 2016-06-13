@@ -2,15 +2,17 @@
 
 # This script takes a list of dictionary files and a plain text file and converts this text input file to CNTK text format.
 #
-# The input text file can contain N streams per line (N TAB-separated "columns") and should be accompanied by N dictionary files.
-# The input text file should be in the following form:
+# The input text file must contain N streams per line (N TAB-separated "columns") and should be accompanied by N dictionary files.
+# The input text file must be in the following form:
 #    text1 TAB text2 TAB ... TAB textN
 #    .....
 # where each line represents one sequence across all N input streams.
 # Each text consists of one or more space-separated word tokens (samples).
 #
-# Dictionary files are text files that are specified for all streams, so the #dictionaries = #columns in the input file.
-# A dictionary contains a single token per line. The zero-based line number becomes the numeric index of the token in the output CNTK text format file.
+# Dictionary files are text files that are required to be specified for all streams,
+# so the #dictionaries = #columns in the input file.
+# A dictionary contains a single token per line. The zero-based line number becomes the numeric index
+# of the token in the output CNTK text format file.
 
 # Example usage (i.e. for PennTreebank files):
 #    sed -e 's/^<\/s> //' -e 's/ <\/s>$//' < en.txt > en.txt1
@@ -32,7 +34,8 @@ def convert(dictionaryStreams, inputs, output, annotated):
             line = line.rstrip('\r\n')
             columns = line.split("\t")
             if len(columns) != len(dictionaries):
-                raise Exception("Number of dictionaries {0} does not correspond to the number of streams in line {1}:'{2}'".format(len(dictionaries), index, line))
+                raise Exception("Number of dictionaries {0} does not correspond to the number of streams in line {1}:'{2}'"
+                    .format(len(dictionaries), index, line))
             _convertSequence(dictionaries, columns, sequenceId, output, annotated)
             sequenceId += 1
 
@@ -48,6 +51,8 @@ def _convertSequence(dictionaries, streams, sequenceId, output, annotated):
                 output.write("\t")
                 continue
             token = tokensPerStream[streamIndex][sampleIndex]
+            if token not in dictionaries[streamIndex]:
+                raise Exception("Token '{0}' cannot be found in the dictionary for stream {1}".format(token, streamIndex))
             value = dictionaries[streamIndex][token]
             output.write("\t|S" + str(streamIndex) + " "+ str(value) + ":1")
             if annotated:
@@ -56,8 +61,10 @@ def _convertSequence(dictionaries, streams, sequenceId, output, annotated):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Transforms text file given dictionaries into CNTK text format.")
-    parser.add_argument('--map', help='List of dictionaries, given in the same order as streams in the input files', nargs="+", required=True)
-    parser.add_argument('--annotated', help='Whether to annotate indices with tokens. Default is false', choices=["True", "False"], default="False", required=False)
+    parser.add_argument('--map', help='List of dictionaries, given in the same order as streams in the input files',
+        nargs="+", required=True)
+    parser.add_argument('--annotated', help='Whether to annotate indices with tokens. Default is false',
+        choices=["True", "False"], default="False", required=False)
     parser.add_argument('--output', help='Name of the output file, stdout if not given', default="", required=False)
     parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", nargs="*", required=False)
     args = parser.parse_args()
@@ -80,6 +87,7 @@ if __name__ == "__main__":
 #####################################################################################################
 
 import StringIO
+import pytest
 
 def test_simpleSanityCheck():
     dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
@@ -97,3 +105,12 @@ def test_simpleSanityCheck():
     expectedOutput.write("1\t\t|S1 3:1\n")
 
     assert expectedOutput.getvalue() == output.getvalue()
+
+def test_nonExistingWord():
+    dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
+    input = StringIO.StringIO("hello my\nworld of nonexistent\n")
+    output = StringIO.StringIO()
+
+    with pytest.raises(Exception) as info:
+        convert([dictionary1], [input], output, False)
+    assert info.value.message == "Token 'nonexistent' cannot be found in the dictionary for stream 0"
