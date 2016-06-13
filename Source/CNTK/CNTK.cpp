@@ -371,7 +371,7 @@ void PrintUsageInfo()
 }
 
 void PrintGpuInfo()
-{    
+{
 #ifndef CPUONLY
     std::vector<GpuData> gpusData = GetGpusData();
 
