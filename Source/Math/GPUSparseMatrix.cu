@@ -2089,7 +2089,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
     GPUSparseMatrix<ElemType> as = ElementProductOf(a, b);
-    c = as;
+    c.SetValue(as);
 }
 
 template <class ElemType>
