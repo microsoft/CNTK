@@ -6,17 +6,9 @@
 
 #include "ChunkRandomizer.h"
 #include <random>
+#include "RandomOrdering.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-    // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
-    // TODO: Deprecate when the new randomizer is in place.
-    static inline size_t rand(const size_t begin, const size_t end)
-    {
-        // still only covers 32-bit range
-        const size_t randomNumber = ::rand() * RAND_MAX + ::rand();
-        return begin + randomNumber % (end - begin);
-    }
 
     // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
     // TODO: Deprecate when the new randomizer is in place.
