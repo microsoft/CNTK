@@ -19,14 +19,13 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-//#include "CNTKLibrary.h"
+#include "CNTKLibrary.h"
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
 #define CNTK_CHECKPOINT_VERSION_2 2     
 #define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
-
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -388,7 +387,6 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  std::list<Matrix<ElemType>>& smoothedGradients,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
@@ -404,7 +402,6 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                         std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
@@ -423,7 +420,6 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                   std::list<Matrix<ElemType>>& smoothedGradients,
                                    const double learningRateAdjustmentFactor);
 
     // uses a small percentage of training data of minibatch to
@@ -441,7 +437,6 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                      std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
     // Attemps to compute the error signal for the whole utterance, which will
@@ -468,55 +463,38 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                         std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "");
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
-public:
-    // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
-                               Matrix<ElemType>& gradientValues,
-                               Matrix<ElemType>& smoothedGradient,
-                               const double learnRatePerSample,
-                               const double momentumPerSample,
-                               size_t actualMBSize,
-                               const double L2RegWeight,
-                               const double L1RegWeight,
-                               const bool needAveMultiplier,
-                               const bool useNesterovMomentum);
 
 protected:
     // UpdateWeights - update the weights in
     void UpdateWeights(const ComputationNodeBasePtr& node,
-                       Matrix<ElemType>& smoothedGradient,
+                       ::CNTK::LearnerPtr learner,
+                       const ::CNTK::Variable& parameter,
                        const double learnRatePerSample,
                        const double momentumPerSample,
                        const size_t actualMBSize,
-                       const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier,
-                       const bool useNesterovMomentum) const;
+                       const double L2RegWeight, const double L1RegWeight) const;
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
-                            const std::list<Matrix<ElemType>>& smoothedGradients,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
     bool TryLoadCheckPointInfo(const size_t epochNumber,
                                /*out*/ size_t& totalSamplesSeen,
                                /*out*/ double& learnRatePerSample,
-                               std::list<Matrix<ElemType>>& smoothedGradients,
                                /*out*/ double& prevCriterion,
                                /*out*/ size_t& minibatchSize);
     void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
-                            std::list<Matrix<ElemType>>& smoothedGradients,
                             /*out*/ double& prevCriterion,
                             /*out*/ size_t& minibatchSize);
 
@@ -563,13 +541,22 @@ protected:
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
-    
-    //// only one learner for the time being.
-    //// TODO: for v2, replace with a list of ler
-    //::CNTK::LearnerPtr m_learner;
+    // a list of variables, one for each LearnableParameterNode
+    std::list<::CNTK::Variable> m_parameters;
 
-    //// a list of variables, one for each learnable node
-    //std::list<::CNTK::Variable> m_variables;
+    // a list of learners, one for each LearnableParameterNode
+    std::list<::CNTK::LearnerPtr> m_learners;
+
+private:
+    std::list<shared_ptr<Matrix<ElemType>>> SmoothedGradients()
+    {
+        std::list<shared_ptr<Matrix<ElemType>>> gradients;
+        for (auto learner : m_learners)
+        {
+            learner->GetSmoothedGradients(gradients);
+        }
+        return gradients;
+    }
 
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();

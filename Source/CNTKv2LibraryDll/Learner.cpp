@@ -2,6 +2,7 @@
 #include "TensorView.h"
 
 using namespace Microsoft::MSR::CNTK;
+using namespace std;
 
 namespace CNTK 
 {
@@ -11,7 +12,7 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     return pow(momentumPerSample, minibatchSize);
 }
 
-LearnerBase::LearnerBase(const std::unordered_set<Variable>& parameters, 
+LearnerBase::LearnerBase(const unordered_set<Variable>& parameters, 
     double learningRatePerSample, double momentumPerSample)
     : Learner(parameters),
     m_learningRatePerSample(learningRatePerSample),
@@ -48,7 +49,7 @@ LearnerBase::LearnerBase(const std::unordered_set<Variable>& parameters,
     return false;
 }
 
-SGD::SGD(const std::unordered_set<Variable>& parameters, double learningRatePerSample,
+SGD::SGD(const unordered_set<Variable>& parameters, double learningRatePerSample,
     double momentumPerSample, bool useNesterovAcceleration)
     : LearnerBase(parameters, learningRatePerSample, momentumPerSample),
     m_useNesterovAcceleration(useNesterovAcceleration)
@@ -70,7 +71,7 @@ void SGD::Update(const ValuePtr smoothedGradient, const ValuePtr gradient,
 }
 
 
-AdaGrad::AdaGrad(const std::unordered_set<Variable>& parameters, double learningRatePerSample,
+AdaGrad::AdaGrad(const unordered_set<Variable>& parameters, double learningRatePerSample,
     bool needAveMultiplier)
     : LearnerBase(parameters, learningRatePerSample),
     m_needAveMultiplier(needAveMultiplier)
@@ -92,7 +93,7 @@ void AdaGrad::Update(const ValuePtr smoothedGradient, const ValuePtr gradient,
 }
 
 
-FSAdaGrad::FSAdaGrad(const std::unordered_set<Variable>& parameters, double learningRatePerSample,
+FSAdaGrad::FSAdaGrad(const unordered_set<Variable>& parameters, double learningRatePerSample,
     double momentumPerSample)
     : LearnerBase(parameters, learningRatePerSample, momentumPerSample)
 {
@@ -116,7 +117,7 @@ void FSAdaGrad::Update(const ValuePtr smoothedGradient, const ValuePtr gradient,
 }
 
 
-RmsProp::RmsProp(const std::unordered_set<Variable>& parameters, double learningRatePerSample, 
+RmsProp::RmsProp(const unordered_set<Variable>& parameters, double learningRatePerSample, 
     RMSPropInfo info, bool needAveMultiplier)
     : LearnerBase(parameters, learningRatePerSample),
     m_info(info),
@@ -141,25 +142,25 @@ void RmsProp::Update(const ValuePtr smoothedGradient, const ValuePtr gradient,
     Matrix<ElementType>::ScaleAndAdd(ElementType(-m_learningRatePerSample / aveMultiplier), *gradientMatrix, *parameterMatrix);
 }
 
-LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, 
+LearnerPtr SGDLearner(const unordered_set<Variable>& parameters, 
     double learningRatePerSample, double momentumPerSample, bool useNesterovAcceleration)
 {
     return new SGD(parameters, learningRatePerSample, momentumPerSample, useNesterovAcceleration);
 }
 
-LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, 
+LearnerPtr AdaGradLearner(const unordered_set<Variable>& parameters, 
     double learningRatePerSample, bool needAveMultiplier)
 {
     return new AdaGrad(parameters, learningRatePerSample, needAveMultiplier);
 }
 
-LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
+LearnerPtr FSAdaGradLearner(const unordered_set<Variable>& parameters,
     double learningRatePerSample, double momentumPerSample)
 {
     return new FSAdaGrad(parameters, learningRatePerSample, momentumPerSample);
 }
 
-LearnerPtr RmsPropLearner(const std::unordered_set<Variable>& parameters, 
+LearnerPtr RmsPropLearner(const unordered_set<Variable>& parameters, 
     double learningRatePerSample, double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
 {
     return new RmsProp(parameters, learningRatePerSample, { gamma, inc, dec, max, min }, needAveMultiplier);

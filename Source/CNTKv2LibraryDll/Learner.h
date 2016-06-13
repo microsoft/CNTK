@@ -13,7 +13,7 @@ namespace CNTK
 #define DECLARE_UPDATE_FUNCTIONS           \
      DECLARE_UPDATE_FUNCTION(float)        \
      DECLARE_UPDATE_FUNCTION(double)       \
-     NOT_IMPLEMENTED; 
+     NOT_IMPLEMENTED;
 
     class LearnerBase : public Learner
     {

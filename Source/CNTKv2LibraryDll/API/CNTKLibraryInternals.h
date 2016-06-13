@@ -513,9 +513,9 @@ namespace CNTK
 
 namespace std {
     template <typename T>
-    struct hash<CNTK::_Internal::_ReferenceCounterSharedPtr<T>>
+    struct hash<::CNTK::_Internal::_ReferenceCounterSharedPtr<T>>
     {
-        size_t operator()(const CNTK::_Internal::_ReferenceCounterSharedPtr<T>& x) const
+        size_t operator()(const ::CNTK::_Internal::_ReferenceCounterSharedPtr<T>& x) const
         {
             return std::hash<const void*>()(x.GetPtr());
         }
