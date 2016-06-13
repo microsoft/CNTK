@@ -372,6 +372,7 @@ void PrintUsageInfo()
 
 void PrintGpuInfo()
 {
+#ifndef CPUONLY
     std::vector<GpuData> gpusData = GetGpusData();
 
     if (gpusData.empty())
@@ -389,6 +390,7 @@ void PrintGpuInfo()
         LOGPRINTF(stderr, "\t\tCUDA cores: %d\n", data.cudaCores);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+#endif
 }
 
 // ---------------------------------------------------------------------------
