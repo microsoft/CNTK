@@ -108,9 +108,7 @@ In the example above, we first create a synthetic data set of 500 samples, each 
 one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
 by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
 in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
-access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
-the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
-set ``has_dynamic_axis`` to False.
+access numpy data.
 
 Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
 We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
