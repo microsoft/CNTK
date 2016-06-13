@@ -351,28 +351,28 @@ Memory Sharing Structure:
 05/13/2016 15:10:02: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:02: Starting minibatch loop.
-05/13/2016 15:10:03:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 1.30072449 * 16000; errTop1 = 0.38468750 * 16000; err = 0.38468750 * 16000; time = 1.2825s; samplesPerSecond = 12475.2
-05/13/2016 15:10:04:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.49017273 * 16000; errTop1 = 0.13037500 * 16000; err = 0.13037500 * 16000; time = 0.2861s; samplesPerSecond = 55923.1
-05/13/2016 15:10:04:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.39744922 * 16000; errTop1 = 0.11168750 * 16000; err = 0.11168750 * 16000; time = 0.2889s; samplesPerSecond = 55389.2
-05/13/2016 15:10:04: Finished Epoch[ 1 of 3]: [Training] ce = 0.65501042 * 60000; errTop1 = 0.18685000 * 60000; err = 0.18685000 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=2.09125s
+05/13/2016 15:10:03: Epoch[ 1 of 3]-Minibatch[1-500, 26.67%]: ce = 1.30072449 * 16000; errs = 38.4688% * 16000; err = 0.38468750 * 16000; time = 1.2825s; samplesPerSecond = 12475.2
+05/13/2016 15:10:04: Epoch[ 1 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.49017273 * 16000; errs = 13.0375% * 16000; err = 0.13037500 * 16000; time = 0.2861s; samplesPerSecond = 55923.1
+05/13/2016 15:10:04: Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.39744922 * 16000; errs = 11.1687% * 16000; err = 0.11168750 * 16000; time = 0.2889s; samplesPerSecond = 55389.2
+05/13/2016 15:10:04: Finished Epoch[ 1 of 3]: [Training] ce = 0.65501042 * 60000; errs = 18.685% * 60000; err = 0.18685000 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=2.09125s
 05/13/2016 15:10:04: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.1'
 
 05/13/2016 15:10:04: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:04: Starting minibatch loop.
-05/13/2016 15:10:04:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.32870679 * 16000; errTop1 = 0.09531250 * 16000; err = 0.09531250 * 16000; time = 0.2809s; samplesPerSecond = 56955.1
-05/13/2016 15:10:05:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.31809930 * 16000; errTop1 = 0.09206250 * 16000; err = 0.09206250 * 16000; time = 0.2862s; samplesPerSecond = 55905.9
-05/13/2016 15:10:05:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.31002502 * 16000; errTop1 = 0.08762500 * 16000; err = 0.08762500 * 16000; time = 0.2946s; samplesPerSecond = 54305.4
-05/13/2016 15:10:05: Finished Epoch[ 2 of 3]: [Training] ce = 0.31494245 * 60000; errTop1 = 0.09090000 * 60000; err = 0.09090000 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=1.08973s
+05/13/2016 15:10:04: Epoch[ 2 of 3]-Minibatch[1-500, 26.67%]: ce = 0.32870679 * 16000; errs = 9.53125% * 16000; err = 0.09531250 * 16000; time = 0.2809s; samplesPerSecond = 56955.1
+05/13/2016 15:10:05: Epoch[ 2 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.31809930 * 16000; errs = 9.20625% * 16000; err = 0.09206250 * 16000; time = 0.2862s; samplesPerSecond = 55905.9
+05/13/2016 15:10:05: Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.31002502 * 16000; errs = 8.7625% * 16000; err = 0.08762500 * 16000; time = 0.2946s; samplesPerSecond = 54305.4
+05/13/2016 15:10:05: Finished Epoch[ 2 of 3]: [Training] ce = 0.31494245 * 60000; errs = 9.09% * 60000; err = 0.09090000 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=1.08973s
 05/13/2016 15:10:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.2'
 
 05/13/2016 15:10:06: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:06: Starting minibatch loop.
-05/13/2016 15:10:06:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.28016867 * 16000; errTop1 = 0.08187500 * 16000; err = 0.08187500 * 16000; time = 0.2894s; samplesPerSecond = 55283.2
-05/13/2016 15:10:06:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.28037985 * 16000; errTop1 = 0.08093750 * 16000; err = 0.08093750 * 16000; time = 0.2860s; samplesPerSecond = 55935.8
-05/13/2016 15:10:06:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.27621069 * 16000; errTop1 = 0.08237500 * 16000; err = 0.08237500 * 16000; time = 0.2791s; samplesPerSecond = 57323.8
-05/13/2016 15:10:07: Finished Epoch[ 3 of 3]: [Training] ce = 0.27476087 * 60000; errTop1 = 0.08011667 * 60000; err = 0.08011667 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=1.07334s
+05/13/2016 15:10:06: Epoch[ 3 of 3]-Minibatch[1-500, 26.67%]: ce = 0.28016867 * 16000; errs = 8.1875% * 16000; err = 0.08187500 * 16000; time = 0.2894s; samplesPerSecond = 55283.2
+05/13/2016 15:10:06: Epoch[ 3 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.28037985 * 16000; errs = 8.09375% * 16000; err = 0.08093750 * 16000; time = 0.2860s; samplesPerSecond = 55935.8
+05/13/2016 15:10:06: Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.27621069 * 16000; errs = 8.2375% * 16000; err = 0.08237500 * 16000; time = 0.2791s; samplesPerSecond = 57323.8
+05/13/2016 15:10:07: Finished Epoch[ 3 of 3]: [Training] ce = 0.27476087 * 60000; errs = 8.01167% * 60000; err = 0.08011667 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=1.07334s
 05/13/2016 15:10:07: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_01_OneHidden@release_gpu/Models/01_OneHidden'
 05/13/2016 15:10:07: CNTKCommandTrainEnd: train
 
@@ -451,7 +451,7 @@ Memory Sharing Structure:
 0x7f0d4bd02f98: {[features Value[784 x *1]] }
 0x7f0d4bd03c78: {[h1.W Value[200 x 784]] }
 
-05/13/2016 15:10:10: Final Results: Minibatch[1-625]: errTop1 = 0.07140000 * 10000; err = 0.07140000 * 10000; ce = 0.25287636 * 10000; perplexity = 1.28772405
+05/13/2016 15:10:10: Final Results: Minibatch[1-10]: errs = 7.140% * 10000; top5Errs = 0.420% * 10000; ce = 0.25287636 * 10000; perplexity = 1.28772405
 
 05/13/2016 15:10:10: Action "test" complete.
 

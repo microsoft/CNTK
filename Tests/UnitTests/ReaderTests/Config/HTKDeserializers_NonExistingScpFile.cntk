@@ -1,0 +1,27 @@
+DataDir = .
+
+deviceId = -1
+
+precision = "float"
+
+Simple_Test = [
+    reader = [
+        readerType = "HTKDeserializers"
+        readMethod = "blockRandomize"
+        randomize = "auto"
+        frameMode = true
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "NonExistingScpFile"
+        ]
+
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]

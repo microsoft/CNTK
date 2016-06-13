@@ -355,7 +355,10 @@ public:
 
         // determine all roots
         deque<ComputationNodeBasePtr> roots;
-        // start with the original network
+        // process 'special nodes'
+        // BUGBUG: This does not allow to unset tags. If special nodes are listed, they should completely override existing tags for the same node.
+        ProcessSpecialNodes(config, workList);
+        // then the original network
         for (let& node : allNodes)
             if (parents.find(node)->second.empty()) // no parents: it's a root
                 roots.push_back(node);

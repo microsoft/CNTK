@@ -600,7 +600,13 @@ class LocalExecutionContext(AbstractContext):
             if '*' in v:
                 v = v.split('*')[0].strip()
 
-            result[k.strip()] = float(v)
+            if v[-1] == '%':
+                # In some cases, CNTK outputs data in percentage
+                v = float(v[:-1])/100
+            else:
+                v = float(v)
+
+            result[k.strip()] = v
 
         return result
 

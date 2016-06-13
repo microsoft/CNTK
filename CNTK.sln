@@ -1122,6 +1122,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CommandEval", "Tests\UnitTe
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{68263A2F-1D5F-4C46-B5AF-2304B80FC3D4}"
+	ProjectSection(SolutionItems) = preProject
+		Scripts\pytest.ini = Scripts\pytest.ini
+		Scripts\txt2ctf.py = Scripts\txt2ctf.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64

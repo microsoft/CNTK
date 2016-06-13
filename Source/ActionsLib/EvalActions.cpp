@@ -46,7 +46,7 @@ using namespace Microsoft::MSR::CNTK;
 template <typename ElemType>
 static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 {
-    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    //DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config(L"minibatchSize", "40960");
     size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
@@ -64,22 +64,17 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 
     bool enableDistributedMBReading = config(L"distributedMBReading", false);
 
-    ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
-    for (int i = 0; i < evalNodeNames.size(); ++i)
-    {
-        evalNodeNamesVector.push_back(evalNodeNames[i]);
-    }
 
-    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
-    
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
+
     // set tracing flags
     net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
 
     SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, 
-        firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+                                   firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
@@ -163,6 +158,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
+        // BUGBUG: ^^ Should use GetModelFromConfig()
         
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
             firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
@@ -217,8 +213,6 @@ template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
-    // Why?
-    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
     DataReader testDataReader(readerConfig);
@@ -234,7 +228,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
     vector<wstring> outputNodeNamesVector;
 
-    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesVector);
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNamesVector);
 
     // set tracing flags
     net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),

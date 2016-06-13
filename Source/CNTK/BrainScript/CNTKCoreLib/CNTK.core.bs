@@ -56,8 +56,9 @@ CNTK2 = [
     // 1. Inputs
     // Changes: dims -> shape
     DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
+    # TODO: Is it a good idea to default to "feature"?
     Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
-    
+
     // 2. Variables and constants
     // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
     // Python API: 
@@ -144,7 +145,7 @@ CNTK2 = [
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
-    ErrorPrediction(_, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (_ : outVectorSequence) /*plus the function args*/ ]
+    ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
 
     // 13. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
@@ -242,7 +243,7 @@ DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ 
 Dropout(activationVectorSequence, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = activationVectorSequence /*plus the function args*/ ]
 ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
 ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix), tag=tag)
-ErrorPrediction(labelVectorSequence, outVectorSequence, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = (labelVectorSequence : outVectorSequence) /*plus the function args*/ ]
+ErrorPrediction = CNTK2.ErrorPrediction
 Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
 Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
