@@ -56,6 +56,29 @@ generic<class ElemType>
             m_colIndices = gcnew array<int>(size);
             m_size = size;
         }
+    
+        property int Size
+        {
+            int get() { return m_size; }
+        }
+        
+        property array<ElemType>^ Buffer
+        {
+            array<ElemType>^ get() {  return m_buffer; }
+        }
+
+        property array<int>^ Indices
+        {
+            array<int>^ get() { return m_indices; }
+        }
+
+        property array<int>^ ColIndices
+        {
+            array<int>^ get() { return m_colIndices;
+            }
+        }
+
+    private:
 
     int m_size;
 
@@ -111,15 +134,15 @@ public ref struct VariableLayout
     };
 
     // Name of the input
-    String^ m_name;
+    property String^ Name;
 
-    DataType m_dataType;
+    property DataType DataKind;
 
-    StorageType m_storageType;
+    property StorageType StorageKind;
 
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
-    int m_numElements;
+    property int NumElements;
 };
 
 public ref class VariableSchema : List<VariableLayout^>
@@ -136,7 +159,7 @@ public:
         List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
         for (int i = 0; i < this->Count; i++)
         {
-            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements * maxLengths[i]));
+            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->NumElements * maxLengths[i]));
         }
 
         return buffers;
@@ -149,7 +172,7 @@ public:
         List<ValueBuffer<ElemType>^>^ buffers = gcnew List<ValueBuffer<ElemType>^>(this->Count);
         for (int i = 0; i < this->Count; i++)
         {
-            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->m_numElements));
+            buffers->Add(gcnew ValueBuffer<ElemType>(this[i]->NumElements));
         }
 
         return buffers;
@@ -158,14 +181,14 @@ public:
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
-public ref class IEvaluateModelExtendedManaged : IDisposable
+public ref class ModelEvaluationExtended : IDisposable
 {
     typedef std::pair<std::wstring, std::vector<ElemType>*> MapEntry;
 
 public:
-    /// <summary>Initializes a new instance of the <see cref="IEvaluateModelExtendedManaged"> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ModelEvaluationExtended"> class.</summary>
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
-    IEvaluateModelExtendedManaged(String^ funcName)
+    ModelEvaluationExtended(String^ funcName)
     {
         pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
         auto hModule = LoadLibrary(dllname);
@@ -228,9 +251,10 @@ public:
         for (auto& lay : outputLayout)
         {
             VariableLayout^ layout = gcnew VariableLayout();
-            layout->m_name = gcnew String(lay.m_name.c_str());
-            layout->m_dataType = GetDataType(lay.m_dataType);
-            layout->m_numElements = lay.m_numElements;
+            layout->Name = gcnew String(lay.m_name.c_str());
+            layout->DataKind = GetDataKind(lay.m_dataType);
+            layout->NumElements = lay.m_numElements;
+            layout->StorageKind = GetStorageKind(lay.m_storageType);
 
             outputSchema->Add(layout);
         }
@@ -275,9 +299,10 @@ public:
         for (auto& lay : inputLayout)
         {
             VariableLayout^ layout = gcnew VariableLayout();
-            layout->m_name = gcnew String(lay.m_name.c_str());
-            layout->m_dataType = GetDataType(lay.m_dataType);
-            layout->m_numElements = lay.m_numElements;
+            layout->Name = gcnew String(lay.m_name.c_str());
+            layout->DataKind = GetDataKind(lay.m_dataType);
+            layout->NumElements = lay.m_numElements;
+            layout->StorageKind = GetStorageKind(lay.m_storageType);
 
             inputSchema->Add(layout);
         }
@@ -307,26 +332,54 @@ public:
             Native::ValueRefs<ElemType> stdOutputs;
             Native::ValueBuffer<ElemType, Native::VectorRef>* vb = new Native::ValueBuffer<ElemType, Native::VectorRef>();
 
+            // Hold gc objects in the stack, while performing native actions
+            vector<gcroot<array<ElemType>^>*> pinBuffers;
+            vector<gcroot<array<int>^>*> pinIndices;
+
             // Map the managed space into the native space, results will be written directly into the managed memory space
+            // https://msdn.microsoft.com/en-us/library/1dz8byfh.aspx
+
             for each (auto item in inputs)
             {
-                pin_ptr<ElemType> pb = &(item->m_buffer[0]);
-                pin_ptr<int> pi = &(item->m_indices[0]);
-                pin_ptr<int> pci = &(item->m_colIndices[0]);
-                vb->m_buffer.InitFrom(pb, item->m_size, item->m_size);
-                vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
-                vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
+                int size = item->Size;
+                // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
+                gcroot<array<ElemType>^>* pBuf = new gcroot<array<ElemType>^>(item->Buffer);
+                gcroot<array<int>^>* pInd = new gcroot<array<int>^>(item->Indices);
+                gcroot<array<int>^>* pColInd = new gcroot<array<int>^>(item->ColIndices);
+
+                pinBuffers.push_back(pBuf);
+                pinIndices.push_back(pInd);
+                pinIndices.push_back(pColInd);
+
+                pin_ptr<ElemType> pp = &(*pBuf)[0];
+                pin_ptr<int> pi = &(*pInd)[0];
+                pin_ptr<int> pci = &(*pColInd)[0];
+
+                vb->m_buffer.InitFrom(pp, size, size);
+                vb->m_indices.InitFrom(pi, size, size);
+                vb->m_colIndices.InitFrom(pci, size, size);
+
                 stdInputs.push_back(*vb);
             }
 
             for each (auto item in outputs)
             {
-                pin_ptr<ElemType> pb = &(item->m_buffer[0]);
-                pin_ptr<int> pi = &(item->m_indices[0]);
-                pin_ptr<int> pci = &(item->m_colIndices[0]);
-                vb->m_buffer.InitFrom(pb, item->m_size, item->m_size);
-                vb->m_indices.InitFrom(pi, item->m_size, item->m_size);
-                vb->m_colIndices.InitFrom(pci, item->m_size, item->m_size);
+                int size = item->Size;
+                gcroot<array<ElemType>^>* pBuf = new gcroot<array<ElemType>^>(item->Buffer);
+                gcroot<array<int>^>* pInd = new gcroot<array<int>^>(item->Indices);
+                gcroot<array<int>^>* pColInd = new gcroot<array<int>^>(item->ColIndices);
+
+                pin_ptr<ElemType> pp = &(*pBuf)[0];
+                pin_ptr<int> pi = &(*pInd)[0];
+                pin_ptr<int> pci = &(*pColInd)[0];
+
+                pinBuffers.push_back(pBuf);
+                pinIndices.push_back(pInd);
+                pinIndices.push_back(pColInd);
+                vb->m_buffer.InitFrom(pp, size, size);
+                vb->m_indices.InitFrom(pi, size, size);
+                vb->m_colIndices.InitFrom(pci, size, size);
+
                 stdOutputs.push_back(*vb);
             }
 
@@ -345,18 +398,18 @@ public:
         }
     }
 
-    ~IEvaluateModelExtendedManaged()
+    ~ModelEvaluationExtended()
     {
         if (m_eval == nullptr)
         {
             return;
         }
 
-        this->!IEvaluateModelExtendedManaged();
+        this->!ModelEvaluationExtended();
     }
 
 protected:
-    !IEvaluateModelExtendedManaged()
+    !ModelEvaluationExtended()
     {
         if (m_eval != nullptr)
         {
@@ -417,7 +470,7 @@ private:
         }
     }
 
-    VariableLayout::DataType GetDataType(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
+    VariableLayout::DataType GetDataKind(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
     {
         switch ((int)dataType)
         {
@@ -430,7 +483,7 @@ private:
         }
     }
 
-    VariableLayout::StorageType GetStorageType(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
+    VariableLayout::StorageType GetStorageKind(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
     {
         switch ((int)storageType)
         {
@@ -448,22 +501,22 @@ private:
 
 /// <summary>Managed float-specific model evaluation class</summary>
 /// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
-public ref class IEvaluateModelExtendedManagedF : IEvaluateModelExtendedManaged<float>
+public ref class ModelEvaluationExtendedF : ModelEvaluationExtended<float>
 {
 public:
-    IEvaluateModelExtendedManagedF::IEvaluateModelExtendedManagedF()
-        : IEvaluateModelExtendedManaged("GetEvalExtendedF")
+    ModelEvaluationExtendedF::ModelEvaluationExtendedF()
+        : ModelEvaluationExtended("GetEvalExtendedF")
     {
     }
 };
 
 /// <summary>Managed double-specific model evaluation class</summary>
 /// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
-public ref class IEvaluateModelExtendedManagedD : IEvaluateModelExtendedManaged<double>
+public ref class ModelEvaluationExtendedD : ModelEvaluationExtended<double>
 {
 public:
-    IEvaluateModelExtendedManagedD::IEvaluateModelExtendedManagedD()
-        : IEvaluateModelExtendedManaged("GetEvalExtendedD")
+    ModelEvaluationExtendedD::ModelEvaluationExtendedD()
+        : ModelEvaluationExtended("GetEvalExtendedD")
     {
     }
 };
@@ -472,16 +525,16 @@ public:
 // This method tricks the compiler into emitting the methods of the classes
 // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
 // explanation to this behavior
-void emitExtended()
+void EmitExtended()
 {
-    IEvaluateModelExtendedManagedF f;
+    ModelEvaluationExtendedF f;
     f.CreateNetwork("");
     f.GetOutputSchema();
     f.GetInputSchema();
     f.StartForwardEvaluation(nullptr);
     f.ForwardPass(nullptr, nullptr);
 
-    IEvaluateModelExtendedManagedD d;
+    ModelEvaluationExtendedD d;
     d.CreateNetwork("");
     d.GetOutputSchema();
     d.GetInputSchema();

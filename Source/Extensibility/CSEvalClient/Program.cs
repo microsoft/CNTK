@@ -269,7 +269,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
                 Environment.CurrentDirectory = initialDirectory;
 
-                using (var model = new IEvaluateModelExtendedManagedF())
+                using (var model = new ModelEvaluationExtendedF())
                 {
                     // Create the network
                     // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
@@ -279,7 +279,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     VariableSchema outputSchema = model.GetOutputSchema();
 
-                    model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
+                    model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                     List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
                     List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>();
@@ -291,7 +291,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     float[][] expected = {new float[]{2}, new float[]{3}};
 
                     Console.WriteLine("Expected values: {0}", string.Join(" - ", expected.Select(b => string.Join(", ", b)).ToList<string>()));
-                    Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.m_buffer)).ToList<string>()));
+                    Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.Buffer)).ToList<string>()));
                 }
             }
             catch (CNTKException ex)

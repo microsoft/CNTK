@@ -17,9 +17,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         {
             int size = 2;
             var vb = new ValueBuffer<float>(size);
-            Assert.AreEqual(size, vb.m_buffer.Length);
-            Assert.AreEqual(size, vb.m_indices.Length);
-            Assert.AreEqual(size, vb.m_colIndices.Length);
+            Assert.AreEqual(size, vb.Buffer.Length);
+            Assert.AreEqual(size, vb.Indices.Length);
+            Assert.AreEqual(size, vb.ColIndices.Length);
         }
 
         [TestMethod]
@@ -35,13 +35,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 "FeatureNodes = (v1) \n" +
                 "] \n";
 
-            using (var model = new IEvaluateModelExtendedManagedF())
+            using (var model = new ModelEvaluationExtendedF())
             {
                 model.CreateNetwork(modelDefinition);
 
                 VariableSchema outputSchema = model.GetOutputSchema();
 
-                model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                 List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
                 List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>();
@@ -49,10 +49,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
 
-                List<float> expected = new List<float>() { 2, 3 /* 1 + 2 */ };
-                var buf = outputBuffer[0].m_buffer;
+                float[][] expected = { new float[] { 2 }, new float[] {3} };
 
-                Assert.AreEqual(string.Join(" - ", expected), string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.m_buffer)).ToList<string>()));
+                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                for (int idx = 0; idx < expected.Length; idx++)
+                {
+                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
+                }
             }
         }
 
@@ -68,26 +71,29 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 "FeatureNodes = (i1) \n" +
                 "] \n";
 
-            using (var model = new IEvaluateModelExtendedManagedF())
+            using (var model = new ModelEvaluationExtendedF())
             {
                 model.CreateNetwork(modelDefinition);
 
                 VariableSchema outputSchema = model.GetOutputSchema();
                 VariableSchema inputSchema = model.GetInputSchema();
 
-                model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                 List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
                 List<ValueBuffer<float>> inputBuffer = inputSchema.CreateBuffers<float>();
-                inputBuffer[0].m_buffer = new float[]{ 2 };
+                inputBuffer[0].Buffer[0] = 2;
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
 
-                List<float> expected = new List<float>() { 6 };
-                var buf = outputBuffer[0].m_buffer;
+                float[][] expected = {new float[]{6}};
 
-                Assert.AreEqual(string.Join(" - ", expected), string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.m_buffer)).ToList<string>()));
+                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                for (int idx = 0; idx < expected.Length; idx++)
+                {
+                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
+                }
             }
         }
 
@@ -106,18 +112,18 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 "FeatureNodes = (i1) \n" +
                 "] \n";
 
-            using (var model = new IEvaluateModelExtendedManagedF())
+            using (var model = new ModelEvaluationExtendedF())
             {
                 model.CreateNetwork(modelDefinition);
 
                 VariableSchema outputSchema = model.GetOutputSchema();
                 VariableSchema inputSchema = model.GetInputSchema();
 
-                model.StartForwardEvaluation(outputSchema.Select(s => s.m_name).ToList<string>());
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                 List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
                 List<ValueBuffer<float>> inputBuffer = inputSchema.CreateBuffers<float>();
-                inputBuffer[0].m_buffer = new float[] {2};
+                inputBuffer[0].Buffer[0] = 2;
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
@@ -127,7 +133,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 Assert.AreEqual(expected.Length, outputBuffer.Count);
                 for(int idx=0; idx<expected.Length; idx++ )
                 {
-                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].m_buffer);
+                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
                 }
             }
         }
