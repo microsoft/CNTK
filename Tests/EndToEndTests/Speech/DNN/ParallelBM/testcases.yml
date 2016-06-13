@@ -33,7 +33,7 @@ testCases:
       - block learning rate = {{float,tolerance=0.1%}}
       - block size per worker = {{integer}} samples
       - resetting SGD momentum after sync
-      - using Nesterov style block momentum
+      - using Nesterov-style block momentum
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
