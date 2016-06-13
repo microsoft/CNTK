@@ -195,7 +195,7 @@ public:
                 // eval results and then remove this hack.
                 if (learnParamsGradients.size() == 0)
                 {
-                    Matrix<ElemType>* matrix = new Matrix<ElemType>((DEVICEID_TYPE)m_net->GetDeviceId());
+                    Matrix<ElemType>* matrix = new Matrix<ElemType>(1, 1, (DEVICEID_TYPE)m_net->GetDeviceId());
                     learnParamsGradients.push_back(matrix);
                 }
 
