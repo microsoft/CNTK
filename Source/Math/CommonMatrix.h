@@ -17,6 +17,7 @@
 #include <string>
 #include <stdint.h>
 #include <memory>
+#include <unordered_map>
 
 #pragma warning( disable: 4251 )
 typedef unsigned char byte;
@@ -58,11 +59,11 @@ public:
     template <typename AllocatedElemType>
     static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
 
+	static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
+
 private:
     template <typename AllocatedElemType>
     static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
-
-    static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
 };
 
 // -----------------------------------------------------------------------
@@ -199,6 +200,124 @@ enum MatrixFlags
     matrixFlagDontOwnBuffer = 1 << bitPosDontOwnBuffer,       // the matrix memory pointers are externally managed, don't allocate/free or attempt to copy to another location
     matrixFlagSetValueOnDevice = 1 << bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
 };
+
+// -----------------------------------------------------------------------
+// BufferManager -- to controal all buffer allocation
+// -----------------------------------------------------------------------
+class BufferManager
+{
+private:
+	BufferManager() {};
+
+public:
+	static BufferManager* GetManagerInstance()
+	{
+		if (!m_instance) m_instance  = new BufferManager();
+		return m_instance;
+	}
+
+	// Request buffer from the buffer pool, or re-allocate a new memory
+	template<class ElemType>
+	ElemType* RequestBuffer(DEVICEID_TYPE deviceId, size_t size)
+	{
+		ElemType* bufferPtr = nullptr;
+		auto& bufferContainor = BufferContainor<ElemType>();
+
+		auto deviceBufferList = bufferContainor.find(deviceId);
+		if (deviceBufferList != bufferContainor.end()){
+			auto sizeBufferList = deviceBufferList->second.find(size);
+			if (sizeBufferList != deviceBufferList->second.end()){
+				if (sizeBufferList->second.size()){
+					bufferPtr = sizeBufferList->second.back();
+					sizeBufferList->second.pop_back();
+					return bufferPtr;
+				}
+			}
+		}
+
+		if (deviceId >= 0) {
+#ifndef CPUONLY
+			auto freeAndTotalMemory = TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(deviceId);
+
+			float allocateRate = (float)freeAndTotalMemory.first / (float)freeAndTotalMemory.second;
+
+			if (allocateRate < 0.05 || freeAndTotalMemory.first <= ((size * sizeof(ElemType)) >> 20)) {
+				PhysicalReleaseAllBuffer<ElemType>();
+			}
+
+			bufferPtr = TracingGPUMemoryAllocator::Allocate<ElemType>(deviceId, size);
+#endif
+		}
+		else {
+			bufferPtr = new ElemType[size]();
+		}
+
+		return bufferPtr;
+	}
+
+	// Release targeting buffer into buffer pool
+	template<class ElemType>
+	void LogicalReleaseBuffer(DEVICEID_TYPE deviceId, ElemType* buffer, size_t size)
+	{
+		auto& bufferContainor = BufferContainor<ElemType>();
+		auto deviceBufferList = bufferContainor.find(deviceId);
+		if (deviceBufferList == bufferContainor.find(deviceId)) {
+			deviceBufferList = bufferContainor.insert(pair<DEVICEID_TYPE, unordered_map<size_t, 
+				vector<ElemType*>>>(deviceId, unordered_map<size_t, vector<ElemType*>>())).first;
+		}
+		auto sizeBufferList = deviceBufferList->second.find(size);
+		if (sizeBufferList == deviceBufferList->second.end()) {
+			sizeBufferList = deviceBufferList->second.insert(pair<size_t, 
+				vector<ElemType*>>(size, vector<ElemType*>(0))).first;
+		}
+		sizeBufferList->second.push_back(buffer);
+		buffer = nullptr;
+	}
+
+	// Release targeting buffer in buffer pool
+	template<class ElemType>
+	void PhysicalReleaseBuffer(DEVICEID_TYPE deviceId, ElemType* buffer)
+	{
+		if (deviceId >= 0) {
+#ifndef CPUONLY
+			TracingGPUMemoryAllocator::Free<ElemType>(deviceId, buffer, false);
+#endif
+		}
+		else {
+			delete[] buffer;
+		}
+	}
+
+	// Release all buffer cache in buffer pool
+	template<class ElemType>
+	void PhysicalReleaseAllBuffer()
+	{
+		auto& bufferContainor = BufferContainor<ElemType>();
+
+		for (auto& deviceBufferList : bufferContainor) {
+			for (auto& sizeBufferList : deviceBufferList.second) {
+				vector<ElemType*>& bufferArray = sizeBufferList.second;
+				for (size_t i = 0; i < bufferArray.size(); i++) {
+					if (bufferArray[i] == nullptr) continue;
+					PhysicalReleaseBuffer(deviceBufferList.first, bufferArray[i]);
+				}
+				bufferArray.clear();
+			}
+		}
+	}
+
+private:
+	template <class ElemType>
+	unordered_map<DEVICEID_TYPE, unordered_map<size_t, vector<ElemType*>>>& BufferContainor();
+
+	static BufferManager* m_instance;
+
+	// hash map to store all the buffer released
+	unordered_map<DEVICEID_TYPE, unordered_map<size_t, vector<float*>>> m_bufferFloatContainor;
+	unordered_map<DEVICEID_TYPE, unordered_map<size_t, vector<double*>>> m_bufferDoubleContainor;
+	unordered_map<DEVICEID_TYPE, unordered_map<size_t, vector<char*>>> m_bufferCharContainor;
+};
+
 
 // -----------------------------------------------------------------------
 // BaseMatrixStorage -- base class for all matrix types (CPU, GPU) x (dense, sparse)

@@ -1460,6 +1460,13 @@ void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::CacheRequireSize(const size_t numRows, const size_t numCols, bool growOnly)
+{
+	if (GetNumRows() != numRows || GetNumCols() != numCols)
+		CacheResize(numRows, numCols, growOnly);
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
     VerifyResizable(__func__);
@@ -1488,6 +1495,45 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::CacheResize(const size_t numRows, const size_t numCols, bool growOnly)
+{
+	VerifyResizable(__func__);
+
+	if (GetNumRows() == numRows && GetNumCols() == numCols)
+		return;
+
+	if (growOnly && numRows * numCols <= GetSizeAllocated()) {
+		m_sliceViewOffset = 0;
+		m_numRows = numRows;
+		m_numCols = numCols;
+		return;
+	}
+
+	if (GetNumRows() && GetNumCols()) {
+		// Indeed, if using PhysicalReleaseBuffer, the buffer pool will be disabled
+		BufferManager::GetManagerInstance()->LogicalReleaseBuffer<ElemType>(GetComputeDeviceId(), Buffer(), GetSizeAllocated());
+	}
+
+	m_numRows = numRows;
+	m_numCols = numCols;
+	m_sliceViewOffset = 0;
+
+	size_t numElements = GetNumElements();
+
+	if (IsEmpty())
+	{
+		SetSizeAllocated(0);
+		SetBuffer(nullptr, 0);
+	}
+	else
+	{
+		SetSizeAllocated(numElements);
+		SetBuffer(BufferManager::GetManagerInstance()->RequestBuffer<ElemType>(GetComputeDeviceId(), GetSizeAllocated()),
+			numElements * sizeof(ElemType));
+	}
 }
 
 template <class ElemType>
@@ -4396,6 +4442,7 @@ template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
+template void GPUMatrix<char>::CacheResize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();

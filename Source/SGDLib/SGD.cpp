@@ -936,6 +936,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
+				// memory compress setting
+				if (m_enableSublinearMemory) {
+					net->SetMemoryCompressMethod(m_enableSublinearMemory);
+				}
+
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================
@@ -954,8 +959,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // backprop
                 // ===========================================================
 
-                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                    net->Backprop(criterionNodes[0]);
+				if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+				{
+					net->Backprop(criterionNodes[0]);
+				}
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
@@ -2650,6 +2657,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             }
 #endif 
         }
+
+		m_enableSublinearMemory = configSGD(L"enableSublinearMemory", false);
     }
 }
 

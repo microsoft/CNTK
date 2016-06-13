@@ -42,6 +42,7 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="RNGHandle.cpp" />
+    <ClCompile Include="CommonMatrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />

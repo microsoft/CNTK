@@ -832,6 +832,23 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+public:
+	enum ReserveInForward {
+		Reserved,
+		Released,
+		Reverted
+	};
+
+	void SetIsReserveInForward(ReserveInForward isReserveInForward)
+	{
+		m_isReserveInForward = isReserveInForward;
+	}
+	ReserveInForward IsReserveInForward()
+	{
+		return m_isReserveInForward;
+	}
+	virtual void ReleaseBufferIntoPool() {}
+
 protected:
 
     // -----------------------------------------------------------------------
@@ -862,6 +879,8 @@ protected:
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
     bool m_gradientInitialized;        // indicates whether the gradient matrix has been resized and initialized to 0
     bool m_outputNeededDuringBackprop; // indicates whether the output value of the node is needed during backprop
+
+	ReserveInForward m_isReserveInForward;
 };
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -1377,10 +1396,14 @@ public:
         }
 #endif
 
-#ifdef _DEBUG
     virtual void /*IComputationNode::*/ EndBackprop() override
     {
         Base::EndBackprop();
+		if (IsValueSharable() && IsReserveInForward() == ReserveInForward::Reverted) {
+			Value().Resize(1, 1, 0, false);
+			Gradient().Resize(1, 1, 0, false);
+		}
+#ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
         for (size_t i = 0; i < m_inputs.size(); i++)
         {
@@ -1393,8 +1416,8 @@ public:
             }
         }
 #endif
-    }
 #endif
+    }
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1698,6 +1721,9 @@ public:
         return *m;
     }
 
+public:
+	virtual void ReleaseBufferIntoPool() override { Value().Resize(1, 1, 0, false); }
+
     // -----------------------------------------------------------------------
     // data members
     // -----------------------------------------------------------------------
@@ -1804,7 +1830,16 @@ public:
     FlowControlNode()
         : ComputationNodeBase(DEVICEID_NOTYETDETERMINED /*we don't own matrices*/, L"" /*name: we don't care*/)
     {
+		m_externalFlowControlNode = nullptr;
+		m_forwardMethod = ForwardMethod::NONE;
     }
+
+	enum ForwardMethod {
+		NONE,
+		FORWARD_NORMAL,
+		FORWARD_ALLRECORD,
+		FORWARD_KEYRECORD
+	};
 
 #pragma warning(disable : 4100)
     // these are meant to be implemented by ComputationNode<ElemType> but should never be called on traversal nodes
@@ -1833,8 +1868,26 @@ public:
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
 
+	virtual void SetExternalFlowControlNode(shared_ptr<FlowControlNode> flowControlNode) { m_externalFlowControlNode = flowControlNode; }
+	virtual void SetForwardMethod(ForwardMethod forwardMethod) { m_forwardMethod = forwardMethod; }
+
+	virtual void AddRecordPeriod(wstring recordStart, wstring recordEnd) { m_partialRecordPeriod.push_back(pair<wstring, wstring>(recordStart, recordEnd)); }
+	virtual void RemoveRecordPeriod() { m_partialRecordPeriod.pop_back(); }
+	virtual pair<wstring, wstring> GetLastRecordPeriod() 
+	{
+		pair<wstring, wstring> period;
+		period.first = m_partialRecordPeriod.back().first;
+		period.second = m_partialRecordPeriod.back().second;
+		return period;
+	}
+	virtual size_t GetRecordPeriodSize() { return m_partialRecordPeriod.size(); }
+
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
+
+	ForwardMethod m_forwardMethod;
+	shared_ptr<FlowControlNode> m_externalFlowControlNode;
+	std::vector<pair<wstring, wstring>> m_partialRecordPeriod;
 };
 
 // =======================================================================

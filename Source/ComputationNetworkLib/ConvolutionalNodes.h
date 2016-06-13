@@ -177,6 +177,12 @@ public:
         }
     }
 
+	void ReleaseBufferIntoPool() override
+	{
+		Value().Resize(1, 1, 0, false);
+		m_tempMatrix->Resize(1, 1, 0, false);
+	}
+
     void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
         Base::DumpNodeInfo(printValues, printMetadata, fstream);

@@ -40,7 +40,20 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
-    GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+	if (m_enableSublinearMemory) {
+		shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+		if (rootNode->GetName() == wstring(L"Err")) {
+			flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_KEYRECORD);
+			m_cacheNetwork = flowControlNode;
+		}
+		else {
+			flowControlNode->SetForwardMethod(FlowControlNode::ForwardMethod::FORWARD_NORMAL);
+		}
+		flowControlNode->ForwardProp(FrameRange(nullptr));
+		return;
+	}
+
+	GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -76,7 +89,16 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     ZeroInputGradients(rootNode);
 
     // backpropagate through the network
-    GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
+
+	if (m_enableSublinearMemory) {
+		shared_ptr<FlowControlNode> flowControlNode = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+		flowControlNode->SetExternalFlowControlNode(m_cacheNetwork);
+		flowControlNode->Backprop(FrameRange(nullptr), true, true);
+		flowControlNode->SetExternalFlowControlNode(nullptr);
+		return;
+	}
+
+	GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -131,20 +153,161 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
 {
+	if (m_forwardMethod == ForwardMethod::NONE) {
+		for (auto& node : m_nestedNodes)
+		{
+#if 0
+			if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+				dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+			if (node->IsOutOfDateWrtInputs())
+			{
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+
+				node->BumpEvalTimeStamp();
+			}
+		}
+		return;
+	}
+
+	// implementation of Sublinear Memory Cost algorithm,
+	// since the forward will be used twice in an iterator,
+	// we using ForwardMethod to mark it.
+	int periodIndex = 0;
+	int count = 0;
+	bool recordTrigger = false;
+	pair<wstring, wstring> curPeriod;
+
+	unordered_map<ComputationNodeBasePtr, int> dependency;
+	unordered_map<ComputationNodeBasePtr, int> order;
+
+	if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
+
+		vector<wstring> safeRecordNodeName;
+
+		for (auto& node : m_nestedNodes)
+		{
+			order.insert(pair<ComputationNodeBasePtr, int>(node, periodIndex++));
+
+			int numInputs = node->GetNumInputs();
+			for (int index = 0; index < numInputs; index++) {
+				auto& input = node->GetInputs()[index];
+				if (dependency.find(input) == dependency.end()) {
+					dependency[input] = 1;
+				}
+				else {
+					dependency[input]++;
+				}
+			}
+		}
+
+		m_partialRecordPeriod.clear();
+		for (int i = 0; i < m_nestedNodes.size(); i++) {
+			if (!m_nestedNodes[i]->IsValueSharable()) continue;
+			count++;
+			bool isSafeReorde = true;
+			for (int j = i + 1; j < m_nestedNodes.size(); j++) {
+				int numInputs = m_nestedNodes[j]->GetNumInputs();
+				for (int index = 0; index < numInputs; index++) {
+					auto& input = m_nestedNodes[j]->GetInputs()[index];
+					if (!input->IsValueSharable()) continue;
+					int orderA = order.find(m_nestedNodes[i])->second;
+					int orderB = order.find(input)->second;
+					if (orderB < orderA) isSafeReorde = false;
+				}
+				if (!isSafeReorde) break;
+			}
+			if (isSafeReorde) safeRecordNodeName.push_back(m_nestedNodes[i]->GetName());
+		}
+
+		int recordSize = (int)sqrtf((float)count);
+		recordSize = max(1, (int)safeRecordNodeName.size() / recordSize);
+
+		periodIndex = 0;
+		vector<wstring> recordNodeName;
+		for (int i = 0; i < safeRecordNodeName.size(); i++) {
+			if (!(i % recordSize)) {
+				recordNodeName.push_back(safeRecordNodeName[i]);
+			}
+		}
+
+		for (int i = 1; i < recordNodeName.size(); i++) {
+			m_partialRecordPeriod.push_back(pair<wstring, wstring>(recordNodeName[i - 1], recordNodeName[i]));
+		}
+
+		periodIndex = 0;
+	}
+	else if(m_forwardMethod == ForwardMethod::FORWARD_ALLRECORD){
+		if (m_partialRecordPeriod.size()) {
+			curPeriod.first = m_partialRecordPeriod.back().first;
+			curPeriod.second = m_partialRecordPeriod.back().second;
+		}
+	}
+
     for (auto& node : m_nestedNodes)
     {
 #if 0
         if (dynamic_pointer_cast<LearnableParameter<float>>(node))
             dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
 #endif
-        if (node->IsOutOfDateWrtInputs())
-        {
-            node->BeginForwardProp();
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-            node->EndForwardProp();
+		if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD || m_forwardMethod == ForwardMethod::FORWARD_NORMAL) {
+			if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD)
+				node->SetIsReserveInForward(ReserveInForward::Reserved);
 
-            node->BumpEvalTimeStamp();
-        }
+			if (node->IsOutOfDateWrtInputs())
+			{
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+
+				if (periodIndex < m_partialRecordPeriod.size() && node->GetName() == m_partialRecordPeriod[periodIndex].second) {
+					recordTrigger = false;
+					periodIndex++;
+				}
+
+				if (periodIndex < m_partialRecordPeriod.size() && node->GetName() == m_partialRecordPeriod[periodIndex].first)
+					recordTrigger = true;
+
+				if (m_forwardMethod == ForwardMethod::FORWARD_KEYRECORD) {
+					// naive
+					int numInputs = node->GetNumInputs();
+					for (int index = 0; index < numInputs; index++) {
+						auto& input = node->GetInputs()[index];
+						if (dependency.find(input) != dependency.end()) {
+							dependency[input]--;// = max(dependency[input] - 1, 0);
+							if (recordTrigger) {
+								if (dependency[input] || !input->IsValueSharable() || !input->GetNumInputs() ||
+									input->GetName() == m_partialRecordPeriod[periodIndex].first) {
+									continue;
+								}
+								input->SetIsReserveInForward(ReserveInForward::Released);
+								input->ReleaseBufferIntoPool();
+							}
+						}
+					}
+				}
+
+				node->BumpEvalTimeStamp();
+			}
+		}
+		else {
+			if (curPeriod.first == wstring(L"") || curPeriod.second == wstring(L"") || node->GetName() == curPeriod.second)
+				return;
+
+			if (node->GetName() == curPeriod.first) {
+				recordTrigger = true;
+				continue;
+			}
+
+			if (recordTrigger && node->IsReserveInForward() == ReserveInForward::Released) {
+				node->BeginForwardProp();
+				node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+				node->EndForwardProp();
+				node->SetIsReserveInForward(ReserveInForward::Reverted);
+			}
+		}
     }
 }
 
@@ -152,9 +315,20 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
     // process nodes in pre-determined order
+
+
     for (auto pnode = m_nestedNodes.rbegin(); pnode != m_nestedNodes.rend(); pnode++) // iterate backwards over evaluation order
     {
         auto& node = *pnode;
+
+		if (m_externalFlowControlNode != nullptr && (int)m_externalFlowControlNode->GetRecordPeriodSize()) {
+			pair<wstring, wstring> recordPeriod = m_externalFlowControlNode->GetLastRecordPeriod();
+			if (node->GetName() == recordPeriod.second) {
+				m_externalFlowControlNode->SetForwardMethod(ForwardMethod::FORWARD_ALLRECORD);
+				m_externalFlowControlNode->ForwardProp(fr);
+				m_externalFlowControlNode->RemoveRecordPeriod();
+			}
+		}
 
         node->BeginBackprop();
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);

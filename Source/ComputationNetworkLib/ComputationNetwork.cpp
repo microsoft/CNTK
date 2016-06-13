@@ -76,6 +76,8 @@ void ComputationNetwork::ClearNetwork()
     m_nameToNodeMap.clear();
 
     m_pMBLayoutOfNetwork->Init(1, 0);
+
+	m_enableSublinearMemory = false;
 }
 
 // -----------------------------------------------------------------------
