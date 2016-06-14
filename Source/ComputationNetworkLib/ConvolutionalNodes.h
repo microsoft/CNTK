@@ -522,6 +522,9 @@ protected:
 // and inputs for the original pooling node. Unpooling node
 // produces an output which has the same dimensions as input to the
 // corresponding max pooling node (i.e. poolInputValues).
+// TODO: need to add support for other pooling types, for example,
+// average unpooling. Note that in this case, generic unpooling operation
+// will take different number of inputs depending on pooling type.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
