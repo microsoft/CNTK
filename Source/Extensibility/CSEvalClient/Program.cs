@@ -44,7 +44,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-
+            
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -59,7 +59,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
-            
+
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
         }
@@ -88,11 +88,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Generate random input values in the appropriate structure and size
-                    var inDims = model.GetNodeDimensions(NodeGroup.nodeInput);
+                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
                     var inputs = GetDictionary(inDims.First().Key, inDims.First().Value, 255);
 
                     // We request the output layer names(s) and dimension, we'll use the first one.
-                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
                     outputLayerName = outDims.First().Key;
                     // We can call the evaluate method and get back the results (single layer)...
                     outputs = model.Evaluate(inputs, outputLayerName);
@@ -129,20 +129,20 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    string hiddenLayerName = "h1.z";
-                    string outputLayerName = "ol.z";
+                    const string hiddenLayerName = "h1.z";
+                    const string outputLayerName = "ol.z";
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    List<string> desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
+                    var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
 
                     // Generate random input values in the appropriate structure and size
-                    var inDims = model.GetNodeDimensions(NodeGroup.nodeInput);
+                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
                     var inputs = GetDictionary(inDims.First().Key, inDims.First().Value, 255);
 
                     // We request the output layer names(s) and dimension, we'll get both the hidden layer and the output layer
-                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
 
                     // We can preallocate the output structure and pass it in (multiple output layers)
                     outputs = new Dictionary<string, List<float>>()
@@ -189,10 +189,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     model.CreateNetwork(networkDescription, deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
-                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { 1.0f } } };
+                    var inputs = new Dictionary<string, List<float>>() { { "features1", new List<float>() { 1.0f } } };
 
                     // We can call the evaluate method and get back the results (single layer output)...
-                    var outDims = model.GetNodeDimensions(NodeGroup.nodeOutput);
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
                     outputLayerName = outDims.First().Key;
                     outputs = model.Evaluate(inputs, outputLayerName);
                 }
@@ -252,15 +252,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// </summary>
         private static void EvaluateExtendedNetworkSingleLayerNoInput()
         {
-            string modelDefinition = "precision = \"float\" \n" +
-                "traceLevel = 1 \n" +
-                "run=NDLNetworkBuilder \n" +
-                "NDLNetworkBuilder=[ \n" +
-                "v1 = Constant(1) \n" +
-                "v2 = Constant(2, tag=\"output\") \n" +
-                "ol = Plus(v1, v2, tag=\"output\") \n" +
-                "FeatureNodes = (v1) \n" +
-                "] \n";
+            const string modelDefinition = @"precision = ""float"" 
+                                     traceLevel = 1
+                                     run=NDLNetworkBuilder
+                                     NDLNetworkBuilder=[
+                                     v1 = Constant(1)
+                                     v2 = Constant(2, tag=""output"")
+                                     ol = Plus(v1, v2, tag=""output"")
+                                     FeatureNodes = (v1)
+                                     ]";
 
             try
             {
@@ -274,21 +274,20 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // Create the network
                     // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a two constants, therefore no input is necessary.
-                    //string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
                     model.CreateNetwork(modelDefinition);
 
-                    VariableSchema outputSchema = model.GetOutputSchema();
+                    VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
 
                     model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                     List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
-                    List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>();
+                    var inputBuffer = new List<ValueBuffer<float>>();
 
                     // We can call the evaluate method and get back the results...
                     model.ForwardPass(inputBuffer, outputBuffer);
 
                     // We expect two outputs: the v2 constant, and the ol Plus result
-                    float[][] expected = {new float[]{2}, new float[]{3}};
+                    var expected = new float[][]{new float[]{2}, new float[]{3}};
 
                     Console.WriteLine("Expected values: {0}", string.Join(" - ", expected.Select(b => string.Join(", ", b)).ToList<string>()));
                     Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.Buffer)).ToList<string>()));
