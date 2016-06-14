@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "Source\CNTK\CNTK.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -372,7 +372,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
-		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {B3DD765E-694E-4494-BAD7-37BBF2942517}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MathCUDA", "Source\Math\MathCUDA.vcxproj", "{B3DD765E-694E-4494-BAD7-37BBF2942517}"
@@ -1553,8 +1552,8 @@ Global
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF}.Release|x64.ActiveCfg = Release|x64
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF}.Release|x64.Build.0 = Release|x64
-		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug_CpuOnly|x64.ActiveCfg = Debug|x64
-		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug_CpuOnly|x64.Build.0 = Debug|x64
+		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug|x64.ActiveCfg = Debug|x64
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Debug|x64.Build.0 = Debug|x64
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}.Release_CpuOnly|x64.ActiveCfg = Release|x64
