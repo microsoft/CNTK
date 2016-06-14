@@ -856,7 +856,6 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     // We first find max per column
     __shared__ ElemType colMax[1];
     __shared__ ElemType partials[512];
-    colMax[0] = -10000000;
     partials[threadIdx.x] = -10000000;
 
     for (int i = threadIdx.x; i < m_numRows; i += 512)
@@ -911,12 +910,11 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     {
         colMax[0] = max(max(partials[0], partials[1]), max(partials[2], partials[3]));
     }
-    partials[threadIdx.x] = 0.0f;
     __syncthreads();
+    partials[threadIdx.x] = 0.0f;
 
     // Now start finding sums
     __shared__ ElemType colSum[1];
-    colSum[0] = 0.0f;
     for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
         ElemType tmp = a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
