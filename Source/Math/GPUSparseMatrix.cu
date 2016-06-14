@@ -2123,11 +2123,12 @@ void GPUSparseMatrix<ElemType>::ElementAndXOf(const GPUSparseMatrix<ElemType>& a
 
     int newNumNZ = 0;
     CUDA_CALL(cudaMemcpy(&newNumNZ, dev_agg, sizeof(int), cudaMemcpyDeviceToHost));
-    GPUSparseMatrix<ElemType> cs(a.GetNumRows(), a.GetNumCols(), newNumNZ, a.GetComputeDeviceId(), MatrixFormat::matrixFormatSparseCSC);
+    c.Resize(a.GetNumRows(), a.GetNumCols(), newNumNZ, MatrixFormat::matrixFormatSparseCSC);
+    //GPUSparseMatrix<ElemType> cs(a.GetNumRows(), a.GetNumCols(), newNumNZ, a.GetComputeDeviceId(), MatrixFormat::matrixFormatSparseCSC);
     _sparseCSCElemMulsparseCSC_Update<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, aCopy.Data(), aCopy.RowLocation(), aCopy.ColLocation(), a.ColLocation(), c.Data(), c.RowLocation(), c.ColLocation());
 
     CUDA_CALL(cudaFree(dev_agg));
-    c.SetValue(cs);
+    //c.SetValue(cs);
 }
 
 
