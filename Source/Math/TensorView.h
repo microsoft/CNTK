@@ -141,6 +141,7 @@ public:
 
     void DoMatrixElementProductOf(const TensorView& a, const TensorView& b);
     void DoMatrixElementAndXOf(const TensorView& a, const TensorView& b);
+    void DoMatrixElementMulAndXOf(const TensorView& a, const TensorView& b);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
 

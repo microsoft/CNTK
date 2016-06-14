@@ -518,6 +518,38 @@ void TensorView<ElemType>::DoMatrixElementAndXOf(const TensorView& a, const Tens
     Matrix<ElemType>::ElementAndXOf(*A, *B, *C);
 }
 
+template <class ElemType>
+void TensorView<ElemType>::DoMatrixElementMulAndXOf(const TensorView& a, const TensorView& b)
+{
+    bool transA = false;
+    bool transB = false;
+    bool transC = false;
+
+    // determine integration dimension offset
+    auto shapeA = a.m_shape;
+    auto shapeB = b.m_shape;
+    auto shapeC = m_shape;
+
+    // flatten. This updates shapeA etc.
+    FlattenToMatrix(shapeA, transA, 1);
+    FlattenToMatrix(shapeB, transB, 1);
+    FlattenToMatrix(shapeC, transC, 1);
+
+    // shapeX[transX] and shapeX[1-transX] are row and column dim, respectively, or swapped if transposed
+    if (shapeA[transA] != shapeC[transC] ||
+        shapeB[transB] != shapeC[transC] ||
+        shapeA[transA] != shapeB[transB])
+    {
+        InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
+    }
+
+    // create Matrix objects out of this
+    let  A = a.Reshaped(shapeA).AsMatrix();
+    let  B = b.Reshaped(shapeB).AsMatrix();
+    auto C = Reshaped(shapeC).AsMatrix();
+
+    Matrix<ElemType>::ElementMulAndXOf(*A, *B, *C);
+}
 template class TensorView<float>;
 template class TensorView<double>;
 

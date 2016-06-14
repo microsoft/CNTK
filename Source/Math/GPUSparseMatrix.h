@@ -436,7 +436,7 @@ public:
     static void ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
 
     static void ElementAndXOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
-
+    static void ElementMulAndXOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
 
 public:
     // See: http://stackoverflow.com/questions/4660123/overloading-friend-operator-for-template-class/4661372#4661372

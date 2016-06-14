@@ -249,8 +249,7 @@ public:
 template class SparseElementTimesNode<float>;
 template class SparseElementTimesNode<double>;
 
-
-// ElementWise Sparse ORX: output = (x>0 && y>0) ? x:0 
+// ElementWise Sparse AndX: output = (x>0 && y>0) ? x:0 
 template <class ElemType>
 class SparseElementAndXNode : public BinaryElementWiseNode<ElemType>
 {
@@ -286,6 +285,43 @@ public:
 
 template class SparseElementAndXNode<float>;
 template class SparseElementAndXNode<double>;
+
+// ElementWise Sparse MulAndX: output = (x>0 && y>0) ? x:0 
+template <class ElemType>
+class SparseElementMulAndXNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"SparseElementMulAndX";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SparseElementMulAndXNode);
+    SparseElementMulAndXNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.DoMatrixElementMulAndXOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseElementMulAndXNode");
+    }
+};
+
+template class SparseElementMulAndXNode<float>;
+template class SparseElementMulAndXNode<double>;
 
 
 // -----------------------------------------------------------------------

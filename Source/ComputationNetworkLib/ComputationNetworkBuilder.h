@@ -117,6 +117,7 @@ public:
     ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr SparseElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr SparseElementAndX(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr SparseElementMulAndX(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName = L"");
     ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"");

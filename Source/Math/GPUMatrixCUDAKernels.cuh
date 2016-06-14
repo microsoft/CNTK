@@ -2937,7 +2937,51 @@ __global__ void _sparseCSCElemAndXsparseCSC_Mark(
     a_dCol[id + 1] = NZCounter;
 }
 
+template <class ElemType>
+__global__ void _sparseCSCElemMulAndXsparseCSC(
+    const int m,
+    const CUDA_LONG n,
+    const ElemType* b_dVal,
+    const int* b_dRow,
+    const int* b_dCol,
+    ElemType* c_dVal,
+    int* c_dRow,
+    int* c_dCol
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    int startC = c_dCol[id];
+    int endC = c_dCol[id + 1];
 
+    int startB = b_dCol[id];
+    int endB = b_dCol[id + 1];
+
+    while (startC < endC)
+    {
+        int cRow = c_dRow[startC];
+        if (startB >= endB)
+        {
+            c_dVal[startC] *= -1.f;
+            startC++;
+            continue;
+        }
+        int bRow = b_dRow[startB];
+        if (cRow == bRow)
+        {
+            c_dVal[startC] *= b_dVal[startB];
+            startC++;
+        }
+        else if (cRow > bRow)
+            startB++;
+        else
+        {
+            c_dVal[startC] *= -1.f;
+            startC++;
+        }
+    }
+}
 
 template <class ElemType>
 __global__ void _isValid(

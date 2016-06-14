@@ -66,6 +66,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(GatherPackedNode))                     return New<GatherPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseElementTimesNode))               return New<SparseElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseElementAndXNode))                return New<SparseElementAndXNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SparseElementMulAndXNode))             return New<SparseElementMulAndXNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
     else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))                 return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
@@ -631,6 +632,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SparseElementAndX(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<SparseElementAndXNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SparseElementMulAndX(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<SparseElementMulAndXNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

@@ -2124,14 +2124,31 @@ void GPUSparseMatrix<ElemType>::ElementAndXOf(const GPUSparseMatrix<ElemType>& a
     int newNumNZ = 0;
     CUDA_CALL(cudaMemcpy(&newNumNZ, dev_agg, sizeof(int), cudaMemcpyDeviceToHost));
     c.Resize(a.GetNumRows(), a.GetNumCols(), newNumNZ, MatrixFormat::matrixFormatSparseCSC);
-    //GPUSparseMatrix<ElemType> cs(a.GetNumRows(), a.GetNumCols(), newNumNZ, a.GetComputeDeviceId(), MatrixFormat::matrixFormatSparseCSC);
     _sparseCSCElemMulsparseCSC_Update<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, aCopy.Data(), aCopy.RowLocation(), aCopy.ColLocation(), a.ColLocation(), c.Data(), c.RowLocation(), c.ColLocation());
 
     CUDA_CALL(cudaFree(dev_agg));
-    //c.SetValue(cs);
 }
 
+// sparse mul-andx sparse = sparse
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ElementMulAndXOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+{
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
 
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+        LogicError("ElementProductOf: matrix dimensions mismatch");
+
+    b.PrepareDevice();
+    //c.Resize(a.GetNumRows(), a.GetNumCols(), a.NzCount(), MatrixFormat::matrixFormatSparseCSC);
+    c.SetValue(a);
+    int m = (int)a.GetNumRows();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _sparseCSCElemMulAndXsparseCSC<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(m, n, b.Data(), b.RowLocation(), b.ColLocation(), c.Data(), c.RowLocation(), c.ColLocation());
+
+}
 
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
