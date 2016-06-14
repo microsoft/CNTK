@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import numpy as np
+from ..utils import wrap_numpy_arrays, get_rank
 
 ################################################################################
 # convolution ops
@@ -30,16 +31,17 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=None):
         #[1.84]
     
     Args:
-        target_vector: usually it is one-hot vector where the hot bit 
-        corresponds to the label index. But it can be any probability distribution
-        over the labels.
+        target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. But it can be any probability distribution over the labels.
         output_vector: the unscaled computed output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import CrossEntropyWithSoftmax
-    return CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
+    op = CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
+    wrap_numpy_arrays(op)
+    op.rank = 0
+    return op
 
 def square_error(target_matrix, output_matrix, name=None):
     """
@@ -55,16 +57,18 @@ def square_error(target_matrix, output_matrix, name=None):
         #[0.]
     
     Args:
-        target_matrix: target matrix, it is usually a one-hot vector where the 
-        hot bit corresponds to the label index
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         output_matrix: the output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk1 import SquareError
-    return SquareError(target_matrix, output_matrix, name = name)
-
+    op = SquareError(target_matrix, output_matrix, name = name)
+    wrap_numpy_arrays(op)
+    op.rank = 0
+    return op
+    
 def error_prediction(target_vector, output_vector, name=None):
     """
     This operation computes the prediction error. It finds the index of the highest 
@@ -82,15 +86,17 @@ def error_prediction(target_vector, output_vector, name=None):
         #[1.]
     
     Args:
-        target_vector: it is one-hot vector where the hot bit corresponds to the 
-        label index
+        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         output_vector: the output values from the network
         name: the name of the node in the network            
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ErrorPrediction
-    return ErrorPrediction(target_vector, output_vector, name = name)
+    op = ErrorPrediction(target_vector, output_vector, name = name)
+    wrap_numpy_arrays(op)
+    op.rank = 0
+    return op
 
 ################################################################################
 # comparison ops
@@ -115,8 +121,10 @@ def less(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Less
-    return Less(left, right, name=name)
-
+    op = Less(left, right, name=name)
+    wrap_numpy_arrays(op)
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def equal(left, right, name=None):
     """
@@ -137,7 +145,10 @@ def equal(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Equal
-    return Equal(left, right, name=name)
+    op = Equal(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def greater(left, right, name=None):
     """
@@ -158,8 +169,10 @@ def greater(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Greater
-    return Greater(left, right, name=name)
-
+    op = Greater(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def greater_equal(left, right, name=None):
     """
@@ -180,7 +193,10 @@ def greater_equal(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import GreaterEqual
-    return GreaterEqual(left, right, name=name)
+    op = GreaterEqual(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def not_equal(left, right, name=None):
     """
@@ -201,7 +217,10 @@ def not_equal(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import NotEqual
-    return NotEqual(left, right, name=name)
+    op = NotEqual(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def less_equal(left, right, name=None):
     """
@@ -222,7 +241,10 @@ def less_equal(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import LessEqual
-    return LessEqual(left, right, name=name)
+    op = LessEqual(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 ################################################################################
 # linear ops
@@ -249,8 +271,10 @@ def plus(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Plus
-    return Plus(left, right, name=name)
-
+    op = Plus(left, right, name=name)
+    wrap_numpy_arrays(op)
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def minus(left, right, name=None):
     """
@@ -275,8 +299,10 @@ def minus(left, right, name=None):
     """
 
     from cntk.ops.cntk2 import Minus
-    return Minus(left, right, name=name)
-
+    op = Minus(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def element_times(left, right, name=None):
     """
@@ -300,8 +326,10 @@ def element_times(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementTimes
-    return ElementTimes(left, right, name=name)
-
+    op = ElementTimes(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def element_divide(left, right, name=None):
     """
@@ -328,16 +356,16 @@ def element_divide(left, right, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import ElementDivide
-    return ElementDivide(left, right, name=name)
-
+    op = ElementDivide(left, right, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = max(op._.rank, op.y.rank)
+    return op
 
 def times(left, right, output_rank=1, name=None):
     """
     The output of this operation is the matrix product of the two input matrices.
-    It supports broadcasting. In case of scalars its backward pass to left propagates right
-    times the received gradient and vice versa.
-    The operator (@) has been overloaded and can equally be used instead of times().
-    However, it is supported in python versions 3.5 or above.
+    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
@@ -349,17 +377,13 @@ def times(left, right, output_rank=1, name=None):
         
         >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
         [array([[[[[  4.,   5.],
-          [  6.,   7.]],
-
-         [[ 12.,  17.],
-          [ 22.,  27.]]],
-
-
-        [[[ 20.,  29.],
-          [ 38.,  47.]],
-
-         [[ 28.,  41.],
-          [ 54.,  67.]]]]])]
+                   [  6.,   7.]],
+                  [[ 12.,  17.],
+                   [ 22.,  27.]]],
+                 [[[ 20.,  29.],
+                   [ 38.,  47.]],
+                  [[ 28.,  41.],
+                   [ 54.,  67.]]]]])]
 
     Args:
         left: left side matrix or tensor
@@ -368,11 +392,17 @@ def times(left, right, output_rank=1, name=None):
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         name: the name of the node in the network            
+
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk.ops.cntk2 import Times
-    return Times(left, right, outputRank=output_rank, name=name)
+    from cntk.ops.cntk2 import Times   
+    # CNTK uses column vectors and column major representation, thus we reverse
+    # params    
+    op = Times(right, left, outputRank=output_rank, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op.x.rank + op.y.rank - 2    
+    return op
 
 def identity(x, name=None):
     """
@@ -390,7 +420,10 @@ def identity(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Identity
-    return Identity(x, name=name)
+    op = Identity(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank   
+    return op
 
 ################################################################################
 # non_diff ops
@@ -424,8 +457,10 @@ def floor(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Floor
-    return Floor(arg, name = name)
-
+    op = Floor(arg, name = name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
+    return op
 
 def ceil(arg, name=None):
     """
@@ -447,8 +482,10 @@ def ceil(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Ceil
-    return Ceil(arg, name = name)
-
+    op = Ceil(arg, name = name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
+    return op
 
 def round(arg, name=None):
     """
@@ -480,8 +517,10 @@ def round(arg, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Round
-    return Round(arg, name = name)
-
+    op = Round(arg, name = name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
+    return op
 
 ################################################################################
 # non_linear and nn ops
@@ -515,8 +554,10 @@ def clip(x, min_value, max_value, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import Clip
-    return Clip(x, min_value, max_value, name = name)
-
+    op = Clip(x, min_value, max_value, name = name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank  
+    return op
 
 def relu(x, name=None):
     """
@@ -535,8 +576,10 @@ def relu(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Relu
-    return Relu(x, name=name)
-
+    op = Relu(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def sigmoid(x, name=None):
     """
@@ -556,8 +599,10 @@ def sigmoid(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Sigmoid
-    return Sigmoid(x, name=name)
-
+    op = Sigmoid(x, name=name)
+    wrap_numpy_arrays(op)        
+    op.rank = op._.rank
+    return op
 
 def tanh(x, name=None):
     """
@@ -576,8 +621,10 @@ def tanh(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Tanh
-    return Tanh(x, name=name)
-
+    op = Tanh(x, name=name)
+    wrap_numpy_arrays(op)        
+    op.rank = op._.rank
+    return op
 
 def softmax(x, name=None):
     """
@@ -601,30 +648,10 @@ def softmax(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Softmax
-    return Softmax(x)
-
-# unittests might require training and testing at the same time ? which 
-# sounds more like end2end test ?
-def dropout(x, name=None):
-    """
-    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
-    that are set to zero are randomly chosen. This is commonly used to prevent 
-    overfitting during the training process.
-
-    The output tensor has the same shape as `x`, but with `dropoutRate` of the
-    elements set to zero (droped out).
-    
-    
-    Examples:
-        TBA
-            
-    Args:        
-        x: source tensor
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    """    
-    from cntk.ops.cntk2 import Dropout
-    return Dropout(x, name = name)
+    op = Softmax(x)
+    wrap_numpy_arrays(op)        
+    op.rank = op._.rank
+    return op
 
 def exp(x, name=None):
     """
@@ -642,7 +669,10 @@ def exp(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Exp
-    return Exp(x, name=name)
+    op = Exp(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def log(x, name=None):
     """
@@ -664,7 +694,10 @@ def log(x, name=None):
         platforms. This will be changed to return `NaN` and `-inf`.
     """
     from cntk.ops.cntk2 import Log
-    return Log(x, name=name)
+    op = Log(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def sqrt(x, name=None):
     """
@@ -683,10 +716,13 @@ def sqrt(x, name=None):
         
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to 
-        return NaN
+        retrun NaN
     """
     from cntk.ops.cntk2 import Sqrt
-    return Sqrt(x, name=name)
+    op = Sqrt(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def square(x, name=None):
     """
@@ -702,7 +738,10 @@ def square(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Square
-    return Square(x, name=name)
+    op = Square(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def abs(x, name=None):
     """
@@ -720,12 +759,14 @@ def abs(x, name=None):
         :class:`cntk.graph.ComputationNode`
     """
     from cntk.ops.cntk2 import Abs
-    return Abs(x, name=name)
-
+    op = Abs(x, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
 
 def cond(flag, value_if_true, value_if_false, name=None):
     """
-    Return either value_if_true or value_if_false based on the value of flag.
+    return either value_if_true or value_if_false based on the value of flag.
     If flag != 0 value_if_true is returned, otherwise value_if_false.
     Behaves analogously to numpy.where(...).
 
@@ -743,14 +784,16 @@ def cond(flag, value_if_true, value_if_false, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import If
-    return If(flag, value_if_true, value_if_false, name = name)
-
+    op = If(flag, value_if_true, value_if_false, name = name)
+    wrap_numpy_arrays(op)        
+    op.rank = max(op.cond.rank,op.thenVal.rank,op.elseVal.rank)
+    return op
     
 ################################################################################
 # recurrent ops
 ################################################################################
 
-def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
+def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
     This function returns the future value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -770,19 +813,21 @@ def future_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None)
                 [  0.1,   0.1,   0.1,   0.1]])]
     
     Args:        
-        dims: dimensions of the input `x`
+        shape: dimensions of the input `x`
         x: the tensor from which the future value is obtained
         time_step: the number of time steps to look into the future (default 1)
-        default_hidden_activation: the default value to use when no future value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no future value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     
     from cntk.ops.cntk1 import FutureValue
-    return FutureValue(dims, x, time_step, default_hidden_activation, name = name)
+    op = FutureValue(shape, x, time_step, default_hidden_activation, name = name)
+    wrap_numpy_arrays(op)            
+    op.rank = get_rank(shape)
+    return op
     
-def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
+def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=None):
     """
     This function returns the past value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -802,18 +847,19 @@ def past_value(dims, x, time_step=1, default_hidden_activation=0.1, name=None):
                 [ 5. ,  6. ,  7. ,  8. ]])]
     
     Args:        
-        dims: dimensions of the input `x`
+        shape: dimensions of the input `x`
         x: the tensor from which the past value is obtained
         time_step: the number of time steps to look into the past (default 1)
-        default_hidden_activation: the default value to use when no past value 
-        is available (default 0.1)
+        default_hidden_activation: the default value to use when no past value is available (default 0.1)
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
     
     from cntk.ops.cntk1 import PastValue
-    return PastValue(dims, x, time_step, default_hidden_activation, name = name)
-
+    op = PastValue(shape, x, time_step, default_hidden_activation, name = name)
+    wrap_numpy_arrays(op)  
+    op.rank = get_rank(shape)
+    return op
 
 ################################################################################
 # reshaping ops
@@ -842,17 +888,18 @@ def reshape(x, shape, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk1 import NewReshape
-    return NewReshape(x, shape, 0, 0, name = name)
+    if not np.isscalar(shape):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))    
+    op = NewReshape(x, shape, 0, 0, name = name)
+    wrap_numpy_arrays(op)            
+    op.rank = get_rank(shape)
+    return op
     
 def transpose_dimensions(x, axis1, axis2, name=None):
     """
     Reverses two axes of the tensor. The output tensor has the same data but with
-    axis1 and axis2 swaped.
-    
-    The backward pass propagates the received gradient for the output-shape to the input shape.
-    
-    Note:
-        axes are zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+    axis1 and axis2 swapped.    
         
     Examples:
         >>> C.eval(C.transpose_dimensions([[0,1],[2,3],[4,5]], 1,2))
@@ -867,16 +914,18 @@ def transpose_dimensions(x, axis1, axis2, name=None):
         :class:`cntk.graph.ComputationNode`
     """    
     from cntk.ops.cntk2 import TransposeDimensions
-    cntk_axis1 = axis1+1
-    cntk_axis2 = axis2+1
-    return TransposeDimensions(x, cntk_axis1, cntk_axis2, name = name)
+    op = TransposeDimensions(x, axis1, axis2, name = name)    
+    wrap_numpy_arrays(op)            
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    op.axis1 = abs(axis1) if axis1<0 else op._.rank - axis1
+    op.axis2 = abs(axis2) if axis2<0 else op._.rank - axis2    
+    op.rank = op._.rank
+    return op
 
 def slice(x, begin_index, end_index, axis=0, name=None): 
     '''
-    Slice the input along an axis.
-
-    Note:
-        `axis` is zero-based as in Numpy, in contrast to CNTK, where 1 is the first axis. 
+    Slice the input along an axis.    
 
     Examples:
         >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
@@ -901,8 +950,10 @@ def slice(x, begin_index, end_index, axis=0, name=None):
                  [ 4.,  5.]]])]
 
     Args:
-        arg: input tensor
-        axis (int): axis along which `begin_index` and `end_index` will be used to slice the data. 
+        x: input tensor
+        begin_index (int): the index along axis where the slicing starts
+        end_index (int): the index along axis where the slicing ends
+        axis (int or str): axis along which `begin_index` and `end_index` will be used. If axis is of type `str` then the time axis will be used.
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -911,12 +962,85 @@ def slice(x, begin_index, end_index, axis=0, name=None):
         :class:`cntk.graph.ComputationNode`
     '''
     from cntk.ops.cntk2 import Slice
-    cntk_axis = axis+1
-    return Slice(x, begin_index, end_index, cntk_axis, name=name)
+    op = Slice(x, begin_index, end_index, axis, name=name)
+    wrap_numpy_arrays(op)                
+    op.rank = op._.rank
+    
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    if isinstance(axis, str):
+        op.axis = -1 # time axis
+    else:
+        op.axis = abs(axis) if axis<0 else op._.rank - axis
+        
+    return op
+    
+def splice(inputs, axis=0, name=None): 
+    '''
+    Concatenate the input tensors along an axis.    
+
+    Examples:
+        >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data1 = np.asarray([[[1, 2],
+        ...                     [4, 5]]])
+        >>> x = C.input_numpy(data1)
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data2 = np.asarray([[[10, 20],
+        ...                     [30, 40],
+        ...                     [50, 60]]])
+        >>> y = C.input_numpy(data2)
+        >>> # splice both inputs on axis=0 returns a 5x2 matrix
+        >>> C.eval(C.splice([x,y], 0))
+        [array([[[1, 2],
+                 [4, 5],
+                 [10, 20],
+                 [30, 40],
+                 [50, 60]]])]        
+
+    Args:
+        inputs (list): list of input tensors
+        axis (int): axis along which the concatenation will be performed
+
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+    from cntk.ops.cntk2 import Splice
+    op = Splice(inputs, axis, name=name)
+    wrap_numpy_arrays(op)            
+    op.rank = op._[0].rank
+
+    #cntk uses column major, thus it will read the indices of data passed from 
+    # python in reverse
+    op.axis = abs(axis) if axis<0 else op._[0].rank - axis
+
+    # Splice is implemented using BrainScript code that results in nested nodes,
+    # if it gets tag='output' the file name might differ depending on the execution
+    # path in BS. Thus we wrap it by Identity to have a fixed name.
+    return identity(op) 
 
 ################################################################################
 # training ops
 ################################################################################
+ 
+def dropout(x, name=None):
+    """
+    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
+    that are set to zero are randomly chosen. This is commonly used to prevent 
+    overfitting during the training process.
+
+    The output tensor has the same shape as `x`, but with `dropoutRate` of the
+    elements set to zero (droped out).
+            
+    Args:        
+        x: source tensor
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """    
+    from cntk.ops.cntk2 import Dropout
+    op = Dropout(x, name = name)
+    wrap_numpy_arrays(op)            
+    op.rank = op._.rank
+    return op
 
 ################################################################################
 # variables_and_parameters ops
@@ -939,7 +1063,7 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from .. import utils
+    from .. import utils    
     if utils.is_tensor(value) or utils.is_tensor_list(value):
         value = np.asarray(value)
         if dynamic_axis:
@@ -950,15 +1074,16 @@ def input_numpy(value, alias=None, dynamic_axis='', name=None):
         if len(cntk_shape) == 0:
             raise ValueError('value should be an array of input samples')
             
-        node = input(cntk_shape, dynamic_axis=dynamic_axis)
+        op = input(cntk_shape, dynamic_axis=dynamic_axis, name=name)
         from ..reader import LazyInputReader
-        node.reader = LazyInputReader(
+        op.reader = LazyInputReader(
             value,
             input_alias=alias,
             dynamic_axis=dynamic_axis,
-            node=node)
-
-        return node
+            node=op)
+        
+        return op
+       
     else:
         raise ValueError('value type is not supported: %s' % type(value))
 
@@ -977,8 +1102,87 @@ def input(shape, dynamic_axis='', name=None):
     """
 
     from cntk.ops.cntk1 import Input
-    return Input(shape, dynamicAxis=dynamic_axis, name=name)
+    if not np.isscalar(shape):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))
+    op = Input(shape, dynamicAxis=dynamic_axis, name=name)
+    
+    op.rank = get_rank(shape)
+    return op
 
+def sparse_input_numpy(indices, values, shape, alias=None, dynamic_axis='', name=None):
+    '''
+    Creates an input node from a sparse input tensors described by a list of indices
+    and a list of values having a shape. The tensors represent one
+    sample and can have sequences of different lengths. 
+
+    Example:
+
+        >>>
+        # Creating a dense matrix 
+        # [[ 10, 20]
+        #  [ 30, 40]]
+        # Note that we need to specify a batch of samples of sequences (all
+        # having sequence length 1 in this example).
+        >>> dense = C.input_numpy([[[10,20,30], 
+                                    [40,50,60]]])
+        # Creating a sparse array 
+        # [0, 0.1, 0]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[ 2.,  5.]])]
+        #  Creating a sparse matrix
+        # [[0  ], 
+           [0.1],
+           [0  ]]
+        >>> sparse = C.sparse_input_numpy(indices=[(1,)], values=[(0.1,)], shape=(3,1))
+        >>> C.eval(C.times(dense, sparse))
+        [array([[[ 2.],
+                 [ 5.]]])]
+
+    Args:
+        indices (list): list (batch) of tuples (indices), which are positions of the values after flattening the tensor with `order='F'`
+        values (list): list (batch) of tuples of values corresponding to indices
+        shape (tuple): shape of the input
+        alias (str): alias to be used in the data file
+        dynamic_axis (str): whether the tensor has already the data
+        alias (str): optional the alias to be used when serializing the data into an intermediate file
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    '''
+
+    op = sparse_input(shape, dynamic_axis=dynamic_axis, name=name)
+    from ..reader import LazySparseInputReader
+    op.reader = LazySparseInputReader(
+        indices,
+        values,
+        shape,
+        input_alias=alias,
+        dynamic_axis=dynamic_axis,
+        node=op)
+    
+    return op
+
+def sparse_input(shape, dynamic_axis='', name=None):
+    """
+    It creates a sparse input node. The graph requires a separate reader that will be
+    fed to this input.
+
+    Args:
+        shape (tuple): the shape of the input tensor
+        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import SparseInput
+    if not np.isscalar(shape):
+        # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))
+    op = SparseInput(shape, dynamicAxis=dynamic_axis, name=name)
+    op.rank = get_rank(shape)
+    return op
 
 def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
         init_from_file_path=None, name=None):
@@ -997,19 +1201,26 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
     """
 
     from . import cntk1
-
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
 
+        if shape is not None and not np.isscalar(shape):
+            # cntk uses column major, thus we reverse the shape    
+            shape = tuple(reversed(shape))
+
         if init_from_file_path:
-            return cntk1.ParameterTensor(shape, init='fromFile',
+            op = cntk1.ParameterTensor(shape, init='fromFile',
                     learningRateMultiplier=learning_rate_multiplier,
                     initFromFilePath=init_from_file_path, name=name)
         else:
-            return cntk1.ParameterTensor(shape, 
+            op = cntk1.ParameterTensor(shape, 
                     learningRateMultiplier=learning_rate_multiplier,
                     name=name)
+            
+        op.rank = get_rank(shape)
+        return op
+        
     """
     To be as generic as possible, we 
      - flatten the data 
@@ -1030,20 +1241,27 @@ def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
         raise ValueError('only dense data is supported')
 
     param_shape = value.shape if value.shape else (1,)
+    
+    # cntk uses column major, thus we reverse the shape    
+    param_shape = tuple(reversed(param_shape))
     literal_shape = (param_shape[0], np.multiply.reduce(param_shape[1:]))
 
-    literal_array = np.reshape(value, literal_shape, order = 'F')
+    # cntk expects data in reverse order, thus we transpose first 
+    transposed_val = np.transpose(value)
+    literal_array = np.reshape(transposed_val, literal_shape, order = 'F')    
 
     from io import BytesIO
     s = BytesIO()
     np.savetxt(s, literal_array, '%.4f')
 
-    return cntk1.ParameterTensor(
+    op = cntk1.ParameterTensor(
         dims=param_shape,
         learningRateMultiplier=learning_rate_multiplier,
         init='fromLiteral',
         initFromLiteral=s.getvalue().decode())
 
+    op.rank = get_rank(param_shape)
+    return op
 
 def constant(value, name=None):
     """
@@ -1056,8 +1274,8 @@ def constant(value, name=None):
         :class:`cntk.graph.ComputationNode`
     """
 
-    return parameter(value=value, learning_rate_multiplier=0.0, name=name)
-
+    op = parameter(value=value, learning_rate_multiplier=0.0, name=name)    
+    return op
 
 def dynamic_axis(name=None):
     """
@@ -1075,7 +1293,9 @@ def dynamic_axis(name=None):
     """
     
     from cntk.ops.cntk2 import DynamicAxis
-    return DynamicAxis(name=name)
+    op = DynamicAxis(name=name)
+    op.rank = None
+    return op
 
 
 def reconcile_dynamic_axis(data_input, layout_input, name=None):
@@ -1096,5 +1316,7 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     """
     
     from cntk.ops.cntk1 import ReconcileDynamicAxis
-    return ReconcileDynamicAxis(data_input, layout_input, name=name)
+    op = ReconcileDynamicAxis(data_input, layout_input, name=name)
+    op.rank = data_input.rank
+    return op
 

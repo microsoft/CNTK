@@ -329,46 +329,46 @@ protected:
     CPUSPARSE_INDEX_TYPE* GetCompIndex() const { return m_compIndex; }
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_compIndex = parray; }
 
-	void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
+    void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
     {
         m_externalBuffer           = false;
         m_format                   = matrixFormat;
         m_computeDevice            = computeDevice;
-		m_numRows                  = 0;
-		m_numCols                  = 0;
-		m_pArray                   = nullptr;
-		m_elemSizeAllocated        = 0;
-		m_totalBufferSizeAllocated = 0;
-		m_blockSize                = 0; // block size
-		m_rowToId                  = nullptr; // the id showing the order row number is observed in the nnz values.
-		m_tempHostBuffer           = nullptr; // used to copy values.
-		m_tempHostBufferSize       = 0;
-		m_colIdx                   = 0; // used to SetValue()
-		m_compIndexSize            = 0;
-		m_nzValues                 = nullptr;
-		m_unCompIndex              = nullptr; // row/col ids in CSC/CSR format
-		m_compIndex                = nullptr; // begin ids of col/row in CSC/CSR format
-		m_blockIds                 = nullptr; // block ids
-		m_blockIdShift             = 0; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
+        m_numRows                  = 0;
+        m_numCols                  = 0;
+        m_pArray                   = nullptr;
+        m_elemSizeAllocated        = 0;
+        m_totalBufferSizeAllocated = 0;
+        m_blockSize                = 0; // block size
+        m_rowToId                  = nullptr; // the id showing the order row number is observed in the nnz values.
+        m_tempHostBuffer           = nullptr; // used to copy values.
+        m_tempHostBufferSize       = 0;
+        m_colIdx                   = 0; // used to SetValue()
+        m_compIndexSize            = 0;
+        m_nzValues                 = nullptr;
+        m_unCompIndex              = nullptr; // row/col ids in CSC/CSR format
+        m_compIndex                = nullptr; // begin ids of col/row in CSC/CSR format
+        m_blockIds                 = nullptr; // block ids
+        m_blockIdShift             = 0; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
     }
 
 protected:
-	// **************************
-	// Variables requried by all matrices
-	// **************************
+    // **************************
+    // Variables requried by all matrices
+    // **************************
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
     bool m_externalBuffer; // is the buffer used by this matrix,
 
-	// m_numRows and m_numCols should be removed
+    // m_numRows and m_numCols should be removed
     size_t m_numRows;
     size_t m_numCols;
     size_t m_elemSizeAllocated;
     ElemType* m_pArray;
 
-	// **************************
-	// GPUSparseMatrix variables
-	// **************************
+    // **************************
+    // GPUSparseMatrix variables
+    // **************************
 
     size_t m_totalBufferSizeAllocated;
 
@@ -379,9 +379,9 @@ protected:
     mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
 
-	// **************************
-	// CPUSparseMatrix variables
-	// **************************
+    // **************************
+    // CPUSparseMatrix variables
+    // **************************
 
     int m_colIdx; // used to SetValue()
     size_t m_compIndexSize;
@@ -543,10 +543,10 @@ protected:
         m_sliceViewOffset   = 0;
         m_sob               = nullptr;
     }
-	void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
+    void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
     {
         ZeroValues();
-		m_sob = make_shared<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+        m_sob = make_shared<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
     }
 
 protected:
@@ -570,7 +570,7 @@ protected:
     // TODO: implement m_colStride
     size_t m_colStride;
 
-	// Storage OBject containing the underlying data used by this matrix
+    // Storage OBject containing the underlying data used by this matrix
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;
 };
 

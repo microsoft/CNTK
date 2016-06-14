@@ -195,11 +195,14 @@ class ComputationNode(object):
         elif type(p_value) in [list, tuple]:
             # FIXME here we assume that all dims are of TensorShape
 
-            if p_name in ['shape', 'dims', 'inputs', 'z']:
+            if p_name in ['_', 'shape', 'dims', 'inputs', 'z']:
                 p_value = _tuple_to_cntk_shape(p_value)
             else:
-                raise ValueError('tuple or list initialization is only allowed for' +
-                                 ' parameters shape, dims, inputs, and z, but not "%s"' % p_name)
+                msg = 'tuple or list initialization is only allowed for' +\
+                      ' parameters shape, dims, inputs, z and _, but' +\
+                      ' not "%s". If this is an input or' % p_name + \
+                      ' parameter, please use parameter() or input_numpy().'
+                raise ValueError(msg)
         else:
             p_value = str(p_value)
 
@@ -229,11 +232,11 @@ class ComputationNode(object):
             for p_name in self.params:
                 p_value = self.__dict__[p_name]
                 if hasattr(p_value, '_to_config') and p_name or \
-                        p_name == 'inputs':
+                        p_name in ['inputs', '_']:
                         # TODO this is under the assumption that RowStack's
-                        # inputs parameter gets a tuple of inputs
+                        # or Splice's inputs parameter gets a tuple of inputs
 
-                    if p_name == 'inputs' and isinstance(self, RowStack):
+                    if p_name in ['inputs', '_'] and self.op_name in ['RowStack', 'CNTK2.Splice']:
                         # Special treatment for special operator.
                         # Used like RowStack(v0:v1:v2)
                         inputs_param = p_value

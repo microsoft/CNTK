@@ -75,7 +75,7 @@ namespace CNTK
             : m_valueType(GetValueType<T>())
         {
             static_assert(std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>::value,
+                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
                 "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -270,6 +270,30 @@ namespace CNTK
             return -1;
         else if (device.Type() == DeviceType::GPU)
             return device.Id();
+        else
+            NOT_IMPLEMENTED;
+    }
+
+    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKMatrixFormat(StorageFormat storageFormat)
+    {
+        if (storageFormat == StorageFormat::Dense)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense;
+        else if (storageFormat == StorageFormat::SparseCSC)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC;
+        else if (storageFormat == StorageFormat::SparseBlockCol)
+            return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseBlockCol;
+        else
+            NOT_IMPLEMENTED;
+    }
+
+    inline StorageFormat AsStorageFormat(Microsoft::MSR::CNTK::MatrixFormat matrixFormat)
+    {
+        if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense)
+            return StorageFormat::Dense;
+        else if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC)
+            return StorageFormat::SparseCSC;
+        else if (matrixFormat == Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseBlockCol)
+            return StorageFormat::SparseBlockCol;
         else
             NOT_IMPLEMENTED;
     }

@@ -50,7 +50,7 @@ namespace CNTK
     /// Get the 'DataType' corresponding to the ElementType template type argument.
     ///
     template <typename ElementType>
-    inline DataType GetDataType()
+    inline DataType AsDataType()
     {
         if (std::is_same<ElementType, float>())
             return DataType::Float;
@@ -66,8 +66,14 @@ namespace CNTK
     enum class StorageFormat
     {
         Dense,
-        // TODO: SParseCSC, SparseCSR, SparseBlockCol
+        SparseCSC,
+        SparseBlockCol,
     };
+
+    inline bool IsSparseStorageFormat(StorageFormat storageFormat)
+    {
+        return (storageFormat != StorageFormat::Dense);
+    }
 
     ///
     /// Enumeration type denoting the type of a compute device.
@@ -207,9 +213,9 @@ namespace CNTK
         ///
         /// Creates and returns a new NDShape instance with the same dimensions as 'this' shape's specified axis range.
         ///
-        NDShape SubShape(size_t startAxisId = 0, size_t endAxisIdExclusive = UINT_MAX) const
+        NDShape SubShape(size_t startAxisId = 0, size_t endAxisIdExclusive = SIZE_MAX) const
         {
-            endAxisIdExclusive = (endAxisIdExclusive == UINT_MAX) ? NumAxes() : endAxisIdExclusive;
+            endAxisIdExclusive = (endAxisIdExclusive == SIZE_MAX) ? NumAxes() : endAxisIdExclusive;
             if ((endAxisIdExclusive < startAxisId) || (endAxisIdExclusive > NumAxes()))
                 InvalidArgument("NDShape::SubShape : The specified endAxisId cannot exceed the number of axes of 'this' NDShape and must be >= than the specified startAxisId");
 
@@ -280,6 +286,8 @@ namespace CNTK
 #pragma warning(push)
 #pragma warning(disable : 4251 4275)
 
+    typedef int SparseIndexType;
+
     ///
     /// Denotes a multi-dimensional writable or read-only array of elemental values.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDArrayView instance.
@@ -299,10 +307,22 @@ namespace CNTK
         NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
+        /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
+        // with the specified Sparse CSC format data.
+        ///
+        template <typename ElementType>
+        NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
+        ///
+        NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device);
+
+        ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified 'device'.
         ///
-        NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device, bool readOnly = false)
-            : NDArrayView(dataType, viewShape, nullptr, 0, device, readOnly)
+        NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device)
+            : NDArrayView(dataType, StorageFormat::Dense, viewShape, device)
         {}
 
         ///
@@ -312,7 +332,7 @@ namespace CNTK
         ///
         template <typename ElementType>
         NDArrayView(const NDShape& viewShape, ElementType* dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
-            : NDArrayView(GetDataType<ElementType>(), viewShape, dataBuffer, numBufferElements * sizeof(ElementType), device, readOnly)
+            : NDArrayView(AsDataType<ElementType>(), viewShape, dataBuffer, numBufferElements * sizeof(ElementType), device, readOnly)
         {}
 
         ///
@@ -331,7 +351,7 @@ namespace CNTK
         ///
         template <typename ElementType>
         explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
-            : NDArrayView(GetDataType<ElementType>(), viewShape, nullptr, 0, device, false)
+            : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
             m_isReadOnly = readOnly;
@@ -366,7 +386,7 @@ namespace CNTK
         ///
         /// Returns the data type of 'this' view's contents.
         ///
-        DataType DataType() const
+        DataType GetDataType() const
         {
             return m_dataType;
         }
@@ -374,7 +394,7 @@ namespace CNTK
         ///
         /// Returns the storage format of 'this' view.
         ///
-        StorageFormat StorageFormat() const
+        StorageFormat GetStorageFormat() const
         {
             return m_storageFormat;
         }
@@ -385,6 +405,14 @@ namespace CNTK
         NDShape Shape() const
         {
             return m_viewShape;
+        }
+
+        ///
+        /// Returns a boolean indicating if 'this' view contains data in sparse storage format.
+        ///
+        bool IsSparse() const
+        {
+            return (GetStorageFormat() != StorageFormat::Dense);
         }
 
         ///
@@ -439,7 +467,7 @@ namespace CNTK
         NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(size_t rowColSplitPoint) const;
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
@@ -570,7 +598,14 @@ namespace CNTK
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        static ValuePtr Create(const NDShape& sampleShape, const std::vector<const std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false);
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences of one hot vectors
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        template <typename ElementType>
+        static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Destruct 'this' Value object.
@@ -807,7 +842,15 @@ namespace CNTK
         /// Create an 'Input' Variable.
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, name)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, false, name)
+        {
+        }
+
+        ///
+        /// Create an 'Input' Variable denoting sparse data.
+        ///
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name = L"")
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
 
@@ -815,7 +858,15 @@ namespace CNTK
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, name)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, false, name)
+        {
+        }
+
+        ///
+        /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
+        ///
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
 
@@ -823,7 +874,7 @@ namespace CNTK
         /// Create an 'Output' variable
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, name)
+            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, false, name)
         {
         }
 
@@ -855,6 +906,14 @@ namespace CNTK
         VariableKind Kind() const
         {
             return m_dataFields->m_varKind;
+        }
+
+        ///
+        /// Returns a boolean value indicating if 'this' variable denotes sparse data
+        ///
+        bool IsSparseInput() const
+        {
+            return (Kind() == VariableKind::Input) && (m_dataFields->m_isSparse);
         }
 
         ///
@@ -901,18 +960,14 @@ namespace CNTK
         ///
         /// Returns the DataType of the data that 'this' Variable symbolically represents
         ///
-        DataType DataType() const
+        DataType GetDataType() const
         {
             return m_dataFields->m_dataType;
         }
 
-#ifdef _WIN32
-        // BUGBUG: Add a default constructor to workaround a bug in VS2013 std::vector implementation that 
-        // incorrectly requires its elements to be default constructible
         Variable()
         {
         }
-#endif
 
         ///
         /// Returns a boolean value indicating if gradient computation is enabled for this variable.
@@ -924,7 +979,7 @@ namespace CNTK
 
     protected:
         Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, name)
+            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, false, name)
         {
         }
 
@@ -935,8 +990,8 @@ namespace CNTK
         }
 
     private:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
-            : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
+        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
+            : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
         {
         }
 
@@ -952,9 +1007,10 @@ namespace CNTK
             bool m_needsGradient;
             wchar_t* m_name;
             _Internal::_SimpleVector<Axis> m_dynamicAxes;
+            bool m_isSparse;
 
-            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const wchar_t* name)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_name(nullptr)
+            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_isSparse(isSparse), m_name(nullptr)
             {
                 if (name != nullptr)
                     m_name = CopyString(name);
@@ -997,7 +1053,7 @@ namespace CNTK
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Parameter, value->DataType(), value->DeepClone(), true, {}, name)
+            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(), true, {}, name)
         {
         }
 
@@ -1008,7 +1064,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), true, {}, name)
+            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), new NDArrayView(initValue, shape, device), true, {}, name)
         {
         }
 
@@ -1046,7 +1102,7 @@ namespace CNTK
         /// Contruct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Constant, value->DataType(), value->DeepClone(true), false, {}, name)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(true), false, {}, name)
         {
         }
 
@@ -1057,7 +1113,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, GetDataType<ElemType>(), new NDArrayView(initValue, shape, device), false, {}, name)
+            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), new NDArrayView(initValue, shape, device), false, {}, name)
         {
         }
 
@@ -1118,6 +1174,14 @@ namespace CNTK
 }
 
 namespace std {
+    template <> struct hash<CNTK::Axis>
+    {
+        size_t operator()(const CNTK::Axis& x) const
+        {
+            return std::hash<std::wstring>()(x.Name());
+        }
+    };
+    
     template <> struct hash<CNTK::Variable>
     {
         size_t operator()(const CNTK::Variable& x) const
@@ -1289,7 +1353,7 @@ namespace CNTK
         ///
         FunctionPtr RootFunction() const
         {
-            return (m_rootFunction == nullptr) ? const_cast<Function*>(this) : m_rootFunction;
+            return (m_rootFunction == nullptr) ? const_cast<Function*>(this) : m_rootFunction.GetPtr();
         }
 
         ///

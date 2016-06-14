@@ -60,7 +60,7 @@ endif
 CXX = mpic++
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
 COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
 CPPFLAGS:= 
@@ -247,7 +247,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
-    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -309,7 +309,96 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
+# CNTKLibrary
 ########################################
+
+CNTK_COMMON_SRC =\
+	$(SOURCEDIR)/Common/BestGpu.cpp \
+	$(SOURCEDIR)/Common/MPIWrapper.cpp \
+
+COMPUTATION_NETWORK_LIB_SRC =\
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
+
+SEQUENCE_TRAINING_LIB_SRC =\
+	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
+	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
+
+ifdef CUDA_PATH
+SEQUENCE_TRAINING_LIB_SRC +=\
+	$(SOURCEDIR)/Math/cudalatticeops.cu \
+	$(SOURCEDIR)/Math/cudalattice.cpp \
+	$(SOURCEDIR)/Math/cudalib.cpp \
+
+else
+SEQUENCE_TRAINING_LIB_SRC +=\
+	$(SOURCEDIR)/SequenceTrainingLib/latticeNoGPU.cpp \
+
+endif
+
+CNTKLIBRARY_SRC =\
+	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
+
+CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
+CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
+
+CNTKLIBRARY_VERSION=2.0
+CNTKLIBRARY:=cntklibrary-$(CNTKLIBRARY_VERSION)
+
+CNTKLIBRARY_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_SRC)))
+
+CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
+ALL+=$(CNTKLIBRARY_LIB)
+SRC+=$(CNTKLIBRARY_SRC)
+
+RPATH=-Wl,-rpath,
+
+$(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building output for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
+
+# CNTKLibrary tests
+########################################
+
+CNTKLIBRARY_TESTS_SRC =\
+	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
+	Tests/UnitTests/V2LibraryTests/Main.cpp \
+	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
+	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
+	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
+
+CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
+CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
+
+ALL+=$(CNTKLIBRARY_TESTS)
+SRC+=$(CNTKLIBRARY_TESTS_SRC)
+
+RPATH=-Wl,-rpath,
+
+$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building output for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+
 # BinaryReader plugin
 ########################################
 
@@ -368,25 +457,25 @@ $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
-# ExperimentalHTKMLFReader plugin
+# HTKDeserializers plugin
 ########################################
 
-EXPERIMENTALHTKMLFREADER_SRC =\
+HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
 
-EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 
-EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
-ALL+=$(EXPERIMENTALHTKMLFREADER)
-SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
+ALL+=$(HTKDESERIALIZERS)
+SRC+=$(HTKDESERIALIZERS_SRC)
 
-$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -594,17 +683,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/CNTK.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
 	$(SOURCEDIR)/SGDLib/Profiler.cpp \
 	$(SOURCEDIR)/SGDLib/SGD.cpp \
 	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
@@ -615,26 +693,14 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
-	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
-	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
-	$(SOURCEDIR)/Common/BestGpu.cpp \
-	$(SOURCEDIR)/Common/MPIWrapper.cpp \
 
 
-ifdef CUDA_PATH
-CNTK_SRC +=\
-	$(SOURCEDIR)/Math/cudalatticeops.cu \
-	$(SOURCEDIR)/Math/cudalattice.cpp \
-	$(SOURCEDIR)/Math/cudalib.cpp \
-
-else
-CNTK_SRC +=\
-	$(SOURCEDIR)/SequenceTrainingLib/latticeNoGPU.cpp \
-
-endif
+CNTK_SRC+=$(CNTK_COMMON_SRC)
+CNTK_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
 CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC)))
 

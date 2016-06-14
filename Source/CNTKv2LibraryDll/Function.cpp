@@ -69,7 +69,11 @@ namespace CNTK
         else if (variable.Kind() == VariableKind::Input)
         {
             // TODO: Specify dynamic axis
-            computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+            if (variable.IsSparseInput())
+                computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+            else
+                computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+
             if (variable.NeedsGradient())
             {
                 // Set a dummy learning rate multiplier to force gradient computation for the input computation node since by default
@@ -80,7 +84,7 @@ namespace CNTK
         else
         {
             assert(variable.Kind() == VariableKind::Output);
-            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap)->As<ComputationNode<ElementType>>()->shared_from_this();
+            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap)->template As<ComputationNode<ElementType>>()->shared_from_this();
         }
 
         variableToNodeMap[variable] = computationNodePtr;
@@ -102,13 +106,13 @@ namespace CNTK
             // Create the nodes corresponding to the inputs
             auto functionInputs = primitiveFunction->Inputs();
             auto input0BaseNodePtr = GetNode(functionInputs[0], network, builder, variableToNodeMap, isVariableRootMap);
-            std::shared_ptr<ComputationNode<ElementType>> input0Node = (input0BaseNodePtr != nullptr) ? input0BaseNodePtr->As<ComputationNode<ElementType>>()->shared_from_this() : nullptr;
+            std::shared_ptr<ComputationNode<ElementType>> input0Node = (input0BaseNodePtr != nullptr) ? input0BaseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr;
 
             std::shared_ptr<ComputationNode<ElementType>> input1Node;
             if (functionInputs.size() > 1)
             {
                 auto input1BaseNodePtr = GetNode(functionInputs[1], network, builder, variableToNodeMap, isVariableRootMap);
-                input1Node = (input1BaseNodePtr != nullptr) ? input1BaseNodePtr->As<ComputationNode<ElementType>>()->shared_from_this() : nullptr;
+                input1Node = (input1BaseNodePtr != nullptr) ? input1BaseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr;
             }
 
             PrimitiveOpType op = primitiveFunction->OpType();
@@ -299,11 +303,18 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CompositeFunction::GetCNTKImplMatrixAndMBLayoutFromValueObject(Variable var, const ValuePtr& value)
     {
-        if (var.DataType() != value->Data()->DataType())
-            LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.DataType()), DataTypeName(value->Data()->DataType()));
+        if (var.GetDataType() != value->Data()->GetDataType())
+            LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->Data()->GetDataType()));
 
-        if (GetDataType<ElementType>() != value->Data()->DataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->Data()->DataType()));
+        if (AsDataType<ElementType>() != value->Data()->GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->Data()->GetDataType()));
+
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
+        if (var.IsSparseInput() && !value->Data()->IsSparse())
+            InvalidArgument("Dense input data supplied for a sparse input Variable");
+
+        if (var.IsSparseInput() && (value->Data()->GetStorageFormat() != StorageFormat::SparseCSC))
+            InvalidArgument("Sparse Input data must be in SparseCSC format");
 
         if (value->Data()->Shape().NumAxes() == var.Shape().NumAxes())
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
@@ -382,8 +393,20 @@ namespace CNTK
                 LogicError("The number of sequences in the packed MBLayout does not match the sequence count in the Value object");
 
             // Now generate the gather indices
-            auto matrixData = std::make_shared<Matrix<ElementType>>(var.Shape().TotalSize(), layout->GetNumCols(), AsCNTKImplDeviceId(value->Data()->Device()));
-            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), 0);
+            auto matrixData = std::make_shared<Matrix<ElementType>>(var.Shape().TotalSize(),
+                                                                    layout->GetNumCols(),
+                                                                    AsCNTKImplDeviceId(value->Data()->Device()),
+                                                                    value->Data()->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
+                                                                    AsCNTKMatrixFormat(value->Data()->GetStorageFormat()));
+
+            std::vector<size_t> sequencesShorterThanLongestSequence;
+            for (size_t i = 0; i < numSequences; ++i)
+                if (sequenceLengths[i] != maxNumTimeSteps)
+                    sequencesShorterThanLongestSequence.push_back(i);
+
+            // Set the source location for all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
+            size_t sourceColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
+            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), (ElementType)sourceColIdxForInvalidColumns);
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t targetParallelStreamIdx = placement[i].first;
@@ -404,8 +427,8 @@ namespace CNTK
         if (var.DynamicAxes().size() > 1)
             LogicError("More than one dynamic axis for a variable is currently unsupported");
 
-        if (GetDataType<ElementType>() != var.DataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.DataType()));
+        if (AsDataType<ElementType>() != var.GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
 
         if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
             LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
@@ -418,12 +441,8 @@ namespace CNTK
         if ((layout == nullptr) || (layout->GetNumTimeSteps() == 1) || (layout->GetNumSequences() == 1))
         {
             // Just create a view over the existing matrix itself
-
-            if ((matrix.GetFormat() != matrixFormatDense) || (matrix.GetFormat() != matrixFormatColMajor))
-                LogicError("Only dense and column-major data storage format is currently supported");
-
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = NDArrayViewPtr(new NDArrayView(GetDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
+            auto data = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
             return ValuePtr(new Value(data), [](_ReferenceCounter* ptr) { delete ptr; });
         }
 
@@ -483,7 +502,7 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = NDArrayViewPtr(new NDArrayView(GetDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
+        auto data = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView), [](_ReferenceCounter* ptr) { delete ptr; });
         return ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
@@ -503,7 +522,7 @@ namespace CNTK
             ValuePtr argumentValue = arguments[*iter];
 
             MBLayoutPtr layout;
-            switch (argumentValue->Data()->DataType())
+            switch (argumentValue->Data()->GetDataType())
             {
             case DataType::Float:
             {
@@ -511,6 +530,8 @@ namespace CNTK
                 layout = CNTKMatrixAndMBLayout.second;
 
                 auto& nodeData = argumentComputationNode->As<ComputationNode<float>>()->Value();
+                // Switch the node matrix to the right matrix type
+                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
                 nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
                 break;
             }
@@ -520,11 +541,13 @@ namespace CNTK
                 layout = CNTKMatrixAndMBLayout.second;
 
                 auto& nodeData = argumentComputationNode->As<ComputationNode<double>>()->Value();
+                // Switch the node matrix to the right matrix type
+                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
                 nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
                 break;
             }
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(argumentValue->Data()->DataType()));
+                LogicError("Unsupported DataType %s", DataTypeName(argumentValue->Data()->GetDataType()));
                 break;
             }
 
@@ -550,7 +573,7 @@ namespace CNTK
             ValuePtr gradientValue = iter->second;
 
             MBLayoutPtr layout;
-            switch (gradientValue->Data()->DataType())
+            switch (gradientValue->Data()->GetDataType())
             {
             case DataType::Float:
             {
@@ -571,7 +594,7 @@ namespace CNTK
                 break;
             }
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(gradientValue->Data()->DataType()));
+                LogicError("Unsupported DataType %s", DataTypeName(gradientValue->Data()->GetDataType()));
                 break;
             }
         }
@@ -612,14 +635,14 @@ namespace CNTK
                     InvalidArgument("The shape %s of the specified Value object for output does not match the actual output shape %s", AsString(outputValuePtr->Data()->Shape()).c_str(), AsString(outputShape).c_str());
             }
 
-            switch (iter->first.DataType())
+            switch (iter->first.GetDataType())
             {
             case DataType::Float:
             {
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(iter->first, computationNodePtr->As<ComputationNode<float>>()->Value(), computationNodePtr->GetMBLayout());
                 if (outputValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](_ReferenceCounter* ptr) { delete ptr; }) : nullptr;
                     outputValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -631,7 +654,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(iter->first, computationNodePtr->As<ComputationNode<double>>()->Value(), computationNodePtr->GetMBLayout());
                 if (outputValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), outputShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](_ReferenceCounter* ptr) { delete ptr; }) : nullptr;
                     outputValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -639,7 +662,7 @@ namespace CNTK
                 break;
             }
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(iter->first.DataType()));
+                LogicError("Unsupported DataType %s", DataTypeName(iter->first.GetDataType()));
                 break;
             }
 
@@ -675,14 +698,14 @@ namespace CNTK
             if (!computationNodePtr->NeedsGradient())
                 LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
 
-            switch (iter->first.DataType())
+            switch (iter->first.GetDataType())
             {
             case DataType::Float:
             {
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(iter->first, computationNodePtr->As<ComputationNode<float>>()->Gradient(), computationNodePtr->GetMBLayout());
                 if (gradientValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](_ReferenceCounter* ptr) { delete ptr; });
                     gradientValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
                 }
@@ -694,7 +717,7 @@ namespace CNTK
                 auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(iter->first, computationNodePtr->As<ComputationNode<double>>()->Gradient(), computationNodePtr->GetMBLayout());
                 if (gradientValuePtr == nullptr)
                 {
-                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.DataType(), gradientShape, nullptr, 0, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
+                    auto data = NDArrayViewPtr(new NDArrayView(iter->first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](_ReferenceCounter* ptr) { delete ptr; });
                     auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](_ReferenceCounter* ptr) { delete ptr; });
                     gradientValuePtr = ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
 
@@ -703,7 +726,7 @@ namespace CNTK
                 break;
             }
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(iter->first.DataType()));
+                LogicError("Unsupported DataType %s", DataTypeName(iter->first.GetDataType()));
                 break;
             }
 
@@ -718,7 +741,7 @@ namespace CNTK
     {
         // TODO: How about zero argument functions?
         // TODO: We need a better way to determine the ElementType for the network
-        auto dataType = arguments.m_map->begin()->second->Data()->DataType();
+        auto dataType = arguments.m_map->begin()->second->Data()->GetDataType();
         if (dataType == DataType::Float)
             GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor);
         else

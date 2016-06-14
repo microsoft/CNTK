@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
+
+if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Train_cntk_text.txt || ! -e $TEST_DATA_DIR/Test_cntk_text.txt ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [[ -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+        if [ "$OS" == "Windows_NT" ]; then
+            DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/CIFAR/v0
+        else
+            DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/CIFAR/v0
+        fi
+
+        # Copy the test data to the test run directory
+        DataDir=$TEST_RUN_DIR/TestData
+        mkdir $DataDir
+        cp -R $DataSourceDir/*_cntk_text.txt $DataDir || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/Miscellaneous/CIFAR-10/README.md for instructions to get it.
+        exit 1
+    fi
+fi

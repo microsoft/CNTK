@@ -41,13 +41,13 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
          if (nodeType == OperationNameOf(AbsNode))                              return New<AbsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClipNode))                             return New<ClipNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparisonEqualNode))                  return New<ComparisonEqualNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparisonGreaterEqualNode))           return New<ComparisonGreaterEqualNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparisonGreaterNode))                return New<ComparisonGreaterNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparisonLessEqualNode))              return New<ComparisonLessEqualNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparsionLessNode))                   return New<ComparsionLessNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(ComparisonNotEqualNode))               return New<ComparisonNotEqualNode<ElemType>>(forward<_Types>(_Args)...);
-	else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(EqualNode))                            return New<EqualNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GreaterEqualNode))                     return New<GreaterEqualNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GreaterNode))                          return New<GreaterNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LessEqualNode))                        return New<LessEqualNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LessNode))                             return New<LessNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(NotEqualNode))                         return New<NotEqualNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosineNode))                           return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
@@ -646,37 +646,37 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Plus(
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparsionLessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparisonEqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Greater(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparisonGreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GreaterEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparsionLessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NotEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparisonEqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LessEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<ComparisonGreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+	return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

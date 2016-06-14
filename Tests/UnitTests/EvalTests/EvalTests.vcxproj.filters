@@ -19,6 +19,9 @@
     <Filter Include="Data">
       <UniqueIdentifier>{5eb4cbb2-7932-472c-8fd6-d3edd7c0bd42}</UniqueIdentifier>
     </Filter>
+    <Filter Include="from BrainScript">
+      <UniqueIdentifier>{753a4cde-dfa8-4bbf-9596-b77d59cf2fb3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -38,5 +41,10 @@
     <ClCompile Include="EvalExtendedTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Source\CNTK\BrainScript\CNTKCoreLib\CNTK.core.bs">
+      <Filter>from BrainScript</Filter>
+    </None>
   </ItemGroup>
 </Project>
