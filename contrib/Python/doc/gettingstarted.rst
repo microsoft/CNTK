@@ -37,7 +37,7 @@ Installing the Python module
 
     >>> import cntk as C
     >>> C.__version__
-    1.4
+    1.5
     >>> with C.LocalExecutionContext('demo', clean_up=False) as ctx:
     ...     a = C.constant([[1,2], [3,4]])
     ...     i = C.input_numpy([[[10,20], [30, 40]]])
