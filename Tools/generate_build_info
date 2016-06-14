@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+#
 # Description: this script is used to generated buildinfo.h in Source/CNTK
 # which will contain the following infomation to be displayed at runtime:
 #   BUILDTYPE       (release/debug)
@@ -24,7 +30,7 @@ usage ()
     echo "This script assumes git can be used"
     echo "This script assumes Config.make has been made"
     echo "-------------------------------------------------------------------"
-    if [ ! -z "$1" ] ; then 
+    if [ ! -z "$1" ] ; then
         echo "ERROR message: $1"
     fi
     exit 1
@@ -60,20 +66,20 @@ makebuildinfo()
         printf "#define _MATHLIB_ \"%s\"\n" "$MATHLIB"
         printf "#define _BUILDSHA1_ \"%s\"\n" "$GIT_COMMIT"
         printf "#define _BUILDBRANCH_ \"%s\"\n" "$GIT_BRANCH"
-        if [ -z "$CUDA_PATH" ]; then 
+        if [ -z "$CUDA_PATH" ]; then
             printf "#define _BUILDTARGET_ \"CPU-only\"\n"
         else
             printf "#define _BUILDTARGET_ \"GPU\"\n"
             printf "#define _CUDA_PATH_ \"%s\"\n" "$CUDA_PATH"
         fi
-        if [ ! -z "$CUB_PATH" ]; then 
+        if [ ! -z "$CUB_PATH" ]; then
             printf "#define _CUB_PATH_ \"%s\"\n"  "$CUB_PATH"
         fi
-        if [ ! -z "$CUDNN_PATH" ]; then 
+        if [ ! -z "$CUDNN_PATH" ]; then
             printf "#define _CUDNN_PATH_ \"%s\"\n"  $CUDNN_PATH
         fi
         printf "#define _BUILDTYPE_ \"%s\"\n" "$BUILDTYPE"
-        if [ ! -z "$WITH_1BITSGD" ]; then 
+        if [ ! -z "$WITH_1BITSGD" ]; then
             printf "#define _WITH_1BITSGD_ \"yes\"\n"
         else
             printf "#define _WITH_1BITSGD_ \"no\"\n"
@@ -87,48 +93,53 @@ makebuildinfo()
 
 #//////////////////////////////////////////////////////#
 #               main function                          #
-#//////////////////////////////////////////////////////#        
-if [ $# -ne 1 ]; then 
-    usage 
+#//////////////////////////////////////////////////////#
+if [ $# -ne 1 ]; then
+    usage
 fi
 
 config=$1
 
-# 1. check whether we have git and what is the sha-1 value 
+# Check whether we have git and what is the SHA-1 value
 if Has_Git; then has_git=1; else has_git=0; usage "git does not exist"; fi
 GIT_STATUS=' (modified)'
 git diff --quiet && git diff --cached --quiet && GIT_STATUS=''
 GIT_COMMIT=`git rev-parse HEAD`$GIT_STATUS
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 
-# 2. looking into Config.make
-if [ ! -e $config ] ; then 
+# Looking into Config.make
+if [ ! -e $config ] ; then
     usage "Config.make not exists"
 fi
 source $config
 
-# 3. whether we have CUDA_PATH 
-if [ -z "${CUDA_PATH+x}" ]; then 
+# Whether we have CUDA_PATH
+if [ -z "${CUDA_PATH+x}" ]; then
     CUDAPATH=""
 else
     CUDAPATH=$CUDA_PATH
 fi
 
-# 4. whether we have CUB_PATH
-if [ -z "${CUB_PATH+x}" ]; then 
+# Whether we have CUB_PATH
+if [ -z "${CUB_PATH+x}" ]; then
     CUBPATH=""
 else
     CUBPATH=$CUB_PATH
 fi
 
-# 5. Build machine info
+# Identify MKL variant being used
+if [ "$MATHLIB" = "mkl" -a "$MKL_THREADING" = "sequential" ]; then
+    MATHLIB=mkl-sequential
+fi
+
+# Build machine info
 BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# 6. make buildinfo.h (only update if changed)
+# Make buildinfo.h (only update if changed)
 target=Source/CNTK/buildinfo.h
-if [ ! -d Source ] ; then 
+if [ ! -d Source ] ; then
     usage
 fi
 
