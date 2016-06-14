@@ -49,7 +49,6 @@
         <CNTKCustomMKLVersion>1</CNTKCustomMKLVersion>
         <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
         <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
-        <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
         <MathDefine>USE_MKL</MathDefine>
       </PropertyGroup>
       <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
@@ -57,6 +56,7 @@
         <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
         <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
         <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+        <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
         <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
       </PropertyGroup>
       <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
@@ -64,6 +64,7 @@
         <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
         <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
         <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+        <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
         <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
       </PropertyGroup>
     </When>
