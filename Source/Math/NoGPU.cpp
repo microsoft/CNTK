@@ -413,6 +413,11 @@ void GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::ElementAndXOf(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+{
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     return *this;
