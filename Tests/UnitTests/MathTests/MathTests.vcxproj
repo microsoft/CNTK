@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BatchNormalizationEngineTests.cpp" />
+    <ClCompile Include="BlockMultiplierTests.cpp" />
     <ClCompile Include="constants.cpp" />
     <ClCompile Include="ConvolutionEngineTests.cpp" />
     <ClCompile Include="CPUSparseMatrixTests.cpp" />
