@@ -49,38 +49,89 @@ generic<class ElemType>
     public ref class ValueBuffer
     {
     public:
-        ValueBuffer(int size)
+        ValueBuffer()
         {
-            m_buffer = gcnew array<ElemType>(size);
-            m_indices = gcnew array<int>(size);
-            m_colIndices = gcnew array<int>(size);
-            m_size = size;
+        }
+
+        ValueBuffer(int bufferSize)
+        {
+            m_buffer = gcnew array<ElemType>(bufferSize);
+        }
+
+        ValueBuffer(int bufferSize, int indicesSize, int colIndicesSize)
+        {
+            m_buffer = gcnew array<ElemType>(bufferSize);
+            m_indices = gcnew array<int>(indicesSize);
+            m_colIndices = gcnew array<int>(colIndicesSize);
         }
     
+        // Returns the current allocated size for the buffer or 0 if empty or no buffer allocated
         property int Size
         {
-            int get() { return m_size; }
+            int get() {
+                return m_buffer == nullptr ? 0 : m_buffer->Length;
+            }
         }
-        
+        //
+        // All elements of a sequence, concatenated.
+        // For dense inputs, the number of samples is given by the the length of
+        // this vector / product of tensor dimensions. E.g. for a tensor of dimension
+        // [2,2] and 12 elements in the buffer, the number of samples is 3.
+        // For sparse inputs, the number of samples is indicated by the m_colIndices field.
+        //
         property array<ElemType>^ Buffer
         {
-            array<ElemType>^ get() {  return m_buffer; }
+            array<ElemType>^ get(){
+                return m_buffer;
+            }
+
+            void set(array<ElemType>^ buffer){
+                m_buffer = buffer;
+            }
         }
 
-        property array<int>^ Indices
-        {
-            array<int>^ get() { return m_indices; }
+        // In case of sparse data, the following is also used. Otherwise, the 
+        // contents are ignored.
+
+        // E.g. a sequence of three sparse vectors with 2 / 4 / 2 non-zero values
+        // could be represented as the following:
+        // colIdx:  0   2       6   8
+        //          v   v       v   v
+        // indices  1 3 2 3 5 6 2 7
+        // buffer   0 1 2 3 4 5 6 7
+
+        //
+        // For every element in buffer, an entry in this array gives its position.
+        // For every vector the entries must be ascending.
+        //
+        property array<int>^ Indices 
+        { 
+            array<int>^ get() {
+                return m_indices;
+            }
+
+            void set(array<int>^ indices)
+            {
+                m_indices = indices;
+            }
         }
 
-        property array<int>^ ColIndices
-        {
-            array<int>^ get() { return m_colIndices;
+        //
+        // Contains numberOfsamples + 1 indices into the buffer. The first entry
+        // is always 0. The last entry points after the last element.
+        // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
+        //
+        property array<int>^ ColIndices {
+            array<int>^ get() {
+                return m_colIndices;
+            }
+
+            void set(array<int>^ colIndices) {
+                m_colIndices = colIndices;
             }
         }
 
     private:
-
-    int m_size;
 
     //
     // All elements of a sequence, concatenated.
@@ -343,21 +394,36 @@ public:
             {
                 int size = item->Size;
                 // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-                gcroot<array<ElemType>^>* pBuf = new gcroot<array<ElemType>^>(item->Buffer);
-                gcroot<array<int>^>* pInd = new gcroot<array<int>^>(item->Indices);
-                gcroot<array<int>^>* pColInd = new gcroot<array<int>^>(item->ColIndices);
+                gcroot<array<ElemType>^>* pBuf;
+                gcroot<array<int>^>* pInd;
+                gcroot<array<int>^>* pColInd;
 
-                pinBuffers.push_back(pBuf);
-                pinIndices.push_back(pInd);
-                pinIndices.push_back(pColInd);
+                // Buffer is required
+                if (item->Buffer == nullptr)
+                {
+                    throw gcnew CNTKRuntimeException("Invalid buffer (empty) for input argument into ForwardPass", String::Empty);
+                }
 
+                pBuf = new gcroot<array<ElemType>^>(item->Buffer);
                 pin_ptr<ElemType> pp = &(*pBuf)[0];
-                pin_ptr<int> pi = &(*pInd)[0];
-                pin_ptr<int> pci = &(*pColInd)[0];
-
+                pinBuffers.push_back(pBuf);
                 vb->m_buffer.InitFrom(pp, size, size);
-                vb->m_indices.InitFrom(pi, size, size);
-                vb->m_colIndices.InitFrom(pci, size, size);
+
+                if (item->Indices != nullptr)
+                {
+                    pInd = new gcroot<array<int>^>(item->Indices);
+                    pin_ptr<int> pi = &(*pInd)[0];
+                    pinIndices.push_back(pInd);
+                    vb->m_indices.InitFrom(pi, item->Indices->Length, item->Indices->Length);
+                }
+
+                if (item->ColIndices != nullptr)
+                {
+                    pColInd = new gcroot<array<int>^>(item->ColIndices);
+                    pin_ptr<int> pci = &(*pColInd)[0];
+                    pinIndices.push_back(pColInd);
+                    vb->m_colIndices.InitFrom(pci, item->ColIndices->Length, item->ColIndices->Length);
+                }
 
                 stdInputs.push_back(*vb);
             }
@@ -365,20 +431,36 @@ public:
             for each (auto item in outputs)
             {
                 int size = item->Size;
-                gcroot<array<ElemType>^>* pBuf = new gcroot<array<ElemType>^>(item->Buffer);
-                gcroot<array<int>^>* pInd = new gcroot<array<int>^>(item->Indices);
-                gcroot<array<int>^>* pColInd = new gcroot<array<int>^>(item->ColIndices);
+                gcroot<array<ElemType>^>* pBuf;
+                gcroot<array<int>^>* pInd;
+                gcroot<array<int>^>* pColInd;
 
+                // Buffer is required
+                if (item->Buffer == nullptr)
+                {
+                    throw gcnew CNTKRuntimeException("Invalid buffer (empty) for output argument into ForwardPass", String::Empty);
+                }
+
+                pBuf = new gcroot<array<ElemType>^>(item->Buffer);
                 pin_ptr<ElemType> pp = &(*pBuf)[0];
-                pin_ptr<int> pi = &(*pInd)[0];
-                pin_ptr<int> pci = &(*pColInd)[0];
-
                 pinBuffers.push_back(pBuf);
-                pinIndices.push_back(pInd);
-                pinIndices.push_back(pColInd);
                 vb->m_buffer.InitFrom(pp, size, size);
-                vb->m_indices.InitFrom(pi, size, size);
-                vb->m_colIndices.InitFrom(pci, size, size);
+
+                if (item->Indices != nullptr)
+                {
+                    pInd = new gcroot<array<int>^>(item->Indices);
+                    pin_ptr<int> pi = &(*pInd)[0];
+                    pinIndices.push_back(pInd);
+                    vb->m_indices.InitFrom(pi, item->Indices->Length, item->Indices->Length);
+                }
+                
+                if (item->ColIndices != nullptr)
+                {
+                    pColInd = new gcroot<array<int>^>(item->ColIndices);
+                    pin_ptr<int> pci = &(*pColInd)[0];
+                    pinIndices.push_back(pColInd);
+                    vb->m_colIndices.InitFrom(pci, item->ColIndices->Length, item->ColIndices->Length);
+                }
 
                 stdOutputs.push_back(*vb);
             }
