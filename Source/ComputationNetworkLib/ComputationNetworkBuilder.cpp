@@ -130,6 +130,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
 #if 1
     else if (nodeType == OperationNameOf(LegacyReshapeNode))                    return New<LegacyReshapeNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
+    else if (nodeType == OperationNameOf(MaxUnpoolingNode))                     return New<MaxUnpoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
 }
 
@@ -249,12 +250,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount,
                                                                                                  const TensorShape& strideShape, const std::vector<bool>& sharing,
                                                                                                  const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                                 ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                                                                                                 bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
 {
     return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                        kernelShape, mapCount, strideShape,
                                                                        sharing, autoPadding, lowerPad, upperPad,
-                                                                       imageLayout, maxTempMemSizeInSamples));
+                                                                       transpose, imageLayout, maxTempMemSizeInSamples));
 }
 
 template <class ElemType>
@@ -314,13 +315,13 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                                        const TensorShape& kernelShape, const TensorShape& mapCount, 
                                                                                        const TensorShape& strideShape, const std::vector<bool>& sharing,
                                                                                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                       ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                                                       bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                                                                        const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelShape, mapCount, strideShape,
                                                                           sharing, autoPadding, lowerPad, upperPad,
-                                                                          imageLayout, maxTempMemSizeInSamples),
+                                                                          transpose, imageLayout, maxTempMemSizeInSamples),
                                                                           { weight, inputValues });
 }
 
@@ -334,6 +335,19 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
                                                                       { inputValues });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxUnpooling(const ComputationNodePtr unpoolInputValues,
+                                                                                        const ComputationNodePtr poolInputValues,
+                                                                                        const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                        ImageLayoutKind imageLayout,
+                                                                                        const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<MaxUnpoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
+                                                                           kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                           { unpoolInputValues, poolInputValues });
 }
 
 template <class ElemType>
