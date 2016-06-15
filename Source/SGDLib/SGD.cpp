@@ -8,22 +8,12 @@
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
+
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
-
-// TODO remove once up-stream (1bit-SGD repo) is fixed:
-#ifdef _MSC_VER
-// Suppress warning for non-ASCII characters (when using certain codepages, e.g., 936)
-#pragma warning(push)
-#pragma warning(disable : 4819) // The file contains a character that cannot be represented in the current code page (...). Save the file in Unicode format to prevent data loss
-#endif
 #include "BlockMomentumSGD.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 #endif
 
 #include "SimpleDistGradAggregator.h"

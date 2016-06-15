@@ -7,12 +7,13 @@
 // Suppress warning for non-ASCII characters in MS-MPI headers
 #pragma warning(push)
 #pragma warning(disable : 4819) // The file contains a character that cannot be represented in the current code page (...). Save the file in Unicode format to prevent data loss
-#endif
 #include "mpi.h"
-#ifdef _MSC_VER
 #pragma warning(pop)
-#pragma comment(lib, "msmpi.lib")
+#else
+#include "mpi.h"
 #endif
+#pragma comment(lib, "msmpi.lib")
+
 
 #include <string>
 #include <array>
