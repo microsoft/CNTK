@@ -17,16 +17,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         public void EvalManagedValuesBufferTest()
         {
             int bufferSize = 2;
-            int indicesSize = 3;
             int colIndicesSize = 5;
             var vb = new ValueBuffer<float>(bufferSize);
             Assert.AreEqual(bufferSize, vb.Buffer.Length);
             Assert.IsNull(vb.Indices);
             Assert.IsNull(vb.ColIndices);
 
-            vb = new ValueBuffer<float>(bufferSize, indicesSize, colIndicesSize);
+            vb = new ValueBuffer<float>(bufferSize, colIndicesSize);
             Assert.AreEqual(bufferSize, vb.Buffer.Length);
-            Assert.AreEqual(indicesSize, vb.Indices.Length);
+            Assert.AreEqual(bufferSize, vb.Indices.Length);
             Assert.AreEqual(colIndicesSize, vb.ColIndices.Length);
         }
 
@@ -51,15 +50,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
-                List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>();
+                ValueBuffer<float>[] outputBuffer = outputSchema.CreateBuffers<float>();
+                ValueBuffer<float>[] inputBuffer = new ValueBuffer<float>[0];
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
 
                 float[][] expected = { new float[] { 2 }, new float[] {3} };
 
-                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
                 for (int idx = 0; idx < expected.Length; idx++)
                 {
                     CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
@@ -88,16 +87,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
-                List<ValueBuffer<float>> inputBuffer = inputSchema.CreateBuffers<float>();
+                ValueBuffer<float>[] outputBuffer = outputSchema.CreateBuffers<float>(5);
+                ValueBuffer<float>[] inputBuffer = inputSchema.CreateBuffers<float>();
                 inputBuffer[0].Buffer[0] = 2;
+                inputBuffer[0].Size = 1;
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
 
                 float[][] expected = {new float[]{6}};
 
-                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
                 for (int idx = 0; idx < expected.Length; idx++)
                 {
                     CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
@@ -125,7 +125,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 VariableSchema outputSchema = model.GetOutputSchema();
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                List<ValueBuffer<float>> outputBuffer = new List<ValueBuffer<float>>()
+                var outputBuffer = new []
                 {
                     new ValueBuffer<float>()
                     {
@@ -133,7 +133,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                     }
                 };
 
-                List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>()
+                var inputBuffer = new []
                 {
                     new ValueBuffer<float>()
                     {
@@ -148,7 +148,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 float[][] expected = { new float[] { 6, 0, 28 } };
 
-                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
                 for (int idx = 0; idx < expected.Length; idx++)
                 {
                     CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
@@ -180,8 +180,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
-                List<ValueBuffer<float>> inputBuffer = inputSchema.CreateBuffers<float>();
+                var outputBuffer = outputSchema.CreateBuffers<float>();
+                var inputBuffer = inputSchema.CreateBuffers<float>();
                 inputBuffer[0].Buffer[0] = 2;
 
                 // We can call the evaluate method and get back the results...
@@ -189,7 +189,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 float[][] expected = {new float[]{6}, new float[]{10} };
             
-                Assert.AreEqual(expected.Length, outputBuffer.Count);
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
                 for(int idx=0; idx<expected.Length; idx++ )
                 {
                     CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
