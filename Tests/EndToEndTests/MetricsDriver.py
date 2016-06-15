@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # ----------------------------------------------------------
 # Copyright (c) Microsoft Corporation.  All rights reserved.
 # ---------------------------------------------------------
@@ -58,12 +58,13 @@ class Baseline:
     if cpuInfo is None:
       return
     self.cpuInfo = "\n".join(cpuInfo.groups()[0:4])
-    hwInfo = cpuInfo.groups()[4:len(cpuInfo.groups())]
+    hwInfo = cpuInfo.groups()[4:]
 
-    gpuInfoIndex = baselineContent.find("GPU info: ")
+    startGpuInfoIndex = baselineContent.find("GPU info: ")
+    endGpuInfoIndex = baselineContent.find("----------", startGpuInfoIndex)
     gpuInfo = re.findall("\t\t(Device ID: \d+)\s+"
                          "(Compute Capability: \d\.\d)\s+"
-                         "(CUDA cores: \d+)", baselineContent[gpuInfoIndex:gpuInfoIndex+1500]) #Taking just a portion of the file, in order to avoid wasting time searching it all
+                         "(CUDA cores: \d+)", baselineContent[startGpuInfoIndex:endGpuInfoIndex])
     if not gpuInfo:
       return
     for index in range(0, len(gpuInfo)):
