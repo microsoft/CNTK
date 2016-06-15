@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+#
+# TODO --math-library support on Windows
 
 # Setting some default values
 BUILD=1
@@ -9,6 +17,7 @@ RANDOM_OUTPUT=0
 CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
+MATH_LIBRARY="acml"
 TESTTARGETS="cpu:gpu"
 
 # parsing command line arguments:
@@ -25,6 +34,7 @@ case $key in
     echo "  -b|--build-only - just build, do not run"
     echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build (by default $FLAVORS)"
     echo "  -t|--targets <target1:target2...> - which target to build (by default $TARGETS)"
+    echo "  -m|--math-library <mathlibrary> - which math library to build with (by default $MATH_LIBRARY)"
     echo "  -tt|--test-targets <testtarget1:testtarget2...> - which target to test (by default $TESTTARGETS)"
     echo "  -cc|--code-coverage - build with support for code coverage (gcov)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
@@ -64,6 +74,24 @@ case $key in
     TARGETS="${2,,}"
     shift # past argument
     ;;
+    -m|--math-library)
+    case ${2,,} in
+        acml)
+        MATH_LIBRARY_OPTION="--with-acml=$ACML_PATH"
+        ;;
+        mkl)
+        MATH_LIBRARY_OPTION="--with-mkl=$MKL_PATH"
+        ;;
+        mkl-sequential)
+        MATH_LIBRARY_OPTION="--with-mkl-sequential=$MKL_PATH"
+        ;;
+        *)
+        echo Unknown math library $MATH_LIBRARY
+        exit 1
+        ;;
+    esac
+    shift # past argument
+    ;;
     -tt|--test-targets)
     TESTTARGETS="${2,,}"
     shift # past argument
@@ -76,7 +104,7 @@ case $key in
     shift # past argument
     ;;
     *)
-    echo Unkown option $key
+    echo Unknown option $key
     exit 1
     ;;
 esac
@@ -86,7 +114,7 @@ done
 # Step 0 -- Validate all necessary prerequisites and check for incompatible options
 # It is possible to use this script on Windows to build CNTK
 # from Cygwin window with Visual C++ environment loaded.
-# In that case OS environment variable will be set and we 
+# In that case OS environment variable will be set and we
 # can use it to differentiate from Linux.
 if [[ $CLEAN_BEFORE == 1 && $RUN == 1 && $BUILD == 0 ]]; then
     echo "============ ERROR: Incompatible options RUN and CLEAN_BEFORE set without BUILD ============"
@@ -99,7 +127,7 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     PREFIX_DIR=x64
     BIN_NAME=CNTK.exe
     BUILD_OS="windows"
-  
+
     if [[ $VS120COMNTOOLS == "" ]]; then
         echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
         echo "============ Please find and run the appropriate vcvarsall.bat script ============"
@@ -224,7 +252,7 @@ if [[ $BUILD == 1 ]]; then
                         OneBitSGDOPT=yes
                     fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
@@ -278,7 +306,7 @@ if [[ $RUN == 1 ]]; then
                 fi
                 OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.$TESTTARGET.out"
 
-                BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME 
+                BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME
                 if ! [[ -f $BIN_PATH ]]; then
                     echo "============ ERROR: CNTK did not build properly for $TARGET/$FLAVOR ============"
                     echo "Missing file: $BIN_PATH"
