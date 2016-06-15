@@ -151,7 +151,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 #ifdef _WIN32
     // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     // TODO:
-    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it’s
+    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it's
     // probably a good idea to do that anyway since I suspect that the '..' characters might
     // confuse the other PathCch functions" [Larry Osterman]
     // "Consider GetFullPathName both for canonicalization and last element finding." [Jay Krell]

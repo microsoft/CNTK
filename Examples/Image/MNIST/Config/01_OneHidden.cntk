@@ -106,7 +106,7 @@ train = [
 
 test = [
     action = "test"
-    minibatchSize = 1024
+    minibatchSize = 1024    # reduce this if you run out of memory
 
     evalNodeNames = ce:errs:top5Errs
 

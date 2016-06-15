@@ -190,3 +190,7 @@ Source/CNTK/buildinfo.h$$
 # Unit test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
+
+Dependencies/CNTKCustomMKL/Publish
+Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
+Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
