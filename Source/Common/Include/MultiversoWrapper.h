@@ -26,8 +26,8 @@
 #include <numeric>
 #include <algorithm>
 
-#define MULTIVERSO_DEBUG
 namespace Microsoft { namespace MSR { namespace CNTK {
+#define MULTIVERSO_DEBUG
 
 #ifndef CPUONLY
 #define CudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -343,6 +343,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
     }
     else
     {
+        timer.Restart();
         float factor = DecayCoefficient();
         i = 0;
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -354,6 +355,12 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             mat.CopyToArray(px, m_tableLength[i]);
         }
 
+        timer.Stop();
+        if (m_traceLevel > 3)
+        {
+            double time = timer.ElapsedSeconds();
+            fprintf(stderr, "\t\t -- pullAndRequest, GPU -> CPU time %lf \n", time);
+        }
         std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
 
         // lr decay
@@ -374,7 +381,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
         {
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
         }
-
+        timer.Restart();
         for (int widx = 0; widx < m_tableCount; widx++)
         {
             if (m_isSparseArray[widx])
@@ -394,7 +401,13 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 multiversoMatrix->Get(py, m_tableLength[widx]);
             }
         }
-
+        timer.Stop();
+        if (m_traceLevel > 3)
+        {
+            double time = timer.ElapsedSeconds();
+            fprintf(stderr, "\t\t -- pullAndRequest, Worker <--> Multiverso time %lf \n", time);
+        }
+        timer.Restart();
         i = 0;
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
         {
@@ -403,6 +416,12 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
 
             ElemType * px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
+        }
+        timer.Stop();
+        if (m_traceLevel > 3)
+        {
+            double time = timer.ElapsedSeconds();
+            fprintf(stderr, "\t\t -- pullAndRequest, CPU -> GPU time %lf \n", time);
         }
     }
     return true;
