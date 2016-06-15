@@ -338,7 +338,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     }
 
     size_t nsenones = labelMatrix.GetNumRows();
-    size_t blankid = nsenones - 1;
+    int blankid = (int)nsenones - 1;
     GetLabelSequence(labelMatrix);
     assert(m_labelVector.size() == nf);
 
