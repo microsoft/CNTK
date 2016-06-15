@@ -1,18 +1,17 @@
 # CNTK
 
 ## Latest news
-*2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
+*2016-06-15.*  CNTK now supports building against a custom Intel® Math Kernel Library (MKL).
+See [setup instructions](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) on how to set this up for your platform.
 
-*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
+*2016-06-10.* See CNTK v.1.5 binary release announcement in the official [Microsoft Research Blog](https://blogs.msdn.microsoft.com/msr_er/2016/06/10/microsoft-improves-programming-flexibility-of-its-ai-toolkit/)
 
-*2016-05-05.* CNTK now supports *BlockMomentum* Stochastic Gradient Descent (SGD) algorithm. 
-See the details in the [Multiple GPUs and machines Wiki section](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+*2016-06-08.* V 1.5 Binary release
+CNTK v.1.5 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-05-03.* New transformations are implemented for **Image Reader**. 
-See the description in the [Image Reader Wiki section](https://github.com/Microsoft/CNTK/wiki/Image-reader)
+*2016-06-01.* An updated version of the network-description language has been made available under the new [BrainScript Network Builder](https://github.com/Microsoft/CNTK/wiki/BrainScript-Network-Builder), which features full expression parsing, recursive functions, and more.
 
-*2016-04-25.* V 1.1 Binary release
-CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
+*2016-05-19.* A 1-hour talk describing CNTK, how to use it, and how it works, has been posted at [Presentations](https://github.com/Microsoft/CNTK/wiki/Presentations).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

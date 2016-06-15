@@ -23,62 +23,11 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+
 template <class ElemType>
 class SimpleOutputWriter
 {
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-
-private:
-    std::vector<ComputationNodeBasePtr> DetermineOutputNodes(const std::vector<std::wstring>& outputNodeNames)
-    {
-        std::vector<ComputationNodeBasePtr> outputNodes;
-
-        if (outputNodeNames.size() == 0)
-        {
-            if (m_verbosity > 0)
-                fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-            if (m_net->OutputNodes().size() == 0)
-                LogicError("There is no default output node specified in the network.");
-
-            outputNodes = m_net->OutputNodes();
-        }
-        else
-        {
-            for (int i = 0; i < outputNodeNames.size(); i++)
-                outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
-        }
-
-        return outputNodes;
-    }
-
-    // collect all input nodes that outputNodes depend on
-    // TODO: This is rather generic, we should move this to a shared place. DataReaderHelpers.h?
-    std::vector<ComputationNodeBasePtr> DetermineInputNodes(const std::vector<ComputationNodeBasePtr>& outputNodes)
-    {
-        // use map to remove duplicated items
-        std::set<ComputationNodeBasePtr> inputNodesMap;
-        for (auto& onode : outputNodes)
-        {
-            for (auto& inode : m_net->InputNodes(onode))
-                inputNodesMap.insert(inode);
-        }
-
-        std::vector<ComputationNodeBasePtr> inputNodes;
-        for (auto& inode : inputNodesMap)
-            inputNodes.push_back(inode);
-
-        return inputNodes;
-    }
-
-    // get StreamMinibatchInputs for a given set of input nodes
-    // TODO: This seems generic, we should have that in a shared place.
-    StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
-    {
-        StreamMinibatchInputs inputMatrices;
-        for (auto& node : inputNodes)
-            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
-        return inputMatrices;
-    }
 
 public:
     SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
@@ -90,13 +39,16 @@ public:
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
-        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes  = DetermineInputNodes(outputNodes);
+        if (outputNodeNames.size() == 0 && m_verbosity > 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes  = m_net->InputNodesForOutputs(outputNodeNames);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -148,7 +100,7 @@ public:
     // Perform a single forward pass to obtain the output values from a network
     void WriteOutput(IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
-        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
@@ -203,8 +155,8 @@ public:
         // In case of unit test, make sure backprop works
         ScopedNetworkOperationMode modeGuard(m_net, nodeUnitTest ? NetworkOperationMode::training : NetworkOperationMode::inferring);
 
-        std::vector<ComputationNodeBasePtr> outputNodes = DetermineOutputNodes(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes = DetermineInputNodes(outputNodes);
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
         std::vector<ComputationNodePtr> gradientNodes;
         std::vector<ComputationNodeBasePtr> allOutputNodes = outputNodes;
 
@@ -244,7 +196,7 @@ public:
             m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
 
-        StreamMinibatchInputs inputMatrices = RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
         
         // load a label mapping if requested
         std::vector<std::string> labelMapping;

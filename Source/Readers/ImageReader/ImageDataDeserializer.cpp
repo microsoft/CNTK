@@ -119,11 +119,9 @@ public:
 
 // A new constructor to support new compositional configuration,
 // that allows composition of deserializers and transforms on inputs.
-// For a sample config please see AlexImage end-to-end test.
-// TODO: Provide only sequences specified in the corpus descriptor.
-ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigParameters& config)
+ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
 {
-    ConfigParameters inputs = config("inputs");
+    ConfigParameters inputs = config("input");
     std::vector<std::string> featureNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "transforms");
     std::vector<std::string> labelNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "labelDim");
 
@@ -167,7 +165,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr, const ConfigPa
     // TODO: multiview should be done on the level of randomizer/transformers - it is responsiblity of the
     // TODO: randomizer to collect how many copies each transform needs and request same sequence several times.
     bool multiViewCrop = config(L"multiViewCrop", false);
-    CreateSequenceDescriptions(config(L"file"), labelDimension, multiViewCrop);
+    CreateSequenceDescriptions(corpus, config(L"file"), labelDimension, multiViewCrop);
 }
 
 // TODO: Should be removed at some point.
@@ -204,7 +202,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
+    CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
 }
 
 // Descriptions of chunks exposed by the image reader.
@@ -224,13 +222,13 @@ ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
     return result;
 }
 
-void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void ImageDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
 {
     // Currently a single sequence per chunk.
     result.push_back(m_imageSequences[chunkId]);
 }
 
-void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size_t labelDimension, bool isMultiCrop)
+void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop)
 {
     std::ifstream mapFile(mapPath);
     if (!mapFile)
@@ -244,15 +242,30 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
     PathReaderMap knownReaders;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
-    description.m_isValid = true;
 
+    auto& stringRegistry = corpus->GetStringRegistry();
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
-        std::string imagePath;
-        std::string classId;
-        if (!std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
-            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
+        std::string imagePath, classId, sequenceKey;
+        // Try to parse sequence id, file path and label.
+        if (!std::getline(ss, sequenceKey, '\t') || !std::getline(ss, imagePath, '\t') || !std::getline(ss, classId, '\t'))
+        {
+            // In case when the sequence key is not specified we set it to the line number inside the mapping file.
+            // Assume that only image path and class label is given (old format).
+            classId = imagePath;
+            imagePath = sequenceKey;
+            sequenceKey = std::to_string(lineIndex);
+
+            if (classId.empty() || imagePath.empty())
+                RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
+        }
+
+        // Skipping sequences that are not included in corpus.
+        if (!corpus->IsIncluded(sequenceKey))
+        {
+            continue;
+        }
 
         char* eptr;
         errno = 0;
@@ -267,22 +280,28 @@ void ImageDataDeserializer::CreateSequenceDescriptions(std::string mapPath, size
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
+        if (CHUNKID_MAX < curId + itemsPerLine)
+        {
+            RuntimeError("Maximum number of chunks exceeded.");
+        }
+
         for (size_t start = curId; curId < start + itemsPerLine; curId++)
         {
             description.m_id = curId;
-            description.m_chunkId = curId;
+            description.m_chunkId = (ChunkIdType)curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = description.m_id;
+            description.m_key.m_sequence = stringRegistry[sequenceKey];
             description.m_key.m_sample = 0;
 
+            m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
             m_imageSequences.push_back(description);
             RegisterByteReader(description.m_id, description.m_path, knownReaders);
         }
     }
 }
 
-ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
 {
     auto sequenceDescription = m_imageSequences[chunkId];
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
@@ -337,8 +356,22 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path, 
 
 cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
 {
-	assert(!path.empty());
+    assert(!path.empty());
 
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }
+
+bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+{
+    auto index = m_keyToSequence.find(key.m_sequence);
+    // Checks whether it is a known sequence for us.
+    if (key.m_sample != 0 || index == m_keyToSequence.end())
+    {
+        return false;
+    }
+
+    result = m_imageSequences[index->second];
+    return true;
+}
+
 }}}

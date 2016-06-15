@@ -157,7 +157,11 @@ public:
         fprintf(stderr, "~MPIWrapper\n");
         fflush(stderr);
         // TODO: Check for error code and throw if !std::uncaught_exception()
-        MPI_Finalize();
+
+        // Do not finalize in event of an exception since calling MPI_Finalize without
+        // all pending communications being finished results in a hang
+        if (!std::uncaught_exception())
+            MPI_Finalize();
     }
 
 private:
