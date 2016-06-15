@@ -315,8 +315,6 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        //try
-        //{
         Native::ValueRefs<ElemType> stdInputs;
         Native::ValueRefs<ElemType> stdOutputs;
         Native::ValueBuffer<ElemType, Native::VectorRef>* vb = new Native::ValueBuffer<ElemType, Native::VectorRef>();
