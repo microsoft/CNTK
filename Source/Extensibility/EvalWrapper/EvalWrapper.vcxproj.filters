@@ -21,5 +21,11 @@
     <ClCompile Include="EvalWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CNTKException.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EvalExtendedWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
