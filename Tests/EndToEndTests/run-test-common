@@ -32,15 +32,21 @@ printHardwareInfo()
   cpuCores=$(cat /proc/cpuinfo | grep -m 1 'cpu cores' | cut -d ":" -f 2 | tr -s " ")
   totalMemory=$(cat /proc/meminfo | grep 'MemTotal' | cut -d ":" -f 2 | tr -s " ")
   nproc=$(nproc)
-  nvidiaSmiPath="nvidia-smi"
+  gpuName=""
+  gpuMem=""
+
+  gpuNameQuery="--query-gpu=gpu_name --format=csv,noheader"
+  gpuMemQuery="--query-gpu=memory.total --format=csv,noheader"
 
   if [ "$OS" == "Windows_NT" ]; then
-    nvidiaSmiPath="\"/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi\""
-  fi
-
-  if [ -f "$nvidiaSmiPath" ]; then
-  gpuName=$($nvidiaSmiPath --query-gpu=gpu_name --format=csv,noheader)
-  gpuMem=$($nvidiaSmiPath --query-gpu=memory.total --format=csv,noheader)
+    nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
+    if [ -f "$nvidiaSmiPath" ]; then
+      gpuName=$("$nvidiaSmiPath" $gpuNameQuery | head -1)
+      gpuMem=$("$nvidiaSmiPath" $gpuMemQuery | head -1)
+    fi
+  else
+    gpuName=$(nvidia-smi $gpuNameQuery | head -1)
+    gpuMem=$(nvidia-smi $gpuMemQuery | head -1)
   fi
 
   echo -e "Hardware info:
