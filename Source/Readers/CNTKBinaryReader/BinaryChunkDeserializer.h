@@ -19,10 +19,10 @@ public:
 
     OffsetsTable(size_t numBatches, size_t numSequences, byte* offsetsTable) : m_numBatches(numBatches), m_diskOffsetsTable(offsetsTable)
     {
-        Initialize();
-
         // We will use this constantly, so let's store it instead of re-computing it.
         m_offsetRowSize = GetOffsetRowSize(numSequences);
+
+        Initialize();
     }
 
     static int64_t GetOffsetRowSize(size_t numSequences) { return sizeof(int64_t) + (1 + numSequences) * sizeof(int32_t); }
