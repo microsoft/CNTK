@@ -123,12 +123,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 model.CreateNetwork(modelDefinition);
 
                 VariableSchema outputSchema = model.GetOutputSchema();
-                VariableSchema inputSchema = model.GetInputSchema();
-
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();  // BUG: OutputSchema reports a Buffer size of 1 instead of 3
-                /*
                 List<ValueBuffer<float>> outputBuffer = new List<ValueBuffer<float>>()
                 {
                     new ValueBuffer<float>()
@@ -136,14 +132,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                         Buffer = new float[3]
                     }
                 };
-                */
 
                 List<ValueBuffer<float>> inputBuffer = new List<ValueBuffer<float>>()
                 {
                     new ValueBuffer<float>()
                     {
-                        Buffer = new float[] {1, 2, 3, 5, 6},
-                        Indices = new [] {0, 2, 2, 1, 2},
+                        Buffer = new float[] { 1, 2, 3, 5, 6 },
+                        Indices = new [] { 0, 2, 2, 1, 2 },
                         ColIndices = new [] { 0, 2, 2, 5 }
                     }
                 };

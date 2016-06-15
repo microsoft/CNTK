@@ -44,7 +44,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-
+            
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -59,7 +59,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
-            
+
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
         }
@@ -274,7 +274,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // Create the network
                     // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a two constants, therefore no input is necessary.
-                    //string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
                     model.CreateNetwork(modelDefinition);
 
                     VariableSchema outputSchema = model.GetOutputSchema();

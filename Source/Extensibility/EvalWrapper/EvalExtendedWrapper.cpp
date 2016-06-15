@@ -40,6 +40,19 @@ public enum class NodeGroup
     nodeSpecified
 };
 
+enum class DataType
+{
+    Float32,
+    Float64
+};
+
+enum class StorageType
+{
+    Undetermined,
+    Dense,
+    Sparse,
+};
+
 //
 // A buffer to keep data for all samples in a (variable length) sequence 
 // from a single input or output.
@@ -171,25 +184,12 @@ generic<class ElemType>
 //
 public ref struct VariableLayout
 {
-    enum class DataType
-    {
-        Float32,
-        Float64
-    };
-
-    enum class StorageType
-    {
-        Undetermined,
-        Dense,
-        Sparse,
-    };
-
     // Name of the input
     property String^ Name;
 
-    property DataType DataKind;
+    property DataType DataType;
 
-    property StorageType StorageKind;
+    property StorageType StorageType;
 
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
@@ -303,9 +303,9 @@ public:
         {
             VariableLayout^ layout = gcnew VariableLayout();
             layout->Name = gcnew String(lay.m_name.c_str());
-            layout->DataKind = GetDataKind(lay.m_dataType);
+            layout->DataType = GetDataType(lay.m_dataType);
             layout->NumElements = lay.m_numElements;
-            layout->StorageKind = GetStorageKind(lay.m_storageType);
+            layout->StorageType = GetStorageType(lay.m_storageType);
 
             outputSchema->Add(layout);
         }
@@ -351,9 +351,9 @@ public:
         {
             VariableLayout^ layout = gcnew VariableLayout();
             layout->Name = gcnew String(lay.m_name.c_str());
-            layout->DataKind = GetDataKind(lay.m_dataType);
+            layout->DataType = GetDataType(lay.m_dataType);
             layout->NumElements = lay.m_numElements;
-            layout->StorageKind = GetStorageKind(lay.m_storageType);
+            layout->StorageType = GetStorageType(lay.m_storageType);
 
             inputSchema->Add(layout);
         }
@@ -552,29 +552,29 @@ private:
         }
     }
 
-    VariableLayout::DataType GetDataKind(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
+    DataType GetDataType(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
     {
         switch ((int)dataType)
         {
-        case VariableLayout::DataType::Float32:
-            return VariableLayout::DataType::Float32;
-        case VariableLayout::DataType::Float64:
-            return VariableLayout::DataType::Float64;
+        case DataType::Float32:
+            return DataType::Float32;
+        case DataType::Float64:
+            return DataType::Float64;
         default:
             throw gcnew CNTKRuntimeException(String::Format("Cannot convert native DataType with value: {0} to corresponding managed DataType.", (int)dataType), "");
         }
     }
 
-    VariableLayout::StorageType GetStorageKind(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
+    StorageType GetStorageType(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
     {
         switch ((int)storageType)
         {
-        case VariableLayout::StorageType::Dense:
-            return VariableLayout::StorageType::Dense;
-        case VariableLayout::StorageType::Sparse:
-            return VariableLayout::StorageType::Sparse;
-        case VariableLayout::StorageType::Undetermined:
-            return VariableLayout::StorageType::Undetermined;
+        case StorageType::Dense:
+            return StorageType::Dense;
+        case StorageType::Sparse:
+            return StorageType::Sparse;
+        case StorageType::Undetermined:
+            return StorageType::Undetermined;
         default:
             throw gcnew CNTKRuntimeException(String::Format("Cannot convert native StorageType with value: {0} to corresponding managed StorageType.", (int)storageType), "");
         }
