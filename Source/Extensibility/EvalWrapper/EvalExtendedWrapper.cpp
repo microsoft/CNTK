@@ -90,7 +90,7 @@ public:
  
     //
     // For dense, this is the length of Buffer (in nr. of ElemTypes).
-    // For sparse, this is the number of columns (the length of ColIndices - 1).
+    // For sparse, this is the length of ColIndices (i.e. the number of columns + 1).
     // This allows Buffer / Indices / ColIndices to be larger than Size to avoid
     // reallocation.
     //
