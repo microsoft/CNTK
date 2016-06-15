@@ -35,12 +35,12 @@ printHardwareInfo()
   nvidiaSmiPath="nvidia-smi"
 
   if [ "$OS" == "Windows_NT" ]; then
-    nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
+    nvidiaSmiPath="\"/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi\""
   fi
 
   if [ -f "$nvidiaSmiPath" ]; then
-  gpuName=$("$nvidiaSmiPath" --query-gpu=gpu_name --format=csv,noheader)
-  gpuMem=$("$nvidiaSmiPath" --query-gpu=memory.total --format=csv,noheader)
+  gpuName=$($nvidiaSmiPath --query-gpu=gpu_name --format=csv,noheader)
+  gpuMem=$($nvidiaSmiPath --query-gpu=memory.total --format=csv,noheader)
   fi
 
   echo -e "Hardware info:
