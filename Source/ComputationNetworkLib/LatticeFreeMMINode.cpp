@@ -351,10 +351,11 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     int endWithWindow = nf - 1;
 
     int index = 0;
+    int lastSenone = -1;
     while (index < nf)
     {
         int currentSenone = (int)m_labelVector[index];
-        //int startIndex = index;
+        int startIndex = index;
         index++;
         while (index < nf)
         {
@@ -362,17 +363,20 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
             index++;
         }
         
-        if (currentSenone != blankid)
+        
         {
-            //beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
-            //endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
-
-            m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
-            m_senoneSequence.push_back({ currentSenone, beginWithWindow, endWithWindow });
-            lastState = m_fsa[lastState][blankid].first;
-            m_stateSequence.push_back(lastState);
+            beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
+            endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
+            if (currentSenone != blankid && lastSenone != blankid)
+            {
+                m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
+                lastState = m_fsa[lastState][blankid].first;
+                m_stateSequence.push_back(lastState);
+            }
+            m_senoneSequence.push_back({ currentSenone, beginWithWindow, endWithWindow });            
             lastState = m_fsa[lastState][currentSenone].first;
             m_stateSequence.push_back(lastState);
+            lastSenone = currentSenone;
         }
     }
     m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
