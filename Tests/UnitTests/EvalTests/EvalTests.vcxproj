@@ -158,10 +158,10 @@
       <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(UnitTestDlls)" />
     </ItemGroup>
     <ItemGroup Condition="$(GpuBuild)">
-      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
+      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(CuDnnDll);$(UnitTestDependencies)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

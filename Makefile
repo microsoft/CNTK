@@ -11,7 +11,11 @@
 #     defaults to release
 #   ACML_PATH= path to ACML library installation
 #     only needed if MATHLIB=acml
-#   MKL_PATH= path to MKL library installation
+#   MKL_PATH= path to CNTK custom MKL installation
+#     only needed if MATHLIB=mkl
+#   CNTK_CUSTOM_MKL_VERSION=2
+#     version for the CNTK custom MKL installation
+#   MKL_THREADING=parallel|sequential
 #     only needed if MATHLIB=mkl
 #   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
 #     defaults to /usr
@@ -131,9 +135,15 @@ ifeq ("$(MATHLIB)","acml")
 endif
 
 ifeq ("$(MATHLIB)","mkl")
-  INCLUDEPATH += $(MKL_PATH)/mkl/include
-  LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
-  LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+  INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
+  LIBS += -lm
+ifeq ("$(MKL_THREADING)","sequential")
+  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
+  LIBS += -lmkl_cntk_s
+else
+  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
+  LIBS += -lmkl_cntk_p -liomp5 -lpthread
+endif
   COMMON_FLAGS += -DUSE_MKL
 endif
 
