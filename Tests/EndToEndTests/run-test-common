@@ -35,18 +35,18 @@ printHardwareInfo()
   gpuName=""
   gpuMem=""
 
-  gpuNameQuery="--query-gpu=gpu_name --format=csv,noheader | sed -n '1p'"
-  gpuMemQuery="--query-gpu=memory.total --format=csv,noheader | sed -n '1p'"
+  gpuNameQuery="--query-gpu=gpu_name --format=csv,noheader"
+  gpuMemQuery="--query-gpu=memory.total --format=csv,noheader"
 
   if [ "$OS" == "Windows_NT" ]; then
     nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
     if [ -f "$nvidiaSmiPath" ]; then
-      gpuName=$("$nvidiaSmiPath" $gpuNameQuery)
-      gpuMem=$("$nvidiaSmiPath" $gpuMemQuery)
-    fi
+      gpuName=$("$nvidiaSmiPath" $gpuNameQuery | head -1)
+      gpuMem=$("$nvidiaSmiPath" $gpuMemQuery | head -1)
+  fi
   else
-    gpuName=$(nvidia-smi $gpuNameQuery)
-    gpuMem=$(nvidia-smi $gpuMemQuery)
+    gpuName=$(nvidia-smi $gpuNameQuery | head -1)
+    gpuMem=$(nvidia-smi $gpuMemQuery | head -1)
   fi
 
   echo -e "Hardware info:
