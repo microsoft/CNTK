@@ -3137,6 +3137,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         if (blendFactor > 0)
         {
             // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
+            // TODO: add a 'beta' parameter to ScaleAndAdd()
             Scale((ElemType)(1 - blendFactor), saveMean);
             ScaleAndAdd((ElemType)blendFactor, runMean, saveMean);
             Scale((ElemType)(1 - blendFactor), saveInvStdDev);
