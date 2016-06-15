@@ -31,6 +31,7 @@ if [ ! -e $OUTPUT_CURRENT ]; then
   exit 3
 fi
 
+# Check for each line that the space-separated floats match the baseline with a tolerance of 0.03 %
 OUTPUT_DIFF=$TEST_RUN_DIR/Output.ScaledLogLikelihood.diff
 awk '{FS=" "} function abs(x) {return ((x < 0.0) ? -x : x)} NR==FNR {for (i=1; i<=NF; i++) a[FNR][i]=$i;} NR!=FNR {for (i=1; i<=NF; i++) {if ((abs($i - a[FNR][i])/abs($i)) > 0.03) printf("Line %d, Field %d: Baseline = %f, Current = %f\n", NR, i, a[FNR][i], $i);}}' $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF || exit $?
 

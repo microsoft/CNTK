@@ -381,6 +381,7 @@ private:
     }
 
     // find a file either at given location or traverse include paths
+    // TODO: also allow ... syntax, where ... refers to the directory of the enclosing file
     static wstring FindSourceFile(const wstring& path, const vector<wstring>& includePaths)
     {
         if (File::Exists(path))

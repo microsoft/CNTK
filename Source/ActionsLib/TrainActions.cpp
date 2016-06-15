@@ -59,7 +59,10 @@ template <class C>
 shared_ptr<C> CreateObject(const ConfigParameters& config, const wchar_t* id)
 {
     ConfigParameters readerConfig(config(id));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    if (!readerConfig.ExistsCurrent("traceLevel")) // do not overwrite "traceLevel" if it's already present
+    {
+        readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    }
     return make_shared<C>(readerConfig);                           // old CNTK config specifies a dictionary which then must be explicitly instantiated
 }
 

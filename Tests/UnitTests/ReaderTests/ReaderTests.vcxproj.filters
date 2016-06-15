@@ -49,6 +49,9 @@
     <Filter Include="Linked Source">
       <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Config\HTKDeserializers">
+      <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\ImageReaderSimple_map.txt">
@@ -303,6 +306,15 @@
     <Text Include="Control\CNTKTextFormatReader\200x200x2_seq2seq_dense_sorted.txt">
       <Filter>Control\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_and_5x5_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
+    <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt">
+      <Filter>Data\CNTKTextFormatReader</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -362,6 +374,45 @@
       <Filter>Config</Filter>
     </None>
     <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop1_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop3_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop4_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop10_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializerSimpleDataLoop11_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop14_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop19_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop20_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop21_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
+    </None>
+    <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

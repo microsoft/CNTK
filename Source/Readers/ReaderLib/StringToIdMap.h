@@ -33,7 +33,7 @@ public:
     }
 
     // Tries to get a value by id.
-    bool TryGet(const TString& value, size_t& id)
+    bool TryGet(const TString& value, size_t& id) const
     {
         const auto& it = m_values.find(value);
         if (it == m_values.end())

@@ -1,6 +1,12 @@
 @echo off
 setlocal enableDelayedexpansion
 
+::: Copyright (c) Microsoft. All rights reserved.
+:::
+::: Licensed under the MIT license. See LICENSE.md file in the project root 
+::: for full license information.
+::: ==============================================================================
+:::
 ::: This is called as a pre-build step for the CNTK executable.
 ::: It receives the build's configuration, $(Configuration), as first paramter.
 ::: It creates buildinfo.h, which makes version information available to the executable itself.
@@ -28,9 +34,14 @@ if not errorlevel 1 (
     )
 )
 
-:: For now, math lib is basically hardwired
-if exist ACML_PATH (
-    echo #define _MATHLIB_ "acml">> buildinfo.h$$
+if "%CNTK_MKL%" == "1" (
+  if "%CNTK_MKL_SEQUENTIAL%" == "1" (
+    echo #define _MATHLIB_ "mkl-sequential">> buildinfo.h$$
+  ) else (
+    echo #define _MATHLIB_ "mkl">> buildinfo.h$$
+  )
+) else (
+  echo #define _MATHLIB_ "acml">> buildinfo.h$$
 )
 
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$

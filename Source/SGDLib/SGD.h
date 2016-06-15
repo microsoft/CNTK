@@ -166,6 +166,8 @@ protected:
         return m_parallelizationMethod;
     }
 
+    // helper function to initialize and check BlockMomentumSGD related parameters
+    void InitializeAndCheckBlockMomentumSGDParameters();
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -270,7 +272,7 @@ protected:
     bool m_zeroThresholdFor1Bit;
 
     // Parallel training related with MA / BM
-    size_t m_nFramesBetweenMASync;
+    size_t m_modelAggregationBlockSize;
     bool   m_resetSGDMomentum; 
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
@@ -351,14 +353,7 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-
-        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
-        {
-            // This is used to finish initializing BlockMomentumSGD parameter 
-            // since some of the parameter may not be specified by the users 
-            InitializeAndCheckBlockMomentumSGDParameters(); 
         }
-    }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -572,23 +567,21 @@ protected:
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
-    IDistGradAggregator<ElemType>* m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
-    void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
     MultiversoHelper<ElemType>* m_pMultiversoHelper;
     bool m_pMultiversoHelperBarrier;
 
-    bool UseGradientAggregation(size_t epochNumber)
+    bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
-
-    bool UseModelAggregation(size_t epochNumber)
+    bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&

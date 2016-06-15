@@ -59,8 +59,14 @@ int _tmain(int argc, _TCHAR* argv[])
     const std::string modelWorkingDirectory = path + "\\..\\..\\Examples\\Image\\MNIST\\Data\\";
     const std::string modelFilePath = modelWorkingDirectory + "..\\Output\\Models\\01_OneHidden";
 
-    // Load model
-    model->CreateNetwork("modelPath=\"" + modelFilePath + "\"");
+    // Load model with desired outputs
+    std::string networkConfiguration;
+    // Uncomment the following line to re-define the outputs (include h1.z AND the output ol.z)
+    // When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
+    // with the ones specified.
+    //networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
+    networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+    model->CreateNetwork(networkConfiguration);
 
     // get the model's layers dimensions
     std::map<std::wstring, size_t> inDims;
@@ -90,6 +96,7 @@ int _tmain(int argc, _TCHAR* argv[])
     model->Evaluate(inputLayer, outputLayer);
 
     // Output the results
+    fprintf(stderr, "Layer '%ls' output:\n", outputLayerName.c_str());
     for each (auto& value in outputs)
     {
         fprintf(stderr, "%f\n", value);

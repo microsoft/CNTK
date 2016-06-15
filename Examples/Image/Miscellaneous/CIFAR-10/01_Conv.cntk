@@ -16,8 +16,6 @@ imageLayout = "cudnn"
 # If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
 initOnCPUOnly=true
 
-prefetch = "true"
-
 command = Train:Test
 
 modelPath = "$ModelDir$/01_Convolution"
@@ -44,20 +42,18 @@ Train = [
     ]
     
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/Train.txt"
-        randomize = "auto"
-        # Setting minibatchMode="full" is a temporary fix to prevent an exception until the reader is migrated to the new reader.
-        minibatchMode="full"
-        features = [
-            dim = 3072
-            start = 1
-        ]
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
+        readerType = "CNTKTextFormatReader"
+        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
+        file = "$DataDir$/Train_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
         ]
     ]    
 ]
@@ -68,18 +64,17 @@ Test = [
     minibatchSize = 16
 
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/Test.txt"
-        randomize = "none"
-        features = [
-            dim = 3072
-            start = 1
-        ]
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
         ]
     ]    
 ]
