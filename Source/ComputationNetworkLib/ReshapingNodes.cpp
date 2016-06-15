@@ -90,7 +90,7 @@ template <class ElemType>
 
         // "LogPlus": softmax
         //   f(x) = log(sum_i exp x_i), hence gradient is:
-        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  – ReduceLogPlus(x))
+        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  - ReduceLogPlus(x))
         // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
         // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
 

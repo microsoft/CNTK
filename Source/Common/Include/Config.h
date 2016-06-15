@@ -498,9 +498,9 @@ public:
                     // check for custom separator character
                     // If the opening brace is immediately followed by any of the customSeparators,
                     // change m_separator (inside seps) to that character.
-                    // The parser lets you change the default separator to something else. For example the default separator for an array is usually the ‘:’ (I think)
+                    // The parser lets you change the default separator to something else. For example the default separator for an array is usually the ':' (I think)
                     // (12:45:23:46)
-                    // However if you are using strings, and one of those strings contains a ‘:’, you might want to change the separator to something else:
+                    // However if you are using strings, and one of those strings contains a ':', you might want to change the separator to something else:
                     // (;this;is;a;path:;c:\mydir\stuff)
                     //
                     // This will fail for

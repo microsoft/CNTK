@@ -178,7 +178,7 @@ GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 # Use GCOV_PREFIX and GCOV_PREFIX_STRIP if relocating:
 # For example, if the object file /user/build/foo.o was built with -fprofile-arcs, the final executable will try to create the data file
 # /user/build/foo.gcda when running on the target system. This will fail if the corresponding directory does not exist and it is unable
-# to create it. This can be overcome by, for example, setting the environment as ‘GCOV_PREFIX=/target/run’ and ‘GCOV_PREFIX_STRIP=1’.
+# to create it. This can be overcome by, for example, setting the environment as 'GCOV_PREFIX=/target/run' and 'GCOV_PREFIX_STRIP=1'.
 # Such a setting will name the data file /target/run/build/foo.gcda
 ifdef CNTK_CODE_COVERAGE
   CXXFLAGS += -fprofile-arcs -ftest-coverage

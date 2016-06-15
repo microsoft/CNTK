@@ -65,6 +65,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(CudaLibs);%(AdditionalDependencies)</AdditionalDependencies>
@@ -82,7 +83,7 @@
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
-      <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" -Xcompiler "/wd 4819" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
       <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"
