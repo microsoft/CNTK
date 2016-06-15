@@ -854,7 +854,6 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     const CUDA_LONG m_numRows)
 {
     // We first find max per column
-    __shared__ ElemType colMax[1];
     __shared__ ElemType partials[512];
     partials[threadIdx.x] = -10000000;
 
@@ -906,6 +905,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     }
     __syncthreads();
 
+    __shared__ ElemType colMax[1];
     if (threadIdx.x == 0)
     {
         colMax[0] = max(max(partials[0], partials[1]), max(partials[2], partials[3]));
@@ -914,7 +914,6 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     partials[threadIdx.x] = 0.0f;
 
     // Now start finding sums
-    __shared__ ElemType colSum[1];
     for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
         ElemType tmp = a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
@@ -965,6 +964,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     }
     __syncthreads();
 
+    __shared__ ElemType colSum[1];
     if (threadIdx.x == 0)
     {
         colSum[0] = partials[0] + partials[1] + partials[2] + partials[3];
