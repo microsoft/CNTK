@@ -68,20 +68,32 @@ public:
         Size = 0;
     }
 
+    // 
+    // Init for Dense
+    //
     ValueBuffer(int bufferSize)
     {
         Buffer = gcnew array<ElemType>(bufferSize);
-        Size = 0;
+        Size = bufferSize;
     }
 
+    //
+    // Init for sparse
+    //
     ValueBuffer(int bufferSize, int colIndicesSize)
     {
         Buffer = gcnew array<ElemType>(bufferSize);
         Indices = gcnew array<int>(bufferSize);
         ColIndices = gcnew array<int>(colIndicesSize);
-        Size = 0;
+        Size = colIndicesSize - 1;
     }
-    
+ 
+    //
+    // For dense, this is the length of Buffer (in nr. of ElemTypes).
+    // For sparse, this is the number of columns (the length of ColIndices - 1).
+    // This allows Buffer / Indices / ColIndices to be larger than Size to avoid
+    // reallocation.
+    //
     property int Size;
 
     //

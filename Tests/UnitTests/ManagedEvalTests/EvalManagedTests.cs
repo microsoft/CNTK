@@ -88,7 +88,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                 ValueBuffer<float>[] outputBuffer = outputSchema.CreateBuffers<float>(5);
-                ValueBuffer<float>[] inputBuffer = inputSchema.CreateBuffers<float>();
+                ValueBuffer<float>[] inputBuffer = inputSchema.CreateBuffers<float>(5);
                 inputBuffer[0].Buffer[0] = 2;
                 inputBuffer[0].Size = 1;
 
@@ -139,7 +139,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                     {
                         Buffer = new float[] { 1, 2, 3, 5, 6 },
                         Indices = new [] { 0, 2, 2, 1, 2 },
-                        ColIndices = new [] { 0, 2, 2, 5 }
+                        ColIndices = new [] { 0, 2, 2, 5 },
+                        Size = 3
                     }
                 };
 
