@@ -43,7 +43,7 @@ printHardwareInfo()
     if [ -f "$nvidiaSmiPath" ]; then
       gpuName=$("$nvidiaSmiPath" $gpuNameQuery)
       gpuMem=$("$nvidiaSmiPath" $gpuMemQuery)
-    fi
+  fi
   else
     gpuName=$(nvidia-smi $gpuNameQuery)
     gpuMem=$(nvidia-smi $gpuMemQuery)
