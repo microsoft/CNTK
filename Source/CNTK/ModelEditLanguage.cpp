@@ -652,6 +652,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             }
             auto pParamNode = std::dynamic_pointer_cast<LearnableParameter<ElemType>>(pNode);
 
+            //shared_ptr<LearnableParameter<short>> pLearnaParamShort(new LearnableParameter<short>(-1, L"Some_Name"));
+
             wstring quantizedNodeName = pNode->NodeName() + L"_quantized";
             // Quantization to <short> is the only currently supported
             shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(pParamNode->Value().Data(), pParamNode->Value().GetNumElements(), extraBits));
