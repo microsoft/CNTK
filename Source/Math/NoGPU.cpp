@@ -417,6 +417,10 @@ void GPUSparseMatrix<ElemType>::ElementAndXOf(const GPUSparseMatrix<ElemType>& a
 {
 }
 
+static void AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const GPUSPARSE_INDEX_TYPE RowOffset);
+{
+}
+
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
