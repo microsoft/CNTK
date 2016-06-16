@@ -2131,7 +2131,28 @@ void GPUSparseMatrix<ElemType>::ElementAndXOf(const GPUSparseMatrix<ElemType>& a
     //c.SetValue(cs);
 }
 
+// row stack matrix b to matrix a
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const GPUSPARSE_INDEX_TYPE RowOffset)
+{
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
 
+    if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() < b.GetNumRows())
+    {
+        LogicError("GPUSparseMatrix: AssignCopyOf: matrix dimension mismatch.");
+    }
+
+    b.PrepareDevice();
+    GPUSparseMatrix<ElemType> aCopy(a);
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    GPUSPARSE_INDEX_TYPE newNzCount = a.NzCount() + b.NzCount();
+    a.Resize(aCopy.GetNumRows(), aCopy.GetNumCols(), newNzCount, MatrixFormat::matrixFormatSparseCSC);
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAssignCopyOfsparseCSC_ColIndexAdd<ElemType><<<nBlocks, 1024>>>(a.GetNumCols(), a.ColLocation(), aCopy.ColLocation(), b.ColLocation());
+    _sparseCSCAssignCopyOfsparseCSC_CopyToA<ElemType><<<nBlocks, 1024>>>(RowOffset, aCopy.GetNumCols(), a.RowLocation(), a.ColLocation(), a.Data(), aCopy.RowLocation(), aCopy.ColLocation(), aCopy.Data(), b.RowLocation(), b.ColLocation(), b.Data());
+}
 
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const

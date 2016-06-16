@@ -563,6 +563,7 @@ public:
 
     static void ElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c); 
     static void ElementAndXOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
+    static void AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const int RowOffset);
 
 public:
     void Read(File& stream);

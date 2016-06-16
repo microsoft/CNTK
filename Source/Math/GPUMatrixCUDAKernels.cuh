@@ -2938,6 +2938,67 @@ __global__ void _sparseCSCElemAndXsparseCSC_Mark(
 }
 
 
+// RowStack sparse matrix b to a
+template <class ElemType>
+__global__ void _sparseCSCAssignCopyOfsparseCSC_ColIndexAdd(
+    const CUDA_LONG n,
+    GPUSPARSE_INDEX_TYPE* c_dCol,
+    const GPUSPARSE_INDEX_TYPE* a_dCol,
+    const GPUSPARSE_INDEX_TYPE* b_dCol
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    c_dCol[id + 1] = a_dCol[id + 1] + b_dCol[id + 1];
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAssignCopyOfsparseCSC_CopyToA(
+    const GPUSPARSE_INDEX_TYPE RowOffset,
+    const CUDA_LONG n,
+    GPUSPARSE_INDEX_TYPE* c_dRow,
+    GPUSPARSE_INDEX_TYPE* c_dCol,
+    ElemType* c_dVal,
+    const GPUSPARSE_INDEX_TYPE* a_dRow,
+    const GPUSPARSE_INDEX_TYPE* a_dCol,
+    const ElemType* a_dVal,
+    const GPUSPARSE_INDEX_TYPE* b_dRow,
+    const GPUSPARSE_INDEX_TYPE* b_dCol,
+    const ElemType* b_dVal
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+
+    int start = c_dCol[id];
+    int end = c_dCol[id + 1];
+
+    int startA = a_dCol[id];
+    int endA = a_dCol[id + 1];
+
+    int startB = b_dCol[id];
+    int endB = b_dCol[id + 1];
+
+    int count = 0;
+
+    while (startA < endA)
+    {
+        c_dRow[start + count] = a_dRow[startA];
+        c_dVal[start + count] = a_dVal[startA];
+        count++;
+        startA++;
+    }
+
+    while (startB < endB)
+    {
+        c_dRow[start + count] = b_dRow[startB] + RowOffset;
+        c_dVal[start + count] = b_dVal[startB];
+        count++;
+        startB++;
+    }
+}
 
 template <class ElemType>
 __global__ void _isValid(

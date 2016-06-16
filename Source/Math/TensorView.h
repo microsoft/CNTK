@@ -141,7 +141,7 @@ public:
 
     void DoMatrixElementProductOf(const TensorView& a, const TensorView& b);
     void DoMatrixElementAndXOf(const TensorView& a, const TensorView& b);
-
+    void SparseAssignCopyOf(const TensorView& a, const int RowOffset);
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
 
 private:

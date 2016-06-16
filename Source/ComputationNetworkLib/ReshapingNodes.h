@@ -543,6 +543,70 @@ private:
 template class RowStackNode<float>;
 template class RowStackNode<double>;
 
+
+
+template <class ElemType>
+class SparseRowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"SparseRowStack"; }
+
+public:
+    DeclareConstructorFromConfig(SparseRowStackNode);
+    SparseRowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        int RowOffset = 0;
+        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.SparseAssignCopyOf(input, RowOffset);
+            RowOffset += Input(inputIndex)->GetSampleLayout().GetDims()[0];
+        }
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseRowStackNode");
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        // the dimension of column must be the same (i.e., the Minibatch size)
+        if (isFinalValidationPass)
+        {
+            for (int i = 0; i < GetNumInputs(); i++)
+            {
+                // the dimension of column must be the same (i.e., the Minibatch size)
+                if (i != 0 && Input(i)->GetMBLayout() != Input(i - 1)->GetMBLayout())
+                    LogicError("%ls: Minibatch layouts doesn't match between input nodes.", NodeDescription().c_str());
+            }
+
+        }
+        // calculate the row size of the output matrix
+        auto dims = Input(0)->GetSampleLayout().GetDims();
+        for (int i = 1; i < GetNumInputs(); i++)
+        {
+            dims[0] += Input(i)->GetSampleLayout().GetDims()[0];
+        }
+
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+
+template class SparseRowStackNode<float>;
+template class SparseRowStackNode<double>;
+
+
 // -----------------------------------------------------------------------
 // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
 // -----------------------------------------------------------------------

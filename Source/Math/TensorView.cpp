@@ -358,6 +358,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     // express the TensorView's storage in m_sob's coordinates
     let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
     let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
+
     if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
 
@@ -505,17 +506,36 @@ void TensorView<ElemType>::DoMatrixElementAndXOf(const TensorView& a, const Tens
         InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     }
 
-    //fprintf(stderr, "After ElementWise rankA, rankB, rankC: %d, %d, %d\n", shapeA.GetRank(), shapeB.GetRank(), shapeC.GetRank());
-    //for (int i = 0; i < shapeA.GetRank(); i++) fprintf(stderr, "dimA: %d ", shapeA.GetDim(i));
-    //for (int i = 0; i < shapeB.GetRank(); i++) fprintf(stderr, "dimB: %d ", shapeB.GetDim(i));
-    //for (int i = 0; i < shapeC.GetRank(); i++) fprintf(stderr, "dimC: %d ", shapeC.GetDim(i));
-
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();
     let  B = b.Reshaped(shapeB).AsMatrix();
     auto C = Reshaped(shapeC).AsMatrix();
 
     Matrix<ElemType>::ElementAndXOf(*A, *B, *C);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::SparseAssignCopyOf(const TensorView& a, const int RowOffset)
+{
+    bool transA = false;
+    bool transB = false;
+
+    // determine integration dimension offset
+    auto shapeA = a.m_shape;
+    auto shapeB = m_shape;
+
+    //fprintf(stderr, "shapeA: %d %d %d \n", shapeA[0], shapeA[1], shapeA[2]);
+    //fprintf(stderr, "shapeB: %d %d %d \n", shapeB[0], shapeB[1], shapeB[2]);
+
+    // flatten. This updates shapeA etc.
+    FlattenToMatrix(shapeA, transA, 1);
+    FlattenToMatrix(shapeB, transB, 1);
+
+    // create Matrix objects out of this
+    let  A = a.Reshaped(shapeA).AsMatrix();
+    auto B = Reshaped(shapeB).AsMatrix();
+
+    Matrix<ElemType>::AssignCopyOf(*B, *A, RowOffset);
 }
 
 template class TensorView<float>;

@@ -4460,6 +4460,26 @@ template <class ElemType>
     }
 }
 
+// AssginCopyOf matix b to a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const int RowOffset)
+{
+    DecideAndMoveToRightDevice(a, b);
+
+    if (b.GetDeviceId() >= 0 /*GPU*/ && b.GetMatrixType() == MatrixType::SPARSE)
+    {
+        if (a.GetMatrixType() != MatrixType::SPARSE)
+        {
+            a.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+        }
+        GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, RowOffset);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
 template <class ElemType>
 /*static*/ void Matrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c)
 {
