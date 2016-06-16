@@ -471,16 +471,6 @@ protected:
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 
 protected:
-    // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr& node,
-                       ::CNTK::LearnerPtr learner,
-                       const ::CNTK::Variable& parameter,
-                       const double learnRatePerSample,
-                       const double momentumPerSample,
-                       const size_t actualMBSize,
-                       const double L2RegWeight, const double L1RegWeight) const;
-
-    void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
@@ -541,22 +531,24 @@ protected:
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
-    // a list of variables, one for each LearnableParameterNode
-    std::list<::CNTK::Variable> m_parameters;
+    // TODO (alrezni): drop the nodes, they are not really required,
+    // instead keep a struct of params (or do it inside the learner).
+    // Actually, we need to know the mutlpiplier for each parameter.
+    // a map from parameters to nodes.
+    std::unordered_map<::CNTK::Variable, ComputationNodePtr> m_parameterToNodeMap;
 
     // a list of learners, one for each LearnableParameterNode
     std::list<::CNTK::LearnerPtr> m_learners;
 
+    // a list of all learnable parameters
+    std::list<::CNTK::Variable> m_learnableParameters;
+
 private:
-    std::list<shared_ptr<Matrix<ElemType>>> SmoothedGradients()
-    {
-        std::list<shared_ptr<Matrix<ElemType>>> gradients;
-        for (auto learner : m_learners)
-        {
-            learner->GetSmoothedGradients(gradients);
-        }
-        return gradients;
-    }
+    std::list<shared_ptr<Matrix<ElemType>>> SmoothedGradients();
+
+    void UpdateWeights(const double learnRatePerSample,
+                       const double momentumPerSample,
+                       const size_t actualMBSize) const;
 
 private:
     void InitializeAndCheckBlockMomentumSGDParameters();
@@ -577,6 +569,24 @@ private:
     bool UsingParallelTrain(size_t epochNumber) const
     {
         return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
+    }
+
+    void InstantiateLearner(GradientsUpdateType type, 
+                            const std::list<ComputationNodeBasePtr>& learnableNodes, 
+                            const ::CNTK::DeviceDescriptor& device);
+
+    static ::CNTK::DeviceDescriptor GetDeviceDescriptor(DEVICEID_TYPE deviceType)
+    {
+        if (deviceType == CPUDEVICE)
+        {
+            return ::CNTK::DeviceDescriptor::CPUDevice();
+        }
+        else if (deviceType >= 0)
+        {
+            return ::CNTK::DeviceDescriptor::GPUDevice(deviceType);
+        }
+
+        return ::CNTK::DeviceDescriptor::DefaultDevice();
     }
 };
 

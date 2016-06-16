@@ -75,8 +75,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; CNTKLibrary-2.0.lib; Common.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>Math.dll; CNTKLibrary-2.0.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <AdditionalDependencies>CNTKLibrary-2.0.lib;ActionsLib.lib;SGDLib.lib;ComputationNetworkLib.lib;Math.lib;Common.lib;kernel32.lib;user32.lib;shell32.lib;SequenceTrainingLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
@@ -104,7 +104,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; CNTKLibrary-2.0.lib; Math.lib; Common.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>Math.dll; CNTKLibrary-2.0.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
@@ -116,7 +116,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);CPUONLY</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Math.dll; CNTKLibrary-2.0.dll; msmpi.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; msmpi.dll;</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Message>Copying dependencies</Message>
@@ -142,7 +142,6 @@
     <Text Include="modelEditorFromScratch.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />

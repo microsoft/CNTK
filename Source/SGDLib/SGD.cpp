@@ -18,8 +18,6 @@
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
-#include "CNTKLibrary.h"
-
 #include <map>
 #include <set>
 
@@ -253,45 +251,33 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
 
-    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    auto device = GetDeviceDescriptor(net->GetDeviceId());
+
+    GradientsUpdateType adpType = GradUpdateType();
+    if (adpType == GradientsUpdateType::RmsProp || adpType == GradientsUpdateType::FSAdaGrad) 
     {
-        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        list<ComputationNodeBasePtr> sparse, dense;
+        partition_copy (learnableNodes.begin(), learnableNodes.end(), sparse.begin(), dense.begin(), 
+            [](const ComputationNodeBasePtr& node) 
+        {  
+            // TODO: check if correct matrix type is already available at this point.
+            return dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetMatrixType() == MatrixType::SPARSE;
+        });
 
-        const auto& nodeValue = node->Value();
+        if (sparse.size() > 0) 
+        {
+            // rmsprop and fsadagrad for sparse is not implemented yet, delegate it with adagrad
+            InstantiateLearner(GradientsUpdateType::AdaGrad, sparse, device);
+        }
 
-        // TODO: communicate net->GetDeviceId() to the learners, so that they allocate matrices
-        // for smoothed gradients on the correct devices.
-        m_parameters.push_back(::CNTK::Variable({ nodeValue.GetNumRows(), nodeValue.GetNumCols() },
-            ::CNTK::GetDataType<ElemType>(), node->NodeName()));
-
-        GradientsUpdateType adpType = GradUpdateType();
-   
-        //TODO: each LearnableParameter node can specify it's own learning rate multipliers,
-        // so for the time being create a separate learner for each LearnableParameter. 
-        //TODO: update learners to take a collection of multipliers, one for each parameter. 
-        if (adpType == GradientsUpdateType::None)
+        if (dense.size() > 0) 
         {
-            //TODO: Does it really make sense to provide a learning rate up-front when creating a learner?
-            // the learning rate can be adjustable, it can be retrieved from a checkpoint etc.
-            // Same for momentum.
-            m_learners.push_back(::CNTK::SGDLearner({ m_parameters.back() }, 0.0, 0.0, m_useNesterovMomentum));
+            InstantiateLearner(adpType, dense, device);
         }
-        else if (adpType == GradientsUpdateType::AdaGrad ||
-            (adpType == GradientsUpdateType::RmsProp && nodeValue.GetMatrixType() == MatrixType::SPARSE) ||
-            (adpType == GradientsUpdateType::FSAdaGrad && nodeValue.GetMatrixType() == MatrixType::SPARSE))
-        {
-            // rmsprop for sparse is not implemented yet, delegate it with adagrad
-            m_learners.push_back(::CNTK::AdaGradLearner({ m_parameters.back() }, 0.0, m_needAveMultiplier));
-        }
-        else if (adpType == GradientsUpdateType::FSAdaGrad)
-        {
-            m_learners.push_back(::CNTK::FSAdaGradLearner({ m_parameters.back() }, 0.0, 0.0));
-        }
-        else if (adpType == GradientsUpdateType::RmsProp)
-        {
-            m_learners.push_back(::CNTK::RmsPropLearner({ m_parameters.back() }, 0.0,
-                m_rpi.gamma, m_rpi.inc, m_rpi.max, m_rpi.dec, m_rpi.min, m_needAveMultiplier));
-        }
+    }
+    else
+    {
+        InstantiateLearner(adpType, learnableNodes, device);
     }
 
     double avgCriterion, lrControlCriterion;
@@ -1078,31 +1064,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (numSamplesInMinibatch != aggregateNumSamples)
                 fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
 #endif
-            auto smoothedGradientIter = SmoothedGradients().begin();
+            // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
+            double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
 
-            auto parameterIter = m_parameters.begin();
-            auto learnerIter = m_learners.begin();
-            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end();
-                nodeIter++, parameterIter++, learnerIter++, smoothedGradientIter++)
-            {
-                ComputationNodeBasePtr node = *nodeIter;
-                if (node->IsParameterUpdateRequired())
-                {
-                    Matrix<ElemType>& smoothedGradient = *(*smoothedGradientIter);
-#ifdef _DEBUG
-                    if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
-                        LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
-#endif
-                    // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
-                    UpdateWeights(node, *learnerIter, *parameterIter, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
-                                  m_L2RegWeight, m_L1RegWeight);
-#ifdef _DEBUG
-                    if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
-                        LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
-#endif
-                }
-            }
+            UpdateWeights(learnRatePerSample, momentumPerSample, numSamplesInMinibatch);
         }
 
         // aggregation by model averaging or block momentum 
@@ -1868,109 +1833,58 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 
 // UpdateWeights - update the weights in
 template <class ElemType>
-void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
-                                  ::CNTK::LearnerPtr learner,
-                                  const ::CNTK::Variable& parameter,
-                                  const double learnRatePerSample,
+void SGD<ElemType>::UpdateWeights(const double learnRatePerSample,
                                   const double momentumPerSample,
-                                  const size_t actualMBSize,
-                                  const double L2RegWeight, const double L1RegWeight) const
+                                  const size_t actualMBSize) const
 {
-#if DUMPOUTPUT
-    LOGPRINTF(stderr, "Update_%ls\n", node->NodeName().c_str());
-#endif
-    if (!node->IsParameterUpdateRequired())
-        LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
-
-    double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
-
-    Matrix<ElemType>& functionValues = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
-    Matrix<ElemType>& gradientValues = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient();
-
-    // we use simple linear (instead of log linear) scaling here
-    const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
-#if DUMPOUTPUT
-    LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
-              learnRatePerSample, momentum, actualMBSize);
-    LOGPRINTF(stderr, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
-              GradUpdateType(), GradientUpdateNoiseStd());
-    gradientValues.Print("Gradient Input");
-    //TODO : move this part to learner?
-    // smoothedGradient.Print("Smoothed Gradient Input");
-#endif
-
-    // make actualMBSize is a valid value
-    assert(actualMBSize > 0);
-
-    // clipping gradients to prevent outliers
-    ClipGradient(gradientValues, actualMBSize);
-
-    double noiseStd = GradientUpdateNoiseStd();
-    Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE) functionValues.GetDeviceId());
-    if (noiseStd > 0)
+    for (auto& learner : m_learners)
     {
-        // get the gradient structure since gradient is sparse
-        sgdUpdateNoise.SetValue(gradientValues);
+        // we use simple linear (instead of log linear) scaling here
+        const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 
-        // reset its value to random
-        sgdUpdateNoise.SetGaussianRandomValue(0, (ElemType) noiseStd);
-    }
+        learner->SetLearningRate(learnRatePerSample);
+        learner->SetMomentum(momentum);
 
-    // L2 regularizer
-    if (L2RegWeight > 0)
-    {
-        // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-        Matrix<ElemType>::ScaleAndAdd((ElemType)(L2RegWeight * actualMBSize), functionValues, gradientValues);
-    }
+        unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> parameters;
+        unordered_map<::CNTK::Variable, const ::CNTK::ValuePtr> gradients;
 
-    learner->SetLearningRate(nodeDependentLearningRatePerSample);
-    learner->SetMomentum(momentum);
-
-    // TODO: use appropriate device here (functionValues.GetDeviceId() => DeviceDescriptor)
-    auto device = ::CNTK::DeviceDescriptor::DefaultDevice();
-
-    learner->Update(
-        { { parameter, new ::CNTK::Value(new ::CNTK::NDArrayView({ functionValues.GetNumRows(), functionValues.GetNumCols() }, 
-                                                  functionValues.Data(), functionValues.GetNumElements(), device)) } },
-        { { parameter, new ::CNTK::Value(new ::CNTK::NDArrayView({ gradientValues.GetNumRows(), gradientValues.GetNumCols() }, 
-                                                  gradientValues.Data(), gradientValues.GetNumElements(), device)) } },
-        actualMBSize);
-
-    if (noiseStd > 0)
-    {
-        Matrix<ElemType>::ScaleAndAdd(1.0, sgdUpdateNoise, functionValues);
-    }
-
-    // L1 regularizer with proximal gradient descent method
-    if (L1RegWeight > 0)
-    {
-        // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-        functionValues.InplaceSoftThreshold((ElemType)(learnRatePerSample * L1RegWeight * actualMBSize));
-    }
-
-#if DUMPOUTPUT
-    functionValues.Print("Parameter Update");
-#endif
-    
-    node->BumpEvalTimeStamp();
-}
-
-template <class ElemType>
-void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
-{
-    if (m_clippingThresholdPerSample != std::numeric_limits<double>::infinity())
-    {
-        double maxGradientPerMB = m_clippingThresholdPerSample * actualMBSize;
-        if (m_gradientClippingWithTruncation)
-            gradient.InplaceTruncate((ElemType)(maxGradientPerMB));
-        else
+        for (const auto& parameter : learner->Parameters()) 
         {
-            // norm2 normalized
-            double gradientNorm = gradient.FrobeniusNorm();
-            if (gradientNorm > maxGradientPerMB)
+            auto& node = m_parameterToNodeMap.at(parameter);
+            if (!node->IsParameterUpdateRequired())
             {
-                double normFactor = maxGradientPerMB / gradientNorm;
-                gradient *= (ElemType) normFactor;
+                continue;
+            }
+
+            Matrix<ElemType>& functionValues = node->Value();
+            Matrix<ElemType>& gradientValues = node->Gradient();
+
+            // TODO: the assumption here is that all matrices (both function and gradient values)
+            // reside on the same device as smoothed gradients 
+            // (allocated on the same device as given by net->GetDeviceId())
+
+            parameters.insert(make_pair(parameter, 
+                new ::CNTK::Value(new ::CNTK::NDArrayView(
+                    { functionValues.GetNumRows(), functionValues.GetNumCols() }, 
+                    functionValues.Data(), functionValues.GetNumElements(), 
+                    GetDeviceDescriptor(functionValues.GetDeviceId())))));
+
+            // TODO: this does not quite work for sparse gradients (Text/SparseDSSM)
+            gradients.insert(make_pair(parameter, 
+                new ::CNTK::Value(new ::CNTK::NDArrayView(
+                    { gradientValues.GetNumRows(), gradientValues.GetNumCols() }, 
+                    gradientValues.Data(), gradientValues.GetNumElements(), 
+                    GetDeviceDescriptor(gradientValues.GetDeviceId())))));
+        }
+
+        learner->Update(parameters, gradients, actualMBSize);
+
+        for (const auto& parameter : learner->Parameters())
+        {
+            auto& node = m_parameterToNodeMap.at(parameter);
+            if (node->IsParameterUpdateRequired())
+            {
+                node->BumpEvalTimeStamp();
             }
         }
     }
@@ -2008,9 +1922,10 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
+            // TODO: replace with learners' checkpointing mechanism
             for (auto& smoothedGradient : SmoothedGradients())
-            {
-                fstream << *smoothedGradient;
+            { 
+                fstream << *smoothedGradient; 
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2091,6 +2006,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
+    // TODO: replace with learners' checkpointing mechanism
     for (auto& smoothedGradient : SmoothedGradients())
     {
         fstream >> *smoothedGradient;
@@ -2295,6 +2211,82 @@ void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNet
         nodeIter->SetEvalTimeStampOutdatedWrtAll();
 }
 
+template <class ElemType>
+list<shared_ptr<Matrix<ElemType>>> SGD<ElemType>::SmoothedGradients()
+{
+    unordered_map<::CNTK::Variable, shared_ptr<Matrix<ElemType>>> gradientMap;
+    for (auto learner : m_learners)
+    {
+        learner->GetSmoothedGradients<ElemType>(gradientMap);
+    }
+    // TODO (alrezni): need to ensure consistent order of gradients across runs.
+    // drop all the once checkpointing is implemented.
+    list<shared_ptr<Matrix<ElemType>>> gradients;
+    for (auto parameter : m_learnableParameters)
+    {
+        gradients.push_back(gradientMap.at(parameter));
+    }
+
+
+    return gradients;
+}
+
+template <class ElemType>
+void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type, 
+    const list<ComputationNodeBasePtr>& learnableNodes, 
+    const ::CNTK::DeviceDescriptor& device)
+{
+    unordered_set<::CNTK::Variable> parameters;
+    unordered_map<::CNTK::Variable, double> learningRateMultipliers;
+
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+
+        const auto& nodeValue = node->Value();
+
+        // TODO (alrezni): communicate net->GetDeviceId() to the learners, so that they allocate matrices
+        // for smoothed gradients on the correct devices.
+        ::CNTK::Variable parameter({ nodeValue.GetNumRows(), nodeValue.GetNumCols() },
+            ::CNTK::AsDataType<ElemType>(), node->NodeDescription());
+
+        m_parameterToNodeMap.insert(make_pair(parameter, node));
+        learningRateMultipliers.insert(make_pair(parameter, node->GetLearningRateMultiplier()));
+        parameters.insert(parameter);
+        m_learnableParameters.push_back(parameter);
+    }
+
+    ::CNTK::Learner::AdditionalParameters additionalParameters;
+    additionalParameters.l1RegWeight = m_L1RegWeight;
+    additionalParameters.l2RegWeight = m_L2RegWeight;
+    additionalParameters.gaussianNoiseInjectStd = GradientUpdateNoiseStd();
+    additionalParameters.gradientClippingWithTruncation = m_gradientClippingWithTruncation;
+    additionalParameters.clippingThresholdPerSample = m_clippingThresholdPerSample;
+    additionalParameters.device = device;
+
+    // TODO: confirm that multipliers are not supposed to change during training.
+    additionalParameters.SetLearningRateMultipliers(learningRateMultipliers);
+
+    switch (type)
+    {
+    case GradientsUpdateType::None:
+        m_learners.push_back(::CNTK::SGDLearner(parameters, m_useNesterovMomentum, additionalParameters));
+        break;
+    case GradientsUpdateType::AdaGrad:
+        m_learners.push_back(::CNTK::AdaGradLearner(parameters, m_needAveMultiplier, additionalParameters));
+        break;
+    case GradientsUpdateType::FSAdaGrad:
+        m_learners.push_back(::CNTK::FSAdaGradLearner(parameters, additionalParameters));
+        break;
+    case GradientsUpdateType::RmsProp:
+        m_learners.push_back(::CNTK::RmsPropLearner(parameters,
+        m_rpi.gamma, m_rpi.inc, m_rpi.max, m_rpi.dec, m_rpi.min, m_needAveMultiplier, additionalParameters));
+        break;
+    default:
+        NOT_IMPLEMENTED;
+    }  
+}
+
 template class SGD<float>;
 template class SGD<double>;
 
@@ -2494,7 +2486,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_learningRatesParam = learningRatesPerSample;
         m_learningRatesSpecifiedForMBSize = intargvector(L"1");
     }
-    else if (learningRatesPerMB.size() > 0) // this actually means per specified minibatch size
+    else if (learningRatesPerMB.size() > 0) // this actually means per specified minuibatch size
     {
         m_learningRatesParam = learningRatesPerMB;
         m_learningRatesSpecifiedForMBSize = m_mbSize;

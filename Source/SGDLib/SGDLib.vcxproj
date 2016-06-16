@@ -46,7 +46,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(NvmlLibPath)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ComputationNetworkLib.lib;Math.lib;CNTKLibrary-2.0.dll;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib;Math.lib;CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll;CNTKLibrary-2.0.dll;</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>

@@ -124,6 +124,7 @@ namespace CNTK
         template class _SimpleVector<size_t>;
         template class _SimpleVector<Axis>;
         template class _SimpleVector<FunctionPtr>;
+        template class _SimpleVector<ValuePtr>;
 
         template bool operator==(const _SimpleVector<size_t>& first, const _SimpleVector<size_t>& second);
 	
@@ -333,6 +334,7 @@ namespace CNTK
         template class _SimpleMap<Variable, const ValuePtr>;
         template class _SimpleMap<Placeholder, Variable>;
         template class _SimpleMap<Variable, ValuePtr>;
+        template class _SimpleMap<Variable, double>;
 
 #pragma endregion _SimpleMap
 

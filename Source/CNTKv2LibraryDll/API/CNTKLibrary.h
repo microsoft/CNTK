@@ -50,7 +50,7 @@ namespace CNTK
     /// Get the 'DataType' corresponding to the ElementType template type argument.
     ///
     template <typename ElementType>
-    inline DataType AsDataType()
+    inline DataType const AsDataType()
     {
         if (std::is_same<ElementType, float>())
             return DataType::Float;
@@ -298,6 +298,7 @@ namespace CNTK
     {
         friend class CompositeFunction;
         friend class Learner;
+        friend class LearnerBase;
 
     public:
         ///
@@ -305,7 +306,7 @@ namespace CNTK
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
         /// as large as the total size of the specified 'viewShape' and must outlive the created NDArrayView object.
         ///
-        NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
+        NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
@@ -317,12 +318,12 @@ namespace CNTK
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
         ///
-        NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device);
+        NDArrayView(::CNTK::DataType dataType, ::CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device);
 
         ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified 'device'.
         ///
-        NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device)
+        NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device)
             : NDArrayView(dataType, StorageFormat::Dense, viewShape, device)
         {}
 
@@ -465,7 +466,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-        NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
+        NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
@@ -486,9 +487,9 @@ namespace CNTK
         void SetValue(double value);
 
     private:
-        CNTK::DataType m_dataType;
+        ::CNTK::DataType m_dataType;
         DeviceDescriptor m_device;
-        CNTK::StorageFormat m_storageFormat;
+        ::CNTK::StorageFormat m_storageFormat;
         NDShape m_viewShape;
         bool m_isReadOnly;
 
@@ -842,7 +843,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name = L"")
+        Variable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, false, name)
         {
         }
@@ -850,7 +851,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name = L"")
+        Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
@@ -858,7 +859,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
+        Variable(const NDShape& shape, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, false, name)
         {
         }
@@ -866,7 +867,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
+        Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
@@ -874,7 +875,7 @@ namespace CNTK
         ///
         /// Create an 'Output' variable
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
+        Variable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, false, name)
         {
         }
@@ -979,7 +980,7 @@ namespace CNTK
         }
 
     protected:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
+        Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
             : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, false, name)
         {
         }
@@ -991,7 +992,7 @@ namespace CNTK
         }
 
     private:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
+        Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
             : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
         {
         }
@@ -1002,7 +1003,7 @@ namespace CNTK
         {
             NDShape m_shape;
             VariableKind m_varKind;
-            CNTK::DataType m_dataType;
+            ::CNTK::DataType m_dataType;
             Function* m_ownerFunction; // Variable does not keep the Function alive
             NDArrayViewPtr m_value;
             bool m_needsGradient;
@@ -1010,7 +1011,7 @@ namespace CNTK
             _Internal::_SimpleVector<Axis> m_dynamicAxes;
             bool m_isSparse;
 
-            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
+            _VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
                 : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_isSparse(isSparse), m_name(nullptr)
             {
                 if (name != nullptr)
@@ -1175,43 +1176,43 @@ namespace CNTK
 }
 
 namespace std {
-    template <> struct hash<CNTK::Axis>
+    template <> struct hash<::CNTK::Axis>
     {
-        size_t operator()(const CNTK::Axis& x) const
+        size_t operator()(const ::CNTK::Axis& x) const
         {
             return std::hash<std::wstring>()(x.Name());
         }
     };
     
-    template <> struct hash<CNTK::Variable>
+    template <> struct hash<::CNTK::Variable>
     {
-        size_t operator()(const CNTK::Variable& x) const
+        size_t operator()(const ::CNTK::Variable& x) const
         {
             return std::hash<const void*>()(x.m_dataFields);
         }
     };
 
-    template <> struct hash<CNTK::Parameter>
+    template <> struct hash<::CNTK::Parameter>
     {
-        size_t operator()(const CNTK::Parameter& x) const
+        size_t operator()(const ::CNTK::Parameter& x) const
         {
-            return std::hash<CNTK::Variable>()(x);
+            return std::hash<::CNTK::Variable>()(x);
         }
     };
 
-    template <> struct hash<CNTK::Constant>
+    template <> struct hash<::CNTK::Constant>
     {
-        size_t operator()(const CNTK::Constant& x) const
+        size_t operator()(const ::CNTK::Constant& x) const
         {
-            return std::hash<CNTK::Variable>()(x);
+            return std::hash<::CNTK::Variable>()(x);
         }
     };
 
-    template <> struct hash<CNTK::Placeholder>
+    template <> struct hash<::CNTK::Placeholder>
     {
-        size_t operator()(const CNTK::Placeholder& x) const
+        size_t operator()(const ::CNTK::Placeholder& x) const
         {
-            return std::hash<CNTK::Variable>()(x);
+            return std::hash<::CNTK::Variable>()(x);
         }
     };
 }
@@ -1593,106 +1594,147 @@ namespace CNTK
         return _Combine(operandVector, name);
     }
 
-
-    // Abstraction for learning a subset of parameters of a learnable function using first order gradient values
-    // For e.g momentum, AdaGrad, RmsProp etc. are different types of learners with their own algorithms for 
-    // learning parameter values using first order gradients.
-    class Learner : public _Internal::_ReferenceCounter
+#pragma warning(push)
+#pragma warning(disable : 4251 4275)
+    ///
+    /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
+    /// For e.g momentum, AdaGrad, RmsProp etc. are different types of learners with their own algorithms for 
+    /// learning parameter values using first order gradients.
+    ///
+    class CNTK_API Learner : public _Internal::_ReferenceCounter
     {
     public:
+        //
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
-        bool Update(std::unordered_map<Variable, ValuePtr>& parameters,
+        //
+        bool Update(const std::unordered_map<Variable, ValuePtr>& parameters,
             const std::unordered_map<Variable, const ValuePtr>& gradients,
             size_t trainingSampleCount)
         {
             auto abisSafeParametersMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(parameters);
             auto abisSafeGradientsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(gradients);
-            bool result = Update(abisSafeParametersMap, abisSafeGradientsMap, trainingSampleCount);
-
-            for (auto iter : parameters)
-            {
-                parameters[iter.first] = abisSafeParametersMap[iter.first];
-            }
-
-            return result;
+            return Update(abisSafeParametersMap, abisSafeGradientsMap, trainingSampleCount);
         }
 
+        ///
+        /// Returns the set of parameters associated with this learner.
+        ///
         std::unordered_set<Variable> Parameters() const { return m_parameters; }
+
+        virtual ~Learner()
+        {
+        }
 
 // TODO: the following methods are needed for backwards compatibility until sgd.cpp is updated to v2.
 #pragma region _temporary_back_compat
+        // TODO: are these getters really necessary?
         virtual double GetLearningRate() const = 0;
         virtual double GetMomentum() const = 0;
+        
         virtual void SetLearningRate(double value) = 0;
         virtual void SetMomentum(double value) = 0;
 
-        template <typename ElementType>
-        std::list<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>> GetSmoothedGradientsMatrices()
+        // Additional learning parameters.
+        struct AdditionalParameters
         {
-            std::list<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>> list;
-            auto gradients = SmoothedGradients();
-            for (size_t i = 0; i < gradients.Size(); ++i)
+            double l1RegWeight = 0.0;
+            double l2RegWeight = 0.0;
+            double gaussianNoiseInjectStd = 0.0;
+            bool gradientClippingWithTruncation = false;
+            double clippingThresholdPerSample = 0.0;
+            DeviceDescriptor device = DeviceDescriptor::DefaultDevice();
+            _Internal::_SimpleMap<Variable, double> learningRateMultipliers;
+
+            void SetLearningRateMultipliers(const std::unordered_map<Variable, double>& multipliers)
             {
-                list.push_back(GetWritableMatrix<ElementType>(gradients[i]))
+               learningRateMultipliers = _Internal::_SimpleMap<Variable, double>::CreateSimpleMap(multipliers);
             }
-            return list;
+        };
+
+        static const AdditionalParameters s_defaultParameters;
+
+        template <typename ElementType>
+        void GetSmoothedGradients(std::unordered_map<Variable, std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>>& map)
+        {
+            auto gradients = SmoothedGradients();
+            const unordered_set<Variable>& keys = gradients.Keys();
+
+            for (auto & key : keys)
+            {
+                map.insert(make_pair(key,gradients[key]->Data()->GetWritableMatrix<ElementType>()));
+            }
         }
 
     protected:
 
-        virtual _Internal::_SimpleVector<ValuePtr>  SmoothedGradients() const = 0;
+        virtual const _Internal::_SimpleMap<Variable, ValuePtr>& SmoothedGradients() const = 0;
 
 #pragma endregion _temporary_back_compat
 
     protected:
-        Learner(const std::unordered_set<Variable>& parameters)
-            : m_parameters(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters))
+        Learner(const _Internal::_SimpleSet<Variable>& parameters)
+            : m_parameters(parameters)
         {   
         }
-
-        template <typename ElementType>
-        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr arrayView)
-        {
-            return arrayView->GetMatrix<ElementType>();
-        }
-
-        template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(NDArrayViewPtr arrayView)
-        {
-            return arrayView->GetWritableMatrix<ElementType>();
-        }
-
-        template <typename ElementType>
-        static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr arrayView)
-        {
-            return arrayView->GetTensorView<ElementType>();
-        }
-
-        template <typename ElementType>
-        static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(NDArrayViewPtr arrayView)
-        {
-            return arrayView->GetWritableTensorView<ElementType>();
-        }
-
 
         virtual bool Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
             const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
             size_t trainingSampleCount) = 0;
 
-        _Internal::_SimpleSet<Variable>  m_parameters;
+       _Internal::_SimpleSet<Variable> m_parameters;
     };
 
-    // Methods to instantiate CNTK built-in learners
-    LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, 
-        double learningRatePerSample, double momentumPerSample, bool useNesterovAcceleration = false);
+#pragma warning(pop)
 
-    LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, 
-        double learningRatePerSample, bool needAveMultiplier = true);
+    CNTK_API LearnerPtr _SGDLearner(const _Internal::_SimpleSet<Variable>& parameters, bool useNesterovAcceleration = false,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
-    LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
-        double learningRatePerSample, double momentumPerSample);
+    CNTK_API LearnerPtr _AdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters, bool needAveMultiplier = true,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
-    LearnerPtr RmsPropLearner(const std::unordered_set<Variable>& parameters, 
-        double learningRatePerSample, double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true);
+    CNTK_API LearnerPtr _FSAdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+
+    CNTK_API LearnerPtr _RmsPropLearner(const _Internal::_SimpleSet<Variable>& parameters,
+        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+
+    ///
+    /// Create an instance of the CNTK built-in SGD learner.
+    ///
+    inline LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, bool useNesterovAcceleration = false, 
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    {
+        return _SGDLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), useNesterovAcceleration, additionalParameters);
+    }
+
+    ///
+    /// Create an instance of the CNTK built-in AdaGrad learner.
+    ///
+    inline LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true, 
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    {
+        return _AdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), needAveMultiplier, additionalParameters);
+    }
+
+    ///
+    /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
+    ///
+    inline LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    {
+        return _FSAdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), additionalParameters);
+    }
+
+    ///
+    /// Create an instance of the CNTK built-in RmsProp learner.
+    ///
+    inline LearnerPtr RmsPropLearner(const std::unordered_set<Variable>& parameters,
+        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    {
+        return _RmsPropLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), 
+            gamma, inc, dec, max, min, needAveMultiplier, additionalParameters);
+    }
 }

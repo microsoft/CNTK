@@ -133,6 +133,7 @@ namespace CNTK
     // Forward declarations
     class CompositeFunction;
     class Function;
+    class LearnerBase;
 
     namespace _Internal
     {
@@ -315,7 +316,7 @@ namespace CNTK
             template <typename ValueType>
             friend CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
 
-            friend class CNTK::Function;
+            friend class ::CNTK::Function;
 
         public:
             _SimpleVector();
@@ -390,7 +391,8 @@ namespace CNTK
         template <typename KeyType>
         class CNTK_API _SimpleSet final
         {
-            friend class CNTK::CompositeFunction;
+            friend class ::CNTK::CompositeFunction;
+            friend class ::CNTK::LearnerBase;
 
             template <typename T>
             friend CNTK_API bool operator==(const _SimpleSet<T>& first, const _SimpleSet<T>& second);
@@ -444,8 +446,8 @@ namespace CNTK
         template <typename KeyType, typename ValueType>
         class CNTK_API _SimpleMap final
         {
-            friend class CNTK::CompositeFunction;
-            friend class CNTK::Function;
+            friend class ::CNTK::CompositeFunction;
+            friend class ::CNTK::Function;
 
         public:
             _SimpleMap();
@@ -497,6 +499,8 @@ namespace CNTK
 
     class Learner;
     typedef _Internal::_ReferenceCounterSharedPtr<Learner> LearnerPtr;
+
+    class LearnerBase;
 
     inline wchar_t* CopyString(const wchar_t* source)
     {

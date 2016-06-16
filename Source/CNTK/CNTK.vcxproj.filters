@@ -176,9 +176,6 @@
       <Filter>from ReaderLib</Filter>
     </ClInclude>
     <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
-    <ClInclude Include="..\CNTKv2LibraryDll\API\CNTKLibrary.h">
-      <Filter>from CNTKv2LibraryDll\API</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -239,12 +236,6 @@
     </Filter>
     <Filter Include="from ReaderLib">
       <UniqueIdentifier>{28bc457a-d2f4-4f42-a9aa-89f22e909ab0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from CNTKv2LibraryDll">
-      <UniqueIdentifier>{0ce5833c-a9f4-49ce-ab24-fa09373cbf46}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from CNTKv2LibraryDll\API">
-      <UniqueIdentifier>{ef9c9c3e-47fc-49c0-b23d-1bb10e3dd9f9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -69,9 +69,6 @@
     <ClInclude Include="NetworkDescriptionLanguage.h">
       <Filter>Model Building - NDL</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKv2LibraryDll\API\CNTKLibrary.h">
-      <Filter>from CNTKv2LibraryDll\API</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -88,12 +85,6 @@
     </Filter>
     <Filter Include="Model Building - Standard Models">
       <UniqueIdentifier>{d8c1ab4c-6926-4c8f-9e2e-bc5f4c87e831}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from CNTKv2LibraryDll">
-      <UniqueIdentifier>{039bf533-f930-441d-bbcf-9c7a23ff182e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from CNTKv2LibraryDll\API">
-      <UniqueIdentifier>{aaa6f113-6703-443a-9b86-d18e1a0556d5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -86,7 +86,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
