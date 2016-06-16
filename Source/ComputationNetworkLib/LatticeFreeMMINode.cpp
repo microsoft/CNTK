@@ -379,9 +379,12 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
             lastSenone = currentSenone;
         }
     }
-    m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
-    lastState = m_fsa[lastState][blankid].first;
-    m_stateSequence.push_back(lastState);
+    if (lastSenone != blankid)
+    {
+        m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
+        lastState = m_fsa[lastState][blankid].first;
+        m_stateSequence.push_back(lastState);
+    }
 
     // copy likelihoods to CPU
     size_t nstates = m_senoneSequence.size();
