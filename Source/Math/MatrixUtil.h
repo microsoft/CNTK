@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
+//
 #pragma once
 #define NOMINMAX
 #include <fstream>
@@ -5,9 +9,10 @@
 #include <iostream>
 #include <limits>
 #include <string.h>//for memset
-#include "blockmultiplierplatform.h"
+#include "BlockMultiplierPlatform.h"
 
 
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<typename ScalarT> void DumpMatrix(ScalarT* pDumpMe, int rows, int cols, std::ostream* pStream, int rowMax = std::numeric_limits<int>::max(),
 	int colMax = std::numeric_limits<int>::max())
@@ -22,7 +27,7 @@ template<typename ScalarT> void DumpMatrix(ScalarT* pDumpMe, int rows, int cols,
 	}
 }
 
-//Turn a row+col into an absolute offset
+// Turn a row+col into an absolute offset
 FORCEINLINE int RowColToOffset(int idxRow, int idxCol, int numCols)
 {
 	return idxRow * numCols + idxCol;
@@ -57,8 +62,6 @@ public:
 		TransposeThread<ScalarT>(ta);
 	}
 };
-
-//template<typename ScalarT> StdThreadPool<TransposeArgs<ScalarT>, TransposeThreadType<ScalarT> >  transPool(16);
 
 
 template<class ScalarT> void Transpose(ScalarT* transposeMe, ScalarT* transposed, int origRows, int origCols)
@@ -185,4 +188,4 @@ template<typename ScalarT>void DumpMatrixToOctaveFormat(const ScalarT* dumpMe, i
 	}
 }
 
-
+}}}

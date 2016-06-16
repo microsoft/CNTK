@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
+//
 #pragma once
 #ifdef _MSC_VER
 #define ALIGNED_ALLOC(bytes,alignment) _aligned_malloc(bytes,alignment)

@@ -5,83 +5,80 @@
 #include "stdafx.h"
 #include "../../../Source/Math/BlockMultiplier.h"
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
-            namespace TEST {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace TEST {
 
                 //The simplest possible matrix multiplier, used here as a check.
                 template<typename ScalarAT, typename ScalarBT, typename ScalarCT, int MAXRANGE = 1 << ((8 * sizeof(ScalarAT)) - 3)> class ReferenceMultiplier
                 {
-                public:
+                    public:
 
-                    typedef ScalarAT ScalarAT;
-                    typedef ScalarBT ScalarBT;
-                    typedef ScalarCT ScalarCT;
+                        typedef ScalarAT ScalarAT;
+                        typedef ScalarBT ScalarBT;
+                        typedef ScalarCT ScalarCT;
 
-                    static const int MAXRANGE = MAXRANGE;
+                        static const int MAXRANGE = MAXRANGE;
 
-                    ScalarBT* PrepareB(ScalarBT* oldB, int k, int n) { return oldB; }
-                    static ScalarAT* CreateMatrixA(int m, int n)
-                    {
-                        return CreateMatrix<ScalarAT>(m, n);
-                    }
-                    static ScalarBT* CreateMatrixB(int m, int n)
-                    {
-                        return CreateMatrix<ScalarBT>(m, n);
-                    }
-                    static ScalarCT* CreateMatrixC(int m, int n)
-                    {
-                        return CreateMatrix<ScalarCT>(m, n);
-                    }
-                    template<typename ScalarT> static ScalarT* CreateMatrix(int m, int n, ScalarT initVal = ScalarT())
-                    {
-
-                        ScalarT* ret = (ScalarT*)malloc(sizeof(ScalarT) * (m * n));
-                        if (initVal != ScalarT())
+                        ScalarBT* PrepareB(ScalarBT* oldB, int k, int n) { return oldB; }
+                        static ScalarAT* CreateMatrixA(int m, int n)
                         {
-                            for (int i = 0; i < m * n; ++i)
-                            {
-                                ret[i] = initVal;
-                            }
+                            return CreateMatrix<ScalarAT>(m, n);
                         }
-                        return ret;
-                    }
-
-                    template<typename ScalarT> static void FreeMatrix(ScalarT* destroyMe)
-                    {
-                        free(destroyMe);
-                    }
-
-                    void MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n, ScalarCT* C, ScalarAT alpha = (ScalarAT)1, ScalarBT beta = (ScalarBT)0)
-                    {
-
-                        alpha;
-                        beta;
-                        for (int r = 0; r < m; ++r)
+                        static ScalarBT* CreateMatrixB(int m, int n)
                         {
-                            for (int c = 0; c < n; ++c)
+                            return CreateMatrix<ScalarBT>(m, n);
+                        }
+                        static ScalarCT* CreateMatrixC(int m, int n)
+                        {
+                            return CreateMatrix<ScalarCT>(m, n);
+                        }
+                        template<typename ScalarT> static ScalarT* CreateMatrix(int m, int n, ScalarT initVal = ScalarT())
+                        {
+
+                            ScalarT* ret = (ScalarT*)malloc(sizeof(ScalarT) * (m * n));
+                            if (initVal != ScalarT())
                             {
-                                ScalarCT accum = (ScalarCT)0;
-                                for (int d = 0; d < k; ++d)
+                                for (int i = 0; i < m * n; ++i)
                                 {
-                                    ScalarCT prod = (ScalarCT)(A[(k * r) + d]) * (ScalarCT)(B[(n*d) + c]);
-                                    bool signsIdentical = ((accum > 0) == (prod > 0));
-                                    //signed overflow occurs iff signs identical and sum different in sign from operators.
-                                    accum += prod;
-                                    if (signsIdentical && (accum > 0) != (prod > 0))
-                                    {
-                                        throw std::runtime_error("overflow!");
-                                    }
+                                    ret[i] = initVal;
                                 }
-                                C[(r * n) + c] = accum;
+                            }
+                            return ret;
+                        }
+
+                        template<typename ScalarT> static void FreeMatrix(ScalarT* destroyMe)
+                        {
+                            free(destroyMe);
+                        }
+
+                        void MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n, ScalarCT* C, ScalarAT alpha = (ScalarAT)1, ScalarBT beta = (ScalarBT)0)
+                        {
+
+                            alpha;
+                            beta;
+                            for (int r = 0; r < m; ++r)
+                            {
+                                for (int c = 0; c < n; ++c)
+                                {
+                                    ScalarCT accum = (ScalarCT)0;
+                                    for (int d = 0; d < k; ++d)
+                                    {
+                                        ScalarCT prod = (ScalarCT)(A[(k * r) + d]) * (ScalarCT)(B[(n*d) + c]);
+                                        bool signsIdentical = ((accum > 0) == (prod > 0));
+                                        //signed overflow occurs iff signs identical and sum different in sign from operators.
+                                        accum += prod;
+                                        if (signsIdentical && (accum > 0) != (prod > 0))
+                                        {
+                                            throw std::runtime_error("overflow!");
+                                        }
+                                    }
+                                    C[(r * n) + c] = accum;
+                                }
                             }
                         }
-                    }
                 };
 
                 template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
-                    int m, int k, int n, MultiplierT& testMult, int numThreads = 1, ScalarCT epsilon = ScalarCT())
+                        int m, int k, int n, MultiplierT& testMult, int numThreads = 1, ScalarCT epsilon = ScalarCT())
 
                 {
                     epsilon;
@@ -131,14 +128,14 @@ namespace Microsoft {
 
 
                 template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
-                    int m, int k, int n, int numThreads = 1, ScalarCT epsilon = ScalarCT())
+                        int m, int k, int n, int numThreads = 1, ScalarCT epsilon = ScalarCT())
                 {
                     MultiplierT testMult;
                     TestMultiplierSub<ScalarAT, ScalarBT, ScalarCT, MultiplierT>(m, k, n, testMult, numThreads, epsilon);
                 }
 
                 template<typename ScalarCT> void CompareMatricesAndDump(const ScalarCT* ref, const ScalarCT* test,
-                    int m, int /*k*/, int n)
+                        int m, int /*k*/, int n)
                 {
                     for (int i = 0; i < m * n; ++i)
                     {
@@ -149,16 +146,13 @@ namespace Microsoft {
                 BOOST_AUTO_TEST_SUITE(BlockMultiplierSuite)
 
                     BOOST_AUTO_TEST_CASE(BlockMultiplyTest)
-                {
+                    {
 
-                    int m = 8;
-                    int k = 128;
-                    int n = 8;
-                    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
-                }
+                        int m = 8;
+                        int k = 128;
+                        int n = 8;
+                        TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
+                    }
 
                 BOOST_AUTO_TEST_SUITE_END()
-            }
-        }
-    }
-} //end namespaces
+            }}}} //end namespaces
