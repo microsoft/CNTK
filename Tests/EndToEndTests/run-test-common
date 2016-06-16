@@ -53,9 +53,11 @@ printHardwareInfo()
     CPU Model Name:$cpuName
     CPU Cores:$cpuCores
     Hardware threads: $nproc
-    Total Memory:$totalMemory
-    GPU Model Name: $gpuName
+    Total Memory:$totalMemory"
+  if [ ! -z "$gpuName" ]; then
+    echo -e "    GPU Model Name: $gpuName
     GPU Memory: $gpuMem"
+  fi
 }
 
 # Helper function to print and run a command
