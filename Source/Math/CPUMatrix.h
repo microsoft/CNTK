@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <ctime>
 #include <limits.h>
-#include "Quantizers.h"
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -433,9 +432,6 @@ public:
 
     // return true if v is an element in matrix c
     static bool HasElement(const CPUMatrix<ElemType>& a, const ElemType v = 0.0);
-
-    template <class QuantizedType>
-    static void Quantize(const CPUMatrix<ElemType>& X, CPUMatrix<QuantizedType>& Y, shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer);
 
 public:
     CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);

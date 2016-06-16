@@ -612,6 +612,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         int numFixedParams = 1;
         int numOptParams = 1;
         // Default quantizer is short, symmetric
+        // extraBits decreases the quantization normalizer to prevent integer overflow during BLAS routines.
+        // Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
+        // For quantization with shorts, recommended value of extraBits is 1-3.
+
         //TODO: add regex pattern for the node name
         if (params.size() > numFixedParams + numOptParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: Quantize(nodeName, [extrabits=[0-5]])).");
@@ -624,14 +628,15 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             try
             {
                 extraBits = std::stoi(value);
-                if (!EqualInsensitive(propName, "extrabits") || extraBits < 0 || extraBits > 5)
-                {
-                    throw std::invalid_argument("");
-                }
             }
             catch (std::logic_error&)
             {
-                LogicError("Invalid optional parameter %s, valid optional parameters: extrabits=[0-5]", propName.c_str());
+                InvalidArgument("Invalid optional parameter %s, valid value range for extrabits is [0-5]", propName.c_str());
+            }
+
+            if (!EqualInsensitive(propName, "extrabits") || extraBits < 0 || extraBits > 5)
+            {
+                InvalidArgument("Invalid optional parameter %s, valid optional parameters : extrabits = [0 - 5]", propName.c_str()); 
             }
         }
         NetNdl<ElemType>* netNdl;
@@ -651,7 +656,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             // Quantization to <short> is the only currently supported
             shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(pParamNode->Value().Data(), pParamNode->Value().GetNumElements(), extraBits));
 
-            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pParamNode, pNode->GetDeviceId(), quantizedNodeName, quantizer));
+            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pParamNode->Value(), pNode->GetDeviceId(), quantizedNodeName, quantizer));
             pNode->CopyTo(pParamNodeQuant, quantizedNodeName, CopyNodeFlags::copyNodeValue);
 
             fprintf(stderr, "Quantize node %ls\n", pNode->NodeName().c_str());
