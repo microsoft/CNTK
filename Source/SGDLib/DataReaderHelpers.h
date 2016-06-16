@@ -46,7 +46,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
                                         size_t& actualMBSize, 
-                                        const MPIWrapperPtr& mpi)
+                                        const MPIWrapperPtr& mpi,
+                                        bool useTwoPassTraining)
     {
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
@@ -90,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UNUSED(iter);
             }
         
-            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout, useTwoPassTraining);
         }
 
         NotifyChangedNodes<ElemType>(net, inputMatrices);
@@ -124,67 +125,120 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                   StreamMinibatchInputs& decimatedMB, // output decimated matrices.
                                                   MBLayoutPtr pMBLayout,              // input MBLayout
                                                   MBLayoutPtr& pDecimateMBLayout,     // output decimated MBLayout (note: cannot work in-place)
-                                                  size_t numProcs, size_t rank)
+                                                  size_t numProcs, size_t rank, bool useTwoPassTraining)
     {
-        size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-        size_t nT = pMBLayout->GetNumTimeSteps();
-
-        // decide start column and end column
-        size_t st = numParallelSequences *  rank      / numProcs;
-        size_t en = numParallelSequences * (rank + 1) / numProcs;
-        assert(rank < numProcs);
-        en = en > numParallelSequences ? numParallelSequences : en; // TODO: why are these two tests necessary? We should rather test rank
-        en = (rank + 1 == numProcs) ? numParallelSequences : en;
-        size_t numNewParallelSequence = en - st;
-
-        // begin decimating matrices
-        size_t rv = 0;
-        for (const auto& it : MB)
+        if (useTwoPassTraining)
         {
-            const wstring& name = it.first;
-            const auto& input = it.second;
-            auto& mat = MB.GetInputMatrix<ElemType>(name);
-            size_t numRows = mat.GetNumRows();
-            size_t numCols = mat.GetNumCols();
-            int deviceId   = mat.GetDeviceId();
+            // Bug, weixi, Only works for one sequence
+            size_t totalFrames = pMBLayout->GetActualNumSamples();
+            size_t st = totalFrames *  rank / numProcs;
+            size_t en = totalFrames * (rank + 1) / numProcs;
+            en = en > totalFrames ? totalFrames : en;
+            size_t numFrames = en - st;
+            
+            // decimate MBLayout as well
+            pDecimateMBLayout = make_shared<MBLayout>(1, numFrames, L"");
+            pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
 
-            if (rv == 0)
-                rv = numCols;
-            else if (rv != numCols)
-                LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int) rv, (int) numCols);
-
-            if (nT != numCols / numParallelSequences)
-                LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
-
-            auto matrixp = make_shared<Matrix<ElemType>>(deviceId);
-            matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numParallelSequences, nT), st * numRows, (en - st) * numRows);
-            matrixp->Reshape(numRows, numNewParallelSequence * nT);
-            decimatedMB.AddInput(name, matrixp, input.pMBLayout, input.sampleLayout);
-            // If we had a RowSlice function, we would like to write in this way
-            // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
-        }
-        // decimate MBLayout as well
-        pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
-        pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
-#if 1
-        // now copy over all sequence info records that are inside the range, with adjusted 's'
-        const auto& sequences = pMBLayout->GetAllSequences();
-        for (const auto& seq : sequences)
-        {
-            if (seq.s >= st && seq.s < en)
+            // now copy over all sequence info records that are inside the range, with adjusted 's'
+            const auto& sequences = pMBLayout->GetAllSequences();
+            for (const auto& seq : sequences)
             {
-                auto shiftedSeq = seq;
-                shiftedSeq.s -= st; // these sequences have shifted up by 'st' sequences
-                pDecimateMBLayout->AddSequence(shiftedSeq);
+                auto newSeq = seq;
+                newSeq.s = 0;
+                newSeq.tBegin = 0;
+                newSeq.tEnd = en - st;
+                pDecimateMBLayout->AddSequence(newSeq);
             }
+
+            size_t rv = 0;
+            for (const auto& it : MB)
+            {
+                const wstring& name = it.first;
+                const auto& input = it.second;
+                auto& mat = MB.GetInputMatrix<ElemType>(name);
+                size_t numRows = mat.GetNumRows();
+                size_t numCols = mat.GetNumCols();
+                int deviceId = mat.GetDeviceId();
+
+                if (rv == 0)
+                    rv = numCols;
+                else if (rv != numCols)
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)numCols);
+                
+                auto matrixp = make_shared<Matrix<ElemType>>(deviceId);
+                matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numCols, 1), st * numRows, (en - st) * numRows);
+                matrixp->Reshape(numRows, numFrames);
+                decimatedMB.AddInput(name, matrixp, pDecimateMBLayout, input.sampleLayout);
+                // If we had a RowSlice function, we would like to write in this way
+                // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
+            }
+            
+            
+            return pair<size_t, size_t>(st, en);
         }
+        else
+        {
+            size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
+            size_t nT = pMBLayout->GetNumTimeSteps();
+
+            // decide start column and end column
+            size_t st = numParallelSequences *  rank / numProcs;
+            size_t en = numParallelSequences * (rank + 1) / numProcs;
+            assert(rank < numProcs);
+            en = en > numParallelSequences ? numParallelSequences : en; // TODO: why are these two tests necessary? We should rather test rank
+            en = (rank + 1 == numProcs) ? numParallelSequences : en;
+            size_t numNewParallelSequence = en - st;
+
+            // begin decimating matrices
+            size_t rv = 0;
+            for (const auto& it : MB)
+            {
+                const wstring& name = it.first;
+                const auto& input = it.second;
+                auto& mat = MB.GetInputMatrix<ElemType>(name);
+                size_t numRows = mat.GetNumRows();
+                size_t numCols = mat.GetNumCols();
+                int deviceId = mat.GetDeviceId();
+
+                if (rv == 0)
+                    rv = numCols;
+                else if (rv != numCols)
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)numCols);
+
+                if (nT != numCols / numParallelSequences)
+                    LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
+
+                auto matrixp = make_shared<Matrix<ElemType>>(deviceId);
+                matrixp->AssignRowSliceValuesOf(mat.Reshaped(numRows * numParallelSequences, nT), st * numRows, (en - st) * numRows);
+                matrixp->Reshape(numRows, numNewParallelSequence * nT);
+                decimatedMB.AddInput(name, matrixp, input.pMBLayout, input.sampleLayout);
+                // If we had a RowSlice function, we would like to write in this way
+                // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
+            }
+            // decimate MBLayout as well
+            pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, L"");
+            pDecimateMBLayout->SetAxisName(pMBLayout->GetAxisName());
+#if 1
+            // now copy over all sequence info records that are inside the range, with adjusted 's'
+            const auto& sequences = pMBLayout->GetAllSequences();
+            for (const auto& seq : sequences)
+            {
+                if (seq.s >= st && seq.s < en)
+                {
+                    auto shiftedSeq = seq;
+                    shiftedSeq.s -= st; // these sequences have shifted up by 'st' sequences
+                    pDecimateMBLayout->AddSequence(shiftedSeq);
+                }
+            }
 #else
-        for (size_t t = 0; t < nT; t++)
-            for (size_t id = 0; id < numNewParallelSequence; id++)
-                pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
+            for (size_t t = 0; t < nT; t++)
+                for (size_t id = 0; id < numNewParallelSequence; id++)
+                    pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
 #endif
 
-        return pair<size_t, size_t>(st, en);
+            return pair<size_t, size_t>(st, en);
+        }
     }
 
     // in-place decimation, for use with data-parallel processing
@@ -192,7 +246,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <class ElemType>
     static pair<size_t, size_t> DecimateMinibatchInPlace(StreamMinibatchInputs& mb,    // matrix to be decimated
                                                          size_t numprocs, size_t rank, // rank info
-                                                         MBLayoutPtr pMBLayout)        // get decimated as well
+                                                         MBLayoutPtr pMBLayout,        // get decimated as well
+                                                         bool useTwoPassTraining)
     {
         if (numprocs == 1)
             return pair<size_t, size_t>(0, pMBLayout->GetNumParallelSequences());
@@ -203,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         pDecimatedMBLayout->SetAxisName(pMBLayout->GetAxisName());
         StreamMinibatchInputs decimatedMB;
         // call in-place decimation
-        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMBLayout, numprocs, rank);
+        pair<size_t, size_t> selected = DecimateMinibatch<ElemType>(mb, decimatedMB, pMBLayout, pDecimatedMBLayout, numprocs, rank, useTwoPassTraining);
         // move the data
         for (auto k : mb)
         {
@@ -305,6 +360,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<shared_ptr<ComputationNode<ElemType>>> m_netEvaluationNodes;
         std::map<wstring, shared_ptr<IStatefulNode>> m_netStatefulNodes; // we need to Export/Import states of stateful nodes when we swtich subminibatches
 
+        bool m_useTwoPassTraining;
+
     private:
         void EnumerateStatefulNodesForRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulNodes)
         {
@@ -340,8 +397,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(ComputationNetworkPtr& net,
                   const std::list<ComputationNodeBasePtr>& learnableNodes,
                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
-                  const std::vector<ComputationNodeBasePtr>& evaluationNodes)
+                  const std::vector<ComputationNodeBasePtr>& evaluationNodes,
+                  const bool useTwoPassTraining)
         {
+            m_useTwoPassTraining = useTwoPassTraining;
             m_MBLayoutCache = make_shared<MBLayout>();
             m_netCriterionAccumulator = make_shared<Matrix<ElemType>>(1, 1, net->GetDeviceId());
             m_netEvaluationAccumulator = make_shared<Matrix<ElemType>>(1, evaluationNodes.size(), net->GetDeviceId());
@@ -435,7 +494,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // subminibatches are cutted at the parallel sequence level;
             // if #requested subminibatch is larger than #parallel sequence,
             // we cannot split further; instead, each subsequence become a subminibatch
-            size_t actualnumSubminibatches = requestedSubminibatches > nParallelSequences ? nParallelSequences : requestedSubminibatches;
+            size_t actualnumSubminibatches = m_useTwoPassTraining ? requestedSubminibatches
+                : (requestedSubminibatches > nParallelSequences ? nParallelSequences : requestedSubminibatches);
 
             // 4. third, allocate space for accumulated gradient
             for (auto& n : m_LearnableNodePtr)
@@ -512,7 +572,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Matrices decimatedMatrices;
             MBLayoutPtr decimatedLayout;
-            pair<size_t, size_t> seqRange = DataReaderHelpers::DecimateMinibatch<ElemType>(m_inputMatricesCache, decimatedMatrices, m_MBLayoutCache, decimatedLayout, m_numSubminibatches, iSubminibatch);
+            pair<size_t, size_t> seqRange = DataReaderHelpers::DecimateMinibatch<ElemType>(m_inputMatricesCache, decimatedMatrices, m_MBLayoutCache, decimatedLayout, m_numSubminibatches, iSubminibatch, m_useTwoPassTraining);
             //  NOTE: deimatedMatrices must be released by caller
 
             // base on the seqRange, we do the decimation for lattices and related variables

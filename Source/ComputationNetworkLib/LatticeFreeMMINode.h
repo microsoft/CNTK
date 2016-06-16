@@ -39,10 +39,13 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
         return L"LatticeFreeMMI";
     }
 
-    void InitTransitionMatrixes()
+    void InitMatrixes()
     {
         CreateMatrixIfNull(m_tmap);
         CreateMatrixIfNull(m_smap);
+        CreateMatrixIfNull(m_mbValues);
+        CreateMatrixIfNull(m_mbLabels);
+        CreateMatrixIfNull(m_mbGradients);
     }
 
     void InitializeFromTfstFiles(const wstring& fstFilePath, const wstring& smapFilePath, bool useSenoneLM, const wstring& transFilePath);
@@ -60,15 +63,15 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_acweight(1.0), m_usePrior(true), m_alignmentWindow(0), m_ceweight(0), m_l2NormFactor(0)
+        : Base(deviceId, name), m_acweight(1.0), m_usePrior(true), m_alignmentWindow(0), m_ceweight(0), m_l2NormFactor(0), m_totalFrameNumberOfCurrentMinibatch(0)
     {
-        InitTransitionMatrixes();
+        InitMatrixes();
     }
 
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const bool usePrior, const int alignmentWindow, const ElemType ceweight, const ElemType l2NormFactor, const bool useSenoneLM, const wstring& transFilePath)
-        : Base(deviceId, name), m_acweight(acweight), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor)
+        : Base(deviceId, name), m_acweight(acweight), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_totalFrameNumberOfCurrentMinibatch(0)
     {
-        InitTransitionMatrixes();
+        InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath, useSenoneLM, transFilePath);
     }
 
@@ -78,25 +81,51 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
+    void SetTotalFrameNumberofCurrentMinibatch(const size_t nf)
+    {
+        m_totalFrameNumberOfCurrentMinibatch = nf;
+        m_frameNumberOfCurrentMinibatch = 0;
+        m_firstPassFinished = false;
+    }
+
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         if (inputIndex == 1)
         {
             FrameRange fr(Input(0)->GetMBLayout());
             auto gradient = Input(1)->GradientFor(fr);
-            // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
-            if (m_ceweight != 0)
+
+            if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
-                m_softmax->InplaceExp();
-                Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
-                Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
-            }
-            if (m_l2NormFactor != 0)
-            {
-                Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
+                // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
+                if (m_ceweight != 0)
+                {
+                    m_softmax->InplaceExp();
+                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
+                    Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+                }
+                if (m_l2NormFactor != 0)
+                {
+                    Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
+                }
+
+                if (m_totalFrameNumberOfCurrentMinibatch > 0)
+                {
+                    Matrix<ElemType>::AssignScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, *m_mbGradients);
+                    m_frameNumberOfCurrentMinibatch = 0;
+                }
+                else
+                {
+                    Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+                }
             }
 
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+            if (m_totalFrameNumberOfCurrentMinibatch > 0)
+            {
+                size_t nf = gradient.GetNumCols();
+                gradient += m_mbGradients->ColumnSlice(m_frameNumberOfCurrentMinibatch, nf);
+                m_frameNumberOfCurrentMinibatch += nf;
+            }
         }
     }
 
@@ -145,9 +174,51 @@ public:
 
         FrameRange fr(Input(0)->GetMBLayout());
 
+        auto inputV = Input(1)->ValueFor(fr);
+        auto inputL = Input(0)->ValueFor(fr);
+        auto inputValue = &inputV;
+        auto inputLabel = &inputL;
+
+        size_t nf = inputValue->GetNumCols();
+        if (m_totalFrameNumberOfCurrentMinibatch > 0)
+        {
+            if (m_firstPassFinished) // Second pass of forward propergation
+            {
+                Value().Resize(1, 1);
+                Value().SetValue((ElemType)(m_savedCriterionValue * nf / m_totalFrameNumberOfCurrentMinibatch));
+                return;
+            }
+
+            if (m_frameNumberOfCurrentMinibatch == 0)   // First sub-minibatch
+            {
+                size_t numRows = inputValue->GetNumRows();
+                m_mbValues->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
+                m_mbLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
+            }
+
+            m_mbValues->SetColumnSlice(*inputValue, m_frameNumberOfCurrentMinibatch, nf);
+            m_mbLabels->SetColumnSlice(*inputLabel, m_frameNumberOfCurrentMinibatch, nf);
+            m_frameNumberOfCurrentMinibatch += nf;
+
+            if (m_frameNumberOfCurrentMinibatch < m_totalFrameNumberOfCurrentMinibatch)
+            {
+                Value().Resize(1, 1);
+                Value().SetValue(0);
+                return;
+            }
+
+            if (m_frameNumberOfCurrentMinibatch > m_totalFrameNumberOfCurrentMinibatch)
+                LogicError("Accumulated m_frameNumberOfCurrentMinibatch should not be larger than m_totalFrameNumberOfCurrentMinibatch!");
+
+            m_firstPassFinished = true;
+            inputValue = m_mbValues.get();
+            inputLabel = m_mbLabels.get();
+            nf = m_totalFrameNumberOfCurrentMinibatch;
+        }
+
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
-        m_likelihoods->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
+        m_likelihoods->AssignLogSoftmaxOf(*inputValue, true);
         if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
 
@@ -160,18 +231,18 @@ public:
         m_likelihoods->InplaceExp(); // likelihood
         (*m_likelihoods) += (ElemType)1e-15;
 
-        size_t nf = m_likelihoods->GetNumCols();
-        double logNumeratorWithCE = CalculateNumeratorsWithCE(Input(0)->MaskedValueFor(fr), nf);
+        double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
 
         double l2NormScore = 0;
         if (m_l2NormFactor != 0)
         {
-            l2NormScore = Matrix<ElemType>::InnerProductOfMatrices(Input(1)->ValueFor(fr), Input(1)->ValueFor(fr)) * 0.5 * m_l2NormFactor;
+            l2NormScore = Matrix<ElemType>::InnerProductOfMatrices(*inputValue, *inputValue) * 0.5 * m_l2NormFactor;
         }
 
         // Got the final numbers
-        ElemType finalValue = (ElemType)((1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore);
+        m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore;
+        ElemType finalValue = (ElemType)(m_savedCriterionValue);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
 
@@ -443,6 +514,10 @@ private:
     }
 
 protected:
+    size_t m_totalFrameNumberOfCurrentMinibatch;
+    size_t m_frameNumberOfCurrentMinibatch;
+    bool m_firstPassFinished;
+    double m_savedCriterionValue;
     ElemType m_acweight;
     bool m_usePrior;
     int m_alignmentWindow;
@@ -462,6 +537,10 @@ protected:
     shared_ptr<Matrix<ElemType>> m_posteriorsNum;
     shared_ptr<Matrix<ElemType>> m_posteriorsDen;
     shared_ptr<Matrix<ElemType>> m_likelihoods;
+
+    shared_ptr<Matrix<ElemType>> m_mbValues;
+    shared_ptr<Matrix<ElemType>> m_mbLabels;
+    shared_ptr<Matrix<ElemType>> m_mbGradients;
 
     // For CE
     shared_ptr<Matrix<ElemType>> m_softmax;
