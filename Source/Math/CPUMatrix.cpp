@@ -6333,14 +6333,6 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     }
 }
 
-// Quantize input matrix X with the given quantizer and set matrix B to the quantized value
-// This assumes that A and B are intialized and have the same number of elements
-template <class ElemType> template<class QuantizedType> //
-void CPUMatrix<ElemType>::Quantize(const CPUMatrix<ElemType>& A, CPUMatrix<QuantizedType>& B, shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer) 
-{
-    quantizer->Quantize(A.Data(), B.Data(), A.GetNumElements())
-}
-
 // =======================================================================
 // explicit instantiations
 // =======================================================================

@@ -165,7 +165,6 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
 template <class ElemType>
 void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFromFilePath)
 {
-#if 1
     try
     {
         InitFromFile(reviseFromFilePath);
@@ -174,21 +173,6 @@ void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFrom
     {
         RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
     }
-#else
-    size_t numRows, numCols;
-    auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
-    size_t nRows, nCols;
-    DetermineDataSize(nRows, nCols); // BUGBUG: private
-
-    if (numRows != nRows || numCols != nCols)
-    {
-        RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-            m_nodeName.c_str(), reviseFromFilePath.c_str(), (int)nRows, (int)nCols, (int)numRows, (int)numCols);
-    }
-
-    Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
-    VerifyDataSize(Value());      // sanity check
-#endif
 }
 
 template <class ElemType>

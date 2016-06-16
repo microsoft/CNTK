@@ -25,20 +25,21 @@ template <class RawType, class QuantizedType>
 class SymmetricQuantizer : public IQuantizerBase<RawType, QuantizedType>
 {
     RawType m_quantizer;
-    RawType m_invQuantizer;
+    RawType m_inverseQuantizer;
+    RawType m_absMax;
 public:
     // elements - collection to be quantized
     // extraBits decreases the quantization normalizer to prevent integer overflow during BLAS routines.
     // Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
-    // For quantization with shorts, recommended value of extraBits is 1 or 2.
+    // For quantization with shorts, recommended value of extraBits is 1-3.
     SymmetricQuantizer(RawType* elements, size_t elementsSize, size_t extraBits)
     {
         if (elementsSize == 0)
         {
             LogicError("The sequence to be quantized is empty.");
         }
-        RawType absMax = FindAbsMax(elements, elementsSize);
-        SymmetricQuantizer(absMax, extraBits);
+        m_absMax = FindAbsMax(elements, elementsSize);
+        SymmetricQuantizer(m_absMax, extraBits);
     }
 
     // absoluteMax - the range of the quantizer (normally represents maximum absolute value of the values in the collection to be quantized).
@@ -51,13 +52,16 @@ public:
             LogicError("The absolute max element in the sequence to be quantized is 0.");
         }
         m_quantizer = rangeMax / shiftedMax;
-        m_invQuantizer = shiftedMax / rangeMax;
+        m_inverseQuantizer = 1 / m_quantizer;
     }
 
     virtual void Quantize(const RawType* input, QuantizedType* output, size_t inputSize)
     {
         for (size_t i = 0; i < inputSize; i++)
         {
+#ifdef _DEBUG
+            assert(abs(input[i]) <= m_absMax);
+#endif
             output[i] = (QuantizedType) (input[i] * m_quantizer);
         }
     }
@@ -66,7 +70,10 @@ public:
     {
         for (size_t i = 0; i < inputSize; i++)
         {
-            output[i] = (RawType)(input[i] * m_invQuantizer);
+            output[i] = (RawType)(input[i] * m_inverseQuantizer);
+#ifdef _DEBUG
+            assert(abs(output[i]) <= m_absMax);
+#endif
         }
     }
 

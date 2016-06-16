@@ -95,12 +95,12 @@ template <class ElemType, class QuantizedType>
 class LearnableParameterQuantized : public LearnableParameter<ElemType>
 {
 public:
-    LearnableParameterQuantized(shared_ptr<LearnableParameter<ElemType>> learnableParameterNode, DEVICEID_TYPE deviceId, std::wstring nodeName, std::shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer) :
+    LearnableParameterQuantized(const Matrix<ElemType>& learnableParameterValue, DEVICEID_TYPE deviceId, std::wstring nodeName, std::shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer) :
         LearnableParameter<ElemType>(deviceId, nodeName)
     {
         // create a temp array for demonstration before we figure out how to store quantized matrix
-        QuantizedType* quantizedData = new QuantizedType[learnableParameterNode->Value().GetNumElements()];
-        quantizer->Quantize(learnableParameterNode->Value().Data(), quantizedData, learnableParameterNode->Value().GetNumElements());
+        QuantizedType* quantizedData = new QuantizedType[learnableParameterValue.GetNumElements()];
+        quantizer->Quantize(learnableParameterValue.Data(), quantizedData, learnableParameterValue.GetNumElements());
 
         delete[] quantizedData;
     }
