@@ -69,6 +69,7 @@ cntkrun()
     RunDir=$(cygpath -aw $RunDir)
     DataDir=$(cygpath -aw $DataDir)
     OutputDir=$(cygpath -aw $OutputDir)
+    BinaryPath=$(cygpath -aw $BinaryPath)
   fi
 
   CNTKArgs="configFile=$ConfigDir/$configFileName currentDirectory=$DataDir RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir OutputDir=$OutputDir DeviceId=$CNTKDeviceId timestamping=true $additionalCNTKArgs"
@@ -83,9 +84,9 @@ cntkrun()
   mkdir -p $modelsDir || exit $?
 
   if [[ $MPIMode == 0 ]]; then
-    run "$BinaryPath" $CNTKArgs
+    run cuda-memcheck --error-exitcode 1 "$BinaryPath" $CNTKArgs
   else
-    run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
+    run "$MPI_BINARY" $MPIArgs cuda-memcheck --error-exitcode 1 $BinaryPath $CNTKArgs
   fi
   local ExitCode=$?
   if [[ $DeleteModelsAfterTest == 1 ]]; then
