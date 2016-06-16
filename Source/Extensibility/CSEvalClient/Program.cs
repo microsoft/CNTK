@@ -280,8 +280,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
-                    List<ValueBuffer<float>> outputBuffer = outputSchema.CreateBuffers<float>();
-                    var inputBuffer = new List<ValueBuffer<float>>();
+                    var outputBuffer = outputSchema.CreateBuffers<float>();
+                    var inputBuffer = new ValueBuffer<float>[0];
 
                     // We can call the evaluate method and get back the results...
                     model.ForwardPass(inputBuffer, outputBuffer);
