@@ -32,6 +32,7 @@
   <Choose>
     <When Condition="Exists('$(ACML_PATH)')">
       <PropertyGroup>
+        <MathLibrary>ACML</MathLibrary>
         <MathLibraryName>ACML</MathLibraryName>
         <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
         <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
@@ -46,6 +47,7 @@
     <!-- See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-mkl on how to configure to build CNTK with MKL -->
     <When Condition="'$(CNTK_MKL)' == '1'">
       <PropertyGroup>
+        <MathLibrary>MKL</MathLibrary>
         <CNTKCustomMKLVersion>1</CNTKCustomMKLVersion>
         <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
         <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>

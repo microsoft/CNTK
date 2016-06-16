@@ -217,7 +217,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="'$(CNTK_MKL)' == '1' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-mkl for instructions." />
-    <Error Condition="'$(CNTK_MKL)' != '1' And !Exists('$(ACML_PATH)')" Text="ACML not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#acml for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'MKL' And '$(CNTK_MKL_PATH)' == ''" Text="CNTK custom MKL location not specified, see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-mkl for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'MKL' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-mkl for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'ACML' And !Exists('$(ACML_PATH)')" Text="ACML not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#acml for instructions." />
   </Target>
 </Project>
