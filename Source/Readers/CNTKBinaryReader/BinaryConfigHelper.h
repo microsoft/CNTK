@@ -26,6 +26,8 @@ public:
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
 
+    size_t GetRandomize() const { return m_randomize; }
+
     size_t GetRandomizationWindow() const { return m_randomizationWindow; }
 
     unsigned int GetTraceLevel() const { return m_traceLevel; }
@@ -38,6 +40,7 @@ private:
     std::wstring m_filepath;
     std::map<std::wstring, std::wstring> m_streams;
     size_t m_randomizationWindow;
+    bool m_randomize;
     unsigned int m_traceLevel;
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
 };

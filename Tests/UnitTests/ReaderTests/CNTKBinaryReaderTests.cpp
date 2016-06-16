@@ -56,8 +56,8 @@ BOOST_AUTO_TEST_CASE(CNTKBinaryReader_sparse_seq_part)
         testDataPath() + "/Control/CNTKBinaryReader/Simple_sparse_seq_part_Output.txt",
         "SparseSeqPart",
         "reader",
-        1600, // epoch size
-        250,  // mb size
+        1500, // epoch size
+        300,  // mb size
         1,   // num epochs 
         1,
         1,
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(CNTKBinaryReader_sparse_seq)
         testDataPath() + "/Control/CNTKBinaryReader/Simple_sparse_seq_Output.txt",
         "SparseSeq",
         "reader",
-        1600, // epoch size
+        1500, // epoch size
         250,  // mb size
         1,   // num epochs 
         2,

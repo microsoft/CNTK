@@ -43,35 +43,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         else
-        {
-            RuntimeError("input section not defined for the reader. This must be defined and all streams in use must be listed.");
-        }
+            RuntimeError("\"input\" section not defined for the reader. This must be defined and all streams in use must be listed.");
 
         m_filepath = msra::strfun::utf16(config(L"file"));
+        m_keepDataInMemory = config(L"keepDataInMemory", false);
 
-        // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput.
-        wstring randomizeString = config(L"randomize", wstring());
-        if (!_wcsicmp(randomizeString.c_str(), L"none"))
+        // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput. We would like this to be true/false,
+        // but we can't for this reason. So we will assume false unless we specifically get "true"
+
+        m_randomize = false;
+        wstring randomizeString = config(L"randomize", L"false");
+        if (!_wcsicmp(randomizeString.c_str(), L"true")) // TODO: don't support case-insensitive option strings in the new reader
+            m_randomize = true;
+
+        if (m_randomize)
         {
-            m_randomizationWindow = randomizeNone;
+            if (config.Exists(L"randomizationWindow"))
+                m_randomizationWindow = config(L"randomizationWindow");
+            else
+                m_randomizationWindow = randomizeAuto;
         }
         else
-        {
-            bool randomize = config(L"randomize", true);
-
-            if (!randomize)
-            {
-                m_randomizationWindow = randomizeNone;
-            }
-            else if (config.Exists(L"randomizationWindow"))
-            {
-                m_randomizationWindow = config(L"randomizationWindow");
-            }
-            else
-            {
-                m_randomizationWindow = randomizeAuto;
-            }
-        }
+            m_randomizationWindow = randomizeNone;
 
         m_traceLevel = config(L"traceLevel", 1);
     }

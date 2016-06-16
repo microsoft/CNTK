@@ -59,6 +59,7 @@ private:
     {
         m_startIndex.resize(m_numBatches);
         size_t sequencesSeen = 0;
+        m_startIndex[0] = 0;
         for (int64_t c = 1; c < m_numBatches; c++)
         {
             sequencesSeen += GetNumSequences(c-1);
