@@ -179,7 +179,13 @@ def writeMetricsToAsciidoc():
       metricsFile.write("".join(["|link:../blob/master/Tests/EndToEndTests/", baseline.fullPath.split(thisDir)[1][1:], "[",
                                  baseline.fullPath.split("/")[-1], "] .2+|", baseline.trainResult.replace("\n", " "), " .2+|",
                                  baseline.testResult.replace("\n", " "), "|\n"]))
-      metricsFile.write("".join(["CPU: ", re.sub("[\r]?\n", ' ', baseline.cpuInfo), "GPU: ", re.sub("[\r]?\n", ' ', baseline.gpuInfo)]))
+      cpuInfo = "".join(["CPU: ", re.sub("[\r]?\n", ' ', baseline.cpuInfo)])
+
+      gpuInfo = re.sub("[\r]?\n", ' ', baseline.gpuInfo)
+      if gpuInfo:
+        metricsFile.write("".join([cpuInfo, " GPU: ", gpuInfo]))
+      else:
+        metricsFile.write(cpuInfo)
 
     metricsFile.write("\n|====\n\n")
 
