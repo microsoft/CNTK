@@ -25,24 +25,28 @@ CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
 {
     BinaryConfigHelper configHelper(config);
 
+    fprintf(stderr, "Initializing CNTKBinaryReader");
     try
     {
         m_deserializer = shared_ptr<IDataDeserializer>(new BinaryChunkDeserializer(configHelper));
 
-        if (configHelper.ShouldKeepDataInMemory()) 
+        if (configHelper.ShouldKeepDataInMemory())
         {
             m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
+            fprintf(stderr, " | keeping data in memory");
         }
 
-        size_t window = configHelper.GetRandomizationWindow();
-        if (window < 0)
+        if (configHelper.GetRandomize())
         {
+            size_t window = configHelper.GetRandomizationWindow();
             // Verbosity is a general config parameter, not specific to the binary format reader.
+            fprintf(stderr, " | randomizing with window: %d", (int)window);
             int verbosity = config(L"verbosity", 2);
             m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
         }
         else
         {
+            fprintf(stderr, " | without randomization");
             m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
@@ -55,6 +59,7 @@ CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
     {
         RuntimeError("CNTKBinaryReader: While reading '%ls': %s", configHelper.GetFilePath().c_str(), e.what());
     }
+    fprintf(stderr, "\n");
 }
 
 std::vector<StreamDescriptionPtr> CNTKBinaryReader::GetStreamDescriptions()
