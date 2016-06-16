@@ -56,7 +56,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
             EvaluateNetworkSingleLayerNoInput();
-
+            
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
 
@@ -276,9 +276,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // operating over a two constants, therefore no input is necessary.
                     model.CreateNetwork(modelDefinition);
 
-                    VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
+                    VariableSchema outputSchema = model.GetOutputSchema();
 
-                    model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
+                    var outputNodeNames = outputSchema.Select(s => s.Name).ToList<string>();
+                    model.StartForwardEvaluation(outputNodeNames);
 
                     var outputBuffer = outputSchema.CreateBuffers<float>();
                     var inputBuffer = new ValueBuffer<float>[0];

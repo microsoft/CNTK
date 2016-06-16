@@ -46,7 +46,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             {
                 model.CreateNetwork(modelDefinition);
 
-                VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
+                VariableSchema outputSchema = model.GetOutputSchema();
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
@@ -82,8 +82,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             {
                 model.CreateNetwork(modelDefinition);
 
-                VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
-                VariableSchema inputSchema = model.GetSchema(NodeGroup.Input);
+                VariableSchema outputSchema = model.GetOutputSchema();
+                VariableSchema inputSchema = model.GetInputSchema();
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
@@ -121,7 +121,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             {
                 model.CreateNetwork(modelDefinition);
 
-                VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
+                VariableSchema outputSchema = model.GetOutputSchema();
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 
                 var outputBuffer = new []
@@ -140,7 +140,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                         Buffer = new float[] { 1, 2, 3, 5, 6 },
                         Indices = new [] { 0, 2, 2, 1, 2 },
                         ColIndices = new [] { 0, 2, 2, 5 },
-                        Size = 3
+                        Size = 4
                     }
                 };
 
@@ -176,8 +176,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             {
                 model.CreateNetwork(modelDefinition);
 
-                VariableSchema outputSchema = model.GetSchema(NodeGroup.Output);
-                VariableSchema inputSchema = model.GetSchema(NodeGroup.Input);
+                VariableSchema outputSchema = model.GetOutputSchema();
+                VariableSchema inputSchema = model.GetInputSchema();
 
                 model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
 

@@ -222,34 +222,29 @@ public:
     }
 
     //
-    // GetSchema - retrieve information about tensor shapes and memory layout for this model.
+    // GetInputSchema - retrieve information about tensor shapes and memory layout for this model.
     //
-    VariableSchema^ GetSchema(NodeGroup nodeGroup)
+    VariableSchema^ GetInputSchema()
     {
         if (m_eval == nullptr)
         {
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        if (nodeGroup != NodeGroup::Input && nodeGroup != NodeGroup::Output)
+        return ConvertNativeSchemaToManaged(m_eval->GetInputSchema());
+    }
+
+    //
+    // GetOutputSchema - retrieve information about tensor shapes and memory layout for this model.
+    //
+    VariableSchema^ GetOutputSchema()
+    {
+        if (m_eval == nullptr)
         {
-            throw gcnew CNTKInvalidArgumentException("The nodeGroup argument is invalid.", String::Empty);
+            throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        auto layouts = nodeGroup == NodeGroup::Input ? m_eval->GetInputSchema() : m_eval->GetOutputSchema();
-
-        auto schema = gcnew VariableSchema();
-        for (auto& lay : layouts)
-        {
-            VariableLayout^ varlayout = gcnew VariableLayout();
-            varlayout->Name = gcnew String(lay.m_name.c_str());
-            varlayout->DataType = GetDataType(lay.m_dataType);
-            varlayout->NumElements = lay.m_numElements;
-            varlayout->StorageType = GetStorageType(lay.m_storageType);
-
-            schema->Add(varlayout);
-        }
-        return schema;
+        return ConvertNativeSchemaToManaged(m_eval->GetOutputSchema());
     }
 
     //
@@ -468,6 +463,31 @@ private:
             valueRefs.push_back(*vb);
         }
     }
+
+    //
+    // ConvertNativeSchemaToManaged - Converts a native schema to a manged one
+    //
+    VariableSchema^ ConvertNativeSchemaToManaged(Native::VariableSchema layouts)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        auto schema = gcnew VariableSchema();
+        for (auto& lay : layouts)
+        {
+            VariableLayout^ varlayout = gcnew VariableLayout();
+            varlayout->Name = gcnew String(lay.m_name.c_str());
+            varlayout->DataType = GetDataType(lay.m_dataType);
+            varlayout->NumElements = lay.m_numElements;
+            varlayout->StorageType = GetStorageType(lay.m_storageType);
+
+            schema->Add(varlayout);
+        }
+        return schema;
+    }
+
 };
 
 /// <summary>Managed float-specific model evaluation class</summary>
@@ -500,13 +520,15 @@ void EmitExtended()
 {
     ModelEvaluationExtendedF f;
     f.CreateNetwork("");
-    f.GetSchema(NodeGroup::Specified);
+    f.GetInputSchema();
+    f.GetOutputSchema();
     f.StartForwardEvaluation(nullptr);
     f.ForwardPass(nullptr, nullptr);
 
     ModelEvaluationExtendedD d;
     d.CreateNetwork("");
-    d.GetSchema(NodeGroup::Specified);
+    d.GetInputSchema();
+    d.GetOutputSchema();
     d.StartForwardEvaluation(nullptr);
     d.ForwardPass(nullptr, nullptr);
 
