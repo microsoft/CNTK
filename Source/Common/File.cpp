@@ -942,9 +942,11 @@ template <class ElemType>
     return array;
 }
 
+template vector<short>  File::LoadMatrixFromTextFile<short>(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<float>  File::LoadMatrixFromTextFile<float> (const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
+template vector<short>  File::LoadMatrixFromStringLiteral<short>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 

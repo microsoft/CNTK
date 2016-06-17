@@ -2439,7 +2439,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignExpOf(const CPUMatrix<ElemType>&
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
-            us(i, j) = exp(a(i, j));
+            us(i, j) = (ElemType) exp(a(i, j));
         }
     }
 
@@ -2515,10 +2515,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLogOf(const CPUMatrix<ElemType>&
         const ElemType v = a(i, j);
         if (v < EPS_IN_LOG)
         {
-            us(i, j) = LOG_OF_EPS_IN_LOG;
+            us(i, j) = (ElemType) LOG_OF_EPS_IN_LOG;
         }
         else
-            us(i, j) = log(v);
+            us(i, j) = (ElemType) log(v);
     }
 
     return *this;
@@ -6336,6 +6336,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
 // =======================================================================
 // explicit instantiations
 // =======================================================================
+template class MATH_API CPUMatrix<short>;
 template class MATH_API CPUMatrix<float>;
 template class MATH_API CPUMatrix<double>;
 

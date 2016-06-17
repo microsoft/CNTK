@@ -1448,6 +1448,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
     return stream;
 }
 
+template class CPUSparseMatrix<short>;
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;
 

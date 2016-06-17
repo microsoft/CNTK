@@ -92,13 +92,13 @@ template <class ElemType>
     if (uniformInit)
     {
         // TODO: move these hidden extra factors out from here and into NDL, and make them visible in BS
-        ElemType randRange = 0.05f * initValueScale;
+        ElemType randRange = (ElemType)(0.05f * initValueScale);
         value.SetUniformRandomValue(-randRange, randRange, randomSeed);
     }
     else
     {
         size_t inputSize = value.GetNumCols();
-        ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
+        ElemType randInitstd = (ElemType)(0.2f * initValueScale / sqrt(ElemType(inputSize)));
         value.SetGaussianRandomValue(0, randInitstd, randomSeed);
     }
     if (initOnCPUOnly)
@@ -299,7 +299,7 @@ template <class ElemType>
     PrintNodeValuesToFile(printValues, printMetadata, fstream);
 }
 
-//template class LearnableParameter<short>;
+template class LearnableParameter<short>;
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
 

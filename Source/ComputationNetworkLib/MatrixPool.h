@@ -22,6 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Note: see #define SUPRESS_MEMSHARING below as for how to temporarily disable memory sharing altogether, for debugging
 class MatrixPool
 {
+    vector<shared_ptr<Matrix<short>>>  m_releasedShortMatrices;
     vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
     vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
 

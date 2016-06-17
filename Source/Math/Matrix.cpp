@@ -16,6 +16,7 @@
 #include <math.h>
 #include "GPUWatcher.h" // bring in this class as well so that it gets exported from this DLL
 #include <memory>
+#include <type_traits>
 #ifndef CPUONLY
 #pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
 #endif
@@ -1518,11 +1519,11 @@ void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Mat
     // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined).
     // These should be made configurable if needed
     const size_t adagradT = 2 * 3600 * 100;
-    const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
+    const ElemType targetadagradavdenom = (ElemType)0.0025; // 1/400 magic constant
     const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
 
     static ElemType aggadagradsqrframes = 0;
-    aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
+    aggadagradsqrframes = (ElemType)(adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize);
     const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
@@ -2117,7 +2118,7 @@ Matrix<ElemType> Matrix<ElemType>::operator*(const Matrix<ElemType>& a) const
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::Assign1x1ProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
-    Multiply1x1AndWeightedAdd(+1, a, b, 0.0f, *this);
+    Multiply1x1AndWeightedAdd(+1, a, b, 0, *this);
     return *this;
 }
 
@@ -2828,14 +2829,14 @@ Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
     if (IsEmpty())
         LogicError("InplaceTruncate: Matrix is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (std::is_same<ElemType, float>::value)
     {
         if (!isfinite((float) threshold))
             return *this;
     }
-    else
+    else if (std::is_same<ElemType, double>::value)
     {
-        if (!isfinite(threshold))
+        if (!isfinite((double)threshold))
             return *this;
     }
 
@@ -2890,14 +2891,14 @@ Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateBottom(const ElemType thresho
     if (IsEmpty())
         LogicError("InplaceTruncateBottom: Matrix is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (std::is_same<ElemType, float>::value)
     {
         if (!isfinite((float) threshold))
             return *this;
     }
-    else
+    else if (std::is_same<ElemType, double>::value)
     {
-        if (!isfinite(threshold))
+        if (!isfinite((double)threshold))
             return *this;
     }
 
@@ -2918,7 +2919,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     if (a.IsEmpty())
         LogicError("AssignTruncateBottomOf: Matrix a is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (std::is_same<ElemType, float>::value)
     {
         if (!isfinite((float) threshold))
         {
@@ -2926,9 +2927,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
             return *this;
         }
     }
-    else
+    else if (std::is_same<ElemType, double>::value)
     {
-        if (!isfinite(threshold))
+        if (!isfinite((double)threshold))
         {
             this->SetValue(a);
             return *this;
@@ -2955,16 +2956,17 @@ Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
     if (IsEmpty())
         LogicError("InplaceTruncateTop: Matrix is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (std::is_same<ElemType, float>::value)
     {
         if (!isfinite((float) threshold))
             return *this;
     }
-    else
+    else if (std::is_same<ElemType, double>::value)
     {
-        if (!isfinite(threshold))
+        if (!isfinite((double) threshold))
             return *this;
     }
+    
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -2982,7 +2984,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     if (a.IsEmpty())
         LogicError("AssignTruncateTopOf: Matrix a is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (std::is_same<ElemType, float>::value)
     {
         if (!isfinite((float) threshold))
         {
@@ -2990,9 +2992,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
             return *this;
         }
     }
-    else
+    else if (std::is_same<ElemType, double>::value)
     {
-        if (!isfinite(threshold))
+        if (!isfinite((double) threshold))
         {
             this->SetValue(a);
             return *this;
@@ -4485,7 +4487,7 @@ template <class ElemType>
 void Matrix<ElemType>::MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
                                       Matrix<ElemType>& c)
 {
-    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
+    return Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, a, transposeA, b, transposeB, (ElemType)1.0, c);
 }
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b)</summary>
@@ -4498,7 +4500,7 @@ template <class ElemType>
 void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
                                 Matrix<ElemType>& c)
 {
-    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 0.0, c);
+    return Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, a, transposeA, b, transposeB, (ElemType)0.0, c);
 }
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b are not transposed): c =  a * b</summary>
@@ -4508,7 +4510,7 @@ void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const bool transposeA
 template <class ElemType>
 void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
 {
-    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
+    return Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, a, false, b, false, (ElemType)0.0, c);
 }
 
 /// <summary>1-D Convolution with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c. MultiplyAndWeightedAdd is just a special case of this.</summary>
@@ -5002,13 +5004,16 @@ bool Matrix<ElemType>::HasNan(const char* name) const
     if (IsEmpty())
         return false;
 
+    if (std::is_same<ElemType, short>::value)
+        return false;
+
     // if GPU then first detect NaN there, will be faster
     if (GetDeviceId() != CPUDEVICE)
     {
         Matrix<ElemType> sum(GetDeviceId());
         sum.AssignSumOfElements(*this);
         auto x = sum.Get00Element();
-        if (!std::isnan(x))
+        if (!std::isnan((float) x))
             return false;
     }
 
@@ -5016,7 +5021,7 @@ bool Matrix<ElemType>::HasNan(const char* name) const
     const Matrix<ElemType>& us = *this;
 
     foreach_coord (i, j, us)
-        if (std::isnan(us(i, j)))
+        if (std::isnan((float)us(i, j)))
         {
             fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
             return true;
@@ -5031,12 +5036,15 @@ bool Matrix<ElemType>::HasNan(const char* name) const
 template <class ElemType>
 size_t Matrix<ElemType>::CountNanInf() const
 {
+    if (std::is_same<short, ElemType>::value)
+        return 0;
+
     const auto& us = *this;
     size_t n = 0; // number of NaNs/INF found
     foreach_coord (i, j, us)
     {
         auto val = us(i, j);
-        if (std::isnan(val) || !std::isfinite(val))
+        if (std::isnan((float) val) || !std::isfinite((float) val))
             n++;
     }
     return n;
@@ -5056,7 +5064,7 @@ ElemType Matrix<ElemType>::Mod(ElemType x, ElemType y)
     if (y <= 0)
         LogicError("y is smaller than zero");
 
-    return x - y * floor(x / y);
+    return (ElemType) (x - y * floor(x / y));
 }
 
 // TODO: use static LogAdd() as defined in TensorOps.h
@@ -5064,7 +5072,7 @@ ElemType Matrix<ElemType>::Mod(ElemType x, ElemType y)
 template <class ElemType>
 ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
 {
-    ElemType temp, diff, z;
+    ElemType temp, diff;
 
     if (x < y)
     {
@@ -5079,8 +5087,7 @@ ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
     }
     else
     {
-        z = exp(diff);
-        return (ElemType)(x + log(1.0 + z));
+        return (ElemType)(x + log(1.0 + exp(diff)));
     }
 }
 
@@ -5406,7 +5413,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED);
 }
 
-//template class Matrix<short>;
+template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
 

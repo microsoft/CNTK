@@ -34,6 +34,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
+vector<shared_ptr<Matrix<short>>>& MatrixPool::GetReleasedMatrices<short>()
+{
+    return m_releasedShortMatrices;
+}
+
+template <>
 vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
 {
     return m_releasedFloatMatrices;
@@ -992,7 +998,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             // S \in R^{min(m,n),1}
             // S is in descending order
 
-            ElemType totalEnergy = 0.0f;
+            ElemType totalEnergy = (ElemType)0.0f;
             for (size_t i = 0; i < S.GetNumRows(); i++)
                 totalEnergy += S(i, 0);
             ElemType keepEnergy = totalEnergy * keepRatio;
@@ -1450,6 +1456,18 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
+// <short>
+//template void ComputationNetwork::InitLearnableParameters<short>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const short initValueScale, bool initOnCPUOnly);
+//template void ComputationNetwork::Read<short>(const wstring& fileName);
+//template void ComputationNetwork::ReadPersistableParameters<short>(File& fstream, bool create);
+//template void ComputationNetwork::PerformSVDecomposition<short>(const map<wstring, float>& SVDConfig, size_t alignedsize);
+//template /*static*/ void ComputationNetwork::SetDropoutRate<short>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+//template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<short>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
+//template void ComputationNetwork::SetSeqParam<short>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
+//    const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+//template void ComputationNetwork::SaveToDbnFile<short>(ComputationNetworkPtr net, const std::wstring& fileName) const;
+
+// <float>
 template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
@@ -1460,6 +1478,7 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
+// <double>
 template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);

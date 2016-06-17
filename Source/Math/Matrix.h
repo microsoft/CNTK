@@ -612,6 +612,7 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
     return stream;
 }
 
+typedef Matrix<short> ShortMatrix;
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
 

@@ -103,7 +103,7 @@ public:
         size_t boundaryframenum;
         std::vector<size_t> validframes; // [s] cursor pointing to next utterance begin within a single parallel sequence [s]
         validframes.assign(samplesInRecurrentStep, 0);
-        ElemType objectValue = 0.0;
+        ElemType objectValue = (ElemType)0.0;
         // convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
         size_t numrows = loglikelihood.GetNumRows();
         size_t numcols = loglikelihood.GetNumCols();
