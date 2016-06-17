@@ -174,13 +174,13 @@ void File::Init(const wchar_t* filename, int fileOptions)
         FreeLibrary(hinstLib);
     }
     else // on Windows 7-, use older PathRemoveFileSpec() instead
-        hr = PathRemoveFileSpec(&path[0]);
+        hr = PathRemoveFileSpec(&path[0]) ? S_OK : S_FALSE;
 
-                if (hr == S_OK) // done
-                    path.resize(wcslen(&path[0]));
-                else if (hr == S_FALSE) // nothing to remove: use .
-                    path = L".";
-        else
+    if (hr == S_OK) // done
+        path.resize(wcslen(&path[0]));
+    else if (hr == S_FALSE) // nothing to remove: use .
+        path = L".";
+    else
         RuntimeError("DirectoryPathOf: Path(Cch)RemoveFileSpec() unexpectedly failed with 0x%08x.", (unsigned int)hr);
 #else
     auto pos = path.find_last_of(L"/");
