@@ -9,6 +9,7 @@
 #include <math.h>
 #include <vector>
 #include <unordered_set>
+#include "Helpers.h"
 
 namespace msra { namespace cuda {
 
@@ -40,10 +41,7 @@ class ondevice
 public:
     ondevice(size_t deviceid)
     {
-        cudaSetDevice((int) deviceid) || "cudaSetDevice failed!";
-    }
-    ~ondevice()
-    {
+        CheckCudaReturnCode(cudaSetDevice((int)deviceid), "Cannot set cuda device.");
     }
 };
 } }

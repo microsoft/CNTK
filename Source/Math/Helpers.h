@@ -5,7 +5,7 @@
 // helpful macros
 // TODO: the file's name is too general to be included from outside; MathHelpers.h?
 
-//#pragma once
+#pragma once
 
 // iterators
 #undef foreach_row
@@ -21,3 +21,11 @@
 
 // this functions returns the index of the first column element in the columnwise array representing matrix with _numRows rows
 #define column_s_ind_colwisem(_colNum, _numRows) ((_numRows) * (_colNum))
+
+#ifndef CPUONLY
+inline void CheckCudaReturnCode(cudaError_t rc, const char* msg)
+{
+    if (rc != cudaSuccess)
+        RuntimeError("%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), (int)rc);
+}
+#endif
