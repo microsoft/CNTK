@@ -516,4 +516,6 @@ private:
 typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
 
+
 }}}
+

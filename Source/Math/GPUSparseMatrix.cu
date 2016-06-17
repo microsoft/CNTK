@@ -2791,6 +2791,7 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
     return stream;
 }
 
+template MATH_API File& operator>>(File& stream, GPUSparseMatrix<short>& us);
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<double>& us);
 
@@ -2849,6 +2850,7 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
     return stream;
 }
 
+template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<short>& us);
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<float>& us);
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<double>& us);
 

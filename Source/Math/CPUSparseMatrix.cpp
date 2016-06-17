@@ -349,7 +349,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
     for (long j = 0; j < numCols; j++)
     {
         auto jInF = idx(0, j); // this is the column we need to get
-        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
+        if (::isnan((double)jInF) || (jInF < 0))     // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
 
@@ -366,7 +366,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
     for (long j = 0; j < numCols; j++)
     {
         auto jInF = idx(0, j); // this is the column we need to get
-        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
+        if (::isnan((double)jInF) || (jInF < 0))     // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
 
@@ -1010,7 +1010,7 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
     if (c.IsEmpty())
     {
         c.RequireSize(GetNumRows(), GetNumCols());
-        c.SetValue(0.0);
+        c.SetValue((ElemType)0);
     }
     // BUGBUG: dimension/ownbuffer check?
 
@@ -1044,13 +1044,13 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
     if (c.IsEmpty() || c.GetNumCols() != GetNumCols() || c.GetNumRows() != GetNumRows())
     {
         c.RequireSize(GetNumRows(), GetNumCols());
-        c.SetValue(0.0);
+        c.SetValue((ElemType) 0.0);
     }
     // BUGBUG: dimension/ownbuffer check?
 
     ElemType aveMultiplier = 0;
 
-    const ElemType floor = 1e-16f;
+    const ElemType floor = (ElemType) 1e-16f;
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
     {
         size_t col_num = (GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? GetNumCols() : GetNumRows();
@@ -1067,7 +1067,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
                 size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                 ElemType adenorm = c(row, col);
                 adenorm += val * val;
-                ElemType a = sqrt(floor + adenorm);
+                ElemType a = (ElemType)sqrt(floor + adenorm);
                 Buffer()[p] = val / a;
                 c(row, col) = adenorm;
 
@@ -1090,7 +1090,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
                 size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : colOrRow;
                 size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? colOrRow : i;
                 c(row, col) += val * val;
-                ElemType a = sqrt(floor + c(row, col));
+                ElemType a = (ElemType)sqrt(floor + c(row, col));
                 Buffer()[p] /= a;
 
                 if (needAveMultiplier)
@@ -1101,7 +1101,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 
     size_t nz = NzCount();
     if (needAveMultiplier && nz > 0)
-        return aveMultiplier / nz;
+        return (ElemType)(aveMultiplier / nz);
     else
         return 1;
 }
@@ -1180,7 +1180,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
     if (!OwnBuffer())
         LogicError("Cannot modify since the buffer is managed externally.");
 
-    ElemType locThresholdPos = abs(threshold);
+    ElemType locThresholdPos = (ElemType)abs(threshold);
     ElemType locTHresholdNeg = -locThresholdPos;
 
     long m = (long) this->NzCount();
@@ -1297,7 +1297,7 @@ ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
         v += nzValues[i] * nzValues[i];
     }
 
-    return sqrt(v);
+    return (ElemType)sqrt(v);
 }
 
 //sum of all abs(elements)
@@ -1405,6 +1405,7 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
     return stream;
 }
 
+template MATH_API File& operator>>(File& stream, CPUSparseMatrix<short>& us);
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
 

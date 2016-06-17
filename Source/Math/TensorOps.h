@@ -10,6 +10,10 @@
 #include "Basics.h"
 #include "CommonMatrix.h"
 
+#pragma warning(disable : 4309) // Truncation of constant value
+#pragma warning(disable : 4244) // conversion from float to short, possible loss of data
+#pragma warning(disable : 4310) // cast truncates constant value
+
 #pragma push_macro("TENSOR_OPS_DECL")
 #ifndef TENSOR_OPS_DECL // to make these accessible to CUDA kernels, say '#define TENSOR_OPS_DECL __device__ __host__'
 #define TENSOR_OPS_DECL
@@ -38,6 +42,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DECL double x##_(double f)  \
     {                           \
         return x(f);            \
+    }\
+    DECL float x##_(short f)  \
+    {                           \
+        return x##f((float)f);            \
+    } \
+    DECL float x##_(int f)  \
+    {                           \
+        return x##f((float)f);            \
     }
 
 OverloadUnaryMathFns(exp);
@@ -127,7 +139,7 @@ DECL ElemType ClippedLog(ElemType z)
 template <class ElemType>
 DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 {
-    if (fabs(b) < EPS_IN_INVERSE) // clip the denominator
+    if (abs(b) < EPS_IN_INVERSE) // clip the denominator
     {
         if (b > 0)
             b = EPS_IN_INVERSE;
