@@ -5,14 +5,17 @@
 // MathPerformanceTests.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#define NOMINMAX
-#include "Windows.h"
+//#define NOMINMAX
+//#include "Windows.h"
+#include "Matrix.h"
+#include "CPUMatrix.h"
+#include "TensorView.h"
+#include "Sequences.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
-#include "Matrix.h"
-#include "CPUMatrix.h"
-#include "Sequences.h"
+#include <algorithm>
+
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
@@ -378,6 +381,129 @@ void SquareMultiplyAndAdd10TimesAvgTest(int n, int count)
     cout << "CPUMatrix/Matrix ratio is: " << cpu_avg / m_avg << " seconds" << endl;
 }
 
+// simple test suite for TensorView
+//  - this is meant for performance optimization
+//  - correctness is defined as same result between GPU and CPU
+template <class ElemType>
+struct TensorTest
+{
+    // helper to create a randomly initialized tensor object
+    static TensorView<ElemType> CreateTensor(TensorShape shape, int randomSeed, DEVICEID_TYPE deviceId, bool isResult = false)
+    {
+        let numElements = shape.GetNumElements();
+
+        if (isResult)
+            cout << " ->";
+        cout << " [" << string(shape) << "]";
+        if (isResult)
+            cout << " \t// " << (deviceId < 0 ? "C" : "G") << "PU\n   " << flush;
+
+        // random init
+        mt19937 rng(randomSeed);
+        uniform_real_distribution<float> nd(-1, 1);
+        vector<ElemType> init(numElements);
+        generate(begin(init), end(init), [&] { return nd(rng); });
+
+        // create storage object (one-column matrix)
+        let sob = make_shared<Matrix<ElemType>>(numElements/*rows*/, 1/*cols*/, init.data(), deviceId);
+
+        // create TensorView
+        return TensorView<ElemType>(sob, shape);
+    }
+
+    // test bias gradient (reduction)
+    static TensorView<ElemType> BiasGradientTest(TensorShape layerShape, TensorShape biasShape, DEVICEID_TYPE deviceId)
+    {
+        int randomSeed = 1;
+        let  gradient = CreateTensor(layerShape, randomSeed++, deviceId);
+        auto bias = CreateTensor(biasShape, randomSeed++, deviceId, true);
+        //gradient.GetSOB().Print("incoming gradient", 0, 9, 0, 9);
+        //bias.GetSOB().Print("bias gradient", 0, 9, 0, 9);
+        bias.DoCopyOf(1, gradient, 1);
+        //bias.GetSOB().Print("updated bias gradient", 0, 9, 0, 9);
+        return bias;
+    }
+
+    // test broadcast summation gradient
+    static TensorView<ElemType> BroadcastingTest(TensorShape layerShape, TensorShape biasShape, DEVICEID_TYPE deviceId)
+    {
+        int randomSeed = 1;
+        let  input  = CreateTensor(layerShape, randomSeed++, deviceId);
+        auto bias   = CreateTensor(biasShape,  randomSeed++, deviceId);
+        //input.GetSOB().Print("input data", 0, 9, 0, 9);
+        //bias.GetSOB().Print("bias", 0, 9, 0, 9);
+        auto result = CreateTensor(layerShape, randomSeed++, deviceId, true);
+        result.AssignSumOf(input, bias);
+        return result;
+    }
+
+    // run one test for both GPU and CPU and verify they are the same
+    template<typename FN>
+    static void OneTensorTest(const char* what, double tolerance, const FN& fn)
+    {
+        cout << "===== Tensor test '" << what << "'\n   ";
+
+        // run on GPU and CPU
+        let resultGPU = fn(0);
+        let resultCPU = fn(-1);
+
+        // dump top corner of the result to get a feel for the error
+        resultGPU.GetSOB().Print("GPU result", 0, 7, 0, 9);
+        resultGPU.GetSOB().TransferToDeviceIfNotThere(-1, true, false, true);
+        resultCPU.GetSOB().Print("CPU result", 0, 7, 0, 9);
+
+        // compare
+        let isSame = resultGPU.GetSOB().IsEqualTo(resultCPU.GetSOB(), (ElemType)tolerance);
+        cout << (isSame ? " --> SUCCEEDED. =====\n" : " --> FAILED (GPU and CPU results differ). =====\n") << endl << flush;
+        if (!isSame)
+            sin(1.0);  // set breakpoint here
+    }
+
+    // main entry point (misusing the constructor)
+    /*void*/ TensorTest()
+    {
+        // --- elementwise
+
+        // elementwise sum
+        OneTensorTest("elementwise addition", 1e-8, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BroadcastingTest(TensorShape{ 512, 256 }, TensorShape({ 512, 256 }), deviceId);
+        });
+
+        // --- broadcasting
+
+        // simple broadcasting
+        OneTensorTest("addition wth simple broadcasting", 1e-8, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BroadcastingTest(TensorShape{ 3, 2 }, TensorShape({ 3, 1 }), deviceId);
+        });
+        // typical bias for convolutional layer
+        OneTensorTest("bias addition (broadcasting)", 1e-8, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BroadcastingTest(TensorShape{ 28, 28, 128, 32 }, TensorShape({ 1, 1, 128 }), deviceId);
+        });
+        // BUGBUG: This test is strange--Print() shows different values with depth 128 instead of 64, but IsEqual() does not fail with 1e-3 tolerance.
+        //         Something fishy going on. Dimension overflow?
+        OneTensorTest("bias addition (broadcasting)", 1e-8, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BroadcastingTest(TensorShape{ 256, 256, 64, 32 }, TensorShape({ 1, 1, 64 }), deviceId);
+        });
+
+        // --- reduction
+
+        // typical bias gradient (reduction) for FF-DNN
+        OneTensorTest("bias gradient (reduction)", 1e-4, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BiasGradientTest(TensorShape{ 2048, 1024 }, TensorShape(2048), deviceId);
+        });
+        // typical bias gradient (reduction) for convolutional layer
+        OneTensorTest("bias gradient (reduction)", 1e-1, [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            return BiasGradientTest(TensorShape{ 256, 256, 64, 32 }, TensorShape({ 1, 1, 64 }), deviceId);
+        });
+    }
+};
+
 template <class ElemType>
 void MandSTest(int count, int devId)
 {
@@ -437,6 +563,8 @@ void MandSTest(int count, int devId)
 
 int wmain()
 {
+    TensorTest<float>();
+
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 
     TestRnnForwardPropSRP<float>();
