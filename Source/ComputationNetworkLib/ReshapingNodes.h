@@ -553,7 +553,7 @@ class SparseRowStackNode : public ComputationNode<ElemType> // note: not derivin
 
 public:
     DeclareConstructorFromConfig(SparseRowStackNode);
-    SparseRowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1)
+    SparseRowStackNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
