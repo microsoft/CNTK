@@ -20,9 +20,7 @@ void* CUDAPageLockedMemAllocator::Malloc(size_t size, int deviceId)
     CheckCudaReturnCode(cudaSetDevice(deviceId), "Cannot set cuda device.");
 
     // Note: I ask for cudaHostAllocDefault but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
-    // TODO: FIX!
     CheckCudaReturnCode(cudaHostAlloc(&p, size, cudaHostAllocDefault), "Malloc in CUDAPageLockedMemAllocator failed");
-
     return p;
 }
 
