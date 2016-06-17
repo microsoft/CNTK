@@ -108,13 +108,12 @@ __device__ __forceinline__ void StoreValues<4, float>(const float src[4], float*
 template <typename T>
 __device__ __forceinline__ T Shuffle(T input, int srcLane)
 {
-#ifdef __CUDA_ARCH__
+#if __CUDA_ARCH__ >= 300
     // shfl is supported only on Kepler+
-    static_assert(__CUDA_ARCH__ >= 300, "CNTK only supports only Kepler GPU architecture or newer");
     return cub::ShuffleIndex(input, srcLane);
 #else
     assert(false);
-    return input;
+    return input; // keep compiler happy
 #endif
 }
 

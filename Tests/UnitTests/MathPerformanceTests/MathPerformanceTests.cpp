@@ -5,14 +5,17 @@
 // MathPerformanceTests.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#define NOMINMAX
-#include "Windows.h"
+//#define NOMINMAX
+//#include "Windows.h"
+#include "Matrix.h"
+#include "CPUMatrix.h"
+#include "TensorView.h"
+#include "Sequences.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
-#include "Matrix.h"
-#include "CPUMatrix.h"
-#include "Sequences.h"
+#include <algorithm>
+
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
@@ -378,6 +381,63 @@ void SquareMultiplyAndAdd10TimesAvgTest(int n, int count)
     cout << "CPUMatrix/Matrix ratio is: " << cpu_avg / m_avg << " seconds" << endl;
 }
 
+// simple test suite for TensorView
+//  - this is meant for performance optimization
+//  - correctness is defined as same result between GPU and CPU
+template <class ElemType>
+struct TensorTest
+{
+    // helper to create a randomly initialized tensor object
+    static TensorView<ElemType> CreateTensor(TensorShape shape, int randomSeed, DEVICEID_TYPE deviceId)
+    {
+        let numElements = shape.GetNumElements();
+
+        // random init
+        mt19937 rng(randomSeed);
+        uniform_real_distribution<float> nd(-1, 1);
+        vector<ElemType> init(numElements);
+        generate(begin(init), end(init), [&] { return nd(rng); });
+
+        // create storage object (one-column matrix)
+        let sob = make_shared<Matrix<ElemType>>(numElements/*rows*/, 1/*cols*/, init.data(), deviceId);
+
+        // create TensorView
+        return TensorView<ElemType>(sob, shape);
+    }
+
+    template<typename FN>
+    static void OneTensorTest(const char* what, const FN& fn)
+    {
+        cout << "Tensor test '" << what << "': ";
+
+        // run on GPU and CPU
+        let resultGPU = fn(0);
+        let resultCPU = fn(-1);
+
+        // compare
+        let isSame = resultGPU.GetSOB().IsEqualTo(resultCPU.GetSOB(), 1e-3f);
+        cout << (isSame ? "succeeded." : "FAILED (GPU and CPU results differ).") << endl;
+    }
+
+    // main entry point (misusing the constructor)
+    /*void*/ TensorTest()
+    {
+        OneTensorTest("bias gradient", [](DEVICEID_TYPE deviceId) -> TensorView<ElemType>
+        {
+            let N = 2048u;
+            let T = 1024u;
+            int randomSeed = 1;
+            let  gradient = CreateTensor(TensorShape{ N, T }, randomSeed++, deviceId);
+            auto bias     = CreateTensor(TensorShape(N),      randomSeed++, deviceId);
+            //gradient.GetSOB().Print("incoming gradient", 0, 9, 0, 9);
+            //bias.GetSOB().Print("bias gradient", 0, 9, 0, 9);
+            bias.DoCopyOf(1, gradient, 1);
+            //bias.GetSOB().Print("updated bias gradient", 0, 9, 0, 9);
+            return bias;
+        });
+    }
+};
+
 template <class ElemType>
 void MandSTest(int count, int devId)
 {
@@ -437,6 +497,8 @@ void MandSTest(int count, int devId)
 
 int wmain()
 {
+    TensorTest<float>();
+
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 
     TestRnnForwardPropSRP<float>();
