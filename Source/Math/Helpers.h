@@ -7,6 +7,10 @@
 
 #pragma once
 
+#ifndef CPUONLY
+#include <cuda_runtime_api.h>
+#endif
+
 // iterators
 #undef foreach_row
 #undef foreach_column
