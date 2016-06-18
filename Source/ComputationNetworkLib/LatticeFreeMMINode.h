@@ -97,6 +97,9 @@ public:
             }
 
             Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+
+            gradient.DropFrame(*m_posteriorsNum, *m_posteriorsDen, (ElemType)(1e-8));
+
         }
     }
 
