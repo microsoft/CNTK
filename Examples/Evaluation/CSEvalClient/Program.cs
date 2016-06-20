@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -21,6 +20,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// <description>
     /// This program is a managed client using the CLIWrapper to run the model evaluator in CNTK.
     /// There are four cases shown in this program related to model loading, network creation and evaluation.
+    /// 
+    /// To run this program from the CNTK binary drop, you must add the Evaluation NuGet package first.
+    /// Refer to <see cref="https://github.com/Microsoft/CNTK/wiki/Eval-Nuget"/> for information regarding the Evalution NuGet package.
     /// 
     /// EvaluateModelSingleLayer and EvaluateModelMultipleLayers
     /// --------------------------------------------------------
@@ -189,7 +191,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     model.CreateNetwork(networkDescription, deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
-                    var inputs = new Dictionary<string, List<float>>() { { "features1", new List<float>() { 1.0f } } };
+                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { 1.0f } } };
 
                     // We can call the evaluate method and get back the results (single layer output)...
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
