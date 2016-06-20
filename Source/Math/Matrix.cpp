@@ -4208,6 +4208,31 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 }
 
 template <class ElemType>
+void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const
+{
+    assert(mpRowCol.GetNumCols() == 1);
+    assert(mpRowIndices.GetNumCols() == 1);
+    assert(indices.GetNumCols() == 1);
+
+    DecideAndMoveToRightDevice(*this, input);
+
+    // REVIEW alexeyk: setting values to zero may cause inconsistency when negative values are unpooled.
+    // To see why, let's assume we have just one input with negative value and output of, for example, 2x2.
+    // As a result of unpooling, there will be 3 zero values and one negative. If we now apply max pooling
+    // operation to the output then we get 0 as the output, not the original negative value.
+    // In practice this will not happen as pooling layers usually go right after ReLU layer.
+    input.SetValue(0);
+
+    // REVIEW alexeyk: add sparse version.
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->MaxUnpooling(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(poolInput.m_CPUMatrix), *(input.m_CPUMatrix)),
+                            m_GPUMatrix->MaxUnpooling(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(poolInput.m_GPUMatrix), *(input.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
 {
     assert(mpRowCol.GetNumCols() == 1);

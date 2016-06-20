@@ -21,6 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // arbitrary configurations and dimensions. In such case the generic implementation becomes very simple and invariant
 // wrt convolution configuration and dimensionality. For specific cases like 2D/3D convolutions and full sharing,
 // highly optimized implementations (e.g. cuDNN) are used.
+// TODO: rename to ConvolutionGeometry
 class ConvolveGeometry final
 {
 public:
@@ -426,6 +427,7 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
+    // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
     {
@@ -490,6 +492,69 @@ public:
         UNUSED(sizeOut);
 
         return dimsOut;
+    }
+
+    // Computes input shape given output shape and other convolution parameters.
+    // Used in deconvolution operation.
+    static TensorShape ComputeInputShape(const TensorShape& outputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
+                                         const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)
+    {
+        if (outputShape.GetRank() != kernelShape.GetRank())
+            InvalidArgument("Convolution output and kernel tensors must have the same rank.");
+        if (mapCount.GetRank() != 1 && outputShape.GetRank() != mapCount.GetRank())
+            InvalidArgument("Convolution map tensor must have rank 1 or the same as the output tensor.");
+        if (stride.GetRank() != 1 && outputShape.GetRank() != stride.GetRank())
+            InvalidArgument("Convolution stride tensor must have rank 1 or the same as the output tensor.");
+        if (sharing.size() != 1 && outputShape.GetRank() != sharing.size())
+            InvalidArgument("Convolution sharing tensor must have rank 1 or the same as the output tensor.");
+        if (autoPad.size() != 1 && outputShape.GetRank() != autoPad.size())
+            InvalidArgument("Convolution padding tensor must have rank 1 or the same as the output tensor.");
+        if (lowerPad.GetRank() != 1 && outputShape.GetRank() != lowerPad.GetRank())
+            InvalidArgument("Convolution lower pad tensor must have rank 1 or the same as the output tensor.");
+        if (upperPad.GetRank() != 1 && outputShape.GetRank() != upperPad.GetRank())
+            InvalidArgument("Convolution upper pad tensor must have rank 1 or the same as the output tensor.");
+
+        SmallVector<size_t> dimsInput(outputShape.GetRank());
+        for (size_t i = 0; i < outputShape.GetRank(); i++)
+        {
+            assert(outputShape[i] >= 1);
+
+            size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
+            size_t dim = outputShape[i];
+            // Input dimension does not include output map count.
+            size_t curMapCount = 1;
+            if (mapCount.size() > 1)
+                curMapCount = mapCount[i];
+            else if (i == outputShape.GetRank() - 1)
+                curMapCount = mapCount[0];
+            assert((dim % curMapCount) == 0);
+            dim /= curMapCount;
+
+            bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
+            size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
+            size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
+            size_t dimIn = (dim - 1) * delta;
+            // We need to be able to restore any input size from the output, not just the one
+            // that does not require padding. For example, if output is 14, stride 2 and 
+            // desired input is 28 then padded input will be 31. In this case if autopadding is enabled,
+            // the input will 27 as (27 - 1) / 2 + 1 == 14.
+            if (autoPadCur)
+                dimIn += 1;
+            else
+                dimIn += (int64_t)kernelShape[i] - (lo + hi);
+            // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
+            // fill the entire space.
+            if (!autoPadCur && (lo > 0 || hi > 0))
+            {
+                size_t size = (dimIn - kernelShape[i] + lo + hi) / delta + 1;
+                if (size != dim)
+                    InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
+            }
+
+            dimsInput[i] = dimIn;
+        }
+
+        return TensorShape(dimsInput);
     }
 
     // Used in unit tests and during debugging.
