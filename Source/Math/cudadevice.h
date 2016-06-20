@@ -9,7 +9,6 @@
 #include <math.h>
 #include <vector>
 #include <unordered_set>
-#include "Helpers.h"
 
 namespace msra { namespace cuda {
 
