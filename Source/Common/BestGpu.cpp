@@ -541,18 +541,19 @@ std::vector<GpuData> GetGpusData()
         for (ProcessorData* pd : processorData)
         {
             GpuData gpuData;
-            gpuData.major = pd->deviceProp.major;
-            gpuData.minor = pd->deviceProp.minor;
-            gpuData.cudaCores = pd->cores;
-            gpuData.deviceId = pd->deviceId;
+            gpuData.m_major = pd->deviceProp.major;
+            gpuData.m_minor = pd->deviceProp.minor;
+            gpuData.m_cudaCores = pd->cores;
+            gpuData.m_deviceId = pd->deviceId;
             data.push_back(gpuData);
          }
     }
 
-    return std::move(data);
+    return data;
 }
 
-std::vector<ProcessorData*> BestGpu::GetProcessorData(){
+std::vector<ProcessorData*> BestGpu::GetProcessorData()
+{
     return m_procData;
 }
 

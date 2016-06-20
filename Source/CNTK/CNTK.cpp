@@ -381,13 +381,13 @@ void PrintGpuInfo()
     }
 
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-    LOGPRINTF(stderr, "GPU info: \n\n");
+    LOGPRINTF(stderr, "GPU info:\n\n");
 
     for (GpuData& data : gpusData)
     {
-        LOGPRINTF(stderr, "\t\tDevice ID: %d\n", data.deviceId);
-        LOGPRINTF(stderr, "\t\tCompute Capability: %d.%d\n", data.major, data.minor);
-        LOGPRINTF(stderr, "\t\tCUDA cores: %d\n", data.cudaCores);
+        LOGPRINTF(stderr, "\t\tDevice ID: %d\n", data.m_deviceId);
+        LOGPRINTF(stderr, "\t\tCompute Capability: %d.%d\n", data.m_major, data.m_minor);
+        LOGPRINTF(stderr, "\t\tCUDA cores: %d\n", data.m_cudaCores);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -522,7 +522,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // echo config info to log
     PrintBuiltInfo();
 
-    //echo gpu info to log
+    // echo gpu info to log
     PrintGpuInfo();
 
     // execute the actions
