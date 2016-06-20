@@ -38,15 +38,13 @@ printHardwareInfo()
   echo "    Hardware threads: $nproc"
   echo "    Total Memory: $totalMemory"
 
-  nvidiaSmiPath=""
+  nvidiaSmiPath="/usr/bin/nvidia-smi"
 
   if [ "$OS" == "Windows_NT" ]; then
     nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
   else
-    nvidiaSmiPath="nvidia-smi"
-  fi
 
-  if [ -f "$nvidiaSmiPath" ]; then
+  if [ -x "$nvidiaSmiPath" ]; then
     gpuName=""
     gpuMem=""
 
