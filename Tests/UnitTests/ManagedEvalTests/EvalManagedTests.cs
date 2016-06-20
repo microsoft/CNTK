@@ -3,7 +3,9 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -215,6 +217,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                     CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
                 }
             }
+        }
+
+        [TestMethod]
+        public void EvalManagedCrossAppDomainExceptionTest()
+        {
+            var currentPath = Environment.CurrentDirectory;
+            var domain = AppDomain.CreateDomain("NewAppDomain");
+            var path = Path.Combine(currentPath, "EvalWrapper.dll");
+            var t = typeof(CNTKException);
+            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
+            Assert.AreNotEqual(null, instance);
         }
     }
 }

@@ -31,15 +31,6 @@ public:
 
     const String^ NativeCallStack;
 
-
-    [System::Security::Permissions::SecurityPermissionAttribute
-        (System::Security::Permissions::SecurityAction::LinkDemand,
-        Flags = System::Security::Permissions::SecurityPermissionFlag::SerializationFormatter)]
-    virtual void GetObjectData(SerializationInfo^ info, StreamingContext context) override
-    {
-        Exception::GetObjectData(info, context);
-    }
-
 protected:
 
     CNTKException(SerializationInfo^ info, StreamingContext context) : Exception(info, context)

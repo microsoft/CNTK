@@ -491,7 +491,7 @@ public ref class ValueBuffer
                 VariableLayout^ varlayout = gcnew VariableLayout();
                 varlayout->Name = gcnew String(lay.m_name.c_str());
                 varlayout->DataType = GetDataType(lay.m_dataType);
-                varlayout->NumElements = lay.m_numElements;
+                varlayout->NumElements = static_cast<int>(lay.m_numElements);
                 varlayout->StorageType = GetStorageType(lay.m_storageType);
 
                 schema->Add(varlayout);
