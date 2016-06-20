@@ -41,7 +41,9 @@ class ondevice
 public:
     ondevice(size_t deviceid)
     {
-        CheckCudaReturnCode(cudaSetDevice((int)deviceid), "Cannot set cuda device.");
+        auto rc = cudaSetDevice((int)deviceid);
+        if (rc != cudaSuccess)
+            RuntimeError("Cannot set cuda device: %s (cuda error %d)", cudaGetErrorString(rc), (int)rc);
     }
 };
 } }

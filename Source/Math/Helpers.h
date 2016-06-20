@@ -7,10 +7,6 @@
 
 #pragma once
 
-#ifndef CPUONLY
-#include <cuda_runtime_api.h>
-#endif
-
 // iterators
 #undef foreach_row
 #undef foreach_column
@@ -25,11 +21,3 @@
 
 // this functions returns the index of the first column element in the columnwise array representing matrix with _numRows rows
 #define column_s_ind_colwisem(_colNum, _numRows) ((_numRows) * (_colNum))
-
-#ifndef CPUONLY
-inline void CheckCudaReturnCode(cudaError_t rc, const char* msg)
-{
-    if (rc != cudaSuccess)
-        RuntimeError("%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), (int)rc);
-}
-#endif
