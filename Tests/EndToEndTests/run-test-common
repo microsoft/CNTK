@@ -28,10 +28,25 @@ DeleteModelsAfterTest=1
 
 printHardwareInfo()
 {
-  cpuName=$(cat /proc/cpuinfo | grep -m 1 'model name' | cut -d ":" -f 2 | tr -s " ")
-  cpuCores=$(cat /proc/cpuinfo | grep -m 1 'cpu cores' | cut -d ":" -f 2 | tr -s " ")
-  totalMemory=$(cat /proc/meminfo | grep 'MemTotal' | cut -d ":" -f 2 | tr -s " ")
+  cpuName=$(cat /proc/cpuinfo 2> /dev/null | grep -m 1 'model name' | cut -d : -f 2- | tr -s " " | cut -c 2-)
+  totalMemory=$(cat /proc/meminfo 2> /dev/null | grep 'MemTotal' | cut -d : -f 2- | tr -s " " | cut -c 2-)
   nproc=$(nproc)
+
+  # Note that MetricsDriver.py depends on this format
+  echo "Hardware info:"
+  echo "    CPU Model Name: $cpuName"
+  echo "    Hardware threads: $nproc"
+  echo "    Total Memory: $totalMemory"
+
+  nvidiaSmiPath=""
+
+  if [ "$OS" == "Windows_NT" ]; then
+    nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
+  else
+    nvidiaSmiPath="nvidia-smi"
+  fi
+
+  if [ -f "$nvidiaSmiPath" ]; then
   gpuName=""
   gpuMem=""
 
@@ -39,25 +54,19 @@ printHardwareInfo()
   gpuMemQuery="--query-gpu=memory.total --format=csv,noheader"
 
   if [ "$OS" == "Windows_NT" ]; then
-    nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
-    if [ -f "$nvidiaSmiPath" ]; then
       gpuName=$("$nvidiaSmiPath" $gpuNameQuery | head -1)
       gpuMem=$("$nvidiaSmiPath" $gpuMemQuery | head -1)
-  fi
   else
-    gpuName=$(nvidia-smi $gpuNameQuery | head -1)
-    gpuMem=$(nvidia-smi $gpuMemQuery | head -1)
+      gpuName=$($nvidiaSmiPath $gpuNameQuery | head -1)
+      gpuMem=$($nvidiaSmiPath $gpuMemQuery | head -1)
   fi
 
-  echo -e "Hardware info:
-    CPU Model Name:$cpuName
-    CPU Cores:$cpuCores
-    Hardware threads: $nproc
-    Total Memory:$totalMemory"
   if [ ! -z "$gpuName" ]; then
-    echo -e "    GPU Model Name: $gpuName
-    GPU Memory: $gpuMem"
+      echo "    GPU Model Name: $gpuName"
+      echo "    GPU Memory: $gpuMem"
+    fi
   fi
+  echo "-------------------------------------------------------------------"
 }
 
 # Helper function to print and run a command
