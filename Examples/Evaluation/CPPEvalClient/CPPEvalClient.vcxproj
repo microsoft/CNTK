@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{578D52A0-3928-4405-A016-F016E8B49031}</ProjectGuid>
+    <ProjectGuid>{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CPPEvalClient</RootNamespace>
   </PropertyGroup>
