@@ -30,6 +30,25 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         }
 
         [TestMethod]
+        public void EvalManagedVariableSchemaTest()
+        {
+            VariableSchema sc = new VariableSchema();
+            var buffers  = sc.CreateBuffers<float>();
+            Assert.AreEqual(0, buffers.Length);
+
+            sc.Add(new VariableLayout(){DataType=DataType.Float32, Name="A", NumElements=5, StorageType = StorageType.Dense});
+            buffers = sc.CreateBuffers<float>();
+            Assert.AreEqual(5, buffers[0].Buffer.Length);
+
+            sc.Add(new VariableLayout() { DataType = DataType.Float32, Name = "B", NumElements = 10, StorageType = StorageType.Sparse});
+            buffers = sc.CreateBuffers<float>();
+            Assert.AreEqual(10, buffers[1].Buffer.Length);
+            // Although sparse, the Indices and ColIndices are not allocated
+            Assert.AreEqual(null, buffers[1].Indices);
+            Assert.AreEqual(null, buffers[1].ColIndices);
+        }
+
+        [TestMethod]
         public void EvalManagedConstantNetworkTest()
         {
             string modelDefinition = @"precision = ""float""
