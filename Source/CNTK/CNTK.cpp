@@ -765,6 +765,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+		BS::SomeTests();
 
         if (argc <= 1)
         {
