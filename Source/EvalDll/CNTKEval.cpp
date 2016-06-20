@@ -26,6 +26,7 @@
 #include "NoRandomizer.h"
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
+#include "latticearchive.h"
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
@@ -99,6 +100,8 @@ extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval)
 template <typename ElemType>
 void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)
 {
+    // On Linux, it is required to add "this->" when referencing m_net, which is the protected member of the base class with templates,
+    // in order to make the name correctly resolved by the compiler.
     if (this->m_net == NULL)
     {
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)

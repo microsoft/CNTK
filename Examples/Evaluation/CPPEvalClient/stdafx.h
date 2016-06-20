@@ -9,11 +9,12 @@
 
 #pragma once
 
-#include "targetver.h"
-
 #include <stdio.h>
+
+#ifdef _WIN32
 #include <tchar.h>
 #include "targetver.h"
 
 // This is a windows only application
 #include "Windows.h"
+#endif
