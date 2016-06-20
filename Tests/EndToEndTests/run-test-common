@@ -38,22 +38,20 @@ printHardwareInfo()
   echo "    Hardware threads: $nproc"
   echo "    Total Memory: $totalMemory"
 
-  nvidiaSmiPath=""
+  nvidiaSmiPath="/usr/bin/nvidia-smi"
 
   if [ "$OS" == "Windows_NT" ]; then
     nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
   else
-    nvidiaSmiPath="nvidia-smi"
-  fi
 
-  if [ -f "$nvidiaSmiPath" ]; then
-  gpuName=""
-  gpuMem=""
+  if [ -x "$nvidiaSmiPath" ]; then
+    gpuName=""
+    gpuMem=""
 
   gpuNameQuery="--query-gpu=gpu_name --format=csv,noheader | sed -n '1p'"
   gpuMemQuery="--query-gpu=memory.total --format=csv,noheader | sed -n '1p'"
 
-  if [ "$OS" == "Windows_NT" ]; then
+    if [ "$OS" == "Windows_NT" ]; then
     nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
     if [ -f "$nvidiaSmiPath" ]; then
       gpuName=$("$nvidiaSmiPath" $gpuNameQuery)
@@ -61,14 +59,14 @@ printHardwareInfo()
   fi
       gpuName=$("$nvidiaSmiPath" $gpuNameQuery | head -1)
       gpuMem=$("$nvidiaSmiPath" $gpuMemQuery | head -1)
-  else
+    else
     gpuName=$(nvidia-smi $gpuNameQuery)
     gpuMem=$(nvidia-smi $gpuMemQuery)
       gpuName=$($nvidiaSmiPath $gpuNameQuery | head -1)
       gpuMem=$($nvidiaSmiPath $gpuMemQuery | head -1)
-  fi
+    fi
 
-  if [ ! -z "$gpuName" ]; then
+    if [ ! -z "$gpuName" ]; then
       echo "    GPU Model Name: $gpuName"
       echo "    GPU Memory: $gpuMem"
     fi
