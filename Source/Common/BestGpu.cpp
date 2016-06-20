@@ -576,7 +576,7 @@ std::vector<GpuData> GetAllGpusData()
         GpuValidity validity = GpuValidity::UnknownDevice;
 
         if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
-        {
+    {
             validity = GpuValidity::ComputeCapabilityNotSupported;
         }
         else
@@ -586,8 +586,8 @@ std::vector<GpuData> GetAllGpusData()
 
         size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
         GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
-        data.push_back(gpuData);
-    }
+            data.push_back(gpuData);
+         }
 
     return data;
 }
