@@ -526,16 +526,15 @@ protected:
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
-    // TODO (alrezni): drop the nodes, they are not really required,
-    // instead keep a struct of params (or do it inside the learner).
-    // Actually, we need to know the mutlpiplier for each parameter.
-    // a map from parameters to nodes.
+    // Maps parameters to corresponding computation nodes.
     std::unordered_map<::CNTK::Variable, ComputationNodePtr> m_parameterToNodeMap;
 
-    // a list of learners, one for each LearnableParameterNode
+    // a list of learners. Potentially, this list can contain several learners, but
+    // at the moment we only create two at most.
     std::list<::CNTK::LearnerPtr> m_learners;
 
-    // a list of all learnable parameters
+    // a list of all learnable parameters. At the moment, this are 'token' parameters,
+    // that are only kept around to satisfy the Learner interface.
     std::list<::CNTK::Variable> m_learnableParameters;
 
 private:

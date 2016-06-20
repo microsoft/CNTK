@@ -1626,16 +1626,9 @@ namespace CNTK
         {
         }
 
-// TODO: the following methods are needed for backwards compatibility until sgd.cpp is updated to v2.
-#pragma region _temporary_back_compat
-        // TODO: are these getters really necessary?
-        virtual double GetLearningRate() const = 0;
-        virtual double GetMomentum() const = 0;
-        
-        virtual void SetLearningRate(double value) = 0;
-        virtual void SetMomentum(double value) = 0;
-
-        // Additional learning parameters.
+        ///
+        /// Additional learning parameters.
+        ///
         struct AdditionalParameters
         {
             double l1RegWeight = 0.0;
@@ -1654,11 +1647,20 @@ namespace CNTK
 
         static const AdditionalParameters s_defaultParameters;
 
+// TODO: replace by the check-pointing mechanism.
+#pragma region _temporary_back_compat
+        // TODO: are these getters really necessary?
+        virtual double GetLearningRate() const = 0;
+        virtual double GetMomentum() const = 0;
+        
+        virtual void SetLearningRate(double value) = 0;
+        virtual void SetMomentum(double value) = 0;
+
         template <typename ElementType>
         void GetSmoothedGradients(std::unordered_map<Variable, std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>>& map)
         {
             auto gradients = SmoothedGradients();
-            const unordered_set<Variable>& keys = gradients.Keys();
+            const std::unordered_set<Variable>& keys = gradients.Keys();
 
             for (auto & key : keys)
             {

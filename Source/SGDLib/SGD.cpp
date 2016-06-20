@@ -2224,8 +2224,6 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
 
         const auto& nodeValue = node->Value();
 
-        // TODO (alrezni): communicate net->GetDeviceId() to the learners, so that they allocate matrices
-        // for smoothed gradients on the correct devices.
         ::CNTK::Variable parameter({ nodeValue.GetNumRows(), nodeValue.GetNumCols() },
             ::CNTK::AsDataType<ElemType>(), node->NodeDescription());
 

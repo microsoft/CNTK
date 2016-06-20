@@ -331,9 +331,9 @@ namespace CNTK
 
         // Explicit template instantiations
         template class _SimpleMap<Variable, ValuePtr>;
+        // TODO: g++ (4.8.4) complains about const values being stored in an std::vector
         template class _SimpleMap<Variable, const ValuePtr>;
         template class _SimpleMap<Placeholder, Variable>;
-        template class _SimpleMap<Variable, ValuePtr>;
         template class _SimpleMap<Variable, double>;
 
 #pragma endregion _SimpleMap
