@@ -588,13 +588,13 @@ private:
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
 
-    bool UseAsyncGradientAggregation(size_t epochNumber)
+    bool UsingAsyncGradientAggregation(size_t epochNumber)
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
-    bool UseParallelTrain(size_t epochNumber)
+    bool UsingParallelTrain(size_t epochNumber)
     {
-        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber) || UseAsyncGradientAggregation(epochNumber);
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
     }
 };
 

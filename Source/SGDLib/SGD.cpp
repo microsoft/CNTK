@@ -794,10 +794,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     int numMBsRun = 0;
 
-    bool useGradientAggregation = UseGradientAggregation(epochNumber);
-    bool useModelAggregation = UseModelAggregation(epochNumber);
-    bool userAsyncGradientAggregation = UseAsyncGradientAggregation(epochNumber);
-    bool useParallelTrain = UseParallelTrain(epochNumber);
+    bool useGradientAggregation = UsingGradientAggregation(epochNumber);
+    bool useModelAggregation = UsingModelAggregation(epochNumber);
+    bool useAsyncGradientAggregation = UsingAsyncGradientAggregation(epochNumber);
+    bool useParallelTrain = UsingParallelTrain(epochNumber);
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -1130,7 +1130,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
-        }
+            }
 
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
             {
@@ -2784,7 +2784,6 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 m_adjustnbminibatch = configAdjustLearningRateAtBeginning(L"adjustNbMinibatch", (size_t)256);
             }
         }
-    }
         } // if (!pMPI)
     } // if (configSGD.Exists(L"ParallelTrain"))
 }
