@@ -42,7 +42,7 @@ printHardwareInfo()
 
   if [ "$OS" == "Windows_NT" ]; then
     nvidiaSmiPath="/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi"
-  else
+  fi
 
   if [ -x "$nvidiaSmiPath" ]; then
     gpuName=""
