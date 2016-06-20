@@ -26,6 +26,8 @@
 #include <vector>
 #include <string>
 
+#include "Basics.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType>
@@ -269,7 +271,7 @@ struct VariableLayout
 
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
-    int m_numElements;
+    size_t m_numElements;
 };
 
 class VariableSchema : public std::vector<VariableLayout>
