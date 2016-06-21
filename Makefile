@@ -290,7 +290,8 @@ MATH_SRC =\
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\
-	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp
+	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
+
 endif
 
 ifdef CUDA_PATH
@@ -309,6 +310,7 @@ MATH_SRC +=\
 else
 MATH_SRC +=\
 	$(SOURCEDIR)/Math/NoGPU.cpp
+
 endif
 
 MATH_SRC+=$(COMMON_SRC)
