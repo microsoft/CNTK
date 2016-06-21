@@ -7,9 +7,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.MSR.CNTK.Extensibility.Managed;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
@@ -21,8 +24,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// This program is a managed client using the CLIWrapper to run the model evaluator in CNTK.
     /// There are four cases shown in this program related to model loading, network creation and evaluation.
     /// 
-    /// To run this program from the CNTK binary drop, you must add the Evaluation NuGet package first.
-    /// Refer to <see cref="https://github.com/Microsoft/CNTK/wiki/Eval-Nuget"/> for information regarding the Evalution NuGet package.
+    /// To run this program from the CNTK binary drop, you must add the NuGet package for model evaluation first.
+    /// Refer to <see cref="https://github.com/Microsoft/CNTK/wiki/NuGet-Package"/> for information regarding the NuGet package for model evaluation.
     /// 
     /// EvaluateModelSingleLayer and EvaluateModelMultipleLayers
     /// --------------------------------------------------------
@@ -34,6 +37,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// ----------------------------------------------------------------
     /// These two cases do not required a trained model (just the network description). These cases show how to extract values from a single forward-pass
     /// without any input to the model.
+    /// 
+    /// EvaluateMultipleModels
+    /// ----------------------
+    /// This case requires the 02_Convolution model and the Test-28x28.txt test file which are part of the <CNTK>/Examples/Image/MNIST example.
+    /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md"/> for how to train
+    /// the model used in this example.
     /// </description>
     class Program
     {
@@ -46,7 +55,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-            
+
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -58,9 +67,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
             EvaluateNetworkSingleLayerNoInput();
-            
+
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
+
+            Console.WriteLine("\n====== EvaluateMultipleModels ========");
+            EvaluateMultipleModels();
 
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
@@ -290,7 +302,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     model.ForwardPass(inputBuffer, outputBuffer);
 
                     // We expect two outputs: the v2 constant, and the ol Plus result
-                    var expected = new float[][]{new float[]{2}, new float[]{3}};
+                    var expected = new float[][] { new float[] { 2 }, new float[] { 3 } };
 
                     Console.WriteLine("Expected values: {0}", string.Join(" - ", expected.Select(b => string.Join(", ", b)).ToList<string>()));
                     Console.WriteLine("Actual Values  : {0}", string.Join(" - ", outputBuffer.Select(b => string.Join(", ", b.Buffer)).ToList<string>()));
@@ -304,6 +316,86 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
             }
+        }
+
+        /// <summary>
+        /// Evaluates multiple instances of a model in the same process.
+        /// </summary>
+        /// <remarks>
+        /// Although all models execute concurrently (multiple tasks), each model is evaluated with a single task at a time.
+        /// </remarks>
+        private static void EvaluateMultipleModels()
+        {
+            // Specifies the number of models in memory as well as the number of parallel tasks feeding these models (1 to 1)
+            int numConcurrentModels = 4;
+
+            // Specifies the number of times to iterate through the test file (epochs)
+            int numRounds = 1;
+
+            // Counts the number of evaluations accross all models
+            int count = 0;
+
+            // Counts the number of failed evaluations (output != expected) accross all models
+            int errorCount = 0;
+
+            // The examples assume the executable is running from the data folder
+            // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
+            Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
+
+            // Load model
+            string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
+
+            // Initializes the model instances
+            ModelEvaluator.Initialize(numConcurrentModels, modelFilePath);
+
+            string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28.txt");
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            try
+            {
+                for (int i = 0; i < numRounds; i++)
+                {
+                    // Feed each line to a single model in parallel
+                    Parallel.ForEach(File.ReadLines(testfile), new ParallelOptions() { MaxDegreeOfParallelism = numConcurrentModels }, (line) =>
+                    {
+                        Interlocked.Increment(ref count);
+
+                        // The first value in the line is the expected label index for the record's outcome
+                        int expected = int.Parse(line.Substring(0, line.IndexOf('\t')));
+                        var inputs = line.Substring(line.IndexOf('\t') + 1).Split('\t').Select(float.Parse).ToList();
+
+                        // We can call the evaluate method and get back the results (single layer)...
+                        var outputs = ModelEvaluator.Evaluate(inputs);
+
+                        // Retrieve the outcome index (so we can compare it with the expected index)
+                        int index = 0;
+                        var max = outputs.Select(v => new { Value = v, Index = index++ })
+                            .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
+                            .Index;
+
+                        // Count the errors
+                        if (expected != max)
+                        {
+                            Interlocked.Increment(ref errorCount);
+                        }
+                    });
+                }
+            }
+            catch (CNTKException ex)
+            {
+                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+
+            sw.Stop();
+            ModelEvaluator.DisposeAll();
+            
+            Console.WriteLine("The file {0} was processed using {1} concurrent model(s) with an error rate of: {2:P2} ({3} error(s) out of {4} record(s)), and a throughput of {5:N2} records/sec", @"Test-28x28.txt", 
+                numConcurrentModels, (float)errorCount / count, errorCount, count, (count + errorCount) * 1000.0 / sw.ElapsedMilliseconds);
         }
 
         /// <summary>
