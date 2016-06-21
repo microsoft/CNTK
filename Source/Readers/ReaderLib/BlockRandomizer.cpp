@@ -5,6 +5,8 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "BlockRandomizer.h"
 #include <algorithm>
 #include <utility>
@@ -31,14 +33,14 @@ BlockRandomizer::BlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
       m_sweepTotalNumberOfSamples(0),
-      m_lastSeenChunkId(SIZE_MAX),
+      m_lastSeenChunkId(CHUNKID_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence)
 {
     assert(deserializer != nullptr);
 
     m_streams = m_deserializer->GetStreamDescriptions();
-    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(m_deserializer, m_chunkRandomizer);
+    m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(verbosity, m_deserializer, m_chunkRandomizer);
 
     // Calculate total number of samples.
     m_sweepTotalNumberOfSamples = 0;
@@ -51,7 +53,7 @@ BlockRandomizer::BlockRandomizer(
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
-    m_lastSeenChunkId = SIZE_MAX;
+    m_lastSeenChunkId = CHUNKID_MAX;
 
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
@@ -72,6 +74,15 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
     size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
     m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
+
+    size_t epochStartFrame = config.m_epochIndex * m_epochSize;
+    fprintf(stderr, "BlockRandomizer::StartEpoch: epoch %" PRIu64 ": frames [%" PRIu64 "..%" PRIu64 "] (first sequence at sample %" PRIu64 "), data subset %" PRIu64 " of %" PRIu64 "\n",
+            config.m_epochIndex,
+            epochStartFrame,
+            epochStartFrame + m_epochSize,
+            m_globalSamplePosition,
+            config.m_workerRank,
+            config.m_numberOfWorkers);
 }
 
 // Prepares a new sweep if needed.
@@ -80,18 +91,22 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
     size_t sweep = samplePosition / m_sweepTotalNumberOfSamples;
     if (m_sweep != sweep)
     {
+        if (m_verbosity >= Notification)
+            fprintf(stderr, "BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep %d\n",
+                    (int) sweep);
+
         m_sweep = sweep;
         m_sweepStartInSamples = sweep * m_sweepTotalNumberOfSamples;
 
         // Rerandomizing the chunks.
         m_chunkRandomizer->Randomize((unsigned int)m_sweep);
 
-        // Resetting seqeunce randomizer.
+        // Resetting sequence randomizer.
         m_sequenceRandomizer->Reset(m_sweep + 1);
 
         // Unloading all chunk data from memory.
         m_chunks.clear();
-        m_lastSeenChunkId = SIZE_MAX;
+        m_lastSeenChunkId = CHUNKID_MAX;
     }
 }
 
@@ -115,6 +130,13 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     {
         return result;
     }
+
+    if (m_verbosity >= Debug)
+        fprintf(stderr, "BlockRandomizer::GetNextSequences(): getting %" PRIu64 " out of %" PRIu64 " sequences for %" PRIu64 " requested samples in sweep %" PRIu64 "\n",
+            sequences.size(),
+            decimated.size(),
+            sampleCount,
+            m_sweep);
 
     result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(decimated.size()));
 
@@ -216,21 +238,24 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
 void BlockRandomizer::RetrieveDataChunks()
 {
-    const auto& window = m_sequenceRandomizer->GetChunkWindow();
-    if (window.back().m_chunkId == m_lastSeenChunkId)
+    size_t randomizedEnd = 0;
+    const auto& window = m_sequenceRandomizer->GetChunkWindow(randomizedEnd);
+    if (window[randomizedEnd - 1].m_chunkId == m_lastSeenChunkId)
     {
         return; // nothing to retrieve.
     }
 
-    m_lastSeenChunkId = window.back().m_chunkId;
+    m_lastSeenChunkId = window[randomizedEnd - 1].m_chunkId;
 
     // in the loop we are building a new map of currently loaded chunks:
     // we are iterating thru all chunks in the window and if they are not in m_chunks map -
     // they get requested from the deserializer.
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;
-    for (auto const& chunk : window)
+    size_t numLoadedChunks = m_chunks.size();
+    for (size_t i = 0; i < randomizedEnd; ++i)
     {
+        auto const& chunk = window[i];
         if (m_decimationMode == DecimationMode::chunk && chunk.m_chunkId % m_config.m_numberOfWorkers != m_config.m_workerRank)
         {
             continue;
@@ -244,11 +269,24 @@ void BlockRandomizer::RetrieveDataChunks()
         else
         {
             chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->m_id);
+
+            if (m_verbosity >= Information)
+                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
+                        chunk.m_chunkId,
+                        chunk.m_original->m_id,
+                        ++numLoadedChunks);
         }
     }
 
     // Swapping current chunks in the m_chunks, by that removing all stale and remembering newly loaded.
+    // TODO diagnostics for paged out chunks?
     m_chunks.swap(chunks);
+
+    if (m_verbosity >= Notification)
+        fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",
+                m_chunks.size(),
+                window.front().m_chunkId,
+                window.back().m_chunkId);
 }
 
 }}}

@@ -1,0 +1,12 @@
+dataDir: .
+
+tags:
+    # running on linux BVT job in 'E' (Examples) leg
+    - bvt-e (build_sku == 'gpu') and (device=='cpu') and (flavor=='release')
+    # running on linux Nightly job in 'E' (Examples) leg
+    - nightly-e (build_sku == 'gpu') and (device=='cpu') and (flavor=='release')
+
+testCases:
+  PyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):
+    patterns:
+      - __COMPLETED__

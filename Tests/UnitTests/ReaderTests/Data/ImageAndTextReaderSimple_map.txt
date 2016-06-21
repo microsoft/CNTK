@@ -1,0 +1,4 @@
+1	images\black.jpg	0
+2	images\blue.jpg	1
+3	images\green.jpg	2
+4	images\red.jpg	3

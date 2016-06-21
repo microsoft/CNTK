@@ -715,11 +715,12 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     }
     else
     {
-		ElemType* bufPtr = Data();
+        ElemType* bufPtr = Data();
         long m = (long) GetNumElements();
         // 2-way thread parallelism is sufficient for the memory bound
         // operation of just setting the values of an array.
         const unsigned SETVALUE_NUM_THREADS = 2;
+        UNUSED(SETVALUE_NUM_THREADS); // in case OMP is turned off.
 #pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
@@ -4310,6 +4311,51 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
                 if (in(colBase + dcol, sample) >= m)
                     grad(colBase + dcol, sample) += g;
             }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
+                                       const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput,
+                                       CPUMatrix<ElemType>& input) const
+{
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < input.GetNumRows());
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+
+            ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
+            ElemType prevMax = curMax;
+            int imax = 0;
+            for (int i = 1; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < poolInput.GetNumRows());
+                curMax = std::max(curMax, poolInput(colBase + dcol, sample));
+                if (curMax > prevMax)
+                {
+                    prevMax = curMax;
+                    imax = i;
+                }
+            }
+
+            int dcol = indices(i0 + imax, 0);
+            assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            input(colBase + dcol, sample) = (*this)(row, sample);
+
+            //int i = (int)poolIn(row, sample);
+            //assert(0 <= i && i < size);
+            //int dcol = indices(i0 + i, 0);
+            //assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            //input(colBase + dcol, sample) = (*this)(row, sample);
         }
     }
 }

@@ -1,0 +1,707 @@
+=== Running /cygdrive/c/src/cntk_github/x64/release/cntk.exe configFile=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config/Multigpu.cntk currentDirectory=C:\src\cntk_github\Examples\Other\Simple2d\Data RunDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu DataDir=C:\src\cntk_github\Examples\Other\Simple2d\Data ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config OutputDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu DeviceId=0 timestamping=true Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  3 2016 16:22:10
+		Last modified date: Thu Apr  7 11:05:47 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+		CUB_PATH: E:\lib\cub-1.4.1
+		CUDNN_PATH: E:\lib\cuDNN_v4
+		Build Branch: alrezni/examples_text
+		Build SHA1: e80dab7d66009531806ce70b4842146e0da00516
+		Built by alrezni on DIFFENG
+		Build Path: C:\src\cntk_github\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\src\cntk_github\Examples\Other\Simple2d\Data
+MPIWrapper: initializing MPI
+ping [requestnodes (before change)]: 1 nodes pinging each other
+ping [requestnodes (before change)]: all 1 nodes responded
+requestnodes [MPIWrapper]: using 1 out of 1 MPI nodes (1 requested); we (0) are in (participating)
+ping [requestnodes (after change)]: 1 nodes pinging each other
+ping [requestnodes (after change)]: all 1 nodes responded
+mpihelper: only one MPI process: MPI operation will be boring
+ping [mpihelper]: 1 nodes pinging each other
+ping [mpihelper]: all 1 nodes responded
+05/03/2016 15:29:53: -------------------------------------------------------------------
+05/03/2016 15:29:53: Build info: 
+
+05/03/2016 15:29:53: 		Built time: May  3 2016 16:22:10
+05/03/2016 15:29:53: 		Last modified date: Thu Apr  7 11:05:47 2016
+05/03/2016 15:29:53: 		Build type: Release
+05/03/2016 15:29:53: 		Build target: GPU
+05/03/2016 15:29:53: 		With 1bit-SGD: yes
+05/03/2016 15:29:53: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+05/03/2016 15:29:53: 		CUB_PATH: E:\lib\cub-1.4.1
+05/03/2016 15:29:53: 		CUDNN_PATH: E:\lib\cuDNN_v4
+05/03/2016 15:29:53: 		Build Branch: alrezni/examples_text
+05/03/2016 15:29:53: 		Build SHA1: e80dab7d66009531806ce70b4842146e0da00516
+05/03/2016 15:29:53: 		Built by alrezni on DIFFENG
+05/03/2016 15:29:53: 		Build Path: C:\src\cntk_github\Source\CNTK\
+05/03/2016 15:29:53: -------------------------------------------------------------------
+
+05/03/2016 15:29:53: Running on DIFFENG at 2016/05/03 15:29:53
+05/03/2016 15:29:53: Command line: 
+C:\src\cntk_github\x64\release\cntk.exe  configFile=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config/Multigpu.cntk  currentDirectory=C:\src\cntk_github\Examples\Other\Simple2d\Data  RunDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu  DataDir=C:\src\cntk_github\Examples\Other\Simple2d\Data  ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config  OutputDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu  DeviceId=0  timestamping=true  Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+
+
+
+05/03/2016 15:29:53: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+05/03/2016 15:29:53: RootDir = ".."
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+deviceId = "auto"
+command = Multigpu_Demo_Train:Multigpu_Demo_Test
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/multigpu.dnn"
+outputNodeNames = ScaledLogLikelihood
+parallelTrain = true
+Multigpu_Demo_Train=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25  
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+]
+Multigpu_Demo_Test=[
+    action = "test"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+]
+Multigpu_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+outputPath = "$OutputDir$/MultigpuOutput"    
+]
+currentDirectory=C:\src\cntk_github\Examples\Other\Simple2d\Data
+RunDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+DataDir=C:\src\cntk_github\Examples\Other\Simple2d\Data
+ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config
+OutputDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+DeviceId=0
+timestamping=true
+Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+
+05/03/2016 15:29:53: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 15:29:53: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+05/03/2016 15:29:53: RootDir = ".."
+ConfigDir = "../Config"
+DataDir = "../Data"
+OutputDir = "../Output"
+ModelDir = "E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models"
+deviceId = "auto"
+command = Multigpu_Demo_Train:Multigpu_Demo_Test
+precision = "float"
+traceLevel = 1
+modelPath = "E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn"
+outputNodeNames = ScaledLogLikelihood
+parallelTrain = true
+Multigpu_Demo_Train=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25  
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+]
+Multigpu_Demo_Test=[
+    action = "test"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+]
+Multigpu_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+outputPath = "E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/MultigpuOutput"    
+]
+currentDirectory=C:\src\cntk_github\Examples\Other\Simple2d\Data
+RunDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+DataDir=C:\src\cntk_github\Examples\Other\Simple2d\Data
+ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config
+OutputDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+DeviceId=0
+timestamping=true
+Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+
+05/03/2016 15:29:53: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+05/03/2016 15:29:53: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: Multigpu.cntk:command=Multigpu_Demo_Train:Multigpu_Demo_Test
+configparameters: Multigpu.cntk:ConfigDir=C:\src\cntk_github\Tests\EndToEndTests\CNTKTextFormatReader\Examples\Other\Simple2d\Config
+configparameters: Multigpu.cntk:currentDirectory=C:\src\cntk_github\Examples\Other\Simple2d\Data
+configparameters: Multigpu.cntk:DataDir=C:\src\cntk_github\Examples\Other\Simple2d\Data
+configparameters: Multigpu.cntk:deviceId=0
+configparameters: Multigpu.cntk:ModelDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models
+configparameters: Multigpu.cntk:modelPath=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn
+configparameters: Multigpu.cntk:Multigpu_Demo_Output=[
+    action = "write"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+outputPath = "E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/MultigpuOutput"    
+]
+
+configparameters: Multigpu.cntk:Multigpu_Demo_Test=[
+    action = "test"
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: Multigpu.cntk:Multigpu_Demo_Train=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 0 
+        minibatchSize = 25  
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\src\cntk_github\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+dim = 2        
+                format = "dense"
+            ]
+            labels = [
+dim = 2        
+                format = "dense"
+            ]
+        ]
+    ]
+] [SGD=[maxEpochs=3]]
+
+configparameters: Multigpu.cntk:OutputDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+configparameters: Multigpu.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Multigpu.cntk:parallelTrain=true
+configparameters: Multigpu.cntk:precision=float
+configparameters: Multigpu.cntk:RootDir=..
+configparameters: Multigpu.cntk:RunDir=E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu
+configparameters: Multigpu.cntk:timestamping=true
+configparameters: Multigpu.cntk:traceLevel=1
+05/03/2016 15:29:53: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+05/03/2016 15:29:53: Commands: Multigpu_Demo_Train Multigpu_Demo_Test
+05/03/2016 15:29:53: Precision = "float"
+05/03/2016 15:29:53: CNTKModelPath: E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn
+05/03/2016 15:29:53: CNTKCommandTrainInfo: Multigpu_Demo_Train : 3
+05/03/2016 15:29:53: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+
+05/03/2016 15:29:53: ##############################################################################
+05/03/2016 15:29:53: #                                                                            #
+05/03/2016 15:29:53: # Action "train"                                                             #
+05/03/2016 15:29:53: #                                                                            #
+05/03/2016 15:29:53: ##############################################################################
+
+05/03/2016 15:29:53: CNTKCommandTrainBegin: Multigpu_Demo_Train
+SimpleNetworkBuilder Using GPU 0
+
+05/03/2016 15:29:53: Creating virgin network.
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *], [2], [2] -> [2 x *]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *] -> [50 x *]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *] -> [50 x 1 x *]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *], [50 x 1] -> [50 x 1 x *]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *] -> [50 x 1 x *]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *] -> [2 x 1 x *]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *], [2 x 1] -> [2 x 1 x *]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *], [2 x 1 x *] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *] -> [2 x 1 x *]
+Validating --> Prior = Mean (labels) : [2 x *] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *], [2] -> [2 x 1 x *]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+05/03/2016 15:29:53: Created model with 25 nodes on GPU 0.
+
+05/03/2016 15:29:53: Training criterion node(s):
+05/03/2016 15:29:53: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+05/03/2016 15:29:53: Evaluation criterion node(s):
+
+05/03/2016 15:29:53: 	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[EvalErrorPrediction Gradient[1]] [InvStdOfFeatures Gradient[2]] [LogOfPrior Gradient[2]] [MVNormalizedFeatures Gradient[2 x *]] [MeanOfFeatures Gradient[2]] [PosteriorProb Gradient[2 x 1 x *]] [PosteriorProb Value[2 x 1 x *]] [Prior Gradient[2]] [ScaledLogLikelihood Gradient[2 x 1 x *]] [features Gradient[2 x *]] [labels Gradient[2 x *]] }
+000000572B66ECA0: {[features Value[2 x *]] }
+00000057420A1700: {[W1 Value[50 x 50]] }
+00000057420A1980: {[MeanOfFeatures Value[2]] }
+00000057420A1AC0: {[B2 Value[2 x 1]] }
+00000057420A1E80: {[W0 Value[50 x 2]] }
+00000057420A1F20: {[labels Value[2 x *]] }
+00000057420A22E0: {[Prior Value[2]] }
+00000057420A2560: {[InvStdOfFeatures Value[2]] }
+00000057420A2880: {[W2 Value[2 x 50]] }
+00000057420A2920: {[B1 Value[50 x 1]] }
+00000057420A2B00: {[B0 Value[50 x 1]] }
+0000005743927E40: {[CrossEntropyWithSoftmax Gradient[1]] }
+0000005743927EE0: {[W2*H1 Gradient[2 x 1 x *]] }
+0000005743928200: {[ScaledLogLikelihood Value[2 x 1 x *]] }
+00000057439282A0: {[W0*features+B0 Gradient[50 x 1 x *]] [W1*H1 Value[50 x 1 x *]] }
+00000057439283E0: {[LogOfPrior Value[2]] }
+00000057439285C0: {[W0 Gradient[50 x 2]] [W0*features+B0 Value[50 x 1 x *]] }
+0000005743928660: {[B1 Gradient[50 x 1]] [H2 Gradient[50 x 1 x *]] [HLast Gradient[2 x 1 x *]] }
+00000057439287A0: {[EvalErrorPrediction Value[1]] }
+0000005743928980: {[CrossEntropyWithSoftmax Value[1]] }
+0000005743928A20: {[B2 Gradient[2 x 1]] }
+0000005743928E80: {[H1 Value[50 x 1 x *]] [W0*features Gradient[50 x *]] }
+0000005743928FC0: {[W1 Gradient[50 x 50]] [W1*H1+B1 Value[50 x 1 x *]] }
+00000057439291A0: {[HLast Value[2 x 1 x *]] [W2 Gradient[2 x 50]] }
+0000005743929240: {[MVNormalizedFeatures Value[2 x *]] }
+00000057439292E0: {[H2 Value[50 x 1 x *]] [W1*H1 Gradient[50 x 1 x *]] }
+0000005743929420: {[B0 Gradient[50 x 1]] [H1 Gradient[50 x 1 x *]] [W1*H1+B1 Gradient[50 x 1 x *]] [W2*H1 Value[2 x 1 x *]] }
+00000057439297E0: {[W0*features Value[50 x *]] }
+
+
+05/03/2016 15:29:53: Precomputing --> 3 PreCompute nodes found.
+
+05/03/2016 15:29:53: 	MeanOfFeatures = Mean()
+05/03/2016 15:29:53: 	InvStdOfFeatures = InvStdDev()
+05/03/2016 15:29:53: 	Prior = Mean()
+
+05/03/2016 15:29:54: Precomputing --> Completed.
+
+
+05/03/2016 15:29:54: Starting Epoch 1: learning rate per sample = 0.020000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
+
+05/03/2016 15:29:54: Starting minibatch loop.
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[   1-  10]: CrossEntropyWithSoftmax = 0.70650452 * 250; EvalErrorPrediction = 0.55200000 * 250; time = 0.0115s; samplesPerSecond = 21832.2
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  11-  20]: CrossEntropyWithSoftmax = 0.69701831 * 250; EvalErrorPrediction = 0.47600000 * 250; time = 0.0095s; samplesPerSecond = 26326.9
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  21-  30]: CrossEntropyWithSoftmax = 0.71089587 * 250; EvalErrorPrediction = 0.50400000 * 250; time = 0.0100s; samplesPerSecond = 25067.7
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  31-  40]: CrossEntropyWithSoftmax = 0.72980273 * 250; EvalErrorPrediction = 0.56000000 * 250; time = 0.0096s; samplesPerSecond = 26079.7
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  41-  50]: CrossEntropyWithSoftmax = 0.70902783 * 250; EvalErrorPrediction = 0.52800000 * 250; time = 0.0115s; samplesPerSecond = 21692.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  51-  60]: CrossEntropyWithSoftmax = 0.72657300 * 250; EvalErrorPrediction = 0.54400000 * 250; time = 0.0124s; samplesPerSecond = 20127.2
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  61-  70]: CrossEntropyWithSoftmax = 0.69319678 * 250; EvalErrorPrediction = 0.43200000 * 250; time = 0.0091s; samplesPerSecond = 27439.4
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  71-  80]: CrossEntropyWithSoftmax = 0.73563477 * 250; EvalErrorPrediction = 0.50000000 * 250; time = 0.0112s; samplesPerSecond = 22246.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  81-  90]: CrossEntropyWithSoftmax = 0.71463281 * 250; EvalErrorPrediction = 0.51200000 * 250; time = 0.0115s; samplesPerSecond = 21739.1
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[  91- 100]: CrossEntropyWithSoftmax = 0.75213428 * 250; EvalErrorPrediction = 0.47200000 * 250; time = 0.0105s; samplesPerSecond = 23814.1
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 101- 110]: CrossEntropyWithSoftmax = 0.75931445 * 250; EvalErrorPrediction = 0.53200000 * 250; time = 0.0115s; samplesPerSecond = 21763.7
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 111- 120]: CrossEntropyWithSoftmax = 0.73075293 * 250; EvalErrorPrediction = 0.50800000 * 250; time = 0.0120s; samplesPerSecond = 20835.1
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 121- 130]: CrossEntropyWithSoftmax = 0.76701953 * 250; EvalErrorPrediction = 0.53200000 * 250; time = 0.0130s; samplesPerSecond = 19305.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 131- 140]: CrossEntropyWithSoftmax = 0.70451270 * 250; EvalErrorPrediction = 0.46800000 * 250; time = 0.0108s; samplesPerSecond = 23184.6
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 141- 150]: CrossEntropyWithSoftmax = 0.70539941 * 250; EvalErrorPrediction = 0.50400000 * 250; time = 0.0117s; samplesPerSecond = 21385.8
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 151- 160]: CrossEntropyWithSoftmax = 0.72700293 * 250; EvalErrorPrediction = 0.50000000 * 250; time = 0.0120s; samplesPerSecond = 20917.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 161- 170]: CrossEntropyWithSoftmax = 0.70096191 * 250; EvalErrorPrediction = 0.45600000 * 250; time = 0.0112s; samplesPerSecond = 22301.5
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 171- 180]: CrossEntropyWithSoftmax = 0.69437305 * 250; EvalErrorPrediction = 0.49600000 * 250; time = 0.0113s; samplesPerSecond = 22079.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 181- 190]: CrossEntropyWithSoftmax = 0.69161621 * 250; EvalErrorPrediction = 0.46800000 * 250; time = 0.0116s; samplesPerSecond = 21514.6
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 191- 200]: CrossEntropyWithSoftmax = 0.73388281 * 250; EvalErrorPrediction = 0.55200000 * 250; time = 0.0107s; samplesPerSecond = 23406.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 201- 210]: CrossEntropyWithSoftmax = 0.72255664 * 250; EvalErrorPrediction = 0.46800000 * 250; time = 0.0116s; samplesPerSecond = 21546.2
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 211- 220]: CrossEntropyWithSoftmax = 0.70414551 * 250; EvalErrorPrediction = 0.45600000 * 250; time = 0.0115s; samplesPerSecond = 21756.2
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 221- 230]: CrossEntropyWithSoftmax = 0.69976758 * 250; EvalErrorPrediction = 0.46000000 * 250; time = 0.0113s; samplesPerSecond = 22065.3
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 231- 240]: CrossEntropyWithSoftmax = 0.72419141 * 250; EvalErrorPrediction = 0.51600000 * 250; time = 0.0114s; samplesPerSecond = 22018.7
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 241- 250]: CrossEntropyWithSoftmax = 0.69943945 * 250; EvalErrorPrediction = 0.51200000 * 250; time = 0.0111s; samplesPerSecond = 22604.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 251- 260]: CrossEntropyWithSoftmax = 0.69206445 * 250; EvalErrorPrediction = 0.47600000 * 250; time = 0.0111s; samplesPerSecond = 22504.3
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 261- 270]: CrossEntropyWithSoftmax = 0.68771680 * 250; EvalErrorPrediction = 0.45600000 * 250; time = 0.0113s; samplesPerSecond = 22118.0
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 271- 280]: CrossEntropyWithSoftmax = 0.69878516 * 250; EvalErrorPrediction = 0.44000000 * 250; time = 0.0130s; samplesPerSecond = 19278.2
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 281- 290]: CrossEntropyWithSoftmax = 0.71889844 * 250; EvalErrorPrediction = 0.45600000 * 250; time = 0.0127s; samplesPerSecond = 19632.5
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 291- 300]: CrossEntropyWithSoftmax = 0.70086523 * 250; EvalErrorPrediction = 0.52400000 * 250; time = 0.0095s; samplesPerSecond = 26329.6
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 301- 310]: CrossEntropyWithSoftmax = 0.70878320 * 250; EvalErrorPrediction = 0.53200000 * 250; time = 0.0112s; samplesPerSecond = 22361.4
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 311- 320]: CrossEntropyWithSoftmax = 0.70674414 * 250; EvalErrorPrediction = 0.48000000 * 250; time = 0.0130s; samplesPerSecond = 19168.8
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 321- 330]: CrossEntropyWithSoftmax = 0.69707422 * 250; EvalErrorPrediction = 0.50000000 * 250; time = 0.0094s; samplesPerSecond = 26729.4
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 331- 340]: CrossEntropyWithSoftmax = 0.68588281 * 250; EvalErrorPrediction = 0.40800000 * 250; time = 0.0112s; samplesPerSecond = 22365.4
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 341- 350]: CrossEntropyWithSoftmax = 0.67734766 * 250; EvalErrorPrediction = 0.45600000 * 250; time = 0.0128s; samplesPerSecond = 19583.3
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 351- 360]: CrossEntropyWithSoftmax = 0.67958008 * 250; EvalErrorPrediction = 0.48000000 * 250; time = 0.0092s; samplesPerSecond = 27144.4
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 361- 370]: CrossEntropyWithSoftmax = 0.66424805 * 250; EvalErrorPrediction = 0.46800000 * 250; time = 0.0114s; samplesPerSecond = 21864.6
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 371- 380]: CrossEntropyWithSoftmax = 0.62412500 * 250; EvalErrorPrediction = 0.20400000 * 250; time = 0.0116s; samplesPerSecond = 21475.8
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 381- 390]: CrossEntropyWithSoftmax = 0.58007422 * 250; EvalErrorPrediction = 0.16000000 * 250; time = 0.0094s; samplesPerSecond = 26567.5
+05/03/2016 15:29:54:  Epoch[ 1 of 3]-Minibatch[ 391- 400]: CrossEntropyWithSoftmax = 0.52764648 * 250; EvalErrorPrediction = 0.19200000 * 250; time = 0.0132s; samplesPerSecond = 18988.3
+05/03/2016 15:29:54: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 0.69975483 * 10000; EvalErrorPrediction = 0.46850000 * 10000; totalSamplesSeen = 10000; learningRatePerSample = 0.02; epochTime=0.453807s
+05/03/2016 15:29:54: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn.1'
+
+05/03/2016 15:29:54: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
+
+05/03/2016 15:29:54: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1).
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[   1-  10, 2.50%]: CrossEntropyWithSoftmax = 0.45075654 * 250; EvalErrorPrediction = 0.15200000 * 250; time = 0.0250s; samplesPerSecond = 10002.4
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  11-  20, 5.00%]: CrossEntropyWithSoftmax = 0.40775497 * 250; EvalErrorPrediction = 0.14400000 * 250; time = 0.0219s; samplesPerSecond = 11420.2
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  21-  30, 7.50%]: CrossEntropyWithSoftmax = 0.34165228 * 250; EvalErrorPrediction = 0.11200000 * 250; time = 0.0230s; samplesPerSecond = 10859.6
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  31-  40, 10.00%]: CrossEntropyWithSoftmax = 0.29708900 * 250; EvalErrorPrediction = 0.07600000 * 250; time = 0.0198s; samplesPerSecond = 12604.0
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  41-  50, 12.50%]: CrossEntropyWithSoftmax = 0.26669365 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0211s; samplesPerSecond = 11860.7
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  51-  60, 15.00%]: CrossEntropyWithSoftmax = 0.25328680 * 250; EvalErrorPrediction = 0.09200000 * 250; time = 0.0212s; samplesPerSecond = 11817.0
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  61-  70, 17.50%]: CrossEntropyWithSoftmax = 0.21017820 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0237s; samplesPerSecond = 10540.1
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  71-  80, 20.00%]: CrossEntropyWithSoftmax = 0.21483054 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0214s; samplesPerSecond = 11699.7
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  81-  90, 22.50%]: CrossEntropyWithSoftmax = 0.16626513 * 250; EvalErrorPrediction = 0.04000000 * 250; time = 0.0213s; samplesPerSecond = 11757.5
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[  91- 100, 25.00%]: CrossEntropyWithSoftmax = 0.17672434 * 250; EvalErrorPrediction = 0.06000000 * 250; time = 0.0239s; samplesPerSecond = 10454.6
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 101- 110, 27.50%]: CrossEntropyWithSoftmax = 0.22140190 * 250; EvalErrorPrediction = 0.10800000 * 250; time = 0.0208s; samplesPerSecond = 12033.1
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 111- 120, 30.00%]: CrossEntropyWithSoftmax = 0.17048554 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0237s; samplesPerSecond = 10553.4
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 121- 130, 32.50%]: CrossEntropyWithSoftmax = 0.16438517 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0234s; samplesPerSecond = 10662.3
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 131- 140, 35.00%]: CrossEntropyWithSoftmax = 0.13782141 * 250; EvalErrorPrediction = 0.04800000 * 250; time = 0.0218s; samplesPerSecond = 11449.0
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 141- 150, 37.50%]: CrossEntropyWithSoftmax = 0.16909663 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0244s; samplesPerSecond = 10228.7
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 151- 160, 40.00%]: CrossEntropyWithSoftmax = 0.15419129 * 250; EvalErrorPrediction = 0.05600000 * 250; time = 0.0229s; samplesPerSecond = 10924.7
+05/03/2016 15:29:54:  Epoch[ 2 of 3]-Minibatch[ 161- 170, 42.50%]: CrossEntropyWithSoftmax = 0.22229924 * 250; EvalErrorPrediction = 0.11200000 * 250; time = 0.0242s; samplesPerSecond = 10340.4
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 171- 180, 45.00%]: CrossEntropyWithSoftmax = 0.18134995 * 250; EvalErrorPrediction = 0.09600000 * 250; time = 0.0236s; samplesPerSecond = 10579.3
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 181- 190, 47.50%]: CrossEntropyWithSoftmax = 0.15616904 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0236s; samplesPerSecond = 10594.6
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 191- 200, 50.00%]: CrossEntropyWithSoftmax = 0.17162733 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0262s; samplesPerSecond = 9530.3
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 201- 210, 52.50%]: CrossEntropyWithSoftmax = 0.15676289 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0262s; samplesPerSecond = 9554.4
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 211- 220, 55.00%]: CrossEntropyWithSoftmax = 0.16159542 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0262s; samplesPerSecond = 9558.8
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 221- 230, 57.50%]: CrossEntropyWithSoftmax = 0.16102246 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0284s; samplesPerSecond = 8800.3
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 231- 240, 60.00%]: CrossEntropyWithSoftmax = 0.15392923 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0248s; samplesPerSecond = 10089.6
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 241- 250, 62.50%]: CrossEntropyWithSoftmax = 0.14898334 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0269s; samplesPerSecond = 9279.5
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 251- 260, 65.00%]: CrossEntropyWithSoftmax = 0.15087969 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0285s; samplesPerSecond = 8785.2
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 261- 270, 67.50%]: CrossEntropyWithSoftmax = 0.15494578 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0247s; samplesPerSecond = 10101.4
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 271- 280, 70.00%]: CrossEntropyWithSoftmax = 0.17878713 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0250s; samplesPerSecond = 9986.0
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 281- 290, 72.50%]: CrossEntropyWithSoftmax = 0.22845049 * 250; EvalErrorPrediction = 0.09200000 * 250; time = 0.0249s; samplesPerSecond = 10045.4
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 291- 300, 75.00%]: CrossEntropyWithSoftmax = 0.16884430 * 250; EvalErrorPrediction = 0.08400000 * 250; time = 0.0241s; samplesPerSecond = 10376.5
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 301- 310, 77.50%]: CrossEntropyWithSoftmax = 0.17970282 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0237s; samplesPerSecond = 10533.9
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 311- 320, 80.00%]: CrossEntropyWithSoftmax = 0.13292468 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0257s; samplesPerSecond = 9721.6
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 321- 330, 82.50%]: CrossEntropyWithSoftmax = 0.14167778 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0226s; samplesPerSecond = 11048.3
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 331- 340, 85.00%]: CrossEntropyWithSoftmax = 0.18716852 * 250; EvalErrorPrediction = 0.10000000 * 250; time = 0.0237s; samplesPerSecond = 10534.7
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 341- 350, 87.50%]: CrossEntropyWithSoftmax = 0.15480385 * 250; EvalErrorPrediction = 0.04800000 * 250; time = 0.0258s; samplesPerSecond = 9705.0
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 351- 360, 90.00%]: CrossEntropyWithSoftmax = 0.19482328 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0247s; samplesPerSecond = 10115.7
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 361- 370, 92.50%]: CrossEntropyWithSoftmax = 0.17488171 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0249s; samplesPerSecond = 10048.2
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 371- 380, 95.00%]: CrossEntropyWithSoftmax = 0.15164433 * 250; EvalErrorPrediction = 0.06000000 * 250; time = 0.0281s; samplesPerSecond = 8901.2
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.12142463 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0222s; samplesPerSecond = 11279.0
+05/03/2016 15:29:55:  Epoch[ 2 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.15287631 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0238s; samplesPerSecond = 10489.7
+05/03/2016 15:29:55: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 0.19475469 * 10000; EvalErrorPrediction = 0.07830000 * 10000; totalSamplesSeen = 20000; learningRatePerSample = 0.0080000004; epochTime=0.964496s
+05/03/2016 15:29:55: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn.2'
+
+05/03/2016 15:29:55: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
+
+05/03/2016 15:29:55: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1).
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[   1-  10, 2.50%]: CrossEntropyWithSoftmax = 0.10717578 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0253s; samplesPerSecond = 9869.7
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  11-  20, 5.00%]: CrossEntropyWithSoftmax = 0.17521929 * 250; EvalErrorPrediction = 0.07600000 * 250; time = 0.0234s; samplesPerSecond = 10701.1
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  21-  30, 7.50%]: CrossEntropyWithSoftmax = 0.14088211 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0250s; samplesPerSecond = 9986.8
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  31-  40, 10.00%]: CrossEntropyWithSoftmax = 0.16281337 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0243s; samplesPerSecond = 10287.6
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  41-  50, 12.50%]: CrossEntropyWithSoftmax = 0.11778386 * 250; EvalErrorPrediction = 0.04000000 * 250; time = 0.0234s; samplesPerSecond = 10666.9
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  51-  60, 15.00%]: CrossEntropyWithSoftmax = 0.16295400 * 250; EvalErrorPrediction = 0.08400000 * 250; time = 0.0266s; samplesPerSecond = 9385.8
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  61-  70, 17.50%]: CrossEntropyWithSoftmax = 0.16287201 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0233s; samplesPerSecond = 10746.2
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  71-  80, 20.00%]: CrossEntropyWithSoftmax = 0.19482140 * 250; EvalErrorPrediction = 0.08400000 * 250; time = 0.0242s; samplesPerSecond = 10312.3
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  81-  90, 22.50%]: CrossEntropyWithSoftmax = 0.20113689 * 250; EvalErrorPrediction = 0.09200000 * 250; time = 0.0235s; samplesPerSecond = 10643.3
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[  91- 100, 25.00%]: CrossEntropyWithSoftmax = 0.13748570 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0238s; samplesPerSecond = 10484.4
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 101- 110, 27.50%]: CrossEntropyWithSoftmax = 0.20080420 * 250; EvalErrorPrediction = 0.10800000 * 250; time = 0.0236s; samplesPerSecond = 10600.9
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 111- 120, 30.00%]: CrossEntropyWithSoftmax = 0.17730590 * 250; EvalErrorPrediction = 0.08400000 * 250; time = 0.0268s; samplesPerSecond = 9342.3
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 121- 130, 32.50%]: CrossEntropyWithSoftmax = 0.15851029 * 250; EvalErrorPrediction = 0.06000000 * 250; time = 0.0233s; samplesPerSecond = 10743.0
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 131- 140, 35.00%]: CrossEntropyWithSoftmax = 0.16257260 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0250s; samplesPerSecond = 10012.8
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 141- 150, 37.50%]: CrossEntropyWithSoftmax = 0.19772537 * 250; EvalErrorPrediction = 0.10800000 * 250; time = 0.0224s; samplesPerSecond = 11143.3
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 151- 160, 40.00%]: CrossEntropyWithSoftmax = 0.10259204 * 250; EvalErrorPrediction = 0.04400000 * 250; time = 0.0235s; samplesPerSecond = 10626.1
+05/03/2016 15:29:55:  Epoch[ 3 of 3]-Minibatch[ 161- 170, 42.50%]: CrossEntropyWithSoftmax = 0.17093073 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0244s; samplesPerSecond = 10230.0
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 171- 180, 45.00%]: CrossEntropyWithSoftmax = 0.16628544 * 250; EvalErrorPrediction = 0.08400000 * 250; time = 0.0252s; samplesPerSecond = 9936.8
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 181- 190, 47.50%]: CrossEntropyWithSoftmax = 0.12690716 * 250; EvalErrorPrediction = 0.05600000 * 250; time = 0.0246s; samplesPerSecond = 10171.7
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 191- 200, 50.00%]: CrossEntropyWithSoftmax = 0.11894288 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0233s; samplesPerSecond = 10718.1
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 201- 210, 52.50%]: CrossEntropyWithSoftmax = 0.12815907 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0246s; samplesPerSecond = 10151.0
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 211- 220, 55.00%]: CrossEntropyWithSoftmax = 0.18265773 * 250; EvalErrorPrediction = 0.09200000 * 250; time = 0.0225s; samplesPerSecond = 11131.9
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 221- 230, 57.50%]: CrossEntropyWithSoftmax = 0.13388730 * 250; EvalErrorPrediction = 0.05600000 * 250; time = 0.0231s; samplesPerSecond = 10807.5
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 231- 240, 60.00%]: CrossEntropyWithSoftmax = 0.19787903 * 250; EvalErrorPrediction = 0.10400000 * 250; time = 0.0251s; samplesPerSecond = 9951.4
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 241- 250, 62.50%]: CrossEntropyWithSoftmax = 0.15563315 * 250; EvalErrorPrediction = 0.07600000 * 250; time = 0.0241s; samplesPerSecond = 10373.0
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 251- 260, 65.00%]: CrossEntropyWithSoftmax = 0.11837055 * 250; EvalErrorPrediction = 0.04800000 * 250; time = 0.0240s; samplesPerSecond = 10429.3
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 261- 270, 67.50%]: CrossEntropyWithSoftmax = 0.13732942 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0234s; samplesPerSecond = 10689.7
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 271- 280, 70.00%]: CrossEntropyWithSoftmax = 0.20012115 * 250; EvalErrorPrediction = 0.09200000 * 250; time = 0.0253s; samplesPerSecond = 9872.4
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 281- 290, 72.50%]: CrossEntropyWithSoftmax = 0.19086846 * 250; EvalErrorPrediction = 0.11200000 * 250; time = 0.0238s; samplesPerSecond = 10525.4
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 291- 300, 75.00%]: CrossEntropyWithSoftmax = 0.16492589 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0243s; samplesPerSecond = 10272.8
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 301- 310, 77.50%]: CrossEntropyWithSoftmax = 0.12141157 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0238s; samplesPerSecond = 10509.5
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 311- 320, 80.00%]: CrossEntropyWithSoftmax = 0.16335481 * 250; EvalErrorPrediction = 0.08800000 * 250; time = 0.0236s; samplesPerSecond = 10579.3
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 321- 330, 82.50%]: CrossEntropyWithSoftmax = 0.15923900 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0241s; samplesPerSecond = 10358.0
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 331- 340, 85.00%]: CrossEntropyWithSoftmax = 0.12315803 * 250; EvalErrorPrediction = 0.05200000 * 250; time = 0.0235s; samplesPerSecond = 10617.1
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 341- 350, 87.50%]: CrossEntropyWithSoftmax = 0.13481532 * 250; EvalErrorPrediction = 0.06400000 * 250; time = 0.0260s; samplesPerSecond = 9612.4
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 351- 360, 90.00%]: CrossEntropyWithSoftmax = 0.20958008 * 250; EvalErrorPrediction = 0.11600000 * 250; time = 0.0223s; samplesPerSecond = 11232.4
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 361- 370, 92.50%]: CrossEntropyWithSoftmax = 0.16519713 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0255s; samplesPerSecond = 9814.3
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 371- 380, 95.00%]: CrossEntropyWithSoftmax = 0.14990733 * 250; EvalErrorPrediction = 0.06800000 * 250; time = 0.0239s; samplesPerSecond = 10481.3
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.16508552 * 250; EvalErrorPrediction = 0.07200000 * 250; time = 0.0255s; samplesPerSecond = 9789.3
+05/03/2016 15:29:56:  Epoch[ 3 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.16941540 * 250; EvalErrorPrediction = 0.08000000 * 250; time = 0.0240s; samplesPerSecond = 10435.4
+05/03/2016 15:29:56: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 0.15791792 * 10000; EvalErrorPrediction = 0.07460000 * 10000; totalSamplesSeen = 30000; learningRatePerSample = 0.0080000004; epochTime=0.970059s
+05/03/2016 15:29:56: SGD: Saving checkpoint model 'E:\cygwin64\tmp\cntk-test-20160503162947.903093\CNTKTextFormatReader\Examples\Other\Simple2d_MultiGpu@release_gpu/Models/multigpu.dnn'
+05/03/2016 15:29:56: CNTKCommandTrainEnd: Multigpu_Demo_Train
+
+05/03/2016 15:29:56: Action "train" complete.
+
+
+05/03/2016 15:29:56: ##############################################################################
+05/03/2016 15:29:56: #                                                                            #
+05/03/2016 15:29:56: # Action "test"                                                              #
+05/03/2016 15:29:56: #                                                                            #
+05/03/2016 15:29:56: ##############################################################################
+
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalErrorPrediction = ErrorPrediction()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *1]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *1]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *1] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *1] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *1], [2], [2] -> [2 x *1]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *1] -> [50 x *1]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *1] -> [2 x 1 x *1]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *1], [2 x 1] -> [2 x 1 x *1]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *1] -> [2 x 1 x *1]
+Validating --> Prior = Mean (labels) : [2 x *1] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *1], [2] -> [2 x 1 x *1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+12 out of 25 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing Structure:
+
+0000000000000000: {[B0 Gradient[50 x 1]] [B1 Gradient[50 x 1]] [B2 Gradient[2 x 1]] [CrossEntropyWithSoftmax Gradient[1]] [EvalErrorPrediction Gradient[1]] [H1 Gradient[50 x 1 x *1]] [H2 Gradient[50 x 1 x *1]] [HLast Gradient[2 x 1 x *1]] [InvStdOfFeatures Gradient[2]] [LogOfPrior Gradient[2]] [MVNormalizedFeatures Gradient[2 x *1]] [MeanOfFeatures Gradient[2]] [PosteriorProb Gradient[2 x 1 x *1]] [PosteriorProb Value[2 x 1 x *1]] [Prior Gradient[2]] [ScaledLogLikelihood Gradient[2 x 1 x *1]] [ScaledLogLikelihood Value[2 x 1 x *1]] [W0 Gradient[50 x 2]] [W0*features Gradient[50 x *1]] [W0*features+B0 Gradient[50 x 1 x *1]] [W1 Gradient[50 x 50]] [W1*H1 Gradient[50 x 1 x *1]] [W1*H1+B1 Gradient[50 x 1 x *1]] [W2 Gradient[2 x 50]] [W2*H1 Gradient[2 x 1 x *1]] [features Gradient[2 x *1]] [labels Gradient[2 x *1]] }
+0000005743925BB0: {[HLast Value[2 x 1 x *1]] }
+0000005743925D90: {[MVNormalizedFeatures Value[2 x *1]] }
+0000005743925E30: {[CrossEntropyWithSoftmax Value[1]] }
+0000005743925F70: {[W2 Value[2 x 50]] }
+0000005743926150: {[W0*features Value[50 x *1]] }
+00000057439261F0: {[H1 Value[50 x 1 x *1]] }
+0000005743926290: {[LogOfPrior Value[2]] }
+00000057439263D0: {[W1*H1+B1 Value[50 x 1 x *1]] }
+0000005743926470: {[W2*H1 Value[2 x 1 x *1]] }
+00000057439265B0: {[W0*features+B0 Value[50 x 1 x *1]] }
+0000005743926650: {[W1*H1 Value[50 x 1 x *1]] }
+0000005743926970: {[H2 Value[50 x 1 x *1]] }
+0000005743926AB0: {[EvalErrorPrediction Value[1]] }
+000000574B7FAD10: {[W0 Value[50 x 2]] }
+000000574B7FB170: {[InvStdOfFeatures Value[2]] }
+000000574B7FB210: {[MeanOfFeatures Value[2]] }
+000000574B7FB530: {[W1 Value[50 x 50]] }
+000000574B7FB7B0: {[labels Value[2 x *1]] }
+000000574B7FBA30: {[Prior Value[2]] }
+000000574C9F1D40: {[features Value[2 x *1]] }
+000000574D960D10: {[B1 Value[50 x 1]] }
+000000574D960E50: {[B2 Value[2 x 1]] }
+000000574D9610D0: {[B0 Value[50 x 1]] }
+
+05/03/2016 15:29:56: Final Results: Minibatch[1-1]: EvalErrorPrediction = 0.05638474 * 603; CrossEntropyWithSoftmax = 0.12022919 * 603; perplexity = 1.12775529
+
+05/03/2016 15:29:56: Action "test" complete.
+
+05/03/2016 15:29:56: __COMPLETED__

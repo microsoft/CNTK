@@ -166,6 +166,8 @@ protected:
         return m_parallelizationMethod;
     }
 
+    // helper function to initialize and check BlockMomentumSGD related parameters
+    void InitializeAndCheckBlockMomentumSGDParameters();
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -270,7 +272,7 @@ protected:
     bool m_zeroThresholdFor1Bit;
 
     // Parallel training related with MA / BM
-    size_t m_nFramesBetweenMASync;
+    size_t m_modelAggregationBlockSize;
     bool   m_resetSGDMomentum; 
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
@@ -280,16 +282,15 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
-	// Parallel training related with ASGD 
-	intargvector m_numMBsToASGDPushAndPull;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
-									   //      note that, this will override m_nFramesBetweenASGDSync when set.
-	intargvector m_nFramesBetweenASGDSync;
-	bool m_isPipeline;
-	bool m_isSimulatingMA;
-	intargvector m_nEpochBarrier;
-	AdjustLearningRateatBeginning m_adjustlearningrateatbeginning;
-	double m_adjustcoefficient;
-	size_t m_adjustnbminibatch;
+	  // Parallel training related with ASGD 
+	  intargvector m_numMBsToASGDPushAndPull;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
+									                         //      note that, this will override m_nFramesBetweenASGDSync when set.
+	  intargvector m_nFramesBetweenASGDSync;
+    bool m_isPipeline;
+    bool m_isSimulateMA;
+    AdjustLearningRateatBeginning m_adjustlearningrateatbeginning;
+    double m_adjustcoefficient;
+    size_t m_adjustnbminibatch;
 
     //sequence training
     double m_hSmoothingWeight;
@@ -352,14 +353,7 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-
-        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
-        {
-            // This is used to finish initializing BlockMomentumSGD parameter 
-            // since some of the parameter may not be specified by the users 
-            InitializeAndCheckBlockMomentumSGDParameters(); 
         }
-    }
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -573,36 +567,34 @@ protected:
     size_t m_prevChosenMinibatchSize;
     double m_lastFinishedEpochTrainLoss;
 
-    IDistGradAggregator<ElemType>* m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
-    void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
     MultiversoHelper<ElemType>* m_pMultiversoHelper;
     bool m_pMultiversoHelperBarrier;
 
-    bool UseGradientAggregation(size_t epochNumber)
+    bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
-
-    bool UseModelAggregation(size_t epochNumber)
+    bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
 
-    bool UseAsyncGradientAggregation(size_t epochNumber)
+    bool UsingAsyncGradientAggregation(size_t epochNumber)
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
-    bool UseParallelTrain(size_t epochNumber)
+    bool UsingParallelTrain(size_t epochNumber)
     {
-        return UseGradientAggregation(epochNumber) || UseModelAggregation(epochNumber) || UseAsyncGradientAggregation(epochNumber);
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
     }
 };
 

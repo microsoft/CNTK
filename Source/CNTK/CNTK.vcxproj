@@ -146,7 +146,6 @@
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
-    <ClInclude Include="..\Common\Include\CompositeDataReader.h" />
     <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h" />
     <ClInclude Include="..\Common\Include\StringUtil.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
@@ -165,6 +164,7 @@
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
+    <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
     <ClInclude Include="..\Readers\ReaderLib\BlockRandomizer.h" />
     <ClInclude Include="..\Readers\ReaderLib\Bundler.h" />
     <ClInclude Include="..\Readers\ReaderLib\ChunkRandomizer.h" />
@@ -173,12 +173,10 @@
     <ClInclude Include="..\Readers\ReaderLib\NoRandomizer.h" />
     <ClInclude Include="..\Readers\ReaderLib\Packer.h" />
     <ClInclude Include="..\Readers\ReaderLib\Reader.h" />
-    <ClInclude Include="..\Readers\ReaderLib\SampleModePacker.h" />
     <ClInclude Include="..\Readers\ReaderLib\SequencePacker.h" />
     <ClInclude Include="..\Readers\ReaderLib\SequenceRandomizer.h" />
     <ClInclude Include="..\Readers\ReaderLib\StringToIdMap.h" />
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h" />
-    <ClInclude Include="..\Readers\ReaderLib\TransformerBase.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />
     <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />

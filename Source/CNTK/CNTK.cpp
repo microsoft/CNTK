@@ -237,66 +237,66 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 if (thisAction == "train" || thisAction == "trainRNN")
                 {
                     LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
-                    DoTrain<ConfigParameters, ElemType>(commandParams);
+                DoTrain<ConfigParameters, ElemType>(commandParams);
                     LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
-                    fullEpochsOffset += GetMaxEpochs(commandParams);
-                }
+                fullEpochsOffset += GetMaxEpochs(commandParams);
+            }
                 else if (thisAction == "adapt")
-                {
-                    DoAdapt<ElemType>(commandParams);
-                }
+            {
+                DoAdapt<ElemType>(commandParams);
+            }
                 else if (thisAction == "test" || thisAction == "eval")
-                {
-                    DoEval<ElemType>(commandParams);
-                }
+            {
+                DoEval<ElemType>(commandParams);
+            }
                 else if (thisAction == "edit")
-                {
-                    DoEdit<ElemType>(commandParams);
-                }
+            {
+                DoEdit<ElemType>(commandParams);
+            }
                 else if (thisAction == "cv")
-                {
-                    DoCrossValidate<ElemType>(commandParams);
-                }
+            {
+                DoCrossValidate<ElemType>(commandParams);
+            }
                 else if (thisAction == "write")
-                {
-                    DoWriteOutput<ElemType>(commandParams);
-                }
+            {
+                DoWriteOutput<ElemType>(commandParams);
+            }
                 else if (thisAction == "devtest")
-                {
-                    TestCn<ElemType>(config); // for "devtest" action pass the root config instead
-                }
-                else if (thisAction == "dumpnode")
-                {
-                    DumpNodeInfo<ElemType>(commandParams);
-                }
+            {
+                TestCn<ElemType>(config); // for "devtest" action pass the root config instead
+            }
+                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
+            {
+                DumpNodeInfo<ElemType>(commandParams);
+            }
                 else if (thisAction == "convertdbn")
-                {
-                    DoConvertFromDbn<ElemType>(commandParams);
-                }
+            {
+                DoConvertFromDbn<ElemType>(commandParams);
+            }
                 else if (thisAction == "exportdbn")
-                {
+            {
                     DoExportToDbn<ElemType>(commandParams);
                 }
                 else if (thisAction == "createLabelMap")
                 {
-                    DoCreateLabelMap<ElemType>(commandParams);
-                }
+                DoCreateLabelMap<ElemType>(commandParams);
+            }
                 else if (thisAction == "writeWordAndClass")
-                {
-                    DoWriteWordAndClassInfo<ElemType>(commandParams);
-                }
+            {
+                DoWriteWordAndClassInfo<ElemType>(commandParams);
+            }
                 else if (thisAction == "plot")
-                {
-                    DoTopologyPlot<ElemType>(commandParams);
-                }
+            {
+                DoTopologyPlot<ElemType>(commandParams);
+            }
                 else if (thisAction == "SVD")
-                {
-                    DoParameterSVD<ElemType>(commandParams);
-                }
-                else
-                {
+            {
+                DoParameterSVD<ElemType>(commandParams);
+            }
+            else
+            {
                     RuntimeError("unknown action: %s  in command set: %s", thisAction.c_str(), command[i].c_str());
-                }
+            }
             }
 
             fprintf(stderr, "\n");
@@ -476,6 +476,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -547,7 +548,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -574,6 +574,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -665,7 +666,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 

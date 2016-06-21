@@ -11,7 +11,11 @@
 #     defaults to release
 #   ACML_PATH= path to ACML library installation
 #     only needed if MATHLIB=acml
-#   MKL_PATH= path to MKL library installation
+#   MKL_PATH= path to CNTK custom MKL installation
+#     only needed if MATHLIB=mkl
+#   CNTK_CUSTOM_MKL_VERSION=2
+#     version for the CNTK custom MKL installation
+#   MKL_THREADING=parallel|sequential
 #     only needed if MATHLIB=mkl
 #   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
 #     defaults to /usr
@@ -131,9 +135,15 @@ ifeq ("$(MATHLIB)","acml")
 endif
 
 ifeq ("$(MATHLIB)","mkl")
-  INCLUDEPATH += $(MKL_PATH)/mkl/include
-  LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
-  LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+  INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
+  LIBS += -lm
+ifeq ("$(MKL_THREADING)","sequential")
+  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
+  LIBS += -lmkl_cntk_s
+else
+  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
+  LIBS += -lmkl_cntk_p -liomp5 -lpthread
+endif
   COMMON_FLAGS += -DUSE_MKL
 endif
 
@@ -247,6 +257,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
+    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -367,25 +378,25 @@ $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
-# ExperimentalHTKMLFReader plugin
+# HTKDeserializers plugin
 ########################################
 
-EXPERIMENTALHTKMLFREADER_SRC =\
+HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/ConfigHelper.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/Exports.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKDataDeserializer.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/ExperimentalHTKMLFReader/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/ConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
 
-EXPERIMENTALHTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EXPERIMENTALHTKMLFREADER_SRC))
+HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 
-EXPERIMENTALHTKMLFREADER:=$(LIBDIR)/ExperimentalHTKMLFReader.so
-ALL+=$(EXPERIMENTALHTKMLFREADER)
-SRC+=$(EXPERIMENTALHTKMLFREADER_SRC)
+HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
+ALL+=$(HTKDESERIALIZERS)
+SRC+=$(HTKDESERIALIZERS_SRC)
 
-$(LIBDIR)/ExperimentalHTKMLFReader.so: $(EXPERIMENTALHTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -688,15 +699,15 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-MAKEFILES :=  Makefile $(BUILD_TOP)/Config.make
-$(OBJDIR)/%.o : %.cu $(MAKEFILES)
+BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
 
+$(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
-$(OBJDIR)/%.o : %.cpp $(MAKEFILES)
+$(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)

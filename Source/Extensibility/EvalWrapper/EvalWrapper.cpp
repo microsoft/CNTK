@@ -23,6 +23,7 @@ using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Runtime::Serialization;
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
@@ -96,7 +97,7 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     void CreateNetwork(String^ networkDescription)
     {
@@ -118,7 +119,22 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("{0}\n{1}", outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     /// <param name="deviceId">The device ID to specify for the network</param>
     void CreateNetwork(String^ networkDescription, int deviceId)
@@ -128,7 +144,23 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        this->CreateNetwork(String::Format("deviceId={0}\n{1}", deviceId, networkDescription));
+        this->CreateNetwork(networkDescription, deviceId, nullptr);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="deviceId">The device ID to specify for the network</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, int deviceId, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("deviceId={0}\n{1}\n{2}", deviceId, outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
@@ -524,7 +556,8 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
+[Serializable]
+public ref class CNTKException : Exception, ISerializable
 {
 public:
     CNTKException() : Exception()
@@ -537,8 +570,23 @@ public:
     {}
 
     const String^ NativeCallStack;
+
+
+    [System::Security::Permissions::SecurityPermissionAttribute
+        (System::Security::Permissions::SecurityAction::LinkDemand,
+        Flags = System::Security::Permissions::SecurityPermissionFlag::SerializationFormatter)]
+    virtual void GetObjectData(SerializationInfo^ info, StreamingContext context) override
+    {
+        Exception::GetObjectData(info, context);
+    }
+
+protected:
+
+    CNTKException(SerializationInfo^ info, StreamingContext context) : Exception(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKRuntimeException : CNTKException
 {
 public:
@@ -547,8 +595,14 @@ public:
 
     CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKRuntimeException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKLogicErrorException : CNTKException
 {
 public:
@@ -557,8 +611,14 @@ public:
 
     CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKLogicErrorException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKInvalidArgumentException : CNTKException
 {
 public:
@@ -567,8 +627,14 @@ public:
 
     CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
     {}
+
+protected:
+
+    CNTKInvalidArgumentException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
+    {}
 };
 
+[Serializable]
 public ref class CNTKBadAllocException : CNTKException
 {
 public:
@@ -576,6 +642,11 @@ public:
     {}
 
     CNTKBadAllocException(String^ message) : CNTKException(message)
+    {}
+
+protected:
+
+    CNTKBadAllocException(SerializationInfo^ info, StreamingContext context) : CNTKException(info, context)
     {}
 };
 
@@ -594,6 +665,8 @@ void emit()
     f.Evaluate("");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
+    f.CreateNetwork("", nullptr);
+    f.CreateNetwork("", 0, nullptr);
     f.GetNodeDimensions(NodeGroup::nodeSpecified);
 
     IEvaluateModelManagedD d;
@@ -603,6 +676,8 @@ void emit()
     d.Evaluate("");
     d.CreateNetwork("");
     d.CreateNetwork("", 0);
+    d.CreateNetwork("", nullptr);
+    d.CreateNetwork("", 0,nullptr);
     d.GetNodeDimensions(NodeGroup::nodeSpecified);
 
     // Deprecated code, hush warnings locally only
