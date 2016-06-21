@@ -160,7 +160,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         ExceptionCapture capture;
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < decimated.size(); ++i)
-            capture.SafeRun([process](int j) { process(j); }, i);
+            capture.SafeRun(process, i);
         capture.RethrowIfHappened();
     }
     else
