@@ -22,6 +22,7 @@ MissingImage_Test = [
         randomize = "auto"
         verbosity = 1
 
+        numCPUThreads = 1
         features=[
             width=4
             height=8
