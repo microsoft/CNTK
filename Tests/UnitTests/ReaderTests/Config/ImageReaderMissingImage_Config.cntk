@@ -1,15 +1,5 @@
 RootDir = .
-ModelDir = "models"
-command = "Simple_Test"
-
 precision = "float"
-
-modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
-
-# deviceId = -1 for CPU, >= 0 for GPU devices
-deviceId = -1
-
-outputNodeNames = "Dummy"
 traceLevel = 1
 
 MissingImage_Test = [
