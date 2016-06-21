@@ -14,6 +14,7 @@
 #include <msclr\marshal_cppstd.h>
 
 #include "CNTKException.h"
+#include "EvalCommon.h"
 #include "Eval.h"
 
 #using <System.dll>
@@ -32,28 +33,6 @@ namespace Native = Microsoft::MSR::CNTK;
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModelExtended<ElemType>**);
 
-/// Enumeration for the types of nodes
-public enum class NodeGroup
-{
-    nodeInput,  // an input node
-    nodeOutput, // an output node
-    nodeSpecified
-};
-
-enum class DataType
-{
-    Float32,
-    Float64
-};
-
-enum class StorageType
-{
-    Undetermined,
-    Dense,
-    Sparse,
-};
-
-
 //
 // A buffer to keep data for all samples in a (variable length) sequence 
 // from a single input or output.
@@ -61,520 +40,511 @@ enum class StorageType
 //
 generic<class ElemType>
 public ref class ValueBuffer
-{
-public:
-    ValueBuffer()
     {
-        Size = 0;
-    }
-
-    // 
-    // Init for Dense
-    //
-    ValueBuffer(int bufferSize)
-    {
-        Buffer = gcnew array<ElemType>(bufferSize);
-        Size = bufferSize;
-    }
-
-    //
-    // Init for sparse
-    //
-    ValueBuffer(int bufferSize, int colIndicesSize)
-    {
-        Buffer = gcnew array<ElemType>(bufferSize);
-        Indices = gcnew array<int>(bufferSize);
-        ColIndices = gcnew array<int>(colIndicesSize);
-        Size = colIndicesSize - 1;
-    }
- 
-    //
-    // For dense, this is the length of Buffer (in nr. of ElemTypes).
-    // For sparse, this is the length of ColIndices (i.e. the number of columns + 1).
-    // This allows Buffer / Indices / ColIndices to be larger than Size to avoid
-    // reallocation.
-    //
-    property int Size;
-
-    //
-    // All elements of a sequence, concatenated.
-    // For dense inputs, the number of samples is given by the the length of
-    // this vector / product of tensor dimensions. E.g. for a tensor of dimension
-    // [2,2] and 12 elements in the buffer, the number of samples is 3.
-    // For sparse inputs, the number of samples is indicated by the ColIndices field.
-    //
-    property array<ElemType>^ Buffer;
-
-    // In case of sparse data, the following is also used. Otherwise, the 
-    // contents are ignored.
-
-    // E.g. a sequence of three sparse vectors with 2 / 4 / 2 non-zero values
-    // could be represented as the following:
-    // colIdx:  0   2       6   8
-    //          v   v       v   v
-    // indices  1 3 2 3 5 6 2 7
-    // buffer   0 1 2 3 4 5 6 7
-
-    //
-    // For every element in buffer, an entry in this array gives its position.
-    // For every vector the entries must be ascending.
-    //
-    property array<int>^ Indices;
-
-    //
-    // Contains numberOfsamples + 1 indices into the buffer. The first entry
-    // is always 0. The last entry points after the last element.
-    // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
-    //
-    property array<int>^ ColIndices;
-};
-
-//
-// Meta data
-//
-public ref struct VariableLayout
-{
-    // Name of the input
-    property String^ Name;
-
-    property DataType DataType;
-
-    property StorageType StorageType;
-
-    // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
-    // E.g. for a tensor [2,3,*] this would be 6.
-    property int NumElements;
-};
-
-public ref class VariableSchema : List<VariableLayout^>
-{
-public:
-    generic<typename ElemType>
-    array<ValueBuffer<ElemType>^>^ CreateBuffers(... array<int>^ maxLengths)
-    {
-        if (maxLengths->Length != this->Count)
+    public:
+        ValueBuffer()
         {
-            throw gcnew CNTKRuntimeException("Expected max lengths for all variables.", String::Empty);
+            Size = 0;
         }
 
-        array<ValueBuffer<ElemType>^>^ buffers = gcnew array<ValueBuffer<ElemType>^>(this->Count);
-        for (int i = 0; i < this->Count; i++)
+        //
+        // Init for Dense
+        //
+        ValueBuffer(int bufferSize)
         {
-            buffers[i] = gcnew ValueBuffer<ElemType>(this[i]->NumElements * maxLengths[i]);
+            Buffer = gcnew array<ElemType>(bufferSize);
+            Size = bufferSize;
         }
 
-        return buffers;
-    }
+        //
+        // Init for Sparse
+        //
+        ValueBuffer(int bufferSize, int colIndicesSize)
+        {
+            Buffer = gcnew array<ElemType>(bufferSize);
+            Indices = gcnew array<int>(bufferSize);
+            ColIndices = gcnew array<int>(colIndicesSize);
+            Size = colIndicesSize - 1;
+        }
 
-    // Creates minimum size buffers based on schema
-    generic<typename ElemType>
-    array<ValueBuffer<ElemType>^>^ CreateBuffers()
+        //
+        // For dense, this is the length of Buffer (in nr. of ElemTypes).
+        // For sparse, this is the length of ColIndices (i.e. the number of columns + 1).
+        // This allows Buffer / Indices / ColIndices to be larger than Size to avoid
+        // reallocation.
+        //
+        property int Size;
+
+        //
+        // All elements of a sequence, concatenated.
+        // For dense inputs, the number of samples is given by the the length of
+        // this vector / product of tensor dimensions. E.g. for a tensor of dimension
+        // [2,2] and 12 elements in the buffer, the number of samples is 3.
+        // For sparse inputs, the number of samples is indicated by the ColIndices field.
+        //
+        property array<ElemType>^ Buffer;
+
+        // In case of sparse data, the following is also used. Otherwise, the 
+        // contents are ignored.
+
+        // E.g. a sequence of three sparse vectors with 2 / 4 / 2 non-zero values
+        // could be represented as the following:
+        // colIdx:  0   2       6   8
+        //          v   v       v   v
+        // indices  1 3 2 3 5 6 2 7
+        // buffer   0 1 2 3 4 5 6 7
+
+        //
+        // For every element in buffer, an entry in this array gives its position.
+        // For every vector the entries must be ascending.
+        //
+        property array<int>^ Indices;
+
+        //
+        // Contains numberOfsamples + 1 indices into the buffer. The first entry
+        // is always 0. The last entry points after the last element.
+        // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
+        //
+        property array<int>^ ColIndices;
+
+
+        // TODO: Should it have a read-only StorageType property?
+    };
+
+    //
+    // Meta data
+    //
+    public ref struct VariableLayout
     {
-        array<ValueBuffer<ElemType>^>^ buffers = gcnew array<ValueBuffer<ElemType>^>(this->Count);
-        for (int i = 0; i < this->Count; i++)
-        {
-            buffers[i] = gcnew ValueBuffer<ElemType>(this[i]->NumElements);
-        }
+        // Name of the input
+        property String^ Name;
 
-        return buffers;
-    }
-};
+        property DataType DataType;
 
-/// Managed wrapper for the native evaluation model
-template<typename ElemType>
-public ref class ModelEvaluationExtended : IDisposable
-{
-    typedef std::pair<std::wstring, std::vector<ElemType>*> MapEntry;
+        property StorageType StorageType;
 
-public:
-    /// <summary>Initializes a new instance of the <see cref="ModelEvaluationExtended"> class.</summary>
-    /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
-    ModelEvaluationExtended(String^ funcName)
+        // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
+        // E.g. for a tensor [2,3,*] this would be 6.
+        property int NumElements;
+    };
+
+    public ref class VariableSchema : List<VariableLayout^>
     {
-        pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
+    public:
+        generic<typename ElemType>
+            array<ValueBuffer<ElemType>^>^ CreateBuffers(... array<int>^ maxLengths)
+            {
+                if (maxLengths->Length == 0)
+                {
+                    maxLengths = gcnew array<int>(this->Count);
+                    for (int i = 0; i<maxLengths->Length; i++)
+                    {
+                        maxLengths[i] = 1;
+                    }
+                }
+
+                if (maxLengths->Length != this->Count)
+                {
+                    throw gcnew CNTKRuntimeException("Expected max lengths for all variables.", String::Empty);
+                }
+
+                array<ValueBuffer<ElemType>^>^ buffers = gcnew array<ValueBuffer<ElemType>^>(this->Count);
+                for (int i = 0; i < this->Count; i++)
+                {
+                    buffers[i] = gcnew ValueBuffer<ElemType>(this[i]->NumElements * maxLengths[i]);
+                }
+
+                return buffers;
+            }
+    };
+
+    /// Managed wrapper for the native evaluation model
+    template<typename ElemType>
+    public ref class ModelEvaluationExtended : IDisposable
+    {
+        typedef std::pair<std::wstring, std::vector<ElemType>*> MapEntry;
+        typedef std::shared_ptr<Native::ValueBuffer<ElemType, Native::VectorRef>> ValueBufferPtr;
+
+    public:
+        /// <summary>Initializes a new instance of the <see cref="ModelEvaluationExtended"> class.</summary>
+        /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
+        ModelEvaluationExtended(String^ funcName)
         {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
+            pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
+            auto hModule = LoadLibrary(dllname);
+            if (hModule == nullptr)
+            {
+                throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
+            }
+
+            try
+            {
+                msclr::interop::marshal_context context;
+                const std::string func = context.marshal_as<std::string>(funcName);
+                auto procAddress = GetProcAddress(hModule, func.c_str());
+                auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
+                pin_ptr <IEvaluateModelExtended<ElemType>*> p_eval = &m_eval;
+                getEvalProc(p_eval);
+            }
+            catch (const exception& ex)
+            {
+                throw gcnew CNTKException(gcnew System::String(ex.what()));
+            }
         }
 
-        try
+        /// <summary>Creates a network based on the network description in the configuration</summary>
+        /// <param name="networkDescription">The configuration file containing the network description</param>
+        void CreateNetwork(String^ networkDescription)
         {
+            if (m_eval == nullptr)
+            {
+                throw gcnew ObjectDisposedException("Object has been disposed.");
+            }
+
             msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
-            pin_ptr <IEvaluateModelExtended<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
-        }
-        catch (const exception& ex)
-        {
-            throw gcnew CNTKException(gcnew System::String(ex.what()));
-        }
-    }
+            const std::string stdNetworkDescription = context.marshal_as<std::string>(networkDescription);
 
-    /// <summary>Creates a network based on the network description in the configuration</summary>
-    /// <param name="networkDescription">The configuration file containing the network description</param>
-    void CreateNetwork(String^ networkDescription)
-    {
-        if (m_eval == nullptr)
-        {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
+            try
+            {
+                m_eval->CreateNetwork(stdNetworkDescription);
+            }
+            catch (const exception& ex)
+            {
+                throw GetCustomException(ex);
+            }
         }
 
-        msclr::interop::marshal_context context;
-        const std::string stdNetworkDescription = context.marshal_as<std::string>(networkDescription);
+        //
+        // GetInputSchema - retrieve information about tensor shapes and memory layout for this model.
+        //
+        VariableSchema^ GetInputSchema()
+        {
+            if (m_eval == nullptr)
+            {
+                throw gcnew ObjectDisposedException("Object has been disposed.");
+            }
 
-        try
-        {
-            m_eval->CreateNetwork(stdNetworkDescription);
-        }
-        catch (const exception& ex)
-        {
-            throw GetCustomException(ex);
-        }
-    }
-
-    //
-    // GetOutputSchema - retrieve information about tensor shapes and memory layout of the outputs for this
-    // model.
-    //
-    VariableSchema^ GetOutputSchema()
-    {
-        if (m_eval == nullptr)
-        {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
+            return ConvertNativeSchemaToManaged(m_eval->GetInputSchema());
         }
 
-        auto outputLayout = m_eval->GetOutputSchema();
-
-        auto outputSchema = gcnew VariableSchema();
-        for (auto& lay : outputLayout)
+        //
+        // GetOutputSchema - retrieve information about tensor shapes and memory layout for this model.
+        //
+        VariableSchema^ GetOutputSchema()
         {
-            VariableLayout^ layout = gcnew VariableLayout();
-            layout->Name = gcnew String(lay.m_name.c_str());
-            layout->DataType = GetDataType(lay.m_dataType);
-            layout->NumElements = lay.m_numElements;
-            layout->StorageType = GetStorageType(lay.m_storageType);
+            if (m_eval == nullptr)
+            {
+                throw gcnew ObjectDisposedException("Object has been disposed.");
+            }
 
-            outputSchema->Add(layout);
-        }
-        return outputSchema;
-    }
-
-    //
-    // Allocate internal state for calling ForwardPass(). The call restricts the network (inputs and outputs)
-    // to the functions represented by the output name.
-    //
-    void StartForwardEvaluation(List<String^>^ outputs)
-    {
-        if (m_eval == nullptr)
-        {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
+            return ConvertNativeSchemaToManaged(m_eval->GetOutputSchema());
         }
 
-        std::vector<wstring> outputNodeNames;
-        msclr::interop::marshal_context context;
-
-        for each (String^ output in outputs)
+        //
+        // Allocate internal state for calling ForwardPass(). The call restricts the network (inputs and outputs)
+        // to the functions represented by the output name.
+        //
+        void StartForwardEvaluation(List<String^>^ outputs)
         {
-            outputNodeNames.push_back(context.marshal_as<std::wstring>(output));
+            if (m_eval == nullptr)
+            {
+                throw gcnew ObjectDisposedException("Object has been disposed.");
+            }
+
+            std::vector<wstring> outputNodeNames;
+            msclr::interop::marshal_context context;
+
+            for each (String^ output in outputs)
+            {
+                outputNodeNames.push_back(context.marshal_as<std::wstring>(output));
+            }
+
+            m_eval->StartForwardEvaluation(outputNodeNames);
         }
 
-        m_eval->StartForwardEvaluation(outputNodeNames);
-    }
-
-    //
-    // GetInputSchema - 
-    //
-    VariableSchema^ GetInputSchema()
-    {
-        if (m_eval == nullptr)
+        //
+        // Forward Pass - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
+        // outputs.
+        // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
+        // This method is not reentrant, as the forward pass keeps internal state.
+        // outputId - output to compute values for. See GetOutputLayouts()
+        // inputs - vector of input buffers, one for every input as given by GetInputLayouts()
+        // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller
+        // Called after StartForwardEvaluation()
+        //
+        void ForwardPass(array<ValueBuffer<ElemType>^>^ inputs, array<ValueBuffer<ElemType>^>^ outputs)
         {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
+            if (m_eval == nullptr)
+            {
+                throw gcnew ObjectDisposedException("Object has been disposed.");
+            }
+
+            try
+            {
+                Native::ValueRefs<ElemType> stdInputs;
+                Native::ValueRefs<ElemType> stdOutputs;
+
+                // Hold gc objects in the stack, while performing native actions
+                vector<gcroot<array<ElemType>^>> pinBuffers;
+                vector<gcroot<array<int>^>> pinIndices;
+
+                // Map the managed space into the native space, results will be written directly into the managed memory space
+                // https://msdn.microsoft.com/en-us/library/1dz8byfh.aspx
+                TransferVectorsToValueBuffers(inputs, stdInputs, pinBuffers, pinIndices, StorageType::Sparse);
+                TransferVectorsToValueBuffers(outputs, stdOutputs, pinBuffers, pinIndices, StorageType::Dense);
+
+                try
+                {
+                    m_eval->ForwardPass(stdInputs, stdOutputs);
+
+                    // Update actual output size.
+                    for (int i = 0; i < outputs->Length; ++i)
+                    {
+                        outputs[i]->Size = (int)stdOutputs[i].m_buffer.m_size;
+                    }
+                }
+                catch (const exception& ex)
+                {
+                    throw GetCustomException(ex);
+                }
+            }
+            catch (Exception^)
+            {
+                throw;
+            }
         }
 
-        auto inputLayout = m_eval->GetInputSchema();
-
-        auto inputSchema = gcnew VariableSchema();
-        for (auto& lay : inputLayout)
+        ~ModelEvaluationExtended()
         {
-            VariableLayout^ layout = gcnew VariableLayout();
-            layout->Name = gcnew String(lay.m_name.c_str());
-            layout->DataType = GetDataType(lay.m_dataType);
-            layout->NumElements = lay.m_numElements;
-            layout->StorageType = GetStorageType(lay.m_storageType);
+            if (m_eval == nullptr)
+            {
+                return;
+            }
 
-            inputSchema->Add(layout);
-        }
-        return inputSchema;
-    }
-
-    //
-    // Forward Pass - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
-    // outputs.
-    // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
-    // This method is not reentrant, as the forward pass keeps internal state.
-    // outputId - output to compute values for. See GetOutputLayouts()
-    // inputs - vector of input buffers, one for every input as given by GetInputLayouts()
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller
-    // Called after StartForwardEvaluation()
-    //
-    void ForwardPass(array<ValueBuffer<ElemType>^>^ inputs, array<ValueBuffer<ElemType>^>^ outputs)
-    {
-        if (m_eval == nullptr)
-        {
-            throw gcnew ObjectDisposedException("Object has been disposed.");
+            this->!ModelEvaluationExtended();
         }
 
-        Native::ValueRefs<ElemType> stdInputs;
-        Native::ValueRefs<ElemType> stdOutputs;
-        Native::ValueBuffer<ElemType, Native::VectorRef>* vb = new Native::ValueBuffer<ElemType, Native::VectorRef>();
-
-        // Hold gc objects in the stack, while performing native actions
-        vector<gcroot<array<ElemType>^>*> pinBuffers;
-        vector<gcroot<array<int>^>*> pinIndices;
-
-        // Map the managed space into the native space, results will be written directly into the managed memory space
-        // https://msdn.microsoft.com/en-us/library/1dz8byfh.aspx
-
-        for each (auto item in inputs)
+    protected:
+        !ModelEvaluationExtended()
         {
-            int numElements = item->Size;
-            int bufferSize = item->ColIndices != nullptr ? item->ColIndices[item->Size - 1] : item->Size;
+            if (m_eval != nullptr)
+            {
+                m_eval->Destroy();
+                m_eval = nullptr;
+            }
+        }
+
+    private:
+        // Native model evaluation instance
+        IEvaluateModelExtended<ElemType> *m_eval;
+
+        /// <summary> Throws a CLR exception based on a native exception</summary>
+        /// <param name="ex">The native exception to throw as a CLR exception</param>
+        /// <returns>A CLR exception</returns>
+        CNTKException^ GetCustomException(const exception& ex)
+        {
+            // Determine the appropriate exception and initialize it with the exception payload
+            if (typeid(ex) == typeid(ExceptionWithCallStack<runtime_error>))
+            {
+                ExceptionWithCallStack<runtime_error>& rich = dynamic_cast<ExceptionWithCallStack<runtime_error>&>((runtime_error&)ex);
+                return gcnew CNTKRuntimeException(gcnew System::String(rich.what()), gcnew System::String(rich.CallStack()));
+            }
+            else if (typeid(ex) == typeid(ExceptionWithCallStack<logic_error>))
+            {
+                ExceptionWithCallStack<logic_error>& rich = dynamic_cast<ExceptionWithCallStack<logic_error>&>((logic_error&)ex);
+                return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
+            }
+            else if (typeid(ex) == typeid(ExceptionWithCallStack<invalid_argument>))
+            {
+                ExceptionWithCallStack<invalid_argument>& rich = dynamic_cast<ExceptionWithCallStack<invalid_argument>&>((invalid_argument&)ex);
+                return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
+            }
+            else if (typeid(ex) == typeid(bad_alloc))
+            {
+                return gcnew CNTKBadAllocException(gcnew System::String(ex.what()));
+            }
+            else
+            {
+                return gcnew CNTKException(gcnew System::String(ex.what()));
+            }
+        }
+
+        /// <summary Converts a managed (CLI) enum NodeGroup to a native NodeGroup
+        /// <param name="nodeGroup">The managed (CLI) NodeGroup to convert to native</param>
+        Native::NodeGroup GetNodeGroup(NodeGroup nodeGroup)
+        {
+            switch ((int)nodeGroup)
+            {
+            case Native::NodeGroup::nodeInput:
+                return Native::NodeGroup::nodeInput;
+            case Native::NodeGroup::nodeOutput:
+                return Native::NodeGroup::nodeOutput;
+            case Native::NodeGroup::nodeSpecified:
+                return Native::NodeGroup::nodeSpecified;
+            default:
+                throw gcnew CNTKRuntimeException(String::Format("Cannot convert native NodeGroup with value: {0} to corresponding managed NodeGroup.", (int)nodeGroup), "");
+            }
+        }
+
+        DataType GetDataType(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
+        {
+            switch ((int)dataType)
+            {
+            case DataType::Float32:
+                return DataType::Float32;
+            case DataType::Float64:
+                return DataType::Float64;
+            default:
+                throw gcnew CNTKRuntimeException(String::Format("Cannot convert native DataType with value: {0} to corresponding managed DataType.", (int)dataType), "");
+            }
+        }
+
+        StorageType GetStorageType(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
+        {
+            switch ((int)storageType)
+            {
+            case StorageType::Dense:
+                return StorageType::Dense;
+            case StorageType::Sparse:
+                return StorageType::Sparse;
+            case StorageType::Unknown:
+                return StorageType::Unknown;
+            default:
+                throw gcnew CNTKRuntimeException(String::Format("Cannot convert native StorageType with value: {0} to corresponding managed StorageType.", (int)storageType), "");
+            }
+        }
+
+        void PinBuffer(array<ElemType>^ itemBuffer, vector<gcroot<array<ElemType>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
+        {
             // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-            gcroot<array<ElemType>^>* pBuf;
-            gcroot<array<int>^>* pInd;
-            gcroot<array<int>^>* pColInd;
-
-            // Buffer is required
-            if (item->Buffer == nullptr)
-            {
-                throw gcnew CNTKRuntimeException("Invalid buffer (empty) for input argument into ForwardPass", String::Empty);
-            }
-
-            pBuf = new gcroot<array<ElemType>^>(item->Buffer);
-            pin_ptr<ElemType> pp = &(*pBuf)[0];
+            gcroot<array<ElemType>^> pBuf(itemBuffer);
+            pin_ptr<ElemType> pp = &(pBuf[0]);
             pinBuffers.push_back(pBuf);
-            vb->m_buffer.InitFrom(pp, bufferSize, bufferSize);
-
-            if (item->Indices != nullptr)
-            {
-                pInd = new gcroot<array<int>^>(item->Indices);
-                pin_ptr<int> pi = &(*pInd)[0];
-                pinIndices.push_back(pInd);
-                vb->m_indices.InitFrom(pi, bufferSize, bufferSize);
-            }
-
-            if (item->ColIndices != nullptr)
-            {
-                pColInd = new gcroot<array<int>^>(item->ColIndices);
-                pin_ptr<int> pci = &(*pColInd)[0];
-                pinIndices.push_back(pColInd);
-                vb->m_colIndices.InitFrom(pci, numElements, numElements);
-            }
-
-            stdInputs.push_back(*vb);
+            vb->m_buffer.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
+            pp = nullptr;
         }
 
-        for each (auto item in outputs)
+        void PinIndices(array<int>^ itemBuffer, vector<gcroot<array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
         {
-            gcroot<array<ElemType>^>* pBuf;
-            gcroot<array<int>^>* pInd;
-            gcroot<array<int>^>* pColInd;
-
-            // Buffer is required
-            if (item->Buffer == nullptr)
-            {
-                throw gcnew CNTKRuntimeException("Invalid buffer (empty) for output argument into ForwardPass", String::Empty);
-            }
-
-            pBuf = new gcroot<array<ElemType>^>(item->Buffer);
-            pin_ptr<ElemType> pp = &(*pBuf)[0];
+            // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
+            gcroot<array<int>^> pBuf(itemBuffer);
+            pin_ptr<int> pp = &(pBuf[0]);
             pinBuffers.push_back(pBuf);
-            vb->m_buffer.InitFrom(pp, item->Buffer->Length, 0);
+            vb->m_indices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
+            pp = nullptr;
+        }
 
-            if (item->Indices != nullptr)
+        void PinColIndices(array<int>^ itemBuffer, vector<gcroot<array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
+        {
+            // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
+            gcroot<array<int>^> pBuf(itemBuffer);
+            pin_ptr<int> pp = &(pBuf[0]);
+            pinBuffers.push_back(pBuf);
+            vb->m_colIndices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
+            pp = nullptr;
+        }
+
+        void TransferVectorsToValueBuffers(array<ValueBuffer<ElemType>^>^ list, Native::ValueRefs<ElemType>& valueRefs, vector<gcroot<array<ElemType>^>>& pinBuffers, vector<gcroot<array<int>^>>& pinIndices, StorageType storageType)
+        {
+            for each (auto item in list)
             {
-                pInd = new gcroot<array<int>^>(item->Indices);
-                pin_ptr<int> pi = &(*pInd)[0];
-                pinIndices.push_back(pInd);
-                vb->m_indices.InitFrom(pi, item->Indices->Length, 0);
+                Native::ValueBuffer<ElemType, Native::VectorRef> vb;
+
+                int numElements = item->Size;
+                int bufferSize = item->ColIndices != nullptr ? item->ColIndices[item->Size - 1] : item->Size;
+
+                // Buffer is required
+                if (item->Buffer == nullptr)
+                {
+                    throw gcnew CNTKRuntimeException("Invalid buffer (empty) for argument into ForwardPass", String::Empty);
+                }
+
+                PinBuffer(item->Buffer, pinBuffers, &vb, storageType, bufferSize);
+
+                if (item->Indices != nullptr)
+                {
+                    PinIndices(item->Indices, pinIndices, &vb, storageType, bufferSize);
+                }
+
+                if (item->ColIndices != nullptr)
+                {
+                    PinColIndices(item->ColIndices, pinIndices, &vb, storageType, numElements);
+                }
+
+                valueRefs.push_back(vb);
             }
-                
-            if (item->ColIndices != nullptr)
+        }
+
+        //
+        // ConvertNativeSchemaToManaged - Converts a native schema to a manged one
+        //
+        VariableSchema^ ConvertNativeSchemaToManaged(Native::VariableSchema layouts)
+        {
+            if (m_eval == nullptr)
             {
-                pColInd = new gcroot<array<int>^>(item->ColIndices);
-                pin_ptr<int> pci = &(*pColInd)[0];
-                pinIndices.push_back(pColInd);
-                vb->m_colIndices.InitFrom(pci, item->ColIndices->Length, 0);
+                throw gcnew ObjectDisposedException("Object has been disposed.");
             }
 
-            stdOutputs.push_back(*vb);
-        }
-
-        try
-        {
-            m_eval->ForwardPass(stdInputs, stdOutputs);
-
-            // Update actual output size.
-            for (int i = 0; i < outputs->Length; ++i)
+            auto schema = gcnew VariableSchema();
+            for (auto& lay : layouts)
             {
-                outputs[i]->Size = (int)stdOutputs[i].m_buffer.m_size;
+                VariableLayout^ varlayout = gcnew VariableLayout();
+                varlayout->Name = gcnew String(lay.m_name.c_str());
+                varlayout->DataType = GetDataType(lay.m_dataType);
+                varlayout->NumElements = static_cast<int>(lay.m_numElements);
+                varlayout->StorageType = GetStorageType(lay.m_storageType);
+
+                schema->Add(varlayout);
             }
+            return schema;
         }
-        catch (const exception& ex)
-        {
-            throw GetCustomException(ex);
-        }
-    }
+    };
 
-    ~ModelEvaluationExtended()
+    /// <summary>Managed float-specific model evaluation class</summary>
+    /// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
+    public ref class ModelEvaluationExtendedF : ModelEvaluationExtended<float>
     {
-        if (m_eval == nullptr)
+    public:
+        ModelEvaluationExtendedF::ModelEvaluationExtendedF()
+            : ModelEvaluationExtended("GetEvalExtendedF")
         {
-            return;
         }
+    };
 
-        this->!ModelEvaluationExtended();
-    }
-
-protected:
-    !ModelEvaluationExtended()
+    /// <summary>Managed double-specific model evaluation class</summary>
+    /// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
+    public ref class ModelEvaluationExtendedD : ModelEvaluationExtended<double>
     {
-        if (m_eval != nullptr)
+    public:
+        ModelEvaluationExtendedD::ModelEvaluationExtendedD()
+            : ModelEvaluationExtended("GetEvalExtendedD")
         {
-            m_eval->Destroy();
-            m_eval = nullptr;
         }
-    }
+    };
 
-private:
-    // Native model evaluation instance
-    IEvaluateModelExtended<ElemType> *m_eval;
-    
-    /// <summary> Throws a CLR exception based on a native exception</summary>
-    /// <param name="ex">The native exception to throw as a CLR exception</param>
-    /// <returns>A CLR exception</returns>
-    CNTKException^ GetCustomException(const exception& ex)
+
+    // This method tricks the compiler into emitting the methods of the classes
+    // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
+    // explanation to this behavior
+    void EmitExtended()
     {
-        // Determine the appropriate exception and initialize it with the exception payload
-        if (typeid(ex) == typeid(ExceptionWithCallStack<runtime_error>))
-        {
-            ExceptionWithCallStack<runtime_error>& rich = dynamic_cast<ExceptionWithCallStack<runtime_error>&>((runtime_error&)ex);
-            return gcnew CNTKRuntimeException(gcnew System::String(rich.what()), gcnew System::String(rich.CallStack()));
-        }
-        else if (typeid(ex) == typeid(ExceptionWithCallStack<logic_error>))
-        {
-            ExceptionWithCallStack<logic_error>& rich = dynamic_cast<ExceptionWithCallStack<logic_error>&>((logic_error&)ex);
-            return gcnew CNTKLogicErrorException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
-        }
-        else if (typeid(ex) == typeid(ExceptionWithCallStack<invalid_argument>))
-        {
-            ExceptionWithCallStack<invalid_argument>& rich = dynamic_cast<ExceptionWithCallStack<invalid_argument>&>((invalid_argument&)ex);
-            return gcnew CNTKInvalidArgumentException(gcnew System::String(ex.what()), gcnew System::String(rich.CallStack()));
-        }
-        else if (typeid(ex) == typeid(bad_alloc))
-        {
-            return gcnew CNTKBadAllocException(gcnew System::String(ex.what()));
-        }
-        else
-        {
-            return gcnew CNTKException(gcnew System::String(ex.what()));
-        }
+        ModelEvaluationExtendedF f;
+        f.CreateNetwork("");
+        f.GetInputSchema();
+        f.GetOutputSchema();
+        f.StartForwardEvaluation(nullptr);
+        f.ForwardPass(nullptr, nullptr);
+
+        ModelEvaluationExtendedD d;
+        d.CreateNetwork("");
+        d.GetInputSchema();
+        d.GetOutputSchema();
+        d.StartForwardEvaluation(nullptr);
+        d.ForwardPass(nullptr, nullptr);
+
+        VariableSchema sc;
+        sc.CreateBuffers<float>();
+        sc.CreateBuffers<double>();
     }
-
-    /// <summary Converts a managed (CLI) enum NodeGroup to a native NodeGroup
-    /// <param name="nodeGroup">The managed (CLI) NodeGroup to convert to native</param>
-    Native::NodeGroup GetNodeGroup(NodeGroup nodeGroup)
-    {
-        switch ((int)nodeGroup)
-        {
-        case Native::NodeGroup::nodeInput:
-            return Native::NodeGroup::nodeInput;
-        case Native::NodeGroup::nodeOutput:
-            return Native::NodeGroup::nodeOutput;
-        case Native::NodeGroup::nodeSpecified:
-            return Native::NodeGroup::nodeSpecified;
-        default:
-            throw gcnew CNTKRuntimeException(String::Format("Cannot convert native NodeGroup with value: {0} to corresponding managed NodeGroup.", (int)nodeGroup), "");
-        }
-    }
-
-    DataType GetDataType(Microsoft::MSR::CNTK::VariableLayout::DataType dataType)
-    {
-        switch ((int)dataType)
-        {
-        case DataType::Float32:
-            return DataType::Float32;
-        case DataType::Float64:
-            return DataType::Float64;
-        default:
-            throw gcnew CNTKRuntimeException(String::Format("Cannot convert native DataType with value: {0} to corresponding managed DataType.", (int)dataType), "");
-        }
-    }
-
-    StorageType GetStorageType(Microsoft::MSR::CNTK::VariableLayout::StorageType storageType)
-    {
-        switch ((int)storageType)
-        {
-        case StorageType::Dense:
-            return StorageType::Dense;
-        case StorageType::Sparse:
-            return StorageType::Sparse;
-        case StorageType::Undetermined:
-            return StorageType::Undetermined;
-        default:
-            throw gcnew CNTKRuntimeException(String::Format("Cannot convert native StorageType with value: {0} to corresponding managed StorageType.", (int)storageType), "");
-        }
-    }
-};
-
-/// <summary>Managed float-specific model evaluation class</summary>
-/// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
-public ref class ModelEvaluationExtendedF : ModelEvaluationExtended<float>
-{
-public:
-    ModelEvaluationExtendedF::ModelEvaluationExtendedF()
-        : ModelEvaluationExtended("GetEvalExtendedF")
-    {
-    }
-};
-
-/// <summary>Managed double-specific model evaluation class</summary>
-/// <remarks>This class is necessary due to how generics and templates work in CLR</remarks>
-public ref class ModelEvaluationExtendedD : ModelEvaluationExtended<double>
-{
-public:
-    ModelEvaluationExtendedD::ModelEvaluationExtendedD()
-        : ModelEvaluationExtended("GetEvalExtendedD")
-    {
-    }
-};
-
-
-// This method tricks the compiler into emitting the methods of the classes
-// Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
-// explanation to this behavior
-void EmitExtended()
-{
-    ModelEvaluationExtendedF f;
-    f.CreateNetwork("");
-    f.GetOutputSchema();
-    f.GetInputSchema();
-    f.StartForwardEvaluation(nullptr);
-    f.ForwardPass(nullptr, nullptr);
-
-    ModelEvaluationExtendedD d;
-    d.CreateNetwork("");
-    d.GetOutputSchema();
-    d.GetInputSchema();
-    d.StartForwardEvaluation(nullptr);
-    d.ForwardPass(nullptr, nullptr);
-
-    VariableSchema sc;
-    sc.CreateBuffers<float>();
-    sc.CreateBuffers<double>();
-}
 
 }}}}}
