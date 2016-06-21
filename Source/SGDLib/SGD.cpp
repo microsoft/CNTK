@@ -1124,7 +1124,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // using parameter server for parameter update
-        if (userAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
+        if (useAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
@@ -1261,7 +1261,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync = 0;
     }
 
-    if (userAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
+    if (useAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
         m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
