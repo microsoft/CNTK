@@ -167,6 +167,10 @@ ifdef KALDI_PATH
   KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
 endif
 
+ifdef SUPPORT_AVX2
+  CPPFLAGS += -mavx2
+endif
+
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
 # In debug mode we will rely on JIT to create code "on the fly" for the underlying architecture
 GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
@@ -270,7 +274,6 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/fileutil.cpp \
 
 MATH_SRC =\
-	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
 	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
@@ -284,6 +287,11 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+
+ifdef SUPPORT_AVX2
+MATH_SRC +=\
+	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
+endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -301,7 +309,6 @@ MATH_SRC +=\
 else
 MATH_SRC +=\
 	$(SOURCEDIR)/Math/NoGPU.cpp
-
 endif
 
 MATH_SRC+=$(COMMON_SRC)
