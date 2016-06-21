@@ -113,7 +113,7 @@ class MATH_API BlockHandlerSSE
             prepareMe;  k; n; //warning re. unreferenced params
             return nullptr;
         }
-        static void FreePreparedB(VectorT* freeMe) { assert(nullptr == freeMe); }
+        static void FreePreparedB(VectorT* freeMe) { freeMe;  assert(nullptr == freeMe); }
 
 };
 

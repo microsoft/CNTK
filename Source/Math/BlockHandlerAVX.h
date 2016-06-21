@@ -105,7 +105,7 @@ class MATH_API BlockHandlerAVX
         {
             return nullptr;
         }
-        static void FreePreparedB(VectorT* freeMe) { assert(nullptr == freeMe); }
+        static void FreePreparedB(VectorT* freeMe) { freeMe;  assert(nullptr == freeMe); }
 };
 
 #define LOADAVX2_128x4 \
