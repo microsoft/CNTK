@@ -19,6 +19,8 @@
 
 #using <System.dll>
 #using <System.Collections.dll>
+#using <System.IO.dll>
+#using <System.Reflection.dll>
 
 using namespace std;
 using namespace System;
@@ -170,7 +172,9 @@ public ref class ValueBuffer
         /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
         ModelEvaluationExtended(String^ funcName)
         {
-            pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
+            auto dir = System::IO::Path::GetDirectoryName(System::Reflection::Assembly::GetExecutingAssembly()->Location);
+            auto dllFileName = System::IO::Path::Combine(dir, "evaldll.dll");
+            pin_ptr<const WCHAR> dllname = PtrToStringChars(dllFileName);
             auto hModule = LoadLibrary(dllname);
             if (hModule == nullptr)
             {
