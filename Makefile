@@ -87,7 +87,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64
+CUFLAGS = -m 64 -msse3
 
 ifdef CUDA_PATH
   ifndef GDK_PATH
