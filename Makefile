@@ -210,9 +210,9 @@ ifeq ("$(BUILDTYPE)","release")
   CUFLAGS += -O3 -g -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
-ifdef CNTK_CUDA_DEVICE_DEBUGINFO
+# ifdef CNTK_CUDA_DEVICE_DEBUGINFO
   CUFLAGS += -G
-endif
+# endif
 
 #######
 
