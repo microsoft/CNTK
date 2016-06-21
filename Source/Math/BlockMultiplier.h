@@ -19,7 +19,9 @@
 #include <vector>
 #include "MatrixUtil.h"
 #include "BlockHandlerSSE.h"
+#ifdef SUPPORT_AVX2
 #include "BlockHandlerAVX.h"
+#endif
 //#define STDTHREAD
 #define OPENMPTHREAD
 #ifdef STDTHREAD
@@ -510,6 +512,7 @@ template<typename BlockHandlerT> class BlockMultiplier
             return _mm_extract_epi32(res2, 0);
         }
 
+#ifdef SUPPORT_AVX2
         //Same as above, for AVX registers
         FORCEINLINE static __m256i my_adds_epi32(__m256i a, __m256i b)
         {
@@ -540,6 +543,7 @@ template<typename BlockHandlerT> class BlockMultiplier
             u.v = res3;
             return u.i[0];
         }
+#endif
 
 
         int m_numThreads;
@@ -578,7 +582,9 @@ template<typename BlockHandlerT> class BlockMultiplier
 
 // Instantiate block multipliers
 template<> const int BlockMultiplier<BlockHandlerSSE>::MAXRANGE;
+#ifdef SUPPORT_AVX2
 template<> const int BlockMultiplier<BlockHandlerAVX>::MAXRANGE;
+#endif
 
 
 template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::ScalarAT* BlockMultiplier<BlockHandlerT>::CreateMatrixA(int m, int n, ScalarAT initVal)
