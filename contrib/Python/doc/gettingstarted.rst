@@ -32,15 +32,16 @@ Installing the Python module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #. Go to ``<cntkpath>/contrib/Python`` and run ``python setup.py install``
 #. Set up the environment variable ``CNTK_EXECUTABLE_PATH`` to point to the
-   CNTK executable
+   CNTK executable. Make sure the executable is also included
 #. Enjoy Python's ease of use with CNTK's speed::
 
-    >>> import cntk as cn
-    >>> cn.__version__
-    1.4
-    >>> with cn.Context('demo', clean_up=False) as ctx:
-    ...     a = cn.constant([[1,2], [3,4]])
-    ...     print(ctx.eval(a + [[10,20], [30, 40]]))
+    >>> import cntk as C
+    >>> C.__version__
+    1.5
+    >>> with C.LocalExecutionContext('demo', clean_up=False) as ctx:
+    ...     a = C.constant([[1,2], [3,4]])
+    ...     i = C.input_numpy([[[10,20], [30, 40]]])
+    ...     print(ctx.eval(a + i))
     [[11.0, 22.0], [33.0, 44.0]]
 
 In this case, we have set ``clean_up=False`` so that you can now peek into the
@@ -71,46 +72,43 @@ explained::
     import cntk as C
     import numpy as np
 
-    def simple_network():
-        # 500 samples, 250-dimensional data
-        N = 500
-        d = 250
+    # 500 samples, 250-dimensional data
+    N = 500
+    d = 250
 
-        # create synthetic data using numpy
-        X = np.random.randn(N, d)
-        Y = np.random.randint(size=(N, 1), low=0, high=2)
-        Y = np.hstack((Y, 1-Y))
+    # create synthetic data using numpy
+    X = np.random.randn(N, d)
+    Y = np.random.randint(size=(N, 1), low=0, high=2)
+    Y = np.hstack((Y, 1-Y))
 
-        # set up the training data for CNTK
-        x = C.input_numpy(X, has_dynamic_axis=False)
-        y = C.input_numpy(Y, has_dynamic_axis=False)
+    # set up the training data for CNTK
+    x = C.input_numpy(X)
+    y = C.input_numpy(Y)
 
-        # define our network parameters: a weight tensor and a bias
-        W = C.parameter((2, d))
-        b = C.parameter((2, 1))
-		
-        # create a dense 'layer' by multiplying the weight tensor and  
-        # the features and adding the bias
-        out = C.times(W, x) + b
+    # define our network parameters: a weight tensor and a bias
+    W = C.parameter((d, 2))
+    b = C.parameter((1, 2))
 
-        # setup the criterion node using cross entropy with softmax
-        ce = C.cross_entropy_with_softmax(y, out, name='loss')
-        ce.tag = 'criterion'
+    # create a dense 'layer' by multiplying the weight tensor and  
+    # the features and adding the bias
+    out = C.times(x, W) + b
 
-        # define our SGD parameters and train!
-        my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-        with C.LocalExecutionContext('logreg') as ctx:
-            ctx.train(root_nodes=[ce], training_params=my_sgd)	        
-            print(ctx.test(root_nodes=[ce]))
+    # setup the criterion node using cross entropy with softmax
+    ce = C.cross_entropy_with_softmax(y, out, name='loss')
+    ce.tag = 'criterion'
+
+    # define our SGD parameters and train!
+    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
+    with C.LocalExecutionContext('logreg') as ctx:
+        ctx.train(root_nodes=[ce], training_params=my_sgd)
+        print(ctx.test(root_nodes=[ce]))
 
 
 In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
 one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
 by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
 in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
-access numpy data. Because dealing with dynamic axis data and sequences is where CNTK really shines, 
-the default input data has a dynamic axis defined. Since we're not dealing with dynamic axes here, we 
-set ``has_dynamic_axis`` to False.
+access numpy data.
 
 Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
 We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
@@ -151,7 +149,7 @@ on the right.
 .. figure:: images/nn_layers.png
     :width: 600px
     :alt: NN Layers
-	
+
 As is apparent from the figure above on the right, RNNs are the natural structure for 
 dealing with sequences. This includes everything from text to music to video; anything 
 where the current state is dependent on the previous state. While RNNs are indeed 
@@ -169,7 +167,7 @@ concentrate on the central feature of the LSTM model: the `memory cell`.
 .. figure:: images/lstm_cell.png
     :width: 400px
     :alt: LSTM cell
-	
+
     An LSTM cell.
 
 The LSTM cell is associated with three gates that control how information is stored / 
@@ -208,48 +206,49 @@ sequence classification. We can think of the network as adding a series of layer
 
 We can define this network as follows in the CNTK Python API::
 
-    import cntk as C
+import cntk as C
 
-    def seqcla():    
-        # model
-        num_labels = 5
-        vocab = 2000
-        embed_dim = 50    
-		
-        # LSTM params
-        input_dim = 50
-        output_dim = 128
-        cell_dim = 128
+def seqcla():
+    # model
+    num_labels = 5
+    vocab = 2000
+    embed_dim = 50
 
-        t = C.dynamic_axis(name='t')
-        # temporarily using cntk1 SpareInput because cntk2's input() will simply allow sparse as a parameter
-        features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')    
-        labels = C.input(num_labels, name='labels')
-   
-        train_reader = C.CNTKTextFormatReader(train_file)
+    # LSTM params
+    input_dim = 50
+    output_dim = 128
+    cell_dim = 128
 
-        # setup embedding matrix
-        embedding = C.parameter((embed_dim, vocab), 
-                                 learning_rate_multiplier=0.0, 
-                                 init_from_file_path=embedding_file)
+    t = C.dynamic_axis(name='t')
+    # temporarily using cntk1 SparseInput because cntk2's input() will simply allow sparse as a parameter
+    features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')
+    labels = C.input(num_labels, name='labels')
 
-        # get the vector representing the word
-        sequence = C.times(embedding, features, name='sequence')
-    
-        # add an LSTM layer
-        L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
-    
-        # add a dense layer on top
-        w = C.parameter((num_labels, output_dim), name='w')
-        b = C.parameter((num_labels), name='b')
-        z = C.plus(C.times(w, L), b, name='z')
-        z.tag = "output"
-    
-        # and reconcile the shared dynamic axis
-        pred = C.reconcile_dynamic_axis(z, labels, name='pred')    
-    
-        ce = C.cross_entropy_with_softmax(labels, pred)
-        ce.tag = "criterion"
+    train_reader = C.CNTKTextFormatReader(train_file)
+
+    # setup embedding matrix
+    embedding = C.parameter((embed_dim, vocab),
+                             learning_rate_multiplier=0.0,
+                             init_from_file_path=embedding_file)
+
+    # get the vector representing the word
+    sequence = C.times(embedding, features, name='sequence')
+
+    # add an LSTM layer
+    L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
+
+    # add a dense layer on top
+    w = C.parameter((num_labels, output_dim), name='w')
+    b = C.parameter((num_labels), name='b')
+    z = C.plus(C.times(w, L), b, name='z')
+    z.tag = "output"
+
+    # and reconcile the shared dynamic axis
+    pred = C.reconcile_dynamic_axis(z, labels, name='pred')
+
+    ce = C.cross_entropy_with_softmax(labels, pred)
+    ce.tag = "criterion"
+
 
 Let's go through some of the intricacies of the above network definition. First, we define 
 some parameters of the data and the network. We have 5 possible classes for the sequences; 
@@ -282,7 +281,7 @@ the criterion node that adds a softmax and then implements the cross entropy los
 we add the criterion node, however, we call :func:`cntk.ops.reconcile_dynamic_axis` which will ensure 
 that the minibatch layout for the labels and the data with dynamic axes is compatible.
 
-For the full explanation of how ``lstm_layer()`` is defined, please see the full example in the 
+For the full explanation of how ``lstm_layer()`` is defined, please see the full example (`seqcla.py <https://github.com/Microsoft/CNTK/blob/master/contrib/Python/cntk/examples/LSTM/seqcla.py>`_) in the 
 Examples section.
 
 How to pass Python data as train/test data

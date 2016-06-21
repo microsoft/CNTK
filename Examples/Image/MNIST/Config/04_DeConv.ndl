@@ -1,0 +1,60 @@
+# macros to include
+load = ndlMnistMacros
+
+# the actual NDL that defines the network
+run = DNN
+
+ndlMnistMacros = [
+    imageW = 28
+    imageH = 28
+    imageC = 1
+    labelDim = 10
+
+    features = ImageInput(imageW, imageH, imageC, imageLayout=$imageLayout$)
+    featScale = Constant(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = InputValue(labelDim)
+]
+
+DNN=[
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 16
+    hStride1 = 2
+    vStride1 = 2
+    wScale1 = 0.1
+    bValue1 = 0
+    # weight[cMap1, kW1 * kH1 * inputChannels]
+    # Conv2DReLULayer is defined in Macros.ndl
+    conv1 = Conv2DReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, wScale1, bValue1)
+    
+    # pool1
+    pool1W = 2
+    pool1H = 2
+    pool1hStride = 2
+    pool1vStride = 2
+    # MaxPooling is a standard NDL node.
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
+    
+    #unpool1
+    unpool1 = MaxUnpool(pool1, conv1, pool1W, pool1H, pool1hStride, pool1vStride)
+    
+    # deconv1
+    lpad1 = 2
+    upad1 = 1
+    # weight[cMap1, kW1 * kH1 * inputChannels]
+    # DeconvReLULayer is defined in Macros.ndl
+    deconv1 = DeconvReLULayer(unpool1, kW1, kH1, imageC, 25, cMap1, hStride1, vStride1, lpad1, upad1, wScale1, bValue1)
+ 
+    mse = SquareError(featScaled, deconv1)
+    #err = ErrorPrediction(labels, ol)
+
+    # Special Nodes
+    FeatureNodes = (features)
+    #LabelNodes = (labels)
+    CriterionNodes = (mse)
+    #EvalNodes = (err)
+    #OutputNodes = (deconv1)
+]
+
