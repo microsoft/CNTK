@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
 #pragma once
-#include "blockmultiplierplatform.h"
+#include "BlockMultiplierPlatform.h"
 #include <emmintrin.h>
 #include <cassert>
 #include <cstdint>

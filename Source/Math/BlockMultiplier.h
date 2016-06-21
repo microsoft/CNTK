@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
 #pragma once
-#include "platform.h"
+#include "BlockMultiplierPlatform.h"
 #include <malloc.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
