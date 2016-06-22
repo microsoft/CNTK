@@ -1,5 +1,8 @@
 #!/bin/bash
-
+# ----------------------------------------------------------
+# Copyright (c) Microsoft Corporation.  All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+# ----------------------------------------------------------
 # Helper script containing common code used by run-test scripts of E2E tests
 
 BinaryPath=$TEST_CNTK_BINARY
