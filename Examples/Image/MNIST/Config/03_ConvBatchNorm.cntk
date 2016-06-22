@@ -50,26 +50,22 @@ train = [
         #batchNormalizationTimeConstant=0 # Set through NDL
         batchNormalizationBlendTimeConstant=0:1#INF
     ]
-    
-    # Note: this reader crashes if randomization is turned on.
+
     reader = [
-        readerType = "UCIFastReader"
-        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
-        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
-        file = "$DataDir$/Train-28x28.txt"
-        
-        features = [
-            dim = 784
-            start = 1
+        readerType = "CNTKTextFormatReader"
+        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
         ]
-        
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
-        ]
-    ]    
+    ]
 ]
 
 #######################################
@@ -85,21 +81,19 @@ test = [
     NDLNetworkBuilder = [
         networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
     ]
-    
+
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/Test-28x28.txt"
-        
-        features = [
-            dim = 784
-            start = 1
-        ]
-        
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
         ]
     ]
 ]

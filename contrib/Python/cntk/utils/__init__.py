@@ -108,8 +108,7 @@ def dense_to_str(data):
 
 
 def sparse_to_str(data):
-    # return ' '.join('%s:%s'%(k,data[k]) for k in sorted(data.items()))
-    raise NotImplementedError
+    return ' '.join('%s:%s'%(k,v) for k,v in sorted(data.items()))
 
 
 def tensors_to_text_format(sample_idx, alias_tensor_map):
@@ -144,9 +143,11 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
                 if not isinstance(tensor, np.ndarray):
                     tensor = np.asarray(tensor)
                 to_str = dense_to_str
+            elif isinstance(tensor, list) and isinstance(tensor[0], dict):
+                to_str = sparse_to_str
             else:
                 raise ValueError(
-                    'expected a tensor, but got "%s"' % type(tensor))
+                    'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
 
             line.append('%s %s' % (alias, to_str(tensor[seq_idx])))
 
@@ -203,7 +204,7 @@ def is_tensor_list(data):
     a list of varying sized NumPy objects.
     '''
     is_list = isinstance(data, list)
-    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray)
+    return is_list and len(data) > 0 and isinstance(data[0], np.ndarray) 
 
 
 def get_temp_filename(directory=None):

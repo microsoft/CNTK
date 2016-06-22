@@ -35,7 +35,9 @@ public:
 
     size_t GetChunkSize() const { return m_chunkSizeBytes; }
 
-    unsigned int GetNumChunksToCache() const { return m_chunkCacheSize; }
+    bool ShouldKeepDataInMemory() const { return m_keepDataInMemory; }
+
+    bool IsInFrameMode() const { return m_frameMode; }
 
     ElementType GetElementType() const { return m_elementType; }
 
@@ -50,7 +52,8 @@ private:
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
     size_t m_chunkSizeBytes; // chunks size in bytes
-    unsigned int m_chunkCacheSize; // number of chunks to keep in the memory
+    bool m_keepDataInMemory; // if true the whole dataset is kept in memory
+    bool m_frameMode; // if true, the maximum expected sequence length in the dataset is one sample.
 };
 
 } } }

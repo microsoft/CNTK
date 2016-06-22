@@ -119,8 +119,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -207,8 +207,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -301,8 +301,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -375,8 +375,8 @@ MPI Rank 0:
 MPI Rank 0: Post-processing network...
 MPI Rank 0: 
 MPI Rank 0: 6 roots:
-MPI Rank 0: 	CE = CrossEntropyWithSoftmax()
-MPI Rank 0: 	Err = ErrorPrediction()
+MPI Rank 0: 	ce = CrossEntropyWithSoftmax()
+MPI Rank 0: 	err = ErrorPrediction()
 MPI Rank 0: 	ScaledLogLikelihood = Minus()
 MPI Rank 0: 	featNorm.invStdDevVector = InvStdDev()
 MPI Rank 0: 	featNorm.meanVector = Mean()
@@ -415,8 +415,8 @@ MPI Rank 0: Validating --> outLayer.in = Plus (finalHiddenToPlus, layers[2].Eh) 
 MPI Rank 0: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.in) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
 MPI Rank 0: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 0: Validating --> outLayer.z = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
-MPI Rank 0: Validating --> CE = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 0: Validating --> Err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> ce = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 0: Validating --> logPrior.x = Mean (labels) : [132 x *] -> [132]
 MPI Rank 0: Validating --> logPrior = Log (logPrior.x) : [132] -> [132]
 MPI Rank 0: Validating --> ScaledLogLikelihood = Minus (outLayer.z, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -435,18 +435,18 @@ MPI Rank 0:
 MPI Rank 0: 05/07/2016 10:06:24: Created model with 36 nodes on GPU 0.
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:24: Training criterion node(s):
-MPI Rank 0: 05/07/2016 10:06:24: 	CE = CrossEntropyWithSoftmax
+MPI Rank 0: 05/07/2016 10:06:24: 	ce = CrossEntropyWithSoftmax
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:24: Evaluation criterion node(s):
 MPI Rank 0: 
-MPI Rank 0: 05/07/2016 10:06:24: 	Err = ErrorPrediction
+MPI Rank 0: 05/07/2016 10:06:24: 	err = ErrorPrediction
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: 
 MPI Rank 0: Memory Sharing Structure:
 MPI Rank 0: 
-MPI Rank 0: 0000000000000000: {[Err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
+MPI Rank 0: 0000000000000000: {[err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
 MPI Rank 0: 0000008A43964330: {[labels Value[132 x *]] }
 MPI Rank 0: 0000008A5CCC7B00: {[link Value[1 x 1]] }
 MPI Rank 0: 0000008A5CCC7CA0: {[outLayer.B Value[132 x 1]] }
@@ -458,15 +458,15 @@ MPI Rank 0: 0000008A5CCC84C0: {[layers[3].Eh.activationVectorSequence.z.B Value[
 MPI Rank 0: 0000008A5CCC8590: {[logPrior.x Value[132]] }
 MPI Rank 0: 0000008A5CCC8660: {[ScaledLogLikelihood Value[132 x 1 x *]] }
 MPI Rank 0: 0000008A5CCC8800: {[layers[2].Eh.activationVectorSequence.z.W Value[512 x 512]] }
-MPI Rank 0: 0000008A5CCC88D0: {[CE Value[1]] }
-MPI Rank 0: 0000008A5CCC8F50: {[Err Value[1]] }
+MPI Rank 0: 0000008A5CCC88D0: {[ce Value[1]] }
+MPI Rank 0: 0000008A5CCC8F50: {[err Value[1]] }
 MPI Rank 0: 0000008A5CCC9020: {[features Value[363 x *]] }
 MPI Rank 0: 0000008A5CCC96A0: {[layers[3].Eh.activationVectorSequence.z.W Value[512 x 512]] }
 MPI Rank 0: 0000008A5CCC9770: {[layers[1].Eh.activationVectorSequence.z.W Value[512 x 363]] }
 MPI Rank 0: 0000008A5CCC9840: {[featNorm.meanVector Value[363]] }
 MPI Rank 0: 0000008A5CE4BDD0: {[finalHiddenToPlus Value[512 x 1 x *]] [layers[3].Eh.activationVectorSequence Gradient[512 x 1 x *]] [layers[3].Eh.activationVectorSequence.z.B Gradient[512 x 1]] }
 MPI Rank 0: 0000008A5CE4BEA0: {[layers[1].Eh.activationVectorSequence Gradient[512 x 1 x *]] [layers[1].Eh.activationVectorSequence.z.B Gradient[512 x 1]] [layers[2].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x 1 x *]] }
-MPI Rank 0: 0000008A5CE4BF70: {[CE Gradient[1]] }
+MPI Rank 0: 0000008A5CE4BF70: {[ce Gradient[1]] }
 MPI Rank 0: 0000008A5CE4C040: {[logPrior Value[132]] }
 MPI Rank 0: 0000008A5CE4C110: {[layers[2].Eh Gradient[512 x 1 x *]] [outLayer.z.PlusArgs[0] Gradient[132 x 1 x *]] }
 MPI Rank 0: 0000008A5CE4C1E0: {[outLayer.B Gradient[132 x 1]] }
@@ -512,15 +512,15 @@ MPI Rank 0: (GPU): creating curand object with seed 0
 MPI Rank 0: (GPU): creating curand object with seed 1
 MPI Rank 0: (GPU): creating curand object with seed 2
 MPI Rank 0: (GPU): creating curand object with seed 3
-MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[   1-  10, 12.50%]: CE = 4.67247429 * 2560; Err = 0.91679687 * 2560; time = 0.3522s; samplesPerSecond = 7268.3
-MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  11-  20, 25.00%]: CE = 7.26328850 * 2560; Err = 0.93593750 * 2560; time = 0.2896s; samplesPerSecond = 8841.0
-MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  21-  30, 37.50%]: CE = 6.03020859 * 2560; Err = 0.91210938 * 2560; time = 0.2878s; samplesPerSecond = 8896.3
-MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  31-  40, 50.00%]: CE = 4.97340546 * 2560; Err = 0.90976563 * 2560; time = 0.2924s; samplesPerSecond = 8756.1
-MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  41-  50, 62.50%]: CE = 4.19051819 * 2560; Err = 0.90781250 * 2560; time = 0.2883s; samplesPerSecond = 8878.4
-MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  51-  60, 75.00%]: CE = 4.06983948 * 2560; Err = 0.90937500 * 2560; time = 0.2880s; samplesPerSecond = 8887.5
-MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  61-  70, 87.50%]: CE = 3.99307861 * 2560; Err = 0.88554687 * 2560; time = 0.2955s; samplesPerSecond = 8664.3
-MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 1 of 5]-Minibatch[  71-  80, 100.00%]: CE = 3.97720337 * 2560; Err = 0.90039063 * 2560; time = 0.2809s; samplesPerSecond = 9112.8
-MPI Rank 0: 05/07/2016 10:06:42: Finished Epoch[ 1 of 5]: [Training] CE = 4.89625206 * 20480; Err = 0.90971680 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.001953125; epochTime=2.39584s
+MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[   1-  10, 12.50%]: ce = 4.67247429 * 2560; err = 0.91679687 * 2560; time = 0.3522s; samplesPerSecond = 7268.3
+MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  11-  20, 25.00%]: ce = 7.26328850 * 2560; err = 0.93593750 * 2560; time = 0.2896s; samplesPerSecond = 8841.0
+MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  21-  30, 37.50%]: ce = 6.03020859 * 2560; err = 0.91210938 * 2560; time = 0.2878s; samplesPerSecond = 8896.3
+MPI Rank 0: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  31-  40, 50.00%]: ce = 4.97340546 * 2560; err = 0.90976563 * 2560; time = 0.2924s; samplesPerSecond = 8756.1
+MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  41-  50, 62.50%]: ce = 4.19051819 * 2560; err = 0.90781250 * 2560; time = 0.2883s; samplesPerSecond = 8878.4
+MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  51-  60, 75.00%]: ce = 4.06983948 * 2560; err = 0.90937500 * 2560; time = 0.2880s; samplesPerSecond = 8887.5
+MPI Rank 0: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  61-  70, 87.50%]: ce = 3.99307861 * 2560; err = 0.88554687 * 2560; time = 0.2955s; samplesPerSecond = 8664.3
+MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 1 of 5]-Minibatch[  71-  80, 100.00%]: ce = 3.97720337 * 2560; err = 0.90039063 * 2560; time = 0.2809s; samplesPerSecond = 9112.8
+MPI Rank 0: 05/07/2016 10:06:42: Finished Epoch[ 1 of 5]: [Training] ce = 4.89625206 * 20480; err = 0.90971680 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.001953125; epochTime=2.39584s
 MPI Rank 0: 05/07/2016 10:06:42: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn.1'
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:42: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -531,15 +531,15 @@ MPI Rank 0: (GPU): creating curand object with seed 4
 MPI Rank 0: (GPU): creating curand object with seed 5
 MPI Rank 0: (GPU): creating curand object with seed 6
 MPI Rank 0: (GPU): creating curand object with seed 7
-MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: CE = 3.87928354 * 2560; Err = 0.88164062 * 2560; time = 0.3625s; samplesPerSecond = 7061.3
-MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: CE = 3.79525396 * 2560; Err = 0.86210937 * 2560; time = 0.2937s; samplesPerSecond = 8715.0
-MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: CE = 3.67996134 * 2560; Err = 0.83007813 * 2560; time = 0.2936s; samplesPerSecond = 8719.7
-MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  31-  40, 50.00%]: CE = 3.53738089 * 2560; Err = 0.81171875 * 2560; time = 0.2902s; samplesPerSecond = 8822.5
-MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  41-  50, 62.50%]: CE = 3.40502012 * 2560; Err = 0.79257813 * 2560; time = 0.2884s; samplesPerSecond = 8877.6
-MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  51-  60, 75.00%]: CE = 3.33775058 * 2560; Err = 0.80156250 * 2560; time = 0.2985s; samplesPerSecond = 8577.2
-MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  61-  70, 87.50%]: CE = 3.34249859 * 2560; Err = 0.80312500 * 2560; time = 0.2896s; samplesPerSecond = 8839.2
-MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  71-  80, 100.00%]: CE = 3.24363290 * 2560; Err = 0.80078125 * 2560; time = 0.2793s; samplesPerSecond = 9165.1
-MPI Rank 0: 05/07/2016 10:06:44: Finished Epoch[ 2 of 5]: [Training] CE = 3.52759774 * 20480; Err = 0.82294922 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=2.41866s
+MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.87928354 * 2560; err = 0.88164062 * 2560; time = 0.3625s; samplesPerSecond = 7061.3
+MPI Rank 0: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.79525396 * 2560; err = 0.86210937 * 2560; time = 0.2937s; samplesPerSecond = 8715.0
+MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.67996134 * 2560; err = 0.83007813 * 2560; time = 0.2936s; samplesPerSecond = 8719.7
+MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  31-  40, 50.00%]: ce = 3.53738089 * 2560; err = 0.81171875 * 2560; time = 0.2902s; samplesPerSecond = 8822.5
+MPI Rank 0: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  41-  50, 62.50%]: ce = 3.40502012 * 2560; err = 0.79257813 * 2560; time = 0.2884s; samplesPerSecond = 8877.6
+MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  51-  60, 75.00%]: ce = 3.33775058 * 2560; err = 0.80156250 * 2560; time = 0.2985s; samplesPerSecond = 8577.2
+MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  61-  70, 87.50%]: ce = 3.34249859 * 2560; err = 0.80312500 * 2560; time = 0.2896s; samplesPerSecond = 8839.2
+MPI Rank 0: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  71-  80, 100.00%]: ce = 3.24363290 * 2560; err = 0.80078125 * 2560; time = 0.2793s; samplesPerSecond = 9165.1
+MPI Rank 0: 05/07/2016 10:06:44: Finished Epoch[ 2 of 5]: [Training] ce = 3.52759774 * 20480; err = 0.82294922 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=2.41866s
 MPI Rank 0: 05/07/2016 10:06:44: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn.2'
 MPI Rank 0: Setting dropout rate to 0.15.
 MPI Rank 0: 
@@ -551,15 +551,15 @@ MPI Rank 0: (GPU): creating curand object with seed 8
 MPI Rank 0: (GPU): creating curand object with seed 9
 MPI Rank 0: (GPU): creating curand object with seed 10
 MPI Rank 0: (GPU): creating curand object with seed 11
-MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: CE = 3.26170050 * 2560; Err = 0.79531250 * 2560; time = 0.3272s; samplesPerSecond = 7825.0
-MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: CE = 3.19220469 * 2560; Err = 0.77187500 * 2560; time = 0.2916s; samplesPerSecond = 8780.5
-MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: CE = 3.15621898 * 2560; Err = 0.75664062 * 2560; time = 0.3118s; samplesPerSecond = 8211.5
-MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  31-  40, 50.00%]: CE = 3.14109590 * 2560; Err = 0.76875000 * 2560; time = 0.2911s; samplesPerSecond = 8794.0
-MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  41-  50, 62.50%]: CE = 3.03453835 * 2560; Err = 0.75000000 * 2560; time = 0.2857s; samplesPerSecond = 8961.0
-MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  51-  60, 75.00%]: CE = 3.03925939 * 2560; Err = 0.73632813 * 2560; time = 0.3009s; samplesPerSecond = 8507.9
-MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.98723174 * 2560; Err = 0.73203125 * 2560; time = 0.3235s; samplesPerSecond = 7913.4
-MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.88212406 * 2560; Err = 0.70703125 * 2560; time = 0.2819s; samplesPerSecond = 9080.5
-MPI Rank 0: 05/07/2016 10:06:47: Finished Epoch[ 3 of 5]: [Training] CE = 3.08679670 * 20480; Err = 0.75224609 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.001953125; epochTime=2.4378s
+MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.26170050 * 2560; err = 0.79531250 * 2560; time = 0.3272s; samplesPerSecond = 7825.0
+MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.19220469 * 2560; err = 0.77187500 * 2560; time = 0.2916s; samplesPerSecond = 8780.5
+MPI Rank 0: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.15621898 * 2560; err = 0.75664062 * 2560; time = 0.3118s; samplesPerSecond = 8211.5
+MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  31-  40, 50.00%]: ce = 3.14109590 * 2560; err = 0.76875000 * 2560; time = 0.2911s; samplesPerSecond = 8794.0
+MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  41-  50, 62.50%]: ce = 3.03453835 * 2560; err = 0.75000000 * 2560; time = 0.2857s; samplesPerSecond = 8961.0
+MPI Rank 0: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  51-  60, 75.00%]: ce = 3.03925939 * 2560; err = 0.73632813 * 2560; time = 0.3009s; samplesPerSecond = 8507.9
+MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.98723174 * 2560; err = 0.73203125 * 2560; time = 0.3235s; samplesPerSecond = 7913.4
+MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.88212406 * 2560; err = 0.70703125 * 2560; time = 0.2819s; samplesPerSecond = 9080.5
+MPI Rank 0: 05/07/2016 10:06:47: Finished Epoch[ 3 of 5]: [Training] ce = 3.08679670 * 20480; err = 0.75224609 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.001953125; epochTime=2.4378s
 MPI Rank 0: 05/07/2016 10:06:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn.3'
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:47: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -570,15 +570,15 @@ MPI Rank 0: (GPU): creating curand object with seed 12
 MPI Rank 0: (GPU): creating curand object with seed 13
 MPI Rank 0: (GPU): creating curand object with seed 14
 MPI Rank 0: (GPU): creating curand object with seed 15
-MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.84218213 * 2560; Err = 0.70703125 * 2560; time = 0.3299s; samplesPerSecond = 7760.3
-MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.76203617 * 2560; Err = 0.68359375 * 2560; time = 0.2910s; samplesPerSecond = 8797.9
-MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.71035615 * 2560; Err = 0.68710938 * 2560; time = 0.2899s; samplesPerSecond = 8830.3
-MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.67239624 * 2560; Err = 0.67148438 * 2560; time = 0.2890s; samplesPerSecond = 8858.5
-MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.58589350 * 2560; Err = 0.66015625 * 2560; time = 0.2900s; samplesPerSecond = 8829.0
-MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.55147338 * 2560; Err = 0.64218750 * 2560; time = 0.2933s; samplesPerSecond = 8729.6
-MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.50601685 * 2560; Err = 0.62812500 * 2560; time = 0.2894s; samplesPerSecond = 8846.7
-MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.50697868 * 2560; Err = 0.64257813 * 2560; time = 0.2830s; samplesPerSecond = 9044.4
-MPI Rank 0: 05/07/2016 10:06:49: Finished Epoch[ 4 of 5]: [Training] CE = 2.64216664 * 20480; Err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=2.37796s
+MPI Rank 0: 05/07/2016 10:06:47:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.84218213 * 2560; err = 0.70703125 * 2560; time = 0.3299s; samplesPerSecond = 7760.3
+MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.76203617 * 2560; err = 0.68359375 * 2560; time = 0.2910s; samplesPerSecond = 8797.9
+MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.71035615 * 2560; err = 0.68710938 * 2560; time = 0.2899s; samplesPerSecond = 8830.3
+MPI Rank 0: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.67239624 * 2560; err = 0.67148438 * 2560; time = 0.2890s; samplesPerSecond = 8858.5
+MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.58589350 * 2560; err = 0.66015625 * 2560; time = 0.2900s; samplesPerSecond = 8829.0
+MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.55147338 * 2560; err = 0.64218750 * 2560; time = 0.2933s; samplesPerSecond = 8729.6
+MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.50601685 * 2560; err = 0.62812500 * 2560; time = 0.2894s; samplesPerSecond = 8846.7
+MPI Rank 0: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.50697868 * 2560; err = 0.64257813 * 2560; time = 0.2830s; samplesPerSecond = 9044.4
+MPI Rank 0: 05/07/2016 10:06:49: Finished Epoch[ 4 of 5]: [Training] ce = 2.64216664 * 20480; err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=2.37796s
 MPI Rank 0: 05/07/2016 10:06:50: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn.4'
 MPI Rank 0: Setting dropout rate to 0.
 MPI Rank 0: 
@@ -586,15 +586,15 @@ MPI Rank 0: 05/07/2016 10:06:50: Starting Epoch 5: learning rate per sample = 0.
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:50: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
-MPI Rank 0: 05/07/2016 10:06:50:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.38464879 * 2560; Err = 0.61757812 * 2560; time = 0.2875s; samplesPerSecond = 8904.7
-MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.35397672 * 2560; Err = 0.61328125 * 2560; time = 0.2784s; samplesPerSecond = 9196.8
-MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.28461430 * 2560; Err = 0.58750000 * 2560; time = 0.2784s; samplesPerSecond = 9196.2
-MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.26420892 * 2560; Err = 0.59218750 * 2560; time = 0.2788s; samplesPerSecond = 9181.0
-MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.21201119 * 2560; Err = 0.58007813 * 2560; time = 0.2786s; samplesPerSecond = 9189.0
-MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.18520039 * 2560; Err = 0.59804687 * 2560; time = 0.2763s; samplesPerSecond = 9265.6
-MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.19160640 * 2560; Err = 0.59335938 * 2560; time = 0.2790s; samplesPerSecond = 9174.0
-MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.14408476 * 2560; Err = 0.58242187 * 2560; time = 0.2717s; samplesPerSecond = 9423.5
-MPI Rank 0: 05/07/2016 10:06:52: Finished Epoch[ 5 of 5]: [Training] CE = 2.25254393 * 20480; Err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.25888s
+MPI Rank 0: 05/07/2016 10:06:50:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.38464879 * 2560; err = 0.61757812 * 2560; time = 0.2875s; samplesPerSecond = 8904.7
+MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.35397672 * 2560; err = 0.61328125 * 2560; time = 0.2784s; samplesPerSecond = 9196.8
+MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.28461430 * 2560; err = 0.58750000 * 2560; time = 0.2784s; samplesPerSecond = 9196.2
+MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.26420892 * 2560; err = 0.59218750 * 2560; time = 0.2788s; samplesPerSecond = 9181.0
+MPI Rank 0: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.21201119 * 2560; err = 0.58007813 * 2560; time = 0.2786s; samplesPerSecond = 9189.0
+MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.18520039 * 2560; err = 0.59804687 * 2560; time = 0.2763s; samplesPerSecond = 9265.6
+MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.19160640 * 2560; err = 0.59335938 * 2560; time = 0.2790s; samplesPerSecond = 9174.0
+MPI Rank 0: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.14408476 * 2560; err = 0.58242187 * 2560; time = 0.2717s; samplesPerSecond = 9423.5
+MPI Rank 0: 05/07/2016 10:06:52: Finished Epoch[ 5 of 5]: [Training] ce = 2.25254393 * 20480; err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.25888s
 MPI Rank 0: 05/07/2016 10:06:52: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn'
 MPI Rank 0: 05/07/2016 10:06:52: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: 
@@ -657,8 +657,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -745,8 +745,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -839,8 +839,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -913,8 +913,8 @@ MPI Rank 1:
 MPI Rank 1: Post-processing network...
 MPI Rank 1: 
 MPI Rank 1: 6 roots:
-MPI Rank 1: 	CE = CrossEntropyWithSoftmax()
-MPI Rank 1: 	Err = ErrorPrediction()
+MPI Rank 1: 	ce = CrossEntropyWithSoftmax()
+MPI Rank 1: 	err = ErrorPrediction()
 MPI Rank 1: 	ScaledLogLikelihood = Minus()
 MPI Rank 1: 	featNorm.invStdDevVector = InvStdDev()
 MPI Rank 1: 	featNorm.meanVector = Mean()
@@ -953,8 +953,8 @@ MPI Rank 1: Validating --> outLayer.in = Plus (finalHiddenToPlus, layers[2].Eh) 
 MPI Rank 1: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.in) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
 MPI Rank 1: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 1: Validating --> outLayer.z = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
-MPI Rank 1: Validating --> CE = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 1: Validating --> Err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> ce = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 1: Validating --> logPrior.x = Mean (labels) : [132 x *] -> [132]
 MPI Rank 1: Validating --> logPrior = Log (logPrior.x) : [132] -> [132]
 MPI Rank 1: Validating --> ScaledLogLikelihood = Minus (outLayer.z, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -973,25 +973,25 @@ MPI Rank 1:
 MPI Rank 1: 05/07/2016 10:06:24: Created model with 36 nodes on GPU 0.
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:24: Training criterion node(s):
-MPI Rank 1: 05/07/2016 10:06:24: 	CE = CrossEntropyWithSoftmax
+MPI Rank 1: 05/07/2016 10:06:24: 	ce = CrossEntropyWithSoftmax
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:24: Evaluation criterion node(s):
 MPI Rank 1: 
-MPI Rank 1: 05/07/2016 10:06:24: 	Err = ErrorPrediction
+MPI Rank 1: 05/07/2016 10:06:24: 	err = ErrorPrediction
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: 
 MPI Rank 1: Memory Sharing Structure:
 MPI Rank 1: 
-MPI Rank 1: 0000000000000000: {[Err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
+MPI Rank 1: 0000000000000000: {[err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
 MPI Rank 1: 000000D2A3E27BE0: {[labels Value[132 x *]] }
 MPI Rank 1: 000000D2ADCEFC10: {[link Value[1 x 1]] }
-MPI Rank 1: 000000D2ADCEFCE0: {[CE Value[1]] }
+MPI Rank 1: 000000D2ADCEFCE0: {[ce Value[1]] }
 MPI Rank 1: 000000D2ADCEFE80: {[layers[1].Eh.activationVectorSequence.z.W Value[512 x 363]] }
 MPI Rank 1: 000000D2ADCEFF50: {[features Value[363 x *]] }
 MPI Rank 1: 000000D2ADCF0020: {[featNorm.meanVector Value[363]] }
-MPI Rank 1: 000000D2ADCF01C0: {[Err Value[1]] }
+MPI Rank 1: 000000D2ADCF01C0: {[err Value[1]] }
 MPI Rank 1: 000000D2ADCF0840: {[outLayer.B Value[132 x 1]] }
 MPI Rank 1: 000000D2ADCF0DF0: {[layers[3].Eh.activationVectorSequence.z.W Value[512 x 512]] }
 MPI Rank 1: 000000D2ADCF0EC0: {[layers[2].Eh.activationVectorSequence.z.B Value[512 x 1]] }
@@ -1017,7 +1017,7 @@ MPI Rank 1: 000000D2C622D770: {[layers[2].Eh.activationVectorSequence Gradient[5
 MPI Rank 1: 000000D2C622D840: {[layers[3].Eh Gradient[512 x 1 x *]] [outLayer.in Value[512 x 1 x *]] }
 MPI Rank 1: 000000D2C622D910: {[layers[2].Eh.activationVectorSequence Value[512 x 1 x *]] [layers[2].Eh.activationVectorSequence.z.z.PlusArgs[0] Gradient[512 x 1 x *]] }
 MPI Rank 1: 000000D2C622D9E0: {[logPrior Value[132]] }
-MPI Rank 1: 000000D2C622DB80: {[CE Gradient[1]] }
+MPI Rank 1: 000000D2C622DB80: {[ce Gradient[1]] }
 MPI Rank 1: 000000D2C622DC50: {[layers[1].Eh Value[512 x 1 x *]] }
 MPI Rank 1: 000000D2C622DD20: {[layers[1].Eh.activationVectorSequence Gradient[512 x 1 x *]] [layers[1].Eh.activationVectorSequence.z.B Gradient[512 x 1]] [layers[2].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x 1 x *]] }
 MPI Rank 1: 000000D2C622DDF0: {[layers[1].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x *]] }
@@ -1050,15 +1050,15 @@ MPI Rank 1: (GPU): creating curand object with seed 0
 MPI Rank 1: (GPU): creating curand object with seed 1
 MPI Rank 1: (GPU): creating curand object with seed 2
 MPI Rank 1: (GPU): creating curand object with seed 3
-MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[   1-  10, 12.50%]: CE = 4.67247429 * 2560; Err = 0.91679687 * 2560; time = 0.3529s; samplesPerSecond = 7254.7
-MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  11-  20, 25.00%]: CE = 7.26328850 * 2560; Err = 0.93593750 * 2560; time = 0.2884s; samplesPerSecond = 8875.3
-MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  21-  30, 37.50%]: CE = 6.03020859 * 2560; Err = 0.91210938 * 2560; time = 0.2893s; samplesPerSecond = 8849.4
-MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  31-  40, 50.00%]: CE = 4.97340546 * 2560; Err = 0.90976563 * 2560; time = 0.2924s; samplesPerSecond = 8754.8
-MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  41-  50, 62.50%]: CE = 4.19051819 * 2560; Err = 0.90781250 * 2560; time = 0.2884s; samplesPerSecond = 8877.1
-MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  51-  60, 75.00%]: CE = 4.06983948 * 2560; Err = 0.90937500 * 2560; time = 0.2881s; samplesPerSecond = 8886.5
-MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  61-  70, 87.50%]: CE = 3.99307861 * 2560; Err = 0.88554687 * 2560; time = 0.2942s; samplesPerSecond = 8702.8
-MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 1 of 5]-Minibatch[  71-  80, 100.00%]: CE = 3.97720337 * 2560; Err = 0.90039063 * 2560; time = 0.2812s; samplesPerSecond = 9105.4
-MPI Rank 1: 05/07/2016 10:06:42: Finished Epoch[ 1 of 5]: [Training] CE = 4.89625206 * 20480; Err = 0.90971680 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.001953125; epochTime=2.39567s
+MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[   1-  10, 12.50%]: ce = 4.67247429 * 2560; err = 0.91679687 * 2560; time = 0.3529s; samplesPerSecond = 7254.7
+MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  11-  20, 25.00%]: ce = 7.26328850 * 2560; err = 0.93593750 * 2560; time = 0.2884s; samplesPerSecond = 8875.3
+MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  21-  30, 37.50%]: ce = 6.03020859 * 2560; err = 0.91210938 * 2560; time = 0.2893s; samplesPerSecond = 8849.4
+MPI Rank 1: 05/07/2016 10:06:40:  Epoch[ 1 of 5]-Minibatch[  31-  40, 50.00%]: ce = 4.97340546 * 2560; err = 0.90976563 * 2560; time = 0.2924s; samplesPerSecond = 8754.8
+MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  41-  50, 62.50%]: ce = 4.19051819 * 2560; err = 0.90781250 * 2560; time = 0.2884s; samplesPerSecond = 8877.1
+MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  51-  60, 75.00%]: ce = 4.06983948 * 2560; err = 0.90937500 * 2560; time = 0.2881s; samplesPerSecond = 8886.5
+MPI Rank 1: 05/07/2016 10:06:41:  Epoch[ 1 of 5]-Minibatch[  61-  70, 87.50%]: ce = 3.99307861 * 2560; err = 0.88554687 * 2560; time = 0.2942s; samplesPerSecond = 8702.8
+MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 1 of 5]-Minibatch[  71-  80, 100.00%]: ce = 3.97720337 * 2560; err = 0.90039063 * 2560; time = 0.2812s; samplesPerSecond = 9105.4
+MPI Rank 1: 05/07/2016 10:06:42: Finished Epoch[ 1 of 5]: [Training] ce = 4.89625206 * 20480; err = 0.90971680 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.001953125; epochTime=2.39567s
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:42: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 2, with 1 datapasses
@@ -1068,15 +1068,15 @@ MPI Rank 1: (GPU): creating curand object with seed 24
 MPI Rank 1: (GPU): creating curand object with seed 25
 MPI Rank 1: (GPU): creating curand object with seed 26
 MPI Rank 1: (GPU): creating curand object with seed 27
-MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: CE = 3.87928354 * 2560; Err = 0.88164062 * 2560; time = 0.3676s; samplesPerSecond = 6964.8
-MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: CE = 3.79525396 * 2560; Err = 0.86210937 * 2560; time = 0.2938s; samplesPerSecond = 8714.1
-MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: CE = 3.67996134 * 2560; Err = 0.83007813 * 2560; time = 0.2936s; samplesPerSecond = 8718.1
-MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  31-  40, 50.00%]: CE = 3.53738089 * 2560; Err = 0.81171875 * 2560; time = 0.2902s; samplesPerSecond = 8821.6
-MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  41-  50, 62.50%]: CE = 3.40502012 * 2560; Err = 0.79257813 * 2560; time = 0.2884s; samplesPerSecond = 8876.1
-MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  51-  60, 75.00%]: CE = 3.33775058 * 2560; Err = 0.80156250 * 2560; time = 0.2985s; samplesPerSecond = 8576.4
-MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  61-  70, 87.50%]: CE = 3.34249859 * 2560; Err = 0.80312500 * 2560; time = 0.2897s; samplesPerSecond = 8837.7
-MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  71-  80, 100.00%]: CE = 3.24363290 * 2560; Err = 0.80078125 * 2560; time = 0.2794s; samplesPerSecond = 9164.1
-MPI Rank 1: 05/07/2016 10:06:44: Finished Epoch[ 2 of 5]: [Training] CE = 3.52759774 * 20480; Err = 0.82294922 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=2.41908s
+MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.87928354 * 2560; err = 0.88164062 * 2560; time = 0.3676s; samplesPerSecond = 6964.8
+MPI Rank 1: 05/07/2016 10:06:42:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.79525396 * 2560; err = 0.86210937 * 2560; time = 0.2938s; samplesPerSecond = 8714.1
+MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.67996134 * 2560; err = 0.83007813 * 2560; time = 0.2936s; samplesPerSecond = 8718.1
+MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  31-  40, 50.00%]: ce = 3.53738089 * 2560; err = 0.81171875 * 2560; time = 0.2902s; samplesPerSecond = 8821.6
+MPI Rank 1: 05/07/2016 10:06:43:  Epoch[ 2 of 5]-Minibatch[  41-  50, 62.50%]: ce = 3.40502012 * 2560; err = 0.79257813 * 2560; time = 0.2884s; samplesPerSecond = 8876.1
+MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  51-  60, 75.00%]: ce = 3.33775058 * 2560; err = 0.80156250 * 2560; time = 0.2985s; samplesPerSecond = 8576.4
+MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  61-  70, 87.50%]: ce = 3.34249859 * 2560; err = 0.80312500 * 2560; time = 0.2897s; samplesPerSecond = 8837.7
+MPI Rank 1: 05/07/2016 10:06:44:  Epoch[ 2 of 5]-Minibatch[  71-  80, 100.00%]: ce = 3.24363290 * 2560; err = 0.80078125 * 2560; time = 0.2794s; samplesPerSecond = 9164.1
+MPI Rank 1: 05/07/2016 10:06:44: Finished Epoch[ 2 of 5]: [Training] ce = 3.52759774 * 20480; err = 0.82294922 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=2.41908s
 MPI Rank 1: Setting dropout rate to 0.15.
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:44: Starting Epoch 3: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
@@ -1087,15 +1087,15 @@ MPI Rank 1: (GPU): creating curand object with seed 28
 MPI Rank 1: (GPU): creating curand object with seed 29
 MPI Rank 1: (GPU): creating curand object with seed 30
 MPI Rank 1: (GPU): creating curand object with seed 31
-MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: CE = 3.26170050 * 2560; Err = 0.79531250 * 2560; time = 0.3338s; samplesPerSecond = 7668.9
-MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: CE = 3.19220469 * 2560; Err = 0.77187500 * 2560; time = 0.2916s; samplesPerSecond = 8779.6
-MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: CE = 3.15621898 * 2560; Err = 0.75664062 * 2560; time = 0.3118s; samplesPerSecond = 8210.3
-MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  31-  40, 50.00%]: CE = 3.14109590 * 2560; Err = 0.76875000 * 2560; time = 0.2911s; samplesPerSecond = 8792.9
-MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  41-  50, 62.50%]: CE = 3.03453835 * 2560; Err = 0.75000000 * 2560; time = 0.2857s; samplesPerSecond = 8959.7
-MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  51-  60, 75.00%]: CE = 3.03925939 * 2560; Err = 0.73632813 * 2560; time = 0.3009s; samplesPerSecond = 8509.0
-MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.98723174 * 2560; Err = 0.73203125 * 2560; time = 0.3238s; samplesPerSecond = 7906.9
-MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.88212406 * 2560; Err = 0.70703125 * 2560; time = 0.2820s; samplesPerSecond = 9079.3
-MPI Rank 1: 05/07/2016 10:06:47: Finished Epoch[ 3 of 5]: [Training] CE = 3.08679670 * 20480; Err = 0.75224609 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.001953125; epochTime=2.43823s
+MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.26170050 * 2560; err = 0.79531250 * 2560; time = 0.3338s; samplesPerSecond = 7668.9
+MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.19220469 * 2560; err = 0.77187500 * 2560; time = 0.2916s; samplesPerSecond = 8779.6
+MPI Rank 1: 05/07/2016 10:06:45:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.15621898 * 2560; err = 0.75664062 * 2560; time = 0.3118s; samplesPerSecond = 8210.3
+MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  31-  40, 50.00%]: ce = 3.14109590 * 2560; err = 0.76875000 * 2560; time = 0.2911s; samplesPerSecond = 8792.9
+MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  41-  50, 62.50%]: ce = 3.03453835 * 2560; err = 0.75000000 * 2560; time = 0.2857s; samplesPerSecond = 8959.7
+MPI Rank 1: 05/07/2016 10:06:46:  Epoch[ 3 of 5]-Minibatch[  51-  60, 75.00%]: ce = 3.03925939 * 2560; err = 0.73632813 * 2560; time = 0.3009s; samplesPerSecond = 8509.0
+MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.98723174 * 2560; err = 0.73203125 * 2560; time = 0.3238s; samplesPerSecond = 7906.9
+MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 3 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.88212406 * 2560; err = 0.70703125 * 2560; time = 0.2820s; samplesPerSecond = 9079.3
+MPI Rank 1: 05/07/2016 10:06:47: Finished Epoch[ 3 of 5]: [Training] ce = 3.08679670 * 20480; err = 0.75224609 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.001953125; epochTime=2.43823s
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:47: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 2, with 1 datapasses
@@ -1105,30 +1105,30 @@ MPI Rank 1: (GPU): creating curand object with seed 32
 MPI Rank 1: (GPU): creating curand object with seed 33
 MPI Rank 1: (GPU): creating curand object with seed 34
 MPI Rank 1: (GPU): creating curand object with seed 35
-MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.84218213 * 2560; Err = 0.70703125 * 2560; time = 0.3352s; samplesPerSecond = 7638.2
-MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.76203617 * 2560; Err = 0.68359375 * 2560; time = 0.2910s; samplesPerSecond = 8796.7
-MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.71035615 * 2560; Err = 0.68710938 * 2560; time = 0.2902s; samplesPerSecond = 8820.2
-MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.67239624 * 2560; Err = 0.67148438 * 2560; time = 0.2887s; samplesPerSecond = 8866.5
-MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.58589350 * 2560; Err = 0.66015625 * 2560; time = 0.2900s; samplesPerSecond = 8828.0
-MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.55147338 * 2560; Err = 0.64218750 * 2560; time = 0.2933s; samplesPerSecond = 8728.4
-MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.50601685 * 2560; Err = 0.62812500 * 2560; time = 0.2894s; samplesPerSecond = 8845.7
-MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.50697868 * 2560; Err = 0.64257813 * 2560; time = 0.2831s; samplesPerSecond = 9043.9
-MPI Rank 1: 05/07/2016 10:06:49: Finished Epoch[ 4 of 5]: [Training] CE = 2.64216664 * 20480; Err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=2.37839s
+MPI Rank 1: 05/07/2016 10:06:47:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.84218213 * 2560; err = 0.70703125 * 2560; time = 0.3352s; samplesPerSecond = 7638.2
+MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.76203617 * 2560; err = 0.68359375 * 2560; time = 0.2910s; samplesPerSecond = 8796.7
+MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.71035615 * 2560; err = 0.68710938 * 2560; time = 0.2902s; samplesPerSecond = 8820.2
+MPI Rank 1: 05/07/2016 10:06:48:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.67239624 * 2560; err = 0.67148438 * 2560; time = 0.2887s; samplesPerSecond = 8866.5
+MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.58589350 * 2560; err = 0.66015625 * 2560; time = 0.2900s; samplesPerSecond = 8828.0
+MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.55147338 * 2560; err = 0.64218750 * 2560; time = 0.2933s; samplesPerSecond = 8728.4
+MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.50601685 * 2560; err = 0.62812500 * 2560; time = 0.2894s; samplesPerSecond = 8845.7
+MPI Rank 1: 05/07/2016 10:06:49:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.50697868 * 2560; err = 0.64257813 * 2560; time = 0.2831s; samplesPerSecond = 9043.9
+MPI Rank 1: 05/07/2016 10:06:49: Finished Epoch[ 4 of 5]: [Training] ce = 2.64216664 * 20480; err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=2.37839s
 MPI Rank 1: Setting dropout rate to 0.
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:50: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:50: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
-MPI Rank 1: 05/07/2016 10:06:50:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.38464879 * 2560; Err = 0.61757812 * 2560; time = 0.2911s; samplesPerSecond = 8792.7
-MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.35397672 * 2560; Err = 0.61328125 * 2560; time = 0.2803s; samplesPerSecond = 9134.1
-MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.28461430 * 2560; Err = 0.58750000 * 2560; time = 0.2782s; samplesPerSecond = 9203.0
-MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.26420892 * 2560; Err = 0.59218750 * 2560; time = 0.2792s; samplesPerSecond = 9170.3
-MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.21201119 * 2560; Err = 0.58007813 * 2560; time = 0.2786s; samplesPerSecond = 9187.8
-MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.18520039 * 2560; Err = 0.59804687 * 2560; time = 0.2760s; samplesPerSecond = 9274.4
-MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.19160640 * 2560; Err = 0.59335938 * 2560; time = 0.2791s; samplesPerSecond = 9173.3
-MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.14408476 * 2560; Err = 0.58242187 * 2560; time = 0.2720s; samplesPerSecond = 9411.1
-MPI Rank 1: 05/07/2016 10:06:52: Finished Epoch[ 5 of 5]: [Training] CE = 2.25254393 * 20480; Err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.25931s
+MPI Rank 1: 05/07/2016 10:06:50:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.38464879 * 2560; err = 0.61757812 * 2560; time = 0.2911s; samplesPerSecond = 8792.7
+MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.35397672 * 2560; err = 0.61328125 * 2560; time = 0.2803s; samplesPerSecond = 9134.1
+MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.28461430 * 2560; err = 0.58750000 * 2560; time = 0.2782s; samplesPerSecond = 9203.0
+MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.26420892 * 2560; err = 0.59218750 * 2560; time = 0.2792s; samplesPerSecond = 9170.3
+MPI Rank 1: 05/07/2016 10:06:51:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.21201119 * 2560; err = 0.58007813 * 2560; time = 0.2786s; samplesPerSecond = 9187.8
+MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.18520039 * 2560; err = 0.59804687 * 2560; time = 0.2760s; samplesPerSecond = 9274.4
+MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.19160640 * 2560; err = 0.59335938 * 2560; time = 0.2791s; samplesPerSecond = 9173.3
+MPI Rank 1: 05/07/2016 10:06:52:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.14408476 * 2560; err = 0.58242187 * 2560; time = 0.2720s; samplesPerSecond = 9411.1
+MPI Rank 1: 05/07/2016 10:06:52: Finished Epoch[ 5 of 5]: [Training] ce = 2.25254393 * 20480; err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.25931s
 MPI Rank 1: 05/07/2016 10:06:52: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:52: Action "train" complete.
@@ -1257,8 +1257,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1345,8 +1345,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1439,8 +1439,8 @@ MPI Rank 0:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 0:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 0:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 0:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 0:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 0:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 0:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 0:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
 MPI Rank 0:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1513,8 +1513,8 @@ MPI Rank 0:
 MPI Rank 0: Post-processing network...
 MPI Rank 0: 
 MPI Rank 0: 6 roots:
-MPI Rank 0: 	CE = CrossEntropyWithSoftmax()
-MPI Rank 0: 	Err = ErrorPrediction()
+MPI Rank 0: 	ce = CrossEntropyWithSoftmax()
+MPI Rank 0: 	err = ErrorPrediction()
 MPI Rank 0: 	ScaledLogLikelihood = Minus()
 MPI Rank 0: 	featNorm.invStdDevVector = InvStdDev()
 MPI Rank 0: 	featNorm.meanVector = Mean()
@@ -1553,8 +1553,8 @@ MPI Rank 0: Validating --> outLayer.in = Plus (finalHiddenToPlus, layers[2].Eh) 
 MPI Rank 0: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.in) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
 MPI Rank 0: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 0: Validating --> outLayer.z = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
-MPI Rank 0: Validating --> CE = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 0: Validating --> Err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> ce = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 0: Validating --> logPrior.x = Mean (labels) : [132 x *] -> [132]
 MPI Rank 0: Validating --> logPrior = Log (logPrior.x) : [132] -> [132]
 MPI Rank 0: Validating --> ScaledLogLikelihood = Minus (outLayer.z, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -1573,22 +1573,22 @@ MPI Rank 0:
 MPI Rank 0: 05/07/2016 10:06:58: Loaded model with 36 nodes on GPU 0.
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:58: Training criterion node(s):
-MPI Rank 0: 05/07/2016 10:06:58: 	CE = CrossEntropyWithSoftmax
+MPI Rank 0: 05/07/2016 10:06:58: 	ce = CrossEntropyWithSoftmax
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:06:58: Evaluation criterion node(s):
 MPI Rank 0: 
-MPI Rank 0: 05/07/2016 10:06:58: 	Err = ErrorPrediction
+MPI Rank 0: 05/07/2016 10:06:58: 	err = ErrorPrediction
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: 
 MPI Rank 0: Memory Sharing Structure:
 MPI Rank 0: 
-MPI Rank 0: 0000000000000000: {[Err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
+MPI Rank 0: 0000000000000000: {[err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
 MPI Rank 0: 000000819A7FA930: {[featNorm.invStdDevVector Value[363]] }
 MPI Rank 0: 00000081A459AC10: {[features Value[363 x *]] }
-MPI Rank 0: 00000081A459ACE0: {[Err Value[1]] }
-MPI Rank 0: 00000081A459ADB0: {[CE Value[1]] }
+MPI Rank 0: 00000081A459ACE0: {[err Value[1]] }
+MPI Rank 0: 00000081A459ADB0: {[ce Value[1]] }
 MPI Rank 0: 00000081A459AF50: {[layers[3].Eh.activationVectorSequence.z.B Value[512 x 1]] }
 MPI Rank 0: 00000081A459B290: {[labels Value[132 x *]] }
 MPI Rank 0: 00000081A459B360: {[layers[3].Eh.activationVectorSequence.z.W Value[512 x 512]] }
@@ -1617,7 +1617,7 @@ MPI Rank 0: 00000081BCFF5AB0: {[layers[3].Eh.activationVectorSequence Value[512 
 MPI Rank 0: 00000081BCFF5D20: {[finalHiddenToPlus.scalarScalingFactor Value[1 x 1]] }
 MPI Rank 0: 00000081BCFF5DF0: {[layers[1].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x *]] }
 MPI Rank 0: 00000081BCFF5EC0: {[layers[3].Eh.activationVectorSequence.z.z Gradient[512 x 1 x *]] }
-MPI Rank 0: 00000081BCFF6130: {[CE Gradient[1]] }
+MPI Rank 0: 00000081BCFF6130: {[ce Gradient[1]] }
 MPI Rank 0: 00000081BCFF63A0: {[featNorm Value[363 x *]] }
 MPI Rank 0: 00000081BCFF6470: {[outLayer.W Gradient[132 x 512]] [outLayer.z Value[132 x 1 x *]] }
 MPI Rank 0: 00000081BCFF6540: {[layers[2].Eh.activationVectorSequence.z.W Gradient[512 x 512]] [layers[2].Eh.activationVectorSequence.z.z Value[512 x 1 x *]] }
@@ -1641,15 +1641,15 @@ MPI Rank 0: (GPU): creating curand object with seed 12
 MPI Rank 0: (GPU): creating curand object with seed 13
 MPI Rank 0: (GPU): creating curand object with seed 14
 MPI Rank 0: (GPU): creating curand object with seed 15
-MPI Rank 0: 05/07/2016 10:07:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.84218213 * 2560; Err = 0.70703125 * 2560; time = 0.5391s; samplesPerSecond = 4749.0
-MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.76203617 * 2560; Err = 0.68359375 * 2560; time = 0.2931s; samplesPerSecond = 8734.4
-MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.71035615 * 2560; Err = 0.68710938 * 2560; time = 0.3002s; samplesPerSecond = 8528.6
-MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.67239624 * 2560; Err = 0.67148438 * 2560; time = 0.3128s; samplesPerSecond = 8183.3
-MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.58589350 * 2560; Err = 0.66015625 * 2560; time = 0.2988s; samplesPerSecond = 8567.9
-MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.55147338 * 2560; Err = 0.64218750 * 2560; time = 0.3001s; samplesPerSecond = 8529.9
-MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.50601685 * 2560; Err = 0.62812500 * 2560; time = 0.2931s; samplesPerSecond = 8735.4
-MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.50697868 * 2560; Err = 0.64257813 * 2560; time = 0.2887s; samplesPerSecond = 8866.4
-MPI Rank 0: 05/07/2016 10:07:04: Finished Epoch[ 4 of 5]: [Training] CE = 2.64216664 * 20480; Err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=6.06973s
+MPI Rank 0: 05/07/2016 10:07:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.84218213 * 2560; err = 0.70703125 * 2560; time = 0.5391s; samplesPerSecond = 4749.0
+MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.76203617 * 2560; err = 0.68359375 * 2560; time = 0.2931s; samplesPerSecond = 8734.4
+MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.71035615 * 2560; err = 0.68710938 * 2560; time = 0.3002s; samplesPerSecond = 8528.6
+MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.67239624 * 2560; err = 0.67148438 * 2560; time = 0.3128s; samplesPerSecond = 8183.3
+MPI Rank 0: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.58589350 * 2560; err = 0.66015625 * 2560; time = 0.2988s; samplesPerSecond = 8567.9
+MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.55147338 * 2560; err = 0.64218750 * 2560; time = 0.3001s; samplesPerSecond = 8529.9
+MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.50601685 * 2560; err = 0.62812500 * 2560; time = 0.2931s; samplesPerSecond = 8735.4
+MPI Rank 0: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.50697868 * 2560; err = 0.64257813 * 2560; time = 0.2887s; samplesPerSecond = 8866.4
+MPI Rank 0: 05/07/2016 10:07:04: Finished Epoch[ 4 of 5]: [Training] ce = 2.64216664 * 20480; err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=6.06973s
 MPI Rank 0: 05/07/2016 10:07:04: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn.4'
 MPI Rank 0: Setting dropout rate to 0.
 MPI Rank 0: 
@@ -1657,15 +1657,15 @@ MPI Rank 0: 05/07/2016 10:07:05: Starting Epoch 5: learning rate per sample = 0.
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: 05/07/2016 10:07:05: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
-MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.38464879 * 2560; Err = 0.61757812 * 2560; time = 0.2837s; samplesPerSecond = 9023.9
-MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.35397672 * 2560; Err = 0.61328125 * 2560; time = 0.2856s; samplesPerSecond = 8962.1
-MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.28461430 * 2560; Err = 0.58750000 * 2560; time = 0.2828s; samplesPerSecond = 9053.0
-MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.26420892 * 2560; Err = 0.59218750 * 2560; time = 0.2769s; samplesPerSecond = 9246.5
-MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.21201119 * 2560; Err = 0.58007813 * 2560; time = 0.2766s; samplesPerSecond = 9256.6
-MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.18520039 * 2560; Err = 0.59804687 * 2560; time = 0.2770s; samplesPerSecond = 9240.6
-MPI Rank 0: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.19160640 * 2560; Err = 0.59335938 * 2560; time = 0.2759s; samplesPerSecond = 9279.5
-MPI Rank 0: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.14408476 * 2560; Err = 0.58242187 * 2560; time = 0.2825s; samplesPerSecond = 9062.8
-MPI Rank 0: 05/07/2016 10:07:07: Finished Epoch[ 5 of 5]: [Training] CE = 2.25254393 * 20480; Err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.27123s
+MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.38464879 * 2560; err = 0.61757812 * 2560; time = 0.2837s; samplesPerSecond = 9023.9
+MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.35397672 * 2560; err = 0.61328125 * 2560; time = 0.2856s; samplesPerSecond = 8962.1
+MPI Rank 0: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.28461430 * 2560; err = 0.58750000 * 2560; time = 0.2828s; samplesPerSecond = 9053.0
+MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.26420892 * 2560; err = 0.59218750 * 2560; time = 0.2769s; samplesPerSecond = 9246.5
+MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.21201119 * 2560; err = 0.58007813 * 2560; time = 0.2766s; samplesPerSecond = 9256.6
+MPI Rank 0: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.18520039 * 2560; err = 0.59804687 * 2560; time = 0.2770s; samplesPerSecond = 9240.6
+MPI Rank 0: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.19160640 * 2560; err = 0.59335938 * 2560; time = 0.2759s; samplesPerSecond = 9279.5
+MPI Rank 0: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.14408476 * 2560; err = 0.58242187 * 2560; time = 0.2825s; samplesPerSecond = 9062.8
+MPI Rank 0: 05/07/2016 10:07:07: Finished Epoch[ 5 of 5]: [Training] ce = 2.25254393 * 20480; err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.27123s
 MPI Rank 0: 05/07/2016 10:07:07: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160507100420.537550\Speech\DNN_Dropout@debug_gpu/models/cntkSpeech.dnn'
 MPI Rank 0: 05/07/2016 10:07:07: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: 
@@ -1728,8 +1728,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1816,8 +1816,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1910,8 +1910,8 @@ MPI Rank 1:         link = Parameter(1, 1, init='fixedValue', value=1, learningR
 MPI Rank 1:         finalHiddenToPlus = Scale(Dropout(link), layers[L-1].Eh)
 MPI Rank 1:         outLayer = BFF(Plus(finalHiddenToPlus, layers[L-2].Eh), layerSizes[L], layerSizes[L-1])
 MPI Rank 1:         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-MPI Rank 1:         CE = trainingCriterion(labels, outZ, tag='criterion')
-MPI Rank 1:         Err = evalCriterion(labels, outZ, tag='evaluation')
+MPI Rank 1:         ce = trainingCriterion(labels, outZ, tag='criterion')
+MPI Rank 1:         err = evalCriterion(labels, outZ, tag='evaluation')
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
 MPI Rank 1:         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
@@ -1984,8 +1984,8 @@ MPI Rank 1:
 MPI Rank 1: Post-processing network...
 MPI Rank 1: 
 MPI Rank 1: 6 roots:
-MPI Rank 1: 	CE = CrossEntropyWithSoftmax()
-MPI Rank 1: 	Err = ErrorPrediction()
+MPI Rank 1: 	ce = CrossEntropyWithSoftmax()
+MPI Rank 1: 	err = ErrorPrediction()
 MPI Rank 1: 	ScaledLogLikelihood = Minus()
 MPI Rank 1: 	featNorm.invStdDevVector = InvStdDev()
 MPI Rank 1: 	featNorm.meanVector = Mean()
@@ -2024,8 +2024,8 @@ MPI Rank 1: Validating --> outLayer.in = Plus (finalHiddenToPlus, layers[2].Eh) 
 MPI Rank 1: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.in) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
 MPI Rank 1: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 1: Validating --> outLayer.z = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
-MPI Rank 1: Validating --> CE = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 1: Validating --> Err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> ce = CrossEntropyWithSoftmax (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> err = ErrorPrediction (labels, outLayer.z) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 1: Validating --> logPrior.x = Mean (labels) : [132 x *] -> [132]
 MPI Rank 1: Validating --> logPrior = Log (logPrior.x) : [132] -> [132]
 MPI Rank 1: Validating --> ScaledLogLikelihood = Minus (outLayer.z, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -2044,18 +2044,18 @@ MPI Rank 1:
 MPI Rank 1: 05/07/2016 10:06:58: Loaded model with 36 nodes on GPU 0.
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:58: Training criterion node(s):
-MPI Rank 1: 05/07/2016 10:06:58: 	CE = CrossEntropyWithSoftmax
+MPI Rank 1: 05/07/2016 10:06:58: 	ce = CrossEntropyWithSoftmax
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:06:58: Evaluation criterion node(s):
 MPI Rank 1: 
-MPI Rank 1: 05/07/2016 10:06:58: 	Err = ErrorPrediction
+MPI Rank 1: 05/07/2016 10:06:58: 	err = ErrorPrediction
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: 
 MPI Rank 1: Memory Sharing Structure:
 MPI Rank 1: 
-MPI Rank 1: 0000000000000000: {[Err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
+MPI Rank 1: 0000000000000000: {[err Gradient[1]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [featNorm Gradient[363 x *]] [featNorm.invStdDevVector Gradient[363]] [featNorm.meanVector Gradient[363]] [features Gradient[363 x *]] [finalHiddenToPlus.scalarScalingFactor Gradient[1 x 1]] [labels Gradient[132 x *]] [link Gradient[1 x 1]] [logPrior Gradient[132]] [logPrior.x Gradient[132]] }
 MPI Rank 1: 000000E0385A5370: {[featNorm.invStdDevVector Value[363]] }
 MPI Rank 1: 000000E057C40C50: {[layers[3].Eh.activationVectorSequence Value[512 x 1 x *]] [layers[3].Eh.activationVectorSequence.z.z.PlusArgs[0] Gradient[512 x 1 x *]] }
 MPI Rank 1: 000000E057C40D20: {[layers[1].Eh.activationVectorSequence Gradient[512 x 1 x *]] [layers[1].Eh.activationVectorSequence.z.B Gradient[512 x 1]] [layers[2].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x 1 x *]] }
@@ -2068,7 +2068,7 @@ MPI Rank 1: 000000E057C41880: {[featNorm Value[363 x *]] }
 MPI Rank 1: 000000E057C41950: {[layers[1].Eh.activationVectorSequence Value[512 x 1 x *]] [layers[1].Eh.activationVectorSequence.z.z.PlusArgs[0] Gradient[512 x *]] }
 MPI Rank 1: 000000E057C41A20: {[layers[2].Eh.activationVectorSequence Gradient[512 x 1 x *]] [layers[2].Eh.activationVectorSequence.z.B Gradient[512 x 1]] [layers[3].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x 1 x *]] }
 MPI Rank 1: 000000E057C41AF0: {[layers[3].Eh Value[512 x 1 x *]] }
-MPI Rank 1: 000000E057C41BC0: {[CE Gradient[1]] }
+MPI Rank 1: 000000E057C41BC0: {[ce Gradient[1]] }
 MPI Rank 1: 000000E057C41C90: {[outLayer.in Gradient[512 x 1 x *]] [outLayer.z Gradient[132 x 1 x *]] }
 MPI Rank 1: 000000E057C41D60: {[layers[1].Eh.activationVectorSequence.z.z.PlusArgs[0] Value[512 x *]] }
 MPI Rank 1: 000000E057C41E30: {[layers[1].Eh.activationVectorSequence.z.W Gradient[512 x 363]] [layers[1].Eh.activationVectorSequence.z.z Value[512 x 1 x *]] }
@@ -2092,10 +2092,10 @@ MPI Rank 1: 000000E057EB8540: {[outLayer.B Value[132 x 1]] }
 MPI Rank 1: 000000E057EB86E0: {[outLayer.W Value[132 x 512]] }
 MPI Rank 1: 000000E057EB8880: {[link Value[1 x 1]] }
 MPI Rank 1: 000000E057EB8950: {[layers[3].Eh.activationVectorSequence.z.B Value[512 x 1]] }
-MPI Rank 1: 000000E057EB8C90: {[Err Value[1]] }
+MPI Rank 1: 000000E057EB8C90: {[err Value[1]] }
 MPI Rank 1: 000000E057EB90A0: {[labels Value[132 x *]] }
 MPI Rank 1: 000000E057EB9170: {[ScaledLogLikelihood Value[132 x 1 x *]] }
-MPI Rank 1: 000000E057EB9310: {[CE Value[1]] }
+MPI Rank 1: 000000E057EB9310: {[ce Value[1]] }
 MPI Rank 1: 000000E057EB93E0: {[featNorm.meanVector Value[363]] }
 MPI Rank 1: 000000E057EB9C00: {[features Value[363 x *]] }
 MPI Rank 1: 000000E057EB9CD0: {[layers[1].Eh.activationVectorSequence.z.W Value[512 x 363]] }
@@ -2112,30 +2112,30 @@ MPI Rank 1: (GPU): creating curand object with seed 32
 MPI Rank 1: (GPU): creating curand object with seed 33
 MPI Rank 1: (GPU): creating curand object with seed 34
 MPI Rank 1: (GPU): creating curand object with seed 35
-MPI Rank 1: 05/07/2016 10:07:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.84218213 * 2560; Err = 0.70703125 * 2560; time = 0.9052s; samplesPerSecond = 2828.1
-MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.76203617 * 2560; Err = 0.68359375 * 2560; time = 0.2937s; samplesPerSecond = 8717.3
-MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.71035615 * 2560; Err = 0.68710938 * 2560; time = 0.3005s; samplesPerSecond = 8517.9
-MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.67239624 * 2560; Err = 0.67148438 * 2560; time = 0.3115s; samplesPerSecond = 8217.0
-MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.58589350 * 2560; Err = 0.66015625 * 2560; time = 0.2980s; samplesPerSecond = 8590.9
-MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.55147338 * 2560; Err = 0.64218750 * 2560; time = 0.3019s; samplesPerSecond = 8480.9
-MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.50601685 * 2560; Err = 0.62812500 * 2560; time = 0.2931s; samplesPerSecond = 8733.7
-MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.50697868 * 2560; Err = 0.64257813 * 2560; time = 0.2888s; samplesPerSecond = 8864.4
-MPI Rank 1: 05/07/2016 10:07:04: Finished Epoch[ 4 of 5]: [Training] CE = 2.64216664 * 20480; Err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=6.07019s
+MPI Rank 1: 05/07/2016 10:07:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.84218213 * 2560; err = 0.70703125 * 2560; time = 0.9052s; samplesPerSecond = 2828.1
+MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.76203617 * 2560; err = 0.68359375 * 2560; time = 0.2937s; samplesPerSecond = 8717.3
+MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.71035615 * 2560; err = 0.68710938 * 2560; time = 0.3005s; samplesPerSecond = 8517.9
+MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.67239624 * 2560; err = 0.67148438 * 2560; time = 0.3115s; samplesPerSecond = 8217.0
+MPI Rank 1: 05/07/2016 10:07:03:  Epoch[ 4 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.58589350 * 2560; err = 0.66015625 * 2560; time = 0.2980s; samplesPerSecond = 8590.9
+MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.55147338 * 2560; err = 0.64218750 * 2560; time = 0.3019s; samplesPerSecond = 8480.9
+MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.50601685 * 2560; err = 0.62812500 * 2560; time = 0.2931s; samplesPerSecond = 8733.7
+MPI Rank 1: 05/07/2016 10:07:04:  Epoch[ 4 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.50697868 * 2560; err = 0.64257813 * 2560; time = 0.2888s; samplesPerSecond = 8864.4
+MPI Rank 1: 05/07/2016 10:07:04: Finished Epoch[ 4 of 5]: [Training] ce = 2.64216664 * 20480; err = 0.66528320 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 0.001953125; epochTime=6.07019s
 MPI Rank 1: Setting dropout rate to 0.
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:07:05: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:07:05: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
-MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: CE = 2.38464879 * 2560; Err = 0.61757812 * 2560; time = 0.2887s; samplesPerSecond = 8868.4
-MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: CE = 2.35397672 * 2560; Err = 0.61328125 * 2560; time = 0.2857s; samplesPerSecond = 8959.4
-MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: CE = 2.28461430 * 2560; Err = 0.58750000 * 2560; time = 0.2831s; samplesPerSecond = 9042.0
-MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: CE = 2.26420892 * 2560; Err = 0.59218750 * 2560; time = 0.2762s; samplesPerSecond = 9269.7
-MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: CE = 2.21201119 * 2560; Err = 0.58007813 * 2560; time = 0.2769s; samplesPerSecond = 9243.8
-MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: CE = 2.18520039 * 2560; Err = 0.59804687 * 2560; time = 0.2771s; samplesPerSecond = 9239.0
-MPI Rank 1: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: CE = 2.19160640 * 2560; Err = 0.59335938 * 2560; time = 0.2762s; samplesPerSecond = 9268.4
-MPI Rank 1: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: CE = 2.14408476 * 2560; Err = 0.58242187 * 2560; time = 0.2819s; samplesPerSecond = 9081.6
-MPI Rank 1: 05/07/2016 10:07:07: Finished Epoch[ 5 of 5]: [Training] CE = 2.25254393 * 20480; Err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.27083s
+MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.38464879 * 2560; err = 0.61757812 * 2560; time = 0.2887s; samplesPerSecond = 8868.4
+MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.35397672 * 2560; err = 0.61328125 * 2560; time = 0.2857s; samplesPerSecond = 8959.4
+MPI Rank 1: 05/07/2016 10:07:05:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.28461430 * 2560; err = 0.58750000 * 2560; time = 0.2831s; samplesPerSecond = 9042.0
+MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  31-  40, 50.00%]: ce = 2.26420892 * 2560; err = 0.59218750 * 2560; time = 0.2762s; samplesPerSecond = 9269.7
+MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  41-  50, 62.50%]: ce = 2.21201119 * 2560; err = 0.58007813 * 2560; time = 0.2769s; samplesPerSecond = 9243.8
+MPI Rank 1: 05/07/2016 10:07:06:  Epoch[ 5 of 5]-Minibatch[  51-  60, 75.00%]: ce = 2.18520039 * 2560; err = 0.59804687 * 2560; time = 0.2771s; samplesPerSecond = 9239.0
+MPI Rank 1: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  61-  70, 87.50%]: ce = 2.19160640 * 2560; err = 0.59335938 * 2560; time = 0.2762s; samplesPerSecond = 9268.4
+MPI Rank 1: 05/07/2016 10:07:07:  Epoch[ 5 of 5]-Minibatch[  71-  80, 100.00%]: ce = 2.14408476 * 2560; err = 0.58242187 * 2560; time = 0.2819s; samplesPerSecond = 9081.6
+MPI Rank 1: 05/07/2016 10:07:07: Finished Epoch[ 5 of 5]: [Training] ce = 2.25254393 * 20480; err = 0.59555664 * 20480; totalSamplesSeen = 102400; learningRatePerSample = 0.001953125; epochTime=2.27083s
 MPI Rank 1: 05/07/2016 10:07:07: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: 
 MPI Rank 1: 05/07/2016 10:07:07: Action "train" complete.

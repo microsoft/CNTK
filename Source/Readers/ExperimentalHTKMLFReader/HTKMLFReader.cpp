@@ -27,9 +27,9 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     ConfigHelper config(readerConfig);
 
     config.GetDataNamesFromConfig(featureNames, labelNames, notused, notused);
-    if (featureNames.size() < 1 || labelNames.size() < 1)
+    if (featureNames.size() < 1)
     {
-        InvalidArgument("Network needs at least 1 feature and 1 label specified.");
+        InvalidArgument("Network needs at least 1 feature specified.");
     }
 
     CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
@@ -107,7 +107,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
 
     bool cleanse = readerConfig(L"checkData", false);
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
-    int verbosity = readerConfig(L"verbosity", 2);
+    int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
     // TODO: this should be bool. Change when config per deserializer is allowed.
@@ -184,7 +184,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             // Old config, the truncation length is specified as the minibatch size.
             // In this case the truncation size is mbSize
             // and the real minibatch size is truncation size * nbruttsineachrecurrentiter
-            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.");
+            fprintf(stderr, "Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.\n");
             truncationLength = minibatchSize;
             size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
             minibatchSize = numParallelSequences * truncationLength;

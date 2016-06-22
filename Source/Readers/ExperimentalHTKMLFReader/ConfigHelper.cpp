@@ -198,8 +198,16 @@ size_t ConfigHelper::GetRandomizationWindow()
 
 wstring ConfigHelper::GetRandomizer()
 {
-    // get the read method, defaults to "blockRandomize"
-    wstring randomizer(m_config(L"readMethod", L"blockRandomize"));
+    // Check (on the action) if we're writing (inputs only) or training/evaluating (inputs and outputs)
+    bool isActionWrite = wstring(m_config(L"action", L"")) == L"write";
+
+    // Get the read method, defaults to "blockRandomize".
+    wstring randomizer = m_config(L"readMethod", L"blockRandomize");
+
+    if (isActionWrite && randomizer != L"none")
+    {
+        InvalidArgument("'readMethod' must be 'none' for write action.");
+    }
 
     if (randomizer == L"blockRandomize" && GetRandomizationWindow() == randomizeNone)
     {

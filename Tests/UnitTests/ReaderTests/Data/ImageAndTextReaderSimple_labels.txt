@@ -1,0 +1,4 @@
+1 |labels 0:1
+2 |labels 1:1
+3 |labels 2:1
+4 |labels 3:1

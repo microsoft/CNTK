@@ -211,6 +211,83 @@ public:
 template class ElementTimesNode<float>;
 template class ElementTimesNode<double>;
 
+
+// ElementWise Sparse Multiplication
+template <class ElemType>
+class SparseElementTimesNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"SparseElementTimes";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SparseElementTimesNode);
+    SparseElementTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.DoMatrixElementProductOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseElementTimeNode");
+    }
+};
+
+template class SparseElementTimesNode<float>;
+template class SparseElementTimesNode<double>;
+
+
+// ElementWise Sparse ORX: output = (x>0 && y>0) ? x:0 
+template <class ElemType>
+class SparseElementAndXNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"SparseElementAndX";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SparseElementAndXNode);
+    SparseElementAndXNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.DoMatrixElementAndXOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseElementAndXNode");
+    }
+};
+
+template class SparseElementAndXNode<float>;
+template class SparseElementAndXNode<double>;
+
+
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
 // shared code of TimesNode and TransposeTimesNode (which transposes A)

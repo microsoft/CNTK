@@ -177,7 +177,9 @@ public:
             {
                 if (m_gradHeader == nullptr)
                 {
-                    m_gradHeader = DistGradHeader::Create(evalNodes.size());
+                    m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
+                        DistGradHeader::Destroy(ptr);
+                    });
                     m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false, m_traceLevel);
                 }
 
@@ -199,7 +201,7 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), 0);
                 noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -299,8 +301,8 @@ protected:
     MPIWrapperPtr m_mpi;
     bool m_enableDistributedMBReading;
 
-    shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
-    struct DistGradHeader* m_gradHeader;
+    std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
+    std::shared_ptr<struct DistGradHeader> m_gradHeader;
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)
 };

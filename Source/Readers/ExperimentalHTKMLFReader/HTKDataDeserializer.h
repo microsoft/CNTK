@@ -29,13 +29,13 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Get information about particular chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
 
     // Retrieves data for a chunk.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Gets sequence description by its key.
-    virtual void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
     class HTKChunk;
@@ -48,7 +48,7 @@ private:
     void InitializeAugmentationWindow(ConfigHelper& config);
 
     // Gets sequence by its chunk id and id inside the chunk.
-    void GetSequenceById(size_t chunkId, size_t id, std::vector<SequenceDataPtr>&);
+    void GetSequenceById(ChunkIdType chunkId, size_t id, std::vector<SequenceDataPtr>&);
 
     // Dimension of features.
     size_t m_dimension;
@@ -64,10 +64,11 @@ private:
 
     CorpusDescriptorPtr m_corpus;
 
+    // General configuration
     int m_verbosity;
 
     // Total number of frames.
-    size_t m_totalNumberOfFrames;
+    size_t m_totalNumberOfFrames = 0;
 
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
@@ -80,8 +81,8 @@ private:
     std::map<size_t, std::pair<size_t, size_t>> m_keyToChunkLocation;
 
     // Auxiliary data for checking against the data in the feature file.
-    unsigned int m_samplePeriod;
-    size_t m_ioFeatureDimension;
+    unsigned int m_samplePeriod = 0;
+    size_t m_ioFeatureDimension = 0;
     std::string m_featureKind;
 };
 

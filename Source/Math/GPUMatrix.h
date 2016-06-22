@@ -630,6 +630,7 @@ class SyncGuard
 {
     static bool DoSync()
     {
+//#undef NO_SYNC 
 #ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
         static bool do_sync = false;
 #else

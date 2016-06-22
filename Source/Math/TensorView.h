@@ -139,6 +139,9 @@ public:
     void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
     void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
+    void DoMatrixElementProductOf(const TensorView& a, const TensorView& b);
+    void DoMatrixElementAndXOf(const TensorView& a, const TensorView& b);
+    void SparseAssignCopyOf(const TensorView& a, const int RowOffset);
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
 
 private:

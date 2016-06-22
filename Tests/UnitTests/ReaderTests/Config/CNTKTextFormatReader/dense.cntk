@@ -9,7 +9,7 @@ deviceId = -1
         # (a sequence with a single sample) 
         file = "1x1_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         input = [
              features = [
@@ -28,7 +28,7 @@ deviceId = -1
         # Training file contains a single sequence with two samples
         file = "1x2_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         input = [
              features = [
@@ -47,7 +47,7 @@ deviceId = -1
         # Training file contains a single sequence with ten samples
         file = "1x10_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         input = [
              features = [
@@ -68,10 +68,10 @@ deviceId = -1
         # repeated 10 times, 
         file = "10x1_MI_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         chunkSizeInBytes = 50000 # ~ 1/2 input size
-        numChunksToCache = 1
+        keepDataInMemory = true
 
         input = [
 
@@ -123,7 +123,7 @@ deviceId = -1
         # Training file contains ten sequence with ten samples each
         file = "10x10_dense.txt"
 
-        randomize = "none"
+        randomize = false
 
         input = [
              features = [
@@ -144,10 +144,10 @@ deviceId = -1
         # BOM value.
         file = "100x1_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         chunkSizeInBytes = 10000 # ~ 3 full sequences (30 samples)
-        numChunksToCache = 5
+        keepDataInMemory = true
 
         input = [
 
@@ -172,10 +172,10 @@ MNIST = [
         readerType = "CNTKTextFormatReader"
         file = "MNIST_dense.txt"
 
-        randomize = "none"
+        randomize = false
 
         chunkSizeInBytes = 10000 # should be enough for ~ 10 samples.
-        numChunksToCache = 10
+        keepDataInMemory = true
 
         input = [
 
@@ -200,7 +200,7 @@ Simple = [
         readerType = "CNTKTextFormatReader"
         file = "Simple_dense.txt"
 
-        randomize = "none"
+        randomize = false
         
         input = [
 
@@ -227,7 +227,7 @@ Simple = [
         # Training file contains 50 sequence with *up to* 20 samples each
         file = "50x20_jagged_sequences_dense.txt"
 
-        randomize = "none"
+        randomize = false
 
         input = [
              features = [
@@ -247,7 +247,7 @@ Simple = [
         # in each of 3 inputs.
         file = "100x100x3_jagged_sequences_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         input = [
              features1 = [
@@ -277,7 +277,7 @@ Simple = [
         # in an input for each of 2 inputs
         file = "200x200x2_seq2seq_dense.txt"
 
-        randomize = "auto"
+        randomize = true
 
         input = [
              features1 = [
@@ -289,6 +289,64 @@ Simple = [
                 alias = "F1"
                 dim = 50
                 format = "dense"
+            ]
+        ]
+    ]
+]
+
+5x10_and_5x5_jagged = [
+    precision = "double"
+    reader = [
+        randomize = true
+        deserializers = [
+            [
+                type="CNTKTextFormatDeserializer"
+                module="CNTKTextFormatReader"
+                file="5x10_and_5x5_jagged.txt"
+                input=[
+                    features1 = [
+                        alias = "F0"
+                        dim = 10
+                        format = "dense"
+                    ]
+                    features2 = [
+                        alias = "F1"
+                        dim = 5
+                        format = "dense"
+                    ]
+                ]
+            ]
+        ]
+    ]
+]
+
+5x10_and_5x5_jagged_composite = [
+    precision = "double"
+    reader = [
+        randomize = true
+        deserializers = [
+            [
+                type="CNTKTextFormatDeserializer"
+                module="CNTKTextFormatReader"
+                file="5x10_jagged.txt"
+                input=[
+                    features1 = [
+                        alias = "F0"
+                        dim = 10
+                        format = "dense"
+                    ]
+                ]                
+            ]:[
+                type="CNTKTextFormatDeserializer"
+                module="CNTKTextFormatReader"
+                file="5x5_jagged.txt"
+                input=[
+                    features2 = [
+                        alias = "F1"
+                        dim = 5
+                        format = "dense"
+                    ]
+                ]
             ]
         ]
     ]

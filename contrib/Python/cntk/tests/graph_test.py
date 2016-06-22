@@ -45,12 +45,13 @@ def test_overload_types(root_node, expected):
 
 
 def test_overload_exception():
-    with pytest.raises(ValueError):
-        C(range(0, 10))[:]
+    c = C(list(range(0, 10)))
 
-    with pytest.raises(ValueError):
-        C(range(0, 10))[0:3:2]
+    with pytest.raises(TypeError):
+        c[:]
 
+    with pytest.raises(TypeError):
+        c[0:3:2]
 
 def _to_list(desc):
     return [line.strip() for line in desc.split('\n')]
