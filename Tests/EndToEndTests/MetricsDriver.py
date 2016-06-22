@@ -50,8 +50,8 @@ class Baseline:
     startCpuInfoIndex = baselineContent.find("CPU info:")
     endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
     cpuInfo = re.search("^CPU info:\s+"
-                        "CPU Model (Name:\s*.*)\s+"
-                        "(Hardware threads: \d+)\s+"
+                       "CPU Model (Name:\s*.*)\s+"                        
+                       "(Hardware threads: \d+)\s+"
                        "Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
     if cpuInfo is None:
       return
@@ -134,7 +134,7 @@ def getExamplesMetrics():
   for example in allExamples:    
     baselineListForExample = example.findBaselineFilesList() 
     six.print_("Example: " + example.fullName)   
-    for baseline in baselineListForExample:            
+    for baseline in baselineListForExample:        
       with open(baseline.fullPath, "r") as f:
         baselineContent = f.read()
         gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
