@@ -306,6 +306,15 @@ protected:
                                         m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
+    {
+        UNUSED(out);
+        UNUSED(poolIn);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for cuDNN engine.");
+    }
+
 private:
     using C = Consts<ElemType>;
 

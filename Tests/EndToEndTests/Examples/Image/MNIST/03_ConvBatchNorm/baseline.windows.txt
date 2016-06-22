@@ -420,29 +420,29 @@ Memory Sharing Structure:
 05/13/2016 08:16:58: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 303.7 samples
 
 05/13/2016 08:16:58: Starting minibatch loop.
-05/13/2016 08:17:02:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.17330922 * 16000; err = 0.05325000 * 16000; time = 4.3656s; samplesPerSecond = 3665.0
-05/13/2016 08:17:04:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.07897408 * 16000; err = 0.02456250 * 16000; time = 1.7980s; samplesPerSecond = 8899.0
-05/13/2016 08:17:06:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.06288062 * 16000; err = 0.02012500 * 16000; time = 1.7989s; samplesPerSecond = 8894.1
-05/13/2016 08:17:07: Finished Epoch[ 1 of 3]: [Training] ce = 0.09585953 * 60000; err = 0.02956667 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.015625; epochTime=9.34707s
+05/13/2016 08:17:02: Epoch[ 1 of 3]-Minibatch[1-500, 26.67%]: ce = 0.17330922 * 16000; errs = 5.325% * 16000; time = 4.3656s; samplesPerSecond = 3665.0
+05/13/2016 08:17:04: Epoch[ 1 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.07897408 * 16000; errs = 2.45625% * 16000; time = 1.7980s; samplesPerSecond = 8899.0
+05/13/2016 08:17:06: Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.06288062 * 16000; errs = 2.0125% * 16000; time = 1.7989s; samplesPerSecond = 8894.1
+05/13/2016 08:17:07: Finished Epoch[ 1 of 3]: [Training] ce = 0.09585953 * 60000; errs = 2.95667% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.015625; epochTime=9.34707s
 05/13/2016 08:17:07: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
 Setting batch normalization blend time constant to 1.#INF.
 
 05/13/2016 08:17:07: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 303.7 samples
 
 05/13/2016 08:17:07: Starting minibatch loop.
-05/13/2016 08:17:09:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.02381749 * 16000; err = 0.00700000 * 16000; time = 1.7975s; samplesPerSecond = 8901.2
-05/13/2016 08:17:11:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.02147904 * 16000; err = 0.00687500 * 16000; time = 1.7971s; samplesPerSecond = 8903.3
-05/13/2016 08:17:13:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.01875302 * 16000; err = 0.00581250 * 16000; time = 1.7965s; samplesPerSecond = 8906.1
-05/13/2016 08:17:14: Finished Epoch[ 2 of 3]: [Training] ce = 0.02042361 * 60000; err = 0.00626667 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=6.7551s
+05/13/2016 08:17:09: Epoch[ 2 of 3]-Minibatch[1-500, 26.67%]: ce = 0.02381749 * 16000; errs = 0.7% * 16000; time = 1.7975s; samplesPerSecond = 8901.2
+05/13/2016 08:17:11: Epoch[ 2 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.02147904 * 16000; errs = 0.6875% * 16000; time = 1.7971s; samplesPerSecond = 8903.3
+05/13/2016 08:17:13: Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.01875302 * 16000; errs = 0.58125% * 16000; time = 1.7965s; samplesPerSecond = 8906.1
+05/13/2016 08:17:14: Finished Epoch[ 2 of 3]: [Training] ce = 0.02042361 * 60000; errs = 0.626667% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=6.7551s
 05/13/2016 08:17:14: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.2'
 
 05/13/2016 08:17:14: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 303.7 samples
 
 05/13/2016 08:17:14: Starting minibatch loop.
-05/13/2016 08:17:16:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.01552748 * 16000; err = 0.00400000 * 16000; time = 1.7980s; samplesPerSecond = 8899.0
-05/13/2016 08:17:18:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.01295741 * 16000; err = 0.00356250 * 16000; time = 1.7961s; samplesPerSecond = 8908.2
-05/13/2016 08:17:20:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.01382423 * 16000; err = 0.00393750 * 16000; time = 1.7964s; samplesPerSecond = 8906.7
-05/13/2016 08:17:21: Finished Epoch[ 3 of 3]: [Training] ce = 0.01415997 * 60000; err = 0.00391667 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=6.75556s
+05/13/2016 08:17:16: Epoch[ 3 of 3]-Minibatch[1-500, 26.67%]: ce = 0.01552748 * 16000; errs = 0.4% * 16000; time = 1.7980s; samplesPerSecond = 8899.0
+05/13/2016 08:17:18: Epoch[ 3 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.01295741 * 16000; errs = 0.35625% * 16000; time = 1.7961s; samplesPerSecond = 8908.2
+05/13/2016 08:17:20: Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.01382423 * 16000; errs = 0.39375% * 16000; time = 1.7964s; samplesPerSecond = 8906.7
+05/13/2016 08:17:21: Finished Epoch[ 3 of 3]: [Training] ce = 0.01415997 * 60000; errs = 0.391667% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=6.75556s
 05/13/2016 08:17:21: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
 05/13/2016 08:17:21: CNTKCommandTrainEnd: train
 
@@ -572,8 +572,8 @@ Memory Sharing Structure:
 00000093D1CA6D40: {[h1.m Value[128 x 1]] }
 00000093D1CA6DE0: {[labels Value[10 x *1]] }
 
-05/13/2016 08:17:32: Final Results: Minibatch[1-313]: err = 0.00710000 * 10000; ce = 0.02063067 * 10000; perplexity = 1.02084496
+05/13/2016 08:17:32: Final Results: Minibatch[1-10]: errs = 0.71% * 10000; ce = 0.02063067 * 10000; perplexity = 1.02084496
 
 05/13/2016 08:17:32: Action "test" complete.
 
-05/13/2016 08:17:32: __COMPLETED__
+05/13/2016 08:17:32: __COMPLETED__

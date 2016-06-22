@@ -5,6 +5,9 @@
 // CNTKEval.cpp : Defines the exported functions for the CNTK DLL.
 //
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "stdafx.h"
 #define EVAL_EXPORTS // creating the exports here
 #include "Eval.h"
@@ -51,9 +54,9 @@ void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription
     config.Parse(networkDescription);
 
     std::vector<wstring> outputNodeNames;
-    m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNames);
+    this->m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNames);
     
-    if (m_net == nullptr)
+    if (this->m_net == nullptr)
     {
         LogicError("Unable to construct network from description");
     }
@@ -66,7 +69,7 @@ template <typename ElemType>
 void CNTKEvalBase<ElemType>::Destroy()
 {
     // cleanup everything
-    m_net.reset();
+    this->m_net.reset();
 }
 
 
@@ -96,14 +99,14 @@ extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval)
 template <typename ElemType>
 void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)
 {
-    if (m_net == NULL)
+    if (this->m_net == NULL)
     {
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
             iter->second = 0;
         return;
     }
 
-    const auto& outputNodes = m_net->OutputNodes();
+    const auto& outputNodes = this->m_net->OutputNodes();
     switch (nodeGroup)
     {
     case nodeInput:
@@ -113,7 +116,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
             LogicError("No Output nodes found: Cannot determine Input node dimensions due to lack of Output nodes.\n(are 'outputNodeNames' and/or 'OutputNodes' properly defined in the configuration file?)");
         }
 
-        auto& nodes = m_net->InputNodes(outputNodes[0]);
+        auto& nodes = this->m_net->InputNodes(outputNodes[0]);
         for (auto& node : nodes)
         {
             std::wstring name = node->NodeName();
@@ -136,7 +139,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     case nodeSpecified:
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
         {
-            auto node = m_net->GetNodeFromName(iter->first);
+            auto node = this->m_net->GetNodeFromName(iter->first);
             iter->second = node->GetSampleMatrixNumRows();
         }
         break;
@@ -148,7 +151,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
 template <typename ElemType>
 void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNodeName)
 {
-    m_net->StartEvaluateMinibatchLoop(m_net->GetNodeFromName(outputNodeName));
+    this->m_net->StartEvaluateMinibatchLoop(this->m_net->GetNodeFromName(outputNodeName));
 }
 
 // Evaluate - Evalute using the model with the given inputs and outputs
@@ -157,12 +160,12 @@ void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNo
 template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
-    size_t minibatchSize = m_config(L"minibatchSize", (size_t) 10240);
+    size_t minibatchSize = this->m_config(L"minibatchSize", (size_t) 10240);
     // get the evaluation names from the output string
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
-    // config["deviceId"] = to_string(m_net->GetDeviceId());
+    // config["deviceId"] = to_string(this->m_net->GetDeviceId());
 
     // create the reader if necessary
     if (m_reader == nullptr)
@@ -185,7 +188,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
-    SimpleOutputWriter<ElemType> eval(m_net);
+    SimpleOutputWriter<ElemType> eval(this->m_net);
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
 }
 
@@ -210,7 +213,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
-    SimpleOutputWriter<ElemType> eval(m_net);
+    SimpleOutputWriter<ElemType> eval(this->m_net);
     eval.WriteOutput(*m_writer, outNodeNames);
 }
 
@@ -252,12 +255,12 @@ VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNod
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::StartForwardEvaluation(const std::vector<wstring>& outputNodeNames)
 {
-    m_scopedNetworkOperationMode = make_shared<ScopedNetworkOperationMode>(m_net, NetworkOperationMode::inferring);
-    m_outputNodes  = m_net->OutputNodesByName(outputNodeNames);
-    m_inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
+    m_scopedNetworkOperationMode = make_shared<ScopedNetworkOperationMode>(this->m_net, NetworkOperationMode::inferring);
+    m_outputNodes  = this->m_net->OutputNodesByName(outputNodeNames);
+    m_inputNodes = this->m_net->InputNodesForOutputs(outputNodeNames);
     // allocate memory for forward computation
-    m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
-    m_net->StartEvaluateMinibatchLoop(m_outputNodes);
+    this->m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
+    this->m_net->StartEvaluateMinibatchLoop(m_outputNodes);
     m_inputMatrices = DataReaderHelpers::RetrieveInputMatrices(m_inputNodes);
 
     for (const auto& node : m_outputNodes)
@@ -274,7 +277,7 @@ template<typename ElemType>
 VariableSchema CNTKEvalExtended<ElemType>::GetOutputSchema() const
 {
     VariableSchema schema;
-    auto& nodes = m_started ? m_outputNodes : m_net->OutputNodes();
+    auto& nodes = m_started ? m_outputNodes : this->m_net->OutputNodes();
     for (const auto& n : nodes)
     {
         schema.push_back(ToVariableLayout(n));
@@ -290,7 +293,7 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
     if (nodes.size() == 0)
     {
         // Default to all nodes
-        nodes = m_net->InputNodesForOutputs({});
+        nodes = this->m_net->InputNodesForOutputs({});
     }
 
     for (const auto& n : nodes)
@@ -301,7 +304,8 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 }
 
 template<typename ElemType>
-void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
+template<template<typename> class ValueContainer>
+void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs)
 {
     if (!m_started)
         RuntimeError("ForwardPass() called before StartForwardEvaluation()");
@@ -315,15 +319,18 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
     size_t i = 0;
     for (auto& input : m_inputMatrices)
     {
-        ValueBuffer<ElemType> buffer = inputs[i];
+        // const cast: The matrix class takes this over without copying and could theoretically change the contents,
+        // though it doesn't in this case.
+        auto& buffer = const_cast<ValueBuffer<ElemType, ValueContainer>&>(inputs[i]);
         shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
         auto type = matrix->GetMatrixType();
-        int numRows = input.second.sampleLayout.GetNumElements();
+        size_t numRows = input.second.sampleLayout.GetNumElements();
 
         if (type == MatrixType::DENSE)
         {
             if (buffer.m_buffer.size() % numRows != 0)
-                RuntimeError("Input %ls: Expected input data to be a multiple of %ld, but it is %ld", m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
+                RuntimeError("Input %ls: Expected input data to be a multiple of %" PRIu64 ", but it is %" PRIu64 ".", 
+                             m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
             if (buffer.m_buffer.size() == 0)
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
         }
@@ -333,38 +340,39 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[0] != 0)
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
-            if (buffer.m_colIndices[buffer.m_colIndices.size()-1] != buffer.m_indices.size())
-                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
+            if (buffer.m_colIndices[buffer.m_colIndices.size() - 1] != buffer.m_indices.size())
+                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", 
+                             m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), 
+                             buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
         }
 
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
         assert(numCols >= 1);
         input.second.pMBLayout->Init(1, numCols);
         input.second.pMBLayout->AddSequence(0, 0, 0, numCols);
-       
+
         if (type == MatrixType::DENSE)
-        {
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
-        }
         else if (type == MatrixType::SPARSE)
         {
             // In the sparse case the m_data layout is identical to CUDA's CSC layout
             // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
-            matrix->SetMatrixFromCSCFormat(buffer.m_colIndices.data(), buffer.m_indices.data(), buffer.m_buffer.data(), buffer.m_buffer.size(), numRows, numCols);
+            matrix->SetMatrixFromCSCFormat(buffer.m_colIndices.data(), buffer.m_indices.data(), buffer.m_buffer.data(),
+                                           buffer.m_buffer.size(), numRows, numCols);
         }
 
         ++i;
     }
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
-    
+
     for (size_t i = 0; i < m_outputNodes.size(); ++i)
     {
         auto node = m_outputNodes[i];
-        m_net->ForwardProp(node);
+        this->m_net->ForwardProp(node);
         shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
-        if (!pMBLayout) 
+        if (!pMBLayout)
         {
             pMBLayout = make_shared<MBLayout>();
             pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
@@ -372,12 +380,10 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
 
         const auto& seq = pMBLayout->GetAllSequences();
         if (seq.size() != 1)
-        {
             RuntimeError("Only 1 output sequence supported by this API");
-        }
 
-        std::vector<ElemType>& vec = outputs[i].m_buffer;
-        
+        ValueContainer<ElemType>& vec = outputs[i].m_buffer;
+
         size_t numElements = outputMatrix->GetNumElements();
 
         if (vec.capacity() < numElements)
@@ -390,6 +396,18 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
         ElemType* data = const_cast<ElemType*>(vec.data());
         outputMatrix->CopyToArray(data, numElements);
     }
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
+{
+    ForwardPassT(inputs, outputs);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs)
+{
+    ForwardPassT(inputs, outputs);
 }
 
 template <typename ElemType>

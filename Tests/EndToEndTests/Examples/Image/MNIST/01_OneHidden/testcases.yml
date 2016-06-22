@@ -21,8 +21,7 @@ testCases:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
       - ce = {{float,tolerance=.1%}} * {{integer}}
-      - errTop1 = {{float,tolerance=.1%}} * {{integer}}
-      - err = {{float,tolerance=.1%}} * {{integer}}
+      - errs = {{float,tolerance=.1%}}% * {{integer}}
       - totalSamplesSeen = {{integer}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
@@ -30,12 +29,11 @@ testCases:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - ce = {{float,tolerance=.1%}} * {{integer}}
-      - errTop1 = {{float,tolerance=.1%}} * {{integer}}
-      - err = {{float,tolerance=.1%}} * {{integer}}
+      - errs = {{float,tolerance=.1%}}% * {{integer}}
 
   Final test results must match:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - errTop1 = {{float,tolerance=.1%}} * {{integer}}
-      - err = {{float,tolerance=.1%}} * {{integer}}
+      - top5Errs = {{float,tolerance=.1%}}% * {{integer}}
+      - errs = {{float,tolerance=.1%}}% * {{integer}}
       - ce = {{float,tolerance=.1%}} * {{integer}}

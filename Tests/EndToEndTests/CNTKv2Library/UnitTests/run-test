@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/V2LibraryTests.exe || exit $?
+else
+  $TEST_BIN_DIR/v2librarytests || exit $?
+fi

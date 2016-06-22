@@ -10,7 +10,6 @@ OutputDir = "$RootDir$/Output"
 ModelDir  = "$OutputDir$/Models"
 
 deviceId = 0
-imageLayout = "cudnn"
 # Note: Batch normalization training on CPU is not yet implemented.
 # When it is, override the above as follows when running on CPU:
 # deviceId = -1
@@ -19,7 +18,6 @@ command = train:test
 
 precision = "float"
 modelPath = "$ModelDir$/03_ConvBatchNorm"
-ndlMacros = "$ConfigDir$/Macros.ndl"
 
 # uncomment the following line to write logs to a file 
 # stderr = "$OutputDir$/03_ConvBatchNorm_out"
@@ -28,7 +26,6 @@ traceLevel=1
 numMBsToShowResult=500
 
 # If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -38,6 +35,9 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly=true
+        ndlMacros = "$ConfigDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
     ]
     
@@ -47,7 +47,6 @@ train = [
         learningRatesPerMB = 0.5:0.1
         momentumPerMB = 0.9
         maxEpochs = 2
-        #batchNormalizationTimeConstant=0 # Set through NDL
         batchNormalizationBlendTimeConstant=0:1#INF
     ]
 
@@ -74,13 +73,9 @@ train = [
 
 test = [
     action = "test"
-    minibatchSize = 32
+    minibatchSize = 1024
 
     modelPath=$ModelDir$/03_ConvBatchNorm
-
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/03_ConvBatchNorm.ndl"
-    ]
 
     reader = [
         readerType = "CNTKTextFormatReader"
