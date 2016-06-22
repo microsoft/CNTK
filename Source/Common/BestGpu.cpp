@@ -548,7 +548,7 @@ std::vector<GpuData> GetGpusData()
 
             string gpuName(pd->deviceProp.name);
             gpuData.m_name = gpuName;
-            gpuData.m_totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
+            gpuData.m_totalMemory = (int) pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
             data.push_back(gpuData);
          }
     }

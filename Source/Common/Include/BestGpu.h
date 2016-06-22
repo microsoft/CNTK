@@ -25,7 +25,7 @@ struct GpuData
     int m_deviceId;
     int m_cudaCores;
     string m_name;
-    size_t m_totalMemory;
+    int m_totalMemory;
 };
 
 std::vector<GpuData> GetGpusData();

@@ -6,7 +6,7 @@
 # This script extracts information (hardware used, final results) contained in the baselines files
 # and generates a markdown file (wiki page)
 
-import sys, os, csv, traceback, re
+import sys, os, re
 import TestDriver as td
 
 try:
