@@ -2024,12 +2024,12 @@ template class LogisticNode<float>;
 template class LogisticNode<double>;
 
 // -----------------------------------------------------------------------
-// DropoutNode (input) -- perform drop-out
+// DropoutNode (input, dropOutRate) -- perform drop-out
 // Output is scaled such that no post-scaling is necessary.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
+class DropoutNode : public ComputationNode<ElemType>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -2039,10 +2039,11 @@ class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(DropoutNode);
+    DeclareConstructorFromConfig(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_dropoutRate(0)
+          m_dropoutRate(0),
+          m_hasUpdatedDropoutRate(false)
     {
         m_randomSeed = (unsigned long) CreateUniqId();
     }
@@ -2052,6 +2053,7 @@ public:
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
+        UpdateDropoutRate();
         if (m_dropoutRate > 0)
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
         else
@@ -2064,6 +2066,7 @@ public:
     virtual void UpdateFunctionMBSize() override
     {
         Base::UpdateFunctionMBSize();
+        UpdateDropoutRate();
         // resize temporaries to their proper size
         if (m_dropoutRate > 0)
             m_maskOfDropout->Resize(Input(0)->Value());
@@ -2073,7 +2076,8 @@ public:
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
+        
+        UpdateDropoutRate();
         if (Environment().IsInferring() || m_dropoutRate <= 0)
         {
             sliceOutputValue.SetValue(sliceInput0Value);
@@ -2090,7 +2094,39 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateUnaryMap(isFinalValidationPass);
+        if (m_inputs.size() != 1 && m_inputs.size() != 2)
+            InvalidArgument("%ls %ls operation requires one or two inputs.", NodeName().c_str(), OperationName().c_str());
+
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        SetDims(Input(0));
+    }
+
+    void UpdateDropoutRate() 
+    {
+        if (m_hasUpdatedDropoutRate)
+        {
+            return;
+        }
+
+        m_hasUpdatedDropoutRate = true;
+
+        // effective dropout rate, use the node parameter to override global if existing.
+        if (m_inputs.size() == 2)
+        {
+            ElemType dropoutRate = (ElemType)(Input(1)->Value().Get00Element());
+            if (dropoutRate < 0 || dropoutRate >= 1)
+            {
+                LogicError("DropoutRate must be >= 0 and < 1.");
+            }
+            
+            printf("dropoutRate=%f\r\n", dropoutRate);
+
+            if (dropoutRate > 0)
+            {
+                m_dropoutRate = (ElemType)dropoutRate;
+            }
+        }
     }
 
     // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
@@ -2099,6 +2135,7 @@ public:
         if (val < 0 || val >= 1)
             LogicError("DropoutRate must be >= 0 and < 1.");
         m_dropoutRate = val;
+        m_hasUpdatedDropoutRate = false;
     }
 
     void SetRandomSeed(const unsigned long val)
@@ -2145,6 +2182,7 @@ public:
 
 private:
     double m_dropoutRate;
+    bool m_hasUpdatedDropoutRate;
     unsigned long m_randomSeed;
     std::shared_ptr<RNGHandle> m_RNGHandle;
 
