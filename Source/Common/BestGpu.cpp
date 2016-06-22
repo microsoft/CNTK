@@ -545,6 +545,10 @@ std::vector<GpuData> GetGpusData()
             gpuData.m_minor = pd->deviceProp.minor;
             gpuData.m_cudaCores = pd->cores;
             gpuData.m_deviceId = pd->deviceId;
+
+            string gpuName(pd->deviceProp.name);
+            gpuData.m_name = gpuName;
+            gpuData.m_totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
             data.push_back(gpuData);
          }
     }

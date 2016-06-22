@@ -15,6 +15,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects { struct IConf
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using namespace std;
+
 #ifndef CPUONLY
 struct GpuData
 {
@@ -22,6 +24,8 @@ struct GpuData
     int m_minor;
     int m_deviceId;
     int m_cudaCores;
+    string m_name;
+    size_t m_totalMemory;
 };
 
 std::vector<GpuData> GetGpusData();
