@@ -39,28 +39,26 @@ class Baseline:
 
   def getHardwareInfo(self, baselineContent):
 
-    startHardwareInfoIndex = baselineContent.find("Hardware info:")
-    endHardwareInfoIndex = baselineContent.find("----------", startHardwareInfoIndex)
-    hwInfo = re.search("^Hardware info:\s+"
+    startCpuInfoIndex = baselineContent.find("CPU info:")
+    endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
+    cpuInfo = re.search("^CPU info:\s+"
                        "CPU Model (Name:\s*.*)\s+"                        
                        "(Hardware threads: \d+)\s+"
-                       "Total (Memory:\s*.*)\s+"
-                       "GPU Model (Name: .*)?\s+"
-                       "GPU (Memory: .*)?", baselineContent[startHardwareInfoIndex:endHardwareInfoIndex], re.MULTILINE)
-    if hwInfo is None:
+                       "Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
+    if cpuInfo is None:
       return
-    self.cpuInfo = "\n".join(hwInfo.groups()[:3])
-    gpuInfo = hwInfo.groups()[3:]
+    self.cpuInfo = "\n".join(cpuInfo.groups())
 
     startGpuInfoIndex = baselineContent.find("GPU info:")
     endGpuInfoIndex = baselineContent.find("----------", startGpuInfoIndex)
-    gpuCapability = re.findall("\t\t(Device ID: \d+)\s+[\w/: \t]+"
-                               "(Compute Capability: \d\.\d)\s+[\w/: \t]+"
-                               "(CUDA cores: \d+)", baselineContent[startGpuInfoIndex:endGpuInfoIndex])
-    if not gpuCapability:
+    gpuInfoSnippet = baselineContent[startGpuInfoIndex:endGpuInfoIndex]
+
+    gpuDevices = re.findall("\t\t(Device\[\d+\]: cores = \d+; computeCapability = \d\.\d; type = .*; memory = \d+ MB)[\r\n]?", gpuInfoSnippet)
+    if not gpuDevices:
       return
-    for index in range(0, len(gpuCapability)):
-      gpuInfo = gpuInfo + gpuCapability[index]
+    six.print_(gpuDevices)
+
+    gpuInfo = [ device for device in gpuDevices ]
     self.gpuInfo = "\n".join(gpuInfo)
 
   @staticmethod

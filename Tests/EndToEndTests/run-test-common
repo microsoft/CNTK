@@ -36,7 +36,7 @@ printHardwareInfo()
   nproc=$(nproc)
 
   # Note that MetricsDriver.py depends on this format
-  echo "Hardware info:"
+  echo "CPU info:"
   echo "    CPU Model Name: $cpuName"
   echo "    Hardware threads: $nproc"
   echo "    Total Memory: $totalMemory"
