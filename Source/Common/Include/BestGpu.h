@@ -14,8 +14,8 @@
 namespace Microsoft { namespace MSR { namespace ScriptableObjects { struct IConfigRecord; }}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-#ifndef CPUONLY
 
+#ifndef CPUONLY
 struct GpuData
 {
     int m_major;

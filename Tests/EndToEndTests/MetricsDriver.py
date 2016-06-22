@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env python
 # ----------------------------------------------------------
 # Copyright (c) Microsoft Corporation.  All rights reserved.
-# ---------------------------------------------------------
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+# ---------------------------------------------------------
 # This script extracts information (hardware used, final results) contained in the baselines files
 # and generates a markdown file (wiki page)
 
@@ -49,7 +49,7 @@ class Baseline:
                        "GPU (Memory: .*)?", baselineContent[startHardwareInfoIndex:endHardwareInfoIndex], re.MULTILINE)
     if hwInfo is None:
       return
-    self.cprintpuInfo = "\n".join(hwInfo.groups()[:3])
+    self.cpuInfo = "\n".join(hwInfo.groups()[:3])
     gpuInfo = hwInfo.groups()[3:]
 
     startGpuInfoIndex = baselineContent.find("GPU info:")

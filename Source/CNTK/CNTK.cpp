@@ -377,6 +377,7 @@ void PrintGpuInfo()
 
     if (gpusData.empty())
     {
+		LOGPRINTF(stderr, "No GPUs found\n");
         return;
     }
 
