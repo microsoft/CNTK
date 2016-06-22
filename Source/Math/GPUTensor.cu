@@ -704,7 +704,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             //  - total elements = NN * Floor(#multiprocs / NN) = <= #multiprocs
             let reductionBufferSize = props.multiProcessorCount;
             assert(reductionBufferSize >= NN * numBlocksZ);
-            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(reductionBufferSize);
+            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(10*reductionBufferSize);
 
             // 'pointers', 'regularOpStrides', and 'regularStrides' are set up to point to the target memory.
             // We need to reroute them to point to our reductionBuffer.
