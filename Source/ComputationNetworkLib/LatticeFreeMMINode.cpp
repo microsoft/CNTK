@@ -354,7 +354,8 @@ double LatticeFreeMMINode<ElemType>::CTCCalculation(const Matrix<ElemType>& labe
         {
             //for (int j = 0; j  <= i * 2 + 1, j < nstates; j+=2)
             for (int j = 0; j <= i, j < nstates; j++)
-            {               
+            {          
+                if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
                 int currentSenone = m_senoneSequence[j].Senone;
                 int baseIndex = (i - 1)*nstates + j;
 
@@ -418,6 +419,7 @@ double LatticeFreeMMINode<ElemType>::CTCCalculation(const Matrix<ElemType>& labe
 
             for (int j = 0; j < nstates; j++)
             {
+                if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
                 int currentSenone = m_senoneSequence[j].Senone;
                 //if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
                 //else
