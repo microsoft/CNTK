@@ -632,7 +632,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     {
         ProgressTracing::SetTimestampingFlag();
     }
-#endif
+
 
 
     // get the command param set they want
