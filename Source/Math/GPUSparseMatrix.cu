@@ -2027,6 +2027,105 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols())
+    {
+        LogicError("GPUSparseMatrix: AddSparseColumnIndex: matrix dimension mismatch.");
+    }
+
+    a.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAddColumnIndexsparseCSC<ElemType> << <nBlocks, 1024 >> >(a.GetNumCols(), a.ColLocation(), b.ColLocation());
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols())
+    {
+        LogicError("GPUSparseMatrix: AddSparseColumnIndex: matrix dimension mismatch.");
+    }
+
+    a.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAddColumnIndexsparseCSC<ElemType> << <nBlocks, 1024 >> >(a.GetNumCols(), a.ColLocation(), b.GetNumRows());
+}
+
+// row stack matrix b to matrix a
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+    //fprintf(stderr, "A: Row: %d Col: %d NZ: %d RowOffset: %d\n", a.GetNumRows(), a.GetNumCols(), a.NzCount(), RowOffset);
+    //fprintf(stderr, "B: Row: %d Col: %d NZ: %d\n", b.GetNumRows(), b.GetNumCols(), b.NzCount());
+    //float time;
+    //cudaEvent_t start, stop;
+    //cudaEventCreate(&start);
+    //cudaEventCreate(&stop);
+    //cudaEventRecord(start, 0);
+    b.PrepareDevice();
+    size_t* d_NzOffset;
+    CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    CUDA_CALL(cudaMemcpy(d_NzOffset, NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyHostToDevice));
+
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() < b.GetNumRows())
+    {
+        LogicError("GPUSparseMatrix: AssignCopyOf: matrix dimension mismatch.");
+    }
+
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAssignCopyOfsparseCSC<ElemType> << <nBlocks, 1024 >> >(RowOffset, a.GetNumCols(), d_NzOffset, a.RowLocation(), a.ColLocation(), a.Data(), b.RowLocation(), b.ColLocation(), b.Data());
+
+    CUDA_CALL(cudaMemcpy(NzOffset, d_NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaFree(d_NzOffset));
+    //cudaEventRecord(stop, 0);
+    //cudaEventSynchronize(stop);
+    //cudaEventElapsedTime(&time, start, stop);
+    //fprintf(stderr, "After A: Row: %d Col: %d NZ: %d\n", a.GetNumRows(), a.GetNumCols(), a.NzCount());
+    //fprintf(stderr, "Time to generate:  %3.1f ms \n", time);
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+    b.PrepareDevice();
+    size_t* d_NzOffset;
+    CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    CUDA_CALL(cudaMemcpy(d_NzOffset, NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyHostToDevice));
+
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() < b.GetNumRows())
+    {
+        LogicError("GPUSparseMatrix: AssignCopyOf: matrix dimension mismatch.");
+    }
+
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAssignCopyOfdense<ElemType> << <nBlocks, 1024 >> >(RowOffset, b.GetNumRows(), b.GetNumCols(), d_NzOffset, a.RowLocation(), a.ColLocation(), a.Data(), b.Data());
+
+    CUDA_CALL(cudaMemcpy(NzOffset, d_NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaFree(d_NzOffset));
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     GPUSparseMatrix<ElemType> res(GetComputeDeviceId(), GetFormat());

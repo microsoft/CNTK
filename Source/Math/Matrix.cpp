@@ -4339,6 +4339,87 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
         { NOT_IMPLEMENTED; });
 }
 
+
+// AssginCopyOf matix b to a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+    DecideAndMoveToRightDevice(a, b);
+
+    if (b.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
+    {
+
+        if (b.GetMatrixType() == MatrixType::SPARSE)
+        {
+            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
+        }
+        else
+        {
+            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, NzOffset, RowOffset);
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs)
+{
+
+    if (a.GetDeviceId() >= 0 /*GPU*/)
+    {
+        if (a.GetMatrixType() == MatrixType::SPARSE)
+        {
+            *numNZs += (*a.m_GPUSparseMatrix).NzCount();
+        }
+        else
+        {
+            *numNZs += (*a.m_GPUMatrix).GetNumElements();
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    DecideAndMoveToRightDevice(a, b);
+    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
+    {
+        if (b.GetMatrixType() == MatrixType::SPARSE)
+        {
+            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix);
+        }
+        else
+        {
+            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUMatrix);
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs)
+{
+    if (a.GetDeviceId() >= 0 /*GPU*/)
+    {
+        if (a.GetMatrixType() != MatrixType::SPARSE)
+        {
+            a.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+        }
+        a.m_GPUSparseMatrix->Resize(numRows, numCols, numNZs);
+    }
+}
+
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>
 /// <param name="alpha">Scalar</param>
 /// <param name="a">Input matrix</param>

@@ -2742,6 +2742,90 @@ __global__ void _sparseCSRElemMulDense(
 }
 
 template <class ElemType>
+__global__ void _sparseCSCAddColumnIndexsparseCSC(
+    const size_t n,
+    GPUSPARSE_INDEX_TYPE *aColIndex,
+    const GPUSPARSE_INDEX_TYPE *bColIndex
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    aColIndex[id + 1] += bColIndex[id + 1];
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAddColumnIndexsparseCSC(
+    const size_t n,
+    GPUSPARSE_INDEX_TYPE *aColIndex,
+    const size_t bNumRows
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    aColIndex[id + 1] += (GPUSPARSE_INDEX_TYPE)(bNumRows*(id + 1));
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAssignCopyOfsparseCSC(
+    const size_t RowOffset,
+    const size_t n,
+    size_t* NzOffset,
+    GPUSPARSE_INDEX_TYPE* aRowIndex,
+    GPUSPARSE_INDEX_TYPE* aColIndex,
+    ElemType* aData,
+    const GPUSPARSE_INDEX_TYPE* bRowIndex,
+    const GPUSPARSE_INDEX_TYPE* bColIndex,
+    const ElemType* bData
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+
+    int start = aColIndex[id];
+
+    int startB = bColIndex[id];
+    int endB = bColIndex[id + 1];
+
+    while (startB < endB)
+    {
+        aRowIndex[start + NzOffset[id]] = bRowIndex[startB] + RowOffset;
+        aData[start + NzOffset[id]] = bData[startB];
+        NzOffset[id]++;
+        startB++;
+    }
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAssignCopyOfdense(
+    const size_t RowOffset,
+    const size_t bNumRows,
+    const size_t n,
+    size_t* NzOffset,
+    GPUSPARSE_INDEX_TYPE* aRowIndex,
+    GPUSPARSE_INDEX_TYPE* aColIndex,
+    ElemType* aData,
+    const ElemType* bData
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+
+    int start = aColIndex[id];
+    //int end = aColIndex[id + 1];
+
+    for (int iRow = 0; iRow < bNumRows; iRow++)
+    {
+        aRowIndex[start + NzOffset[id]] = iRow + RowOffset;
+        aData[start + NzOffset[id]] = bData[IDX2C(iRow, id, bNumRows)];
+        NzOffset[id]++;
+    }
+}
+
+template <class ElemType>
 __global__ void _isValid(
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,

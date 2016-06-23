@@ -562,6 +562,11 @@ public:
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
 
+    static void AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
+    static void AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs);
+    static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+    static void ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs);
+
 public:
     void Read(File& stream);
     void Write(File& stream) const;
