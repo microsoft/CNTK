@@ -126,7 +126,7 @@ void CheckSupportForGpu(DEVICEID_TYPE deviceId)
     {
         InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", 
                         gpuData.name.c_str(), gpuData.versionMajor, gpuData.versionMinor);
-    }
+}
     else if (gpuData.validity == GpuValidity::UnknownDevice)
     {
         InvalidArgument("CNTK: Unknown GPU with Device ID %d.", gpuData.deviceId);
@@ -510,7 +510,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
             if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
-            {
+        {
                 CheckSupportForGpu(valp); // throws if gpu is not supported
             }
         }
@@ -621,7 +621,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
     {
         if (static_cast<int>(val) >= 0) // gpu (id >= 0)
-        {
+    {
             CheckSupportForGpu(static_cast<int>(val)); // throws if gpu is not supported
         }
     }
@@ -632,6 +632,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     {
         ProgressTracing::SetTimestampingFlag();
     }
+#endif
+
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
