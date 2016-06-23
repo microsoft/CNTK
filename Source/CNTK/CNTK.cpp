@@ -404,7 +404,7 @@ void PrintGpuInfo()
 
     for (GpuData& data : gpusData)
     {
-        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+		LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
                   data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
