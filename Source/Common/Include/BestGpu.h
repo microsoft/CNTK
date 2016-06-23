@@ -29,6 +29,7 @@ struct GpuData
 };
 
 std::vector<GpuData> GetGpusData();
+bool gpuSupported(DEVICEID_TYPE deviceId);
 
 class ConfigParameters;
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config);

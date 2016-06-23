@@ -107,6 +107,7 @@ public:
     void Init();
     void SetAllowedDevices(const std::vector<int>& devices); // only allow certain GPUs
     bool DeviceAllowed(int device);
+    void DisallowUnsupportedDevices();
     void DisallowDevice(int device)
     {
         assert((device >= -1) && (device <= 31));
@@ -158,6 +159,8 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU, const i
                 {
                     g_bestGpu->DisallowDevice(excludedDevices[i]);
                 }
+
+                g_bestGpu->DisallowUnsupportedDevices();
             }
 
             bestDeviceId = (DEVICEID_TYPE)g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
@@ -529,6 +532,33 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     return best; // return the array of the best GPUs
 }
 
+void BestGpu::DisallowUnsupportedDevices()
+{
+    for (ProcessorData* pd : m_procData)
+    {
+        if (pd->deviceProp.major < 3)
+        {
+            DisallowDevice(pd->deviceId); //We don't support GPUs with Compute Capability < 3.0
+        }
+    }
+}
+
+bool gpuSupported(DEVICEID_TYPE deviceId){
+    auto bestGpu = make_unique<BestGpu>();
+
+    std::vector<ProcessorData*> processorData = bestGpu->GetProcessorData();
+
+    for (ProcessorData* pd : processorData)
+    {
+        if (pd->deviceId == deviceId)
+        {
+            return pd->deviceProp.major >= 3; //We support GPUs with Compute Capability >= 3.0
+        }
+    }
+
+    return false;
+}
+
 std::vector<GpuData> GetGpusData()
 {
     std::vector<GpuData> data;
@@ -536,21 +566,19 @@ std::vector<GpuData> GetGpusData()
     auto bestGpu = make_unique<BestGpu>();
 
     std::vector<ProcessorData*> processorData = bestGpu->GetProcessorData();
-    if (!processorData.empty())
+    
+    for (ProcessorData* pd : processorData)
     {
-        for (ProcessorData* pd : processorData)
-        {
-            GpuData gpuData;
-            gpuData.m_major = pd->deviceProp.major;
-            gpuData.m_minor = pd->deviceProp.minor;
-            gpuData.m_cudaCores = pd->cores;
-            gpuData.m_deviceId = pd->deviceId;
+        GpuData gpuData;
+        gpuData.m_major = pd->deviceProp.major;
+        gpuData.m_minor = pd->deviceProp.minor;
+        gpuData.m_cudaCores = pd->cores;
+        gpuData.m_deviceId = pd->deviceId;
 
-            string gpuName(pd->deviceProp.name);
-            gpuData.m_name = gpuName;
-            gpuData.m_totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
-            data.push_back(gpuData);
-         }
+        string gpuName(pd->deviceProp.name);
+        gpuData.m_name = gpuName;
+        gpuData.m_totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
+        data.push_back(gpuData);
     }
 
     return data;
