@@ -2073,9 +2073,12 @@ void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const
     //cudaEventCreate(&start);
     //cudaEventCreate(&stop);
     //cudaEventRecord(start, 0);
+  
     b.PrepareDevice();
-    size_t* d_NzOffset;
-    CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    //size_t* d_NzOffset;
+    //CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    
+    size_t* d_NzOffset = TracingGPUMemoryAllocator::Allocate<size_t>(a.GetComputeDeviceId(), a.GetNumCols());
     CUDA_CALL(cudaMemcpy(d_NzOffset, NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyHostToDevice));
 
     if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
@@ -2092,7 +2095,9 @@ void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const
     _sparseCSCAssignCopyOfsparseCSC<ElemType> << <nBlocks, 1024 >> >(RowOffset, a.GetNumCols(), d_NzOffset, a.RowLocation(), a.ColLocation(), a.Data(), b.RowLocation(), b.ColLocation(), b.Data());
 
     CUDA_CALL(cudaMemcpy(NzOffset, d_NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaFree(d_NzOffset));
+    //CUDA_CALL(cudaFree(d_NzOffset));
+    TracingGPUMemoryAllocator::Free<size_t>(a.GetComputeDeviceId(), d_NzOffset);
+
     //cudaEventRecord(stop, 0);
     //cudaEventSynchronize(stop);
     //cudaEventElapsedTime(&time, start, stop);
@@ -2104,8 +2109,9 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     b.PrepareDevice();
-    size_t* d_NzOffset;
-    CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    //size_t* d_NzOffset;
+    //CUDA_CALL(cudaMalloc((void **)&d_NzOffset, sizeof(size_t)*a.GetNumCols()));
+    size_t* d_NzOffset = TracingGPUMemoryAllocator::Allocate<size_t>(a.GetComputeDeviceId(), a.GetNumCols());
     CUDA_CALL(cudaMemcpy(d_NzOffset, NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyHostToDevice));
 
     if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
@@ -2122,7 +2128,8 @@ void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const
     _sparseCSCAssignCopyOfdense<ElemType> << <nBlocks, 1024 >> >(RowOffset, b.GetNumRows(), b.GetNumCols(), d_NzOffset, a.RowLocation(), a.ColLocation(), a.Data(), b.Data());
 
     CUDA_CALL(cudaMemcpy(NzOffset, d_NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaFree(d_NzOffset));
+    //CUDA_CALL(cudaFree(d_NzOffset));
+    TracingGPUMemoryAllocator::Free<size_t>(a.GetComputeDeviceId(), d_NzOffset);
 }
 
 template <class ElemType>
