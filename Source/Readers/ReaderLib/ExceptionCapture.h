@@ -39,7 +39,7 @@ public:
     }
 
 private:
-    // Caputures the exception.
+    // Captures the exception.
     // Thread-safe.
     void Capture()
     {
