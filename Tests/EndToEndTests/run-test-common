@@ -29,6 +29,7 @@ MPIArgs=
 DeleteExistingModels=1
 DeleteModelsAfterTest=1
 
+# Print info needed by MetricsDriver.py to extract tests metrics
 printHardwareInfo()
 {
   cpuName=$(cat /proc/cpuinfo 2> /dev/null | grep -m 1 'model name' | cut -d : -f 2- | tr -s " " | cut -c 2-)
@@ -138,4 +139,5 @@ cntkmpirun()
   return $?
 }
 
+# place printHardwareInfo here, so that all tests print it
 printHardwareInfo
