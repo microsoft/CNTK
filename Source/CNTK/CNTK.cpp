@@ -498,7 +498,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         auto valp = *valpp;
         if (!valp.Is<ScriptableObjects::String>()) // If it's not string 'auto' or 'cpu', then it's a gpu
         {
-            checkSupportForGpu(valp);
+            if ((int)valp > 0) checkSupportForGpu(valp);
         }
     }
 #endif
@@ -606,7 +606,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     ConfigValue val = config("deviceId", "auto");
     if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
     {
-        checkSupportForGpu((int) val);
+        if ((int) val > 0) checkSupportForGpu((int) val);
     }
 #endif
 
