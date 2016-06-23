@@ -492,7 +492,7 @@ private:
             if (found != std::string::npos)
             {
                 m_isSparseArray[i] = true;
-                fprintf(stderr, "Layer %ls using sparseMatrix. row size: %d, col size: %d\n", nodeName.c_str(), layerColSize, layerRowSize);
+                fprintf(stderr, "Layer %ls using sparseMatrix. row size: %d, col size: %d\n", nodeName.c_str(), (int)layerColSize, (int)layerRowSize);
                 fflush(stderr);
                 m_matrixMap->push_back(new multiverso::MatrixWorker<ElemType>(layerColSize, layerRowSize, true));
                 m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerColSize, layerRowSize, true, m_isUseAsyncBuffered));
