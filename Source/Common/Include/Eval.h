@@ -25,8 +25,7 @@
 #include <map>
 #include <vector>
 #include <string>
-
-#include "Basics.h"
+#include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -110,12 +109,14 @@ void EVAL_API GetEval(IEvaluateModel<ElemType>** peval);
 extern "C" EVAL_API void GetEvalF(IEvaluateModel<float>** peval);
 extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval);
 
+class Plugin;
 
 template <typename ElemType>
-class Eval : public IEvaluateModel<ElemType>, protected Plugin
+class Eval : public IEvaluateModel<ElemType>
 {
 private:
     IEvaluateModel<ElemType>* m_eval; // evaluation class pointer
+    std::shared_ptr<Plugin> m_plugin; 
 
     void GetEvalClass(const std::string& config);
 
