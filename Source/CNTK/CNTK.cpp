@@ -603,18 +603,19 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
 
 #ifndef CPUONLY
-    DEVICEID_TYPE deviceId = config("deviceId");
-    if (deviceId >= 0)
+    ConfigValue val = config("deviceId", "auto");
+    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
     {
-        checkSupportForGpu(deviceId);
+        checkSupportForGpu((int) val);
     }
+#endif
 
     bool timestamping = config(L"timestamping", false);
     if (timestamping)
     {
         ProgressTracing::SetTimestampingFlag();
     }
-#endif
+
 
 
     // get the command param set they want
