@@ -24,7 +24,7 @@ cp -R $DataSourceDir/* $DataDir || exit $?
 
 # Write:
 # TODO TIMIT_WriteBottleneck=[writer=[writerType=HTKDeserializers]] 
-cntkrun TIMIT_WriteBottleneck.cntk "TIMIT_WriteBottleneck=[reader=[readerType=HTKDeserializers]] TIMIT_WriteBottleneck=[reader=[readMethod=none]] TIMIT_WriteBottleneck=[reader=[featIn=[scpFile=\$ScpDir\$/TIMIT.core.scp.fbank.fullpath.rnn]]] $CntkArguments"
+cntkrun TIMIT_WriteBottleneck.cntk "TIMIT_WriteBottleneck=[reader=[randomize=true]] TIMIT_WriteBottleneck=[reader=[deserializers=([type=\"HTKFeatureDeserializer\" module=\"HTKDeserializers\" input=[features=[dim=363 scpFile=\"\$ScpDir\$/TIMIT.core.scp.fbank.fullpath.rnn\"]]])]] $CntkArguments"
 
 ExitCode=$?
 
