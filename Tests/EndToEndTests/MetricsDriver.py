@@ -19,26 +19,34 @@ thisDir = os.path.dirname(os.path.realpath(__file__))
 windows = os.getenv("OS")=="Windows_NT"
 
 class Baseline:
-  def __init__(self, fullPath, opSystem, device, flavor, testResult = "", trainResult = ""):
+  def __init__(self, fullPath, testResult = "", trainResult = ""):
     self.fullPath = fullPath
-    self.opSystem = opSystem
-    self.device = device
-    self.flavor = flavor
     self.cpuInfo = ""
     self.gpuInfo = ""
     self.testResult = testResult
     self.trainResult = trainResult
 
-  def getResultsInfo(self, baselineContent):
+  # extracts results info. e.g.
+  #	Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
+  # Final Results: Minibatch[1-1]: err = 0.90000000 * 100 ce = 2.32170486 * 100 perplexity = 10.1930372
+  def extractResultsInfo(self, baselineContent):
     trainResults = re.findall('.*(Finished Epoch\[[ ]*\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
     if trainResults:                                       
-      self.trainResult = Baseline.getLastTrainResult(trainResults[-1])[0:-2]
+      self.trainResult = Baseline.formatLastTrainResult(trainResults[-1])[0:-2]
     testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+|)?\s+(.*)', baselineContent)
     if testResults:
-      self.testResult = Baseline.getLastTestResult(testResults[-1])[0:-2]
+      self.testResult = Baseline.formatLastTestResult(testResults[-1])[0:-2]
 
-  def getHardwareInfo(self, baselineContent):
-
+  # extracts cpu and gpu info from baseline content. e.g.:
+  #CPU info:
+  #  CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+  #  Hardware threads: 12
+  #GPU info:
+  #
+  #Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+  #Device[1]: cores = 96; computeCapability = 2.1; type = "Quadro 600"; memory = 1024 MB
+  #  Total Memory: 33474872 kB
+  def extractHardwareInfo(self, baselineContent):
     startCpuInfoIndex = baselineContent.find("CPU info:")
     endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
     cpuInfo = re.search("^CPU info:\s+"
@@ -56,17 +64,15 @@ class Baseline:
     gpuDevices = re.findall("\t\t(Device\[\d+\]: cores = \d+; computeCapability = \d\.\d; type = .*; memory = \d+ MB)[\r\n]?", gpuInfoSnippet)
     if not gpuDevices:
       return
-    six.print_(gpuDevices)
-
     gpuInfo = [ device for device in gpuDevices ]
     self.gpuInfo = "\n".join(gpuInfo)
 
   @staticmethod
-  def getLastTestResult(line):
+  def formatLastTestResult(line):
     return line[0] + line[1] + "\n" + line[2].replace('; ', '\n').replace('    ','\n')
 
   @staticmethod
-  def getLastTrainResult(line):  
+  def formatLastTrainResult(line):
     epochsInfo, parameters = line[0], line[1]
     return epochsInfo + '\n' + parameters.replace('; ', '\n')
 
@@ -97,6 +103,7 @@ class Example:
         example = Example(suiteName,  exampleName, testDir)
         Example.allExamplesIndexedByFullName[example.fullName.lower()] = example
 
+  # it returns a list with all baseline files for current example
   def findBaselineFilesList(self):
     baselineFilesList = []
 
@@ -110,11 +117,12 @@ class Example:
           candidateName = "baseline" + o + flavor + device + ".txt"
           fullPath = td.cygpath(os.path.join(self.testDir, candidateName), relative=True)          
           if os.path.isfile(fullPath):
-            baseline = Baseline(fullPath, o[1:], device[1:], flavor[1:]);            
+            baseline = Baseline(fullPath);
             baselineFilesList.append(baseline)
 
     return baselineFilesList
 
+# extracts information for every example and stores it in Example.allExamplesIndexedByFullName
 def getExamplesMetrics():  
   Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))  
 
@@ -122,7 +130,7 @@ def getExamplesMetrics():
 
   print ("CNTK - Metrics collector")  
 
-  for example in allExamples:    
+  for example in allExamples:
     baselineListForExample = example.findBaselineFilesList() 
     six.print_("Example: " + example.fullName)   
     for baseline in baselineListForExample:        
@@ -132,12 +140,13 @@ def getExamplesMetrics():
         if gitHash is None:
           continue
         example.gitHash = gitHash.group(1) 
-        baseline.getHardwareInfo(baselineContent)
-        baseline.getResultsInfo(baselineContent)                 
+        baseline.extractHardwareInfo(baselineContent)
+        baseline.extractResultsInfo(baselineContent)
       example.baselineList.append(baseline)    
         
+# creates a list with links to each example result
 def createAsciidocExampleList(file):
-  for example in Example.allExamplesIndexedByFullName: 
+  for example in Example.allExamplesIndexedByFullName:
     if not example.baselineList:
       continue
     file.write("".join(["<<", example.fullName.replace("/","").lower(),",", example.fullName, ">> +\n"]))
@@ -147,7 +156,7 @@ def writeMetricsToAsciidoc():
   metricsFile = open("metrics.adoc",'wb')
 
   createAsciidocExampleList(metricsFile)
-  
+
   for example in Example.allExamplesIndexedByFullName:
     if not example.baselineList:
       continue
