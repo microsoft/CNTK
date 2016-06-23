@@ -117,6 +117,11 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
     return maxEpochs;
 }
 
+void checkSupportForGpu(DEVICEID_TYPE deviceId)
+{
+    if(!gpuSupported(deviceId)) InvalidArgument("CNTK: GPU device %d has compute capability less than 3.0", deviceId);
+}
+
 // special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
 static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
 {
@@ -484,6 +489,16 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
+    auto valpp = config.Find(L"deviceId");
+    if (valpp)
+    {
+        auto valp = *valpp;
+        if (!valp.Is<ScriptableObjects::String>()) // If it's not string 'auto' or 'cpu', then it's a gpu
+        {
+            checkSupportForGpu(valp);
+        }
+    }
+
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
@@ -582,6 +597,13 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
     ConfigParameters config;
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+
+    DEVICEID_TYPE deviceId = config("deviceId");
+    if (deviceId >= 0)
+    {
+        checkSupportForGpu(deviceId);
+    }
+
     bool timestamping = config(L"timestamping", false);
     if (timestamping)
     {
