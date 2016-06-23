@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
         0,
         1),
         std::runtime_error,
-        [](const std::runtime_error& ex) { return string("Cannot open file 'image\\black.jpg'") == ex.what(); });
+        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists\\black.jpg'") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
