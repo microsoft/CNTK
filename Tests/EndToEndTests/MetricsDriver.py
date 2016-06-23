@@ -181,10 +181,9 @@ def writeMetricsToAsciidoc():
 
     metricsFile.write("\n|====\n\n")
 
+# ======================= Entry point =======================
 six.print_("==============================================================================")
 
-# ======================= Entry point =======================
-# discover all the tests
 Example.discoverAllExamples()
 
 getExamplesMetrics()

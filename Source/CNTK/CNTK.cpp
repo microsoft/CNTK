@@ -621,7 +621,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
     {
         if (static_cast<int>(val) >= 0) // gpu (id >= 0)
-    {
+        {
             CheckSupportForGpu(static_cast<int>(val)); // throws if gpu is not supported
         }
     }

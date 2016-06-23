@@ -554,7 +554,7 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId)
     auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
     if (it != gpusData.end())
-    {
+        {
         return *it;
     }
 
@@ -586,8 +586,8 @@ std::vector<GpuData> GetAllGpusData()
 
         size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
         GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
-            data.push_back(gpuData);
-         }
+        data.push_back(gpuData);
+    }
 
     return data;
 }
