@@ -23,7 +23,7 @@ namespace CNTK
     ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
-    enum class DataType
+    enum DataType
     {
         Unknown,
         Float,
@@ -128,6 +128,14 @@ namespace CNTK
         /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
+
+        ///
+        /// [wilrich] Default constructor is required for Cython bindings.
+        ///
+        CNTK_API DeviceDescriptor() : m_deviceId(0), m_deviceType(DeviceType::CPU)
+        {
+        }
+
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceType deviceType)
@@ -374,6 +382,11 @@ namespace CNTK
         /// 
         template <typename ElementType>
         const ElementType* DataBuffer() const;
+
+        const double* DataBufferD() const
+        {
+            return DataBuffer<double>();
+        }
 
         ///
         /// Returns the descriptor of the device that 'this' view resides on
@@ -1171,6 +1184,8 @@ namespace CNTK
 
     static_assert(sizeof(Placeholder) == sizeof(Variable), "The Placeholder type should not have any data fields beyond what it's base type 'Variable' has.");
 #pragma warning(pop)
+
+
 }
 
 namespace std {
@@ -1273,12 +1288,13 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
         ///
-        BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+        BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                  std::unordered_map<Variable, ValuePtr>& outputs,
                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {})
         {
-            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(arguments);
+            printf("I'm in\n");
+            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments);
             auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs);
             auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsToRetainBackwardStateFor);
 
@@ -1289,6 +1305,11 @@ namespace CNTK
                 outputs[iter->first] = abisSafeOutputsMap[iter->first];
 
             return backPropState;
+        }
+
+        std::unordered_map<Variable, ValuePtr>* createMap()
+        {
+            return new std::unordered_map<Variable, ValuePtr>();
         }
 
         ///
@@ -1317,7 +1338,7 @@ namespace CNTK
     protected:
         // Mandatory methods to be overriden by new 'Function' types.
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
+        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments,
                                          _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
                                          const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                          const DeviceDescriptor& computeDevice) = 0;

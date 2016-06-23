@@ -506,7 +506,7 @@ namespace CNTK
         return ValuePtr(new Value(data, mask), [](_ReferenceCounter* ptr) { delete ptr; });
     }
 
-    void CompositeFunction::PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments)
+    void CompositeFunction::PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments)
     {
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
@@ -734,7 +734,7 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
+    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments,
                                                             _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
                                                             const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                                             const DeviceDescriptor& computeDevice)
