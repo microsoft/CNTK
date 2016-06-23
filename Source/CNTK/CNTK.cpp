@@ -118,9 +118,13 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 }
 
 #ifndef CPUONLY
-void checkSupportForGpu(DEVICEID_TYPE deviceId)
+// abort execution is GPU doesn't comply with the compute capability restriction
+void CheckSupportForGpu(DEVICEID_TYPE deviceId)
 {
-    if(!gpuSupported(deviceId)) InvalidArgument("CNTK: GPU device %d has compute capability less than 3.0", deviceId);
+    if (!IsGpuSupported(deviceId))
+    {
+        InvalidArgument("CNTK: GPU device %d has compute capability less than 3.0", deviceId);
+    }
 }
 #endif
 
@@ -377,6 +381,7 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
+// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
 void PrintGpuInfo()
 {
 #ifndef CPUONLY
@@ -384,7 +389,7 @@ void PrintGpuInfo()
 
     if (gpusData.empty())
     {
-		LOGPRINTF(stderr, "No GPUs found\n");
+        LOGPRINTF(stderr, "No GPUs found\n");
         return;
     }
 
@@ -394,7 +399,7 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
 		LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-			      data.m_deviceId, data.m_cudaCores, data.m_major, data.m_minor, data.m_name.c_str(), data.m_totalMemory);
+			      data.deviceId, data.cudaCores, data.major, data.minor, data.name.c_str(), data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -496,9 +501,12 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (valpp)
     {
         auto valp = *valpp;
-        if (!valp.Is<ScriptableObjects::String>()) // If it's not string 'auto' or 'cpu', then it's a gpu
+        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
-            if ((int)valp > 0) checkSupportForGpu(valp);
+            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            {
+                CheckSupportForGpu(valp);
+            }
         }
     }
 #endif
@@ -606,7 +614,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     ConfigValue val = config("deviceId", "auto");
     if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
     {
-        if ((int) val > 0) checkSupportForGpu((int) val);
+        if (static_cast<int>(val) >= 0) // gpu (id >= 0)
+        {
+            CheckSupportForGpu(static_cast<int>(val));
+        }
     }
 #endif
 

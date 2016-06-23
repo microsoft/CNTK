@@ -20,16 +20,16 @@ using namespace std;
 #ifndef CPUONLY
 struct GpuData
 {
-    int m_major;
-    int m_minor;
-    int m_deviceId;
-    int m_cudaCores;
-    string m_name;
-    size_t m_totalMemory;
+    int major;
+    int minor;
+    int deviceId;
+    int cudaCores;
+    string name;
+    size_t totalMemory;
 };
 
 std::vector<GpuData> GetGpusData();
-bool gpuSupported(DEVICEID_TYPE deviceId);
+bool IsGpuSupported(DEVICEID_TYPE deviceId);
 
 class ConfigParameters;
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config);
