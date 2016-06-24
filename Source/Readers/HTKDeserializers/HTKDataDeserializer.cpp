@@ -426,6 +426,38 @@ private:
     std::vector<double> m_buffer;
 };
 
+// Copies a source into a destination with the specified destination offset.
+static void CopyToOffset(const const_array_ref<float>& source, array_ref<float>& destination, size_t offset)
+{
+    size_t sourceSize = source.size() * sizeof(float);
+    memcpy_s(destination.begin() + sourceSize * offset, sourceSize, &source.front(), sourceSize);
+}
+
+// TODO: Move augmentation to the separate class outside of deserializer.
+// Augments a frame with a given index with frames to the left and right of it.
+static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
+                             size_t frameIndex,
+                             const size_t leftExtent,
+                             const size_t rightExtent,
+                             array_ref<float>& destination)
+{
+    CopyToOffset(utterance[frameIndex], destination, leftExtent);
+
+    for (size_t currentFrame = frameIndex, n = 1; n <= leftExtent; n++)
+    {
+        if (currentFrame > 0)
+            currentFrame--; // index does not move beyond boundary
+        CopyToOffset(utterance[currentFrame], destination, leftExtent - n);
+    }
+
+    for (size_t currentFrame = frameIndex, n = 1; n <= rightExtent; n++)
+    {
+        if (currentFrame + 1 < utterance.size())
+            currentFrame++;
+        CopyToOffset(utterance[currentFrame], destination, rightExtent + n);
+    }
+}
+
 // Get a sequence by its chunk id and sequence id.
 // Sequence ids are guaranteed to be unique inside a chunk.
 void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<SequenceDataPtr>& r)
@@ -443,14 +475,16 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
     {
         // For frame mode augment a single frame.
         size_t frameIndex = id - chunkDescription.GetStartFrameIndexInsideChunk(utteranceIndex);
-        msra::dbn::augmentneighbors(utteranceFramesWrapper, vector<char>(), frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, features, 0);
+        auto fillIn = features.col(0);
+        AugmentNeighbors(utteranceFramesWrapper, frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
     }
     else
     {
         // Augment complete utterance.
         for (size_t frameIndex = 0; frameIndex < utterance->GetNumberOfFrames(); ++frameIndex)
         {
-            msra::dbn::augmentneighbors(utteranceFramesWrapper, vector<char>(), frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, features, frameIndex);
+            auto fillIn = features.col(frameIndex);
+            AugmentNeighbors(utteranceFramesWrapper, frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
         }
     }
 
