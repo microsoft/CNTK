@@ -81,23 +81,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename ScalarT> ScalarT* CreateAlignedMatrix(int m, int n, ScalarT initVal, int alignment = 64)
     {
         ScalarT* ret = (ScalarT*)ALIGNED_ALLOC(sizeof(ScalarT) * (m * n), alignment);
-        ClearMatrix(ret, m, n, initVal);
-        return ret;
-    }
 
-    template<typename ScalarT> void ClearMatrix(ScalarT* buffer, int m, int n, ScalarT initVal)
-    {
+
         if (initVal != 0)
         {
             for (int i = 0; i < m * n; ++i)
             {
-                buffer[i] = initVal;// +i;
+                ret[i] = initVal;// +i;
             }
         }
         else
         {
-            memset(buffer, 0, sizeof(ScalarT) * m * n);
+            memset(ret, 0, sizeof(ScalarT) * m * n);
         }
+
+        return ret;
     }
 
     template<typename ScalarT> void FreeAlignedMatrix(ScalarT* destroyMe)
