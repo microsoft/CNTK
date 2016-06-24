@@ -569,7 +569,7 @@ public:
         ElemType* pArray = us.CopyToArray();
         for (size_t i = 0; i < us.GetNumElements(); ++i)
             stream << pArray[i];
-        
+
         delete[] pArray;
 
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
@@ -607,7 +607,7 @@ static void CudaCall(ERRTYPE retCode, const char *file, int line, const char* ex
 #endif
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s . File=%s, line=%d; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, file, line, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s . File=%s, line=%d; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode),file, line, currentCudaDevice, hostname ? hostname : "?", exprString);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
