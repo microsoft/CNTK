@@ -6042,7 +6042,7 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
 
 // perform loop over reduction index m
 // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
-template <class ElemType, typename OPFN, int reductionOp, size_t N, int m>
+template <class ElemType, typename OPFN, ElementWiseOperator reductionOp, size_t N, int m>
 struct TensorOpReduction
 {
     // reduction case (non-reduction case is specialized)
@@ -6190,7 +6190,7 @@ struct TensorOpIteration<ElemType, OPFN, reductionOp, 2, true /*vectorizable*/, 
     }
 };
 
-template <class ElemType, typename OPFN, int reductionOp, size_t N, bool vectorizable, int m>
+template <class ElemType, typename OPFN, ElementWiseOperator reductionOp, size_t N, bool vectorizable, int m>
 struct TensorOpIteration<ElemType, OPFN, reductionOp, N, vectorizable, m, -1>
 {
     static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, 

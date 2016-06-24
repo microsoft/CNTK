@@ -63,6 +63,15 @@ template <class ElemType>
     auto result =           ValueTensorFor(rank, fr);
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
+    // some reductions are currently only on CPU
+    switch (m_op)
+    {
+        case ElementWiseOperator::opMax:
+        case ElementWiseOperator::opMin:
+            // Make sure that computation is exucted on CPU. TODO: will this work? Are parameters right.
+            Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ true);
+    }
+
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
     result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
     // note: we can implement "Mean" by passing 1/dim for alpha
