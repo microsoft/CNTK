@@ -23,6 +23,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    vector<size_t> numSequencesForFrame;
 // -----------------------------------------------------------------------
 // RNNNode
 // -----------------------------------------------------------------------
@@ -120,8 +121,23 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
         shapeYT = TensorShape(shapeYT.GetDims());
 
         // create a vector with the correct number of timesteps(shapeXT[2]) containing the sequence count (shapeXT[1])
-        vector<size_t> numSequencesForFrame(shapeXT[2], shapeXT[1]);
-        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
+        numSequencesForFrame = vector<size_t>(shapeXT[2], shapeXT[1]);
+        try
+        {
+            m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
+        }
+        catch (exception e)
+        {
+            fprintf(stderr, "|m_transposedInput|=%ld\n", m_transposedInput->GetNumElements());
+            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
+            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
+            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
+            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
+            fprintf(stderr, "numSequencesForFrame=[");
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            fprintf(stderr, "\n");
+            throw e;
+        }
 
         // No one uses shapeY, but it is necessary
         TensorShape shapeY;
@@ -172,13 +188,47 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
         m_transposedDInput->Resize(Input(0)->Value().GetNumRows(), m_transposedDOutput->GetNumCols());
 
         // Do the work
-        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnParameters, *m_reserve, *m_workspace);
+        try
+        {
+            m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnParameters, *m_reserve, *m_workspace);
+        }
+        catch (exception e)
+        {
+            fprintf(stderr, "|m_transposedDOutput|=%ld\n", m_transposedDOutput->GetNumElements());
+            fprintf(stderr, "|paramW|=%ld\n", paramW.GetNumElements());
+            fprintf(stderr, "|m_transposedDInput|=%ld\n", m_transposedDInput->GetNumElements());
+            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
+            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
+            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
+            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
+            fprintf(stderr, "numSequencesForFrame=[");
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            fprintf(stderr, "\n");
+            throw e;
+        }
         m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
         Matrix<ElemType>& paramDW = Input(1)->Gradient();
-        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
+        try
+        {
+            m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
+        }
+        catch (exception e)
+        {
+            fprintf(stderr, "|m_transposedInput|=%ld\n", m_transposedInput->GetNumElements());
+            fprintf(stderr, "|m_transposedOutput|=%ld\n", m_transposedOutput->GetNumElements());
+            fprintf(stderr, "|paramDW|=%ld\n", paramDW.GetNumElements());
+            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
+            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
+            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
+            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
+            fprintf(stderr, "numSequencesForFrame=[");
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            fprintf(stderr, "\n");
+            throw e;
+        }
     }
     else if (inputIndex == 0) // data
     {
