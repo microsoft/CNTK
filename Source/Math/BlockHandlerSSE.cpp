@@ -8,7 +8,7 @@
 #include <tmmintrin.h>
 
 #include "BlockHandlerSSE.h"
-#include "MatrixUtil.h"
+#include "BlockMultiplierMatrixUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -17,7 +17,7 @@
 #include <mutex>
 #include <memory>
 #include <vector>
-#include "MatrixUtil.h"
+#include "BlockMultiplierMatrixUtil.h"
 #include "BlockHandlerSSE.h"
 #ifdef SUPPORT_AVX2
 #include "BlockHandlerAVX.h"
@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // m, k, and n are the matrix dimensions.
 // m is the number of rows in A and C.
 // k is the common dimension (the number of columns in A and rows in B).
-// n isthe number of columns in B and C.
+// n is the number of columns in B and C.
 // In other words, A is (m x k), B is (k x n) and C is (m x n).
 //
 template<typename BlockHandlerT>struct HandlerArgs
@@ -475,7 +475,7 @@ template<typename BlockHandlerT> class BlockMultiplier
 
     public:
 
-        //Stolen from [https://software.intel.com/en-us/forums/intel-isa-extensions/topic/285219]
+        //Borrowed from [https://software.intel.com/en-us/forums/intel-isa-extensions/topic/285219]
         //Results in a saturated add, i.e. in the overflow case we return int_max, and in the
         //underflow we return int_min.
         //The code is clever - it uses the _mm_blendv_ps instruction to avoid branching.
@@ -993,8 +993,6 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
             }
         }
 
-        //Clean up
-        //FreeAlignedMatrix(transC);
         FreeAlignedMatrix(newA);
     }
 }

@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <iostream>
 #include <exception>
-#include "MatrixUtil.h"
+#include "BlockMultiplierMatrixUtil.h"
 
 #include "BlockHandlerAVX.h"
 

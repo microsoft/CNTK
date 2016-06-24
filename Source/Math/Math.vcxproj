@@ -163,6 +163,7 @@
     <ClInclude Include="BlockHandlerAVX.h" />
     <ClInclude Include="BlockHandlerSSE.h" />
     <ClInclude Include="BlockMultiplier.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
     <ClInclude Include="BlockMultiplierPlatform.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />

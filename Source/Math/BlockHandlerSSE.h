@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cstdint>
 #include <thread>
-#include "MatrixUtil.h"
+#include "BlockMultiplierMatrixUtil.h"
 #define FOR_CNTK
 #ifdef FOR_CNTK
 #include "CommonMatrix.h"
@@ -1167,31 +1167,15 @@ FORCEINLINE void BlockHandlerSSE::HandleBlock128x4(int currBlock, int startRow, 
     {
         LOAD2_128x4;
     }
-    //LOAD3_128x4;
+
     for (int c = 0; c < n; ++c)
     {
-        //This makes a small but noticable difference.
         short* currB = &B[RowToColOffsetRewrittenB(c, currBlock, 128, n)];
         short* currB2 = &B[RowToColOffsetRewrittenB(c, currBlock + 1, 128, n)];
 
         //The gain comes when we have all the row values loaded up
         //together and we multiply them all times each column, saving m_rowsPerBlock column
         //loads.
-
-        /*
-           int32_t accum1 = 0;
-           int32_t accum2 = 0;
-           int32_t accum3 = 0;
-           int32_t accum4 = 0;
-           int32_t accum5 = 0;
-           int32_t accum6 = 0;
-           int32_t accum7 = 0;
-           int32_t accum8 = 0;
-           int32_t accum9 = 0;
-           int32_t accum10 = 0;
-           int32_t accum11 = 0;
-           int32_t accum12 = 0;
-           */
 
         __m128i accum1 = _mm_set_epi32(0, 0, 0, 0);
         __m128i accum2 = _mm_set_epi32(0, 0, 0, 0);
@@ -1421,36 +1405,6 @@ FORCEINLINE void BlockHandlerSSE::kernelsse128x4(
     __m128i result4efgh = _mm_add_epi32(result4ef, result4gh);
     __m128i result4abcdefgh = _mm_add_epi32(result4abcd, result4efgh);
 
-    //Now we can just add horizontally
-
-    //Move this to BlockHandler
-    /*
-
-       __m128i firstHorizontal = _mm_hadd_epi32(result1abcdefgh, result1abcdefgh);
-       firstHorizontal = _mm_hadd_epi32(firstHorizontal, firstHorizontal);
-    //firstHorizontal = _mm_hadd_epi32(firstHorizontal, firstHorizontal);
-
-    __m128i secondHorizontal = _mm_hadd_epi32(result2abcdefgh, result2abcdefgh);
-    secondHorizontal = _mm_hadd_epi32(secondHorizontal, secondHorizontal);
-    //secondHorizontal = _mm_hadd_epi32(secondHorizontal, secondHorizontal);
-
-    __m128i thirdHorizontal = _mm_hadd_epi32(result3abcdefgh, result3abcdefgh);
-    thirdHorizontal = _mm_hadd_epi32(thirdHorizontal, thirdHorizontal);
-    //thirdHorizontal = _mm_hadd_epi32(thirdHorizontal, thirdHorizontal);
-
-    __m128i fourthHorizontal = _mm_hadd_epi32(result4abcdefgh, result4abcdefgh);
-    fourthHorizontal = _mm_hadd_epi32(fourthHorizontal, fourthHorizontal);
-    //fourthHorizontal = _mm_hadd_epi32(fourthHorizontal, fourthHorizontal);
-    */
-
-    /*
-     *return1 = _mm_extract_epi32(firstHorizontal, 0);
-     *return2 = _mm_extract_epi32(secondHorizontal, 0);
-     *return3 = _mm_extract_epi32(thirdHorizontal, 0);
-     *return4 = _mm_extract_epi32(fourthHorizontal, 0);
-     */
-    //The extract instruction seemed to be a bottleneck. Can we make it faster?
-    //No, it's exactly the same :-(.
     *return1 = result1abcdefgh;
     *return2 = result2abcdefgh;
     *return3 = result3abcdefgh;
