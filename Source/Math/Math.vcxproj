@@ -161,6 +161,11 @@
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="BatchNormalizationEngine.h" />
+    <ClInclude Include="BlockHandlerAVX.h" />
+    <ClInclude Include="BlockHandlerSSE.h" />
+    <ClInclude Include="BlockMultiplier.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="BlockMultiplierPlatform.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="ConvolveGeometry.h" />
@@ -190,6 +195,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BatchNormalizationEngine.cpp" />
+    <ClCompile Include="BlockHandlerAVX.cpp" />
+    <ClCompile Include="BlockHandlerSSE.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />	
     <ClCompile Include="CPUSparseMatrix.cpp" />

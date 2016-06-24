@@ -68,7 +68,7 @@ INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2L
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
 COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
 CPPFLAGS:= 
-CXXFLAGS:= -msse3 -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+CXXFLAGS:= -msse3 -mssse3 -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
@@ -87,7 +87,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64
+CUFLAGS = -m 64 
 
 ifdef CUDA_PATH
   ifndef GDK_PATH
@@ -165,6 +165,10 @@ ifdef KALDI_PATH
 
   KALDI_LIBPATH += $(KALDI_PATH)/src/lib
   KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
+endif
+
+ifdef SUPPORT_AVX2
+  CPPFLAGS += -mavx2
 endif
 
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
@@ -269,6 +273,7 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/fileutil.cpp \
 
 MATH_SRC =\
+	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
@@ -281,6 +286,12 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+
+ifdef SUPPORT_AVX2
+MATH_SRC +=\
+	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
+
+endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
