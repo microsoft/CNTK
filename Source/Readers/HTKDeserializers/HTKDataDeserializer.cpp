@@ -454,7 +454,7 @@ static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
     {
         if (currentFrame + 1 < utterance.size())
             currentFrame++;
-        CopyToOffset(utterance[currentFrame], destination, rightExtent + n);
+        CopyToOffset(utterance[currentFrame], destination, leftExtent + n);
     }
 }
 
