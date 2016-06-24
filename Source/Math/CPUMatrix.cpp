@@ -6067,10 +6067,10 @@ struct TensorOpReduction
             }
             return (ElemType)precision_aggregate;
         }
-        else if (reductionOp == ElementWiseOperator::opMax || reductionOp == ElementWiseOperator::opMax)
+        else if (reductionOp == ElementWiseOperator::opMax || reductionOp == ElementWiseOperator::opMin)
         {
             // For min/max we first aways use ElemType for aggregating
-            ElemType aggregate = 0;
+            ElemType aggregate = reductionOp == ElementWiseOperator::opMax ? std::numeric_limits<ElemType>::min() : std::numeric_limits<ElemType>::max();
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
             {
                 if (reductionOp == ElementWiseOperator::opMax)
@@ -6305,8 +6305,8 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
-        InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
+    if (reductionOp != ElementWiseOperator::opSum && reductionOp != ElementWiseOperator::opMax && reductionOp != ElementWiseOperator::opMin)
+        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum not yet implemented.");
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
