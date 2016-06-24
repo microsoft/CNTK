@@ -430,7 +430,7 @@ private:
 static void CopyToOffset(const const_array_ref<float>& source, array_ref<float>& destination, size_t offset)
 {
     size_t sourceSize = source.size() * sizeof(float);
-    memcpy_s(destination.begin() + sourceSize * offset, sourceSize, &source.front(), sourceSize);
+    memcpy_s((char*)destination.begin() + sourceSize * offset, sourceSize, &source.front(), sourceSize);
 }
 
 // TODO: Move augmentation to the separate class outside of deserializer.
