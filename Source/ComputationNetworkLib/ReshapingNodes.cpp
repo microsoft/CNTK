@@ -86,6 +86,25 @@ template <class ElemType>
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
+    case ElementWiseOperator::opMax:
+    {
+                                       // "Sum": broadcast the gradient
+                                       auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+                                       auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
+                                       sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+    }
+        break;
+
+    case ElementWiseOperator::opMin:
+    {
+                                       // "Sum": broadcast the gradient
+                                       auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+                                       auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
+                                       sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+    }
+        break;
         // more coming
 
         // "LogPlus": softmax
@@ -103,8 +122,9 @@ template <class ElemType>
 {
     switch (m_op)
     {
+    case ElementWiseOperator::opMax: return true;
+    case ElementWiseOperator::opMin: return true;
     case ElementWiseOperator::opSum: return false;
-    // will be different e.g. for LogPlus, Max, and Min
     }
     LogicError("Should not get here.");
 }
@@ -114,8 +134,9 @@ template <class ElemType>
 {
     switch (m_op)
     {
+    case ElementWiseOperator::opMax: return true;
+    case ElementWiseOperator::opMin: return true;
     case ElementWiseOperator::opSum: return false;
-    // will be different for LogPlus, Max, and Min
     }
     LogicError("Should not get here.");
 }
@@ -129,6 +150,9 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     else
 #endif
     if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
+    else if (m_operation == L"Max") m_op = ElementWiseOperator::opMax;
+    else if (m_operation == L"Min") m_op = ElementWiseOperator::opMin;
+
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
 }
