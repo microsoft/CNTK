@@ -1320,3 +1320,63 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
     op.rank = data_input.rank
     return op
 
+################################################################################
+# reduction ops
+################################################################################
+
+def reduce_max(value, axis=0, name=None):
+    """
+    For axis >= 1 computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+
+    Args:
+        value (list): list of input tensors
+        axis (int): axis to reduce. For axis==0 the whole tensor is reduce into one value.
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import ReduceMax
+    op = ReduceMax(value, axis=axis, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
+
+def reduce_min(value, axis=0, name=None):
+    """
+    For axis >= 1 computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+
+    Args:
+        value (list): list of input tensors
+        axis (int): axis to reduce. For axis==0 the whole tensor is reduce into one value.
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import ReduceMin
+    op = ReduceMin(value, axis=axis, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op._.rank
+    return op
+
+def reduce_sum(value, axis=0, name=None):
+    """
+    For axis >= 1 computes the sum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+
+    Args:
+        value (list): list of input tensors
+        axis (int): axis to reduce. For axis==0 the whole tensor is reduce into one value.
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import ReduceSum
+    op = ReduceSum(value, axis=axis, name=name)
+    wrap_numpy_arrays(op)    
+    op.rank = op.z.rank - 1
+    return op

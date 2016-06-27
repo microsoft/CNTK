@@ -298,8 +298,8 @@ class ReconcileDynamicAxis(ComputationNode):
         self.inputs = ['dataInput', 'layoutInput']
 
 class Convolution(ComputationNode):
-    def __init__(self, weightNode, inputValueNode, kernelDims, mapDims=1, stride=1, sharing=True, autoPadding=True, lowerPad=0, upperPad=0, imageLayout='CHW', maxTempMemSizeInSamples=0, op_name='Convolution', name=None):
-        super(Convolution, self).__init__(params=['weightNode', 'inputValueNode', 'kernelDims', 'mapDims', 'stride', 'sharing', 'autoPadding', 'lowerPad', 'upperPad', 'imageLayout', 'maxTempMemSizeInSamples'], op_name=op_name, name=name)
+    def __init__(self, weightNode, inputValueNode, kernelDims, mapDims=1, stride=1, sharing=True, autoPadding=True, lowerPad=0, upperPad=0, transpose=False, imageLayout='CHW', maxTempMemSizeInSamples=0, op_name='Convolution', name=None):
+        super(Convolution, self).__init__(params=['weightNode', 'inputValueNode', 'kernelDims', 'mapDims', 'stride', 'sharing', 'autoPadding', 'lowerPad', 'upperPad', 'transpose', 'imageLayout', 'maxTempMemSizeInSamples'], op_name=op_name, name=name)
         self.weightNode = weightNode
         self.inputValueNode = inputValueNode
         self.kernelDims = kernelDims
@@ -309,9 +309,10 @@ class Convolution(ComputationNode):
         self.autoPadding = autoPadding
         self.lowerPad = lowerPad
         self.upperPad = upperPad
+        self.transpose = transpose
         self.imageLayout = imageLayout
         self.maxTempMemSizeInSamples = maxTempMemSizeInSamples
-        self.params_with_defaults = ['mapDims', 'stride', 'sharing', 'autoPadding', 'lowerPad', 'upperPad', 'imageLayout', 'maxTempMemSizeInSamples']
+        self.params_with_defaults = ['mapDims', 'stride', 'sharing', 'autoPadding', 'lowerPad', 'upperPad', 'transpose', 'imageLayout', 'maxTempMemSizeInSamples']
         self.inputs = ['weightNode', 'inputValueNode']
 
 class Pooling(ComputationNode):
@@ -638,6 +639,22 @@ class RectifiedLinear(ComputationNode):
 class ReduceSum(ComputationNode):
     def __init__(self, z, axis=0, op_name='ReduceSum', name=None):
         super(ReduceSum, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+        self.z = z
+        self.axis = axis
+        self.params_with_defaults = ['axis']
+        self.inputs = ['z']
+
+class ReduceMax(ComputationNode):
+    def __init__(self, z, axis=0, op_name='ReduceMax', name=None):
+        super(ReduceMax, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+        self.z = z
+        self.axis = axis
+        self.params_with_defaults = ['axis']
+        self.inputs = ['z']
+
+class ReduceMin(ComputationNode):
+    def __init__(self, z, axis=0, op_name='ReduceMin', name=None):
+        super(ReduceMin, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
         self.z = z
         self.axis = axis
         self.params_with_defaults = ['axis']
