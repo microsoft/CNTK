@@ -434,6 +434,7 @@ static void CopyToOffset(const const_array_ref<float>& source, array_ref<float>&
 }
 
 // TODO: Move augmentation to the separate class outside of deserializer.
+// TODO: Check the CNTK Book why different left and right extents are not supported.
 // Augments a frame with a given index with frames to the left and right of it.
 static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
                              size_t frameIndex,
@@ -453,7 +454,7 @@ static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
     for (size_t currentFrame = frameIndex, n = 1; n <= rightExtent; n++)
     {
         if (currentFrame + 1 < utterance.size())
-            currentFrame++;
+            currentFrame++; // index does not move beyond boundary
         CopyToOffset(utterance[currentFrame], destination, leftExtent + n);
     }
 }
