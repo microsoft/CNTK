@@ -5,6 +5,12 @@ namespace CNTK
 {
     class LearnerBase : public Learner
     {
+    public:
+        
+        virtual Dictionary GetCheckpointState() const override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
     protected:
         LearnerBase(const _Internal::_SimpleSet<Variable>& parameters, const Learner::AdditionalParameters& additionalParameters);
 
@@ -21,8 +27,6 @@ namespace CNTK
         }
 
         virtual std::wstring LearnerType() = 0;
-
-        
 
         double m_learningRatePerSample;
         double m_momentumPerSample;

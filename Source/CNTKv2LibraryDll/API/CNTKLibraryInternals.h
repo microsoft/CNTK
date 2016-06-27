@@ -49,6 +49,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
+
+    class File;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -134,6 +136,7 @@ namespace CNTK
     class CompositeFunction;
     class Function;
     class LearnerBase;
+    class Dictionary;
 
     namespace _Internal
     {

@@ -1925,10 +1925,9 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-            // TODO: replace with learners' checkpointing mechanism
-            for (auto& smoothedGradient : SmoothedGradients())
-            { 
-                fstream << *smoothedGradient; 
+            for (auto& learner : m_learners)
+            {
+                fstream << learner->GetCheckpointState();
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2009,10 +2008,11 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-    // TODO: replace with learners' checkpointing mechanism
-    for (auto& smoothedGradient : SmoothedGradients())
+    for (auto& learner : m_learners)
     {
-        fstream >> *smoothedGradient;
+        ::CNTK::Dictionary checkpoint;
+        fstream >> checkpoint;
+        learner->RestoreFromCheckpoint(checkpoint);
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2194,7 +2194,7 @@ template <class ElemType>
 list<shared_ptr<Matrix<ElemType>>> SGD<ElemType>::SmoothedGradients()
 {
     unordered_map<::CNTK::Variable, shared_ptr<Matrix<ElemType>>> gradientMap;
-    for (auto learner : m_learners)
+    for (auto& learner : m_learners)
     {
         learner->GetSmoothedGradients<ElemType>(gradientMap);
     }
@@ -2205,7 +2205,6 @@ list<shared_ptr<Matrix<ElemType>>> SGD<ElemType>::SmoothedGradients()
     {
         gradients.push_back(gradientMap.at(parameter));
     }
-
 
     return gradients;
 }

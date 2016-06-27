@@ -236,7 +236,40 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     return false;
 }
 
+/* virtual */ Dictionary LearnerBase::GetCheckpointState() const /* override */ 
+{
+    Dictionary checkpoint;
 
+    for (const auto& learnableParameter : Parameters())
+    {
+        if (checkpoint.Contains(learnableParameter.Name()))
+        {
+            // TODO: check uniqueness in the constructor?
+            LogicError("Parameter names must be unique");
+        }
+        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+
+        // TODO: could also store things like dimensions, element size, format, etc.
+        checkpoint[learnableParameter.Name()] = SerializeToVector(smoothedGradient->Data());
+    }
+    return checkpoint;
+}
+
+/* virtual */ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /* override */
+{
+    for (const auto& learnableParameter : Parameters())
+    {
+        if (!checkpoint.Contains(learnableParameter.Name()))
+        {
+            LogicError("Checkpoint does not contain state for parameter %ls", learnableParameter.Name().c_str());
+        }
+        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+
+        const DictionaryValue& state = checkpoint[learnableParameter.Name()];
+
+        DeserializeFromVector(smoothedGradient->Data(), state.GetValue<_Internal::_SimpleVector<DictionaryValue>>());
+    }
+}
 
 Learners::SGDLearner::SGDLearner(const _SimpleSet<Variable>& parameters, bool useNesterovAcceleration, 
     const Learner::AdditionalParameters& additionalParameters)
