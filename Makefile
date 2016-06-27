@@ -35,6 +35,9 @@
 #     defaults to /usr/local/
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
+# TODO: Build static libraries for common dependencies that are shared by multiple 
+# targets, e.g. eval and CNTK.
+
 ARCH=$(shell uname)
 
 ifndef BUILD_TOP
@@ -425,55 +428,62 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 # LibEval
 ########################################
 
-EVALLIB_SRC =\
+EVAL:=eval
+
+SGDLIB_SRC=\
+	$(SOURCEDIR)/SGDLib/Profiler.cpp \
+	$(SOURCEDIR)/SGDLib/SGD.cpp
+	
+EVAL_SRC=\
 	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
-	$(SOURCEDIR)/SGDLib/Profiler.cpp \
-	$(SOURCEDIR)/SGDLib/SGD.cpp \
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
 	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp 
 
-EVALLIB_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
-EVALLIB_SRC+=$(CNTK_COMMON_SRC)
-EVALLIB_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
+EVAL_SRC+=$(SGDLIB_SRC)
+EVAL_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+EVAL_SRC+=$(CNTK_COMMON_SRC)
+EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
-EVALLIB_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVALLIB_SRC)))
+EVAL_OBJ:=$(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SRC)))
 
-EVALLIB_NAME := eval
-EVALLIB := $(LIBDIR)/libeval.so
-ALL+=$(EVALLIB)
-SRC+=$(EVALLIB_SRC)
+EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
+ALL+=$(EVAL_LIB)
+SRC+=$(EVAL_SRC)
 
-$(EVALLIB): $(EVALLIB_OBJ) | $(CNTKMATH_LIB)
+RPATH=-Wl,-rpath,
+
+$(EVAL_LIB): $(EVAL_OBJ) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo Building $(EVALLIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
+	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
 
 ########################################
 # Eval Sample client
 ########################################
-EVAL_SAMPLE_CLIENT_SRC =\
+EVAL_SAMPLE_CLIENT:=$(BINDIR)/cppevalclient
+
+EVAL_SAMPLE_CLIENT_SRC=\
 	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalClient/CPPEvalClient.cpp 
 
-EVAL_SAMPLE_CLIENT:=$(BINDIR)/cppevalclient
-EVAL_SAMPLE_CLIENT_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SRC))
+EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SRC))
 
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
 
 RPATH=-Wl,-rpath,
 
-$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVALLIB)
+$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^  -l$(EVALLIB_NAME) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ -l$(EVAL) -l$(CNTKMATH)
 
 ########################################
 # BinaryReader plugin
@@ -760,8 +770,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/CNTK.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
 	$(SOURCEDIR)/CNTK/tests.cpp \
-	$(SOURCEDIR)/SGDLib/Profiler.cpp \
-	$(SOURCEDIR)/SGDLib/SGD.cpp \
 	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
@@ -774,7 +782,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
 
-
+CNTK_SRC+=$(SGDLIB_SRC)
 CNTK_SRC+=$(CNTK_COMMON_SRC)
 CNTK_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)

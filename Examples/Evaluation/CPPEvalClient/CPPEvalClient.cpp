@@ -4,8 +4,6 @@
 //
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
-
-#include "stdafx.h"
 #include "Eval.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -23,7 +21,7 @@ typedef std::map<std::wstring, std::vector<float>*> Layer;
 /// <description>
 /// This program is a native C++ client using the native evaluation interface
 /// located in the <see cref="eval.h"/> file.
-/// The CNTK evaluation dll (EvalDLL.dll), must be found through the system's path. 
+/// The CNTK evaluation library (EvalDLL.dll on Windows, and LibEval.so on Linux), must be found through the system's path. 
 /// The other requirement is that Eval.h be included
 /// In order to run this program the model must already exist in the example. To create the model,
 /// first run the example in <CNTK>/Examples/Image/MNIST. Once the model file 01_OneHidden is created,
@@ -42,10 +40,9 @@ int main(int argc, char* argv[])
     // Load the eval library
     auto hModule = LoadLibrary(L"evaldll.dll");
     if (hModule == nullptr)
-    {
-        const std::wstring msg(L"Cannot find evaldll.dll library");
-        const std::string ex(msg.begin(), msg.end());
-        throw new std::exception(ex.c_str());
+    {       
+        fprintf(stderr, "Cannot find evaldll.dll library.");
+        return 1;
     }
 
     // Get the factory method to the evaluation engine
@@ -57,17 +54,16 @@ int main(int argc, char* argv[])
     getEvalProc(&model);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
-    const std::string modelWorkingDirectory = path + "\\..\\..\\Examples\\Image\\MNIST\\Data\\";
-    const std::string modelFilePath = modelWorkingDirectory + "..\\Output\\Models\\01_OneHidden";
-
+    const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
 #else // on Linux
     path = app.substr(0, app.rfind("/"));
     GetEvalF(&model);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
     const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
-    const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
 #endif
+
+    const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
 
     // Load model with desired outputs
     std::string networkConfiguration;
