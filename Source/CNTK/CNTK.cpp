@@ -126,7 +126,7 @@ void CheckSupportForGpu(DEVICEID_TYPE deviceId)
     {
         InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", 
                         gpuData.name.c_str(), gpuData.versionMajor, gpuData.versionMinor);
-}
+    }
     else if (gpuData.validity == GpuValidity::UnknownDevice)
     {
         InvalidArgument("CNTK: Unknown GPU with Device ID %d.", gpuData.deviceId);
@@ -404,7 +404,7 @@ void PrintGpuInfo()
 
     for (GpuData& data : gpusData)
     {
-		LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
                   data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
@@ -760,7 +760,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
-        // CheckSupportForGpu(0);
+
         if (argc <= 1)
         {
             LOGPRINTF(stderr, "No command-line argument given.\n");
