@@ -7,7 +7,7 @@ BinaryPath=$TEST_CNTK_BINARY
 if [ "$TEST_DEVICE" == "cpu" ]; then
   CNTKDeviceId=-1
 elif [ "$TEST_DEVICE" == "gpu" ]; then
-  CNTKDeviceId=0
+  CNTKDeviceId=1
 else
   echo "Error: Unknown TEST_DEVICE specified!"
   exit 3
@@ -84,9 +84,9 @@ cntkrun()
   mkdir -p $modelsDir || exit $?
 
   if [[ $MPIMode == 0 ]]; then
-    run cuda-memcheck --error-exitcode 1 "$BinaryPath" $CNTKArgs
+    run cuda-memcheck --error-exitcode 1 --tool racecheck --leak-check full --report-api-errors all "$BinaryPath" $CNTKArgs
   else
-    run "$MPI_BINARY" $MPIArgs cuda-memcheck --error-exitcode 1 $BinaryPath $CNTKArgs
+    run "$MPI_BINARY" $MPIArgs cuda-memcheck --error-exitcode 1 --tool racecheck --leak-check full --report-api-errors all $BinaryPath $CNTKArgs
   fi
   local ExitCode=$?
   if [[ $DeleteModelsAfterTest == 1 ]]; then
