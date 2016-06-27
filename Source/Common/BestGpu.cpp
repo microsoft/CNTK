@@ -540,7 +540,7 @@ void BestGpu::DisallowUnsupportedDevices()
 {
     for (auto pd : m_procData)
     {
-        if (pd->deviceProp.major < MininumCCMajorForGpu)
+        if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
         {
             DisallowDevice(pd->deviceId);
         }
@@ -556,9 +556,7 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId){
         return *it;
     }
 
-    GpuData defaultGpuData = GpuData();
-    defaultGpuData.deviceId = deviceId;
-    return defaultGpuData;
+    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
@@ -572,23 +570,20 @@ std::vector<GpuData> GetAllGpusData()
     
     for (ProcessorData* pd : processorData)
     {
-        GpuData gpuData = GpuData();
-        gpuData.major = pd->deviceProp.major;
-        gpuData.minor = pd->deviceProp.minor;
-        gpuData.cudaCores = pd->cores;
-        gpuData.deviceId = pd->deviceId;
+
+        GpuValidity validity = GpuValidity::UnknownDevice;
+
         if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
         {
-            gpuData.validity = GpuValidity::ComputeCapabilityNotSupported;
+            validity = GpuValidity::ComputeCapabilityNotSupported;
         }
         else
         {
-            gpuData.validity = GpuValidity::Valid;
+            validity = GpuValidity::Valid;
         }
 
-        string gpuName(pd->deviceProp.name);
-        gpuData.name = gpuName;
-        gpuData.totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
+        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
+        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
         data.push_back(gpuData);
     }
 

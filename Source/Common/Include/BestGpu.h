@@ -20,21 +20,21 @@ using namespace std;
 #ifndef CPUONLY
 enum class GpuValidity {
     Valid,
-    InvalidDeviceId,
+    UnknownDevice,
     ComputeCapabilityNotSupported
 };
 
 struct GpuData
 {
-    int major;
-    int minor;
+    int versionMajor;
+    int versionMinor;
     int deviceId;
     int cudaCores;
     GpuValidity validity;
     string name;
     size_t totalMemory;
-    GpuData()
-        :major(0), minor(0), cudaCores(0), validity(GpuValidity::InvalidDeviceId)
+    GpuData(int versionMajor, int versionMinor, int deviceId, int cudaCores, GpuValidity validity, const string& name, size_t totalMemory)
+        :versionMajor(versionMajor), versionMinor(versionMinor), deviceId(deviceId), cudaCores(cudaCores), validity(validity), name(name), totalMemory(totalMemory)
     {
     }
 
