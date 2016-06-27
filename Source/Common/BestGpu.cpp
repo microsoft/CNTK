@@ -554,7 +554,7 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId)
     auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
     if (it != gpusData.end())
-        {
+    {
         return *it;
     }
 
@@ -576,7 +576,7 @@ std::vector<GpuData> GetAllGpusData()
         GpuValidity validity = GpuValidity::UnknownDevice;
 
         if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
-    {
+        {
             validity = GpuValidity::ComputeCapabilityNotSupported;
         }
         else

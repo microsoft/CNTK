@@ -395,7 +395,7 @@ void PrintGpuInfo()
 
     if (gpusData.empty())
     {
-		LOGPRINTF(stderr, "No GPUs found\n");
+        LOGPRINTF(stderr, "No GPUs found\n");
         return;
     }
 
@@ -510,7 +510,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
             if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
-        {
+            {
                 CheckSupportForGpu(valp); // throws if gpu is not supported
             }
         }
@@ -760,7 +760,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
-
+        // CheckSupportForGpu(0);
         if (argc <= 1)
         {
             LOGPRINTF(stderr, "No command-line argument given.\n");
