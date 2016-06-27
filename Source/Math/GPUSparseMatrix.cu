@@ -2689,7 +2689,6 @@ template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>
 template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
 template void GPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void GPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
-template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
 template void GPUSparseMatrix<char>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<char>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<char>::~GPUSparseMatrix();
@@ -2713,7 +2712,6 @@ template void GPUSparseMatrix<short>::CopyToCPUSparseMatrix(CPUSparseMatrix<shor
 template void GPUSparseMatrix<short>::ChangeDeviceTo(int);
 template void GPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
 template void GPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
-template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
 template void GPUSparseMatrix<short>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<short>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<short>::~GPUSparseMatrix();
@@ -2725,6 +2723,7 @@ template void GPUSparseMatrix<short>::ScaleAndAdd(short, GPUSparseMatrix<short> 
 
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
+template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
 
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)

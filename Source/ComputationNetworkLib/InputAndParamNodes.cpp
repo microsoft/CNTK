@@ -74,7 +74,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
 // initialize with random numbers
 // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
+void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
                                                 const unsigned long randomSeed,
                                                 const ElemType initValueScale,
                                                 bool initOnCPUOnly)
@@ -162,6 +162,7 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
     VerifyDataSize(Value());      // sanity check
 }
 
+// TODO: Move this error check there, since this is called only from one place.
 template <class ElemType>
 void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFromFilePath)
 {
@@ -304,5 +305,8 @@ template <class ElemType>
 {
     SetLearningRateMultiplier(0);
 }
+
+template class LearnableParameter<float>;
+template class LearnableParameter<double>;
 
 }}}

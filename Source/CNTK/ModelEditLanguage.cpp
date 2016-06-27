@@ -10,7 +10,6 @@
 #include "ModelEditLanguage.h"
 #include "ConvolutionalNodes.h"
 #include "InputAndParamNodes.h"
-#include "Quantizers.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -605,63 +604,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
             pParamNode->ReviseFromFile(msra::strfun::utf16(paramPath));
             fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
-        }
-    }
-    else if (EqualInsensitive(name, "Quantize"))
-    {
-        int numFixedParams = 1;
-        int numOptParams = 1;
-        // Default quantizer is short, symmetric
-        // extraBits decreases the quantization normalizer to prevent integer overflow during BLAS routines.
-        // Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
-        // For quantization with shorts, recommended value of extraBits is 1-3.
-
-        //TODO: add regex pattern for the node name
-        if (params.size() > numFixedParams + numOptParams || params.size() < numFixedParams)
-            RuntimeError("Invalid number of parameters. Valid parameters: Quantize(nodeName, [extrabits=[0-5]])).");
-
-        std::string nodeName = params[0];
-        int extraBits = 0;
-        std::string propName, value;
-        if (OptionalParameter(params[params.size() - 1], propName, value))
-        {
-            try
-            {
-                extraBits = std::stoi(value);
-            }
-            catch (std::logic_error&)
-            {
-                InvalidArgument("Invalid optional parameter %s, valid value range for extrabits is [0-5]", propName.c_str());
-            }
-
-            if (!EqualInsensitive(propName, "extrabits") || extraBits < 0 || extraBits > 5)
-            {
-                InvalidArgument("Invalid optional parameter %s, valid optional parameters : extrabits = [0 - 5]", propName.c_str()); 
-            }
-        }
-        NetNdl<ElemType>* netNdl;
-        vector<ComputationNodeBasePtr> nodes = FindSymbols(nodeName, netNdl);
-
-        for (auto& pNode : nodes)
-        {
-            if (pNode->OperationName() != LearnableParameter<ElemType>::TypeName())
-            {
-                fprintf(stderr, "WARNING: you want to quantize the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
-                    pNode->NodeName().c_str(), pNode->OperationName().c_str());
-                continue;
-            }
-            auto pParamNode = std::dynamic_pointer_cast<LearnableParameter<ElemType>>(pNode);
-
-            //shared_ptr<LearnableParameter<short>> pLearnaParamShort(new LearnableParameter<short>(-1, L"Some_Name"));
-
-            wstring quantizedNodeName = pNode->NodeName() + L"_quantized";
-            // Quantization to <short> is the only currently supported
-            shared_ptr<SymmetricQuantizer<ElemType, short>> quantizer(new SymmetricQuantizer<ElemType, short>(pParamNode->Value().Data(), pParamNode->Value().GetNumElements(), extraBits));
-
-            shared_ptr<LearnableParameterQuantized<ElemType, short>> pParamNodeQuant(new LearnableParameterQuantized<ElemType, short>(pParamNode->Value(), pNode->GetDeviceId(), quantizedNodeName, quantizer));
-            pNode->CopyTo(pParamNodeQuant, quantizedNodeName, CopyNodeFlags::copyNodeValue);
-
-            fprintf(stderr, "Quantize node %ls\n", pNode->NodeName().c_str());
         }
     }
     else

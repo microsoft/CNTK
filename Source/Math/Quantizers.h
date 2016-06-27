@@ -4,25 +4,28 @@
 //
 #pragma once
 
-#pragma warning(disable : 4127) // conditional expression is constant
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// RawType - input type to the quantizer
+// RawType - input type to the quantizer. Currently CNTK supports float or double as RawType.
 // QuantizedType - output type of the quantizer
 template <class RawType, class QuantizedType>
-class IQuantizerBase 
+class QuantizerBase 
 {
 public:
     virtual void Quantize(const RawType* input, QuantizedType* output, size_t arraySize) = 0;
     virtual void Dequantize(const QuantizedType* input, RawType* output, size_t arraySize) = 0;
 
 protected:
-    static int rangeMax;
+    static const int QuantizerBase<RawType, short>::rangeMax = std::numeric_limits<short>::max();
 };
 
+// Symmetric quantizer. 
+// Quantization is achieved by 
+//    1. Finding the absolute max of values to be quantized.
+//    2. Adjusting the absolute max with extraBits parameters.
+//    3. Scaling all values in the collection to be within the symmetric range of the QuantizedType
 template <class RawType, class QuantizedType>
-class SymmetricQuantizer : public IQuantizerBase<RawType, QuantizedType>
+class SymmetricQuantizer : public QuantizerBase<RawType, QuantizedType>
 {
     RawType m_quantizer;
     RawType m_inverseQuantizer;
@@ -30,14 +33,12 @@ class SymmetricQuantizer : public IQuantizerBase<RawType, QuantizedType>
 public:
     // elements - collection to be quantized
     // extraBits decreases the quantization normalizer to prevent integer overflow during BLAS routines.
-    // Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
-    // For quantization with shorts, recommended value of extraBits is 1-3.
-    SymmetricQuantizer(RawType* elements, size_t elementsSize, size_t extraBits)
+    //     Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
+    //     For quantization with shorts, recommended value of extraBits is 1-3.
+    // This constructor accepts the collection of RawType to initialize internal quantizer
+    // and then apply this quantizer to collections with similar range as the one it was initialized with.
+    SymmetricQuantizer(const RawType* elements, size_t elementsSize, size_t extraBits)
     {
-        if (elementsSize == 0)
-        {
-            LogicError("The sequence to be quantized is empty.");
-        }
         m_absMax = FindAbsMax(elements, elementsSize);
         SymmetricQuantizer(m_absMax, extraBits);
     }
@@ -55,6 +56,7 @@ public:
         m_inverseQuantizer = 1 / m_quantizer;
     }
 
+    // Perform quantization of the input collection, put result into pre-allocated output collection
     virtual void Quantize(const RawType* input, QuantizedType* output, size_t inputSize)
     {
         for (size_t i = 0; i < inputSize; i++)
@@ -66,14 +68,12 @@ public:
         }
     }
 
+    // Accept quantized collection as input, put de-quantization result into pre-allocated output collection.
     virtual void Dequantize(const QuantizedType* input, RawType* output, size_t inputSize)
     {
         for (size_t i = 0; i < inputSize; i++)
         {
             output[i] = (RawType)(input[i] * m_inverseQuantizer);
-#ifdef _DEBUG
-            assert(abs(output[i]) <= m_absMax);
-#endif
         }
     }
 
@@ -81,8 +81,8 @@ private:
     // Find absolute maximum value
     RawType FindAbsMax(RawType* elements, size_t elementsSize)
     {
-        // in constructor we asserted that arraySize > 0
-        RawType maxElem, minElem = elements[0];
+        RawType maxElem = std::numeric_limits<float>::min();
+        RawType minElem = std::numeric_limits<float>::max();
         for (size_t i = 0; i < elementsSize; i++)
         {
             maxElem = std::max(maxElem, elements[i]);
@@ -92,8 +92,5 @@ private:
         return std::max(maxElem, std::abs(minElem));
     }
 };
-
-int IQuantizerBase<float, short>::rangeMax = SHRT_MAX;
-int IQuantizerBase<double, short>::rangeMax = SHRT_MAX;
 
 }}}

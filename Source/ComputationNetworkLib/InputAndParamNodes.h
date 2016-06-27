@@ -5,7 +5,6 @@
 #pragma once
 
 #include "Basics.h"
-#include "Quantizers.h"
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
@@ -28,6 +27,7 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     static const std::wstring TypeName() { return L"LearnableParameter"; }
 
     void InitShape(const TensorShape& shape);
+
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 
@@ -56,11 +56,10 @@ public:
     void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
 
     // initialize by reading a matrix from a text file
-    virtual void InitFromFile(const std::wstring& initFromFilePath);
+    void InitFromFile(const std::wstring& initFromFilePath);
 
     // reload parameters from file
     // This is called from MEL.
-    // TODO: Move this error check there, since this is called only from one place.
     void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
@@ -83,37 +82,6 @@ public:
 
     // called from CloneFunction(..., parameters="constant")
     virtual void FreezeParameters() override; // from IFreezable
-};
-
-// -----------------------------------------------------------------------
-// LearnableParameterQuantized (/*no input*/)
-// Represents quantized weight matrices and biases
-// This node is for inference only and should not be used during training
-// Expected workflow: 
-//    (1) Train a model with LearnableParameter
-//    (2) To prepare the model for runtime, use BS to convert desired LearnableParameter nodes to LearnableParameterQuantized
-// TODO: add -Node to the class name
-// -----------------------------------------------------------------------
-template <class ElemType, class QuantizedType>
-class LearnableParameterQuantized : public LearnableParameter<ElemType>
-{
-public:
-    LearnableParameterQuantized(const Matrix<ElemType>& learnableParameterValue, DEVICEID_TYPE deviceId, std::wstring nodeName, std::shared_ptr<IQuantizerBase<ElemType, QuantizedType>> quantizer) :
-        LearnableParameter<ElemType>(deviceId, nodeName)
-    {
-        // create a temp array for demonstration before we figure out how to store quantized matrix
-        QuantizedType* quantizedData = new QuantizedType[learnableParameterValue.GetNumElements()];
-        quantizer->Quantize(learnableParameterValue.Data(), quantizedData, learnableParameterValue.GetNumElements());
-
-        delete[] quantizedData;
-    }
-
-    virtual void InitFromFile(const std::wstring& initFromFilePath) override;
-
-    virtual void Save(File& fstream) const override;
-    virtual void Load(File& fstream, size_t modelVersion) override;
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 };
 
 // -----------------------------------------------------------------------
