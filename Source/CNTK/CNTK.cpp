@@ -118,17 +118,18 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 }
 
 #ifndef CPUONLY
-// abort execution is GPU doesn't comply with the compute capability restriction
+// abort execution is GPU is not supported (e.g. compute capability not supported)
 void CheckSupportForGpu(DEVICEID_TYPE deviceId)
 {
     auto gpuData = GetGpuData(deviceId);
     if (gpuData.validity == GpuValidity::ComputeCapabilityNotSupported)
     {
-        InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", gpuData.name.c_str(), gpuData.major, gpuData.minor);
+        InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", 
+                        gpuData.name.c_str(), gpuData.versionMajor, gpuData.versionMinor);
     }
-    else if (gpuData.validity == GpuValidity::InvalidDeviceId)
+    else if (gpuData.validity == GpuValidity::UnknownDevice)
     {
-        InvalidArgument("CNTK: The GPU with Device ID %d does not exist.", gpuData.deviceId);
+        InvalidArgument("CNTK: Unknown GPU with Device ID %d.", gpuData.deviceId);
     }
 }
 #endif
@@ -404,7 +405,7 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.major, data.minor, data.name.c_str(), data.totalMemory);
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -510,7 +511,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         {
             if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
             {
-                CheckSupportForGpu(valp);
+                CheckSupportForGpu(valp); // throws if gpu is not supported
             }
         }
     }
@@ -621,7 +622,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     {
         if (static_cast<int>(val) >= 0) // gpu (id >= 0)
         {
-            CheckSupportForGpu(static_cast<int>(val));
+            CheckSupportForGpu(static_cast<int>(val)); // throws if gpu is not supported
         }
     }
 #endif
@@ -759,7 +760,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
-        // CheckSupportForGpu(0);
+
         if (argc <= 1)
         {
             LOGPRINTF(stderr, "No command-line argument given.\n");
