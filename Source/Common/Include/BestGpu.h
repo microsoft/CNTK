@@ -18,18 +18,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 #ifndef CPUONLY
+enum class GpuValidity {
+    Valid,
+    InvalidDeviceId,
+    ComputeCapabilityNotSupported
+};
+
 struct GpuData
 {
     int major;
     int minor;
     int deviceId;
     int cudaCores;
+    GpuValidity validity;
     string name;
     size_t totalMemory;
+    GpuData()
+        :major(0), minor(0), cudaCores(0), validity(GpuValidity::InvalidDeviceId)
+    {
+    }
+
 };
 
-std::vector<GpuData> GetGpusData();
-bool IsGpuSupported(DEVICEID_TYPE deviceId);
+std::vector<GpuData> GetAllGpusData();
+GpuData GetGpuData(DEVICEID_TYPE deviceId);
 
 class ConfigParameters;
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config);

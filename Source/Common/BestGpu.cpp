@@ -547,24 +547,22 @@ void BestGpu::DisallowUnsupportedDevices()
     }
 }
 
-bool IsGpuSupported(DEVICEID_TYPE deviceId){
-    auto bestGpu = make_unique<BestGpu>();
+GpuData GetGpuData(DEVICEID_TYPE deviceId){
+    std::vector<GpuData> gpusData = GetAllGpusData();
 
-    std::vector<ProcessorData*> processorData = bestGpu->GetProcessorData();
+    auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
-    for (auto pd : processorData)
-    {
-        if (pd->deviceId == deviceId)
-        {
-            return pd->deviceProp.major >= BestGpu::MininumCCMajorForGpu;
-        }
+    if (it != gpusData.end()){
+        return *it;
     }
 
-    return false;
+    GpuData defaultGpuData = GpuData();
+    defaultGpuData.deviceId = deviceId;
+    return defaultGpuData;
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
-std::vector<GpuData> GetGpusData()
+std::vector<GpuData> GetAllGpusData()
 {
     std::vector<GpuData> data;
 
@@ -574,11 +572,19 @@ std::vector<GpuData> GetGpusData()
     
     for (ProcessorData* pd : processorData)
     {
-        GpuData gpuData;
+        GpuData gpuData = GpuData();
         gpuData.major = pd->deviceProp.major;
         gpuData.minor = pd->deviceProp.minor;
         gpuData.cudaCores = pd->cores;
         gpuData.deviceId = pd->deviceId;
+        if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
+        {
+            gpuData.validity = GpuValidity::ComputeCapabilityNotSupported;
+        }
+        else
+        {
+            gpuData.validity = GpuValidity::Valid;
+        }
 
         string gpuName(pd->deviceProp.name);
         gpuData.name = gpuName;

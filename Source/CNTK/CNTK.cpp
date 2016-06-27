@@ -121,9 +121,14 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // abort execution is GPU doesn't comply with the compute capability restriction
 void CheckSupportForGpu(DEVICEID_TYPE deviceId)
 {
-    if (!IsGpuSupported(deviceId))
+    auto gpuData = GetGpuData(deviceId);
+    if (gpuData.validity == GpuValidity::ComputeCapabilityNotSupported)
     {
-        InvalidArgument("CNTK: GPU device %d has compute capability less than 3.0", deviceId);
+        InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", gpuData.name.c_str(), gpuData.major, gpuData.minor);
+    }
+    else if (gpuData.validity == GpuValidity::InvalidDeviceId)
+    {
+        InvalidArgument("CNTK: The GPU with Device ID %d does not exist.", gpuData.deviceId);
     }
 }
 #endif
@@ -385,7 +390,7 @@ void PrintUsageInfo()
 void PrintGpuInfo()
 {
 #ifndef CPUONLY
-    std::vector<GpuData> gpusData = GetGpusData();
+    std::vector<GpuData> gpusData = GetAllGpusData();
 
     if (gpusData.empty())
     {
@@ -398,8 +403,8 @@ void PrintGpuInfo()
 
     for (GpuData& data : gpusData)
     {
-		LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-			      data.deviceId, data.cudaCores, data.major, data.minor, data.name.c_str(), data.totalMemory);
+        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+                  data.deviceId, data.cudaCores, data.major, data.minor, data.name.c_str(), data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -754,7 +759,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     try
     {        
         PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
-
+        // CheckSupportForGpu(0);
         if (argc <= 1)
         {
             LOGPRINTF(stderr, "No command-line argument given.\n");
