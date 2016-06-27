@@ -16,6 +16,7 @@
 #include <set>
 #include <algorithm>
 #include <map>
+#include "TimerUtility.h"
 
 using namespace std;
 
@@ -139,11 +140,19 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 #endif
         if (node->IsOutOfDateWrtInputs())
         {
+            Timer timer;
+            timer.Start();
+            fprintf(stderr, "ForwardProp start on node %ls ", node->GetName().c_str());
+
             node->BeginForwardProp();
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
             node->EndForwardProp();
 
             node->BumpEvalTimeStamp();
+
+            timer.Stop();
+            double propTime = timer.ElapsedSeconds();
+            fprintf(stderr, "ForwardProp on node %ls took %.6gs\n", node->GetName().c_str(), propTime);
         }
     }
 }
