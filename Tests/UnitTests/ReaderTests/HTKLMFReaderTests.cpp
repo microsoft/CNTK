@@ -585,6 +585,40 @@ BOOST_AUTO_TEST_CASE(HTKDeserializers_NonExistingScpFile)
         "reader");
 };
 
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop2)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop2_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_12_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop12)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop12_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_12_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop12_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 

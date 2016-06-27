@@ -204,6 +204,7 @@
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderGrayscale_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
+    <Text Include="Data\ImageReaderMissingImage_map.txt" />
     <Text Include="Data\ImageReaderMultiView_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderZip_map.txt" />

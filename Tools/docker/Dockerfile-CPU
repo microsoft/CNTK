@@ -1,7 +1,6 @@
 # CNTK Dockerfile
 #   CPU only
 #   No 1-bit SGD
-#   Assumes AMD ACML has been previously downloaded and the .tgz file resides in Docker dir
 
 FROM ubuntu:14.04
 
@@ -12,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         g++-multilib \
         gcc-multilib \
+        gfortran-multilib \
         libavcodec-dev \
         libavformat-dev \
         libjasper-dev \
@@ -24,44 +24,60 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python-dev \
         python-numpy \
         python-pip \
+        python-yaml \
         wget \
         zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.gz | tar -xzf - && \
-    cd openmpi-1.10.1 && \
+RUN OPENMPI_VERSION=1.10.3 && \
+    wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
+    cd openmpi-${OPENMPI_VERSION} && \
     ./configure --prefix=/usr/local/mpi && \
     make -j"$(nproc)" install && \
-    rm -rf /openmpi-1.10.1
+    rm -rf /openmpi-${OPENMPI_VERSION}
 
 ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
-RUN wget -q -O - http://nih.at/libzip/libzip-1.1.2.tar.gz | tar -xzf - && \
-    cd libzip-1.1.2 && \
+RUN LIBZIP_VERSION=1.1.2 && \
+    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
-    rm -rf /libzip-1.1.2
+    rm -rf /libzip-${LIBZIP_VERSION}
 
-RUN wget -q -O - https://github.com/Itseez/opencv/archive/3.0.0.tar.gz | tar -xzf - && \
-    cd opencv-3.0.0 && \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-3.0.0 . && \
+RUN OPENCV_VERSION=3.1.0 && \
+    wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
+    cd opencv-${OPENCV_VERSION} && \
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
     make -j"$(nproc)" install && \
-    rm -rf /opencv-3.0.0
+    rm -rf /opencv-${OPENCV_VERSION}
 
-RUN wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v0.2.17.tar.gz | tar -xzf - && \
-    cd OpenBLAS-0.2.17 && \
-    make -j"$(nproc)" && \
+RUN OPENBLAS_VERSION=0.2.18 && \
+    wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.tar.gz | tar -xzf - && \
+    cd OpenBLAS-${OPENBLAS_VERSION} && \
+    make -j"$(nproc)" USE_OPENMP=1 | tee make.log && \
+    grep -qF 'OpenBLAS build complete. (BLAS CBLAS LAPACK LAPACKE)' make.log && \
+    grep -qF 'Use OpenMP in the multithreading.' make.log && \
     make PREFIX=/usr/local/openblas install && \
-    rm -rf /OpenBLAS-0.2.17
+    rm -rf /OpenBLAS-${OPENBLAS_VERSION}
+
+# Install CNTK custom MKL, version 1
+RUN mkdir /usr/local/CNTKCustomMKL && \
+    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-1.tgz | \
+    tar -xzf - -C /usr/local/CNTKCustomMKL
 
 WORKDIR /cntk
 
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
-    sed -i 's/-lopenblas/-lopenblas -llapacke/g' Makefile && \
-    mkdir -p build/release && \
-    cd build/release && \
-    ../../configure --with-openblas=/usr/local/openblas && \
-     make -j1 all 
+    mkdir -p build/cpu/release && \
+    cd build/cpu/release && \
+    ../../../configure --with-openblas=/usr/local/openblas && \
+    make -j"$(nproc)" all && \
+    cd ../../.. && \
+    mkdir -p build-mkl/cpu/release && \
+    cd build-mkl/cpu/release && \
+    ../../../configure --with-mkl=/usr/local/CNTKCustomMKL && \
+    make -j"$(nproc)" all
 
-ENV PATH=/cntk/build/release/bin:$PATH
+ENV PATH=/cntk/build/cpu/release/bin:$PATH
