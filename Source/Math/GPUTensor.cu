@@ -676,21 +676,23 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
-        fprintf(stderr, "start 1\n");
+        //fprintf(stderr, "start 1\n");
         {
+            /*
             fprintf(stderr, "N: %d\tM: %d\tK: %d\tbPG: %d\ttPB: %d\tb: %f\talpha: %f\top: %d\tm_N: %d\n", 
                       N, M, K, grid.m_blocksPerGrid, grid.m_threadsPerBlock, beta, alpha, op, grid.m_N);
             fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
             fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
             fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
             fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+            */
             SyncGuard syncGuard;
             _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
                 beta, pointers, alpha, op,
                 regularOpStrides, regularStrides, grid.m_N,
                 reducingOpDims, reducingStrides);
         }
-        fprintf(stderr, "done  1\n");
+        //fprintf(stderr, "done  1\n");
     }
     // === optimization: simple case would not use all multiprocs
     else
@@ -740,21 +742,23 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         // This involves no reduction across blocks.
         if (numReductionChunks == 1)
         {
-            fprintf(stderr, "start 2\n");
+            //fprintf(stderr, "start 2\n");
             {
+                /*
                 fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
                           N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
             fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
             fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
             fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
             fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+            */
                 SyncGuard syncGuard;
                 _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
                     beta, pointers, alpha, op,
                     regularOpStrides, regularStrides, NN,
                     reducingOpDims, reducingStrides, 0, reductionChunkSize);
             }
-            fprintf(stderr, "done  2\n");
+            //fprintf(stderr, "done  2\n");
         }
         // --- case (b)
         // Reduction across blocks. This is the difficult one.
@@ -836,38 +840,42 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         else if (beta == 1)
         {
             // no need to pre-scale; just add (common for gradients)
-            fprintf(stderr, "start 3\n");
+            //fprintf(stderr, "start 3\n");
             {
+                /*
                 fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
                           N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
             fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
             fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
             fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
             fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+            */
                 SyncGuard syncGuard;
                 _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             }
-            fprintf(stderr, "done  3\n");
+            //fprintf(stderr, "done  3\n");
             return;
         }
         else
         {
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
-            fprintf(stderr, "start 4\n");
+            //fprintf(stderr, "start 4\n");
             {
+                /*
                 fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
                           N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
             fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
             fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
             fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
             fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+            */
                 SyncGuard syncGuard;
                 _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
                 // We will leave it like this for a while, but eventually need to revisit using temporary memory.
                 _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
             }
-            fprintf(stderr, "done  4\n");
+            //fprintf(stderr, "done  4\n");
         }
 #endif
     }
