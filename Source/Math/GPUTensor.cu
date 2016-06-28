@@ -107,6 +107,21 @@ struct FixedArray
     {
         return m_data[n];
     }
+    operator std::string() const
+    {
+        std::string s;
+        s.append("( ");
+        s.append(std::to_string(N));
+        s.append(" ) | ");
+        for (size_t k = 0; k < N; k++)
+        {
+            if (k > 0)
+                s.append(" x ");
+            s.append(std::to_string(m_data[k]));
+        }
+        s.append(" |");
+        return s;
+    }
     template <class VEC>
     FixedArray(const VEC& data) // construct from CPU-side STL array or vector
     {
@@ -125,6 +140,12 @@ struct FixedArray<T, 0>
     __device__ __host__ size_t size() const
     {
         return 0;
+    }
+    operator std::string() const
+    {
+        std::string s;
+        s.append("( 0 )");
+        return s;
     }
     template <class VEC>
     FixedArray(const VEC& data)
@@ -157,6 +178,26 @@ struct FixedMatrix
     {
         return m_data[n][k];
     }
+    operator std::string() const
+    {
+        std::string s;
+        s.append("( ");
+        s.append(std::to_string(N));
+        s.append(" v ");
+        s.append(std::to_string(K));
+        s.append(" ) | ");
+        for (size_t n = 0; n < N; n++)
+        {
+            for (size_t k = 0; k < K; k++)
+            {
+                if (k > 0)
+                    s.append(" x ");
+                s.append(std::to_string(m_data[n][k]));
+            }
+            s.append(" |");
+        }
+        return s;
+    }
     template <typename U>
     FixedMatrix(const array<SmallVector<U>, N>& data) // construct from CPU-side array of vectors
     {
@@ -183,6 +224,10 @@ struct FixedMatrix<T, N, 0>
     __device__ __host__ size_t getNumCols() const
     {
         return 0;
+    }
+    operator std::string() const
+    {
+        return "";
     }
     template <typename U>
     FixedMatrix(const array<SmallVector<U>, N>& data)
@@ -555,6 +600,7 @@ static shared_ptr<ElemType> AllocateReductionBuffer(size_t N)
 {
     ElemType* deviceBufferPtr;
     CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(ElemType) * N));
+    assert(deviceBufferPtr);
     return shared_ptr<ElemType>(deviceBufferPtr, [](ElemType* deviceBufferPtr){ cudaFree((void*)deviceBufferPtr); });
 }
 
@@ -602,7 +648,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    SyncGuard syncGuard;
+    //SyncGuard syncGuard;
 
     // do some optimization for reductions
     //  - example: 30 GPU procs, warp size 32 --> 960 GPU cores
@@ -630,10 +676,21 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
-        _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
-            beta, pointers, alpha, op,
-            regularOpStrides, regularStrides, grid.m_N,
-            reducingOpDims, reducingStrides);
+        fprintf(stderr, "start 1\n");
+        {
+            fprintf(stderr, "N: %d\tM: %d\tK: %d\tbPG: %d\ttPB: %d\tb: %f\talpha: %f\top: %d\tm_N: %d\n", 
+                      N, M, K, grid.m_blocksPerGrid, grid.m_threadsPerBlock, beta, alpha, op, grid.m_N);
+            fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
+            fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
+            fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
+            fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+            SyncGuard syncGuard;
+            _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
+                beta, pointers, alpha, op,
+                regularOpStrides, regularStrides, grid.m_N,
+                reducingOpDims, reducingStrides);
+        }
+        fprintf(stderr, "done  1\n");
     }
     // === optimization: simple case would not use all multiprocs
     else
@@ -683,10 +740,21 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         // This involves no reduction across blocks.
         if (numReductionChunks == 1)
         {
-            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
-                beta, pointers, alpha, op,
-                regularOpStrides, regularStrides, NN,
-                reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            fprintf(stderr, "start 2\n");
+            {
+                fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
+                          N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
+            fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
+            fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
+            fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
+            fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+                SyncGuard syncGuard;
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
+                    beta, pointers, alpha, op,
+                    regularOpStrides, regularStrides, NN,
+                    reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            }
+            fprintf(stderr, "done  2\n");
         }
         // --- case (b)
         // Reduction across blocks. This is the difficult one.
@@ -704,7 +772,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             //  - total elements = NN * Floor(#multiprocs / NN) = <= #multiprocs
             let reductionBufferSize = props.multiProcessorCount;
             assert(reductionBufferSize >= NN * numBlocksZ);
-            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(reductionBufferSize);
+            shared_ptr<ElemType> reductionBuffer = GetReductionBuffer<ElemType>(10*reductionBufferSize);
 
             // 'pointers', 'regularOpStrides', and 'regularStrides' are set up to point to the target memory.
             // We need to reroute them to point to our reductionBuffer.
@@ -768,16 +836,38 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         else if (beta == 1)
         {
             // no need to pre-scale; just add (common for gradients)
-            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            fprintf(stderr, "start 3\n");
+            {
+                fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
+                          N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
+            fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
+            fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
+            fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
+            fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+                SyncGuard syncGuard;
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            }
+            fprintf(stderr, "done  3\n");
             return;
         }
         else
         {
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
-            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
-            // We will leave it like this for a while, but eventually need to revisit using temporary memory.
-            _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+            fprintf(stderr, "start 4\n");
+            {
+                fprintf(stderr, "N: %d\tM: %d\tK: %d\tnBX: %d\tnBY: %d\tnBZ: %d\tnTX: %d\tbeta: %f\talpha: %f\top: %d\n",
+                          N, M, K, numBlocksX, numBlocksY, numBlocksZ, numThreadsX, beta, alpha, op);
+            fprintf(stderr, "regOpS: %s\n", ((string)regularOpStrides).c_str());
+            fprintf(stderr, "reg  S: %s\n", ((string)regularStrides).c_str());
+            fprintf(stderr, "redOpD: %s\n", ((string)reducingOpDims).c_str());
+            fprintf(stderr, "red  S: %s\n", ((string)reducingStrides).c_str());
+                SyncGuard syncGuard;
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+                // We will leave it like this for a while, but eventually need to revisit using temporary memory.
+                _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+            }
+            fprintf(stderr, "done  4\n");
         }
 #endif
     }
