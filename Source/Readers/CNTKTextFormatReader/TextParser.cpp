@@ -43,7 +43,7 @@ public:
     void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
 
     // A map from sequence ids to the sequence data.
-    std::map<size_t, SequenceBuffer> m_sequenceMap;
+    std::vector<SequenceBuffer> m_sequenceMap;
 
     // chunk id (copied from the descriptor)
     ChunkIdType m_id;
@@ -239,10 +239,9 @@ TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descri
 template <class ElemType>
 void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
-    auto it = m_sequenceMap.find(sequenceId);
-    assert(it != m_sequenceMap.end());
+    assert(m_sequenceMap.size() > sequenceId);
     result.reserve(m_parser->m_streamInfos.size());
-    const auto& sequenceData = it->second;
+    const auto& sequenceData = m_sequenceMap[sequenceId];
     for (size_t j = 0; j < m_parser->m_streamInfos.size(); ++j)
     {
         InputStreamBuffer* input = sequenceData[j].get();
@@ -297,11 +296,10 @@ ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 template <class ElemType>
 void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
 {
+    chunk->m_sequenceMap.resize(descriptor.m_sequences.size());
     for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        chunk->m_sequenceMap.insert(make_pair(
-            sequenceDescriptor.m_id,
-            LoadSequence(sequenceDescriptor)));
+        chunk->m_sequenceMap[sequenceDescriptor.m_id] = LoadSequence(sequenceDescriptor);
     }
 }
 
