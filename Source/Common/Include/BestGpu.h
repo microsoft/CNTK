@@ -18,7 +18,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using namespace std;
 
 #ifndef CPUONLY
-enum class GpuValidity {
+enum class GpuValidity
+{
     Valid,
     UnknownDevice,
     ComputeCapabilityNotSupported

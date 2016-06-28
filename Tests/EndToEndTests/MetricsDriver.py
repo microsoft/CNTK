@@ -27,13 +27,13 @@ class Baseline:
     self.trainResult = trainResult
 
   # extracts results info. e.g.
-  #	Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
+  # Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
   # Final Results: Minibatch[1-1]: err = 0.90000000 * 100 ce = 2.32170486 * 100 perplexity = 10.1930372
   def extractResultsInfo(self, baselineContent):
-    trainResults = re.findall('.*(Finished Epoch\[[ ]*\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
-    if trainResults:                                       
+    trainResults = re.findall('.*(Finished Epoch\[ *\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
+    if trainResults:
       self.trainResult = Baseline.formatLastTrainResult(trainResults[-1])[0:-2]
-    testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+|)?\s+(.*)', baselineContent)
+    testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+)?\s+(.*)', baselineContent)
     if testResults:
       self.testResult = Baseline.formatLastTestResult(testResults[-1])[0:-2]
 
@@ -50,7 +50,7 @@ class Baseline:
     startCpuInfoIndex = baselineContent.find("CPU info:")
     endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
     cpuInfo = re.search("^CPU info:\s+"
-                       "CPU Model (Name:\s*.*)\s+"                        
+                       "CPU Model (Name:\s*.*)\s+"
                        "(Hardware threads: \d+)\s+"
                        "Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
     if cpuInfo is None:
@@ -78,7 +78,7 @@ class Baseline:
 
 class Example:
 
-  allExamplesIndexedByFullName = {} 
+  allExamplesIndexedByFullName = {}
 
   def __init__(self, suite, name, testDir):
     self.suite = suite
@@ -98,7 +98,7 @@ class Example:
         exampleName = os.path.basename(dirName)
         suiteDir = os.path.dirname(dirName)
         # suite name will be derived from the path components
-        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')                    
+        suiteName = os.path.relpath(suiteDir, testsDir).replace('\\', '/')
 
         example = Example(suiteName,  exampleName, testDir)
         Example.allExamplesIndexedByFullName[example.fullName.lower()] = example
@@ -115,7 +115,7 @@ class Example:
       for device in devices:
         for flavor in flavors:          
           candidateName = "baseline" + o + flavor + device + ".txt"
-          fullPath = td.cygpath(os.path.join(self.testDir, candidateName), relative=True)          
+          fullPath = td.cygpath(os.path.join(self.testDir, candidateName), relative=True)
           if os.path.isfile(fullPath):
             baseline = Baseline(fullPath);
             baselineFilesList.append(baseline)
@@ -124,7 +124,7 @@ class Example:
 
 # extracts information for every example and stores it in Example.allExamplesIndexedByFullName
 def getExamplesMetrics():  
-  Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))  
+  Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))
 
   allExamples = Example.allExamplesIndexedByFullName
 
@@ -133,7 +133,7 @@ def getExamplesMetrics():
   for example in allExamples:
     baselineListForExample = example.findBaselineFilesList()
     six.print_("Example: " + example.fullName)
-    for baseline in baselineListForExample:        
+    for baseline in baselineListForExample:
       with open(baseline.fullPath, "r") as f:
         baselineContent = f.read()
         gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
