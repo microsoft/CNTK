@@ -16,6 +16,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+inline bool IsDigit(char c)
+{
+    return '0' <= c && c <= '9';
+}
+
 enum State
 {
     Init = 0,
@@ -486,7 +491,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 template <class ElemType>
 bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
-    while (bytesToRead && CanRead() && isdigit(*m_pos))
+    while (bytesToRead && CanRead() && IsDigit(*m_pos))
     {
         // skip sequence ids
         ++m_pos;
@@ -919,7 +924,7 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
     {
         char c = *m_pos;
 
-        if (!isdigit(c))
+        if (!IsDigit(c))
         {
             return found;
         }
@@ -977,7 +982,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
         {
         case State::Init:
             // the number must either start with a number or a sign
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1001,7 +1006,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case Sign:
             // the sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1019,7 +1024,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case IntegralPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 number = number * 10 + (c - '0');
             }
@@ -1040,7 +1045,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Period:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = FractionalPart;
                 coefficient = number;
@@ -1054,7 +1059,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case FractionalPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // TODO: ignore if number of precision digits > FLT_[MANT_]DIG/DBL_[MANT_]DIG
                 // no state change
@@ -1079,7 +1084,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case TheLetterE:
             // followed with optional minus or plus sign and nonempty sequence of decimal digits
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 negative = false;
@@ -1104,7 +1109,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case ExponentSign:
             // exponent sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 number = (c - '0');
@@ -1122,7 +1127,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Exponent:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // no state change
                 number = number * 10 + (c - '0');
