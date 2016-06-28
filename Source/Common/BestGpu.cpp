@@ -547,12 +547,14 @@ void BestGpu::DisallowUnsupportedDevices()
     }
 }
 
-GpuData GetGpuData(DEVICEID_TYPE deviceId){
+GpuData GetGpuData(DEVICEID_TYPE deviceId)
+{
     std::vector<GpuData> gpusData = GetAllGpusData();
 
     auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
-    if (it != gpusData.end()){
+    if (it != gpusData.end())
+    {
         return *it;
     }
 
