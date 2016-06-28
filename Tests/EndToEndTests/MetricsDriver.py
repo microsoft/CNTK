@@ -27,13 +27,13 @@ class Baseline:
     self.trainResult = trainResult
 
   # extracts results info. e.g.
-  #	Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
+  # Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
   # Final Results: Minibatch[1-1]: err = 0.90000000 * 100 ce = 2.32170486 * 100 perplexity = 10.1930372
   def extractResultsInfo(self, baselineContent):
-    trainResults = re.findall('.*(Finished Epoch\[[ ]*\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
+    trainResults = re.findall('.*(Finished Epoch\[ *\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
     if trainResults:                                       
       self.trainResult = Baseline.formatLastTrainResult(trainResults[-1])[0:-2]
-    testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+|)?\s+(.*)', baselineContent)
+    testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+)?\s+(.*)', baselineContent)
     if testResults:
       self.testResult = Baseline.formatLastTestResult(testResults[-1])[0:-2]
 
@@ -88,8 +88,6 @@ class Example:
     self.baselineList = []
     
     self.gitHash = ""
-    self.hardwareInfo = ""  
-    self.gpuInfo = ""
 
   @staticmethod
   def discoverAllExamples():
@@ -129,22 +127,22 @@ def getExamplesMetrics():
   Example.allExamplesIndexedByFullName = list(sorted(Example.allExamplesIndexedByFullName.values(), key=lambda test: test.fullName))  
   allExamples = Example.allExamplesIndexedByFullName
 
-  print ("CNTK - Metrics collector")  
+  print ("CNTK - Metrics collector")
 
   for example in allExamples:
-    baselineListForExample = example.findBaselineFilesList() 
-    six.print_("Example: " + example.fullName)   
+    baselineListForExample = example.findBaselineFilesList()
+    six.print_("Example: " + example.fullName)
     for baseline in baselineListForExample:        
       with open(baseline.fullPath, "r") as f:
         baselineContent = f.read()
         gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
         if gitHash is None:
           continue
-        example.gitHash = gitHash.group(1) 
+        example.gitHash = gitHash.group(1)
         baseline.extractHardwareInfo(baselineContent)
         baseline.extractResultsInfo(baselineContent)
-      example.baselineList.append(baseline)    
-        
+      example.baselineList.append(baseline)
+
 # creates a list with links to each example result
 def createAsciidocExampleList(file):
   for example in Example.allExamplesIndexedByFullName:
