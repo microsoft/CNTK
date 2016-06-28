@@ -5,6 +5,9 @@
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
 #include "Eval.h"
+#ifdef _WIN32
+#include "Windows.h"
+#endif
 
 using namespace Microsoft::MSR::CNTK;
 
