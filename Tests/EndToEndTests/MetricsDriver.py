@@ -88,8 +88,6 @@ class Example:
     self.baselineList = []
     
     self.gitHash = ""
-    self.hardwareInfo = ""  
-    self.gpuInfo = ""
 
   @staticmethod
   def discoverAllExamples():
@@ -131,7 +129,7 @@ def getExamplesMetrics():
 
   print ("CNTK - Metrics collector")  
 
-  for example in allExamples:    
+  for example in allExamples:
     baselineListForExample = example.findBaselineFilesList() 
     six.print_("Example: " + example.fullName)   
     for baseline in baselineListForExample:        
@@ -157,7 +155,7 @@ def writeMetricsToAsciidoc():
   metricsFile = open("metrics.adoc",'wb')
 
   createAsciidocExampleList(metricsFile)
-  
+
   for example in Example.allExamplesIndexedByFullName:
     if not example.baselineList:
       continue

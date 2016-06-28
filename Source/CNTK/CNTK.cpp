@@ -633,8 +633,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         ProgressTracing::SetTimestampingFlag();
     }
 
-
-
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
 
