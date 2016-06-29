@@ -268,7 +268,11 @@ public:
             m_outputRank = 1;
     }
 
-private:
+    size_t GetOutputRank()
+    {
+        return m_outputRank;
+    }
+protected:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
@@ -531,6 +535,77 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+
+// ------------------------------------------------------------------------------------------------
+// QuantizedTimesNode - Node that will be used in place of Times/TransposeTimes at load time, 
+// if quantization is turned on.
+// ------------------------------------------------------------------------------------------------
+
+template <class ElemType, bool m_transpose>
+class QuantizedBlockTimesNode : public TimesNodeBase<ElemType, m_transpose>
+{
+    typedef TimesNodeBase<ElemType, m_transpose> Base; 
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"QuantizedBlockTimes"; }
+public:
+    QuantizedBlockTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
+        : Base(deviceId, name, outputRank)
+    {
+    }
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {           
+        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+            Base::ForwardProp(fr); // It will come back
+        TensorView<ElemType> input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+        //auto sh0 = input0.GetShape();
+        //auto sh1 = input1.GetShape();
+        //auto sh2 = output.GetShape();
+        //Matrix<ElemType>& a = input0.GetSOB();
+        //for (int i = 0; i < a.GetNumElements(); i++)
+        //    a.Data()[i] = (ElemType)(i < 10 ? i+1 : 0);
+        //Matrix<ElemType>& b = input1.GetSOB();
+        //for (int i = 0; i < b.GetNumElements(); i++)
+        //    b.Data()[i] = (ElemType)(i < 10 ? i+1 : 0);
+        //fprintf(stderr, "QBTN@node '%ls'. IterDim=%d, SeqRange=%d,%d, timeRange=%d,%d, isAllFrames=%d, sh0=%s, sh1=%s o=%s\n", this->GetName().c_str(),
+        //    (int)fr.GetIterationDimension(),
+        //    (int)fr.GetSequenceRange().first,
+        //    (int)fr.GetSequenceRange().second,
+        //    (int)fr.GetTimeRange().first,
+        //    (int)fr.GetTimeRange().second,
+        //    (int)fr.IsAllFrames(),
+        //    sh0.operator std::string().c_str(),
+        //    sh1.operator std::string().c_str(),
+        //    sh2.operator std::string().c_str()
+        //    );
+
+        // output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+        output.AssignQuantizedMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false /*transB*/);
+        //input0.GetSOB().Print("A");
+        //input1.GetSOB().Print("B");
+        //output.GetSOB().Print("C");
+    }
+private:
+
+public:
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& /*fr*/) override
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        fprintf(stderr, "QuantizedBlockTimesNode::Validate called for node '%ls'\n", this->GetName().c_str());
+    }
+};
+
+template class QuantizedBlockTimesNode<float, false>;
+template class QuantizedBlockTimesNode<float, true>;
+template class QuantizedBlockTimesNode<double, false>;
+template class QuantizedBlockTimesNode<double, true>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
