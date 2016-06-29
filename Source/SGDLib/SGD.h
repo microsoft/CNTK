@@ -25,7 +25,8 @@ using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
 #define CNTK_CHECKPOINT_VERSION_2 2     
-#define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
+#define CNTK_CHECKPOINT_VERSION_3 3     
+#define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_3
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -538,7 +539,7 @@ protected:
     std::list<::CNTK::Variable> m_learnableParameters;
 
 private:
-    std::list<shared_ptr<Matrix<ElemType>>> SmoothedGradients();
+    void ResetSGDMomentum();
 
     void UpdateWeights(const double learnRatePerSample,
                        const double momentumPerSample,

@@ -1798,6 +1798,8 @@ namespace CNTK
             double m_double;
             void* m_ptr;
         } m_data;
+
+        const size_t version = 1;
     };
 
     ///
@@ -1842,6 +1844,7 @@ namespace CNTK
 
     private:
         std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
+        const size_t version = 1;
     };
 
 
@@ -1909,32 +1912,15 @@ namespace CNTK
 
         static const AdditionalParameters s_defaultParameters;
 
-// TODO: replace by the check-pointing mechanism.
-#pragma region _temporary_back_compat
-        // TODO: are these getters really necessary?
-        virtual double GetLearningRate() const = 0;
-        virtual double GetMomentum() const = 0;
-        
+// TODO: remove these setters as soon as adaptive learning rate functionality is moved inside the learner.
         virtual void SetLearningRate(double value) = 0;
         virtual void SetMomentum(double value) = 0;
+// -------------------------------------------------------------------------------------------------------
 
-        template <typename ElementType>
-        void GetSmoothedGradients(std::unordered_map<Variable, std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>>& map)
-        {
-            auto gradients = SmoothedGradients();
-            const std::unordered_set<Variable>& keys = gradients.Keys();
+        // TODO: should this be called ResetMomentum?
+        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
+        virtual void ResetSmoothedGradients() = 0;
 
-            for (auto & key : keys)
-            {
-                map.insert(make_pair(key,gradients[key]->Data()->GetWritableMatrix<ElementType>()));
-            }
-        }
-
-    protected:
-
-        virtual const _Internal::_SimpleMap<Variable, ValuePtr>& SmoothedGradients() const = 0;
-
-#pragma endregion _temporary_back_compat
 
     protected:
         Learner(const _Internal::_SimpleSet<Variable>& parameters)

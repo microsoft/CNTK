@@ -190,6 +190,27 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     }
 }
 
+/* virtual */ void LearnerBase::ResetSmoothedGradients() /* override */
+{
+    auto gradientVector = m_smoothedGradients.Values();
+
+    for (auto i = 0; i < gradientVector.Size(); ++i)
+    {
+        auto data = gradientVector[i]->Data();
+
+        switch (data->GetDataType())
+        {
+        case DataType::Float:
+            return data->SetValue(0.0f);
+        case DataType::Double:
+            return data->SetValue(0.0);
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
+            break;
+        }
+    }
+}
+
 /* virtual */ bool LearnerBase::Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
     const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
     size_t trainingSampleCount) /* override */
@@ -424,8 +445,6 @@ LearnerPtr _RmsPropLearner(const _SimpleSet<Variable>& parameters,
 
 
 // Explicit template instantiations
-template CNTK_API void Learner::GetSmoothedGradients<float>(unordered_map<Variable, shared_ptr<Matrix<float>>>& list);
-template CNTK_API void Learner::GetSmoothedGradients<double>(unordered_map<Variable, shared_ptr<Matrix<double>>>& list);
 template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr arrayView);
 template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr arrayView);
 

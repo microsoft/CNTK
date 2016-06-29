@@ -68,19 +68,11 @@ namespace CNTK
         template <typename ElementType>
         void PostProcess(const Variable& learnableParameter, const ValuePtr&  gradient, const ValuePtr& parameter, size_t actualMBSize) const;
 
-        // TODO: the following methods are needed for backwards compatibility until sgd.cpp is updated to v2.
-#pragma region _temporary_back_compat
-        virtual double GetLearningRate() const { return m_learningRatePerSample; }
-        virtual double GetMomentum() const override { return m_momentumPerSample; }
+        // TOOD: these setters will be dropped.
         virtual void SetLearningRate(double value) override { m_learningRatePerSample = value; }
         virtual void SetMomentum(double value) override { m_momentumPerSample = value; }
 
-        virtual const _Internal::_SimpleMap<Variable, ValuePtr>& SmoothedGradients() const override
-        {
-            return m_smoothedGradients;
-        }
-
-#pragma endregion _temporary_back_compat
+        virtual void ResetSmoothedGradients() override;
 
     private:
         // TODO: make these functions friends of NDViewArray and move to Utils?

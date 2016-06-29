@@ -367,6 +367,9 @@ namespace CNTK
 
     Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us) 
     {
+        size_t version;
+        stream >> version;
+
         stream >> us.m_valueType;
         
         switch (us.ValueType()) {
@@ -413,6 +416,8 @@ namespace CNTK
     }
     
     Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us) {
+        stream << us.version;
+
         stream << us.ValueType();
         
         switch (us.ValueType()) {
@@ -503,6 +508,7 @@ namespace CNTK
 
     Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us) 
     {
+        stream << us.version;
         stream << us.m_dictionaryData->size(); 
         for (auto it = us.m_dictionaryData->begin(); it != us.m_dictionaryData->end(); ++it)
         {
@@ -514,6 +520,8 @@ namespace CNTK
 
     Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us) 
     {
+        size_t version;
+        stream >> version;
         size_t size; 
         stream >> size;
         us.m_dictionaryData->reserve(size);
