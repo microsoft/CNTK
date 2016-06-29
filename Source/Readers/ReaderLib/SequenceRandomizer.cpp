@@ -191,6 +191,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t posBegin = m_randomizedChunks[chunkWindowBegin].m_sequencePositionStart;
             size_t posEnd = m_randomizedChunks[chunkWindowEnd - 1].SequenceEndPosition();
 
+            ChunkIdType tChunkIndex = GetChunkIndexForSequencePosition(t);
+            auto& first = GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t);
+
             for (;;)
             {
                 // Pick a sequence position from [posBegin, posEnd)
@@ -198,23 +201,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // Pick up j sequence.
                 ChunkIdType jChunkIndex = GetChunkIndexForSequencePosition(j);
-                ChunkIdType tChunkIndex = GetChunkIndexForSequencePosition(t);
-
-                auto& first = GetRandomizedSequenceDescriptionByPosition(jChunkIndex, j);
+                auto& second = GetRandomizedSequenceDescriptionByPosition(jChunkIndex, j);
 
                 // Try again if the sequence currently at j cannot be placed at position i.
-                if (!IsValidForPosition(tChunkIndex, first))
+                if (!IsValidForPosition(tChunkIndex, second))
                     continue;
 
-                // Pick up t sequence
-                auto& second = GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t);
-
                 // Try again if the sequence currently at i cannot be placed at position j.
-                if (!IsValidForPosition(jChunkIndex, second))
+                if (!IsValidForPosition(jChunkIndex, first))
                     continue;
 
                 // Swap and break out.
-                std::swap(second, first); // TODO old swap was perhaps more efficient
+                std::swap(first, second); // TODO old swap was perhaps more efficient
                 break;
             }
         }
