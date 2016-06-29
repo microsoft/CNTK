@@ -7,14 +7,18 @@
 
 #pragma once
 
+
 #include "CNTKLibraryInternals.h"
+
 
 #include <memory>
 #include <vector>
 #include <array>
 #include <stdarg.h>
 #include <assert.h>
+#include <map>
 #include <unordered_map>
+#include <set>
 #include <unordered_set>
 #include <string>
 
@@ -88,7 +92,7 @@ namespace CNTK
     ///
     /// Denotes a compute device instance.
     ///
-    class DeviceDescriptor final
+    class DeviceDescriptor
     {
     public:
         ///
@@ -129,6 +133,7 @@ namespace CNTK
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
 
+
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceType deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
@@ -153,7 +158,7 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
-    class NDShape final
+    class NDShape
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
     public:
@@ -294,7 +299,7 @@ namespace CNTK
     /// The underlying data is stored in sparse or dense format, and is located on a specific device.
     /// The actual underlying storage is either external or internal in which case its lifetime is managed through reference counting.
     ///
-    class CNTK_API NDArrayView final : public _Internal::_ReferenceCounter
+    class CNTK_API NDArrayView : public _Internal::_ReferenceCounter
     {
         friend class CompositeFunction;
 
@@ -350,7 +355,7 @@ namespace CNTK
         /// assign the specified value to each element of the view.
         ///
         template <typename ElementType>
-        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
+        NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
             : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
@@ -498,7 +503,7 @@ namespace CNTK
     /// Denotes a multi-dimensional mask used for specifying specific sections of a NDArrayView object as masked/invalid.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDMask instance.
     ///
-    class CNTK_API NDMask final : public _Internal::_ReferenceCounter
+    class CNTK_API NDMask : public _Internal::_ReferenceCounter
     {
         friend class CompositeFunction;
 
@@ -658,7 +663,7 @@ namespace CNTK
     /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
     /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
     ///
-    class Axis final
+    class Axis
     {
     public:
         ///
@@ -832,10 +837,14 @@ namespace CNTK
     class CNTK_API Variable
     {
         friend bool operator==(const Variable& first, const Variable& second);
+        friend bool operator<(const Variable& first, const Variable& second);
         friend class Function;
 
         template <typename T>
         friend struct std::hash;
+
+        template <typename T>
+        friend struct std::less;
 
     public:
         ///
@@ -997,7 +1006,7 @@ namespace CNTK
 
     private:
 
-        struct _VariableFields final : public _Internal::_ReferenceCounter
+        struct _VariableFields : public _Internal::_ReferenceCounter
         {
             NDShape m_shape;
             VariableKind m_varKind;
@@ -1040,10 +1049,15 @@ namespace CNTK
         return first.m_dataFields == second.m_dataFields;
     }
 
+    inline bool operator<(const Variable& first, const Variable& second)
+    {
+		return (first.m_dataFields.GetPtr() < second.m_dataFields.GetPtr());
+    }
+
     ///
     /// Denotes Parameter inputs of a Function.
     ///
-    class Parameter final : public Variable
+    class Parameter : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1087,12 +1101,11 @@ namespace CNTK
         }
     };
 
-    static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
     /// Denotes Constant inputs of a Function.
     ///
-    class Constant final : public Variable
+    class Constant : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1136,13 +1149,12 @@ namespace CNTK
         }
     };
 
-    static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
     /// Denotes a Placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    class CNTK_API Placeholder final : public Variable
+    class CNTK_API Placeholder : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1169,8 +1181,9 @@ namespace CNTK
         }
     };
 
-    static_assert(sizeof(Placeholder) == sizeof(Variable), "The Placeholder type should not have any data fields beyond what it's base type 'Variable' has.");
 #pragma warning(pop)
+
+
 }
 
 namespace std {
@@ -1234,7 +1247,7 @@ namespace CNTK
         BackPropState(const FunctionPtr& function) : m_function(function) {}
 
     private:
-        virtual void _ForceRTTIGeneration() final
+        virtual void _ForceRTTIGeneration()
         {
             LogicError("This is an internal method that is never supposed to be called");
         }
@@ -1273,14 +1286,38 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
         ///
-        BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+        BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                  std::unordered_map<Variable, ValuePtr>& outputs,
                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {})
         {
-            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(arguments);
+            printf("I'm in\n");
+            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments);
             auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs);
             auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsToRetainBackwardStateFor);
+
+            auto backPropState = Forward(abisSafeArgumentsMap, abisSafeOutputsMap, abisSafeOutputsToRetainBackwardStateFor, computeDevice);
+
+            // Copy over the ValuePtr values in outputs
+            for (auto iter = outputs.begin(); iter != outputs.end(); ++iter)
+                outputs[iter->first] = abisSafeOutputsMap[iter->first];
+
+            return backPropState;
+        }
+
+        BackPropStatePtr ForwardMap(const std::map<Variable, ValuePtr>& arguments,
+                                 std::map<Variable, ValuePtr>& outputs,
+                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
+                                 const std::set<Variable>& outputsToRetainBackwardStateFor = {})
+        {
+			const std::unordered_map<Variable, ValuePtr> arguments_umap(arguments.begin(), arguments.end());
+			auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments_umap);
+
+			std::unordered_map<Variable, ValuePtr> outputs_umap(outputs.begin(), outputs.end());
+			auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs_umap);
+
+			const std::unordered_set<Variable> outputsRetain_umap(outputsToRetainBackwardStateFor.begin(), outputsToRetainBackwardStateFor.end());
+			auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsRetain_umap);
 
             auto backPropState = Forward(abisSafeArgumentsMap, abisSafeOutputsMap, abisSafeOutputsToRetainBackwardStateFor, computeDevice);
 
@@ -1314,10 +1351,25 @@ namespace CNTK
                 backPropagatedGradientValuesForInputs[iter->first] = abisSafeBackPropagatedGradientValuesForInputs[iter->first];
         }
 
+        void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, const ValuePtr>& rootGradientValues,
+                      std::map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
+        {
+			const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
+			auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
+			const std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
+			auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs_umap);
+
+            Backward(state, abisSafeRootGradientValuesMap, abisSafeBackPropagatedGradientValuesForInputs);
+
+            // Copy over the ValuePtr values in backPropagatedGradientValuesForInputs
+            for (auto iter = backPropagatedGradientValuesForInputs.begin(); iter != backPropagatedGradientValuesForInputs.end(); ++iter)
+                backPropagatedGradientValuesForInputs[iter->first] = abisSafeBackPropagatedGradientValuesForInputs[iter->first];
+        }
+
     protected:
         // Mandatory methods to be overriden by new 'Function' types.
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
+        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments,
                                          _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
                                          const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                          const DeviceDescriptor& computeDevice) = 0;

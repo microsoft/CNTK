@@ -18,6 +18,7 @@
 #define CNTK_API
 #endif
 
+
 #include <memory>
 #include <vector>
 #include <array>
@@ -173,11 +174,11 @@ namespace CNTK
         // A smart pointer to a reference counted object
         // T must be a type derived from _Reference_counter
         template <class T>
-        class _ReferenceCounterSharedPtr final
+        class _ReferenceCounterSharedPtr 
         {
-            typedef void(*_ReferenceCounterDeleter)(_ReferenceCounter* obj);
 
         public:
+            typedef void(*_ReferenceCounterDeleter)(_ReferenceCounter* obj);
 
             // Constructor
             _ReferenceCounterSharedPtr(T* ptr = nullptr, _ReferenceCounterDeleter deleter = nullptr) : m_objPtr(ptr), m_deleter(deleter)
@@ -308,7 +309,7 @@ namespace CNTK
         // A simple vector implementation with a C ABI to allow usage across the library DLL boundary
         // as STL vectors cannot be used across the DLL boundary
         template <typename T>
-        class CNTK_API _SimpleVector final
+        class CNTK_API _SimpleVector
         {
             template <typename ValueType>
             friend CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
@@ -386,7 +387,7 @@ namespace CNTK
         // A simple set implementation with a C ABI to allow usage across the library DLL boundary
         // as STL sets cannot be used across the DLL boundary
         template <typename KeyType>
-        class CNTK_API _SimpleSet final
+        class CNTK_API _SimpleSet
         {
             friend class CNTK::CompositeFunction;
 
@@ -440,7 +441,7 @@ namespace CNTK
         // A simple map implementation with a C ABI to allow usage across the library DLL boundary
         // as STL maps cannot be used across the DLL boundary
         template <typename KeyType, typename ValueType>
-        class CNTK_API _SimpleMap final
+        class CNTK_API _SimpleMap
         {
             friend class CNTK::CompositeFunction;
             friend class CNTK::Function;

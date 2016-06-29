@@ -65,7 +65,7 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& /*arguments*/,
+        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& /*arguments*/,
                                          _Internal::_SimpleMap<Variable, ValuePtr>& /*outputs*/,
                                          const _Internal::_SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
                                          const DeviceDescriptor& /*computeDevice*/) override
@@ -295,7 +295,7 @@ namespace CNTK
             return CompositeFunctionPtr(func, [](_ReferenceCounter* ptr) { delete ptr; });
         }
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
+        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments,
                                          _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
                                          const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                          const DeviceDescriptor& computeDevice) override;
@@ -349,7 +349,7 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
 
-        void PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments);
+        void PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments);
         void PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
