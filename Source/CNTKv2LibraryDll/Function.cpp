@@ -557,10 +557,10 @@ namespace CNTK
         m_computationNetwork->BumpEvalTimeStamp(inputNodes);
     }
 
-    void CompositeFunction::PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients)
+    void CompositeFunction::PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, ValuePtr>& gradients)
     {
         auto functionOutputs = this->Outputs();
-        std::unordered_map<Variable, const ValuePtr>& gradientsValueMap = *gradients.m_map;
+        std::unordered_map<Variable, ValuePtr>& gradientsValueMap = *gradients.m_map;
         for (auto iter = gradientsValueMap.begin(); iter != gradientsValueMap.end(); ++iter)
         {
             // Only gradients for roots of the function can be specified
@@ -782,7 +782,7 @@ namespace CNTK
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
-                                                 const _Internal::_SimpleMap<Variable, const ValuePtr>& rootGradientValues,
+                                                 const _Internal::_SimpleMap<Variable, ValuePtr>& rootGradientValues,
                                                  _Internal::_SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
     {
         if ((state == nullptr) || (dynamic_cast<const CNTKBackPropState*>(state.GetPtr()) == nullptr))

@@ -74,7 +74,7 @@ namespace CNTK
         }
 
         virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const _Internal::_SimpleMap<Variable, const ValuePtr>& /*rootGradientValues*/,
+                              const _Internal::_SimpleMap<Variable, ValuePtr>& /*rootGradientValues*/,
                               _Internal::_SimpleMap<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
@@ -301,7 +301,7 @@ namespace CNTK
                                          const DeviceDescriptor& computeDevice) override;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const _Internal::_SimpleMap<Variable, const ValuePtr>& rootGradientValues,
+                              const _Internal::_SimpleMap<Variable, ValuePtr>& rootGradientValues,
                               _Internal::_SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
@@ -350,7 +350,7 @@ namespace CNTK
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
 
         void PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, ValuePtr>& arguments);
-        void PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients);
+        void PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
