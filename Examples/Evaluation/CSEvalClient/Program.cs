@@ -40,7 +40,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// 
     /// EvaluateMultipleModels
     /// ----------------------
-    /// This case requires the 02_Convolution model and the Test-28x28.txt test file which are part of the <CNTK>/Examples/Image/MNIST example.
+    /// This case requires the 02_Convolution model and the Test-28x28_cntk_text.txt test file which are part of the <CNTK>/Examples/Image/MNIST example.
     /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md"/> for how to train
     /// the model used in this example.
     /// </description>
@@ -55,7 +55,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-
+            
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -70,7 +70,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
-
+            
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
 
@@ -348,7 +348,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             // Initializes the model instances
             ModelEvaluator.Initialize(numConcurrentModels, modelFilePath);
 
-            string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28.txt");
+            string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28_cntk_text.txt");
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -361,15 +361,25 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     {
                         Interlocked.Increment(ref count);
 
-                        // The first value in the line is the expected label index for the record's outcome
-                        int expected = int.Parse(line.Substring(0, line.IndexOf('\t')));
-                        var inputs = line.Substring(line.IndexOf('\t') + 1).Split('\t').Select(float.Parse).ToList();
+                        // The file format correspond to the CNTK Text Format Reader format (https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader)
+                        var sets = line.Split('|');
+                        var labels = sets[1].Trim().Split(' ').Skip(1);
+                        var features = sets[2].Trim().Split(' ').Skip(1);
+
+                        // Retrieve the 1-hot vector with the label index
+                        int index = 0;
+                        var expected = labels.Select(float.Parse).Select(v => new { Value = v, Index = index++ })
+                            .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
+                            .Index;
+
+                        // Retrieve the features
+                        var inputs = features.Select(float.Parse).ToList();
 
                         // We can call the evaluate method and get back the results (single layer)...
                         var outputs = ModelEvaluator.Evaluate(inputs);
 
                         // Retrieve the outcome index (so we can compare it with the expected index)
-                        int index = 0;
+                        index = 0;
                         var max = outputs.Select(v => new { Value = v, Index = index++ })
                             .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                             .Index;
@@ -393,8 +403,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             sw.Stop();
             ModelEvaluator.DisposeAll();
-            
-            Console.WriteLine("The file {0} was processed using {1} concurrent model(s) with an error rate of: {2:P2} ({3} error(s) out of {4} record(s)), and a throughput of {5:N2} records/sec", @"Test-28x28.txt", 
+
+            Console.WriteLine("The file {0} was processed using {1} concurrent model(s) with an error rate of: {2:P2} ({3} error(s) out of {4} record(s)), and a throughput of {5:N2} records/sec", @"Test-28x28_cntk_text.txt", 
                 numConcurrentModels, (float)errorCount / count, errorCount, count, (count + errorCount) * 1000.0 / sw.ElapsedMilliseconds);
         }
 
