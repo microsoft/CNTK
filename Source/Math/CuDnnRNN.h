@@ -26,6 +26,7 @@ public:
         // bugbug: possible leak. Does CuDnn release this for us?
         CUDA_CALL(cudaMalloc(&states, stateSize));
 
+        fprintf(stderr, "CuDnnDropout()\n");
         CUDNN_CALL(cudnnSetDropoutDescriptor(m_dropoutDesc,
             *m_cudnn,
             dropout,
@@ -36,6 +37,7 @@ public:
 
     ~CuDnnDropout()
     {
+        fprintf(stderr, "~CuDnnDropout()\n");
         if (m_dropoutDesc != nullptr)
         {
             cudnnDestroyDropoutDescriptor(m_dropoutDesc);
@@ -80,6 +82,7 @@ public:
         : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
+        fprintf(stderr, "CuDnnRNN()\n");
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
         CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
             (int)m_rnnParameters.m_hiddenSize,
@@ -93,6 +96,7 @@ public:
 
     ~CuDnnRNN()
     {
+        fprintf(stderr, "~CuDnnRNN()\n");
         if (m_rnnDesc != nullptr)
         {
             cudnnDestroyRNNDescriptor(m_rnnDesc);
@@ -184,6 +188,7 @@ public:
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
         m_BackwardDataCalledYet(false)
     {
+        fprintf(stderr, "CuDnnRNNExecutor()\n");
         m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters);
     }
 

@@ -89,6 +89,7 @@ CuDnn::ptr_t CuDnn::Instance()
         cudnnHandle_t* cudnn = new cudnnHandle_t;
         CUDNN_CALL(cudnnCreate(cudnn));
         CUDNN_CALL(cudnnSetStream(*cudnn, GetStream()));
+        fprintf(stderr, "CuDnn::Instance()::createNew() deviceId=%d\n", deviceId);
         return cudnn;
     };
 
@@ -97,6 +98,7 @@ CuDnn::ptr_t CuDnn::Instance()
         assert(*src != nullptr);
         auto err = cudnnDestroy(*src);
         assert(err == CUDNN_STATUS_SUCCESS);
+        fprintf(stderr, "CuDnn::Instance()::m_instance.destroy()\n");
 #ifdef NDEBUG
         UNUSED(err);
 #endif
