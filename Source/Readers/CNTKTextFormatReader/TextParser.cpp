@@ -244,33 +244,7 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
     const auto& sequenceData = m_sequenceMap[sequenceId];
     for (size_t j = 0; j < m_parser->m_streamInfos.size(); ++j)
     {
-        InputStreamBuffer* input = sequenceData[j].get();
-        const StreamInfo& stream = m_parser->m_streamInfos[j];
-        SequenceDataPtr data;
-        if (stream.m_type == StorageType::dense)
-        {
-            auto denseData = make_shared<DenseSequenceData>();
-            denseData->m_sampleLayout = m_parser->m_streams[j]->m_sampleLayout;
-            data = denseData;
-        }
-        else
-        {
-            auto sparseData = make_shared<SparseSequenceData>();
-            SparseInputStreamBuffer* sparseInput = static_cast<SparseInputStreamBuffer*>(input);
-            sparseData->m_indices = sparseInput->m_indices.data();
-            sparseData->m_nnzCounts.reserve(sparseInput->m_nnzCounts.size());
-            copy(sparseInput->m_nnzCounts.begin(), sparseInput->m_nnzCounts.end(),
-                back_inserter(sparseData->m_nnzCounts));
-            sparseData->m_totalNnzCount = sparseInput->m_totalNnzCount;
-            assert(input->m_numberOfSamples == sparseInput->m_nnzCounts.size());
-            data = sparseData;
-        }
-
-        data->m_data = input->m_buffer.data();
-        data->m_numberOfSamples = input->m_numberOfSamples;
-        data->m_chunk = shared_from_this();
-        data->m_id = sequenceId;
-        result.push_back(data);
+        result.push_back(sequenceData[j]);
     }
 }
 
@@ -483,7 +457,33 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
+    Enrich(sequence, sequenceDsc.m_id);
     return sequence;
+}
+
+template<class ElemType>
+void TextParser<ElemType>::Enrich(SequenceBuffer& sequenceData, size_t sequenceId)
+{
+    for (size_t j = 0; j < m_streamInfos.size(); ++j)
+    {
+        const StreamInfo& stream = m_streamInfos[j];
+        SequenceDataBase* data = sequenceData[j].get();
+        if (stream.m_type == StorageType::dense)
+        {
+            auto denseData = static_cast<DenseInputStreamBuffer*>(data);
+            denseData->m_sampleLayout = m_streams[j]->m_sampleLayout;
+            data->m_data = denseData->m_buffer.data();
+        }
+        else
+        {
+            auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
+            sparseData->m_indices = sparseData->m_indicesBuffer.data();
+            assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
+            data->m_data = sparseData->m_buffer.data();
+        }
+
+        data->m_id = sequenceId;
+    }
 }
 
 template <class ElemType>
@@ -619,7 +619,7 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
     {
         SparseInputStreamBuffer* data = reinterpret_cast<SparseInputStreamBuffer*>(sequence[id].get());
         vector<ElemType>& values = data->m_buffer;
-        vector<IndexType>& indices = data->m_indices;
+        vector<IndexType>& indices = data->m_indicesBuffer;
         assert(values.size() == indices.size());
         size_t size = values.size();
         if (!TryReadSparseSample(values, indices, stream.m_sampleDimension, bytesToRead))
