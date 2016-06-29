@@ -1,4 +1,4 @@
-%module swig_cntk
+%module(directors="1") swig_cntk
 
 %include "stl.i"
 %include "std_wstring.i" 
@@ -24,11 +24,12 @@
 
 %apply (float* ARGOUT_ARRAY1, int DIM1) {(float* data, int len)}
 
-
 %{
     #include "CNTKLibrary.h"
     using namespace CNTK;
 %}
+
+%feature("director") FunctionCallback;
 
 %feature("ref")   CNTK::_Internal::_ReferenceCounter "$this->AddReference();"
 %feature("unref") CNTK::_Internal::_ReferenceCounter "$this->RemoveReference();"
@@ -81,35 +82,27 @@ namespace CNTK {
 
 %inline %{
 
-size_t bla;
-extern void stuff(std::map<CNTK::Variable, CNTK::ValuePtr>& mymap)
-{
-	bla = 13;
-
-    //return v->Data()->IsSparse();
-    printf("size inside=%d", mymap.size());
-
-    for (auto x : mymap)
-    {
-    printf("in stuff %ls\n", x.first.Name().c_str());
-    }
-}
-
-extern void naivestuff(std::map<CNTK::Variable, int>& mymap)
-{
-    printf("naivestuff size inside=%\n", mymap.size());
-
-    for (auto x : mymap)
-    {
-        printf("in stuff %ls (%d) ->%d\n", x.first.Name().c_str(), x.first.Shape().TotalSize(), x.second);
-    }
-
-    printf("naivestuff end\n");
-}
-
 void data_from_value(float* cntk_data, float* data, int len) {
     for (int i=0; i<len; i++)
         data[i] = cntk_data[i];
 }
 
+class Callback {
+public:
+    virtual ~Callback() { std::cout << "Callback::~Callback()" << std:: endl; }
+    virtual void forward() { std::cout << "Callback::forward()" << std::endl; }
+    virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
+};
+
+class Caller {
+private:
+    Callback *_callback;
+public:
+    Caller(): _callback(0) {}
+    ~Caller() { delCallback(); }
+    void delCallback() { delete _callback; _callback = 0; }
+    void setCallback(Callback *cb) { delCallback(); _callback = cb; }
+    void forward() { if (_callback) _callback->forward(); }
+    void backward() { if (_callback) _callback->backward(); }
+};
 %}
