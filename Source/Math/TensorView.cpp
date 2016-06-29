@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "TensorView.h"
+#include "../../../Source/Math/BlockMultiplier.h"
 #include <array>
 
 #ifndef let
@@ -351,13 +352,8 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
         return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape[1]));
 }
 
-template <class ElemType>
-void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha)
+void FlattenShapesToMatrix(TensorShape& shapeA, bool transA, TensorShape& shapeB, bool transB, TensorShape& shapeC, bool transC)
 {
-    // determine integration dimension offset
-    auto shapeA = a.m_shape;
-    auto shapeB = b.m_shape;
-    auto shapeC =   m_shape;
     if (shapeA.GetRank() + shapeB.GetRank() < shapeC.GetRank())
         InvalidArgument("DoMatrixProductOf: Ranks %s don't match, output must have a non-reduced output dimension.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     let removedDims = shapeA.GetRank() + shapeB.GetRank() - shapeC.GetRank();
@@ -371,12 +367,22 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     FlattenToMatrix(shapeC, transC, firstReducedDim);
     // check dimensions
     // shapeX[transX] and shapeX[1-transX] are row and column dim, respectively, or swapped if transposed
-    if (shapeA[transA]   != shapeC[transC]   || // output dim
-        shapeB[1-transB] != shapeC[1-transC] || // input dim
-        shapeA[1-transA] != shapeB[transB])     // reduction dim
+    if (shapeA[transA] != shapeC[transC] || // output dim
+        shapeB[1 - transB] != shapeC[1 - transC] || // input dim
+        shapeA[1 - transA] != shapeB[transB])     // reduction dim
     {
         InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     }
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha)
+{
+    // determine integration dimension offset
+    auto shapeA = a.m_shape;
+    auto shapeB = b.m_shape;
+    auto shapeC = m_shape;
+    FlattenShapesToMatrix(shapeA, transA, shapeB, transB, shapeC, transC);
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();
     let  B = b.Reshaped(shapeB).AsMatrix();
@@ -386,6 +392,72 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
+}
+
+template<typename ElemType, typename ScalarT>
+ElemType Scale(ScalarT* quantized, shared_ptr<Matrix<ElemType>> matrix)
+{
+    const ElemType* data = matrix->Data();
+    ElemType scale = 327.68;
+    for (size_t i = 0; i < matrix->GetNumElements(); ++i)
+    {
+        *quantized++ = (ScalarT)max((ElemType)numeric_limits<ScalarT>::min(), 
+                                min((ElemType)numeric_limits<ScalarT>::max(), round(data[i] * scale)));
+    }
+    return scale;
+}
+
+template<typename ElemType, typename ScalarT>
+ElemType Descale(shared_ptr<Matrix<ElemType>> matrix, ScalarT* quantized, ElemType scale)
+{
+    ElemType* data = matrix->Data();
+    for (size_t i = 0; i < matrix->GetNumElements(); ++i)
+    {
+        *data++ = quantized[i] / scale;  
+    }
+    return scale;
+}
+
+
+
+template <class ElemType>
+void TensorView<ElemType>::DoQuantizedMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha)
+{
+    // determine integration dimension offset
+    auto shapeA = a.m_shape;
+    auto shapeB = b.m_shape;
+    auto shapeC = m_shape;
+    FlattenShapesToMatrix(shapeA, transA, shapeB, transB, shapeC, transC);
+    // create Matrix objects out of this
+    let  A = a.Reshaped(shapeA).AsMatrix();
+    let  B = b.Reshaped(shapeB).AsMatrix();
+    auto C = Reshaped(shapeC).AsMatrix();
+    // and go
+    if (transA || transB || transC)
+        NOT_IMPLEMENTED;
+
+    BlockMultiplier<BlockHandlerSSE> mult;
+    // mult is row-major. Since A and B are col-major, deal with this by swapping arguments.
+    // Effectively we're flipping the whole computation around a 45 degree angle
+    int m = (int)A->GetNumRows();
+    int k = (int)A->GetNumCols();
+    int l = (int)B->GetNumRows();
+    assert(k == l); l;
+    int n = (int)B->GetNumCols();
+    int16_t* matA = mult.CreateMatrixA(m, k);
+    int16_t* matB = mult.CreateMatrixB(k, n);
+    int32_t* matC = mult.CreateMatrixC(m, n);
+    ElemType scaleA = Scale(matA, A);
+    ElemType scaleB = Scale(matB, B);
+    int16_t* newA = mult.PrepareB(matA, k, m);
+    // Flip!  m <-> n  and A <-> B
+    mult.MultiplyMatrices(matB, n, k, newA, m, matC, (int16_t)alpha, (int16_t)beta);
+    Descale(C, matC, scaleA * scaleB);
+    mult.FreeMatrix(matA);
+    mult.FreeMatrix(matB);
+    mult.FreeMatrix(matC);
+    if (newA != matA)
+        mult.FreeMatrix(newA);
 }
 
 template class TensorView<float>;

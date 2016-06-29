@@ -139,10 +139,21 @@ public:
     void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
     void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
+
+    // -------------------------------------------------------------------
+    // Quantized matrix product. This scales inputs to 16 bit integers, performs
+    // integer multiplication using SSE/AVX2, and transforms the results back.
+    // It is meant for forward pass only where:
+    // a) Both matrices are dense
+    // b) the A input is a constant
+    // c) None of the arguments are transposed (not implemented)
+    void AssignQuantizedMatrixProductOf(bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoQuantizedMatrixProductOf(0, transC, a, transA, b, transB, alpha); }
+    void DoQuantizedMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
+
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
 
-private:
+public:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
@@ -153,7 +164,7 @@ private:
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------
-
+private:
     shared_ptr<Matrix<ElemType>> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
     TensorShape m_shape;                // the meta-data that describes the data's shape and/or access pattern
 };

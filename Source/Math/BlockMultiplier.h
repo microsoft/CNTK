@@ -840,7 +840,7 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
 
         if (m % rowsPerBlock != 0)
         {
-            throw new std::runtime_error("Error: m must be < 4 or a multiple of 4.");
+            throw std::runtime_error("Error: m must be < 4 or a multiple of 4.");
         }
 
         if (alpha != 1 || beta != 0)

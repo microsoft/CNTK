@@ -227,6 +227,10 @@ protected:
 
     virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
+    virtual bool ValueIsConstSelf() const override
+    {
+        return false;
+    }
 public:
     virtual void Save(File& fstream) const override
     {

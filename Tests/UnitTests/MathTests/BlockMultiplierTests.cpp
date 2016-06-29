@@ -147,11 +147,39 @@ BOOST_AUTO_TEST_SUITE(BlockMultiplierSuite)
 
 BOOST_AUTO_TEST_CASE(BlockMultiplyTest)
 {
-
-    int m = 8;
-    int k = 128;
-    int n = 8;
+    int m = 4, k = 10, n = 8;
     TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
+    BlockMultiplier<BlockHandlerSSE> mult;
+    
+    // mult is row-major. Since A and B are col-major, deal with this by swapping arguments.
+    // Effectively we're flipping the whole computation around a 45 degree angle
+   
+    int16_t* matA = mult.CreateMatrixA(m, k);
+    int16_t* matB = mult.CreateMatrixB(k, n);
+    int32_t* matC = mult.CreateMatrixC(m, n);
+    float alpha = 1, beta = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        matA[i] = matB[i] = (int16_t)i + 1;
+    }
+    int16_t* newA = mult.PrepareB(matA, k, m);
+    // Flip!  m <-> n  and A <-> B
+    mult.MultiplyMatrices(matB, n, k, newA, m, matC, (int16_t)alpha, (int16_t)beta);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        BOOST_CHECK_EQUAL(i + 1, matC[i]);
+    }
+    for (int i = 4; i < m * n; ++i)
+    {
+        BOOST_CHECK_EQUAL(0, matC[i]);
+    }
+
+    mult.FreeMatrix(matA);
+    mult.FreeMatrix(matB);
+    mult.FreeMatrix(matC);
+    if (newA != matA)
+        mult.FreeMatrix(newA);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

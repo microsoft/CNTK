@@ -173,8 +173,8 @@ void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr ne
 
     if (newNode->NodeName() != nodeName) // TODO: This was not tested for earlier; I hope no code depends on this.
         InvalidArgument("ChangeNode: newNode must have the same name as the old node.");
-    if (oldNode->OperationName() != newNode->OperationName())
-        InvalidArgument("ReplaceNode: newNode must have the same type as the old node.");
+    //if (oldNode->OperationName() != newNode->OperationName())
+    //    InvalidArgument("ReplaceNode: newNode must have the same type as the old node.");
 
     InvalidateCompiledNetwork();
 

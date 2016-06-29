@@ -18,6 +18,8 @@
 #include <cstdio>
 #include "ProgressTracing.h"
 #include "ComputationNetworkBuilder.h"
+#include "LinearAlgebraNodes.h"
+#include "InputAndParamNodes.h"
 
 using namespace std;
 
@@ -150,7 +152,7 @@ public:
     }
 
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
-    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions& formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions& formattingOptions, size_t numOutputSamples = requestDataSize, bool quantizeTimes = false, bool nodeUnitTest = false)
     {
         // In case of unit test, make sure backprop works
         ScopedNetworkOperationMode modeGuard(m_net, nodeUnitTest ? NetworkOperationMode::training : NetworkOperationMode::inferring);
@@ -159,6 +161,42 @@ public:
         std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
         std::vector<ComputationNodePtr> gradientNodes;
         std::vector<ComputationNodeBasePtr> allOutputNodes = outputNodes;
+
+        if (quantizeTimes)
+        {
+            const auto& nodes = m_net->GetAllNodes();
+            std::vector<ComputationNodeBasePtr> replacedNodes;
+            for (const auto &n : nodes)
+            {
+                if (n->Is<TimesNode<ElemType>>())
+                {
+                    if (n->GetInputs()[0]->ValueIsConst())
+                    {
+                        QuantizedBlockTimesNode<ElemType, false> qTimes(n->GetDeviceId(), n->GetName(),
+                            n->As<TimesNode<ElemType>>()->GetOutputRank());
+                        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, false>>(move(qTimes)));
+                    }
+                }
+                else if (n->Is<TransposeTimesNode<ElemType>>())
+                {
+                    if (n->GetInputs()[0]->ValueIsConst())
+                    {
+                        QuantizedBlockTimesNode<ElemType, true> qTimes(n->GetDeviceId(), n->GetName(),
+                            n->As<TransposeTimesNode<ElemType>>()->GetOutputRank());
+                        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, true>>(move(qTimes)));
+                    }
+                }
+            }
+            fprintf(stderr, "Replacing %d nodes with quantized times node\n", (int)replacedNodes.size());
+            for (auto& n : replacedNodes)
+            {
+                m_net->ReplaceNode(n->GetName(), n);
+            }
+            if (replacedNodes.size() > 0)
+            {
+                m_net->CompileNetwork();
+            }
+        }
 
         if (!nodeUnitTest)                                        // regular operation
         {
