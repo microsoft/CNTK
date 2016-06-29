@@ -1201,11 +1201,11 @@ namespace CNTK
                                        const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
-        void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, const ValuePtr>& rootGradientValues,
+        void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, ValuePtr>& rootGradientValues,
                       std::map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
         {
-            const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
-            auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
+            const std::unordered_map<Variable, ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
+            auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
             const std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
             auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs_umap);
 

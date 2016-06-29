@@ -309,8 +309,13 @@ namespace CNTK
                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
 
         virtual void Backward(const BackPropStatePtr& state,
+<<<<<<< HEAD
                               const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+=======
+                              const _Internal::_SimpleMap<Variable, ValuePtr>& rootGradientValues,
+                              _Internal::_SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+>>>>>>> b3b1373... Prepare API for backward adjustments
 
     private:
         virtual void ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
