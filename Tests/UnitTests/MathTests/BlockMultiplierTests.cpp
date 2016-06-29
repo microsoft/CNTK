@@ -152,6 +152,8 @@ BOOST_AUTO_TEST_CASE(BlockMultiplyTest)
     int k = 128;
     int n = 8;
     TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
+    //Add test for case where m > 4 but not divisible by 4
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(7, k, n);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

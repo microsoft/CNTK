@@ -820,8 +820,9 @@ template<typename BlockHandlerT>struct BlockInfo
     std::function<void (HandlerArgs<BlockHandlerT>)> oneFn;
 };
 
+
 //We assume B has been rewritten in block order.
-//For now we assume m, k and n are all multiples of kernelsize.
+//We assume C has been zeroed out.
 template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n,
         int32_t* C, ScalarAT alpha, ScalarBT beta)
 {
@@ -832,15 +833,24 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
     // in the openmp case, but I have not tested this scenario so I'm leaving it in for now.
     std::lock_guard<std::mutex> lock(m_MultiplyMut);
     {
+        //We want to multithread to the extent possible. When batch size is small this
+        //means doing a row at a time so we can take advantage of multiple procs.
+        //But only row sizes 1 and 4 are supported so far (should be fixed by codegen).
         int rowsPerBlock = m / m_numThreads;
         if (rowsPerBlock < 4)
             rowsPerBlock = 1;
         if (rowsPerBlock > 4)
             rowsPerBlock = 4;
 
+        //Fall back to row at a time if we end up with an invalid # of rows at a time
+        //TODO: We should always do 4 rows at a time if it makes sense from a threading standpoint
+        //since it is significantly more efficient. So if we have e.g. 7 rows, we should do
+        //one set of four rows at a time and then three single rows. This however will require
+        //changes to this function, RewriteAInBlockOrder and RowToColOffsetRewrittenA, so for now
+        //we are silently backing off to row at a time.
         if (m % rowsPerBlock != 0)
         {
-            throw new std::runtime_error("Error: m must be < 4 or a multiple of 4.");
+            rowsPerBlock = 1;
         }
 
         if (alpha != 1 || beta != 0)
