@@ -1051,7 +1051,7 @@ namespace CNTK
 
     inline bool operator<(const Variable& first, const Variable& second)
     {
-		return (first.m_dataFields.GetPtr() < second.m_dataFields.GetPtr());
+        return (first.m_dataFields.GetPtr() < second.m_dataFields.GetPtr());
     }
 
     ///
@@ -1291,7 +1291,6 @@ namespace CNTK
                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {})
         {
-            printf("I'm in\n");
             auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments);
             auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs);
             auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsToRetainBackwardStateFor);
@@ -1310,14 +1309,14 @@ namespace CNTK
                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                  const std::set<Variable>& outputsToRetainBackwardStateFor = {})
         {
-			const std::unordered_map<Variable, ValuePtr> arguments_umap(arguments.begin(), arguments.end());
-			auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments_umap);
+            const std::unordered_map<Variable, ValuePtr> arguments_umap(arguments.begin(), arguments.end());
+            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments_umap);
 
-			std::unordered_map<Variable, ValuePtr> outputs_umap(outputs.begin(), outputs.end());
-			auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs_umap);
+            std::unordered_map<Variable, ValuePtr> outputs_umap(outputs.begin(), outputs.end());
+            auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs_umap);
 
-			const std::unordered_set<Variable> outputsRetain_umap(outputsToRetainBackwardStateFor.begin(), outputsToRetainBackwardStateFor.end());
-			auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsRetain_umap);
+            const std::unordered_set<Variable> outputsRetain_umap(outputsToRetainBackwardStateFor.begin(), outputsToRetainBackwardStateFor.end());
+            auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsRetain_umap);
 
             auto backPropState = Forward(abisSafeArgumentsMap, abisSafeOutputsMap, abisSafeOutputsToRetainBackwardStateFor, computeDevice);
 
@@ -1354,10 +1353,10 @@ namespace CNTK
         void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, const ValuePtr>& rootGradientValues,
                       std::map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
         {
-			const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
-			auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
-			const std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
-			auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs_umap);
+            const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
+            auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
+            const std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
+            auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs_umap);
 
             Backward(state, abisSafeRootGradientValuesMap, abisSafeBackPropagatedGradientValuesForInputs);
 
