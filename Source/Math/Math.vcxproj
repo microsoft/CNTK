@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -105,7 +105,7 @@
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <OpenMPSupport>true</OpenMPSupport>
+      <OpenMPSupport>false</OpenMPSupport>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -151,6 +151,7 @@
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>$(MathDelayLoad)</DelayLoadDLLs>
@@ -170,9 +171,9 @@
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
-    <ClInclude Include="CPURNGHandle.h" />	
+    <ClInclude Include="CPURNGHandle.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
-    <ClInclude Include="RNGHandle.h" />	
+    <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
     <None Include="GPUWatcher.cu" />
@@ -198,7 +199,7 @@
     <ClCompile Include="BlockHandlerAVX.cpp" />
     <ClCompile Include="BlockHandlerSSE.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
-    <ClCompile Include="CPURNGHandle.cpp" />	
+    <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />
     <ClCompile Include="dllmain.cpp">
@@ -212,7 +213,7 @@
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />
-    <ClCompile Include="RNGHandle.cpp" />	
+    <ClCompile Include="RNGHandle.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

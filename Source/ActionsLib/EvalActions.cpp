@@ -249,7 +249,8 @@ void DoWriteOutput(const ConfigParameters& config)
         wstring outputPath = config(L"outputPath");
         WriteFormattingOptions formattingOptions(config);
         bool nodeUnitTest = config(L"nodeUnitTest", "false");
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
+        bool quantizeTimes = config(L"quantizeTimes", "false");
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, quantizeTimes, nodeUnitTest);
     }
     else
         InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");

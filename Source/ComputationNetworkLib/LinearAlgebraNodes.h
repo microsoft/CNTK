@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
+#include "../../../Source/Math/BlockMultiplier.h"
 
 #include <unordered_set>
 #include <map>
@@ -258,7 +259,11 @@ public:
             m_outputRank = 1;
     }
 
-private:
+    size_t GetOutputRank()
+    {
+        return m_outputRank;
+    }
+protected:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
@@ -521,6 +526,67 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+
+// ------------------------------------------------------------------------------------------------
+// QuantizedTimesNode - Node that will be used in place of Times/TransposeTimes at load time, 
+// if quantization is turned on.
+// ------------------------------------------------------------------------------------------------
+
+template <class ElemType, bool m_transpose>
+class QuantizedBlockTimesNode : public TimesNodeBase<ElemType, m_transpose>
+{
+    typedef TimesNodeBase<ElemType, m_transpose> Base; 
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"QuantizedBlockTimes"; }
+    int16_t* m_preparedA = nullptr;
+    ElemType m_scaleA;
+    bool m_reuseA;
+public:
+    QuantizedBlockTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
+        : Base(deviceId, name, outputRank)
+    {
+    }
+
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {           
+        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+            Base::ForwardProp(fr); // It will come back
+        if (Input(0)->Value().GetMatrixType() != DENSE || Input(1)->Value().GetMatrixType() != DENSE)
+            Base::ForwardProp(fr); // Can't deal with this. We shouldn't be here.
+
+        TensorView<ElemType> input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+        output.AssignQuantizedMatrixProductOf(input0, m_transpose/*transA*/, input1, m_reuseA ? &m_preparedA : nullptr, &m_scaleA);
+    }
+private:
+
+public:
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& /*fr*/) override
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_reuseA = Input(0)->ValueIsConst();
+    }
+
+    virtual ~QuantizedBlockTimesNode()
+    {
+        if (m_preparedA != nullptr)
+        {
+             BlockMultiplier<BlockHandlerSSE>::FreeMatrix(m_preparedA); // Template arg doesn't matter.
+        }
+    }
+};
+
+template class QuantizedBlockTimesNode<float, false>;
+template class QuantizedBlockTimesNode<float, true>;
+template class QuantizedBlockTimesNode<double, false>;
+template class QuantizedBlockTimesNode<double, true>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
