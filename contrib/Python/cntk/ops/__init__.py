@@ -1439,7 +1439,9 @@ def reduce_max(value, axis=0, name=None):
     from cntk.ops.cntk1 import ReduceMax
     op = ReduceMax(value, axis=axis, name=name)
     wrap_numpy_arrays(op)    
-    op.rank = op.z.rank
+    op.axis = abs(axis) if axis<0 else op.z.rank - axis
+    op.rank = 0 if op.axis == 0 else op.z.rank    
+
     return op
 
 def reduce_min(value, axis=0, name=None):
@@ -1458,5 +1460,6 @@ def reduce_min(value, axis=0, name=None):
     from cntk.ops.cntk1 import ReduceMin
     op = ReduceMin(value, axis=axis, name=name)
     wrap_numpy_arrays(op)    
-    op.rank = op.z.rank
+    op.axis = abs(axis) if axis<0 else op.z.rank - axis
+    op.rank = 0 if op.axis == 0 else op.z.rank    
     return op

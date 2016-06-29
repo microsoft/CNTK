@@ -64,9 +64,9 @@ def test_op_reduce_sum(input_data, axis, device_id, precision):
 
 
 REDUCE_MAX_TEST_CASES = [
-     ([[10, 0],[20,  1]], 0,        [20],  [[0,0],[1,0]]),
+     ([[10, 0],[20,  1]], 2,        [20],  [[0,0],[1,0]]),
      ([[10, 0],[20,  1]], 1, [[10], [20]], [[1,0],[1,0]]),
-     ([[10, 0],[ 0, 20]], 2, [[10,   20]], [[1,0],[0,1]]),
+     ([[10, 0],[ 0, 20]], 0, [[10,   20]], [[1,0],[0,1]]),
 ]
 
 @pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MAX_TEST_CASES)
@@ -86,9 +86,9 @@ def test_op_reduce_max(input_data, axis_data, expected_result, expected_gradient
 
 
 REDUCE_MIN_TEST_CASES = [
-     ([[-10, 0],[-20,  -1]], 0,         [-20],  [[0,0],[1,0]]),
+     ([[-10, 0],[-20,  -1]], 2,         [-20],  [[0,0],[1,0]]),
      ([[-10, 0],[-20,  -1]], 1, [[-10], [-20]], [[1,0],[1,0]]),
-     ([[-10,-0],[  0, -20]], 2, [[-10,   -20]], [[1,0],[0,1]]),
+     ([[-10,-0],[  0, -20]], 0, [[-10,   -20]], [[1,0],[0,1]]),
 ]
 
 @pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MIN_TEST_CASES)
