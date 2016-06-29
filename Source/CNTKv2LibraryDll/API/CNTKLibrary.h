@@ -7,14 +7,18 @@
 
 #pragma once
 
+
 #include "CNTKLibraryInternals.h"
+
 
 #include <memory>
 #include <vector>
 #include <array>
 #include <stdarg.h>
 #include <assert.h>
+#include <map>
 #include <unordered_map>
+#include <set>
 #include <unordered_set>
 #include <string>
 #include <sstream>
@@ -90,7 +94,7 @@ namespace CNTK
     ///
     /// Denotes a compute device instance.
     ///
-    class DeviceDescriptor final
+    class DeviceDescriptor
     {
     public:
         ///
@@ -119,6 +123,7 @@ namespace CNTK
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
 
+
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
@@ -142,7 +147,7 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
-    class NDShape final
+    class NDShape
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
     public:
@@ -371,7 +376,7 @@ namespace CNTK
         /// assign the specified value to each element of the view.
         ///
         template <typename ElementType>
-        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
+        NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
             : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
@@ -645,7 +650,7 @@ namespace CNTK
     /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
     /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
     ///
-    class Axis final
+    class Axis
     {
     public:
         ///
@@ -751,10 +756,14 @@ namespace CNTK
     class Variable
     {
         friend bool operator==(const Variable& first, const Variable& second);
+        friend bool operator<(const Variable& first, const Variable& second);
         friend class Function;
 
         template <typename T>
         friend struct std::hash;
+
+        template <typename T>
+        friend struct std::less;
 
     public:
         ///
@@ -919,10 +928,15 @@ namespace CNTK
         return first.m_dataFields == second.m_dataFields;
     }
 
+    inline bool operator<(const Variable& first, const Variable& second)
+    {
+		return (first.m_dataFields.GetPtr() < second.m_dataFields.GetPtr());
+    }
+
     ///
     /// Denotes Parameter inputs of a Function.
     ///
-    class Parameter final : public Variable
+    class Parameter : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -973,7 +987,7 @@ namespace CNTK
     ///
     /// Denotes Constant inputs of a Function.
     ///
-    class Constant final : public Variable
+    class Constant : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1151,6 +1165,29 @@ namespace CNTK
                                                   const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                                   const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
+        BackPropStatePtr ForwardMap(const std::map<Variable, ValuePtr>& arguments,
+                                 std::map<Variable, ValuePtr>& outputs,
+                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
+                                 const std::set<Variable>& outputsToRetainBackwardStateFor = {})
+        {
+			const std::unordered_map<Variable, ValuePtr> arguments_umap(arguments.begin(), arguments.end());
+			auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(arguments_umap);
+
+			std::unordered_map<Variable, ValuePtr> outputs_umap(outputs.begin(), outputs.end());
+			auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs_umap);
+
+			const std::unordered_set<Variable> outputsRetain_umap(outputsToRetainBackwardStateFor.begin(), outputsToRetainBackwardStateFor.end());
+			auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsRetain_umap);
+
+            auto backPropState = Forward(abisSafeArgumentsMap, abisSafeOutputsMap, abisSafeOutputsToRetainBackwardStateFor, computeDevice);
+
+            // Copy over the ValuePtr values in outputs
+            for (auto iter = outputs.begin(); iter != outputs.end(); ++iter)
+                outputs[iter->first] = abisSafeOutputsMap[iter->first];
+
+            return backPropState;
+        }
+
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
         /// corresponding to the specified set of input variables in 'backPropagatedGradientValuesForInputs'.
@@ -1163,6 +1200,21 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+
+        void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, const ValuePtr>& rootGradientValues,
+                      std::map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
+        {
+			const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
+			auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues_umap);
+			const std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
+			auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs_umap);
+
+            Backward(state, abisSafeRootGradientValuesMap, abisSafeBackPropagatedGradientValuesForInputs);
+
+            // Copy over the ValuePtr values in backPropagatedGradientValuesForInputs
+            for (auto iter = backPropagatedGradientValuesForInputs.begin(); iter != backPropagatedGradientValuesForInputs.end(); ++iter)
+                backPropagatedGradientValuesForInputs[iter->first] = abisSafeBackPropagatedGradientValuesForInputs[iter->first];
+        }
 
     public:
 

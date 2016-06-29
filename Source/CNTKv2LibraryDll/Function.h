@@ -68,10 +68,10 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& /*arguments*/,
-                                         std::unordered_map<Variable, ValuePtr>& /*outputs*/,
-                                         const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
+        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, ValuePtr>& /*arguments*/,
+                                         _Internal::_SimpleMap<Variable, ValuePtr>& /*outputs*/,
+                                         const _Internal::_SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
+                                         const DeviceDescriptor& /*computeDevice*/) override
         {
             NOT_IMPLEMENTED;
         }

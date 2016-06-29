@@ -18,6 +18,7 @@
 #define CNTK_API
 #endif
 
+
 #include <memory>
 #include <vector>
 #include <array>
