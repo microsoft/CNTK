@@ -1,5 +1,3 @@
-import sys
-sys.path.append(r"C:\blis\CNTK\x64\Release_CpuOnly")
 import swig_cntk
 
 def shape_from_NDShape(swig_obj):
@@ -17,41 +15,49 @@ def create_variable(shape, data_type=float, is_sparse=False, needs_gradient=True
     else:
         raise ValueError('Type %s is not supported'%data_type)
 
-    return swig_cntk.Variable(swig_cntk.NDShape(shape), cntk_type, is_sparse,  name)
+    return swig_cntk.Variable(swig_cntk.NDShape(shape), is_sparse, cntk_type, needs_gradient, name)
 
 def create_ValuePtr(shape, data_type, dev):
-    ndshape = swig_cntk.NDShape(shape+(1,1))
+    ndshape = swig_cntk.NDShape(shape)
     view = swig_cntk.NDArrayViewFloat(data_type, ndshape, dev)
     view_ptr = swig_cntk.NDArrayViewPtr(view)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
 
 def create_ValuePtr_with_value(shape, value, dev):
-    ndshape = swig_cntk.NDShape(shape+(1,1))
+    ndshape = swig_cntk.NDShape(shape)
     view = swig_cntk.NDArrayViewFloat(value, ndshape, dev)
     view_ptr = swig_cntk.NDArrayViewPtr(view)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
 
-def cntk():
+def create_ValuePtr_with_Buffer(shape, data_type, dev):
+    ndshape = swig_cntk.NDShape(shape)
+    view = swig_cntk.NDArrayViewFloat(value, ndshape, dev)
+    view_ptr = swig_cntk.NDArrayViewPtr(view)
+    value = swig_cntk.Value(view_ptr)
+    return swig_cntk.ValuePtr(value)
+
+def forward_backward():
     dev = swig_cntk.DeviceDescriptor.CPUDevice()
 
+    #import time;time.sleep(20)
     left_shape = (2,3)
     right_shape = (2,3)
     output_shape = (2,3)
 
     # import time;time.sleep(20)
-    left_var = create_variable(left_shape, name="left_node")
-    right_var = create_variable(right_shape, name="right_node")
+    left_var = create_variable(left_shape, needs_gradient=True, name="left_node")
+    right_var = create_variable(right_shape, needs_gradient=True, name="right_node")
 
-    left_value_ptr = create_ValuePtr_with_value(left_shape, 2, dev)
-    right_value_ptr = create_ValuePtr_with_value(right_shape, 5, dev)
+    left_value_ptr = create_ValuePtr_with_value(left_shape+(1,1), 2, dev)
+    right_value_ptr = create_ValuePtr_with_value(right_shape+(1,1), 5, dev)
 
     op = swig_cntk.Plus(left_var, right_var)
 
     outputVariable = op.Output()
     output_shape = (2,3)
-    output_value_ptr = create_ValuePtr(output_shape, swig_cntk.DataType_Float, dev) 
+    output_value_ptr = create_ValuePtr(output_shape+(1,1), swig_cntk.DataType_Float, dev) 
 
     arguments = swig_cntk.MapVarValuePtr()
     arguments[left_var] = left_value_ptr
@@ -60,17 +66,44 @@ def cntk():
     outputs = swig_cntk.MapVarValuePtr()
     outputs[outputVariable] = output_value_ptr
 
-    outputs_to_retain = set()
-    backpropstate = op.ForwardMap(arguments, outputs, dev)#, outputs_to_retain)
-
-    import numpy as np
-    output_ndshape = output_value_ptr.Data().Shape() 
-    data = swig_cntk.data_from_value(
+    outputs_retain = swig_cntk.VarSet([outputVariable])
+    #
+    # Forward
+    #
+    backpropstate = op.ForwardMap(arguments, outputs, dev, outputs_retain)
+    forward_data = swig_cntk.data_from_value(
             output_value_ptr.Data().GetPtr().DataBufferFloat(), 
-            output_ndshape.TotalSize())
+            output_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    print("Result forward:")
+    print(forward_data)
 
-    return data.reshape(output_shape)
+    #
+    # Backward
+    #
+    grad_left_value_ptr = create_ValuePtr(left_shape+(1,1), swig_cntk.DataType_Float, dev)
+    grad_right_value_ptr = create_ValuePtr(right_shape+(1,1), swig_cntk.DataType_Float, dev)
+
+    gradients = swig_cntk.MapVarValuePtr()
+    gradients[left_var] = grad_left_value_ptr
+    gradients[right_var] = grad_right_value_ptr
+
+    rootGradients = swig_cntk.MapVarValuePtr()
+    rootGradientValuePtr = create_ValuePtr_with_value(
+            shape_from_NDShape(outputVariable.Shape())+(1,1), 1, dev) 
+    rootGradients[outputVariable] = rootGradientValuePtr
+ 
+    op.BackwardMap(backpropstate, rootGradients, gradients)
+    left_grad_data = swig_cntk.data_from_value(
+            grad_left_value_ptr.Data().GetPtr().DataBufferFloat(), 
+            grad_left_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    print("Result backward left:")
+    print(left_grad_data)
+
+    right_grad_data = swig_cntk.data_from_value(
+            grad_right_value_ptr.Data().GetPtr().DataBufferFloat(), 
+            grad_right_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    print("Result backward right:")
+    print(right_grad_data)
 
 if __name__=='__main__':
-    res = cntk()
-    print(res)
+    forward_backward()
