@@ -607,7 +607,11 @@ static void CudaCall(ERRTYPE retCode, const char *file, int line, const char* ex
 #endif
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
+<<<<<<< 2569d6ff5bb3da454863e4daa6e15158f1a144b5
             Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s . File=%s, line=%d; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode),file, line, currentCudaDevice, hostname ? hostname : "?", exprString);
+=======
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s . File=%s, line=%d; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, file, line, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString);
+>>>>>>> Added filename and line number to CUDA error message.
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
