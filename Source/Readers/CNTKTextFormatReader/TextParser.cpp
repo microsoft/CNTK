@@ -239,13 +239,11 @@ TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descri
 template <class ElemType>
 void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
-    assert(m_sequenceMap.size() > sequenceId);
+    assert(sequenceId < m_sequenceMap.size());
     result.reserve(m_parser->m_streamInfos.size());
+
     const auto& sequenceData = m_sequenceMap[sequenceId];
-    for (size_t j = 0; j < m_parser->m_streamInfos.size(); ++j)
-    {
-        result.push_back(sequenceData[j]);
-    }
+    result.insert(result.end(), sequenceData.begin(), sequenceData.end());
 }
 
 template <class ElemType>
@@ -457,12 +455,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
-    Enrich(sequence, sequenceDsc.m_id);
+    FillSequenceMetadata(sequence, sequenceDsc.m_id);
     return sequence;
 }
 
 template<class ElemType>
-void TextParser<ElemType>::Enrich(SequenceBuffer& sequenceData, size_t sequenceId)
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, size_t sequenceId)
 {
     for (size_t j = 0; j < m_streamInfos.size(); ++j)
     {
