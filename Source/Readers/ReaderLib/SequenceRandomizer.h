@@ -70,7 +70,7 @@ private:
     // Gets randomized chunk index using a sequence position in the sweep.
     ChunkIdType GetChunkIndexForSequencePosition(size_t sequenceSweepPosition) const;
 
-    // Gets randomized sequence by sequence position in sweep.
+    // Gets randomized sequence by sequence position in sweep and its randomized chunk index.
     RandomizedSequenceDescription& GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition);
 
     // Add randomizes sequences for the chunk with a given index.

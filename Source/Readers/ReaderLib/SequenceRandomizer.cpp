@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t posEnd = m_randomizedChunks[chunkWindowEnd - 1].SequenceEndPosition();
 
             ChunkIdType tChunkIndex = GetChunkIndexForSequencePosition(t);
-            auto& first = GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t);
+            auto& tSequence = GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t);
 
             for (;;)
             {
@@ -201,18 +201,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // Pick up j sequence.
                 ChunkIdType jChunkIndex = GetChunkIndexForSequencePosition(j);
-                auto& second = GetRandomizedSequenceDescriptionByPosition(jChunkIndex, j);
+                auto& jSequence = GetRandomizedSequenceDescriptionByPosition(jChunkIndex, j);
 
                 // Try again if the sequence currently at j cannot be placed at position i.
-                if (!IsValidForPosition(tChunkIndex, second))
+                if (!IsValidForPosition(tChunkIndex, jSequence))
                     continue;
 
                 // Try again if the sequence currently at i cannot be placed at position j.
-                if (!IsValidForPosition(jChunkIndex, first))
+                if (!IsValidForPosition(jChunkIndex, tSequence))
                     continue;
 
                 // Swap and break out.
-                std::swap(first, second); // TODO old swap was perhaps more efficient
+                std::swap(tSequence, jSequence);
                 break;
             }
         }
@@ -330,8 +330,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_currentSampleCursor;
     }
 
-    // Checks if the randomized sequence is valid for a target position using its chunk randomization window.
-    inline bool SequenceRandomizer::IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const
+    // Checks if the randomized sequence is valid for a target chunk.
+    bool SequenceRandomizer::IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const
     {
         const auto& chunk = m_randomizedChunks[chunkIndex];
         return chunk.m_randomizationWindow.m_begin <= seqDesc.m_chunk->m_chunkId && seqDesc.m_chunk->m_chunkId < chunk.m_randomizationWindow.m_end;
@@ -373,8 +373,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_chunkWindowEnd++;
     }
 
-    // Gets randomized sequence by the sequence id.
-    inline RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition)
+    // Gets randomized sequence by the sequence position in the sweep and randomized chunk index.
+    RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition)
     {
         size_t sequenceOffsetInsideChunk = sequenceSweepPosition - m_randomizedChunks[chunkIndex].m_sequencePositionStart;
         return m_sequenceWindow[chunkIndex - m_chunkWindowBegin][sequenceOffsetInsideChunk];

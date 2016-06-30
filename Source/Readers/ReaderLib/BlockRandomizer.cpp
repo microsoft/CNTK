@@ -102,8 +102,6 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 
         // Resetting sequence randomizer.
         m_sequenceRandomizer->Reset(m_sweep + 1);
-
-        // Unloading all chunk data from memory.
         m_lastSeenChunkId = CHUNKID_MAX;
     }
 }
@@ -276,8 +274,9 @@ void BlockRandomizer::RetrieveDataChunks()
         }
     }
 
-    // Removing not used chunks.
-    m_chunks.clear();
+    // Swapping current chunks in the m_chunks, by that removing all stale.
+    // TODO diagnostics for paged out chunks?
+    m_chunks.swap(chunks);
 
     // Adding new ones.
     for (size_t i = 0; i < randomizedEnd; ++i)
@@ -285,7 +284,7 @@ void BlockRandomizer::RetrieveDataChunks()
         if (needed[i])
         {
             auto const& chunk = window[i];
-            chunks[chunk.m_original->m_id] = m_deserializer->GetChunk(chunk.m_original->m_id);
+            m_chunks[chunk.m_original->m_id] = m_deserializer->GetChunk(chunk.m_original->m_id);
             if (m_verbosity >= Information)
                 fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                 chunk.m_chunkId,
@@ -293,10 +292,6 @@ void BlockRandomizer::RetrieveDataChunks()
                 ++numLoadedChunks);
         }
     }
-
-    // Swapping current chunks in the m_chunks, by that removing all stale and remembering newly loaded.
-    // TODO diagnostics for paged out chunks?
-    m_chunks.swap(chunks);
 
     if (m_verbosity >= Notification)
         fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",
