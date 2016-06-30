@@ -47,7 +47,7 @@ def forward_backward():
     output_shape = (2,3)
 
     # import time;time.sleep(20)
-    left_var = create_variable(left_shape, needs_gradient=True, name="left_node")
+    left_var = create_variable(left_shape, needs_gradient=False, name="left_node")
     right_var = create_variable(right_shape, needs_gradient=True, name="right_node")
 
     left_value_ptr = create_ValuePtr_with_value(left_shape+(1,1), 2, dev)
