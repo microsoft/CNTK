@@ -5,6 +5,8 @@
 
 #include "stdafx.h"
 #include "EvalTestHelper.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -21,6 +23,10 @@ BOOST_FIXTURE_TEST_SUITE(EvalTestSuite, EvalFixture)
 
 IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefinition, VariableSchema& inputLayouts, VariableSchema& outputLayouts)
 {
+    // Native model evaluation instance
+    IEvaluateModelExtended<float> *eval;
+
+#ifdef _WIN32
     // Load the eval library
     auto hModule = LoadLibrary(L"evaldll.dll");
     if (hModule == nullptr)
@@ -33,10 +39,12 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     std::string func = "GetEvalExtendedF";
     auto procAddress = GetProcAddress(hModule, func.c_str());
     auto getEvalProc = (GetEvalProc<float>)procAddress;
-
-    // Native model evaluation instance
-    IEvaluateModelExtended<float> *eval;
+        
     getEvalProc(&eval);
+
+#else // on Linux
+    GetEvalExtendedF(&eval);
+#endif
 
     try
     {
@@ -44,7 +52,7 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     }
     catch (std::exception& ex)
     {
-        fprintf(stderr, ex.what());
+        fprintf(stderr, "%s\n", ex.what());
         throw;
     }
     fflush(stderr);
@@ -53,9 +61,9 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     outputLayouts = eval->GetOutputSchema();
 
     for (auto vl : outputLayouts)
-    {
-        fprintf(stderr, "Output dimension: %d\n", vl.m_numElements);
-        fprintf(stderr, "Output name: %ls\n", vl.m_name);
+    {        
+        fprintf(stderr, "Output dimension: %" PRIu64 "\n", vl.m_numElements);
+        fprintf(stderr, "Output name: %ls\n", vl.m_name.c_str());
     }
 
     eval->StartForwardEvaluation({outputLayouts[0].m_name});
