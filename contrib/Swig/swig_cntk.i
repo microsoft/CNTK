@@ -29,7 +29,7 @@
     using namespace CNTK;
 %}
 
-%feature("director") FunctionCallback;
+%feature("director") Callback;
 
 %feature("ref")   CNTK::_Internal::_ReferenceCounter "$this->AddReference();"
 %feature("unref") CNTK::_Internal::_ReferenceCounter "$this->RemoveReference();"
