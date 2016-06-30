@@ -100,7 +100,7 @@ public:
 
 
 template<class ElemType>
-class CSparsePCReader : public IDataReader
+class CSparsePCReader : public DataReaderBase
 {
 private:
     ConfigParameters m_readerConfig;
@@ -192,7 +192,9 @@ public:
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
     virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
-	virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+	virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
+	//virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+	virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
 
     size_t GetNumParallelSequences() { return m_pMBLayout->GetNumParallelSequences(); }
     void SetNumParallelSequences(const size_t) { };

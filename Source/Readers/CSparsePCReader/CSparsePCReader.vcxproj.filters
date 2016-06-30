@@ -36,9 +36,6 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -96,6 +93,9 @@
     <ClCompile Include="CSparsePCReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
@@ -108,9 +108,6 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">

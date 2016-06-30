@@ -439,12 +439,19 @@ namespace Microsoft {
 			}
 			//Compress END
 
+			template<class ElemType>
+			void CSparsePCReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples)
+			{
+
+
+			}
+
 			// GetMinibatch - Get the next minibatch (features and labels)
 			// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
 			//             [out] each matrix resized if necessary containing data. 
 			// returns - true if there are more minibatches, false if no more minibatchs remain
 			template<class ElemType>
-			bool CSparsePCReader<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
+			bool CSparsePCReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 			{
 
 				// get out if they didn't call StartMinibatchLoop() first
