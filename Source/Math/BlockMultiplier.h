@@ -180,7 +180,7 @@ template<typename BlockHandlerT> class BlockMultiplier
         // get rid of the allocation but I haven't had time to do this yet.
         static void BlockHandler128x4Thread(HandlerArgs<BlockHandlerT> ha)
         {
-            //Accumulate full row results locally b/f writing to C
+            // Accumulate full row results locally b/f writing to C
             VectorT* resultStorage = (VectorT*)ALIGNED_ALLOC(sizeof(VectorT) * ha.rowsPerBlock * ha.n, 16);
             memset(resultStorage, 0, sizeof(VectorT) * ha.rowsPerBlock * ha.n);
             const int blocksAtOnce = 2;
@@ -195,7 +195,7 @@ template<typename BlockHandlerT> class BlockMultiplier
 
             int n = ha.n;
             {
-                //This takes about the same amount of time as the memcpy version below.
+                // This takes about the same amount of time as the memcpy version below.
                 for (int c = 0; c < n; ++c)
                 {
                     //_mm_prefetch((char*)&(transC[RowColToOffset(c, startRow, m)]), _MM_HINT_T1);
@@ -297,7 +297,6 @@ template<typename BlockHandlerT> class BlockMultiplier
 
             int n = ha.n;
             {
-                //This takes about the same amount of time as the memcpy version below.
                 for (int c = 0; c < n; ++c)
                 {
                     VectorT result1 = resultStorage[RowColToOffset(0, c, n)];
@@ -475,14 +474,14 @@ template<typename BlockHandlerT> class BlockMultiplier
 
     public:
 
-        //Borrowed from [https://software.intel.com/en-us/forums/intel-isa-extensions/topic/285219]
-        //Results in a saturated add, i.e. in the overflow case we return int_max, and in the
-        //underflow we return int_min.
-        //The code is clever - it uses the _mm_blendv_ps instruction to avoid branching.
-        //It's based on the fact that you can only have overflow if the signs of the operands
-        //are identical and different from the sign of the result.
-        //The resulting code results in matrix multiplies that are a few percent slower than the non-saturating code,
-        //but we avoid the wild inaccuracies resulting from over/underflow.
+        // Borrowed from [https://software.intel.com/en-us/forums/intel-isa-extensions/topic/285219]
+        // Results in a saturated add, i.e. in the overflow case we return int_max, and in the
+        // underflow we return int_min.
+        // The code is clever - it uses the _mm_blendv_ps instruction to avoid branching.
+        // It's based on the fact that you can only have overflow if the signs of the operands
+        // are identical and different from the sign of the result.
+        // The resulting code results in matrix multiplies that are a few percent slower than the non-saturating code,
+        // but we avoid the wild inaccuracies resulting from over/underflow.
         FORCEINLINE static __m128i my_adds_epi32(__m128i a, __m128i b)
         {
             __m128i int_min = _mm_set1_epi32(0x80000000);
@@ -499,15 +498,15 @@ template<typename BlockHandlerT> class BlockMultiplier
         //Saturated horizontal add
         FORCEINLINE static int32_t my_hadd(__m128i hAddMe)
         {
-            //We have ABCD, we want A + B + C +D.
-            //Shuffle to get BADC
+            // We have ABCD, we want A + B + C +D.
+            // Shuffle to get BADC
             __m128i shuff1 = _mm_shuffle_epi32(hAddMe, _MM_SHUFFLE(1, 0, 3, 2));
             __m128i res1 = my_adds_epi32(hAddMe, shuff1);
-            //Now we have
-            //A+B B+A, C+D D+C, so shuffle and add once more
+            // Now we have
+            // A+B B+A, C+D D+C, so shuffle and add once more
             __m128i shuff2 = _mm_shuffle_epi32(res1, _MM_SHUFFLE(0, 1, 2, 3));
-            //This gives us
-            //D+C A+B B+A C+D
+            // This gives us
+            // D+C A+B B+A C+D
             __m128i res2 = my_adds_epi32(res1, shuff2);
             return _mm_extract_epi32(res2, 0);
         }
@@ -560,6 +559,7 @@ template<typename BlockHandlerT> class BlockMultiplier
             m_pPool.reset(new StdThreadPool<HandlerArgs<BlockHandlerT>>(threads));
 #else
 #ifdef OPENMPTHREAD
+            m_oldNumThreads = omp_get_num_threads();
             omp_set_num_threads(threads);
 #endif
 #endif
@@ -568,16 +568,18 @@ template<typename BlockHandlerT> class BlockMultiplier
         ~BlockMultiplier()
         {
             BlockHandlerT::FreePreparedB(m_pBlockHandlerBInfo);
+            omp_set_num_threads(m_oldNumThreads);
         }
         static ScalarAT* CreateMatrixA(int m, int n, ScalarAT initVal = 0);
         static ScalarBT* CreateMatrixB(int m, int n, ScalarBT initVal = 0);
         static int32_t* CreateMatrixC(int m, int n, int32_t initVal = 0);
         ScalarBT* PrepareB(ScalarBT* oldB, int k, int n);
         template<typename ScalarT> static void FreeMatrix(ScalarT* freeMe) { FreeAlignedMatrix<ScalarT>(freeMe); }
-        //We assume B has been rewritten in block order.
-        //For now we assume m, k and n are all multiples of kernelsize.
+        // We assume B has been rewritten in block order.
+        // For now we assume m, k and n are all multiples of kernelsize.
         void MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n, int32_t* C, ScalarAT alpha = 1, ScalarBT beta = 0);
         static const int MAXRANGE = 1 << 13;
+        int m_oldNumThreads;
 };
 
 // Instantiate block multipliers
@@ -606,8 +608,8 @@ template<typename BlockHandlerT> int32_t* BlockMultiplier<BlockHandlerT>::Create
 template<typename BlockHandlerT> FORCEINLINE int BlockMultiplier<BlockHandlerT>::referenceKernel(ScalarAT* A, 
         ScalarBT* B, int blockSize)
 {
-    //For now just use regular instructions
-    //until we have the breakdown figured out.
+    // For now just use regular instructions
+    // until we have the breakdown figured out.
     int accum = 0;
     for (int i = 0; i < blockSize; ++i)
     {
@@ -616,8 +618,8 @@ template<typename BlockHandlerT> FORCEINLINE int BlockMultiplier<BlockHandlerT>:
     return accum;
 }
 
-//Rewrites B in Block order so that memory accesses to B will be sequential.
-//See comments on RewriteBInBlockOrder for details.
+// Rewrites B in Block order so that memory accesses to B will be sequential.
+// See comments on RewriteBInBlockOrder for details.
 template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::ScalarBT* BlockMultiplier<BlockHandlerT>::PrepareB(ScalarBT* oldB, int k, int n)
 {
     ScalarBT* newB = CreateMatrixB(k, n);
@@ -651,37 +653,37 @@ template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::Scalar
     return newB;
 }
 
-//A version of RewriteBInBlockOrder that allows for multiple decreasing block sizes
-//(Which is necessary for letting us handle arbitrarily-sized matrices). On the first call, set kOffset to zero, and
-//newB to the beginning of the newly allocated B array.
-//We return a pointer to the next writable element in newB, and kOffset gets the new offset into the shared dimension. 
+// A version of RewriteBInBlockOrder that allows for multiple decreasing block sizes
+// (Which is necessary for letting us handle arbitrarily-sized matrices). On the first call, set kOffset to zero, and
+// newB to the beginning of the newly allocated B array.
+// We return a pointer to the next writable element in newB, and kOffset gets the new offset into the shared dimension. 
 
-//So if you have blocks of size 128 and 64, do something like this:
-//short* newB = alloc_b();
-//int kOffset=0;
-//int retBlockSize = firstBlockSize;
-//(Write out the blocks up to k=128)
-//short* nextB = RewriteBInBlockOrder(oldB, newB, k, n, 128, *kOffset);
-//short* lastB = RewriteBInBlockOrder(oldB, nextB, k, n, 64, &kOffset);
+// So if you have blocks of size 128 and 64, do something like this:
+// short* newB = alloc_b();
+// int kOffset=0;
+// int retBlockSize = firstBlockSize;
+// (Write out the blocks up to k=128)
+// short* nextB = RewriteBInBlockOrder(oldB, newB, k, n, 128, *kOffset);
+// short* lastB = RewriteBInBlockOrder(oldB, nextB, k, n, 64, &kOffset);
 
-//For each block, the logic is as follows:
-//Given a block size of 2 and a matrix that looks like this:
+// For each block, the logic is as follows:
+// Given a block size of 2 and a matrix that looks like this:
 // B00 B01 B02 B03
 // B10 B11 B12 B13
 // B20 B21 B22 B23
 // B30 B31 B32 B33
-//.. we will rewrite it like this
+// .. we will rewrite it like this
 // B00 B10 B01 B11 B02 B12 B03 B13 //The first block of columns 0,1,2, and 3.
-//B20 B30 B21 B31 B22 B32 B23 B33 //The second block of columns, 0, 1, 2, and 3.
+// B20 B30 B21 B31 B22 B32 B23 B33 //The second block of columns, 0, 1, 2, and 3.
 
-//So each "row" of the new matrix (block size * num_original_cols) contains all of the values that
-//will be multiplied with block zero of a given row.
-//Column offsets within the row can be computed by (block_size * col_offset).
+// So each "row" of the new matrix (block size * num_original_cols) contains all of the values that
+// will be multiplied with block zero of a given row.
+// Column offsets within the row can be computed by (block_size * col_offset).
 
-//Given the original B matrix, we restructure it so that we will access all of its elements in block order.
-//That way we can load in blocksize elements from A, then read in the corresponding elements from each
-//column of B in sequential order.
-//Old, replaced with fn below, keeping around for now for reference.
+// Given the original B matrix, we restructure it so that we will access all of its elements in block order.
+// That way we can load in blocksize elements from A, then read in the corresponding elements from each
+// column of B in sequential order.
+// Old, replaced with fn below, keeping around for now for reference.
 template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::ScalarBT* BlockMultiplier<BlockHandlerT>::RewriteBInBlockOrder(ScalarBT* oldB, ScalarBT* newB, int k, 
         int n, int blockSize, int* kOffset)
 {
@@ -689,7 +691,7 @@ template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::Scalar
     int numBlocks = (k - *kOffset) / blockSize;
     for (int b = 0; b < numBlocks; ++b)
     {
-        //row offset to beginning of block
+        // Row offset to beginning of block
         int blockOffset = *kOffset + (b * blockSize);
         for (int c = 0; c < n; ++c)
         {
@@ -700,28 +702,28 @@ template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::Scalar
             }
         }
     }
-    //Bump offset for next level down
+    // Bump offset for next level down
     *kOffset += (numBlocks * blockSize);
-    //Return ptr to next value to be written
+    // Return ptr to next value to be written
     return curr;
 }
 
-//We can also reorder A, pulling in multiple rows at once.
-//So while the input looks like this in memory:
+// We can also reorder A, pulling in multiple rows at once.
+// So while the input looks like this in memory:
 // Row1Block1 Row1Block2 Row1Block3
 // Row2Block1 Row2Block2 Row2Block3
 // Row3Block1 Row3Block2 Row3Block3
 // Row4Block1 Row4Block2 Row4Block3
 //
 // we want the rewritten array to look like this (assuming 2 rows per block):
-//Row1Block1 Row2Block1 Row1Block2 Row2Block2 Row1Block3 Row2Block3
-//Row3Block1 Row4Block1 Row3Block2 Row4Block2 Row3Block3 Row4Block3
+// Row1Block1 Row2Block1 Row1Block2 Row2Block2 Row1Block3 Row2Block3
+// Row3Block1 Row4Block1 Row3Block2 Row4Block2 Row3Block3 Row4Block3
 
-//length = 2 (rows per block) * 3 (blocks per row)
+// length = 2 (rows per block) * 3 (blocks per row)
 
-//So the first "row" contains the first rowsPerBlock rows in block order.
-//We can index into the start of block b in a row via (b * blockSize * rowsPerBlock)
-//blockSize is the size of our dot product kernel.
+// So the first "row" contains the first rowsPerBlock rows in block order.
+// We can index into the start of block b in a row via (b * blockSize * rowsPerBlock)
+// blockSize is the size of our dot product kernel.
 template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::RewriteAInBlockOrder(ScalarAT* A, ScalarAT* newA, int m,
         int k, int /*blockSize*/, int rowsPerBlock)
 {
@@ -774,7 +776,7 @@ template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::Scalar
 }
 
 
-//I tried parallelizing this and got no speedup - that doesn't really make sense though.
+// I tried parallelizing this and got no speedup - that doesn't really make sense though.
 template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::ScalarAT* BlockMultiplier<BlockHandlerT>::RewriteAInBlockOrder2(ScalarAT* A, ScalarAT* newA, 
         int m, int k, int blockSize, int rowsPerBlock, int* pKOffset)
 {
@@ -821,8 +823,8 @@ template<typename BlockHandlerT>struct BlockInfo
 };
 
 
-//We assume B has been rewritten in block order.
-//We assume C has been zeroed out.
+// We assume B has been rewritten in block order.
+// We assume C has been zeroed out.
 template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n,
         int32_t* C, ScalarAT alpha, ScalarBT beta)
 {
@@ -833,21 +835,21 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
     // in the openmp case, but I have not tested this scenario so I'm leaving it in for now.
     std::lock_guard<std::mutex> lock(m_MultiplyMut);
     {
-        //We want to multithread to the extent possible. When batch size is small this
-        //means doing a row at a time so we can take advantage of multiple procs.
-        //But only row sizes 1 and 4 are supported so far (should be fixed by codegen).
+        // We want to multithread to the extent possible. When batch size is small this
+        // means doing a row at a time so we can take advantage of multiple procs.
+        // But only row sizes 1 and 4 are supported so far (should be fixed by codegen).
         int rowsPerBlock = m / m_numThreads;
         if (rowsPerBlock < 4)
             rowsPerBlock = 1;
         if (rowsPerBlock > 4)
             rowsPerBlock = 4;
 
-        //Fall back to row at a time if we end up with an invalid # of rows at a time
-        //TODO: We should always do 4 rows at a time if it makes sense from a threading standpoint
-        //since it is significantly more efficient. So if we have e.g. 7 rows, we should do
-        //one set of four rows at a time and then three single rows. This however will require
-        //changes to this function, RewriteAInBlockOrder and RowToColOffsetRewrittenA, so for now
-        //we are silently backing off to row at a time.
+        // Fall back to row at a time if we end up with an invalid # of rows at a time
+        // TODO: We should always do 4 rows at a time if it makes sense from a threading standpoint
+        // since it is significantly more efficient. So if we have e.g. 7 rows, we should do
+        // one set of four rows at a time and then three single rows. This however will require
+        // changes to this function, RewriteAInBlockOrder and RowToColOffsetRewrittenA, so for now
+        // we are silently backing off to row at a time.
         if (m % rowsPerBlock != 0)
         {
             rowsPerBlock = 1;
@@ -900,10 +902,6 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
 
         std::vector<BlockInfo<BlockHandlerT>*> blockInfos(5);
 
-
-        //std::function<void __cdecl(HandlerArgs<BlockHandlerT>)> fourFn = BlockHandler128x4Thread;
-        //std::function<void __cdecl(HandlerArgs<BlockHandlerT>)> oneFn = BlockHandler128x1Thread;
-
         BlockInfo<BlockHandlerT> bi128(blocks128, k128, 0, 0, fn128x4, fn128x1);
         BlockInfo<BlockHandlerT> bi64(blocks64, k64, offsetA64, offsetB64, fn64x4, fn64x1);
         BlockInfo<BlockHandlerT> bi32(blocks32, k32, offsetA32, offsetB32, fn32x4, fn32x1);
@@ -921,8 +919,6 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
             if ( currBlockInfo.blockCnt > 0)
             {
                 HandlerArgs<BlockHandlerT> ha;
-
-
                 ha.blocks = currBlockInfo.blockCnt;
                 ha.m = m;
                 ha.k = currBlockInfo.k;
@@ -930,7 +926,6 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
                 ha.newA = newA + currBlockInfo.offsetA;
                 ha.B = B + currBlockInfo.offsetB;
                 ha.transC = C;
-
                 ha.rowsPerThread = m / m_numThreads;
                 ha.rowsPerBlock = rowsPerBlock;
                 ha.pBlockPreparedB = m_pBlockHandlerBInfo;
@@ -1009,4 +1004,4 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
 
 
 
-}}}//end namespace
+}}}// end namespace
