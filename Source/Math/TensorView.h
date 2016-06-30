@@ -145,10 +145,7 @@ public:
     // integer multiplication using SSE/AVX2, and transforms the results back.
     // It is meant for forward pass only where:
     // a) Both matrices are dense
-    // b) the A input is a constant
-    // c) None of the arguments are transposed (not implemented)
-    void AssignQuantizedMatrixProductOf(bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoQuantizedMatrixProductOf(0, transC, a, transA, b, transB, alpha); }
-    void DoQuantizedMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
+    void AssignQuantizedMatrixProductOf(const TensorView& a, bool transA, const TensorView& b, int16_t** preppedA = nullptr, ElemType* preppedScaleA = nullptr);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
