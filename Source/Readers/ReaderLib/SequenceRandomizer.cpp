@@ -191,21 +191,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t posBegin = m_randomizedChunks[chunkWindowBegin].m_sequencePositionStart;
             size_t posEnd = m_randomizedChunks[chunkWindowEnd - 1].SequenceEndPosition();
 
+            ChunkIdType tChunkIndex = GetChunkIndexForSequencePosition(t);
+            auto& tSequence = GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t);
+
             for (;;)
             {
                 // Pick a sequence position from [posBegin, posEnd)
                 const size_t j = rand(posBegin, posEnd);
 
+                // Pick up j sequence.
+                ChunkIdType jChunkIndex = GetChunkIndexForSequencePosition(j);
+                auto& jSequence = GetRandomizedSequenceDescriptionByPosition(jChunkIndex, j);
+
                 // Try again if the sequence currently at j cannot be placed at position i.
-                if (!IsValidForPosition(t, GetRandomizedSequenceDescriptionBySequenceId(j)))
+                if (!IsValidForPosition(tChunkIndex, jSequence))
                     continue;
 
                 // Try again if the sequence currently at i cannot be placed at position j.
-                if (!IsValidForPosition(j, GetRandomizedSequenceDescriptionBySequenceId(t)))
+                if (!IsValidForPosition(jChunkIndex, tSequence))
                     continue;
 
                 // Swap and break out.
-                std::swap(GetRandomizedSequenceDescriptionBySequenceId(t), GetRandomizedSequenceDescriptionBySequenceId(j)); // TODO old swap was perhaps more efficient
+                std::swap(tSequence, jSequence);
                 break;
             }
         }
@@ -214,7 +221,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t t = firstSequencePositionToRandomize; t < endSequencePosToRandomize; ++t)
         {
             // TODO assert only
-            if (!IsValidForPosition(t, GetRandomizedSequenceDescriptionBySequenceId(t)))
+            ChunkIdType tChunkIndex = GetChunkIndexForSequencePosition(t);
+            if (!IsValidForPosition(tChunkIndex, GetRandomizedSequenceDescriptionByPosition(tChunkIndex, t)))
             {
                 LogicError("SequenceRandomizer::RandomizeNextSequenceDescriptions: randomization logic mangled!");
             }
@@ -322,10 +330,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_currentSampleCursor;
     }
 
-    // Checks if the randomized sequence is valid for a target position using its chunk randomization window.
-    bool SequenceRandomizer::IsValidForPosition(size_t targetPosition, const RandomizedSequenceDescription& seqDesc) const
+    // Checks if the randomized sequence is valid for a target chunk.
+    bool SequenceRandomizer::IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const
     {
-        const auto& chunk = m_randomizedChunks[GetChunkIndexForSequencePosition(targetPosition)];
+        const auto& chunk = m_randomizedChunks[chunkIndex];
         return chunk.m_randomizationWindow.m_begin <= seqDesc.m_chunk->m_chunkId && seqDesc.m_chunk->m_chunkId < chunk.m_randomizationWindow.m_end;
     }
 
@@ -365,11 +373,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_chunkWindowEnd++;
     }
 
-    // Gets randomized sequence by the sequence id.
-    RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId)
+    // Gets randomized sequence by the sequence position in the sweep and randomized chunk index.
+    RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition)
     {
-        ChunkIdType globalChunkIdx = GetChunkIndexForSequencePosition(sequenceId);
-        size_t sequenceOffsetInsideChunk = sequenceId - m_randomizedChunks[globalChunkIdx].m_sequencePositionStart;
-        return m_sequenceWindow[globalChunkIdx - m_chunkWindowBegin][sequenceOffsetInsideChunk];
+        size_t sequenceOffsetInsideChunk = sequenceSweepPosition - m_randomizedChunks[chunkIndex].m_sequencePositionStart;
+        return m_sequenceWindow[chunkIndex - m_chunkWindowBegin][sequenceOffsetInsideChunk];
     }
 }}}
