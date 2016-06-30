@@ -84,21 +84,15 @@
     <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
   </PropertyGroup>
 
-  <Choose>
-    <When Condition="Exists('$(OPENCV_PATH_V31)')">
-      <PropertyGroup>
-        <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
-        <OpenCvVersion>310</OpenCvVersion>
-      </PropertyGroup>
-    </When>
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
+    <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
+    <OpenCvVersion>300</OpenCvVersion>
+  </PropertyGroup>
 
-    <When Condition="Exists('$(OPENCV_PATH)')">
-      <PropertyGroup>
-        <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
-        <OpenCvVersion>300</OpenCvVersion>
-      </PropertyGroup>
-    </When>
-  </Choose>
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
+    <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
+    <OpenCvVersion>310</OpenCvVersion>
+  </PropertyGroup>
 
   <PropertyGroup Condition="$(HasOpenCv)">
     <OpenCvInclude>$(OpenCvPath)\include;</OpenCvInclude>
