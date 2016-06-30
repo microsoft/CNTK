@@ -367,8 +367,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                         var features = sets[2].Trim().Split(' ').Skip(1);
 
                         // Retrieve the 1-hot vector with the label index
-                        int index = 0;
-                        var expected = labels.Select(float.Parse).Select(v => new { Value = v, Index = index++ })
+                        var expected = labels.Select(float.Parse).Select((v, index) => new { Value = v, Index = index })
                             .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                             .Index;
 
@@ -379,8 +378,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                         var outputs = ModelEvaluator.Evaluate(inputs);
 
                         // Retrieve the outcome index (so we can compare it with the expected index)
-                        index = 0;
-                        var max = outputs.Select(v => new { Value = v, Index = index++ })
+                        var max = outputs.Select((v, index) => new { Value = v, Index = index })
                             .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                             .Index;
 
