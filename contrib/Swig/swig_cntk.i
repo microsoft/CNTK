@@ -18,6 +18,7 @@
     import_array();
 %}
 
+// TODO [wilrich] Add support for unordered containers
 /*%include "std_unordered_map_vc2013.i"*/
 /*%include "std_unordered_set_vc2013.i"*/
 
@@ -30,6 +31,14 @@
 %}
 
 %feature("director") Callback;
+%exception {
+    try { $action }
+    catch (Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (std::invalid_argument &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (std::logic_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (...) { SWIG_exception(SWIG_RuntimeError,"Runtime exception"); }
+}
 
 %feature("ref")   CNTK::_Internal::_ReferenceCounter "$this->AddReference();"
 %feature("unref") CNTK::_Internal::_ReferenceCounter "$this->RemoveReference();"
@@ -37,14 +46,6 @@
 %rename(NDShape_eq) operator==(const NDShape&, const NDShape&);
 %rename(Variable_eq) operator==(const Variable&, const Variable&);
 %rename(Variable_lt) operator<(const Variable&, const Variable&);
-
-// the following are ignored for whatever reason
-%rename(_ReferenceCounterSharedPtr_assign) CNTK::_Internal::_ReferenceCounterSharedPtr::operator=(const CNTK::_Internal::__ReferenceCounterSharedPtr&);
-%rename(_ReferenceCounterSharedPtr_move) CNTK::_Internal::_ReferenceCounterSharedPtr::operator=(CNTK::_Internal::__ReferenceCounterSharedPtr&);
-
-
-%rename(__call__) operator();
-%rename(__dereference__) operator*;
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -54,6 +55,7 @@
 
 
 %{
+// [@Amit] FIXME: can we move these behind function calls? 
 namespace CNTK {
     /*static*/ Axis Axis::DefaultDynamicAxis = Axis(L"defaultDynamicAxis");
     /*static*/ Axis Axis::BatchAxis = Axis(L"batchAxis");
@@ -87,6 +89,10 @@ void data_from_value(float* cntk_data, float* data, int len) {
         data[i] = cntk_data[i];
 }
 
+void exception_tester() {
+    throw "exc thrown in exception_tester()";
+}
+
 class Callback {
 public:
     virtual ~Callback() { std::cout << "Callback::~Callback()" << std:: endl; }
@@ -102,7 +108,12 @@ public:
     ~FunctionInCNTK() { delCallback(); }
     void delCallback() { delete _callback; _callback = 0; }
     void setCallback(Callback *cb) { delCallback(); _callback = cb; }
-    void forward() { if (_callback) _callback->forward(); }
+    void forward() { 
+        if (_callback) 
+            _callback->forward(); 
+        else
+            throw "Forward callback not defined!";
+    }
     void backward() { if (_callback) _callback->backward(); }
 };
 %}

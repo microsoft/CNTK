@@ -8,6 +8,7 @@ class PyCallback(swig_cntk.Callback):
 
     def forward(self):
         print("PyCallback.forward()")
+        1/0
 
     def backward(self):
         print("PyCallback.backward()")
@@ -36,4 +37,7 @@ def callback_test():
 
 
 if __name__=='__main__':
+    import time
+    #time.sleep(20)
     callback_test()
+    #swig_cntk.exception_tester()
