@@ -67,7 +67,7 @@ private:
         std::vector<ElemType> m_buffer;
     };
 
-    // A sequence buffer is a vector that contains an input buffer for each input stream.
+    // A sequence buffer is a vector that contains sequence data for each input stream.
     typedef std::vector<SequenceDataPtr> SequenceBuffer;
 
     // A chunk of input data in the text format.
