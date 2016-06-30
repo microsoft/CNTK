@@ -105,7 +105,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         LogicError("Please specify at least a single input stream.");
     }
 
-    bool cleanse = readerConfig(L"checkData", false);
+    bool cleanse = readerConfig(L"checkData", true);
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
     int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
@@ -113,7 +113,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     // TODO: this should be bool. Change when config per deserializer is allowed.
     if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
+        m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, true, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
     }
     else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
     {
