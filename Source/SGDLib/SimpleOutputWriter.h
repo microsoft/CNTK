@@ -170,21 +170,15 @@ public:
             {
                 if (n->Is<TimesNode<ElemType>>())
                 {
-                    if (n->GetInputs()[0]->ValueIsConst())
-                    {
-                        QuantizedBlockTimesNode<ElemType, false> qTimes(n->GetDeviceId(), n->GetName(),
-                            n->As<TimesNode<ElemType>>()->GetOutputRank());
-                        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, false>>(move(qTimes)));
-                    }
+                    QuantizedBlockTimesNode<ElemType, false> qTimes(n->GetDeviceId(), n->GetName(),
+                        n->As<TimesNode<ElemType>>()->GetOutputRank());
+                    replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, false>>(move(qTimes)));
                 }
                 else if (n->Is<TransposeTimesNode<ElemType>>())
                 {
-                    if (n->GetInputs()[0]->ValueIsConst())
-                    {
-                        QuantizedBlockTimesNode<ElemType, true> qTimes(n->GetDeviceId(), n->GetName(),
-                            n->As<TransposeTimesNode<ElemType>>()->GetOutputRank());
-                        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, true>>(move(qTimes)));
-                    }
+                    QuantizedBlockTimesNode<ElemType, true> qTimes(n->GetDeviceId(), n->GetName(),
+                        n->As<TransposeTimesNode<ElemType>>()->GetOutputRank());
+                    replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, true>>(move(qTimes)));
                 }
             }
             fprintf(stderr, "Replacing %d nodes with quantized times node\n", (int)replacedNodes.size());

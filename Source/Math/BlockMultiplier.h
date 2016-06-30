@@ -19,6 +19,7 @@
 #include <vector>
 #include "BlockMultiplierMatrixUtil.h"
 #include "BlockHandlerSSE.h"
+#define SUPPORT_AVX2
 #ifdef SUPPORT_AVX2
 #include "BlockHandlerAVX.h"
 #endif
@@ -840,7 +841,7 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
 
         if (m % rowsPerBlock != 0)
         {
-            throw std::runtime_error("Error: m must be < 4 or a multiple of 4.");
+            rowsPerBlock = 1;
         }
 
         if (alpha != 1 || beta != 0)

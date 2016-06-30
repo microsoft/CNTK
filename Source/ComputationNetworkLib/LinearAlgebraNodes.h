@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
+#include "../../../Source/Math/BlockMultiplier.h"
 
 #include <unordered_set>
 #include <map>
@@ -537,45 +538,27 @@ class QuantizedBlockTimesNode : public TimesNodeBase<ElemType, m_transpose>
     typedef TimesNodeBase<ElemType, m_transpose> Base; 
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"QuantizedBlockTimes"; }
+    int16_t* m_preparedA = nullptr;
+    ElemType m_scaleA;
+    bool m_reuseA;
 public:
     QuantizedBlockTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
         : Base(deviceId, name, outputRank)
     {
     }
+
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {           
         if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
             Base::ForwardProp(fr); // It will come back
+        if (Input(0)->Value().GetMatrixType() != DENSE || Input(1)->Value().GetMatrixType() != DENSE)
+            Base::ForwardProp(fr); // Can't deal with this. We shouldn't be here.
+
         TensorView<ElemType> input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         TensorView<ElemType> input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         TensorView<ElemType> output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        //auto sh0 = input0.GetShape();
-        //auto sh1 = input1.GetShape();
-        //auto sh2 = output.GetShape();
-        //Matrix<ElemType>& a = input0.GetSOB();
-        //for (int i = 0; i < a.GetNumElements(); i++)
-        //    a.Data()[i] = (ElemType)(i < 10 ? i+1 : 0);
-        //Matrix<ElemType>& b = input1.GetSOB();
-        //for (int i = 0; i < b.GetNumElements(); i++)
-        //    b.Data()[i] = (ElemType)(i < 10 ? i+1 : 0);
-        //fprintf(stderr, "QBTN@node '%ls'. IterDim=%d, SeqRange=%d,%d, timeRange=%d,%d, isAllFrames=%d, sh0=%s, sh1=%s o=%s\n", this->GetName().c_str(),
-        //    (int)fr.GetIterationDimension(),
-        //    (int)fr.GetSequenceRange().first,
-        //    (int)fr.GetSequenceRange().second,
-        //    (int)fr.GetTimeRange().first,
-        //    (int)fr.GetTimeRange().second,
-        //    (int)fr.IsAllFrames(),
-        //    sh0.operator std::string().c_str(),
-        //    sh1.operator std::string().c_str(),
-        //    sh2.operator std::string().c_str()
-        //    );
-
-        // output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
-        output.AssignQuantizedMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false /*transB*/);
-        //input0.GetSOB().Print("A");
-        //input1.GetSOB().Print("B");
-        //output.GetSOB().Print("C");
+        output.AssignQuantizedMatrixProductOf(input0, m_transpose/*transA*/, input1, m_reuseA ? &m_preparedA : nullptr, &m_scaleA);
     }
 private:
 
@@ -588,7 +571,15 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        fprintf(stderr, "QuantizedBlockTimesNode::Validate called for node '%ls'\n", this->GetName().c_str());
+        m_reuseA = Input(0)->ValueIsConst();
+    }
+
+    virtual ~QuantizedBlockTimesNode()
+    {
+        if (m_preparedA != nullptr)
+        {
+             BlockMultiplier<BlockHandlerSSE>::FreeMatrix(m_preparedA); // Template arg doesn't matter.
+        }
     }
 };
 
