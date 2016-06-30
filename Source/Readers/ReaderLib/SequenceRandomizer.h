@@ -64,14 +64,14 @@ private:
     // Randomize one more chunk if needed after the chunk cursor has been incremented.
     void RandomizeNextChunkIfNeeded();
 
-    // Checks if the randomized sequence is valid for a target position using its chunk randomization window.
-    inline bool IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const;
+    // Checks if the randomized sequence is valid for a target chunk.
+    bool IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const;
 
     // Gets randomized chunk index using a sequence position in the sweep.
-    inline ChunkIdType GetChunkIndexForSequencePosition(size_t sequenceSweepPosition) const;
+    ChunkIdType GetChunkIndexForSequencePosition(size_t sequenceSweepPosition) const;
 
     // Gets randomized sequence by sequence position in sweep.
-    inline RandomizedSequenceDescription& GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIdex, size_t sequenceSweepPosition);
+    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition);
 
     // Add randomizes sequences for the chunk with a given index.
     void AddRandomizedSequencesForChunk(ChunkIdType chunkIndex);

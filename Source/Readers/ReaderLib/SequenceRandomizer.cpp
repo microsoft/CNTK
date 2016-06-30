@@ -374,9 +374,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Gets randomized sequence by the sequence id.
-    inline RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIdex ,size_t sequenceSweepPosition)
+    inline RandomizedSequenceDescription& SequenceRandomizer::GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition)
     {
-        size_t sequenceOffsetInsideChunk = sequenceSweepPosition - m_randomizedChunks[chunkIdex].m_sequencePositionStart;
-        return m_sequenceWindow[chunkIdex - m_chunkWindowBegin][sequenceOffsetInsideChunk];
+        size_t sequenceOffsetInsideChunk = sequenceSweepPosition - m_randomizedChunks[chunkIndex].m_sequencePositionStart;
+        return m_sequenceWindow[chunkIndex - m_chunkWindowBegin][sequenceOffsetInsideChunk];
     }
 }}}
