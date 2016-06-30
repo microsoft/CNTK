@@ -232,6 +232,7 @@ ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
 
+RPATH=-Wl,-rpath,
 
 ########################################
 # Build info
@@ -245,7 +246,6 @@ BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success
 ifneq ("$(BUILDINFO_OUTPUT)","Success")
   $(error Could not generate $(BUILDINFO))
 endif
-
 
 ########################################
 # Math library
@@ -324,8 +324,6 @@ CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
@@ -391,8 +389,6 @@ CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
@@ -415,8 +411,6 @@ CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJ
 
 ALL+=$(CNTKLIBRARY_TESTS)
 SRC+=$(CNTKLIBRARY_TESTS_SRC)
-
-RPATH=-Wl,-rpath,
 
 $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
@@ -456,8 +450,6 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(EVAL_LIB): $(EVAL_OBJ) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
@@ -476,8 +468,6 @@ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SR
 
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
-
-RPATH=-Wl,-rpath,
 
 $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
