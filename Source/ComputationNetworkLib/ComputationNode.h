@@ -12,6 +12,7 @@
 #include "TensorShape.h"
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
+#include "SynchronizationManager.h"
 
 #include <unordered_set>
 #include <map>
@@ -23,6 +24,8 @@
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
+
+
 
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -904,6 +907,9 @@ protected:
     // std containers such as list and map does not support class reference so we need to use pointer
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
+
+
+
 public:
 
     using ComputationNodeBase::AttachInputs; // import the convenience functions that take 1..6 parameters
@@ -919,6 +925,7 @@ public:
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ComputationNodeBase(deviceId, name)
     {
+       m_syncManager = SynchronizationManager::GetSynchronizationManager();
     }
 
     // recover a shared_ptr from ourselves if given a naked pointer
@@ -1340,6 +1347,9 @@ public:
     {
         Base::BeginForwardProp();
 
+        //synchronize streams for swapping and parallelism
+        m_syncManager->SynchronizeState(ComputationNodeBasePtr(this));
+
         // update the actual m_value allocation
         if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
             UpdateFunctionValuesSize();
@@ -1355,6 +1365,10 @@ public:
     virtual void /*IComputationNode::*/ EndForwardProp() override
     {
         Base::EndForwardProp();
+
+        //synchronize streams for swapping and parallelism
+        m_syncManager->SynchronizeState(ComputationNodeBasePtr(this));   
+
 #ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
         MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
@@ -1720,6 +1734,8 @@ public:
 protected:
 
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
+
+    shared_ptr<SynchronizationManager> m_syncManager;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 };
