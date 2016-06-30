@@ -618,10 +618,10 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 }
 
 #define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA",     cudaSuccess))
-#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS",   CUBLAS_STATUS_SUCCESS))
-#define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
-#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
-#define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
+#define CUBLAS_CALL(expr)   ({ SyncGuard sync; CudaCall((expr), #expr, "CUBLAS",   CUBLAS_STATUS_SUCCESS); })
+#define CUSPARSE_CALL(expr) ({ SyncGuard sync; CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS); })
+#define CURAND_CALL(expr)   ({ SyncGuard sync; CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS); })
+#define CUDNN_CALL(expr)    ({ SyncGuard sync; CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS); })
 
 // -----------------------------------------------------------------------
 // SyncGuard -- synchronize around CUDA calls

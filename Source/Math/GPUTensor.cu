@@ -602,7 +602,6 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
-    SyncGuard syncGuard;
 
     // do some optimization for reductions
     //  - example: 30 GPU procs, warp size 32 --> 960 GPU cores
@@ -630,6 +629,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
+        SyncGuard syncGuard;
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
             beta, pointers, alpha, op,
             regularOpStrides, regularStrides, grid.m_N,
@@ -683,6 +683,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         // This involves no reduction across blocks.
         if (numReductionChunks == 1)
         {
+            SyncGuard syncGuard;
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
                 beta, pointers, alpha, op,
                 regularOpStrides, regularStrides, NN,
@@ -768,6 +769,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         else if (beta == 1)
         {
             // no need to pre-scale; just add (common for gradients)
+            SyncGuard syncGuard;
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             return;
         }
@@ -775,6 +777,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         {
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
+            SyncGuard syncGuard;
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             // We will leave it like this for a while, but eventually need to revisit using temporary memory.
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);

@@ -858,15 +858,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
     int n = (int) a.m_numRows;
     ElemType alpha = 1;
     ElemType beta = 0;
-    cublasStatus_t st;
     if (sizeof(ElemType) == sizeof(float))
-        st = cublasSgeam(cuHandle, transA, transB, m, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(Data()), (int) m_numRows);
+        CUBLAS_CALL(cublasSgeam(cuHandle, transA, transB, m, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(Data()), (int) m_numRows));
     else if (sizeof(ElemType) == sizeof(double))
-        st = cublasDgeam(cuHandle, transA, transB, m, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(Data()), (int) m_numRows);
+        CUBLAS_CALL(cublasDgeam(cuHandle, transA, transB, m, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(Data()), (int) m_numRows));
     else
         RuntimeError("Unsupported template argument in GPUMatrix");
-    if (st != CUBLAS_STATUS_SUCCESS)
-        RuntimeError("AssignTransposeOf failed");
     m_numRows = a.m_numCols;
     m_numCols = a.m_numRows;
     return *this;
@@ -2267,7 +2264,7 @@ ElemType GPUMatrix<ElemType>::Max() const
     if (sizeof(ElemType) == sizeof(float))
     {
         int resInd = 0;
-        cublasIsamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd);
+        CUBLAS_CALL(cublasIsamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd));
         resInd--;
         CUDA_CALL(cudaMemcpy(reinterpret_cast<float*>(&res), reinterpret_cast<float*>(Data()+ resInd), sizeof(float), cudaMemcpyDeviceToHost));
         return res;
@@ -2275,7 +2272,7 @@ ElemType GPUMatrix<ElemType>::Max() const
     else
     {
         int resInd = 0;
-        cublasIdamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
+        CUBLAS_CALL(cublasIdamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd));
         resInd--;
         CUDA_CALL(cudaMemcpy(reinterpret_cast<double*>(&res), Data()+ resInd, sizeof(float), cudaMemcpyDeviceToHost));
         return res;
@@ -3659,7 +3656,7 @@ template <class ElemType>
         RuntimeError("Matrix alpha must be 1x1");
     }
     cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-    cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+    CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE));
     if (sizeof(ElemType) == sizeof(float))
     {
         CUBLAS_CALL(cublasSscal(cuHandle, int(a.m_numRows * a.m_numCols), (float*) alpha.Data(), (float*) a.Data(), 1));
@@ -3670,10 +3667,10 @@ template <class ElemType>
     }
     else
     {
-        cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
+        CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST));
         RuntimeError("Unsupported template argument in GPUMatrix");
     }
-    cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
+    CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST));
 }
 
 template <class ElemType> // c = alpha * a
@@ -3784,7 +3781,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignInnerProductOfMatrices(const GPU
         InvalidArgument("InnerProductOfMatrices: Matrices a and b should have same dimension.");
 
     cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-    cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+    CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE));
     if (sizeof(ElemType) == sizeof(double))
     {
         CUBLAS_CALL(cublasDdot(cuHandle, m * n, reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1, reinterpret_cast<double*>(Data())));
@@ -3793,7 +3790,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignInnerProductOfMatrices(const GPU
     {
         CUBLAS_CALL(cublasSdot(cuHandle, m * n, reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1, reinterpret_cast<float*>(Data())));
     }
-    cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
+    CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST));
     return *this;
 }
 
@@ -3977,16 +3974,16 @@ ElemType GPUMatrix<ElemType>::GetLearnRateForBlock_Helper(const GPUMatrix<ElemTy
     if (sizeof(ElemType) == sizeof(double))
     {
         cublasHandle_t cuHandle = GetCublasHandle(Gradients.GetComputeDeviceId());
-        cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+        CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE));
         CUBLAS_CALL(cublasDdot(cuHandle, m * n, reinterpret_cast<double*>(Gradients.Data()), 1, reinterpret_cast<double*>(SmoothedGradients.Data()), 1, reinterpret_cast<double*>(d_res)));
-        cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
+        CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST));
     }
     else
     {
         cublasHandle_t cuHandle = GetCublasHandle(Gradients.GetComputeDeviceId());
-        cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+        CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE));
         CUBLAS_CALL(cublasSdot(cuHandle, m * n, reinterpret_cast<float*>(Gradients.Data()), 1, reinterpret_cast<float*>(SmoothedGradients.Data()), 1, reinterpret_cast<float*>(d_res)));
-        cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
+        CUBLAS_CALL(cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST));
     }
     // d_res[0] should now contain inner product of matrices
     // Compute squared Frobenius norms (squared sums of elements)
