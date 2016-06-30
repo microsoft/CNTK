@@ -7,9 +7,13 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
 
 #include "CNTKLibraryInternals.h"
-
 
 #include <memory>
 #include <vector>
@@ -23,6 +27,7 @@
 #include <string>
 #include <sstream>
 #include<algorithm>
+
 
 namespace CNTK
 {
@@ -94,7 +99,7 @@ namespace CNTK
     ///
     /// Denotes a compute device instance.
     ///
-    class DeviceDescriptor
+    class DeviceDescriptor final
     {
     public:
         ///
@@ -123,7 +128,6 @@ namespace CNTK
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
 
-
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
@@ -147,7 +151,7 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
-    class NDShape
+    class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
     public:
@@ -376,7 +380,7 @@ namespace CNTK
         /// assign the specified value to each element of the view.
         ///
         template <typename ElementType>
-        NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
+        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
             : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
@@ -650,7 +654,7 @@ namespace CNTK
     /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
     /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
     ///
-    class Axis
+    class Axis final
     {
     public:
         ///
@@ -936,7 +940,7 @@ namespace CNTK
     ///
     /// Denotes Parameter inputs of a Function.
     ///
-    class Parameter : public Variable
+    class Parameter final : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -987,7 +991,7 @@ namespace CNTK
     ///
     /// Denotes Constant inputs of a Function.
     ///
-    class Constant : public Variable
+    class Constant final : public Variable
     {
         template <typename T>
         friend struct std::hash;

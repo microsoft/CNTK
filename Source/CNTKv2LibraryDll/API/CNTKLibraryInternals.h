@@ -7,6 +7,11 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#endif
+
 #ifdef _WIN32
 #ifdef CNTKV2LIBRARYDLL
 #define CNTK_API __declspec(dllexport)
@@ -17,7 +22,6 @@
 #else // no DLLs on Linux
 #define CNTK_API
 #endif
-
 
 #include <memory>
 #include <vector>
