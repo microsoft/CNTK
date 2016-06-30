@@ -94,12 +94,12 @@ public:
     virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
 };
 
-class Caller {
+class FunctionInCNTK {
 private:
     Callback *_callback;
 public:
-    Caller(): _callback(0) {}
-    ~Caller() { delCallback(); }
+    FunctionInCNTK(): _callback(0) {}
+    ~FunctionInCNTK() { delCallback(); }
     void delCallback() { delete _callback; _callback = 0; }
     void setCallback(Callback *cb) { delCallback(); _callback = cb; }
     void forward() { if (_callback) _callback->forward(); }

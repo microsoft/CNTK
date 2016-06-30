@@ -7,6 +7,11 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#endif
+
 #ifdef _WIN32
 #ifdef CNTKV2LIBRARYDLL
 #define CNTK_API __declspec(dllexport)
@@ -17,7 +22,6 @@
 #else // no DLLs on Linux
 #define CNTK_API
 #endif
-
 
 #include <memory>
 #include <vector>
@@ -174,7 +178,7 @@ namespace CNTK
         // A smart pointer to a reference counted object
         // T must be a type derived from _Reference_counter
         template <class T>
-        class _ReferenceCounterSharedPtr 
+        class _ReferenceCounterSharedPtr final
         {
 
         public:
@@ -309,7 +313,7 @@ namespace CNTK
         // A simple vector implementation with a C ABI to allow usage across the library DLL boundary
         // as STL vectors cannot be used across the DLL boundary
         template <typename T>
-        class CNTK_API _SimpleVector
+        class CNTK_API _SimpleVector final
         {
             template <typename ValueType>
             friend CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
@@ -387,7 +391,7 @@ namespace CNTK
         // A simple set implementation with a C ABI to allow usage across the library DLL boundary
         // as STL sets cannot be used across the DLL boundary
         template <typename KeyType>
-        class CNTK_API _SimpleSet
+        class CNTK_API _SimpleSet final
         {
             friend class CNTK::CompositeFunction;
 
@@ -441,7 +445,7 @@ namespace CNTK
         // A simple map implementation with a C ABI to allow usage across the library DLL boundary
         // as STL maps cannot be used across the DLL boundary
         template <typename KeyType, typename ValueType>
-        class CNTK_API _SimpleMap
+        class CNTK_API _SimpleMap final
         {
             friend class CNTK::CompositeFunction;
             friend class CNTK::Function;

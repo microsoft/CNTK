@@ -7,9 +7,13 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
 
 #include "CNTKLibraryInternals.h"
-
 
 #include <memory>
 #include <vector>
@@ -21,6 +25,7 @@
 #include <set>
 #include <unordered_set>
 #include <string>
+
 
 namespace CNTK
 {
@@ -92,7 +97,7 @@ namespace CNTK
     ///
     /// Denotes a compute device instance.
     ///
-    class DeviceDescriptor
+    class DeviceDescriptor final
     {
     public:
         ///
@@ -133,7 +138,6 @@ namespace CNTK
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
 
-
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceType deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
@@ -158,7 +162,7 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
-    class NDShape
+    class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
     public:
@@ -299,7 +303,7 @@ namespace CNTK
     /// The underlying data is stored in sparse or dense format, and is located on a specific device.
     /// The actual underlying storage is either external or internal in which case its lifetime is managed through reference counting.
     ///
-    class CNTK_API NDArrayView : public _Internal::_ReferenceCounter
+    class CNTK_API NDArrayView final : public _Internal::_ReferenceCounter
     {
         friend class CompositeFunction;
 
@@ -355,7 +359,7 @@ namespace CNTK
         /// assign the specified value to each element of the view.
         ///
         template <typename ElementType>
-        NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
+        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
             : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
@@ -503,7 +507,7 @@ namespace CNTK
     /// Denotes a multi-dimensional mask used for specifying specific sections of a NDArrayView object as masked/invalid.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDMask instance.
     ///
-    class CNTK_API NDMask : public _Internal::_ReferenceCounter
+    class CNTK_API NDMask final : public _Internal::_ReferenceCounter
     {
         friend class CompositeFunction;
 
@@ -663,7 +667,7 @@ namespace CNTK
     /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
     /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
     ///
-    class Axis
+    class Axis final
     {
     public:
         ///
@@ -1006,7 +1010,7 @@ namespace CNTK
 
     private:
 
-        struct _VariableFields : public _Internal::_ReferenceCounter
+        struct _VariableFields final : public _Internal::_ReferenceCounter
         {
             NDShape m_shape;
             VariableKind m_varKind;
@@ -1057,7 +1061,7 @@ namespace CNTK
     ///
     /// Denotes Parameter inputs of a Function.
     ///
-    class Parameter : public Variable
+    class Parameter final : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1101,11 +1105,12 @@ namespace CNTK
         }
     };
 
+    static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
     /// Denotes Constant inputs of a Function.
     ///
-    class Constant : public Variable
+    class Constant final : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1149,12 +1154,13 @@ namespace CNTK
         }
     };
 
+    static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
     /// Denotes a Placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    class CNTK_API Placeholder : public Variable
+    class CNTK_API Placeholder final : public Variable
     {
         template <typename T>
         friend struct std::hash;
@@ -1181,9 +1187,8 @@ namespace CNTK
         }
     };
 
+    static_assert(sizeof(Placeholder) == sizeof(Variable), "The Placeholder type should not have any data fields beyond what it's base type 'Variable' has.");
 #pragma warning(pop)
-
-
 }
 
 namespace std {
@@ -1247,7 +1252,7 @@ namespace CNTK
         BackPropState(const FunctionPtr& function) : m_function(function) {}
 
     private:
-        virtual void _ForceRTTIGeneration()
+        virtual void _ForceRTTIGeneration() final
         {
             LogicError("This is an internal method that is never supposed to be called");
         }
