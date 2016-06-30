@@ -145,13 +145,50 @@ template<typename ScalarCT> void CompareMatricesAndDump(const ScalarCT* ref, con
 
 BOOST_AUTO_TEST_SUITE(BlockMultiplierSuite)
 
-BOOST_AUTO_TEST_CASE(BlockMultiplyTest)
+BOOST_AUTO_TEST_CASE(BlockMultiplyTest8x128x8SingleThread)
 {
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(8, 128, 8, 1);
+}
 
-    int m = 8;
-    int k = 128;
-    int n = 8;
-    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
+// Test with numblocks > 4 && numblocks % 4 != 0
+BOOST_AUTO_TEST_CASE(BlockMultiplyTest7x128x8SingleThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(7, 128, 8, 1);
+}
+
+// Test that hits all the kernel functions in BlockMultiplier (single row)
+BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKSingleRowSingleThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(1, 128 + 64 + 32 + 16 + 8 + 1, 1, 1);
+}
+
+// Test that hits all the kernel functions in BlockMultiplier (four rows)
+BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKFourRowsSingleThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(4, 128 + 64 + 32 + 16 + 8 + 1, 1, 1);
+}
+
+BOOST_AUTO_TEST_CASE(BlockMultiplyTest8x128x8MultiThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(8, 128, 8, 2);
+}
+
+// Test with numblocks > 4 && numblocks % 4 != 0
+BOOST_AUTO_TEST_CASE(BlockMultiplyTest7x128x8MultiThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(7, 128, 8, 2);
+}
+
+// Test that hits all the kernel functions in BlockMultiplier (single row)
+BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKSingleRowMultiThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(1, 128 + 64 + 32 + 16 + 8 + 1, 1, 2);
+}
+
+// Test that hits all the kernel functions in BlockMultiplier (four rows)
+BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKFourRowsMultiThread)
+{
+    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(4, 128 + 64 + 32 + 16 + 8 + 1, 1, 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
