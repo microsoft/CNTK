@@ -15,15 +15,28 @@ class SwapInAction : public SyncAction
 public:
 
     ~SwapInAction(){}
-    SwapInAction()
+    SwapInAction(CPUMatrix<float> *CPUBuffer, GPUMatrix<float> *GPUBuffer, cudaStream_t swapOutStream)
     {
-        m_bufferCPU = NULL;
-        m_bufferGPU = NULL;
+        m_bufferCPU = CPUBuffer;
+        m_bufferGPU = GPUBuffer;
         m_isAsynchronous = true;
+        m_swapOutStream = swapOutStream;
+
+        cudaStream_t stream;
+        CUDA_CALL(cudaStreamCreate(&stream));
+        m_swapInStream = stream;
     }
 
     //implementation of abstract method
     void executeAction();
+
+private:
+    cudaStream_t m_swapOutStream;
+    cudaStream_t m_swapInStream;
+    bool m_isSwappingToGPU;
+
+    void SwapToGPU();
+    void SynchronizeBufferBeforeUse();
 
 };
 }}}
