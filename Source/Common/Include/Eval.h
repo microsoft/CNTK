@@ -25,6 +25,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -108,12 +109,14 @@ void EVAL_API GetEval(IEvaluateModel<ElemType>** peval);
 extern "C" EVAL_API void GetEvalF(IEvaluateModel<float>** peval);
 extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval);
 
+class Plugin;
 
 template <typename ElemType>
-class Eval : public IEvaluateModel<ElemType>, protected Plugin
+class Eval : public IEvaluateModel<ElemType>
 {
 private:
     IEvaluateModel<ElemType>* m_eval; // evaluation class pointer
+    std::shared_ptr<Plugin> m_plugin; 
 
     void GetEvalClass(const std::string& config);
 
@@ -223,7 +226,8 @@ struct VectorRef
     size_t m_size;       // ElemTypes used.
 
     VectorRef() : m_vector(nullptr), m_capacity(0), m_size(0) {}
-    void InitFrom(std::vector<ElemType>& src) { m_vector = src.data(); m_capacity = src.capacity(); m_size = src.size(); }
+    void InitFrom(std::vector<ElemType>& src) { InitFrom(src.data(), src.capacity(), src.size()); }
+    void InitFrom(ElemType* data, size_t capacity, size_t size) { m_vector = data; m_capacity = capacity; m_size = size; }
     size_t size() const { return m_size; }
     size_t capacity() const { return m_capacity; }
     ElemType* data() { return m_vector; }
@@ -268,7 +272,7 @@ struct VariableLayout
 
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
-    int m_numElements;
+    size_t m_numElements;
 };
 
 class VariableSchema : public std::vector<VariableLayout>

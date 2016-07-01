@@ -42,6 +42,12 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="RNGHandle.cpp" />
+    <ClCompile Include="BlockHandlerAVX.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="BlockHandlerSSE.cpp">
+        <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -104,6 +110,18 @@
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="CPURNGHandle.h">
       <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockHandlerAVX.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockHandlerSSE.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockMultiplier.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockMultiplierPlatform.h">
+        <Filter>CPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

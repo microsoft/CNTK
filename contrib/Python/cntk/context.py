@@ -422,7 +422,8 @@ class LocalExecutionContext(AbstractContext):
                 [get_cntk_cmd(), 'configFile=%s' % filename],
                 stderr=subprocess.STDOUT)
             output = output_bytes.decode('utf-8')
-            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
+            log_name = 'cntk_%s.log'%action_name
+            with open(os.path.join(self.directory, log_name), 'w') as log:
                 log.write(output)
 
         except subprocess.CalledProcessError as e:
@@ -910,3 +911,15 @@ class DeferredExecutionContext(AbstractContext):
             out.write("command=%s" % ":".join(self.actions))
                     
         return filename
+
+    def export_string(self):
+        '''
+        Exports the requested actions (via function calls like train()) to an
+        configuration string that will be executed on the cluster
+
+        Returns: 
+            content of configuration
+        '''                
+                
+
+        return '\n'.join(self.config + ["command=%s" % ":".join(self.actions)])

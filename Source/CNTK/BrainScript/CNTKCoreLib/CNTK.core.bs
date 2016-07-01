@@ -26,15 +26,36 @@ IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ]
 
 
 ##############################################################################
-# comparison functions
+# aliases
 ##############################################################################
 
-Less         = CNTK2.Less
-Equal        = CNTK2.Equal
-Greater      = CNTK2.Greater
-GreaterEqual = CNTK2.GreaterEqual
-NotEqual     = CNTK2.NotEqual
-LessEqual    = CNTK2.LessEqual
+Less                    = CNTK2.Less
+Equal                   = CNTK2.Equal
+Greater                 = CNTK2.Greater
+GreaterEqual            = CNTK2.GreaterEqual
+NotEqual                = CNTK2.NotEqual
+LessEqual               = CNTK2.LessEqual
+Splice                  = CNTK2.Splice
+TransposeDimensions     = CNTK2.TransposeDimensions
+Times                   = CNTK2.Times
+Abs                     = CNTK2.Abs
+Ceil                    = CNTK2.Ceil
+CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+Dropout                 = CNTK2.Dropout
+ElementTimes            = CNTK2.ElementTimes
+ElementDivide           = CNTK2.ElementDivide
+ErrorPrediction         = CNTK2.ErrorPrediction
+Exp                     = CNTK2.Exp
+Floor                   = CNTK2.Floor
+Log                     = CNTK2.Log
+Minus                   = CNTK2.Minus
+Pass                    = CNTK2.Identity
+Plus                    = CNTK2.Plus
+RectifiedLinear         = CNTK2.Relu
+ReduceSum               = CNTK2.ReduceSum
+ReduceLogSum            = CNTK2.ReduceLogSum
+Round                   = CNTK2.Round
+Sigmoid                 = CNTK2.Sigmoid
 
 ##############################################################################
 # ComputationNodes
@@ -87,14 +108,14 @@ CNTK2 = [
         else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
 
     Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
-		if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-		else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
-		else [ # workaround: swap 'axis' to first position, RowStack, swap back
-			ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
-				inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
-			].inputsT
-			out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
-		].out
+        if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
+        else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
+        else [ # workaround: swap 'axis' to first position, RowStack, swap back
+            ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
+                inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
+            ].inputsT
+            out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
+        ].out
 
     // Swap two axes of a tensor
     TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
@@ -120,9 +141,11 @@ CNTK2 = [
     Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
-    // 6. Reductions
-    // None so far
-
+    // 6. Reductions    
+    # the following is a temporary workaround until we have the C++ version
+    ReduceLogSum (_, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
+    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, _ - LogSoftmax (_), tag=tag1) ].out
+    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
     // 7. Control flow (if, composite etc.)
     // None so far
 
@@ -147,7 +170,7 @@ CNTK2 = [
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
 
-    // 13. Comparison nodes
+    // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
     Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
     Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
@@ -155,8 +178,7 @@ CNTK2 = [
     NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
     LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
 
-    // 13. Others
-    // 12. Others
+    // 13. Others    
     Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
@@ -181,19 +203,6 @@ Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag=
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
-Splice (inputs, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
-    if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-    else if axis == 1 then [tag1=tag; out = RowStack (inputs, tag=tag1)].out
-    else [ # workaround: swap 'axis' to first position, RowStack, swap back
-        ArrayTransposeDimensions (inputs, axis1, axis2) = [ # transpose each element of a BS array
-            inputsT[i:0..Length(inputs)-1] = TransposeDimensions (inputs[i], axis1, axis2)
-        ].inputsT
-        out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (inputs, 1, axis)), 1, axis, tag=tag)].out
-    ].out
-Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
-NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
-FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
@@ -206,11 +215,13 @@ Slice(beginIndex, endIndex, input, axis=1, tag='') =
               else BS.Sequences.Gather (flags, input)
     ].out
     else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ] # non-time axis
+Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
+NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
+FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
-TransposeDimensions(input, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = input /*plus the function args*/ ]
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
-Times(A, B, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( A : B ) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
@@ -228,8 +239,6 @@ ClassificationError = ErrorPrediction
 Delay = PastValue 
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
-Abs(x, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = x /*plus the function args*/ ]
-Ceil(x, tag='') = Negate(Floor(Negate(x)), tag=tag)
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -238,50 +247,33 @@ CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNod
 CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = x /*plus the function args*/ ]
 CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
-CrossEntropyWithSoftmax(labelVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (labelVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 # once ReduceLogSum becomes proper C++, CrossEntropyWithSoftmax() will become this:
 NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
 DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
 // TODO: DiagTimes = ElementTimes
-Dropout(activationVectorSequence, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = activationVectorSequence /*plus the function args*/ ]
-ElementTimes(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
-ElementDivide(aMatrix, anotherMatrix, tag='') = ElementTimes(aMatrix, Reciprocal(anotherMatrix), tag=tag)
-ErrorPrediction = CNTK2.ErrorPrediction
-Exp(x, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = x /*plus the function args*/ ]
-Floor(x, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = x /*plus the function args*/ ]
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
-Log(x, tag='') = new ComputationNode [ operation = 'Log' ; inputs = x /*plus the function args*/ ]
 LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = z /*plus the function args*/ ]
 # TODO: ^^ along axis, like Softmax
 MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; inputs = matrix /*plus the function args*/ ]
 MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = matrix /*plus the function args*/ ]
 Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = dataVectorSequence /*plus the function args*/ ]
-Minus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = input /*plus the function args*/ ]
 PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = (targetObject : indexSequence) /*plus the function args*/ ]
-Pass(x, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = x /*plus the function args*/ ]
 PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
-Plus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
-RectifiedLinear(z, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = z /*plus the function args*/ ]
-ReduceSum (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Sum"    /*plus the function args*/ ]
-# the following is a temporary workaround until we have the C++ version
-ReduceLogSum (z, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
-    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, z - LogSoftmax (z), tag=tag1) ].out
+//# the following is a temporary workaround until we have the C++ version
 #ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
 #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
 #ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
 #ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
-Round(x, tag='') = Floor(Plus(x, ConstantTensor(0.5, (1))), tag=tag)
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
-Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /*plus the function args*/ ]
 Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = z /*plus the function args*/ ]
 Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version below once we have ReduceLogSum
     if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]

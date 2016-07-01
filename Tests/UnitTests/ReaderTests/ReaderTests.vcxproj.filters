@@ -315,6 +315,9 @@
     <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt">
       <Filter>Data\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\ImageReaderMissingImage_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -397,9 +400,6 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop10_Config.cntk">
       <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\HTKDeserializerSimpleDataLoop11_Config.cntk">
-      <Filter>Config\HTKDeserializers</Filter>
-    </None>
     <None Include="Config\HTKDeserializersSimpleDataLoop14_Config.cntk">
       <Filter>Config\HTKDeserializers</Filter>
     </None>
@@ -415,6 +415,7 @@
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
       <Filter>Config</Filter>
     </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Data\ImageNet1K_intensity.xml">
