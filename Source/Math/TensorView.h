@@ -14,7 +14,11 @@
 #pragma warning(push)
 #pragma warning(disable : 4251) // needs to have dll-interface to be used by clients of... caused by TensorView::m_shape which is only private. We use the same compiler everywhere.
 
-template<class ElemType> struct TensorTest;
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+    template <class ElemType> struct TensorTest;
+}}}}
+
+template <class ElemType> struct TensorTest;
 
 // This class is exported from the Math.dll.
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -150,8 +154,9 @@ private:
     // -------------------------------------------------------------------
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
-    Matrix<ElemType>&       GetSOB()       { return *m_sob; }
-    friend struct ::TensorTest<ElemType>;
+    Matrix<ElemType>&       GetSOB()       { return *m_sob; }    
+//    friend struct ::TensorTest<ElemType>;
+    friend Microsoft::MSR::CNTK::Test::TensorTest<ElemType>;
 
     // -------------------------------------------------------------------
     // sob members

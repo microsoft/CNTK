@@ -563,7 +563,7 @@ void MandSTest(int count, int devId)
 
 int wmain()
 {
-    TensorTest<float>();
+    //TensorTest<float>();
 
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 

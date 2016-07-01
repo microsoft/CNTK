@@ -12,7 +12,6 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #include "targetver.h"
 
-#include <boost/test/unit_test.hpp>
 #include <stdio.h>
 
 // TODO: reference additional headers your program requires here
