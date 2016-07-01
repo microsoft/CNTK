@@ -7,13 +7,32 @@
 
 #include "SwapInAction.h"
 
+#ifndef CPUONLY
+    #include <cuda.h>
+#endif
+
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 void SwapInAction::executeAction()
 {
-    
+    if(!m_isSwappingToGPU)
+        SwapToGPU();
+    else
+        SynchronizeBufferBeforeUse();
+}
+
+void SwapInAction::SwapToGPU()
+{
+        CUDA_CALL(cudaStreamSynchronize(m_swapOutStream));
+        CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU->Data(), m_bufferGPU->BufferSize(), cudaMemcpyDefault, m_swapInStream));
+}
+
+void SwapInAction::SynchronizeBufferBeforeUse()
+{
+    CUDA_CALL(cudaStreamSynchronize(m_swapInStream));
 }
 
 }}}
