@@ -8,6 +8,10 @@
 #include "SwapOutAction.h"
 #include "GPUMatrix.h"
 
+#ifndef CPUONLY
+	#include "cuda_runtime_api.h"
+#endif
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -29,13 +33,15 @@ void SwapOutAction::allocatePinnedBuffer()
 
     
 
-    CUDA_CALL(cudaHostAlloc(&pinnedBuffer, sizeof(float)*cols*rows, cudahostAllocPortable));
+    //CUDA_CALL(cudaHostAlloc(&pinnedBuffer, sizeof(float)*cols*rows, cudahostAllocPortable));
 
 
-    m_bufferCPU = CPUMatrix<float>(rows, cols, pinnedBuffer);
+    m_bufferCPU = new CPUMatrix<float>(rows, cols, pinnedBuffer);
     
     
 
 }
 
 }}}
+
+

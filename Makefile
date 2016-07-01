@@ -337,6 +337,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SynchronizationManager.cpp \
 
 SEQUENCE_TRAINING_LIB_SRC =\
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
@@ -347,6 +348,8 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 	$(SOURCEDIR)/Math/cudalatticeops.cu \
 	$(SOURCEDIR)/Math/cudalattice.cpp \
 	$(SOURCEDIR)/Math/cudalib.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SwapInAction.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SwapOutAction.cpp \
 
 else
 SEQUENCE_TRAINING_LIB_SRC +=\

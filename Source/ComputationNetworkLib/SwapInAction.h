@@ -14,7 +14,8 @@ class SwapInAction : public SyncAction
 
 public:
 
-    SwapInAction::SwapInAction()
+    ~SwapInAction(){}
+    SwapInAction()
     {
         m_bufferCPU = NULL;
         m_bufferGPU = NULL;
@@ -22,7 +23,7 @@ public:
     }
 
     //implementation of abstract method
-    void SwapInAction::executeAction();
+    void executeAction();
 
 };
 }}}

@@ -10,8 +10,6 @@
 #include <unordered_map>
 #include <memory>
 
-
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
@@ -24,20 +22,21 @@ class SynchronizationManager
 private:
     typedef std::shared_ptr<SyncAction> SyncActionPtr;
     std::unordered_map<ComputationNodeBasePtr, std::vector<SyncActionPtr> > m_actionTable;
-    SynchronizationManager();
+    SynchronizationManager(){};
     static std::shared_ptr<SynchronizationManager> s_SynchronizationManager;
 
     
 
 public:
-    static std::shared_ptr<SynchronizationManager> SynchronizationManager::GetSynchronizationManager()
+    ~SynchronizationManager(){};
+    static std::shared_ptr<SynchronizationManager> GetSynchronizationManager()
     {
-        if (s_SynchronizationManager == NULL)
+        if (SynchronizationManager::s_SynchronizationManager == NULL)
         {
-            s_SynchronizationManager = std::shared_ptr<SynchronizationManager>(new SynchronizationManager());
+            SynchronizationManager::s_SynchronizationManager = std::shared_ptr<SynchronizationManager>(new SynchronizationManager());
         }
 
-        return s_SynchronizationManager;
+        return SynchronizationManager::s_SynchronizationManager;
     }
 
     void SynchronizeState(ComputationNodeBasePtr node);
@@ -47,4 +46,6 @@ public:
 	
 };
 
+
 }}}
+
