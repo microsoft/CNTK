@@ -57,7 +57,7 @@ public:
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
-
+	 
     ComputationNetwork(DEVICEID_TYPE deviceId)
         : ComputationNetwork()
     {
