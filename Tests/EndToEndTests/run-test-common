@@ -41,6 +41,7 @@ printHardwareInfo()
   echo "    CPU Model Name: $cpuName"
   echo "    Hardware threads: $nproc"
   echo "    Total Memory: $totalMemory"
+
   echo "-------------------------------------------------------------------"
 }
 
