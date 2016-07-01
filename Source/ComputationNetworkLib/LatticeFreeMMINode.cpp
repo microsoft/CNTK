@@ -326,153 +326,6 @@ void LatticeFreeMMINode<ElemType>::InitializeFromTfstFiles(const wstring& fstFil
 // If m_ceweight == 0, return the log numerator score of MMI
 // Else, return (1-m_ceweight) * logNum - m_ceweight * logCE
 template <class ElemType>
-double LatticeFreeMMINode<ElemType>::CTCCalculation(const Matrix<ElemType>& labelMatrix, const size_t nf)
-{
-    if (nf == 0) return 0;
-    size_t nsenones = labelMatrix.GetNumRows();
-    int blankid = (int)nsenones - 1;
-    // copy likelihoods to CPU
-    size_t nstates = m_senoneSequence.size();
-    size_t bufferSize = nsenones * nf;
-    m_likelihoodBuffer.resize(bufferSize);
-    ElemType* refArr = &m_likelihoodBuffer[0];
-    m_softmax->CopyToArray(refArr, bufferSize);
-    
-    m_alphaNums.clear();
-    m_alphaNums.resize(nstates * nf, DBL_MIN_EXP);
-
-    for (int i = 0; i < nf; i++)
-    {
-        if (i == 0)
-        {
-            int currentSenone = m_senoneSequence[0].Senone;
-            m_alphaNums[0] = m_likelihoodBuffer[currentSenone];
-            currentSenone = m_senoneSequence[1].Senone;
-            m_alphaNums[1] = m_likelihoodBuffer[currentSenone];
-        }
-        else
-        {
-            //for (int j = 0; j  <= i * 2 + 1, j < nstates; j+=2)
-            for (int j = 0; j <= i, j < nstates; j++)
-            {          
-                if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
-                int currentSenone = m_senoneSequence[j].Senone;
-                int baseIndex = (i - 1)*nstates + j;
-
-                if (j == 0)
-                {
-                    m_alphaNums[i*nstates] = m_alphaNums[baseIndex] + m_likelihoodBuffer[i * nsenones + currentSenone];
-                    /* m_alphaNums[i*nstates + 1] = Logadd(m_alphaNums[(i - 1) * nstates] + m_fsa[m_stateSequence[0]][m_senoneSequence[1].Senone].second,
-                    m_alphaNums[(i - 1) * nstates+1] + m_fsa[m_stateSequence[1]][m_senoneSequence[1].Senone].second)
-                    + m_likelihoodBuffer[i * nsenones + m_senoneSequence[1].Senone];*/
-                }
-                else if (j > 1 && currentSenone != blankid && currentSenone != m_senoneSequence[j - 2].Senone)
-                {
-                    double x = Logadd(m_alphaNums[baseIndex] , m_alphaNums[baseIndex - 1] );
-                    m_alphaNums[i * nstates + j] = Logadd(x, m_alphaNums[baseIndex - 2])
-                        + m_likelihoodBuffer[i * nsenones + currentSenone];
-                }
-                else
-                {
-                    m_alphaNums[i * nstates + j] = Logadd(m_alphaNums[baseIndex] , m_alphaNums[baseIndex - 1] )
-                        + m_likelihoodBuffer[i * nsenones + currentSenone];
-                }
-            }
-        }
-    }
-
-
-    double logForwardScore = Logadd(m_alphaNums[nstates * nf - 1],  m_alphaNums[nstates * nf - 2] );
-    //double logForwardScore = m_alphaNums[nstates * nf - 1] + m_fsa[m_stateSequence[nstates - 1]][-1].second;
-
-    if (std::isnan(logForwardScore))
-        RuntimeError("logForwardScore for numerator should not be nan.");
-
-    m_betas.clear();
-    m_betas.resize(nstates, DBL_MIN_EXP);
-    m_betasTemp.clear();
-    m_betasTemp.resize(nstates, DBL_MIN_EXP);
-    m_betas[nstates - 1] = m_likelihoodBuffer[(nf-1) * nsenones + m_senoneSequence[nstates-1].Senone];
-    m_betas[nstates - 2] = m_likelihoodBuffer[(nf-1) * nsenones + m_senoneSequence[nstates-2].Senone];
-
-    for (int i = nf - 1; i >= 0; i--)
-    {
-        double absum = DBL_MIN_EXP;
-        for (int j = 0; j < nstates; j++)
-        {
-            double abTime = m_alphaNums[i * nstates + j] + m_betas[j] - m_likelihoodBuffer[i * nsenones + m_senoneSequence[j].Senone];
-            m_alphaNums[i * nstates + j] = abTime;
-            absum = Logadd(absum, abTime);
-
-            m_betasTemp[j] = m_betas[j] ;
-        }
-
-        //assert(absum != -FLT_MAX);
-        //cout << i << " : " << log(absum) << endl;
-        for (int j = 0; j < nstates; j++)
-        {
-            m_alphaNums[i * nstates + j] -= absum;
-        }
-
-        if (i > 0)
-        {
-
-            for (int j = 0; j < nstates; j++)
-            {
-                if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
-                int currentSenone = m_senoneSequence[j].Senone;
-                //if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
-                //else
-                {
-                    if (j < nstates - 1)
-                    {
-                        if (j < nstates - 2 && m_senoneSequence[j].Senone != blankid && m_senoneSequence[j].Senone != m_senoneSequence[j + 2].Senone)
-                        {
-                            double x = Logadd(m_betasTemp[j] , m_betasTemp[j + 1] );
-                            m_betas[j] = Logadd(x, m_betasTemp[j + 2]) + m_likelihoodBuffer[(i-1) * nsenones + currentSenone];
-                        }
-                        else
-                            m_betas[j] = Logadd(m_betasTemp[j], m_betasTemp[j + 1]) + m_likelihoodBuffer[(i - 1) * nsenones + currentSenone];
-                    }
-                    else
-                    {
-                        m_betas[nstates - 1] = m_betasTemp[nstates - 1] + m_likelihoodBuffer[(i - 1) * nsenones + currentSenone];
-                    }
-
-                }
-            }
-        }
-    }
-
-#ifdef _DEBUG
-    cout << "log forward score: " << logForwardScore << endl;
-    double logBackwardScore = Logadd(m_betas[0] ,    m_betas[1] );
-
-    //double logBackwardScore = m_betas[0] + m_likelihoodBuffer[m_senoneSequence[0].Senone];
-    cout << "log backward score: " << logBackwardScore << endl;
-#endif
-
-    // asign posteriors to m_posteriorsNum
-    m_posteriorsAtHost.clear();
-    m_posteriorsAtHost.resize(nf * nsenones, 0);
-    for (int i = 0; i < nf; i++)
-    {
-        for (int j = 0; j < nstates; j++)
-        {
-            m_posteriorsAtHost[i * nsenones + m_senoneSequence[j].Senone] += exp((ElemType)m_alphaNums[i * nstates + j]);
-        }
-    }
-    m_posteriorsCTC->Resize(nsenones, nf);
-    m_posteriorsCTC->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
-
-    return logForwardScore;
-    
-}
-
-
-// If m_ceweight == 0, return the log numerator score of MMI
-// Else, return (1-m_ceweight) * logNum - m_ceweight * logCE
-template <class ElemType>
 double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf)
 {
     if (nf == 0) return 0;
@@ -502,7 +355,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     while (index < nf)
     {
         int currentSenone = (int)m_labelVector[index];
-        int startIndex = index;
+        //int startIndex = index;
         index++;
         while (index < nf)
         {
@@ -512,8 +365,8 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
         
         
         {
-            beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
-            endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
+            //beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
+            //endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
             if (currentSenone != blankid && lastSenone != blankid)
             {
                 m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
@@ -684,9 +537,9 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
 
     // return the forward path score
-    //if (m_ceweight == 0)
+    if (m_ceweight == 0)
         return logForwardScore;
-    /*else
+    else
     {
         double logSum = 0;
         for (int i = 0; i < nf * nsenones; i++)
@@ -699,7 +552,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
 
         ElemType ce = Matrix<ElemType>::InnerProductOfMatrices(*m_posteriorsNum, *m_softmax);   // m_softmax is with logSoftmax of the NN output
         return (1 - m_ceweight) * logForwardScore - m_ceweight * (logSum - ce);
-    }*/
+    }
 }
 
 template <class ElemType>
