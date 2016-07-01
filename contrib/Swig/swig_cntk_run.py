@@ -1,3 +1,4 @@
+import numpy as np
 import swig_cntk
 
 def shape_from_NDShape(swig_obj):
@@ -38,6 +39,15 @@ def create_ValuePtr_with_Buffer(shape, data_type, dev):
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
 
+def create_ValuePtr_from_NumPy(nd, dev):
+    # storing the shape, since we can pass only flattened arrays
+    shape = nd.shape
+    nd = np.asarray(nd, dtype=np.float32).ravel()
+    ndav = swig_cntk.NDArrayView(nd, shape, dev, False)
+    view_ptr = swig_cntk.NDArrayViewPtr(ndav)
+    value = swig_cntk.Value(view_ptr)
+    return swig_cntk.ValuePtr(value)
+
 def forward_backward():
     dev = swig_cntk.DeviceDescriptor.CPUDevice()
 
@@ -47,10 +57,11 @@ def forward_backward():
     output_shape = (2,3)
 
     # import time;time.sleep(20)
-    left_var = create_variable(left_shape, needs_gradient=False, name="left_node")
+    left_var = create_variable(left_shape, needs_gradient=True, name="left_node")
     right_var = create_variable(right_shape, needs_gradient=True, name="right_node")
 
-    left_value_ptr = create_ValuePtr_with_value(left_shape+(1,1), 2, dev)
+    nd = np.arange(6).reshape(left_shape+(1,1))
+    left_value_ptr = create_ValuePtr_from_NumPy(nd, dev)
     right_value_ptr = create_ValuePtr_with_value(right_shape+(1,1), 5, dev)
 
     op = swig_cntk.Plus(left_var, right_var)
@@ -93,17 +104,16 @@ def forward_backward():
     rootGradients[outputVariable] = rootGradientValuePtr
  
     op.BackwardMap(backpropstate, rootGradients, gradients)
-    left_grad_data = swig_cntk.data_from_value(
-            grad_left_value_ptr.Data().GetPtr().DataBufferFloat(), 
-            grad_left_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    left_grad_data = grad_left_value_ptr.Data().ToNumPy().reshape(output_shape)
     print("Result backward left:")
     print(left_grad_data)
 
-    right_grad_data = swig_cntk.data_from_value(
-            grad_right_value_ptr.Data().GetPtr().DataBufferFloat(), 
-            grad_right_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    right_grad_data = grad_right_value_ptr.Data().ToNumPy().reshape(output_shape)
     print("Result backward right:")
     print(right_grad_data)
 
 if __name__=='__main__':
     forward_backward()
+
+    print("Initializing from NumPy:")
+    dev = swig_cntk.DeviceDescriptor.CPUDevice()
