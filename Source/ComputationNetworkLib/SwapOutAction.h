@@ -13,8 +13,8 @@ class SwapOutAction : public SyncAction
 {
 
 public:
-
-    SwapOutAction::SwapOutAction()
+    ~SwapOutAction(){}
+    SwapOutAction()
     {
         m_bufferCPU = NULL;
         m_bufferGPU = NULL;
@@ -22,7 +22,7 @@ public:
     }
 
     //implementation of abstract method
-    void SwapOutAction::executeAction();
+    void executeAction();
 
 private:
 
