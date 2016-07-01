@@ -68,7 +68,6 @@ namespace CNTK
         template <typename ElementType>
         void PostProcess(const Variable& learnableParameter, const ValuePtr&  gradient, const ValuePtr& parameter, size_t actualMBSize) const;
 
-        // TOOD: these setters will be dropped.
         virtual void SetLearningRate(double value) override { m_learningRatePerSample = value; }
         virtual void SetMomentum(double value) override { m_momentumPerSample = value; }
 

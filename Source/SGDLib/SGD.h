@@ -530,13 +530,9 @@ protected:
     // Maps parameters to corresponding computation nodes.
     std::unordered_map<::CNTK::Variable, ComputationNodePtr> m_parameterToNodeMap;
 
-    // a list of learners. Potentially, this list can contain several learners, but
+    // a list of learners. Potentially, this list can contain multiple learners, but
     // at the moment we only create two at most.
     std::list<::CNTK::LearnerPtr> m_learners;
-
-    // a list of all learnable parameters. At the moment, this are 'token' parameters,
-    // that are only kept around to satisfy the Learner interface.
-    std::list<::CNTK::Variable> m_learnableParameters;
 
 private:
     void ResetSGDMomentum();
@@ -579,6 +575,18 @@ private:
         }
 
         return ::CNTK::DeviceDescriptor::DefaultDevice();
+    }
+
+
+    static ::CNTK::NDArrayViewPtr AsNDArrayView(Matrix<ElemType>& matrix)
+    {
+        if (matrix.GetMatrixType() == MatrixType::SPARSE) 
+        {
+            RuntimeError("A sparse matrix currently cannot be wrapped into an NDArrayView");
+        }
+
+        return new ::CNTK::NDArrayView({ matrix.GetNumRows(), matrix.GetNumCols() }, 
+            matrix.Data(), matrix.GetNumElements(), GetDeviceDescriptor(matrix.GetDeviceId()));
     }
 };
 

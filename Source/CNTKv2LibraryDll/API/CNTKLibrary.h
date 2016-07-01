@@ -1912,15 +1912,12 @@ namespace CNTK
 
         static const AdditionalParameters s_defaultParameters;
 
-// TODO: remove these setters as soon as adaptive learning rate functionality is moved inside the learner.
         virtual void SetLearningRate(double value) = 0;
         virtual void SetMomentum(double value) = 0;
-// -------------------------------------------------------------------------------------------------------
 
         // TODO: should this be called ResetMomentum?
         // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
         virtual void ResetSmoothedGradients() = 0;
-
 
     protected:
         Learner(const _Internal::_SimpleSet<Variable>& parameters)

@@ -192,12 +192,10 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
 
 /* virtual */ void LearnerBase::ResetSmoothedGradients() /* override */
 {
-    auto gradientVector = m_smoothedGradients.Values();
-
-    for (auto i = 0; i < gradientVector.Size(); ++i)
+    for (const auto& learnableParameter : Parameters())
     {
-        auto data = gradientVector[i]->Data();
-
+        auto& smoothedGradient = m_smoothedGradients[learnableParameter];
+        auto data = smoothedGradient->Data();
         switch (data->GetDataType())
         {
         case DataType::Float:
@@ -263,14 +261,17 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
 
     for (const auto& learnableParameter : Parameters())
     {
+        // TODO: parameter name is not guaranteed to be unique. Instead, all serializable objects
+        // need to expose "UId" property -- a persistent unique internal name. 
+        // Switch to UId as soon as it's available.
         if (checkpoint.Contains(learnableParameter.Name()))
         {
-            // TODO: check uniqueness in the constructor?
             LogicError("Parameter names must be unique");
         }
         auto smoothedGradient = m_smoothedGradients[learnableParameter];
 
-        // TODO: could also store things like dimensions, element size, format, etc.
+        // Potentially, could store things like dimensions, element size, format, etc., but
+        // that seems to be redundant, since all of that is passed in the constructor. 
         checkpoint[learnableParameter.Name()] = SerializeToVector(smoothedGradient->Data());
     }
     return checkpoint;

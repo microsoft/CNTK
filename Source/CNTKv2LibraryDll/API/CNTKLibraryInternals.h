@@ -471,8 +471,6 @@ namespace CNTK
 
             _SimpleSet<KeyType> Keys() const;
 
-            _SimpleVector<ValueType> Values() const;
-
             static _SimpleMap<KeyType, ValueType> CreateSimpleMap(const std::unordered_map<KeyType, ValueType>& initMap)
             {
                 _SimpleMap<KeyType, ValueType> simpleMap;

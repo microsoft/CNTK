@@ -1871,18 +1871,10 @@ void SGD<ElemType>::UpdateWeights(const double learnRatePerSample,
             // reside on the same device as smoothed gradients 
             // (allocated on the same device as given by net->GetDeviceId())
 
-            parameters.insert(make_pair(parameter, 
-                new ::CNTK::Value(new ::CNTK::NDArrayView(
-                    { functionValues.GetNumRows(), functionValues.GetNumCols() }, 
-                    functionValues.Data(), functionValues.GetNumElements(), 
-                    GetDeviceDescriptor(functionValues.GetDeviceId())))));
+            parameters.insert(make_pair(parameter, new ::CNTK::Value(AsNDArrayView(functionValues))));
 
             // TODO: this does not quite work for sparse gradients (Text/SparseDSSM)
-            gradients.insert(make_pair(parameter, 
-                new ::CNTK::Value(new ::CNTK::NDArrayView(
-                    { gradientValues.GetNumRows(), gradientValues.GetNumCols() }, 
-                    gradientValues.Data(), gradientValues.GetNumElements(), 
-                    GetDeviceDescriptor(gradientValues.GetDeviceId())))));
+            gradients.insert(make_pair(parameter, new ::CNTK::Value(AsNDArrayView(gradientValues))));
         }
 
         learner->Update(parameters, gradients, actualMBSize);
@@ -1997,7 +1989,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     if (ckpVersion < CURRENT_CNTK_CHECKPOINT_VERSION)
     {
-        RuntimeError("Checkpoint version (%ul) not supported.", ckpVersion); 
+        RuntimeError("Checkpoint version (%lu) is not supported.", ckpVersion); 
     }
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
@@ -2234,7 +2226,6 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
         m_parameterToNodeMap.insert(make_pair(parameter, node));
         learningRateMultipliers.insert(make_pair(parameter, node->GetLearningRateMultiplier()));
         parameters.insert(parameter);
-        m_learnableParameters.push_back(parameter);
     }
 
     ::CNTK::Learner::AdditionalParameters additionalParameters;
@@ -2467,7 +2458,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_learningRatesParam = learningRatesPerSample;
         m_learningRatesSpecifiedForMBSize = intargvector(L"1");
     }
-    else if (learningRatesPerMB.size() > 0) // this actually means per specified minuibatch size
+    else if (learningRatesPerMB.size() > 0) // this actually means per specified minibatch size
     {
         m_learningRatesParam = learningRatesPerMB;
         m_learningRatesSpecifiedForMBSize = m_mbSize;

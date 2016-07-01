@@ -128,7 +128,7 @@ namespace CNTK
         template class _SimpleVector<ValuePtr>;
 
         template bool operator==(const _SimpleVector<size_t>& first, const _SimpleVector<size_t>& second);
-    
+
 #pragma endregion _SimpleVector
 
 #pragma region _SimpleSet
@@ -320,19 +320,8 @@ namespace CNTK
             return keys;
         }
 
-        template <typename KeyType, typename ValueType>
-        _SimpleVector<ValueType> _SimpleMap<KeyType, ValueType>::Values() const
-        {
-            _SimpleVector<ValueType> values;
-            for (auto iter = m_map->begin(); iter != m_map->end(); ++iter)
-                values.PushBack(iter->second);
-
-            return values;
-        }
-
         // Explicit template instantiations
         template class _SimpleMap<Variable, ValuePtr>;
-        // TODO: g++ (4.8.4) complains about const values being stored in an std::vector
         template class _SimpleMap<Variable, const ValuePtr>;
         template class _SimpleMap<Placeholder, Variable>;
         template class _SimpleMap<Variable, double>;
@@ -462,7 +451,6 @@ namespace CNTK
         return stream;
     }
 
-
     Dictionary::Dictionary()
         : m_dictionaryData(new std::unordered_map <std::wstring, DictionaryValue>)
     {
@@ -536,7 +524,9 @@ namespace CNTK
         return stream;
     }
 
-     // TODO: instead of doing this would be nice to allow some type binary data in the Dictionary.
+
+    // TODO: we store the type info for every element in the vector, which is extremely redundant.
+    // Instead, it'd be nice to introduce some sort of DictionaryValueVector.
     _Internal::_SimpleVector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr)
     {        
         if (viewPtr->IsSparse())
@@ -554,7 +544,6 @@ namespace CNTK
             cpuDataViewPtr = new NDArrayView(viewPtr->GetDataType(), viewPtr->Shape(), DeviceDescriptor::CPUDevice());
             cpuDataViewPtr->CopyFrom(*viewPtr);
         }
-
 
         switch (cpuDataViewPtr->GetDataType())
         {
@@ -584,7 +573,6 @@ namespace CNTK
         return values;
     }
 
-    // TODO: instead of doing this would be nice to allow some type binary data in the Dictionary.
     void DeserializeFromVector(NDArrayViewPtr&& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values)
     {        
         if (viewPtr->IsSparse())
@@ -635,4 +623,7 @@ namespace CNTK
             viewPtr->CopyFrom(*cpuDataViewPtr);
         }
     }
+     
+    template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
+    template void DictionaryValue::AllocateDataPtr<_Internal::_SimpleVector<DictionaryValue>>(const _Internal::_SimpleVector<DictionaryValue>& value);
 }
