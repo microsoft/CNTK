@@ -134,7 +134,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
             fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
             fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
             fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
             fprintf(stderr, "\n");
             throw e;
         }
@@ -149,7 +149,6 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
 
         // This changes the data from "minibatch paking" in Input(0)->Value() to "dense CuDNN packing" in m_transposedInput
-        vector<size_t> numSequencesForFrame;
         this->PackSequencesForCuDNN(Input(0)->Value(), *m_transposedInput, numSequencesForFrame);
 
         // ensure enough storage
@@ -202,7 +201,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
             fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
             fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
             fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
             fprintf(stderr, "\n");
             throw e;
         }
@@ -225,7 +224,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
             fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
             fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
             fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%d, ", x);
+            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
             fprintf(stderr, "\n");
             throw e;
         }
