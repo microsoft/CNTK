@@ -1593,6 +1593,261 @@ namespace CNTK
         auto operandVector = _Internal::_SimpleVector<FunctionPtr>::CreateSimpleVector(operands);
         return _Combine(operandVector, name);
     }
+    
+    ///
+    /// A serializable value represents one of:
+    /// a) Boolean
+    /// b) String
+    /// c) Single and double precision floating point values
+    /// d) Signed long integer
+    /// e) vector<DictionaryValue>
+    ///
+    class CNTK_API DictionaryValue
+    {
+    public:
+        enum class Type : unsigned int
+        {
+            None,
+            Bool,
+            SizeT,
+            Float,
+            Double,
+            NDShape,
+            Vector
+        };
+
+        static const char* TypeName(Type type)
+        {
+            if (type == Type::None)
+                return "None";
+            else if (type == Type::Bool)
+                return "Bool";
+            else if (type == Type::SizeT)
+                return "SizeT";
+            else if (type == Type::Float)
+                return "Float";
+            else if (type == Type::Double)
+                return "Double";
+            else if (type == Type::NDShape)
+                return "NDShape";
+            else if (type == Type::Vector)
+                return "Vector";
+            else
+                LogicError("Unknown DictionaryValue::Type");
+        }
+
+    public:
+        DictionaryValue() : m_valueType(Type::None)
+        {
+        }
+
+        DictionaryValue(bool value) : m_valueType(GetValueType<bool>())
+        {
+            m_data.m_boolean = value;
+        }
+
+        DictionaryValue(size_t value) : m_valueType(GetValueType<size_t>())
+        {
+            m_data.m_sizeT = value;
+        }
+        
+        DictionaryValue(float value) : m_valueType(GetValueType<float>())
+        {
+            m_data.m_float = value;
+        }
+
+        DictionaryValue(double value) : m_valueType(GetValueType<double>())
+        {
+            m_data.m_double = value;
+        }
+
+        template <typename T>
+        DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
+        {
+            static_assert(std::is_same<T, NDShape>::value ||
+                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
+                "Unsupported ValueType");
+
+            AllocateDataPtr(value);
+        }
+
+        DictionaryValue(const DictionaryValue& other) : m_valueType(Type::Bool)
+        {
+            *this = other;
+        }
+
+        DictionaryValue& operator=(const DictionaryValue& other)
+        {
+            if (this != &other)
+            {
+                FreeDataPtr();
+
+                m_valueType = other.m_valueType;
+                m_data = other.m_data;
+
+                if (other.m_valueType == Type::NDShape)
+                    AllocateDataPtr(other.GetValue<NDShape>());
+                else if (other.m_valueType == Type::Vector)
+                    AllocateDataPtr(other.GetValue<_Internal::_SimpleVector<DictionaryValue>>());
+            }
+
+            return *this;
+        }
+
+        ~DictionaryValue()
+        {
+            FreeDataPtr();
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_boolean;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_sizeT;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_float;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_double;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return *(reinterpret_cast<T*>(m_data.m_ptr));
+        }
+
+        bool HasValue() const
+        {
+            return m_valueType != Type::None;
+        }
+
+        Type ValueType() const
+        {
+            return m_valueType;
+        }
+
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us);
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us);
+
+    private:
+        template <typename T>
+        static Type GetValueType()
+        {
+            static_assert(std::is_same<T, bool>::value ||
+                std::is_same<T, size_t>::value ||
+                std::is_same<T, float>::value ||
+                std::is_same<T, double>::value ||
+                std::is_same<T, NDShape>::value ||
+                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
+                "Unsupported ValueType");
+
+            if (std::is_same<T, bool>::value)
+                return Type::Bool;
+            else if (std::is_same<T, size_t>::value)
+                return Type::SizeT;
+            else if (std::is_same<T, float>::value)
+                return Type::Float;
+            else if (std::is_same<T, double>::value)
+                return Type::Double;
+            else if (std::is_same<T, NDShape>::value)
+                return Type::NDShape;
+            else if (std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value)
+                return Type::Vector;
+        }
+
+        template <typename T>
+        void VerifyType() const
+        {
+            if (GetValueType<T>() != m_valueType)
+                RuntimeError("Reading a DictionaryValue as the wrong type; Reading as type %s when actual type is %s", typeid(T).name(), DictionaryValue::TypeName(m_valueType));
+        }
+
+        template <typename T>
+        void AllocateDataPtr(const T& value);
+
+        template <typename T>
+        void FreePtrAsType();
+
+        void FreeDataPtr();
+
+        Type m_valueType;
+
+        union ValueData
+        {
+            bool m_boolean;
+            size_t m_sizeT;
+            float m_float;
+            double m_double;
+            void* m_ptr;
+        } m_data;
+
+        const size_t version = 1;
+    };
+
+    ///
+    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed). 
+    ///
+    class CNTK_API Dictionary
+    {
+    public:
+        Dictionary();
+        ~Dictionary();
+
+        // Disallow copy contruction and assignment
+        Dictionary(const Dictionary&) = delete;
+        Dictionary& operator=(const Dictionary&) = delete;
+
+        Dictionary(Dictionary&& other);
+        Dictionary& operator=(Dictionary&& other);
+
+        DictionaryValue& operator[](const std::wstring& key)
+        {
+            return operator[](key.c_str());
+        }
+
+        DictionaryValue& operator[](const wchar_t* key);
+
+        DictionaryValue operator[](const std::wstring& key) const
+        {
+            return operator[](key.c_str());
+        }
+
+        DictionaryValue operator[](const wchar_t* key) const;
+
+        bool Contains(const std::wstring& key) const
+        {
+            return Contains(key.c_str());
+        }
+
+        bool Contains(const wchar_t* key) const;
+
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us);
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us);
+
+    private:
+        std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
+        const size_t version = 1;
+    };
+
+
 
 #pragma warning(push)
 #pragma warning(disable : 4251 4275)
@@ -1621,6 +1876,16 @@ namespace CNTK
         /// Returns the set of parameters associated with this learner.
         ///
         std::unordered_set<Variable> Parameters() const { return m_parameters; }
+        
+        ///
+        /// Optionally overridable method to checkpoint the learner's state.
+        ///
+        virtual Dictionary GetCheckpointState() const = 0;
+        
+        ///
+        /// Optionally overridable method to restore the learner's state from a previous checkpoint.
+        ///
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
 
         virtual ~Learner()
         {
@@ -1647,32 +1912,15 @@ namespace CNTK
 
         static const AdditionalParameters s_defaultParameters;
 
-// TODO: replace by the check-pointing mechanism.
-#pragma region _temporary_back_compat
-        // TODO: are these getters really necessary?
-        virtual double GetLearningRate() const = 0;
-        virtual double GetMomentum() const = 0;
-        
+// TODO: remove these setters as soon as adaptive learning rate functionality is moved inside the learner.
         virtual void SetLearningRate(double value) = 0;
         virtual void SetMomentum(double value) = 0;
+// -------------------------------------------------------------------------------------------------------
 
-        template <typename ElementType>
-        void GetSmoothedGradients(std::unordered_map<Variable, std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>>& map)
-        {
-            auto gradients = SmoothedGradients();
-            const std::unordered_set<Variable>& keys = gradients.Keys();
+        // TODO: should this be called ResetMomentum?
+        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
+        virtual void ResetSmoothedGradients() = 0;
 
-            for (auto & key : keys)
-            {
-                map.insert(make_pair(key,gradients[key]->Data()->GetWritableMatrix<ElementType>()));
-            }
-        }
-
-    protected:
-
-        virtual const _Internal::_SimpleMap<Variable, ValuePtr>& SmoothedGradients() const = 0;
-
-#pragma endregion _temporary_back_compat
 
     protected:
         Learner(const _Internal::_SimpleSet<Variable>& parameters)
@@ -1685,6 +1933,7 @@ namespace CNTK
             size_t trainingSampleCount) = 0;
 
        _Internal::_SimpleSet<Variable> m_parameters;
+
     };
 
 #pragma warning(pop)

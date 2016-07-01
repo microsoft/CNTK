@@ -1078,10 +1078,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
             {
-                bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, SmoothedGradients(), nSamplesSinceLastModelSync);
+                bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, nSamplesSinceLastModelSync);
                 if (synced)
                 {
                     nSamplesSinceLastModelSync = 0;
+                    ResetSGDMomentum();
                 }
             }
             // prepare break condition
@@ -1196,7 +1197,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     if (useModelAggregation )
     {
-        m_pMASGDHelper->OnEpochEnd(learnableNodes, SmoothedGradients(), nSamplesSinceLastModelSync);
+       bool synced = m_pMASGDHelper->OnEpochEnd(learnableNodes, nSamplesSinceLastModelSync);
+       if (synced)
+       {
+           ResetSGDMomentum();
+       }
         nSamplesSinceLastModelSync = 0;
     }
 
@@ -1925,10 +1930,9 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-            // TODO: replace with learners' checkpointing mechanism
-            for (auto& smoothedGradient : SmoothedGradients())
-            { 
-                fstream << *smoothedGradient; 
+            for (auto& learner : m_learners)
+            {
+                fstream << learner->GetCheckpointState();
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -1991,6 +1995,11 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
 
+    if (ckpVersion < CURRENT_CNTK_CHECKPOINT_VERSION)
+    {
+        RuntimeError("Checkpoint version (%ul) not supported.", ckpVersion); 
+    }
+
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
@@ -2009,10 +2018,11 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-    // TODO: replace with learners' checkpointing mechanism
-    for (auto& smoothedGradient : SmoothedGradients())
+    for (auto& learner : m_learners)
     {
-        fstream >> *smoothedGradient;
+        ::CNTK::Dictionary checkpoint;
+        fstream >> checkpoint;
+        learner->RestoreFromCheckpoint(checkpoint);
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2191,23 +2201,17 @@ void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNet
 }
 
 template <class ElemType>
-list<shared_ptr<Matrix<ElemType>>> SGD<ElemType>::SmoothedGradients()
+void SGD<ElemType>::ResetSGDMomentum()
 {
-    unordered_map<::CNTK::Variable, shared_ptr<Matrix<ElemType>>> gradientMap;
-    for (auto learner : m_learners)
+    if (!m_resetSGDMomentum)
     {
-        learner->GetSmoothedGradients<ElemType>(gradientMap);
+        return;
     }
-    // TODO (alrezni): need to ensure consistent order of gradients across runs.
-    // drop all the once checkpointing is implemented.
-    list<shared_ptr<Matrix<ElemType>>> gradients;
-    for (auto parameter : m_learnableParameters)
+                    
+    for (auto& learner : m_learners)
     {
-        gradients.push_back(gradientMap.at(parameter));
-    }
-
-
-    return gradients;
+        learner->ResetSmoothedGradients();
+    }                
 }
 
 template <class ElemType>

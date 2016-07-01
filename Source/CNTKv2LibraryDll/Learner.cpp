@@ -190,6 +190,27 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     }
 }
 
+/* virtual */ void LearnerBase::ResetSmoothedGradients() /* override */
+{
+    auto gradientVector = m_smoothedGradients.Values();
+
+    for (auto i = 0; i < gradientVector.Size(); ++i)
+    {
+        auto data = gradientVector[i]->Data();
+
+        switch (data->GetDataType())
+        {
+        case DataType::Float:
+            return data->SetValue(0.0f);
+        case DataType::Double:
+            return data->SetValue(0.0);
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
+            break;
+        }
+    }
+}
+
 /* virtual */ bool LearnerBase::Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
     const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
     size_t trainingSampleCount) /* override */
@@ -236,7 +257,40 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     return false;
 }
 
+/* virtual */ Dictionary LearnerBase::GetCheckpointState() const /* override */ 
+{
+    Dictionary checkpoint;
 
+    for (const auto& learnableParameter : Parameters())
+    {
+        if (checkpoint.Contains(learnableParameter.Name()))
+        {
+            // TODO: check uniqueness in the constructor?
+            LogicError("Parameter names must be unique");
+        }
+        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+
+        // TODO: could also store things like dimensions, element size, format, etc.
+        checkpoint[learnableParameter.Name()] = SerializeToVector(smoothedGradient->Data());
+    }
+    return checkpoint;
+}
+
+/* virtual */ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /* override */
+{
+    for (const auto& learnableParameter : Parameters())
+    {
+        if (!checkpoint.Contains(learnableParameter.Name()))
+        {
+            LogicError("Checkpoint does not contain state for parameter %ls", learnableParameter.Name().c_str());
+        }
+        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+
+        const DictionaryValue& state = checkpoint[learnableParameter.Name()];
+
+        DeserializeFromVector(smoothedGradient->Data(), state.GetValue<_Internal::_SimpleVector<DictionaryValue>>());
+    }
+}
 
 Learners::SGDLearner::SGDLearner(const _SimpleSet<Variable>& parameters, bool useNesterovAcceleration, 
     const Learner::AdditionalParameters& additionalParameters)
@@ -391,8 +445,6 @@ LearnerPtr _RmsPropLearner(const _SimpleSet<Variable>& parameters,
 
 
 // Explicit template instantiations
-template CNTK_API void Learner::GetSmoothedGradients<float>(unordered_map<Variable, shared_ptr<Matrix<float>>>& list);
-template CNTK_API void Learner::GetSmoothedGradients<double>(unordered_map<Variable, shared_ptr<Matrix<double>>>& list);
 template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr arrayView);
 template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr arrayView);
 
