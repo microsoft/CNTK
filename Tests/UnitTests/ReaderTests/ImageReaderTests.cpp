@@ -220,5 +220,25 @@ BOOST_AUTO_TEST_CASE(ImageReaderGrayscale)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageReaderMissingImage_Config.cntk",
+        testDataPath() + "/Control/ImageReaderSimple_Control.txt",
+        testDataPath() + "/Control/ImageReaderSimple_Output.txt",
+        "MissingImage_Test",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1),
+        std::runtime_error,
+        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists\\black.jpg'") == ex.what(); });
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }

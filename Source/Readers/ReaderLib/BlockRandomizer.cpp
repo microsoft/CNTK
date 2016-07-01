@@ -13,8 +13,7 @@
 #include <deque>
 
 #include "DataReader.h"
-#include <random>
-#include <set>
+#include "ExceptionCapture.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -103,9 +102,6 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 
         // Resetting sequence randomizer.
         m_sequenceRandomizer->Reset(m_sweep + 1);
-
-        // Unloading all chunk data from memory.
-        m_chunks.clear();
         m_lastSeenChunkId = CHUNKID_MAX;
     }
 }
@@ -143,7 +139,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     auto process = [&](int i) -> void {
         const auto& description = decimated[i];
         std::vector<SequenceDataPtr> sequence;
-        auto it = m_chunks.find(description.m_chunk->m_chunkId);
+        auto it = m_chunks.find(description.m_chunk->m_original->m_id);
         if (it == m_chunks.end())
         {
             LogicError("Invalid chunk requested.");
@@ -156,12 +152,13 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         }
     };
 
-    // TODO: This will be changed, when we move transformers under the randomizer, should not deal with multithreading here.
     if (m_multithreadedGetNextSequences)
     {
+        ExceptionCapture capture;
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < decimated.size(); ++i)
-            process(i);
+            capture.SafeRun(process, i);
+        capture.RethrowIfHappened();
     }
     else
     {
@@ -253,6 +250,11 @@ void BlockRandomizer::RetrieveDataChunks()
     // There could be some chunks in the m_chunks that are not required anymore, by swapping the chunks with m_chunks, we are removing those.
     std::map<size_t, ChunkPtr> chunks;
     size_t numLoadedChunks = m_chunks.size();
+
+    std::vector<bool> needed;
+    needed.resize(randomizedEnd, false);
+
+    // Firstly, make sure we unload all not needed chunks:
     for (size_t i = 0; i < randomizedEnd; ++i)
     {
         auto const& chunk = window[i];
@@ -261,26 +263,35 @@ void BlockRandomizer::RetrieveDataChunks()
             continue;
         }
 
-        auto it = m_chunks.find(chunk.m_chunkId);
+        auto it = m_chunks.find(chunk.m_original->m_id);
         if (it != m_chunks.end())
         {
-            chunks[chunk.m_chunkId] = it->second;
+            chunks[chunk.m_original->m_id] = it->second;
         }
         else
         {
-            chunks[chunk.m_chunkId] = m_deserializer->GetChunk(chunk.m_original->m_id);
-
-            if (m_verbosity >= Information)
-                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
-                        chunk.m_chunkId,
-                        chunk.m_original->m_id,
-                        ++numLoadedChunks);
+            needed[i] = true;
         }
     }
 
-    // Swapping current chunks in the m_chunks, by that removing all stale and remembering newly loaded.
+    // Swapping current chunks in the m_chunks, by that removing all stale.
     // TODO diagnostics for paged out chunks?
     m_chunks.swap(chunks);
+
+    // Adding new ones.
+    for (size_t i = 0; i < randomizedEnd; ++i)
+    {
+        if (needed[i])
+        {
+            auto const& chunk = window[i];
+            m_chunks[chunk.m_original->m_id] = m_deserializer->GetChunk(chunk.m_original->m_id);
+            if (m_verbosity >= Information)
+                fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
+                chunk.m_chunkId,
+                chunk.m_original->m_id,
+                ++numLoadedChunks);
+        }
+    }
 
     if (m_verbosity >= Notification)
         fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",

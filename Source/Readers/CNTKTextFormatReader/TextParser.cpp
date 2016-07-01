@@ -16,6 +16,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+inline bool IsDigit(char c)
+{
+    return '0' <= c && c <= '9';
+}
+
 enum State
 {
     Init = 0,
@@ -38,7 +43,7 @@ public:
     void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
 
     // A map from sequence ids to the sequence data.
-    std::map<size_t, SequenceBuffer> m_sequenceMap;
+    std::vector<SequenceBuffer> m_sequenceMap;
 
     // chunk id (copied from the descriptor)
     ChunkIdType m_id;
@@ -234,40 +239,11 @@ TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descri
 template <class ElemType>
 void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
-    auto it = m_sequenceMap.find(sequenceId);
-    assert(it != m_sequenceMap.end());
+    assert(sequenceId < m_sequenceMap.size());
     result.reserve(m_parser->m_streamInfos.size());
-    const auto& sequenceData = it->second;
-    for (size_t j = 0; j < m_parser->m_streamInfos.size(); ++j)
-    {
-        InputStreamBuffer* input = sequenceData[j].get();
-        const StreamInfo& stream = m_parser->m_streamInfos[j];
-        SequenceDataPtr data;
-        if (stream.m_type == StorageType::dense)
-        {
-            auto denseData = make_shared<DenseSequenceData>();
-            denseData->m_sampleLayout = m_parser->m_streams[j]->m_sampleLayout;
-            data = denseData;
-        }
-        else
-        {
-            auto sparseData = make_shared<SparseSequenceData>();
-            SparseInputStreamBuffer* sparseInput = static_cast<SparseInputStreamBuffer*>(input);
-            sparseData->m_indices = sparseInput->m_indices.data();
-            sparseData->m_nnzCounts.reserve(sparseInput->m_nnzCounts.size());
-            copy(sparseInput->m_nnzCounts.begin(), sparseInput->m_nnzCounts.end(),
-                back_inserter(sparseData->m_nnzCounts));
-            sparseData->m_totalNnzCount = sparseInput->m_totalNnzCount;
-            assert(input->m_numberOfSamples == sparseInput->m_nnzCounts.size());
-            data = sparseData;
-        }
 
-        data->m_data = input->m_buffer.data();
-        data->m_numberOfSamples = input->m_numberOfSamples;
-        data->m_chunk = shared_from_this();
-        data->m_id = sequenceId;
-        result.push_back(data);
-    }
+    const auto& sequenceData = m_sequenceMap[sequenceId];
+    result.insert(result.end(), sequenceData.begin(), sequenceData.end());
 }
 
 template <class ElemType>
@@ -292,11 +268,10 @@ ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 template <class ElemType>
 void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
 {
+    chunk->m_sequenceMap.resize(descriptor.m_sequences.size());
     for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        chunk->m_sequenceMap.insert(make_pair(
-            sequenceDescriptor.m_id,
-            LoadSequence(sequenceDescriptor)));
+        chunk->m_sequenceMap[sequenceDescriptor.m_id] = LoadSequence(sequenceDescriptor);
     }
 }
 
@@ -480,13 +455,39 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
+    FillSequenceMetadata(sequence, sequenceDsc.m_id);
     return sequence;
+}
+
+template<class ElemType>
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, size_t sequenceId)
+{
+    for (size_t j = 0; j < m_streamInfos.size(); ++j)
+    {
+        const StreamInfo& stream = m_streamInfos[j];
+        SequenceDataBase* data = sequenceData[j].get();
+        if (stream.m_type == StorageType::dense)
+        {
+            auto denseData = static_cast<DenseInputStreamBuffer*>(data);
+            denseData->m_sampleLayout = m_streams[j]->m_sampleLayout;
+            data->m_data = denseData->m_buffer.data();
+        }
+        else
+        {
+            auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
+            sparseData->m_indices = sparseData->m_indicesBuffer.data();
+            assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
+            data->m_data = sparseData->m_buffer.data();
+        }
+
+        data->m_id = sequenceId;
+    }
 }
 
 template <class ElemType>
 bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
-    while (bytesToRead && CanRead() && isdigit(*m_pos))
+    while (bytesToRead && CanRead() && IsDigit(*m_pos))
     {
         // skip sequence ids
         ++m_pos;
@@ -616,7 +617,7 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
     {
         SparseInputStreamBuffer* data = reinterpret_cast<SparseInputStreamBuffer*>(sequence[id].get());
         vector<ElemType>& values = data->m_buffer;
-        vector<IndexType>& indices = data->m_indices;
+        vector<IndexType>& indices = data->m_indicesBuffer;
         assert(values.size() == indices.size());
         size_t size = values.size();
         if (!TryReadSparseSample(values, indices, stream.m_sampleDimension, bytesToRead))
@@ -919,7 +920,7 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
     {
         char c = *m_pos;
 
-        if (!isdigit(c))
+        if (!IsDigit(c))
         {
             return found;
         }
@@ -977,7 +978,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
         {
         case State::Init:
             // the number must either start with a number or a sign
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1001,7 +1002,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case Sign:
             // the sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1019,7 +1020,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case IntegralPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 number = number * 10 + (c - '0');
             }
@@ -1040,7 +1041,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Period:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = FractionalPart;
                 coefficient = number;
@@ -1054,7 +1055,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case FractionalPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // TODO: ignore if number of precision digits > FLT_[MANT_]DIG/DBL_[MANT_]DIG
                 // no state change
@@ -1079,7 +1080,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case TheLetterE:
             // followed with optional minus or plus sign and nonempty sequence of decimal digits
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 negative = false;
@@ -1104,7 +1105,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case ExponentSign:
             // exponent sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 number = (c - '0');
@@ -1122,7 +1123,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Exponent:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // no state change
                 number = number * 10 + (c - '0');
