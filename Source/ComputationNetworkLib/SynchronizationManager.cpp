@@ -54,8 +54,7 @@ std::string SynchronizationManager::GetStepName(ComputationNodeBasePtr node)
     }
 
    name += std::to_string((long)node->ValuePtr().get()); 
-   //TODO: do I need this to make the hash unique?
-   //name += std::to_string((long)(&(node->Gradient()))); 
+   name += std::to_string((long)node->GradientPtr().get()); 
    
 
    return name;
@@ -64,6 +63,19 @@ std::string SynchronizationManager::GetStepName(ComputationNodeBasePtr node)
 
 void SynchronizationManager::RegisterBuffers(ComputationNodeBasePtr node)
 {
+    
+    int inputCount = node->GetNumInputs();
+    for(int i = 0; i < inputCount; i++)
+    {
+       m_stepNumber2Buffer[m_currentStepNumber].push_back(node->Input(i)->ValuePtr().get());
+       m_buffer2StepNumbers[node->Input(i)->ValuePtr().get()].push_back(m_currentStepNumber);
+    }
+
+    m_stepNumber2Buffer[m_currentStepNumber].push_back(node->ValuePtr().get());
+    m_stepNumber2Buffer[m_currentStepNumber].push_back(node->GradientPtr().get());
+
+    m_buffer2StepNumbers[node->ValuePtr().get()].push_back(m_currentStepNumber);
+    m_buffer2StepNumbers[node->GradientPtr().get()].push_back(m_currentStepNumber);
 }
 
 void SynchronizationManager::ExecuteActions(ComputationNodeBasePtr node)
