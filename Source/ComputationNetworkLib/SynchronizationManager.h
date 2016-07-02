@@ -25,7 +25,14 @@ private:
     std::unordered_map<ComputationNodeBasePtr, std::vector<SyncActionPtr> > m_actionTable;
     SynchronizationManager(){};
     static std::shared_ptr<SynchronizationManager> s_synchronizationManager;
-    std::unordered_map<std::string, int> m_stepName2StepNumber;
+
+    // needed to identify a step
+    std::unordered_map<std::string, int> m_stepName2StepNumber; 
+    // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
+    std::unordered_map<int, std::vector<MatrixBase*> > m_stepNumber2Buffer; 
+    // needed in order to determine dependencies
+    std::unordered_map<MatrixBase*, std::vector<int> > m_buffer2StepNumbers; 
+
 
     enum SynchronizationState
     {
@@ -44,6 +51,7 @@ private:
     void RegisterBuffers(ComputationNodeBasePtr node);
 
     std::string GetStepName(ComputationNodeBasePtr node);
+
 public:
     ~SynchronizationManager(){};
     static std::shared_ptr<SynchronizationManager> GetSynchronizationManager()

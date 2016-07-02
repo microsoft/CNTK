@@ -594,6 +594,7 @@ public:
     // helper to access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
     virtual MatrixBasePtr ValuePtr() const = 0; // for use in readers that pass the agnostic object around
+    virtual MatrixBasePtr GradientPtr() const = 0; // for use in readers that pass the agnostic object around
 
     // TODO: two sets of functions, choose one
     const std::wstring& NodeName() const { return m_nodeName; }
@@ -1160,7 +1161,7 @@ public:
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
-    MatrixBasePtr GradientPtr() const { return m_gradient; }
+    MatrixBasePtr GradientPtr() const override final { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
 private:
@@ -1848,6 +1849,7 @@ public:
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
     virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
+    virtual MatrixBasePtr GradientPtr() const override { NOT_IMPLEMENTED; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
