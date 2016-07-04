@@ -36,9 +36,7 @@ def create_ValuePtr_with_value(shape, data_type, value, dev):
     return swig_cntk.ValuePtr(value)
 
 def create_ValuePtr_from_NumPy(nd, dev):
-    # storing the shape, since we can pass only flattened arrays
-    shape = nd.shape
-    ndav = swig_cntk.NDArrayView(shape, nd.ravel(), dev, False)
+    ndav = swig_cntk.NDArrayView(nd, dev, False)
     view_ptr = swig_cntk.NDArrayViewPtr(ndav)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
