@@ -85,11 +85,18 @@ namespace CNTK {
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
+        if (PyArray_NDIM(array) != 1)
+        {
+            // Note that in contrast to numpy.i's implementation we demand NumPy arrays 
+            // and do not accept arbitrary sequences, which would needed to be copied around.
+            throw std::logic_error("flat array expected");
+        }
+
         int len = (int) PyArray_DIM(array, 0);
 
         int typecode = PyArray_TYPE(array);
 
-        void* buf = PyArray_DATA((PyArrayObject*)array);
+        void* buf = PyArray_DATA(array);
 
         if (typecode == NPY_FLOAT)
         {
