@@ -329,14 +329,12 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
-
+    
 ########################################
-# CNTKLibrary
+# CNTK Common
 ########################################
 
-CNTK_COMMON_SRC =\
-	$(SOURCEDIR)/Common/BestGpu.cpp \
-	$(SOURCEDIR)/Common/MPIWrapper.cpp \
+CNTK_COMMON:=cntkcommon
 
 COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
@@ -367,6 +365,29 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 
 endif
 
+CNTK_COMMON_SRC =\
+	$(SOURCEDIR)/Common/BestGpu.cpp \
+	$(SOURCEDIR)/Common/MPIWrapper.cpp \
+
+CNTK_COMMON_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+CNTK_COMMON_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
+
+CNTK_COMMON_OBJ:=$(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_COMMON_SRC)))
+
+CNTK_COMMON_LIB:=$(LIBDIR)/lib$(CNTK_COMMON).so
+ALL+=$(CNTK_COMMON_LIB)
+SRC+=$(CNTK_COMMON_SRC)
+
+$(CNTK_COMMON_LIB): $(CNTK_COMMON_OBJ)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo Building $(CNTK_COMMON_LIB) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
+
+########################################
+# CNTKLibrary
+########################################
+
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
@@ -377,10 +398,6 @@ CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
     $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
 
-CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
-CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
-CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
-
 CNTKLIBRARY_VERSION=2.0
 CNTKLIBRARY:=cntklibrary-$(CNTKLIBRARY_VERSION)
 
@@ -390,11 +407,11 @@ CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-$(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
+$(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB) $(CNTK_COMMON_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(CNTK_COMMON)
 
 ########################################
 # CNTKLibrary tests
@@ -417,7 +434,7 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH) -l$(CNTK_COMMON)
 
 ########################################
 # LibEval
@@ -441,9 +458,6 @@ EVAL_SRC=\
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp 
 
 EVAL_SRC+=$(SGDLIB_SRC)
-EVAL_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
-EVAL_SRC+=$(CNTK_COMMON_SRC)
-EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
 EVAL_OBJ:=$(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SRC)))
 
@@ -455,7 +469,7 @@ $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTK_COMMON)
 
 ########################################
 # Eval Sample client
@@ -474,7 +488,7 @@ $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ -l$(EVAL) -l$(CNTKMATH) -l$(CNTKLIBRARY)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ -l$(EVAL) -l$(CNTKMATH) -l$(CNTKLIBRARY) -l$(CNTK_COMMON)
 
 ########################################
 # BinaryReader plugin
@@ -774,9 +788,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
 
 CNTK_SRC+=$(SGDLIB_SRC)
-CNTK_SRC+=$(CNTK_COMMON_SRC)
-CNTK_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
-CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
 CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC)))
 
@@ -788,7 +799,7 @@ $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(CNTKLIBRARY) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(CNTKLIBRARY) -l$(CNTK_COMMON) -fopenmp
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
