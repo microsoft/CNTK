@@ -63,7 +63,7 @@ namespace CNTK {
 
 %extend CNTK::NDArrayView {
 
-    NDArrayView(std::vector<size_t> shape, PyObject* pyobj, const CNTK::DeviceDescriptor& device, bool readOnly) 
+    NDArrayView(PyObject* pyobj, const CNTK::DeviceDescriptor& device, bool readOnly) 
     {
         if (!PyArray_Check((PyArrayObject*)pyobj))
         {
@@ -74,12 +74,17 @@ namespace CNTK {
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
-        if (PyArray_NDIM(array) != 1)
-        {
-            throw std::logic_error("flat array expected");
-        }
+        int num_axes = PyArray_NDIM(array); 
+        
+        npy_intp* np_shape = PyArray_SHAPE(array); 
+        std::vector<size_t> shape;
 
-        int len = (int) PyArray_DIM(array, 0);
+        npy_intp num_elements = 1;
+        for (int i=0; i<num_axes; i++)
+        {
+            shape.push_back(np_shape[i]);
+            num_elements *= np_shape[i];
+        }
 
         int typecode = PyArray_TYPE(array);
 
@@ -87,11 +92,11 @@ namespace CNTK {
 
         if (typecode == NPY_FLOAT)
         {
-            return new NDArrayView(NDShape(shape), (float*)buf, len, device, readOnly);
+            return new NDArrayView(NDShape(shape), (float*)buf, num_elements, device, readOnly);
         }
         else if (typecode == NPY_DOUBLE)
         {
-            return new NDArrayView(NDShape(shape), (double*)buf, len, device, readOnly);
+            return new NDArrayView(NDShape(shape), (double*)buf, num_elements, device, readOnly);
         }
         else
         {
@@ -102,9 +107,9 @@ namespace CNTK {
     PyObject* ToNumPy() {
         // FIXME use not yet existing NDShape function that returns the dimensions at once
         int num_axes = (int)(*self).Shape().NumAxes();
-        npy_intp* dims = new npy_intp[num_axes];
+        npy_intp* shape = new npy_intp[num_axes];
         for (int i=0; i<num_axes; i++)
-            dims[i] = (*self).Shape()[i];
+            shape[i] = (*self).Shape()[i];
 
         NPY_TYPES numpy_type;
         void* buffer;
@@ -125,9 +130,9 @@ namespace CNTK {
             throw std::invalid_argument("unknown CNTK data type");
         }
         
-        PyObject* ndarray = PyArray_SimpleNewFromData(num_axes, dims, numpy_type, buffer);
+        PyObject* ndarray = PyArray_SimpleNewFromData(num_axes, shape, numpy_type, buffer);
 
-        delete[] dims;
+        delete[] shape;
 
         return ndarray;
     }
