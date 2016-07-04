@@ -24,18 +24,21 @@
 
 
 %apply (float* ARGOUT_ARRAY1, int DIM1) {(float* data, int len)}
-%apply (float* IN_ARRAY1, int DIM1) {(float* py_data, int len)}
+
+//%apply (double* IN_ARRAY1, int DIM1) {(double* py_double_buf, int len)}
+//%apply (float* IN_ARRAY1, int DIM1) {(float* py_float_buf, int len)}
+
 %apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
-/*%typemap(in) PyArrayObject* ndobj {*/
-    /*$1 = obj_to_array_no_conversion($input, NPY_FLOAT);*/
-/*}*/
+
 
 %{
     #include "CNTKLibrary.h"
     using namespace CNTK;
 %}
 
+// Callback support
 %feature("director") Callback;
+
 %exception {
     try { $action }
     catch (Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
@@ -45,6 +48,7 @@
     catch (...) { SWIG_exception(SWIG_RuntimeError,"Runtime exception"); }
 }
 
+// Reference counting
 %feature("ref")   CNTK::_Internal::_ReferenceCounter "$this->AddReference();"
 %feature("unref") CNTK::_Internal::_ReferenceCounter "$this->RemoveReference();"
 
@@ -69,42 +73,65 @@ namespace CNTK {
 %}
 
 %extend CNTK::NDArrayView {
-    %template(DataBufferFloat) DataBuffer<float>;
 
-    NDArrayView(float* py_data, int len, std::vector<size_t> shape, const CNTK::DeviceDescriptor& device, bool readOnly) 
+    NDArrayView(std::vector<size_t> shape, PyObject* pyobj, const CNTK::DeviceDescriptor& device, bool readOnly) 
     {
-        //
-        // So far we only support float here. Double is left as an exercise to
-        // the code reader :-). Will come on Monday otherwise.
-        //
-        NDShape ndshape(shape);
-        return new NDArrayView(ndshape, py_data, len, device, readOnly);
+        if (!PyArray_Check((PyArrayObject*)pyobj))
+        {
+            // Note that in contrast to numpy.i's implementation we demand NumPy arrays 
+            // and do not accept arbitrary sequences, which would needed to be copied around.
+            throw std::logic_error("NumPy array expected");
+        }
+
+        PyArrayObject* array = (PyArrayObject*)pyobj;
+
+        int len = (int) PyArray_DIM(array, 0);
+
+        int typecode = PyArray_TYPE(array);
+
+        void* buf = PyArray_DATA((PyArrayObject*)array);
+
+        if (typecode == NPY_FLOAT)
+        {
+            return new NDArrayView(NDShape(shape), (float*)buf, len, device, readOnly);
+        }
+        else if (typecode == NPY_DOUBLE)
+        {
+            return new NDArrayView(NDShape(shape), (double*)buf, len, device, readOnly);
+        }
+        else
+        {
+            throw std::logic_error("NumPy array of type float32 or float64 expected");
+        }
     }
 
     PyObject* ToNumPy() {
         // FIXME use not yet existing NDShape function that returns the dimensions at once
-        size_t nd = (*self).Shape().NumAxes();
-        npy_intp* dims = new npy_intp[nd];
-        for (int i=0; i<nd; i++)
+        int num_axes = (int)(*self).Shape().NumAxes();
+        npy_intp* dims = new npy_intp[num_axes];
+        for (int i=0; i<num_axes; i++)
             dims[i] = (*self).Shape()[i];
 
-        CNTK::DataType cntk_type = (*self).GetDataType();
         NPY_TYPES numpy_type;
+        void* buffer;
+
+        CNTK::DataType cntk_type = (*self).GetDataType();
         if (cntk_type == CNTK::DataType::Float)
         {
             numpy_type = NPY_FLOAT;
+            buffer = (void*)(*self).DataBuffer<float>();
         }
         else if (cntk_type == CNTK::DataType::Double)
         {
             numpy_type = NPY_DOUBLE;
+            buffer = (void*)(*self).DataBuffer<double>();
         }
         else
         {
             throw std::invalid_argument("unknown CNTK data type");
         }
         
-        PyObject* ndarray = PyArray_SimpleNewFromData((int)nd, dims, numpy_type,
-            (void*)(*self).DataBuffer<float>());
+        PyObject* ndarray = PyArray_SimpleNewFromData(num_axes, dims, numpy_type, buffer);
 
         delete[] dims;
 
@@ -127,14 +154,9 @@ namespace CNTK {
 %template(BackPropStatePtr) CNTK::_Internal::_ReferenceCounterSharedPtr<BackPropState>;
 
 %template(NDArrayViewFloat) CNTK::NDArrayView::NDArrayView<float>;
+%template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
 
 %inline %{
-
-    void data_from_value(float* cntk_data, float* data, int len) {
-        for (int i=0; i<len; i++)
-            data[i] = cntk_data[i];
-    }
-
 
 //
 // The following callback code is only for testing. Will have to be merged with
