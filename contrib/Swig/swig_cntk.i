@@ -18,18 +18,7 @@
     import_array();
 %}
 
-// TODO [wilrich] Add support for unordered containers
-/*%include "std_unordered_map_vc2013.i"*/
-/*%include "std_unordered_set_vc2013.i"*/
-
-
-%apply (float* ARGOUT_ARRAY1, int DIM1) {(float* data, int len)}
-
-//%apply (double* IN_ARRAY1, int DIM1) {(double* py_double_buf, int len)}
-//%apply (float* IN_ARRAY1, int DIM1) {(float* py_float_buf, int len)}
-
 %apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
-
 
 %{
     #include "CNTKLibrary.h"
@@ -87,8 +76,6 @@ namespace CNTK {
 
         if (PyArray_NDIM(array) != 1)
         {
-            // Note that in contrast to numpy.i's implementation we demand NumPy arrays 
-            // and do not accept arbitrary sequences, which would needed to be copied around.
             throw std::logic_error("flat array expected");
         }
 
