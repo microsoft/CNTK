@@ -8,10 +8,10 @@ def shape_from_NDShape(swig_obj):
 
     return tuple(shape)
 
-def create_variable(shape, data_type=float, is_sparse=False, needs_gradient=True, name=""):
-    if data_type == float:
+def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
+    if data_type == 'float':
         cntk_type = swig_cntk.DataType_Float
-    elif data_type == double:
+    elif data_type == 'double':
         cntk_type = swig_cntk.DataType_Double
     else:
         raise ValueError('Type %s is not supported'%data_type)
@@ -20,21 +20,17 @@ def create_variable(shape, data_type=float, is_sparse=False, needs_gradient=True
 
 def create_ValuePtr(shape, data_type, dev):
     ndshape = swig_cntk.NDShape(shape)
-    view = swig_cntk.NDArrayViewFloat(data_type, ndshape, dev)
+    view = swig_cntk.NDArrayView(data_type, swig_cntk.StorageFormat_Dense, ndshape, dev)
     view_ptr = swig_cntk.NDArrayViewPtr(view)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
 
-def create_ValuePtr_with_value(shape, value, dev):
+def create_ValuePtr_with_value(shape, data_type, value, dev):
     ndshape = swig_cntk.NDShape(shape)
-    view = swig_cntk.NDArrayViewFloat(value, ndshape, dev)
-    view_ptr = swig_cntk.NDArrayViewPtr(view)
-    value = swig_cntk.Value(view_ptr)
-    return swig_cntk.ValuePtr(value)
-
-def create_ValuePtr_with_Buffer(shape, data_type, dev):
-    ndshape = swig_cntk.NDShape(shape)
-    view = swig_cntk.NDArrayViewFloat(value, ndshape, dev)
+    if data_type == swig_cntk.DataType_Float:
+        view = swig_cntk.NDArrayViewFloat(value, ndshape, dev)
+    elif data_type == swig_cntk.DataType_Double:
+        view = swig_cntk.NDArrayViewDouble(value, ndshape, dev)
     view_ptr = swig_cntk.NDArrayViewPtr(view)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
@@ -42,8 +38,7 @@ def create_ValuePtr_with_Buffer(shape, data_type, dev):
 def create_ValuePtr_from_NumPy(nd, dev):
     # storing the shape, since we can pass only flattened arrays
     shape = nd.shape
-    nd = np.asarray(nd, dtype=np.float32).ravel()
-    ndav = swig_cntk.NDArrayView(nd, shape, dev, False)
+    ndav = swig_cntk.NDArrayView(shape, nd.ravel(), dev, False)
     view_ptr = swig_cntk.NDArrayViewPtr(ndav)
     value = swig_cntk.Value(view_ptr)
     return swig_cntk.ValuePtr(value)
@@ -57,12 +52,13 @@ def forward_backward():
     output_shape = (2,3)
 
     # import time;time.sleep(20)
-    left_var = create_variable(left_shape, needs_gradient=True, name="left_node")
-    right_var = create_variable(right_shape, needs_gradient=True, name="right_node")
+    left_var = create_variable(left_shape, data_type='float', needs_gradient=True, name="left_node")
+    right_var = create_variable(right_shape, data_type='float', needs_gradient=True, name="right_node")
 
-    nd = np.arange(6).reshape(left_shape+(1,1))
+    nd = np.arange(6).reshape(left_shape+(1,1)).astype(np.float32)
     left_value_ptr = create_ValuePtr_from_NumPy(nd, dev)
-    right_value_ptr = create_ValuePtr_with_value(right_shape+(1,1), 5, dev)
+    right_value_ptr = create_ValuePtr_with_value(right_shape+(1,1),
+            swig_cntk.DataType_Float, 5, dev)
 
     op = swig_cntk.Plus(left_var, right_var)
 
@@ -82,25 +78,25 @@ def forward_backward():
     # Forward
     #
     backpropstate = op.ForwardMap(arguments, outputs, dev, outputs_retain)
-    forward_data = swig_cntk.data_from_value(
-            output_value_ptr.Data().GetPtr().DataBufferFloat(), 
-            output_value_ptr.Data().Shape().TotalSize()).reshape(output_shape)
+    forward_data = output_value_ptr.Data().ToNumPy().reshape(output_shape)
     print("Result forward:")
     print(forward_data)
 
     #
     # Backward
     #
-    grad_left_value_ptr = create_ValuePtr(left_shape+(1,1), swig_cntk.DataType_Float, dev)
-    grad_right_value_ptr = create_ValuePtr(right_shape+(1,1), swig_cntk.DataType_Float, dev)
-
+    grad_left_value_ptr = create_ValuePtr(left_shape+(1,1),
+            swig_cntk.DataType_Float, dev)
+    grad_right_value_ptr = create_ValuePtr(right_shape+(1,1),
+            swig_cntk.DataType_Float, dev) 
     gradients = swig_cntk.MapVarValuePtr()
     gradients[left_var] = grad_left_value_ptr
     gradients[right_var] = grad_right_value_ptr
 
     rootGradients = swig_cntk.MapVarValuePtr()
     rootGradientValuePtr = create_ValuePtr_with_value(
-            shape_from_NDShape(outputVariable.Shape())+(1,1), 1, dev) 
+            shape_from_NDShape(outputVariable.Shape())+(1,1),
+            swig_cntk.DataType_Float, 1, dev) 
     rootGradients[outputVariable] = rootGradientValuePtr
  
     op.BackwardMap(backpropstate, rootGradients, gradients)
@@ -115,5 +111,3 @@ def forward_backward():
 if __name__=='__main__':
     forward_backward()
 
-    print("Initializing from NumPy:")
-    dev = swig_cntk.DeviceDescriptor.CPUDevice()
