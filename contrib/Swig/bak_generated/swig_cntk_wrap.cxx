@@ -13,6 +13,7 @@
 #define SWIGPYTHON
 #endif
 
+#define SWIG_DIRECTORS
 #define SWIG_PYTHON_DIRECTOR_NO_VTABLE
 
 
@@ -3004,6 +3005,450 @@ SWIG_Python_NonDynamicSetAttr(PyObject *obj, PyObject *name, PyObject *value) {
 
   #define SWIG_exception(code, msg) do { SWIG_Error(code, msg); SWIG_fail;; } while(0) 
 
+/* -----------------------------------------------------------------------------
+ * director_common.swg
+ *
+ * This file contains support for director classes which is common between
+ * languages.
+ * ----------------------------------------------------------------------------- */
+
+/*
+  Use -DSWIG_DIRECTOR_STATIC if you prefer to avoid the use of the
+  'Swig' namespace. This could be useful for multi-modules projects.
+*/
+#ifdef SWIG_DIRECTOR_STATIC
+/* Force anonymous (static) namespace */
+#define Swig
+#endif
+/* -----------------------------------------------------------------------------
+ * director.swg
+ *
+ * This file contains support for director classes so that Python proxy
+ * methods can be called from C++.
+ * ----------------------------------------------------------------------------- */
+
+#ifndef SWIG_DIRECTOR_PYTHON_HEADER_
+#define SWIG_DIRECTOR_PYTHON_HEADER_
+
+#include <string>
+#include <iostream>
+#include <exception>
+#include <vector>
+#include <map>
+
+
+/*
+  Use -DSWIG_PYTHON_DIRECTOR_NO_VTABLE if you don't want to generate a 'virtual
+  table', and avoid multiple GetAttr calls to retrieve the python
+  methods.
+*/
+
+#ifndef SWIG_PYTHON_DIRECTOR_NO_VTABLE
+#ifndef SWIG_PYTHON_DIRECTOR_VTABLE
+#define SWIG_PYTHON_DIRECTOR_VTABLE
+#endif
+#endif
+
+
+
+/*
+  Use -DSWIG_DIRECTOR_NO_UEH if you prefer to avoid the use of the
+  Undefined Exception Handler provided by swig.
+*/
+#ifndef SWIG_DIRECTOR_NO_UEH
+#ifndef SWIG_DIRECTOR_UEH
+#define SWIG_DIRECTOR_UEH
+#endif
+#endif
+
+
+/*
+  Use -DSWIG_DIRECTOR_NORTTI if you prefer to avoid the use of the
+  native C++ RTTI and dynamic_cast<>. But be aware that directors
+  could stop working when using this option.
+*/
+#ifdef SWIG_DIRECTOR_NORTTI
+/*
+   When we don't use the native C++ RTTI, we implement a minimal one
+   only for Directors.
+*/
+# ifndef SWIG_DIRECTOR_RTDIR
+# define SWIG_DIRECTOR_RTDIR
+
+namespace Swig {
+  class Director;
+  SWIGINTERN std::map<void *, Director *>& get_rtdir_map() {
+    static std::map<void *, Director *> rtdir_map;
+    return rtdir_map;
+  }
+
+  SWIGINTERNINLINE void set_rtdir(void *vptr, Director *rtdir) {
+    get_rtdir_map()[vptr] = rtdir;
+  }
+
+  SWIGINTERNINLINE Director *get_rtdir(void *vptr) {
+    std::map<void *, Director *>::const_iterator pos = get_rtdir_map().find(vptr);
+    Director *rtdir = (pos != get_rtdir_map().end()) ? pos->second : 0;
+    return rtdir;
+  }
+}
+# endif /* SWIG_DIRECTOR_RTDIR */
+
+# define SWIG_DIRECTOR_CAST(ARG) Swig::get_rtdir(static_cast<void *>(ARG))
+# define SWIG_DIRECTOR_RGTR(ARG1, ARG2) Swig::set_rtdir(static_cast<void *>(ARG1), ARG2)
+
+#else
+
+# define SWIG_DIRECTOR_CAST(ARG) dynamic_cast<Swig::Director *>(ARG)
+# define SWIG_DIRECTOR_RGTR(ARG1, ARG2)
+
+#endif /* SWIG_DIRECTOR_NORTTI */
+
+extern "C" {
+  struct swig_type_info;
+}
+
+namespace Swig {
+
+  /* memory handler */
+  struct GCItem {
+    virtual ~GCItem() {}
+
+    virtual int get_own() const {
+      return 0;
+    }
+  };
+
+  struct GCItem_var {
+    GCItem_var(GCItem *item = 0) : _item(item) {
+    }
+
+    GCItem_var& operator=(GCItem *item) {
+      GCItem *tmp = _item;
+      _item = item;
+      delete tmp;
+      return *this;
+    }
+
+    ~GCItem_var() {
+      delete _item;
+    }
+
+    GCItem * operator->() const {
+      return _item;
+    }
+
+  private:
+    GCItem *_item;
+  };
+
+  struct GCItem_Object : GCItem {
+    GCItem_Object(int own) : _own(own) {
+    }
+
+    virtual ~GCItem_Object() {
+    }
+
+    int get_own() const {
+      return _own;
+    }
+
+  private:
+    int _own;
+  };
+
+  template <typename Type>
+  struct GCItem_T : GCItem {
+    GCItem_T(Type *ptr) : _ptr(ptr) {
+    }
+
+    virtual ~GCItem_T() {
+      delete _ptr;
+    }
+
+  private:
+    Type *_ptr;
+  };
+
+  template <typename Type>
+  struct GCArray_T : GCItem {
+    GCArray_T(Type *ptr) : _ptr(ptr) {
+    }
+
+    virtual ~GCArray_T() {
+      delete[] _ptr;
+    }
+
+  private:
+    Type *_ptr;
+  };
+
+  /* base class for director exceptions */
+  class DirectorException : public std::exception {
+  protected:
+    std::string swig_msg;
+  public:
+    DirectorException(PyObject *error, const char *hdr ="", const char *msg ="") : swig_msg(hdr) {
+      SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+      if (msg[0]) {
+        swig_msg += " ";
+        swig_msg += msg;
+      }
+      if (!PyErr_Occurred()) {
+        PyErr_SetString(error, what());
+      }
+      SWIG_PYTHON_THREAD_END_BLOCK;
+    }
+
+    virtual ~DirectorException() throw() {
+    }
+
+    /* Deprecated, use what() instead */
+    const char *getMessage() const {
+      return what();
+    }
+
+    const char *what() const throw() {
+      return swig_msg.c_str();
+    }
+
+    static void raise(PyObject *error, const char *msg) {
+      throw DirectorException(error, msg);
+    }
+
+    static void raise(const char *msg) {
+      raise(PyExc_RuntimeError, msg);
+    }
+  };
+
+  /* unknown exception handler  */
+  class UnknownExceptionHandler {
+#ifdef SWIG_DIRECTOR_UEH
+    static void handler() {
+      try {
+        throw;
+      } catch (DirectorException& e) {
+        std::cerr << "SWIG Director exception caught:" << std::endl
+                  << e.what() << std::endl;
+      } catch (std::exception& e) {
+        std::cerr << "std::exception caught: "<< e.what() << std::endl;
+      } catch (...) {
+        std::cerr << "Unknown exception caught." << std::endl;
+      }
+
+      std::cerr << std::endl
+                << "Python interpreter traceback:" << std::endl;
+      PyErr_Print();
+      std::cerr << std::endl;
+
+      std::cerr << "This exception was caught by the SWIG unexpected exception handler." << std::endl
+                << "Try using %feature(\"director:except\") to avoid reaching this point." << std::endl
+                << std::endl
+                << "Exception is being re-thrown, program will likely abort/terminate." << std::endl;
+      throw;
+    }
+
+  public:
+
+    std::unexpected_handler old;
+    UnknownExceptionHandler(std::unexpected_handler nh = handler) {
+      old = std::set_unexpected(nh);
+    }
+
+    ~UnknownExceptionHandler() {
+      std::set_unexpected(old);
+    }
+#endif
+  };
+
+  /* type mismatch in the return value from a python method call */
+  class DirectorTypeMismatchException : public DirectorException {
+  public:
+    DirectorTypeMismatchException(PyObject *error, const char *msg="")
+      : DirectorException(error, "SWIG director type mismatch", msg) {
+    }
+
+    DirectorTypeMismatchException(const char *msg="")
+      : DirectorException(PyExc_TypeError, "SWIG director type mismatch", msg) {
+    }
+
+    static void raise(PyObject *error, const char *msg) {
+      throw DirectorTypeMismatchException(error, msg);
+    }
+
+    static void raise(const char *msg) {
+      throw DirectorTypeMismatchException(msg);
+    }
+  };
+
+  /* any python exception that occurs during a director method call */
+  class DirectorMethodException : public DirectorException {
+  public:
+    DirectorMethodException(const char *msg = "")
+      : DirectorException(PyExc_RuntimeError, "SWIG director method error.", msg) {
+    }
+
+    static void raise(const char *msg) {
+      throw DirectorMethodException(msg);
+    }
+  };
+
+  /* attempt to call a pure virtual method via a director method */
+  class DirectorPureVirtualException : public DirectorException {
+  public:
+    DirectorPureVirtualException(const char *msg = "")
+      : DirectorException(PyExc_RuntimeError, "SWIG director pure virtual method called", msg) {
+    }
+
+    static void raise(const char *msg) {
+      throw DirectorPureVirtualException(msg);
+    }
+  };
+
+
+#if defined(SWIG_PYTHON_THREADS)
+/*  __THREAD__ is the old macro to activate some thread support */
+# if !defined(__THREAD__)
+#   define __THREAD__ 1
+# endif
+#endif
+
+#ifdef __THREAD__
+# include "pythread.h"
+  class Guard {
+    PyThread_type_lock &mutex_;
+
+  public:
+    Guard(PyThread_type_lock & mutex) : mutex_(mutex) {
+      PyThread_acquire_lock(mutex_, WAIT_LOCK);
+    }
+
+    ~Guard() {
+      PyThread_release_lock(mutex_);
+    }
+  };
+# define SWIG_GUARD(mutex) Guard _guard(mutex)
+#else
+# define SWIG_GUARD(mutex)
+#endif
+
+  /* director base class */
+  class Director {
+  private:
+    /* pointer to the wrapped python object */
+    PyObject *swig_self;
+    /* flag indicating whether the object is owned by python or c++ */
+    mutable bool swig_disown_flag;
+
+    /* decrement the reference count of the wrapped python object */
+    void swig_decref() const {
+      if (swig_disown_flag) {
+        SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+        Py_DECREF(swig_self);
+        SWIG_PYTHON_THREAD_END_BLOCK;
+      }
+    }
+
+  public:
+    /* wrap a python object. */
+    Director(PyObject *self) : swig_self(self), swig_disown_flag(false) {
+    }
+
+    /* discard our reference at destruction */
+    virtual ~Director() {
+      swig_decref();
+    }
+
+    /* return a pointer to the wrapped python object */
+    PyObject *swig_get_self() const {
+      return swig_self;
+    }
+
+    /* acquire ownership of the wrapped python object (the sense of "disown" is from python) */
+    void swig_disown() const {
+      if (!swig_disown_flag) {
+        swig_disown_flag=true;
+        swig_incref();
+      }
+    }
+
+    /* increase the reference count of the wrapped python object */
+    void swig_incref() const {
+      if (swig_disown_flag) {
+        Py_INCREF(swig_self);
+      }
+    }
+
+    /* methods to implement pseudo protected director members */
+    virtual bool swig_get_inner(const char * /* swig_protected_method_name */) const {
+      return true;
+    }
+
+    virtual void swig_set_inner(const char * /* swig_protected_method_name */, bool /* swig_val */) const {
+    }
+
+  /* ownership management */
+  private:
+    typedef std::map<void *, GCItem_var> swig_ownership_map;
+    mutable swig_ownership_map swig_owner;
+#ifdef __THREAD__
+    static PyThread_type_lock swig_mutex_own;
+#endif
+
+  public:
+    template <typename Type>
+    void swig_acquire_ownership_array(Type *vptr) const {
+      if (vptr) {
+        SWIG_GUARD(swig_mutex_own);
+        swig_owner[vptr] = new GCArray_T<Type>(vptr);
+      }
+    }
+
+    template <typename Type>
+    void swig_acquire_ownership(Type *vptr) const {
+      if (vptr) {
+        SWIG_GUARD(swig_mutex_own);
+        swig_owner[vptr] = new GCItem_T<Type>(vptr);
+      }
+    }
+
+    void swig_acquire_ownership_obj(void *vptr, int own) const {
+      if (vptr && own) {
+        SWIG_GUARD(swig_mutex_own);
+        swig_owner[vptr] = new GCItem_Object(own);
+      }
+    }
+
+    int swig_release_ownership(void *vptr) const {
+      int own = 0;
+      if (vptr) {
+        SWIG_GUARD(swig_mutex_own);
+        swig_ownership_map::iterator iter = swig_owner.find(vptr);
+        if (iter != swig_owner.end()) {
+          own = iter->second->get_own();
+          swig_owner.erase(iter);
+        }
+      }
+      return own;
+    }
+
+    template <typename Type>
+    static PyObject *swig_pyobj_disown(PyObject *pyobj, PyObject *SWIGUNUSEDPARM(args)) {
+      SwigPyObject *sobj = (SwigPyObject *)pyobj;
+      sobj->own = 0;
+      Director *d = SWIG_DIRECTOR_CAST(reinterpret_cast<Type *>(sobj->ptr));
+      if (d)
+        d->swig_disown();
+      return PyWeakref_NewProxy(pyobj, NULL);
+    }
+  };
+
+#ifdef __THREAD__
+  PyThread_type_lock Director::swig_mutex_own = PyThread_allocate_lock();
+#endif
+}
+
+#endif
 
 /* -------- TYPES TABLE (BEGIN) -------- */
 
@@ -3026,34 +3471,34 @@ SWIG_Python_NonDynamicSetAttr(PyObject *obj, PyObject *name, PyObject *value) {
 #define SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t swig_types[16]
 #define SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t swig_types[17]
 #define SWIGTYPE_p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t swig_types[18]
-#define SWIGTYPE_p___int64 swig_types[19]
-#define SWIGTYPE_p_allocator_type swig_types[20]
-#define SWIGTYPE_p_char swig_types[21]
-#define SWIGTYPE_p_difference_type swig_types[22]
-#define SWIGTYPE_p_f_p_CNTK___Internal___ReferenceCounter__void swig_types[23]
-#define SWIGTYPE_p_float swig_types[24]
-#define SWIGTYPE_p_int swig_types[25]
-#define SWIGTYPE_p_key_type swig_types[26]
-#define SWIGTYPE_p_long swig_types[27]
-#define SWIGTYPE_p_mapped_type swig_types[28]
-#define SWIGTYPE_p_p_PyObject swig_types[29]
-#define SWIGTYPE_p_p_char swig_types[30]
-#define SWIGTYPE_p_p_unsigned_long swig_types[31]
-#define SWIGTYPE_p_short swig_types[32]
-#define SWIGTYPE_p_signed___int64 swig_types[33]
-#define SWIGTYPE_p_signed_char swig_types[34]
-#define SWIGTYPE_p_size_type swig_types[35]
-#define SWIGTYPE_p_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t swig_types[36]
-#define SWIGTYPE_p_std__initializer_listT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t swig_types[37]
-#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[38]
-#define SWIGTYPE_p_std__invalid_argument swig_types[39]
-#define SWIGTYPE_p_std__lessT_CNTK__Variable_t swig_types[40]
-#define SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t swig_types[41]
-#define SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t swig_types[42]
-#define SWIGTYPE_p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t swig_types[43]
-#define SWIGTYPE_p_std__setT_CNTK__Variable_t swig_types[44]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[45]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t swig_types[46]
+#define SWIGTYPE_p_Callback swig_types[19]
+#define SWIGTYPE_p_FunctionInCNTK swig_types[20]
+#define SWIGTYPE_p___int64 swig_types[21]
+#define SWIGTYPE_p_allocator_type swig_types[22]
+#define SWIGTYPE_p_char swig_types[23]
+#define SWIGTYPE_p_difference_type swig_types[24]
+#define SWIGTYPE_p_double swig_types[25]
+#define SWIGTYPE_p_f_p_CNTK___Internal___ReferenceCounter__void swig_types[26]
+#define SWIGTYPE_p_float swig_types[27]
+#define SWIGTYPE_p_int swig_types[28]
+#define SWIGTYPE_p_key_type swig_types[29]
+#define SWIGTYPE_p_long swig_types[30]
+#define SWIGTYPE_p_mapped_type swig_types[31]
+#define SWIGTYPE_p_p_PyObject swig_types[32]
+#define SWIGTYPE_p_p_char swig_types[33]
+#define SWIGTYPE_p_p_unsigned_long swig_types[34]
+#define SWIGTYPE_p_short swig_types[35]
+#define SWIGTYPE_p_signed___int64 swig_types[36]
+#define SWIGTYPE_p_signed_char swig_types[37]
+#define SWIGTYPE_p_size_type swig_types[38]
+#define SWIGTYPE_p_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t swig_types[39]
+#define SWIGTYPE_p_std__initializer_listT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t swig_types[40]
+#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[41]
+#define SWIGTYPE_p_std__invalid_argument swig_types[42]
+#define SWIGTYPE_p_std__lessT_CNTK__Variable_t swig_types[43]
+#define SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t swig_types[44]
+#define SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t swig_types[45]
+#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[46]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t swig_types[47]
 #define SWIGTYPE_p_std__unordered_setT_CNTK__Constant_t swig_types[48]
 #define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[49]
@@ -3695,6 +4140,9 @@ SWIG_AsVal_ptrdiff_t (PyObject * obj, ptrdiff_t *val)
 
 
 #include <cwchar>
+
+
+#include <set>
 
 
 namespace swig {
@@ -5034,8 +5482,76 @@ SWIG_AsVal_bool (PyObject *obj, bool *val)
   return SWIG_OK;
 }
 
-SWIGINTERN float const *CNTK_NDArrayView_DataBufferFloat(CNTK::NDArrayView const *self){
-        return (*self).DataBuffer<float>();
+SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_14(PyObject *pyobj,CNTK::DeviceDescriptor const &device,bool readOnly){
+        if (!PyArray_Check((PyArrayObject*)pyobj))
+        {
+            // Note that in contrast to numpy.i's implementation we demand NumPy arrays 
+            // and do not accept arbitrary sequences, which would needed to be copied around.
+            throw std::logic_error("NumPy array expected");
+        }
+
+        PyArrayObject* array = (PyArrayObject*)pyobj;
+
+        int num_axes = PyArray_NDIM(array); 
+        
+        npy_intp* np_shape = PyArray_SHAPE(array); 
+        std::vector<size_t> shape;
+
+        npy_intp num_elements = 1;
+        for (int i=0; i<num_axes; i++)
+        {
+            shape.push_back(np_shape[i]);
+            num_elements *= np_shape[i];
+        }
+
+        int typecode = PyArray_TYPE(array);
+
+        void* buf = PyArray_DATA(array);
+
+        if (typecode == NPY_FLOAT)
+        {
+            return new NDArrayView(NDShape(shape), (float*)buf, num_elements, device, readOnly);
+        }
+        else if (typecode == NPY_DOUBLE)
+        {
+            return new NDArrayView(NDShape(shape), (double*)buf, num_elements, device, readOnly);
+        }
+        else
+        {
+            throw std::logic_error("NumPy array of type float32 or float64 expected");
+        }
+    }
+SWIGINTERN PyObject *CNTK_NDArrayView_ToNumPy(CNTK::NDArrayView *self){
+        // FIXME use not yet existing NDShape function that returns the dimensions at once
+        int num_axes = (int)(*self).Shape().NumAxes();
+        npy_intp* shape = new npy_intp[num_axes];
+        for (int i=0; i<num_axes; i++)
+            shape[i] = (*self).Shape()[i];
+
+        NPY_TYPES numpy_type;
+        void* buffer;
+
+        CNTK::DataType cntk_type = (*self).GetDataType();
+        if (cntk_type == CNTK::DataType::Float)
+        {
+            numpy_type = NPY_FLOAT;
+            buffer = (void*)(*self).DataBuffer<float>();
+        }
+        else if (cntk_type == CNTK::DataType::Double)
+        {
+            numpy_type = NPY_DOUBLE;
+            buffer = (void*)(*self).DataBuffer<double>();
+        }
+        else
+        {
+            throw std::invalid_argument("unknown CNTK data type");
+        }
+        
+        PyObject* ndarray = PyArray_SimpleNewFromData(num_axes, shape, numpy_type, buffer);
+
+        delete[] shape;
+
+        return ndarray;
     }
 
 /* Getting isfinite working pre C99 across multiple platforms is non-trivial. Users can provide SWIG_isfinite on older platforms. */
@@ -5541,6 +6057,75 @@ SWIGINTERN PyObject *std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__asdict(std::m
 SWIGINTERN void std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_1(std::map< CNTK::Variable,CNTK::ValuePtr > *self,std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator position){ self->erase(position); }
 SWIGINTERN void std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_2(std::map< CNTK::Variable,CNTK::ValuePtr > *self,std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator first,std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator last){ self->erase(first, last); }
 
+  namespace swig {
+    template <class SwigPySeq, class T> 
+    inline void 
+    assign(const SwigPySeq& swigpyseq, std::set<T>* seq) {
+      // seq->insert(swigpyseq.begin(), swigpyseq.end()); // not used as not always implemented
+      typedef typename SwigPySeq::value_type value_type;
+      typename SwigPySeq::const_iterator it = swigpyseq.begin();
+      for (;it != swigpyseq.end(); ++it) {
+	seq->insert(seq->end(),(value_type)(*it));
+      }
+    }
+
+    template <class T>
+    struct traits_asptr<std::set<T> >  {
+      static int asptr(PyObject *obj, std::set<T> **s) {
+	return traits_asptr_stdseq<std::set<T> >::asptr(obj, s);
+      }
+    };
+
+    template <class T>
+    struct traits_from<std::set<T> > {
+      static PyObject *from(const std::set<T>& vec) {
+	return traits_from_stdseq<std::set<T> >::from(vec);
+      }
+    };
+  }
+
+
+      namespace swig {
+	template <>  struct traits<std::set< CNTK::Variable, std::less< CNTK::Variable >, std::allocator< CNTK::Variable > > > {
+	  typedef pointer_category category;
+	  static const char* type_name() {
+	    return "std::set<" "CNTK::Variable" "," "std::less< CNTK::Variable >" "," "std::allocator< CNTK::Variable >" " >";
+	  }
+	};
+      }
+    
+SWIGINTERN swig::SwigPyIterator *std_set_Sl_CNTK_Variable_Sg__iterator(std::set< CNTK::Variable > *self,PyObject **PYTHON_SELF){
+      return swig::make_output_iterator(self->begin(), self->begin(), self->end(), *PYTHON_SELF);
+    }
+SWIGINTERN bool std_set_Sl_CNTK_Variable_Sg____nonzero__(std::set< CNTK::Variable > const *self){
+      return !(self->empty());
+    }
+SWIGINTERN bool std_set_Sl_CNTK_Variable_Sg____bool__(std::set< CNTK::Variable > const *self){
+      return !(self->empty());
+    }
+SWIGINTERN std::set< CNTK::Variable >::size_type std_set_Sl_CNTK_Variable_Sg____len__(std::set< CNTK::Variable > const *self){
+      return self->size();
+    }
+SWIGINTERN void std_set_Sl_CNTK_Variable_Sg__append(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::value_type x){
+       self->insert(x);
+     }
+SWIGINTERN bool std_set_Sl_CNTK_Variable_Sg____contains__(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::value_type x){
+       return self->find(x) != self->end();
+     }
+SWIGINTERN std::set< CNTK::Variable >::value_type std_set_Sl_CNTK_Variable_Sg____getitem__(std::set< CNTK::Variable > const *self,std::set< CNTK::Variable >::difference_type i){
+       return *(swig::cgetpos(self, i));
+     }
+SWIGINTERN void std_set_Sl_CNTK_Variable_Sg__add(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::value_type x){
+       self->insert(x);
+     }
+SWIGINTERN void std_set_Sl_CNTK_Variable_Sg__discard(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::value_type x){
+       self->erase(x);
+     }
+SWIGINTERN void std_set_Sl_CNTK_Variable_Sg__erase__SWIG_1(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::iterator pos){ self->erase(pos); }
+SWIGINTERN void std_set_Sl_CNTK_Variable_Sg__erase__SWIG_2(std::set< CNTK::Variable > *self,std::set< CNTK::Variable >::iterator first,std::set< CNTK::Variable >::iterator last){ self->erase(first, last); }
+
+
+// [@Amit] FIXME: can we move these behind function calls? 
 namespace CNTK {
     /*static*/ Axis Axis::DefaultDynamicAxis = Axis(L"defaultDynamicAxis");
     /*static*/ Axis Axis::BatchAxis = Axis(L"batchAxis");
@@ -5549,506 +6134,93 @@ namespace CNTK {
 
 
 
-size_t bla;
-extern void stuff(std::map<CNTK::Variable, CNTK::ValuePtr>& mymap)
-{
-	bla = 13;
+//
+// The following callback code is only for testing. Will have to be merged with
+// the operator classes.
+//
+class Callback {
+public:
+    virtual ~Callback() { std::cout << "Callback::~Callback()" << std:: endl; }
+    virtual void forward() { std::cout << "Callback::forward()" << std::endl; }
+    virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
+};
 
-    //return v->Data()->IsSparse();
-    printf("size inside=%d", mymap.size());
-
-    for (auto x : mymap)
-    {
-    printf("in stuff %ls\n", x.first.Name().c_str());
-    }
-}
-
-extern void naivestuff(std::map<CNTK::Variable, int>& mymap)
-{
-    printf("naivestuff size inside=%\n", mymap.size());
-
-    for (auto x : mymap)
-    {
-        printf("in stuff %ls (%d) ->%d\n", x.first.Name().c_str(), x.first.Shape().TotalSize(), x.second);
-    }
-
-    printf("naivestuff end\n");
-}
-
-void data_from_value(float* cntk_data, float* data, int len) {
-    for (int i=0; i<len; i++)
-        data[i] = cntk_data[i];
-}
-
-
-
-#if NPY_API_VERSION < 0x00000007
-#define NPY_ARRAY_DEFAULT NPY_DEFAULT
-#define NPY_ARRAY_FARRAY  NPY_FARRAY
-#define NPY_FORTRANORDER  NPY_FORTRAN
-#endif
-
-
-/* Macros to extract array attributes.
- */
-#if NPY_API_VERSION < 0x00000007
-#define is_array(a)            ((a) && PyArray_Check((PyArrayObject*)a))
-#define array_type(a)          (int)(PyArray_TYPE((PyArrayObject*)a))
-#define array_numdims(a)       (((PyArrayObject*)a)->nd)
-#define array_dimensions(a)    (((PyArrayObject*)a)->dimensions)
-#define array_size(a,i)        (((PyArrayObject*)a)->dimensions[i])
-#define array_strides(a)       (((PyArrayObject*)a)->strides)
-#define array_stride(a,i)      (((PyArrayObject*)a)->strides[i])
-#define array_data(a)          (((PyArrayObject*)a)->data)
-#define array_descr(a)         (((PyArrayObject*)a)->descr)
-#define array_flags(a)         (((PyArrayObject*)a)->flags)
-#define array_enableflags(a,f) (((PyArrayObject*)a)->flags) = f
-#define array_is_fortran(a)    (PyArray_ISFORTRAN((PyArrayObject*)a))
-#else
-#define is_array(a)            ((a) && PyArray_Check(a))
-#define array_type(a)          PyArray_TYPE((PyArrayObject*)a)
-#define array_numdims(a)       PyArray_NDIM((PyArrayObject*)a)
-#define array_dimensions(a)    PyArray_DIMS((PyArrayObject*)a)
-#define array_strides(a)       PyArray_STRIDES((PyArrayObject*)a)
-#define array_stride(a,i)      PyArray_STRIDE((PyArrayObject*)a,i)
-#define array_size(a,i)        PyArray_DIM((PyArrayObject*)a,i)
-#define array_data(a)          PyArray_DATA((PyArrayObject*)a)
-#define array_descr(a)         PyArray_DESCR((PyArrayObject*)a)
-#define array_flags(a)         PyArray_FLAGS((PyArrayObject*)a)
-#define array_enableflags(a,f) PyArray_ENABLEFLAGS((PyArrayObject*)a,f)
-#define array_is_fortran(a)    (PyArray_IS_F_CONTIGUOUS((PyArrayObject*)a))
-#endif
-#define array_is_contiguous(a) (PyArray_ISCONTIGUOUS((PyArrayObject*)a))
-#define array_is_native(a)     (PyArray_ISNOTSWAPPED((PyArrayObject*)a))
-
-
-  /* Given a PyObject, return a string describing its type.
-   */
-  const char* pytype_string(PyObject* py_obj)
-  {
-    if (py_obj == NULL          ) return "C NULL value";
-    if (py_obj == Py_None       ) return "Python None" ;
-    if (PyCallable_Check(py_obj)) return "callable"    ;
-    if (PyString_Check(  py_obj)) return "string"      ;
-    if (PyInt_Check(     py_obj)) return "int"         ;
-    if (PyFloat_Check(   py_obj)) return "float"       ;
-    if (PyDict_Check(    py_obj)) return "dict"        ;
-    if (PyList_Check(    py_obj)) return "list"        ;
-    if (PyTuple_Check(   py_obj)) return "tuple"       ;
-#if PY_MAJOR_VERSION < 3
-    if (PyFile_Check(    py_obj)) return "file"        ;
-    if (PyModule_Check(  py_obj)) return "module"      ;
-    if (PyInstance_Check(py_obj)) return "instance"    ;
-#endif
-
-    return "unknown type";
-  }
-
-  /* Given a NumPy typecode, return a string describing the type.
-   */
-  const char* typecode_string(int typecode)
-  {
-    static const char* type_names[25] = {"bool",
-                                         "byte",
-                                         "unsigned byte",
-                                         "short",
-                                         "unsigned short",
-                                         "int",
-                                         "unsigned int",
-                                         "long",
-                                         "unsigned long",
-                                         "long long",
-                                         "unsigned long long",
-                                         "float",
-                                         "double",
-                                         "long double",
-                                         "complex float",
-                                         "complex double",
-                                         "complex long double",
-                                         "object",
-                                         "string",
-                                         "unicode",
-                                         "void",
-                                         "ntypes",
-                                         "notype",
-                                         "char",
-                                         "unknown"};
-    return typecode < 24 ? type_names[typecode] : type_names[24];
-  }
-
-  /* Make sure input has correct numpy type.  This now just calls
-     PyArray_EquivTypenums().
-   */
-  int type_match(int actual_type,
-                 int desired_type)
-  {
-    return PyArray_EquivTypenums(actual_type, desired_type);
-  }
-
-#ifdef SWIGPY_USE_CAPSULE
-  void free_cap(PyObject * cap)
-  {
-    void* array = (void*) PyCapsule_GetPointer(cap,SWIGPY_CAPSULE_NAME);
-    if (array != NULL) free(array);
-  }
-#endif
-
-
-
-
-  /* Given a PyObject pointer, cast it to a PyArrayObject pointer if
-   * legal.  If not, set the python error string appropriately and
-   * return NULL.
-   */
-  PyArrayObject* obj_to_array_no_conversion(PyObject* input,
-                                            int        typecode)
-  {
-    PyArrayObject* ary = NULL;
-    if (is_array(input) && (typecode == NPY_NOTYPE ||
-                            PyArray_EquivTypenums(array_type(input), typecode)))
-    {
-      ary = (PyArrayObject*) input;
-    }
-    else if is_array(input)
-    {
-      const char* desired_type = typecode_string(typecode);
-      const char* actual_type  = typecode_string(array_type(input));
-      PyErr_Format(PyExc_TypeError,
-                   "Array of type '%s' required.  Array of type '%s' given",
-                   desired_type, actual_type);
-      ary = NULL;
-    }
-    else
-    {
-      const char* desired_type = typecode_string(typecode);
-      const char* actual_type  = pytype_string(input);
-      PyErr_Format(PyExc_TypeError,
-                   "Array of type '%s' required.  A '%s' was given",
-                   desired_type,
-                   actual_type);
-      ary = NULL;
-    }
-    return ary;
-  }
-
-  /* Convert the given PyObject to a NumPy array with the given
-   * typecode.  On success, return a valid PyArrayObject* with the
-   * correct type.  On failure, the python error string will be set and
-   * the routine returns NULL.
-   */
-  PyArrayObject* obj_to_array_allow_conversion(PyObject* input,
-                                               int       typecode,
-                                               int*      is_new_object)
-  {
-    PyArrayObject* ary = NULL;
-    PyObject*      py_obj;
-    if (is_array(input) && (typecode == NPY_NOTYPE ||
-                            PyArray_EquivTypenums(array_type(input),typecode)))
-    {
-      ary = (PyArrayObject*) input;
-      *is_new_object = 0;
-    }
-    else
-    {
-      py_obj = PyArray_FROMANY(input, typecode, 0, 0, NPY_ARRAY_DEFAULT);
-      /* If NULL, PyArray_FromObject will have set python error value.*/
-      ary = (PyArrayObject*) py_obj;
-      *is_new_object = 1;
-    }
-    return ary;
-  }
-
-  /* Given a PyArrayObject, check to see if it is contiguous.  If so,
-   * return the input pointer and flag it as not a new object.  If it is
-   * not contiguous, create a new PyArrayObject using the original data,
-   * flag it as a new object and return the pointer.
-   */
-  PyArrayObject* make_contiguous(PyArrayObject* ary,
-                                 int*           is_new_object,
-                                 int            min_dims,
-                                 int            max_dims)
-  {
-    PyArrayObject* result;
-    if (array_is_contiguous(ary))
-    {
-      result = ary;
-      *is_new_object = 0;
-    }
-    else
-    {
-      result = (PyArrayObject*) PyArray_ContiguousFromObject((PyObject*)ary,
-                                                              array_type(ary),
-                                                              min_dims,
-                                                              max_dims);
-      *is_new_object = 1;
-    }
-    return result;
-  }
-
-  /* Given a PyArrayObject, check to see if it is Fortran-contiguous.
-   * If so, return the input pointer, but do not flag it as not a new
-   * object.  If it is not Fortran-contiguous, create a new
-   * PyArrayObject using the original data, flag it as a new object
-   * and return the pointer.
-   */
-  PyArrayObject* make_fortran(PyArrayObject* ary,
-                              int*           is_new_object)
-  {
-    PyArrayObject* result;
-    if (array_is_fortran(ary))
-    {
-      result = ary;
-      *is_new_object = 0;
-    }
-    else
-    {
-      Py_INCREF(array_descr(ary));
-      result = (PyArrayObject*) PyArray_FromArray(ary,
-                                                  array_descr(ary),
-#if NPY_API_VERSION < 0x00000007
-                                                  NPY_FORTRANORDER);
-#else
-                                                  NPY_ARRAY_F_CONTIGUOUS);
-#endif
-      *is_new_object = 1;
-    }
-    return result;
-  }
-
-  /* Convert a given PyObject to a contiguous PyArrayObject of the
-   * specified type.  If the input object is not a contiguous
-   * PyArrayObject, a new one will be created and the new object flag
-   * will be set.
-   */
-  PyArrayObject* obj_to_array_contiguous_allow_conversion(PyObject* input,
-                                                          int       typecode,
-                                                          int*      is_new_object)
-  {
-    int is_new1 = 0;
-    int is_new2 = 0;
-    PyArrayObject* ary2;
-    PyArrayObject* ary1 = obj_to_array_allow_conversion(input,
-                                                        typecode,
-                                                        &is_new1);
-    if (ary1)
-    {
-      ary2 = make_contiguous(ary1, &is_new2, 0, 0);
-      if ( is_new1 && is_new2)
-      {
-        Py_DECREF(ary1);
-      }
-      ary1 = ary2;
-    }
-    *is_new_object = is_new1 || is_new2;
-    return ary1;
-  }
-
-  /* Convert a given PyObject to a Fortran-ordered PyArrayObject of the
-   * specified type.  If the input object is not a Fortran-ordered
-   * PyArrayObject, a new one will be created and the new object flag
-   * will be set.
-   */
-  PyArrayObject* obj_to_array_fortran_allow_conversion(PyObject* input,
-                                                       int       typecode,
-                                                       int*      is_new_object)
-  {
-    int is_new1 = 0;
-    int is_new2 = 0;
-    PyArrayObject* ary2;
-    PyArrayObject* ary1 = obj_to_array_allow_conversion(input,
-                                                        typecode,
-                                                        &is_new1);
-    if (ary1)
-    {
-      ary2 = make_fortran(ary1, &is_new2);
-      if (is_new1 && is_new2)
-      {
-        Py_DECREF(ary1);
-      }
-      ary1 = ary2;
-    }
-    *is_new_object = is_new1 || is_new2;
-    return ary1;
-  }
-
-
-  /* Test whether a python object is contiguous.  If array is
-   * contiguous, return 1.  Otherwise, set the python error string and
-   * return 0.
-   */
-  int require_contiguous(PyArrayObject* ary)
-  {
-    int contiguous = 1;
-    if (!array_is_contiguous(ary))
-    {
-      PyErr_SetString(PyExc_TypeError,
-                      "Array must be contiguous.  A non-contiguous array was given");
-      contiguous = 0;
-    }
-    return contiguous;
-  }
-
-  /* Test whether a python object is (C_ or F_) contiguous.  If array is
-   * contiguous, return 1.  Otherwise, set the python error string and
-   * return 0.
-   */
-  int require_c_or_f_contiguous(PyArrayObject* ary)
-  {
-    int contiguous = 1;
-    if (!(array_is_contiguous(ary) || array_is_fortran(ary)))
-    {
-      PyErr_SetString(PyExc_TypeError,
-                      "Array must be contiguous (C_ or F_).  A non-contiguous array was given");
-      contiguous = 0;
-    }
-    return contiguous;
-  }
-
-  /* Require that a numpy array is not byte-swapped.  If the array is
-   * not byte-swapped, return 1.  Otherwise, set the python error string
-   * and return 0.
-   */
-  int require_native(PyArrayObject* ary)
-  {
-    int native = 1;
-    if (!array_is_native(ary))
-    {
-      PyErr_SetString(PyExc_TypeError,
-                      "Array must have native byteorder.  "
-                      "A byte-swapped array was given");
-      native = 0;
-    }
-    return native;
-  }
-
-  /* Require the given PyArrayObject to have a specified number of
-   * dimensions.  If the array has the specified number of dimensions,
-   * return 1.  Otherwise, set the python error string and return 0.
-   */
-  int require_dimensions(PyArrayObject* ary,
-                         int            exact_dimensions)
-  {
-    int success = 1;
-    if (array_numdims(ary) != exact_dimensions)
-    {
-      PyErr_Format(PyExc_TypeError,
-                   "Array must have %d dimensions.  Given array has %d dimensions",
-                   exact_dimensions,
-                   array_numdims(ary));
-      success = 0;
-    }
-    return success;
-  }
-
-  /* Require the given PyArrayObject to have one of a list of specified
-   * number of dimensions.  If the array has one of the specified number
-   * of dimensions, return 1.  Otherwise, set the python error string
-   * and return 0.
-   */
-  int require_dimensions_n(PyArrayObject* ary,
-                           int*           exact_dimensions,
-                           int            n)
-  {
-    int success = 0;
-    int i;
-    char dims_str[255] = "";
-    char s[255];
-    for (i = 0; i < n && !success; i++)
-    {
-      if (array_numdims(ary) == exact_dimensions[i])
-      {
-        success = 1;
-      }
-    }
-    if (!success)
-    {
-      for (i = 0; i < n-1; i++)
-      {
-        sprintf(s, "%d, ", exact_dimensions[i]);
-        strcat(dims_str,s);
-      }
-      sprintf(s, " or %d", exact_dimensions[n-1]);
-      strcat(dims_str,s);
-      PyErr_Format(PyExc_TypeError,
-                   "Array must have %s dimensions.  Given array has %d dimensions",
-                   dims_str,
-                   array_numdims(ary));
-    }
-    return success;
-  }
-
-  /* Require the given PyArrayObject to have a specified shape.  If the
-   * array has the specified shape, return 1.  Otherwise, set the python
-   * error string and return 0.
-   */
-  int require_size(PyArrayObject* ary,
-                   npy_intp*      size,
-                   int            n)
-  {
-    int i;
-    int success = 1;
-    int len;
-    char desired_dims[255] = "[";
-    char s[255];
-    char actual_dims[255] = "[";
-    for(i=0; i < n;i++)
-    {
-      if (size[i] != -1 &&  size[i] != array_size(ary,i))
-      {
-        success = 0;
-      }
-    }
-    if (!success)
-    {
-      for (i = 0; i < n; i++)
-      {
-        if (size[i] == -1)
-        {
-          sprintf(s, "*,");
-        }
+class FunctionInCNTK {
+private:
+    Callback *_callback;
+public:
+    FunctionInCNTK(): _callback(0) {}
+    ~FunctionInCNTK() { delCallback(); }
+    void delCallback() { delete _callback; _callback = 0; }
+    void setCallback(Callback *cb) { delCallback(); _callback = cb; }
+    void forward() { 
+        if (_callback) 
+            _callback->forward(); 
         else
-        {
-          sprintf(s, "%ld,", (long int)size[i]);
-        }
-        strcat(desired_dims,s);
-      }
-      len = strlen(desired_dims);
-      desired_dims[len-1] = ']';
-      for (i = 0; i < n; i++)
-      {
-        sprintf(s, "%ld,", (long int)array_size(ary,i));
-        strcat(actual_dims,s);
-      }
-      len = strlen(actual_dims);
-      actual_dims[len-1] = ']';
-      PyErr_Format(PyExc_TypeError,
-                   "Array must have shape of %s.  Given array has shape of %s",
-                   desired_dims,
-                   actual_dims);
+            throw "Forward callback not defined!";
     }
-    return success;
-  }
+    void backward() { if (_callback) _callback->backward(); }
+};
 
-  /* Require the given PyArrayObject to to be Fortran ordered.  If the
-   * the PyArrayObject is already Fortran ordered, do nothing.  Else,
-   * set the Fortran ordering flag and recompute the strides.
-   */
-  int require_fortran(PyArrayObject* ary)
-  {
-    int success = 1;
-    int nd = array_numdims(ary);
-    int i;
-    npy_intp * strides = array_strides(ary);
-    if (array_is_fortran(ary)) return success;
-    /* Set the Fortran ordered flag */
-    array_enableflags(ary,NPY_ARRAY_FARRAY);
-    /* Recompute the strides */
-    strides[0] = strides[nd-1];
-    for (i=1; i < nd; ++i)
-      strides[i] = strides[i-1] * array_size(ary,i-1);
-    return success;
-  }
 
+
+
+/* ---------------------------------------------------
+ * C++ director class methods
+ * --------------------------------------------------- */
+
+#include "swig_cntk_wrap.h"
+
+SwigDirector_Callback::SwigDirector_Callback(PyObject *self): Callback(), Swig::Director(self) {
+  SWIG_DIRECTOR_RGTR((Callback *)this, this); 
+}
+
+
+
+
+SwigDirector_Callback::~SwigDirector_Callback() {
+}
+
+void SwigDirector_Callback::forward() {
+  if (!swig_get_self()) {
+    Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Callback.__init__.");
+  }
+#if defined(SWIG_PYTHON_DIRECTOR_VTABLE)
+  const size_t swig_method_index = 0;
+  const char * const swig_method_name = "forward";
+  PyObject* method = swig_get_method(swig_method_index, swig_method_name);
+  swig::SwigVar_PyObject result = PyObject_CallFunction(method, NULL, NULL);
+#else
+  swig::SwigVar_PyObject result = PyObject_CallMethod(swig_get_self(), (char *) "forward", NULL);
+#endif
+  if (!result) {
+    PyObject *error = PyErr_Occurred();
+    if (error) {
+      Swig::DirectorMethodException::raise("Error detected when calling 'Callback.forward'");
+    }
+  }
+}
+
+
+void SwigDirector_Callback::backward() {
+  if (!swig_get_self()) {
+    Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Callback.__init__.");
+  }
+#if defined(SWIG_PYTHON_DIRECTOR_VTABLE)
+  const size_t swig_method_index = 1;
+  const char * const swig_method_name = "backward";
+  PyObject* method = swig_get_method(swig_method_index, swig_method_name);
+  swig::SwigVar_PyObject result = PyObject_CallFunction(method, NULL, NULL);
+#else
+  swig::SwigVar_PyObject result = PyObject_CallMethod(swig_get_self(), (char *) "backward", NULL);
+#endif
+  if (!result) {
+    PyObject *error = PyErr_Occurred();
+    if (error) {
+      Swig::DirectorMethodException::raise("Error detected when calling 'Callback.backward'");
+    }
+  }
+}
 
 
 #ifdef __cplusplus
@@ -6909,7 +7081,26 @@ SWIGINTERN PyObject *_wrap_new__ReferenceCounter(PyObject *SWIGUNUSEDPARM(self),
   CNTK::_Internal::_ReferenceCounter *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new__ReferenceCounter")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounter *)new CNTK::_Internal::_ReferenceCounter();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounter *)new CNTK::_Internal::_ReferenceCounter(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounter, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -6931,7 +7122,26 @@ SWIGINTERN PyObject *_wrap_delete__ReferenceCounter(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete__ReferenceCounter" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounter *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounter * >(argp1);
-  arg1->RemoveReference();
+  {
+    try {
+      arg1->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -6953,7 +7163,26 @@ SWIGINTERN PyObject *_wrap__ReferenceCounter_AddReference(PyObject *SWIGUNUSEDPA
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "_ReferenceCounter_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounter *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounter * >(argp1);
-  result = (arg1)->AddReference();
+  {
+    try {
+      result = (arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -6975,7 +7204,26 @@ SWIGINTERN PyObject *_wrap__ReferenceCounter_RemoveReference(PyObject *SWIGUNUSE
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "_ReferenceCounter_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounter *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounter * >(argp1);
-  result = (arg1)->RemoveReference();
+  {
+    try {
+      result = (arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -6997,7 +7245,26 @@ SWIGINTERN PyObject *_wrap__ReferenceCounter_GetReferenceCount(PyObject *SWIGUNU
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "_ReferenceCounter_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounter *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounter * >(argp1);
-  result = (arg1)->GetReferenceCount();
+  {
+    try {
+      result = (arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -7027,7 +7294,26 @@ SWIGINTERN PyObject *_wrap_CopyString(PyObject *SWIGUNUSEDPARM(self), PyObject *
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CopyString" "', argument " "1"" of type '" "wchar_t const *""'");
   }
   arg1 = reinterpret_cast< wchar_t * >(buf1);
-  result = (wchar_t *)CNTK::CopyString((wchar_t const *)arg1);
+  {
+    try {
+      result = (wchar_t *)CNTK::CopyString((wchar_t const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_FromWCharPtr((const wchar_t *)result);
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   return resultobj;
@@ -7051,7 +7337,26 @@ SWIGINTERN PyObject *_wrap_IsSparseStorageFormat(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "IsSparseStorageFormat" "', argument " "1"" of type '" "CNTK::StorageFormat""'");
   } 
   arg1 = static_cast< CNTK::StorageFormat >(val1);
-  result = (bool)CNTK::IsSparseStorageFormat(arg1);
+  {
+    try {
+      result = (bool)CNTK::IsSparseStorageFormat(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7073,7 +7378,26 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_Id(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_Id" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp1);
-  result = (int)((CNTK::DeviceDescriptor const *)arg1)->Id();
+  {
+    try {
+      result = (int)((CNTK::DeviceDescriptor const *)arg1)->Id(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -7095,7 +7419,26 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_Type(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_Type" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp1);
-  result = (CNTK::DeviceType)((CNTK::DeviceDescriptor const *)arg1)->Type();
+  {
+    try {
+      result = (CNTK::DeviceType)((CNTK::DeviceDescriptor const *)arg1)->Type(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -7108,7 +7451,26 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_CPUDevice(PyObject *SWIGUNUSEDPARM(s
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
   if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_CPUDevice")) SWIG_fail;
-  result = CNTK::DeviceDescriptor::CPUDevice();
+  {
+    try {
+      result = CNTK::DeviceDescriptor::CPUDevice(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7130,7 +7492,26 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_GPUDevice(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "DeviceDescriptor_GPUDevice" "', argument " "1"" of type '" "unsigned int""'");
   } 
   arg1 = static_cast< unsigned int >(val1);
-  result = CNTK::DeviceDescriptor::GPUDevice(arg1);
+  {
+    try {
+      result = CNTK::DeviceDescriptor::GPUDevice(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7143,7 +7524,26 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_DefaultDevice(PyObject *SWIGUNUSEDPA
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
   if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_DefaultDevice")) SWIG_fail;
-  result = CNTK::DeviceDescriptor::DefaultDevice();
+  {
+    try {
+      result = CNTK::DeviceDescriptor::DefaultDevice(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7164,7 +7564,11 @@ SWIGINTERN PyObject *_wrap_delete_DeviceDescriptor(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DeviceDescriptor" "', argument " "1"" of type '" "CNTK::DeviceDescriptor *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -7208,7 +7612,26 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__eq__" "', argument " "2"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp2);
-  result = (bool)CNTK::operator ==((CNTK::DeviceDescriptor const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator ==((CNTK::DeviceDescriptor const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7245,7 +7668,26 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__ne__" "', argument " "2"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp2);
-  result = (bool)CNTK::operator !=((CNTK::DeviceDescriptor const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator !=((CNTK::DeviceDescriptor const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7282,7 +7724,26 @@ SWIGINTERN PyObject *_wrap_NDShape_eq(PyObject *SWIGUNUSEDPARM(self), PyObject *
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDShape_eq" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
-  result = (bool)operator ==((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2);
+  {
+    try {
+      result = (bool)operator ==((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7313,7 +7774,26 @@ SWIGINTERN PyObject *_wrap_new_NDShape__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_NDShape" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
-  result = (CNTK::NDShape *)new CNTK::NDShape(arg1,arg2);
+  {
+    try {
+      result = (CNTK::NDShape *)new CNTK::NDShape(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -7335,7 +7815,26 @@ SWIGINTERN PyObject *_wrap_new_NDShape__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_NDShape" "', argument " "1"" of type '" "size_t""'");
   } 
   arg1 = static_cast< size_t >(val1);
-  result = (CNTK::NDShape *)new CNTK::NDShape(arg1);
+  {
+    try {
+      result = (CNTK::NDShape *)new CNTK::NDShape(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -7362,7 +7861,26 @@ SWIGINTERN PyObject *_wrap_new_NDShape__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
     }
     arg1 = ptr;
   }
-  result = (CNTK::NDShape *)new CNTK::NDShape((std::vector< size_t,std::allocator< size_t > > const &)*arg1);
+  {
+    try {
+      result = (CNTK::NDShape *)new CNTK::NDShape((std::vector< size_t,std::allocator< size_t > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res1)) delete arg1;
   return resultobj;
@@ -7389,7 +7907,26 @@ SWIGINTERN PyObject *_wrap_new_NDShape__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDShape" "', argument " "1"" of type '" "std::initializer_list< size_t > const &""'"); 
   }
   arg1 = reinterpret_cast< std::initializer_list< size_t > * >(argp1);
-  result = (CNTK::NDShape *)new CNTK::NDShape((std::initializer_list< size_t > const &)*arg1);
+  {
+    try {
+      result = (CNTK::NDShape *)new CNTK::NDShape((std::initializer_list< size_t > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -7477,7 +8014,26 @@ SWIGINTERN PyObject *_wrap_NDShape_NumAxes(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_NumAxes" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = ((CNTK::NDShape const *)arg1)->NumAxes();
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->NumAxes(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -7517,7 +8073,26 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDShape_SubShape" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
-  result = ((CNTK::NDShape const *)arg1)->SubShape(arg2,arg3);
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->SubShape(arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7548,7 +8123,26 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape_SubShape" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
-  result = ((CNTK::NDShape const *)arg1)->SubShape(arg2);
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->SubShape(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7570,7 +8164,26 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_SubShape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = ((CNTK::NDShape const *)arg1)->SubShape();
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->SubShape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7660,7 +8273,26 @@ SWIGINTERN PyObject *_wrap_NDShape_HasInferredDimension(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_HasInferredDimension" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = (bool)((CNTK::NDShape const *)arg1)->HasInferredDimension();
+  {
+    try {
+      result = (bool)((CNTK::NDShape const *)arg1)->HasInferredDimension(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7682,7 +8314,26 @@ SWIGINTERN PyObject *_wrap_NDShape_TotalSize(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_TotalSize" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = ((CNTK::NDShape const *)arg1)->TotalSize();
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->TotalSize(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -7716,7 +8367,26 @@ SWIGINTERN PyObject *_wrap_NDShape_AppendShape(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDShape_AppendShape" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
-  result = ((CNTK::NDShape const *)arg1)->AppendShape((CNTK::NDShape const &)*arg2);
+  {
+    try {
+      result = ((CNTK::NDShape const *)arg1)->AppendShape((CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -7747,7 +8417,26 @@ SWIGINTERN PyObject *_wrap_NDShape___getitem__(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape___getitem__" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
-  result = (size_t *) &CNTK_NDShape___getitem__(arg1,arg2);
+  {
+    try {
+      result = (size_t *) &CNTK_NDShape___getitem__(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(*result));
   return resultobj;
 fail:
@@ -7768,7 +8457,11 @@ SWIGINTERN PyObject *_wrap_delete_NDShape(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDShape" "', argument " "1"" of type '" "CNTK::NDShape *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -7812,7 +8505,26 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__eq__" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
-  result = (bool)CNTK::operator ==((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator ==((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7849,7 +8561,26 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__ne__" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
-  result = (bool)CNTK::operator !=((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator !=((CNTK::NDShape const &)*arg1,(CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -7920,7 +8651,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_0(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "new_NDArrayView" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,arg3,arg4,(CNTK::DeviceDescriptor const &)*arg5,arg6);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,arg3,arg4,(CNTK::DeviceDescriptor const &)*arg5,arg6); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -7983,7 +8733,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_1(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayView" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp5);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,arg3,arg4,(CNTK::DeviceDescriptor const &)*arg5);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,arg3,arg4,(CNTK::DeviceDescriptor const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -8039,7 +8808,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_4(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayView" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,arg2,(CNTK::NDShape const &)*arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,arg2,(CNTK::NDShape const &)*arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -8086,7 +8874,695 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_5(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayView" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView(arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_NEW |  0 );
+  result->AddReference();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_NDArrayView(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_NDArrayView",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDArrayView" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      arg1->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_Device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  SwigValueWrapper< CNTK::DeviceDescriptor > result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Device",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Device" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->Device(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_GetDataType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::DataType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetDataType",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetDataType" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = (CNTK::DataType)((CNTK::NDArrayView const *)arg1)->GetDataType(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_GetStorageFormat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::StorageFormat result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetStorageFormat",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetStorageFormat" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = (CNTK::StorageFormat)((CNTK::NDArrayView const *)arg1)->GetStorageFormat(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  SwigValueWrapper< CNTK::NDShape > result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Shape",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Shape" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->Shape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_IsSparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsSparse",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsSparse" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = (bool)((CNTK::NDArrayView const *)arg1)->IsSparse(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_IsReadOnly(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsReadOnly",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsReadOnly" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = (bool)((CNTK::NDArrayView const *)arg1)->IsReadOnly(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::NDArrayViewPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_DeepClone",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_DeepClone" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->DeepClone(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::NDArrayViewPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_DeepClone",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_NDArrayView_DeepClone__SWIG_1(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_NDArrayView_DeepClone__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_DeepClone'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::NDArrayView::DeepClone(bool) const\n"
+    "    CNTK::NDArrayView::DeepClone() const\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::NDArrayViewPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_Alias",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_Alias" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->Alias(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::NDArrayViewPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Alias",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  {
+    try {
+      result = ((CNTK::NDArrayView const *)arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_Alias(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_NDArrayView_Alias__SWIG_1(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_NDArrayView_Alias__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_Alias'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::NDArrayView::Alias(bool) const\n"
+    "    CNTK::NDArrayView::Alias() const\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDArrayView_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
+  CNTK::NDArrayView *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_CopyFrom",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_CopyFrom" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__NDArrayView,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::NDArrayView * >(argp2);
+  {
+    try {
+      (arg1)->CopyFrom((CNTK::NDArrayView const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_14(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  CNTK::DeviceDescriptor *arg2 = 0 ;
+  bool arg3 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_NDArrayView",&obj0,&obj1,&obj2)) SWIG_fail;
+  arg1 = obj0;
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayView" "', argument " "2"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayView" "', argument " "2"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_NDArrayView" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new_CNTK_NDArrayView__SWIG_14(arg1,(CNTK::DeviceDescriptor const &)*arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -8121,6 +9597,23 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
         if (_v) {
           return _wrap_new_NDArrayView__SWIG_5(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    _v = (argv[0] != 0);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_bool(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          return _wrap_new_NDArrayView__SWIG_14(self, args);
         }
       }
     }
@@ -8220,411 +9713,47 @@ fail:
     "    CNTK::NDArrayView::NDArrayView(CNTK::DataType,CNTK::NDShape const &,void *,size_t,CNTK::DeviceDescriptor const &,bool)\n"
     "    CNTK::NDArrayView::NDArrayView(CNTK::DataType,CNTK::NDShape const &,void *,size_t,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::NDArrayView::NDArrayView(CNTK::DataType,CNTK::StorageFormat,CNTK::NDShape const &,CNTK::DeviceDescriptor const &)\n"
-    "    CNTK::NDArrayView::NDArrayView(CNTK::DataType,CNTK::NDShape const &,CNTK::DeviceDescriptor const &)\n");
+    "    CNTK::NDArrayView::NDArrayView(CNTK::DataType,CNTK::NDShape const &,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::NDArrayView::NDArrayView(PyObject *,CNTK::DeviceDescriptor const &,bool)\n");
   return 0;
 }
 
 
-SWIGINTERN PyObject *_wrap_delete_NDArrayView(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
+  PyObject *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:delete_NDArrayView",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_DISOWN |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDArrayView" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  arg1->RemoveReference();
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_Device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  SwigValueWrapper< CNTK::DeviceDescriptor > result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Device",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_ToNumPy",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Device" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_ToNumPy" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = ((CNTK::NDArrayView const *)arg1)->Device();
-  resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_GetDataType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  CNTK::DataType result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetDataType",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetDataType" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (CNTK::DataType)((CNTK::NDArrayView const *)arg1)->GetDataType();
-  resultobj = SWIG_From_int(static_cast< int >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_GetStorageFormat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  CNTK::StorageFormat result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetStorageFormat",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetStorageFormat" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (CNTK::StorageFormat)((CNTK::NDArrayView const *)arg1)->GetStorageFormat();
-  resultobj = SWIG_From_int(static_cast< int >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  SwigValueWrapper< CNTK::NDShape > result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Shape",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Shape" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = ((CNTK::NDArrayView const *)arg1)->Shape();
-  resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_IsSparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  bool result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsSparse",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsSparse" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (bool)((CNTK::NDArrayView const *)arg1)->IsSparse();
-  resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_IsReadOnly(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  bool result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsReadOnly",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsReadOnly" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (bool)((CNTK::NDArrayView const *)arg1)->IsReadOnly();
-  resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  bool arg2 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  CNTK::NDArrayViewPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_DeepClone",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_DeepClone" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  result = ((CNTK::NDArrayView const *)arg1)->DeepClone(arg2);
-  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  CNTK::NDArrayViewPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_DeepClone",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = ((CNTK::NDArrayView const *)arg1)->DeepClone();
-  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone(PyObject *self, PyObject *args) {
-  Py_ssize_t argc;
-  PyObject *argv[3] = {
-    0
-  };
-  Py_ssize_t ii;
-  
-  if (!PyTuple_Check(args)) SWIG_fail;
-  argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
-    argv[ii] = PyTuple_GET_ITEM(args,ii);
-  }
-  if (argc == 1) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_NDArrayView_DeepClone__SWIG_1(self, args);
+  {
+    try {
+      result = (PyObject *)CNTK_NDArrayView_ToNumPy(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
     }
   }
-  if (argc == 2) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      {
-        int res = SWIG_AsVal_bool(argv[1], NULL);
-        _v = SWIG_CheckState(res);
-      }
-      if (_v) {
-        return _wrap_NDArrayView_DeepClone__SWIG_0(self, args);
-      }
-    }
-  }
-  
-fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_DeepClone'.\n"
-    "  Possible C/C++ prototypes are:\n"
-    "    CNTK::NDArrayView::DeepClone(bool) const\n"
-    "    CNTK::NDArrayView::DeepClone() const\n");
-  return 0;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  bool arg2 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  CNTK::NDArrayViewPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_Alias",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_Alias" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  result = ((CNTK::NDArrayView const *)arg1)->Alias(arg2);
-  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  CNTK::NDArrayViewPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Alias",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = ((CNTK::NDArrayView const *)arg1)->Alias();
-  resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias(PyObject *self, PyObject *args) {
-  Py_ssize_t argc;
-  PyObject *argv[3] = {
-    0
-  };
-  Py_ssize_t ii;
-  
-  if (!PyTuple_Check(args)) SWIG_fail;
-  argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
-    argv[ii] = PyTuple_GET_ITEM(args,ii);
-  }
-  if (argc == 1) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_NDArrayView_Alias__SWIG_1(self, args);
-    }
-  }
-  if (argc == 2) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDArrayView, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      {
-        int res = SWIG_AsVal_bool(argv[1], NULL);
-        _v = SWIG_CheckState(res);
-      }
-      if (_v) {
-        return _wrap_NDArrayView_Alias__SWIG_0(self, args);
-      }
-    }
-  }
-  
-fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_Alias'.\n"
-    "  Possible C/C++ prototypes are:\n"
-    "    CNTK::NDArrayView::Alias(bool) const\n"
-    "    CNTK::NDArrayView::Alias() const\n");
-  return 0;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  CNTK::NDArrayView *arg2 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  void *argp2 = 0 ;
-  int res2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_CopyFrom",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_CopyFrom" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__NDArrayView,  0  | 0);
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
-  }
-  if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
-  }
-  arg2 = reinterpret_cast< CNTK::NDArrayView * >(argp2);
-  (arg1)->CopyFrom((CNTK::NDArrayView const &)*arg2);
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_NDArrayView_DataBufferFloat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  float *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_DataBufferFloat",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DataBufferFloat" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (float *)CNTK_NDArrayView_DataBufferFloat((CNTK::NDArrayView const *)arg1);
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  resultobj = result;
   return resultobj;
 fail:
   return NULL;
@@ -8705,7 +9834,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_0(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_NDArrayViewFloat" "', argument " "7"" of type '" "bool""'");
   } 
   arg7 = static_cast< bool >(val7);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(float const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6,arg7);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(float const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6,arg7); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
   result->AddReference();
   return resultobj;
@@ -8779,7 +9927,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_1(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewFloat" "', argument " "6"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg6 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp6);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(float const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(float const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -8843,7 +10010,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_2(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_NDArrayViewFloat" "', argument " "5"" of type '" "bool""'");
   } 
   arg5 = static_cast< bool >(val5);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4,arg5);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4,arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
   result->AddReference();
   return resultobj;
@@ -8899,7 +10085,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_3(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewFloat" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -8956,7 +10161,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_4(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_NDArrayViewFloat" "', argument " "4"" of type '" "bool""'");
   } 
   arg4 = static_cast< bool >(val4);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3,arg4);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3,arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
   result->AddReference();
   return resultobj;
@@ -9005,7 +10229,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_5(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewFloat" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -9041,7 +10284,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_6(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewFloat" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1,(CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -9065,7 +10327,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_7(PyObject *SWIGUNUSEDPARM
   } 
   temp1 = static_cast< float >(val1);
   arg1 = &temp1;
-  result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((float const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -9291,6 +10572,818 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::SparseIndexType *arg2 = (CNTK::SparseIndexType *) 0 ;
+  CNTK::SparseIndexType *arg3 = (CNTK::SparseIndexType *) 0 ;
+  double *arg4 = (double *) 0 ;
+  size_t arg5 ;
+  CNTK::DeviceDescriptor *arg6 = 0 ;
+  bool arg7 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  size_t val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  bool val7 ;
+  int ecode7 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  PyObject * obj6 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::SparseIndexType const *""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::SparseIndexType * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::SparseIndexType const *""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::SparseIndexType * >(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_double, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "double const *""'"); 
+  }
+  arg4 = reinterpret_cast< double * >(argp4);
+  ecode5 = SWIG_AsVal_size_t(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_NDArrayViewDouble" "', argument " "5"" of type '" "size_t""'");
+  } 
+  arg5 = static_cast< size_t >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "new_NDArrayViewDouble" "', argument " "6"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "6"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg6 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp6);
+  ecode7 = SWIG_AsVal_bool(obj6, &val7);
+  if (!SWIG_IsOK(ecode7)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_NDArrayViewDouble" "', argument " "7"" of type '" "bool""'");
+  } 
+  arg7 = static_cast< bool >(val7);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(double const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6,arg7); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
+  result->AddReference();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::SparseIndexType *arg2 = (CNTK::SparseIndexType *) 0 ;
+  CNTK::SparseIndexType *arg3 = (CNTK::SparseIndexType *) 0 ;
+  double *arg4 = (double *) 0 ;
+  size_t arg5 ;
+  CNTK::DeviceDescriptor *arg6 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  size_t val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::SparseIndexType const *""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::SparseIndexType * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::SparseIndexType const *""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::SparseIndexType * >(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_double, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "double const *""'"); 
+  }
+  arg4 = reinterpret_cast< double * >(argp4);
+  ecode5 = SWIG_AsVal_size_t(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_NDArrayViewDouble" "', argument " "5"" of type '" "size_t""'");
+  } 
+  arg5 = static_cast< size_t >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "new_NDArrayViewDouble" "', argument " "6"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "6"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg6 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp6);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,(CNTK::SparseIndexType const *)arg2,(CNTK::SparseIndexType const *)arg3,(double const *)arg4,arg5,(CNTK::DeviceDescriptor const &)*arg6); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  double *arg2 = (double *) 0 ;
+  size_t arg3 ;
+  CNTK::DeviceDescriptor *arg4 = 0 ;
+  bool arg5 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  size_t val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  bool val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_double, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "double *""'"); 
+  }
+  arg2 = reinterpret_cast< double * >(argp2);
+  ecode3 = SWIG_AsVal_size_t(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "size_t""'");
+  } 
+  arg3 = static_cast< size_t >(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
+  ecode5 = SWIG_AsVal_bool(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_NDArrayViewDouble" "', argument " "5"" of type '" "bool""'");
+  } 
+  arg5 = static_cast< bool >(val5);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4,arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
+  result->AddReference();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  double *arg2 = (double *) 0 ;
+  size_t arg3 ;
+  CNTK::DeviceDescriptor *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  size_t val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_double, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "double *""'"); 
+  }
+  arg2 = reinterpret_cast< double * >(argp2);
+  ecode3 = SWIG_AsVal_size_t(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "size_t""'");
+  } 
+  arg3 = static_cast< size_t >(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((CNTK::NDShape const &)*arg1,arg2,arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double *arg1 = 0 ;
+  CNTK::NDShape *arg2 = 0 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  bool arg4 ;
+  double temp1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  bool val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "double""'");
+  } 
+  temp1 = static_cast< double >(val1);
+  arg1 = &temp1;
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  ecode4 = SWIG_AsVal_bool(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_NDArrayViewDouble" "', argument " "4"" of type '" "bool""'");
+  } 
+  arg4 = static_cast< bool >(val4);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((double const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3,arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, SWIG_POINTER_OWN |  0 );
+  result->AddReference();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double *arg1 = 0 ;
+  CNTK::NDShape *arg2 = 0 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  double temp1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "double""'");
+  } 
+  temp1 = static_cast< double >(val1);
+  arg1 = &temp1;
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((double const &)*arg1,(CNTK::NDShape const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_6(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double *arg1 = 0 ;
+  CNTK::NDShape *arg2 = 0 ;
+  double temp1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_NDArrayViewDouble",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "double""'");
+  } 
+  temp1 = static_cast< double >(val1);
+  arg1 = &temp1;
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__NDShape,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewDouble" "', argument " "2"" of type '" "CNTK::NDShape const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((double const &)*arg1,(CNTK::NDShape const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_7(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double *arg1 = 0 ;
+  double temp1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::NDArrayView *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_NDArrayViewDouble",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_NDArrayViewDouble" "', argument " "1"" of type '" "double""'");
+  } 
+  temp1 = static_cast< double >(val1);
+  arg1 = &temp1;
+  {
+    try {
+      result = (CNTK::NDArrayView *)new CNTK::NDArrayView((double const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[8] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 7) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      return _wrap_new_NDArrayViewDouble__SWIG_7(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_new_NDArrayViewDouble__SWIG_6(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_new_NDArrayViewDouble__SWIG_5(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_double, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_size_t(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_NDArrayViewDouble__SWIG_3(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          {
+            int res = SWIG_AsVal_bool(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            return _wrap_new_NDArrayViewDouble__SWIG_4(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_double, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_size_t(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            {
+              int res = SWIG_AsVal_bool(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              return _wrap_new_NDArrayViewDouble__SWIG_2(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 6) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_int, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        void *vptr = 0;
+        int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_int, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          void *vptr = 0;
+          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_double, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            {
+              int res = SWIG_AsVal_size_t(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              int res = SWIG_ConvertPtr(argv[5], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+              _v = SWIG_CheckState(res);
+              if (_v) {
+                return _wrap_new_NDArrayViewDouble__SWIG_1(self, args);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 7) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__NDShape, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_int, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        void *vptr = 0;
+        int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_int, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          void *vptr = 0;
+          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_double, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            {
+              int res = SWIG_AsVal_size_t(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              int res = SWIG_ConvertPtr(argv[5], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+              _v = SWIG_CheckState(res);
+              if (_v) {
+                {
+                  int res = SWIG_AsVal_bool(argv[6], NULL);
+                  _v = SWIG_CheckState(res);
+                }
+                if (_v) {
+                  return _wrap_new_NDArrayViewDouble__SWIG_0(self, args);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_NDArrayViewDouble'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::NDArrayView::NDArrayView(CNTK::NDShape const &,CNTK::SparseIndexType const *,CNTK::SparseIndexType const *,double const *,size_t,CNTK::DeviceDescriptor const &,bool)\n"
+    "    CNTK::NDArrayView::NDArrayView(CNTK::NDShape const &,CNTK::SparseIndexType const *,CNTK::SparseIndexType const *,double const *,size_t,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::NDArrayView::NDArrayView(CNTK::NDShape const &,double *,size_t,CNTK::DeviceDescriptor const &,bool)\n"
+    "    CNTK::NDArrayView::NDArrayView(CNTK::NDShape const &,double *,size_t,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::NDArrayView::NDArrayView(double const &,CNTK::NDShape const &,CNTK::DeviceDescriptor const &,bool)\n"
+    "    CNTK::NDArrayView::NDArrayView(double const &,CNTK::NDShape const &,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::NDArrayView::NDArrayView(double const &,CNTK::NDShape const &)\n"
+    "    CNTK::NDArrayView::NDArrayView(double const &)\n");
+  return 0;
+}
+
+
 SWIGINTERN PyObject *NDArrayView_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
@@ -9327,7 +11420,26 @@ SWIGINTERN PyObject *_wrap_new_NDMask__SWIG_0(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDMask" "', argument " "2"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp2);
-  result = (CNTK::NDMask *)new CNTK::NDMask((CNTK::NDShape const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2);
+  {
+    try {
+      result = (CNTK::NDMask *)new CNTK::NDMask((CNTK::NDShape const &)*arg1,(CNTK::DeviceDescriptor const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDMask, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -9353,7 +11465,26 @@ SWIGINTERN PyObject *_wrap_new_NDMask__SWIG_1(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDMask" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = (CNTK::NDMask *)new CNTK::NDMask((CNTK::NDShape const &)*arg1);
+  {
+    try {
+      result = (CNTK::NDMask *)new CNTK::NDMask((CNTK::NDShape const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDMask, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -9417,7 +11548,26 @@ SWIGINTERN PyObject *_wrap_delete_NDMask(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDMask" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  arg1->RemoveReference();
+  {
+    try {
+      arg1->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -9464,7 +11614,26 @@ SWIGINTERN PyObject *_wrap_NDMask_MaskSection(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_MaskSection" "', argument " "3"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::NDShape * >(argp3);
-  (arg1)->MaskSection((std::vector< size_t,std::allocator< size_t > > const &)*arg2,(CNTK::NDShape const &)*arg3);
+  {
+    try {
+      (arg1)->MaskSection((std::vector< size_t,std::allocator< size_t > > const &)*arg2,(CNTK::NDShape const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -9487,7 +11656,26 @@ SWIGINTERN PyObject *_wrap_NDMask_Clear(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Clear" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  (arg1)->Clear();
+  {
+    try {
+      (arg1)->Clear(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -9509,7 +11697,26 @@ SWIGINTERN PyObject *_wrap_NDMask_Device(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Device" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  result = ((CNTK::NDMask const *)arg1)->Device();
+  {
+    try {
+      result = ((CNTK::NDMask const *)arg1)->Device(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9531,7 +11738,26 @@ SWIGINTERN PyObject *_wrap_NDMask_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Shape" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  result = ((CNTK::NDMask const *)arg1)->Shape();
+  {
+    try {
+      result = ((CNTK::NDMask const *)arg1)->Shape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9553,7 +11779,26 @@ SWIGINTERN PyObject *_wrap_NDMask_DeepClone(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_DeepClone" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  result = ((CNTK::NDMask const *)arg1)->DeepClone();
+  {
+    try {
+      result = ((CNTK::NDMask const *)arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9575,7 +11820,26 @@ SWIGINTERN PyObject *_wrap_NDMask_Alias(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Alias" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  result = ((CNTK::NDMask const *)arg1)->Alias();
+  {
+    try {
+      result = ((CNTK::NDMask const *)arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9608,7 +11872,26 @@ SWIGINTERN PyObject *_wrap_NDMask_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_CopyFrom" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDMask * >(argp2);
-  (arg1)->CopyFrom((CNTK::NDMask const &)*arg2);
+  {
+    try {
+      (arg1)->CopyFrom((CNTK::NDMask const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -9640,7 +11923,26 @@ SWIGINTERN PyObject *_wrap_new_Value__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Value" "', argument " "1"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDArrayViewPtr * >(argp1);
-  result = (CNTK::Value *)new CNTK::Value((CNTK::NDArrayViewPtr const &)*arg1);
+  {
+    try {
+      result = (CNTK::Value *)new CNTK::Value((CNTK::NDArrayViewPtr const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Value, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -9678,7 +11980,26 @@ SWIGINTERN PyObject *_wrap_new_Value__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Value" "', argument " "2"" of type '" "CNTK::NDMaskPtr const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDMaskPtr * >(argp2);
-  result = (CNTK::Value *)new CNTK::Value((CNTK::NDArrayViewPtr const &)*arg1,(CNTK::NDMaskPtr const &)*arg2);
+  {
+    try {
+      result = (CNTK::Value *)new CNTK::Value((CNTK::NDArrayViewPtr const &)*arg1,(CNTK::NDMaskPtr const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Value, SWIG_POINTER_NEW |  0 );
   result->AddReference();
   return resultobj;
@@ -9742,7 +12063,26 @@ SWIGINTERN PyObject *_wrap_delete_Value(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Value" "', argument " "1"" of type '" "CNTK::Value *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  arg1->RemoveReference();
+  {
+    try {
+      arg1->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -9764,7 +12104,26 @@ SWIGINTERN PyObject *_wrap_Value_Data(PyObject *SWIGUNUSEDPARM(self), PyObject *
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Data" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  result = ((CNTK::Value const *)arg1)->Data();
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->Data(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9786,7 +12145,26 @@ SWIGINTERN PyObject *_wrap_Value_Mask(PyObject *SWIGUNUSEDPARM(self), PyObject *
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Mask" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  result = ((CNTK::Value const *)arg1)->Mask();
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->Mask(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9817,7 +12195,26 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_DeepClone" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = ((CNTK::Value const *)arg1)->DeepClone(arg2);
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->DeepClone(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9839,7 +12236,26 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_DeepClone" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  result = ((CNTK::Value const *)arg1)->DeepClone();
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9916,7 +12332,26 @@ SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_Alias" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = ((CNTK::Value const *)arg1)->Alias(arg2);
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->Alias(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -9938,7 +12373,26 @@ SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Alias" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  result = ((CNTK::Value const *)arg1)->Alias();
+  {
+    try {
+      result = ((CNTK::Value const *)arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -10017,7 +12471,26 @@ SWIGINTERN PyObject *_wrap_Value_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Value_CopyFrom" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Value * >(argp2);
-  (arg1)->CopyFrom((CNTK::Value const &)*arg2);
+  {
+    try {
+      (arg1)->CopyFrom((CNTK::Value const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -10046,7 +12519,26 @@ SWIGINTERN PyObject *_wrap_new_Axis__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_Axis" "', argument " "1"" of type '" "size_t""'");
   } 
   arg1 = static_cast< size_t >(val1);
-  result = (CNTK::Axis *)new CNTK::Axis(arg1);
+  {
+    try {
+      result = (CNTK::Axis *)new CNTK::Axis(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10073,7 +12565,26 @@ SWIGINTERN PyObject *_wrap_new_Axis__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyOb
     }
     arg1 = ptr;
   }
-  result = (CNTK::Axis *)new CNTK::Axis((std::wstring const &)*arg1);
+  {
+    try {
+      result = (CNTK::Axis *)new CNTK::Axis((std::wstring const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res1)) delete arg1;
   return resultobj;
@@ -10100,7 +12611,26 @@ SWIGINTERN PyObject *_wrap_new_Axis__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Axis" "', argument " "1"" of type '" "CNTK::Axis const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  result = (CNTK::Axis *)new CNTK::Axis((CNTK::Axis const &)*arg1);
+  {
+    try {
+      result = (CNTK::Axis *)new CNTK::Axis((CNTK::Axis const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10125,7 +12655,26 @@ SWIGINTERN PyObject *_wrap_new_Axis__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Axis" "', argument " "1"" of type '" "CNTK::Axis &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  result = (CNTK::Axis *)new CNTK::Axis((CNTK::Axis &&)*arg1);
+  {
+    try {
+      result = (CNTK::Axis *)new CNTK::Axis((CNTK::Axis &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10147,7 +12696,26 @@ SWIGINTERN PyObject *_wrap_Axis_IsStaticAxis(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_IsStaticAxis" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  result = (bool)((CNTK::Axis const *)arg1)->IsStaticAxis();
+  {
+    try {
+      result = (bool)((CNTK::Axis const *)arg1)->IsStaticAxis(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -10169,7 +12737,26 @@ SWIGINTERN PyObject *_wrap_Axis_StaticAxisIndex(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_StaticAxisIndex" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  result = ((CNTK::Axis const *)arg1)->StaticAxisIndex();
+  {
+    try {
+      result = ((CNTK::Axis const *)arg1)->StaticAxisIndex(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -10326,7 +12913,26 @@ SWIGINTERN PyObject *_wrap_Axis_Name(PyObject *SWIGUNUSEDPARM(self), PyObject *a
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_Name" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  result = ((CNTK::Axis const *)arg1)->Name();
+  {
+    try {
+      result = ((CNTK::Axis const *)arg1)->Name(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_std_wstring(static_cast< std::wstring >(result));
   return resultobj;
 fail:
@@ -10347,7 +12953,26 @@ SWIGINTERN PyObject *_wrap_delete_Axis(PyObject *SWIGUNUSEDPARM(self), PyObject 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Axis" "', argument " "1"" of type '" "CNTK::Axis *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -10360,7 +12985,26 @@ SWIGINTERN PyObject *_wrap_new_Axis__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyOb
   CNTK::Axis *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_Axis")) SWIG_fail;
-  result = (CNTK::Axis *)new CNTK::Axis();
+  {
+    try {
+      result = (CNTK::Axis *)new CNTK::Axis(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10467,7 +13111,26 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__eq__" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
-  result = (bool)CNTK::operator ==((CNTK::Axis const &)*arg1,(CNTK::Axis const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator ==((CNTK::Axis const &)*arg1,(CNTK::Axis const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -10504,7 +13167,26 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__ne__" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
-  result = (bool)CNTK::operator !=((CNTK::Axis const &)*arg1,(CNTK::Axis const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator !=((CNTK::Axis const &)*arg1,(CNTK::Axis const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -10596,7 +13278,26 @@ SWIGINTERN PyObject *_wrap_Variable_eq(PyObject *SWIGUNUSEDPARM(self), PyObject 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Variable_eq" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = (bool)operator ==((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)operator ==((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -10633,7 +13334,26 @@ SWIGINTERN PyObject *_wrap_Variable_lt(PyObject *SWIGUNUSEDPARM(self), PyObject 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Variable_lt" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = (bool)operator <((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)operator <((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -10681,7 +13401,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg3 = ptr;
   }
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -10717,7 +13456,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
   } 
   arg2 = static_cast< CNTK::DataType >(val2);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10774,7 +13532,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_2(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg4 = ptr;
   }
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
@@ -10819,7 +13596,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_3(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
   } 
   arg3 = static_cast< CNTK::DataType >(val3);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10876,7 +13672,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_4(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg4 = ptr;
   }
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
@@ -10921,7 +13736,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_5(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
   } 
   arg3 = static_cast< bool >(val3);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -10987,7 +13821,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_6(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg5 = ptr;
   }
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4,(std::wstring const &)*arg5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4,(std::wstring const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
@@ -11041,7 +13894,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_7(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_Variable" "', argument " "4"" of type '" "bool""'");
   } 
   arg4 = static_cast< bool >(val4);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -11110,7 +13982,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_8(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg5 = ptr;
   }
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4,(std::wstring const &)*arg5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4,(std::wstring const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
@@ -11167,7 +14058,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_9(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp4);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -11192,7 +14102,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_10(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "1"" of type '" "CNTK::FunctionPtr const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::FunctionPtr * >(argp1);
-  result = (CNTK::Variable *)new CNTK::Variable((CNTK::FunctionPtr const &)*arg1);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::FunctionPtr const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -11214,7 +14143,26 @@ SWIGINTERN PyObject *_wrap_Variable_Shape(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Shape" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = ((CNTK::Variable const *)arg1)->Shape();
+  {
+    try {
+      result = ((CNTK::Variable const *)arg1)->Shape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -11236,7 +14184,26 @@ SWIGINTERN PyObject *_wrap_Variable_DynamicAxes(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_DynamicAxes" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = ((CNTK::Variable const *)arg1)->DynamicAxes();
+  {
+    try {
+      result = ((CNTK::Variable const *)arg1)->DynamicAxes(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::vector< CNTK::Axis,std::allocator< CNTK::Axis > >(static_cast< const std::vector< CNTK::Axis,std::allocator< CNTK::Axis > >& >(result))), SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -11258,7 +14225,26 @@ SWIGINTERN PyObject *_wrap_Variable_Kind(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Kind" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (CNTK::VariableKind)((CNTK::Variable const *)arg1)->Kind();
+  {
+    try {
+      result = (CNTK::VariableKind)((CNTK::Variable const *)arg1)->Kind(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -11280,7 +14266,26 @@ SWIGINTERN PyObject *_wrap_Variable_IsSparseInput(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsSparseInput" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (bool)((CNTK::Variable const *)arg1)->IsSparseInput();
+  {
+    try {
+      result = (bool)((CNTK::Variable const *)arg1)->IsSparseInput(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11302,7 +14307,26 @@ SWIGINTERN PyObject *_wrap_Variable_IsParameter(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsParameter" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (bool)((CNTK::Variable const *)arg1)->IsParameter();
+  {
+    try {
+      result = (bool)((CNTK::Variable const *)arg1)->IsParameter(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11324,7 +14348,26 @@ SWIGINTERN PyObject *_wrap_Variable_IsConstant(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsConstant" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (bool)((CNTK::Variable const *)arg1)->IsConstant();
+  {
+    try {
+      result = (bool)((CNTK::Variable const *)arg1)->IsConstant(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11346,7 +14389,26 @@ SWIGINTERN PyObject *_wrap_Variable_IsPlaceholder(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsPlaceholder" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (bool)((CNTK::Variable const *)arg1)->IsPlaceholder();
+  {
+    try {
+      result = (bool)((CNTK::Variable const *)arg1)->IsPlaceholder(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11368,7 +14430,26 @@ SWIGINTERN PyObject *_wrap_Variable_Name(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Name" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = ((CNTK::Variable const *)arg1)->Name();
+  {
+    try {
+      result = ((CNTK::Variable const *)arg1)->Name(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_std_wstring(static_cast< std::wstring >(result));
   return resultobj;
 fail:
@@ -11390,7 +14471,26 @@ SWIGINTERN PyObject *_wrap_Variable_Owner(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Owner" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = ((CNTK::Variable const *)arg1)->Owner();
+  {
+    try {
+      result = ((CNTK::Variable const *)arg1)->Owner(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -11412,7 +14512,26 @@ SWIGINTERN PyObject *_wrap_Variable_GetDataType(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_GetDataType" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (CNTK::DataType)((CNTK::Variable const *)arg1)->GetDataType();
+  {
+    try {
+      result = (CNTK::DataType)((CNTK::Variable const *)arg1)->GetDataType(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -11425,7 +14544,26 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_11(PyObject *SWIGUNUSEDPARM(self),
   CNTK::Variable *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_Variable")) SWIG_fail;
-  result = (CNTK::Variable *)new CNTK::Variable();
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -11716,7 +14854,26 @@ SWIGINTERN PyObject *_wrap_Variable_NeedsGradient(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_NeedsGradient" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (bool)((CNTK::Variable const *)arg1)->NeedsGradient();
+  {
+    try {
+      result = (bool)((CNTK::Variable const *)arg1)->NeedsGradient(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11737,7 +14894,11 @@ SWIGINTERN PyObject *_wrap_delete_Variable(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Variable" "', argument " "1"" of type '" "CNTK::Variable *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -11781,7 +14942,26 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__eq__" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = (bool)CNTK::operator ==((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator ==((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11885,7 +15065,26 @@ SWIGINTERN PyObject *_wrap___lt__(PyObject *SWIGUNUSEDPARM(self), PyObject *args
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "__lt__" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = (bool)CNTK::operator <((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)CNTK::operator <((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -11924,7 +15123,26 @@ SWIGINTERN PyObject *_wrap_new_Parameter__SWIG_0(PyObject *SWIGUNUSEDPARM(self),
     }
     arg2 = ptr;
   }
-  result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDArrayViewPtr const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDArrayViewPtr const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -11951,7 +15169,26 @@ SWIGINTERN PyObject *_wrap_new_Parameter__SWIG_1(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Parameter" "', argument " "1"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDArrayViewPtr * >(argp1);
-  result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDArrayViewPtr const &)*arg1);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDArrayViewPtr const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -11976,7 +15213,26 @@ SWIGINTERN PyObject *_wrap_new_Parameter__SWIG_5(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Parameter" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -12049,7 +15305,26 @@ SWIGINTERN PyObject *_wrap_Parameter_Value(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Parameter_Value" "', argument " "1"" of type '" "CNTK::Parameter const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Parameter * >(argp1);
-  result = ((CNTK::Parameter const *)arg1)->Value();
+  {
+    try {
+      result = ((CNTK::Parameter const *)arg1)->Value(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12070,7 +15345,11 @@ SWIGINTERN PyObject *_wrap_delete_Parameter(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Parameter" "', argument " "1"" of type '" "CNTK::Parameter *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Parameter * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -12116,7 +15395,26 @@ SWIGINTERN PyObject *_wrap_new_Constant__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg2 = ptr;
   }
-  result = (CNTK::Constant *)new CNTK::Constant((CNTK::NDArrayViewPtr const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = (CNTK::Constant *)new CNTK::Constant((CNTK::NDArrayViewPtr const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Constant, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -12143,7 +15441,26 @@ SWIGINTERN PyObject *_wrap_new_Constant__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Constant" "', argument " "1"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDArrayViewPtr * >(argp1);
-  result = (CNTK::Constant *)new CNTK::Constant((CNTK::NDArrayViewPtr const &)*arg1);
+  {
+    try {
+      result = (CNTK::Constant *)new CNTK::Constant((CNTK::NDArrayViewPtr const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Constant, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -12168,7 +15485,26 @@ SWIGINTERN PyObject *_wrap_new_Constant__SWIG_5(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Constant" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (CNTK::Constant *)new CNTK::Constant((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = (CNTK::Constant *)new CNTK::Constant((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Constant, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -12241,7 +15577,26 @@ SWIGINTERN PyObject *_wrap_Constant_Value(PyObject *SWIGUNUSEDPARM(self), PyObje
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Constant_Value" "', argument " "1"" of type '" "CNTK::Constant const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Constant * >(argp1);
-  result = ((CNTK::Constant const *)arg1)->Value();
+  {
+    try {
+      result = ((CNTK::Constant const *)arg1)->Value(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12262,7 +15617,11 @@ SWIGINTERN PyObject *_wrap_delete_Constant(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Constant" "', argument " "1"" of type '" "CNTK::Constant *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Constant * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -12308,7 +15667,26 @@ SWIGINTERN PyObject *_wrap_new_Placeholder__SWIG_0(PyObject *SWIGUNUSEDPARM(self
     }
     arg2 = ptr;
   }
-  result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::NDShape const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::NDShape const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Placeholder, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -12335,7 +15713,26 @@ SWIGINTERN PyObject *_wrap_new_Placeholder__SWIG_1(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Placeholder" "', argument " "1"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::NDShape const &)*arg1);
+  {
+    try {
+      result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::NDShape const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Placeholder, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -12360,7 +15757,26 @@ SWIGINTERN PyObject *_wrap_new_Placeholder__SWIG_2(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Placeholder" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = (CNTK::Placeholder *)new CNTK::Placeholder((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Placeholder, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -12432,7 +15848,11 @@ SWIGINTERN PyObject *_wrap_delete_Placeholder(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Placeholder" "', argument " "1"" of type '" "CNTK::Placeholder *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Placeholder * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -12461,7 +15881,26 @@ SWIGINTERN PyObject *_wrap_BackPropState_Function(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropState_Function" "', argument " "1"" of type '" "CNTK::BackPropState const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::BackPropState * >(argp1);
-  result = ((CNTK::BackPropState const *)arg1)->Function();
+  {
+    try {
+      result = ((CNTK::BackPropState const *)arg1)->Function(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12482,7 +15921,11 @@ SWIGINTERN PyObject *_wrap_delete_BackPropState(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BackPropState" "', argument " "1"" of type '" "CNTK::BackPropState *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::BackPropState * >(argp1);
-  arg1->RemoveReference();
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    arg1->RemoveReference();
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -12559,7 +16002,26 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Forward" "', argument " "5"" of type '" "std::unordered_set< CNTK::Variable > const &""'"); 
   }
   arg5 = reinterpret_cast< std::unordered_set< CNTK::Variable > * >(argp5);
-  result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::unordered_set< CNTK::Variable > const &)*arg5);
+  {
+    try {
+      result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::unordered_set< CNTK::Variable > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12617,7 +16079,26 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12663,7 +16144,26 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Forward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
   }
   arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp3);
-  result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3);
+  {
+    try {
+      result = (arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12766,7 +16266,7 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap__SWIG_0(PyObject *SWIGUNUSEDPARM(
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg2 = 0 ;
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg3 = 0 ;
   CNTK::DeviceDescriptor *arg4 = 0 ;
-  std::set< CNTK::Variable > *arg5 = 0 ;
+  std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *arg5 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
@@ -12814,15 +16314,34 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap__SWIG_0(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ForwardMap" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__setT_CNTK__Variable_t,  0  | 0);
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Function_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Function_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::set< CNTK::Variable > * >(argp5);
-  result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::set< CNTK::Variable > const &)*arg5);
+  arg5 = reinterpret_cast< std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > * >(argp5);
+  {
+    try {
+      result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12880,7 +16399,26 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap__SWIG_1(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ForwardMap" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -12926,7 +16464,26 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap__SWIG_2(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ForwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
   }
   arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp3);
-  result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3);
+  {
+    try {
+      result = (arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13002,7 +16559,7 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap(PyObject *self, PyObject *args) {
           int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__setT_CNTK__Variable_t, 0);
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_Function_ForwardMap__SWIG_0(self, args);
@@ -13016,7 +16573,7 @@ SWIGINTERN PyObject *_wrap_Function_ForwardMap(PyObject *self, PyObject *args) {
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Function_ForwardMap'.\n"
     "  Possible C/C++ prototypes are:\n"
-    "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &,std::set< CNTK::Variable > const &)\n"
+    "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &,std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &)\n"
     "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &)\n");
   return 0;
@@ -13027,7 +16584,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   CNTK::BackPropStatePtr *arg2 = 0 ;
-  std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > *arg3 = 0 ;
+  std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg3 = 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg4 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -13056,14 +16613,14 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Backward" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::BackPropStatePtr * >(argp2);
-  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t,  0  | 0);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Function_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Function_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &""'"); 
   }
-  arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > * >(argp3);
+  arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,  0 );
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_Backward" "', argument " "4"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
@@ -13072,7 +16629,26 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Backward" "', argument " "4"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
   }
   arg4 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp4);
-  (arg1)->Backward((CNTK::BackPropStatePtr const &)*arg2,(std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &)*arg3,*arg4);
+  {
+    try {
+      (arg1)->Backward((CNTK::BackPropStatePtr const &)*arg2,(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg3,*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -13084,7 +16660,7 @@ SWIGINTERN PyObject *_wrap_Function_BackwardMap(PyObject *SWIGUNUSEDPARM(self), 
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   CNTK::BackPropStatePtr *arg2 = 0 ;
-  std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > *arg3 = 0 ;
+  std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg3 = 0 ;
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg4 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -13113,14 +16689,14 @@ SWIGINTERN PyObject *_wrap_Function_BackwardMap(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_BackwardMap" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::BackPropStatePtr * >(argp2);
-  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t,  0  | 0);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Function_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Function_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &""'"); 
   }
-  arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > * >(argp3);
+  arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,  0 );
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_BackwardMap" "', argument " "4"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
@@ -13129,7 +16705,26 @@ SWIGINTERN PyObject *_wrap_Function_BackwardMap(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_BackwardMap" "', argument " "4"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
   }
   arg4 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp4);
-  (arg1)->BackwardMap((CNTK::BackPropStatePtr const &)*arg2,(std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &)*arg3,*arg4);
+  {
+    try {
+      (arg1)->BackwardMap((CNTK::BackPropStatePtr const &)*arg2,(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg3,*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -13150,7 +16745,26 @@ SWIGINTERN PyObject *_wrap_delete_Function(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Function" "', argument " "1"" of type '" "CNTK::Function *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  arg1->RemoveReference();
+  {
+    try {
+      arg1->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -13172,7 +16786,26 @@ SWIGINTERN PyObject *_wrap_Function_Name(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Name" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Name();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Name(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_std_wstring(static_cast< std::wstring >(result));
   return resultobj;
 fail:
@@ -13194,7 +16827,26 @@ SWIGINTERN PyObject *_wrap_Function_RootFunction(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_RootFunction" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->RootFunction();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->RootFunction(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13216,7 +16868,26 @@ SWIGINTERN PyObject *_wrap_Function_Inputs(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Inputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Inputs();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Inputs(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >(static_cast< const std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >& >(result))), SWIGTYPE_p_std__vectorT_CNTK__Variable_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13238,7 +16909,26 @@ SWIGINTERN PyObject *_wrap_Function_Output(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Output" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Output();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Output(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::Variable(static_cast< const CNTK::Variable& >(result))), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13260,7 +16950,26 @@ SWIGINTERN PyObject *_wrap_Function_Outputs(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Outputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Outputs();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Outputs(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >(static_cast< const std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >& >(result))), SWIGTYPE_p_std__vectorT_CNTK__Variable_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13282,7 +16991,26 @@ SWIGINTERN PyObject *_wrap_Function_Arguments(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Arguments" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Arguments();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Arguments(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Variable >(static_cast< const std::unordered_set< CNTK::Variable >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13304,7 +17032,26 @@ SWIGINTERN PyObject *_wrap_Function_Parameters(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Parameters" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Parameters();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Parameters(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Parameter >(static_cast< const std::unordered_set< CNTK::Parameter >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13326,7 +17073,26 @@ SWIGINTERN PyObject *_wrap_Function_Constants(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Constants" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Constants();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Constants(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Constant >(static_cast< const std::unordered_set< CNTK::Constant >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Constant_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13348,7 +17114,26 @@ SWIGINTERN PyObject *_wrap_Function_Placeholders(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Placeholders" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = ((CNTK::Function const *)arg1)->Placeholders();
+  {
+    try {
+      result = ((CNTK::Function const *)arg1)->Placeholders(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Placeholder >(static_cast< const std::unordered_set< CNTK::Placeholder >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Placeholder_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13382,7 +17167,26 @@ SWIGINTERN PyObject *_wrap_Function_ReplacePlaceholders(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ReplacePlaceholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
   }
   arg2 = reinterpret_cast< std::unordered_map< CNTK::Placeholder,CNTK::Variable > * >(argp2);
-  result = (arg1)->ReplacePlaceholders((std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &)*arg2);
+  {
+    try {
+      result = (arg1)->ReplacePlaceholders((std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13428,7 +17232,26 @@ SWIGINTERN PyObject *_wrap__Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
     }
     arg2 = ptr;
   }
-  result = CNTK::_Combine((CNTK::_Internal::_SimpleVector< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::_Combine((CNTK::_Internal::_SimpleVector< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -13455,7 +17278,26 @@ SWIGINTERN PyObject *_wrap__Combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "_Combine" "', argument " "1"" of type '" "CNTK::_Internal::_SimpleVector< CNTK::FunctionPtr > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_SimpleVector< CNTK::FunctionPtr > * >(argp1);
-  result = CNTK::_Combine((CNTK::_Internal::_SimpleVector< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1);
+  {
+    try {
+      result = CNTK::_Combine((CNTK::_Internal::_SimpleVector< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13548,7 +17390,26 @@ SWIGINTERN PyObject *_wrap_Times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
     }
     arg3 = ptr;
   }
-  result = CNTK::Times((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = CNTK::Times((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -13587,7 +17448,26 @@ SWIGINTERN PyObject *_wrap_Times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = CNTK::Times((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = CNTK::Times((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13688,7 +17568,26 @@ SWIGINTERN PyObject *_wrap_Plus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
     }
     arg3 = ptr;
   }
-  result = CNTK::Plus((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = CNTK::Plus((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -13727,7 +17626,26 @@ SWIGINTERN PyObject *_wrap_Plus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = CNTK::Plus((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = CNTK::Plus((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13816,7 +17734,26 @@ SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     }
     arg2 = ptr;
   }
-  result = CNTK::Sigmoid((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::Sigmoid((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -13843,7 +17780,26 @@ SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = CNTK::Sigmoid((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = CNTK::Sigmoid((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -13924,7 +17880,26 @@ SWIGINTERN PyObject *_wrap_Tanh__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
     }
     arg2 = ptr;
   }
-  result = CNTK::Tanh((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::Tanh((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -13951,7 +17926,26 @@ SWIGINTERN PyObject *_wrap_Tanh__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = CNTK::Tanh((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = CNTK::Tanh((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14044,7 +18038,26 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_0(PyObject *SWIGUNUSEDP
     }
     arg3 = ptr;
   }
-  result = CNTK::CrossEntropyWithSoftmax((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = CNTK::CrossEntropyWithSoftmax((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -14083,7 +18096,26 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_1(PyObject *SWIGUNUSEDP
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = CNTK::CrossEntropyWithSoftmax((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = CNTK::CrossEntropyWithSoftmax((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14184,7 +18216,26 @@ SWIGINTERN PyObject *_wrap_PredictionError__SWIG_0(PyObject *SWIGUNUSEDPARM(self
     }
     arg3 = ptr;
   }
-  result = CNTK::PredictionError((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = CNTK::PredictionError((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -14223,7 +18274,26 @@ SWIGINTERN PyObject *_wrap_PredictionError__SWIG_1(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PredictionError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = CNTK::PredictionError((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = CNTK::PredictionError((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14312,7 +18382,26 @@ SWIGINTERN PyObject *_wrap_Exp__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject 
     }
     arg2 = ptr;
   }
-  result = CNTK::Exp((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::Exp((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -14339,7 +18428,26 @@ SWIGINTERN PyObject *_wrap_Exp__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = CNTK::Exp((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = CNTK::Exp((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14441,7 +18549,26 @@ SWIGINTERN PyObject *_wrap_PastValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
     }
     arg4 = ptr;
   }
-  result = CNTK::PastValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3,(std::wstring const &)*arg4);
+  {
+    try {
+      result = CNTK::PastValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
@@ -14489,7 +18616,26 @@ SWIGINTERN PyObject *_wrap_PastValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "PastValue" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
-  result = CNTK::PastValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3);
+  {
+    try {
+      result = CNTK::PastValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14611,7 +18757,26 @@ SWIGINTERN PyObject *_wrap_FutureValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
     }
     arg4 = ptr;
   }
-  result = CNTK::FutureValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3,(std::wstring const &)*arg4);
+  {
+    try {
+      result = CNTK::FutureValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
@@ -14659,7 +18824,26 @@ SWIGINTERN PyObject *_wrap_FutureValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "FutureValue" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
-  result = CNTK::FutureValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3);
+  {
+    try {
+      result = CNTK::FutureValue((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14772,7 +18956,26 @@ SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
     }
     arg3 = ptr;
   }
-  result = CNTK::ElementTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3);
+  {
+    try {
+      result = CNTK::ElementTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
@@ -14811,7 +19014,26 @@ SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
-  result = CNTK::ElementTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = CNTK::ElementTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -14900,7 +19122,26 @@ SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
     }
     arg2 = ptr;
   }
-  result = CNTK::ReduceSum((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::ReduceSum((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -14927,7 +19168,26 @@ SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReduceSum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
-  result = CNTK::ReduceSum((CNTK::Variable const &)*arg1);
+  {
+    try {
+      result = CNTK::ReduceSum((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15008,7 +19268,26 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     }
     arg2 = ptr;
   }
-  result = CNTK::Combine((std::initializer_list< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1,(std::wstring const &)*arg2);
+  {
+    try {
+      result = CNTK::Combine((std::initializer_list< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -15035,7 +19314,26 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Combine" "', argument " "1"" of type '" "std::initializer_list< CNTK::FunctionPtr > const &""'"); 
   }
   arg1 = reinterpret_cast< std::initializer_list< CNTK::FunctionPtr > * >(argp1);
-  result = CNTK::Combine((std::initializer_list< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1);
+  {
+    try {
+      result = CNTK::Combine((std::initializer_list< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15102,7 +19400,26 @@ SWIGINTERN PyObject *_wrap_new_MapVarValuePtr__SWIG_0(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_MapVarValuePtr" "', argument " "1"" of type '" "std::less< CNTK::Variable > const &""'"); 
   }
   arg1 = reinterpret_cast< std::less< CNTK::Variable > * >(argp1);
-  result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >((std::less< CNTK::Variable > const &)*arg1);
+  {
+    try {
+      result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >((std::less< CNTK::Variable > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -15126,7 +19443,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_iterator(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_iterator" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__iterator(arg1,arg2);
+  {
+    try {
+      result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__iterator(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15148,7 +19484,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___nonzero__(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr___nonzero__" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____nonzero__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1);
+  {
+    try {
+      result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____nonzero__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -15170,7 +19525,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___bool__(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr___bool__" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____bool__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1);
+  {
+    try {
+      result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____bool__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -15192,7 +19566,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___len__(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr___len__" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____len__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1);
+  {
+    try {
+      result = std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____len__((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -15226,13 +19619,31 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___getitem__(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr___getitem__" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  try {
-    result = (std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::mapped_type *) &std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____getitem__(arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      try {
+        result = (std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::mapped_type *) &std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____getitem__(arg1,(CNTK::Variable const &)*arg2);
+      }
+      catch(std::out_of_range &_e) {
+        SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
+      }
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  catch(std::out_of_range &_e) {
-    SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
-  }
-  
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, 0 |  0 );
   return resultobj;
 fail:
@@ -15265,13 +19676,31 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___delitem__(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr___delitem__" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  try {
-    std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____delitem__(arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      try {
+        std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____delitem__(arg1,(CNTK::Variable const &)*arg2);
+      }
+      catch(std::out_of_range &_e) {
+        SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
+      }
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  catch(std::out_of_range &_e) {
-    SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
-  }
-  
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -15305,7 +19734,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_has_key(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_has_key" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__has_key((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__has_key((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > const *)arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -15327,7 +19775,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_keys(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_keys" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__keys(arg1);
+  {
+    try {
+      result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__keys(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = result;
   return resultobj;
 fail:
@@ -15349,7 +19816,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_values(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_values" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__values(arg1);
+  {
+    try {
+      result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__values(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = result;
   return resultobj;
 fail:
@@ -15371,7 +19857,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_items(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_items" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__items(arg1);
+  {
+    try {
+      result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__items(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = result;
   return resultobj;
 fail:
@@ -15405,7 +19910,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___contains__(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr___contains__" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____contains__(arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      result = (bool)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____contains__(arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -15429,7 +19953,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_key_iterator(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_key_iterator" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__key_iterator(arg1,arg2);
+  {
+    try {
+      result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__key_iterator(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15453,7 +19996,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_value_iterator(PyObject *SWIGUNUSEDPAR
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_value_iterator" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__value_iterator(arg1,arg2);
+  {
+    try {
+      result = (swig::SwigPyIterator *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__value_iterator(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15486,7 +20048,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___setitem____SWIG_0(PyObject *SWIGUNUS
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr___setitem__" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____setitem____SWIG_0(arg1,(CNTK::Variable const &)*arg2);
+  {
+    try {
+      std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____setitem____SWIG_0(arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -15531,13 +20112,31 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr___setitem____SWIG_1(PyObject *SWIGUNUS
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr___setitem__" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::mapped_type const &""'"); 
   }
   arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::mapped_type * >(argp3);
-  try {
-    std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____setitem____SWIG_1(arg1,(CNTK::Variable const &)*arg2,(CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const &)*arg3);
+  {
+    try {
+      try {
+        std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg____setitem____SWIG_1(arg1,(CNTK::Variable const &)*arg2,(CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const &)*arg3);
+      }
+      catch(std::out_of_range &_e) {
+        SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
+      }
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  catch(std::out_of_range &_e) {
-    SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
-  }
-  
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -15609,7 +20208,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_asdict(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_asdict" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__asdict(arg1);
+  {
+    try {
+      result = (PyObject *)std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__asdict(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = result;
   return resultobj;
 fail:
@@ -15622,7 +20240,26 @@ SWIGINTERN PyObject *_wrap_new_MapVarValuePtr__SWIG_1(PyObject *SWIGUNUSEDPARM(s
   std::map< CNTK::Variable,CNTK::ValuePtr > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_MapVarValuePtr")) SWIG_fail;
-  result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >();
+  {
+    try {
+      result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -15649,7 +20286,26 @@ SWIGINTERN PyObject *_wrap_new_MapVarValuePtr__SWIG_2(PyObject *SWIGUNUSEDPARM(s
     }
     arg1 = ptr;
   }
-  result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >((std::map< CNTK::Variable,CNTK::ValuePtr > const &)*arg1);
+  {
+    try {
+      result = (std::map< CNTK::Variable,CNTK::ValuePtr > *)new std::map< CNTK::Variable,CNTK::ValuePtr >((std::map< CNTK::Variable,CNTK::ValuePtr > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t, SWIG_POINTER_NEW |  0 );
   if (SWIG_IsNewObj(res1)) delete arg1;
   return resultobj;
@@ -15715,7 +20371,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_empty(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_empty" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (bool)((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->empty();
+  {
+    try {
+      result = (bool)((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->empty(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -15737,7 +20412,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_size(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_size" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->size();
+  {
+    try {
+      result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->size(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -15770,7 +20464,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_swap(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_swap" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp2);
-  (arg1)->swap(*arg2);
+  {
+    try {
+      (arg1)->swap(*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -15792,7 +20505,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_begin(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_begin" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (arg1)->begin();
+  {
+    try {
+      result = (arg1)->begin(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -15815,7 +20547,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_end(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_end" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (arg1)->end();
+  {
+    try {
+      result = (arg1)->end(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -15838,7 +20589,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_rbegin(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_rbegin" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (arg1)->rbegin();
+  {
+    try {
+      result = (arg1)->rbegin(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::reverse_iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -15861,7 +20631,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_rend(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_rend" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = (arg1)->rend();
+  {
+    try {
+      result = (arg1)->rend(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::reverse_iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -15883,7 +20672,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_clear(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_clear" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  (arg1)->clear();
+  {
+    try {
+      (arg1)->clear(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -15905,7 +20713,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_get_allocator(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapVarValuePtr_get_allocator" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > const *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->get_allocator();
+  {
+    try {
+      result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->get_allocator(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::allocator_type(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::allocator_type& >(result))), SWIGTYPE_p_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -15939,7 +20766,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_erase__SWIG_0(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_erase" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (arg1)->erase((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2);
+  {
+    try {
+      result = (arg1)->erase((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -15973,7 +20819,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_count(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_count" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->count((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2);
+  {
+    try {
+      result = ((std::map< CNTK::Variable,CNTK::ValuePtr > const *)arg1)->count((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -16009,7 +20874,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_erase__SWIG_1(PyObject *SWIGUNUSEDPARM
       SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "MapVarValuePtr_erase" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator""'");
     }
   }
-  std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_1(arg1,arg2);
+  {
+    try {
+      std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_1(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -16060,7 +20944,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_erase__SWIG_2(PyObject *SWIGUNUSEDPARM
       SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "MapVarValuePtr_erase" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator""'");
     }
   }
-  std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_2(arg1,arg2,arg3);
+  {
+    try {
+      std_map_Sl_CNTK_Variable_Sc_CNTK_ValuePtr_Sg__erase__SWIG_2(arg1,arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -16160,7 +21063,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_find(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_find" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (arg1)->find((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2);
+  {
+    try {
+      result = (arg1)->find((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -16195,7 +21117,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_lower_bound(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_lower_bound" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (arg1)->lower_bound((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2);
+  {
+    try {
+      result = (arg1)->lower_bound((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -16230,7 +21171,26 @@ SWIGINTERN PyObject *_wrap_MapVarValuePtr_upper_bound(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MapVarValuePtr_upper_bound" "', argument " "2"" of type '" "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &""'"); 
   }
   arg2 = reinterpret_cast< std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type * >(argp2);
-  result = (arg1)->upper_bound((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2);
+  {
+    try {
+      result = (arg1)->upper_bound((std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::iterator & >(result)),
     swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
   return resultobj;
@@ -16252,7 +21212,11 @@ SWIGINTERN PyObject *_wrap_delete_MapVarValuePtr(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MapVarValuePtr" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr > *""'"); 
   }
   arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr > * >(argp1);
-  delete arg1;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -16264,6 +21228,1568 @@ SWIGINTERN PyObject *MapVarValuePtr_swigregister(PyObject *SWIGUNUSEDPARM(self),
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
   SWIG_TypeNewClientData(SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_new_VarSet__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::less< CNTK::Variable > *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_VarSet",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__lessT_CNTK__Variable_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_VarSet" "', argument " "1"" of type '" "std::less< CNTK::Variable > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_VarSet" "', argument " "1"" of type '" "std::less< CNTK::Variable > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::less< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (std::set< CNTK::Variable > *)new std::set< CNTK::Variable >((std::less< CNTK::Variable > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_iterator(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  PyObject **arg2 = (PyObject **) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  swig::SwigPyIterator *result = 0 ;
+  
+  arg2 = &obj0;
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_iterator",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_iterator" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (swig::SwigPyIterator *)std_set_Sl_CNTK_Variable_Sg__iterator(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet___nonzero__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet___nonzero__",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet___nonzero__" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (bool)std_set_Sl_CNTK_Variable_Sg____nonzero__((std::set< CNTK::Variable > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet___bool__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet___bool__",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet___bool__" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (bool)std_set_Sl_CNTK_Variable_Sg____bool__((std::set< CNTK::Variable > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet___len__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::size_type result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet___len__",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet___len__" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = std_set_Sl_CNTK_Variable_Sg____len__((std::set< CNTK::Variable > const *)arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_append(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::value_type arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_append",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_append" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_append" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'"); 
+    }  
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_append" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'");
+    } else {
+      std::set< CNTK::Variable >::value_type * temp = reinterpret_cast< std::set< CNTK::Variable >::value_type * >(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2)) delete temp;
+    }
+  }
+  {
+    try {
+      std_set_Sl_CNTK_Variable_Sg__append(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet___contains__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::value_type arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet___contains__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet___contains__" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet___contains__" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'"); 
+    }  
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet___contains__" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'");
+    } else {
+      std::set< CNTK::Variable >::value_type * temp = reinterpret_cast< std::set< CNTK::Variable >::value_type * >(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2)) delete temp;
+    }
+  }
+  {
+    try {
+      result = (bool)std_set_Sl_CNTK_Variable_Sg____contains__(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet___getitem__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::difference_type arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  ptrdiff_t val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::value_type result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet___getitem__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet___getitem__" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  ecode2 = SWIG_AsVal_ptrdiff_t(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "VarSet___getitem__" "', argument " "2"" of type '" "std::set< CNTK::Variable >::difference_type""'");
+  } 
+  arg2 = static_cast< std::set< CNTK::Variable >::difference_type >(val2);
+  {
+    try {
+      try {
+        result = std_set_Sl_CNTK_Variable_Sg____getitem__((std::set< CNTK::Variable > const *)arg1,arg2);
+      }
+      catch(std::out_of_range &_e) {
+        SWIG_exception_fail(SWIG_IndexError, (&_e)->what());
+      }
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj((new std::set< CNTK::Variable >::value_type(static_cast< const std::set< CNTK::Variable >::value_type& >(result))), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_add(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::value_type arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_add",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_add" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_add" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'"); 
+    }  
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_add" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'");
+    } else {
+      std::set< CNTK::Variable >::value_type * temp = reinterpret_cast< std::set< CNTK::Variable >::value_type * >(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2)) delete temp;
+    }
+  }
+  {
+    try {
+      std_set_Sl_CNTK_Variable_Sg__add(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_discard(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::value_type arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_discard",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_discard" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_discard" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'"); 
+    }  
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_discard" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type""'");
+    } else {
+      std::set< CNTK::Variable >::value_type * temp = reinterpret_cast< std::set< CNTK::Variable >::value_type * >(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2)) delete temp;
+    }
+  }
+  {
+    try {
+      std_set_Sl_CNTK_Variable_Sg__discard(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_VarSet__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_VarSet")) SWIG_fail;
+  {
+    try {
+      result = (std::set< CNTK::Variable > *)new std::set< CNTK::Variable >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_VarSet__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = 0 ;
+  int res1 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_VarSet",&obj0)) SWIG_fail;
+  {
+    std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *ptr = (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *)0;
+    res1 = swig::asptr(obj0, &ptr);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_VarSet" "', argument " "1"" of type '" "std::set< CNTK::Variable > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_VarSet" "', argument " "1"" of type '" "std::set< CNTK::Variable > const &""'"); 
+    }
+    arg1 = ptr;
+  }
+  {
+    try {
+      result = (std::set< CNTK::Variable > *)new std::set< CNTK::Variable >((std::set< CNTK::Variable > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_VarSet(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[2] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 1) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 0) {
+    return _wrap_new_VarSet__SWIG_1(self, args);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__lessT_CNTK__Variable_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_VarSet__SWIG_0(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    int res = swig::asptr(argv[0], (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > >**)(0));
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_VarSet__SWIG_2(self, args);
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_VarSet'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    std::set< CNTK::Variable >::set(std::less< CNTK::Variable > const &)\n"
+    "    std::set< CNTK::Variable >::set()\n"
+    "    std::set< CNTK::Variable >::set(std::set< CNTK::Variable > const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_empty(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_empty",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_empty" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (bool)((std::set< CNTK::Variable > const *)arg1)->empty(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_size(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::size_type result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_size",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_size" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = ((std::set< CNTK::Variable > const *)arg1)->size(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_clear(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_clear",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_clear" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      (arg1)->clear(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_swap(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable > *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_swap",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_swap" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t,  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_swap" "', argument " "2"" of type '" "std::set< CNTK::Variable > &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_swap" "', argument " "2"" of type '" "std::set< CNTK::Variable > &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable > * >(argp2);
+  {
+    try {
+      (arg1)->swap(*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_erase__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::size_type result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_erase",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_erase" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = (arg1)->erase((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_count(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::size_type result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_count",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_count" "', argument " "1"" of type '" "std::set< CNTK::Variable > const *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_count" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_count" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = ((std::set< CNTK::Variable > const *)arg1)->count((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_begin(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_begin",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_begin" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (arg1)->begin(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_end(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_end",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_end" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (arg1)->end(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_rbegin(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::reverse_iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_rbegin",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_rbegin" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (arg1)->rbegin(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::reverse_iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_rend(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  std::set< CNTK::Variable >::reverse_iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:VarSet_rend",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_rend" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    try {
+      result = (arg1)->rend(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::reverse_iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_erase__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::iterator arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  swig::SwigPyIterator *iter2 = 0 ;
+  int res2 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_erase",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_erase" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
+  if (!SWIG_IsOK(res2) || !iter2) {
+    SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::iterator""'");
+  } else {
+    swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *iter_t = dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter2);
+    if (iter_t) {
+      arg2 = iter_t->get_current();
+    } else {
+      SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::iterator""'");
+    }
+  }
+  {
+    try {
+      std_set_Sl_CNTK_Variable_Sg__erase__SWIG_1(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_erase__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::iterator arg2 ;
+  std::set< CNTK::Variable >::iterator arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  swig::SwigPyIterator *iter2 = 0 ;
+  int res2 ;
+  swig::SwigPyIterator *iter3 = 0 ;
+  int res3 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:VarSet_erase",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_erase" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
+  if (!SWIG_IsOK(res2) || !iter2) {
+    SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::iterator""'");
+  } else {
+    swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *iter_t = dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter2);
+    if (iter_t) {
+      arg2 = iter_t->get_current();
+    } else {
+      SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "2"" of type '" "std::set< CNTK::Variable >::iterator""'");
+    }
+  }
+  res3 = SWIG_ConvertPtr(obj2, SWIG_as_voidptrptr(&iter3), swig::SwigPyIterator::descriptor(), 0);
+  if (!SWIG_IsOK(res3) || !iter3) {
+    SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "3"" of type '" "std::set< CNTK::Variable >::iterator""'");
+  } else {
+    swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *iter_t = dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter3);
+    if (iter_t) {
+      arg3 = iter_t->get_current();
+    } else {
+      SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "VarSet_erase" "', argument " "3"" of type '" "std::set< CNTK::Variable >::iterator""'");
+    }
+  }
+  {
+    try {
+      std_set_Sl_CNTK_Variable_Sg__erase__SWIG_2(arg1,arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_erase(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = swig::asptr(argv[0], (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > >**)(0));
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_VarSet_erase__SWIG_0(self, args);
+      }
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = swig::asptr(argv[0], (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > >**)(0));
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      swig::SwigPyIterator *iter = 0;
+      int res = SWIG_ConvertPtr(argv[1], SWIG_as_voidptrptr(&iter), swig::SwigPyIterator::descriptor(), 0);
+      _v = (SWIG_IsOK(res) && iter && (dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter) != 0));
+      if (_v) {
+        return _wrap_VarSet_erase__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = swig::asptr(argv[0], (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > >**)(0));
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      swig::SwigPyIterator *iter = 0;
+      int res = SWIG_ConvertPtr(argv[1], SWIG_as_voidptrptr(&iter), swig::SwigPyIterator::descriptor(), 0);
+      _v = (SWIG_IsOK(res) && iter && (dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter) != 0));
+      if (_v) {
+        swig::SwigPyIterator *iter = 0;
+        int res = SWIG_ConvertPtr(argv[2], SWIG_as_voidptrptr(&iter), swig::SwigPyIterator::descriptor(), 0);
+        _v = (SWIG_IsOK(res) && iter && (dynamic_cast<swig::SwigPyIterator_T<std::set< CNTK::Variable >::iterator > *>(iter) != 0));
+        if (_v) {
+          return _wrap_VarSet_erase__SWIG_2(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'VarSet_erase'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    std::set< CNTK::Variable >::erase(std::set< CNTK::Variable >::key_type const &)\n"
+    "    std::set< CNTK::Variable >::erase(std::set< CNTK::Variable >::iterator)\n"
+    "    std::set< CNTK::Variable >::erase(std::set< CNTK::Variable >::iterator,std::set< CNTK::Variable >::iterator)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_find(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_find",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_find" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_find" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_find" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = (arg1)->find((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_lower_bound(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_lower_bound",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_lower_bound" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_lower_bound" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_lower_bound" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = (arg1)->lower_bound((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_upper_bound(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  std::set< CNTK::Variable >::iterator result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_upper_bound",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_upper_bound" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_upper_bound" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_upper_bound" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = (arg1)->upper_bound((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::set< CNTK::Variable >::iterator & >(result)),
+    swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_equal_range(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::key_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  SwigValueWrapper< std::pair< std::set< CNTK::Variable >::iterator,std::set< CNTK::Variable >::iterator > > result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_equal_range",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_equal_range" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_equal_range" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_equal_range" "', argument " "2"" of type '" "std::set< CNTK::Variable >::key_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::key_type * >(argp2);
+  {
+    try {
+      result = (arg1)->equal_range((std::set< CNTK::Variable >::key_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = PyTuple_New(2);
+  PyTuple_SetItem(resultobj,0,SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::pair< std::set< CNTK::Variable >::iterator,std::set< CNTK::Variable >::iterator > & >(result).first),
+      swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN));
+  PyTuple_SetItem(resultobj,1,SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::pair< std::set< CNTK::Variable >::iterator,std::set< CNTK::Variable >::iterator > & >(result).second),
+      swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_VarSet_insert(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  std::set< CNTK::Variable >::value_type *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  SwigValueWrapper< std::pair< std::set< CNTK::Variable >::iterator,bool > > result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:VarSet_insert",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VarSet_insert" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "VarSet_insert" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "VarSet_insert" "', argument " "2"" of type '" "std::set< CNTK::Variable >::value_type const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::set< CNTK::Variable >::value_type * >(argp2);
+  {
+    try {
+      result = (arg1)->insert((std::set< CNTK::Variable >::value_type const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = PyTuple_New(2);
+  PyTuple_SetItem(resultobj,0,SWIG_NewPointerObj(swig::make_output_iterator(static_cast< const std::pair< std::set< CNTK::Variable >::iterator,bool > & >(result).first),
+      swig::SwigPyIterator::descriptor(),SWIG_POINTER_OWN));    
+  PyTuple_SetItem(resultobj,1,SWIG_From_bool  (static_cast< const std::pair< std::set< CNTK::Variable >::iterator,bool > & >(result).second));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_VarSet(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::set< CNTK::Variable > *arg1 = (std::set< CNTK::Variable > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_VarSet",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_VarSet" "', argument " "1"" of type '" "std::set< CNTK::Variable > *""'"); 
+  }
+  arg1 = reinterpret_cast< std::set< CNTK::Variable > * >(argp1);
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *VarSet_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, SWIG_NewClientData(obj));
   return SWIG_Py_Void();
 }
 
@@ -16289,7 +22815,26 @@ SWIGINTERN PyObject *_wrap_new_FunctionPtr__SWIG_0(PyObject *SWIGUNUSEDPARM(self
       SWIG_exception_fail(SWIG_ArgError(res), "in method '" "new_FunctionPtr" "', argument " "2"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function >::_ReferenceCounterDeleter""'"); 
     }
   }
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >(arg1,arg2);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -16311,7 +22856,26 @@ SWIGINTERN PyObject *_wrap_new_FunctionPtr__SWIG_1(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_FunctionPtr" "', argument " "1"" of type '" "CNTK::Function *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Function * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >(arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -16324,7 +22888,26 @@ SWIGINTERN PyObject *_wrap_new_FunctionPtr__SWIG_2(PyObject *SWIGUNUSEDPARM(self
   CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_FunctionPtr")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -16349,7 +22932,26 @@ SWIGINTERN PyObject *_wrap_new_FunctionPtr__SWIG_3(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_FunctionPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > const &)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -16374,7 +22976,26 @@ SWIGINTERN PyObject *_wrap_new_FunctionPtr__SWIG_4(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_FunctionPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > &&)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Function >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -16463,7 +23084,26 @@ SWIGINTERN PyObject *_wrap_delete_FunctionPtr(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FunctionPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -16485,7 +23125,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr___deref__(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr___deref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (CNTK::Function *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->operator ->();
+  {
+    try {
+      result = (CNTK::Function *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->operator ->(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Function, 0 |  0 );
   return resultobj;
 fail:
@@ -16507,7 +23166,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr___ref__(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr___ref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (CNTK::Function *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->operator *();
+  {
+    try {
+      result = (CNTK::Function *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->operator *(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Function, 0 |  0 );
   return resultobj;
 fail:
@@ -16529,7 +23207,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_GetPtr(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_GetPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (CNTK::Function *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->GetPtr();
+  {
+    try {
+      result = (CNTK::Function *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *)arg1)->GetPtr(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Function, 0 |  0 );
   return resultobj;
 fail:
@@ -16599,7 +23296,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Forward" "', argument " "5"" of type '" "std::unordered_set< CNTK::Variable > const &""'"); 
   }
   arg5 = reinterpret_cast< std::unordered_set< CNTK::Variable > * >(argp5);
-  result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::unordered_set< CNTK::Variable > const &)*arg5);
+  {
+    try {
+      result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::unordered_set< CNTK::Variable > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -16657,7 +23373,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -16703,7 +23438,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Forward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
   }
   arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp3);
-  result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3);
+  {
+    try {
+      result = (*arg1)->Forward((std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg2,*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -16806,7 +23560,7 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap__SWIG_0(PyObject *SWIGUNUSEDPA
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg2 = 0 ;
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg3 = 0 ;
   CNTK::DeviceDescriptor *arg4 = 0 ;
-  std::set< CNTK::Variable > *arg5 = 0 ;
+  std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *arg5 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
@@ -16814,8 +23568,7 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap__SWIG_0(PyObject *SWIGUNUSEDPA
   int res3 = 0 ;
   void *argp4 = 0 ;
   int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -16856,20 +23609,44 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap__SWIG_0(PyObject *SWIGUNUSEDPA
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ForwardMap" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__setT_CNTK__Variable_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "FunctionPtr_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable > const &""'"); 
+  {
+    std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *ptr = (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "FunctionPtr_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ForwardMap" "', argument " "5"" of type '" "std::set< CNTK::Variable > const &""'"); 
+  {
+    try {
+      result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  arg5 = reinterpret_cast< std::set< CNTK::Variable > * >(argp5);
-  result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4,(std::set< CNTK::Variable > const &)*arg5);
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res2)) delete arg2;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -16926,7 +23703,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap__SWIG_1(PyObject *SWIGUNUSEDPA
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ForwardMap" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
-  result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4);
+  {
+    try {
+      result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3,(CNTK::DeviceDescriptor const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -16976,7 +23772,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap__SWIG_2(PyObject *SWIGUNUSEDPA
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ForwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
   }
   arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp3);
-  result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3);
+  {
+    try {
+      result = (*arg1)->ForwardMap((std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg2,*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::BackPropStatePtr(static_cast< const CNTK::BackPropStatePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_OWN |  0 );
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -17054,7 +23869,7 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap(PyObject *self, PyObject *args
           int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__setT_CNTK__Variable_t, 0);
+            int res = swig::asptr(argv[4], (std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_FunctionPtr_ForwardMap__SWIG_0(self, args);
@@ -17068,7 +23883,7 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ForwardMap(PyObject *self, PyObject *args
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'FunctionPtr_ForwardMap'.\n"
     "  Possible C/C++ prototypes are:\n"
-    "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &,std::set< CNTK::Variable > const &)\n"
+    "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &,std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > const &)\n"
     "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::Function::ForwardMap(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &,std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &)\n");
   return 0;
@@ -17079,7 +23894,7 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Backward(PyObject *SWIGUNUSEDPARM(self), 
   PyObject *resultobj = 0;
   CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *arg1 = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *) 0 ;
   CNTK::BackPropStatePtr *arg2 = 0 ;
-  std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > *arg3 = 0 ;
+  std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg3 = 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg4 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -17108,14 +23923,14 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Backward(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Backward" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::BackPropStatePtr * >(argp2);
-  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t,  0  | 0);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FunctionPtr_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FunctionPtr_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Backward" "', argument " "3"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &""'"); 
   }
-  arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > * >(argp3);
+  arg3 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,  0 );
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "FunctionPtr_Backward" "', argument " "4"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
@@ -17124,7 +23939,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Backward(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_Backward" "', argument " "4"" of type '" "std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &""'"); 
   }
   arg4 = reinterpret_cast< std::unordered_map< CNTK::Variable,CNTK::ValuePtr > * >(argp4);
-  (*arg1)->Backward((CNTK::BackPropStatePtr const &)*arg2,(std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > const &)*arg3,*arg4);
+  {
+    try {
+      (*arg1)->Backward((CNTK::BackPropStatePtr const &)*arg2,(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)*arg3,*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -17136,14 +23970,13 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_BackwardMap(PyObject *SWIGUNUSEDPARM(self
   PyObject *resultobj = 0;
   CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *arg1 = (CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *) 0 ;
   CNTK::BackPropStatePtr *arg2 = 0 ;
-  std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > *arg3 = 0 ;
+  std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg3 = 0 ;
   std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg4 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp3 = 0 ;
-  int res3 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
   void *argp4 = 0 ;
   int res4 = 0 ;
   PyObject * obj0 = 0 ;
@@ -17165,14 +23998,17 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_BackwardMap(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_BackwardMap" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::BackPropStatePtr * >(argp2);
-  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t,  0  | 0);
-  if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FunctionPtr_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &""'"); 
+  {
+    std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value >,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > > > *ptr = (std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value >,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > > > *)0;
+    res3 = swig::asptr(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FunctionPtr_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &""'"); 
+    }
+    arg3 = ptr;
   }
-  if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_BackwardMap" "', argument " "3"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &""'"); 
-  }
-  arg3 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,  0 );
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "FunctionPtr_BackwardMap" "', argument " "4"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
@@ -17181,10 +24017,31 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_BackwardMap(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_BackwardMap" "', argument " "4"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
   }
   arg4 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp4);
-  (*arg1)->BackwardMap((CNTK::BackPropStatePtr const &)*arg2,(std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > const &)*arg3,*arg4);
+  {
+    try {
+      (*arg1)->BackwardMap((CNTK::BackPropStatePtr const &)*arg2,(std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > const &)*arg3,*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
+  if (SWIG_IsNewObj(res3)) delete arg3;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
   return NULL;
 }
 
@@ -17203,7 +24060,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Name(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Name" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Name();
+  {
+    try {
+      result = (*arg1)->Name(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_std_wstring(static_cast< std::wstring >(result));
   return resultobj;
 fail:
@@ -17225,7 +24101,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_RootFunction(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_RootFunction" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->RootFunction();
+  {
+    try {
+      result = (*arg1)->RootFunction(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17247,7 +24142,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Inputs(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Inputs" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Inputs();
+  {
+    try {
+      result = (*arg1)->Inputs(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >(static_cast< const std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >& >(result))), SWIGTYPE_p_std__vectorT_CNTK__Variable_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17269,7 +24183,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Output(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Output" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Output();
+  {
+    try {
+      result = (*arg1)->Output(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::Variable(static_cast< const CNTK::Variable& >(result))), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17291,7 +24224,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Outputs(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Outputs" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Outputs();
+  {
+    try {
+      result = (*arg1)->Outputs(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >(static_cast< const std::vector< CNTK::Variable,std::allocator< CNTK::Variable > >& >(result))), SWIGTYPE_p_std__vectorT_CNTK__Variable_std__allocatorT_CNTK__Variable_t_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17313,7 +24265,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Arguments(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Arguments" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Arguments();
+  {
+    try {
+      result = (*arg1)->Arguments(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Variable >(static_cast< const std::unordered_set< CNTK::Variable >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17335,7 +24306,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Parameters(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Parameters" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Parameters();
+  {
+    try {
+      result = (*arg1)->Parameters(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Parameter >(static_cast< const std::unordered_set< CNTK::Parameter >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17357,7 +24347,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Constants(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Constants" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Constants();
+  {
+    try {
+      result = (*arg1)->Constants(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Constant >(static_cast< const std::unordered_set< CNTK::Constant >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Constant_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17379,7 +24388,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_Placeholders(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_Placeholders" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->Placeholders();
+  {
+    try {
+      result = (*arg1)->Placeholders(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new std::unordered_set< CNTK::Placeholder >(static_cast< const std::unordered_set< CNTK::Placeholder >& >(result))), SWIGTYPE_p_std__unordered_setT_CNTK__Placeholder_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17413,7 +24441,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_ReplacePlaceholders(PyObject *SWIGUNUSEDP
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FunctionPtr_ReplacePlaceholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
   }
   arg2 = reinterpret_cast< std::unordered_map< CNTK::Placeholder,CNTK::Variable > * >(argp2);
-  result = (*arg1)->ReplacePlaceholders((std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &)*arg2);
+  {
+    try {
+      result = (*arg1)->ReplacePlaceholders((std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17435,7 +24482,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_AddReference(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->AddReference();
+  {
+    try {
+      result = (*arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -17457,7 +24523,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_RemoveReference(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->RemoveReference();
+  {
+    try {
+      result = (*arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -17479,7 +24564,26 @@ SWIGINTERN PyObject *_wrap_FunctionPtr_GetReferenceCount(PyObject *SWIGUNUSEDPAR
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionPtr_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Function > * >(argp1);
-  result = (*arg1)->GetReferenceCount();
+  {
+    try {
+      result = (*arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -17516,7 +24620,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewPtr__SWIG_0(PyObject *SWIGUNUSEDPARM(s
       SWIG_exception_fail(SWIG_ArgError(res), "in method '" "new_NDArrayViewPtr" "', argument " "2"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >::_ReferenceCounterDeleter""'"); 
     }
   }
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >(arg1,arg2);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -17538,7 +24661,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewPtr__SWIG_1(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDArrayViewPtr" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDArrayView * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >(arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -17551,7 +24693,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewPtr__SWIG_2(PyObject *SWIGUNUSEDPARM(s
   CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_NDArrayViewPtr")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -17576,7 +24737,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewPtr__SWIG_3(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > const &)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -17601,7 +24781,26 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewPtr__SWIG_4(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDArrayViewPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > &&)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDArrayView > &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -17690,7 +24889,26 @@ SWIGINTERN PyObject *_wrap_delete_NDArrayViewPtr(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDArrayViewPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -17712,7 +24930,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr___deref__(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr___deref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (CNTK::NDArrayView *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->operator ->();
+  {
+    try {
+      result = (CNTK::NDArrayView *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->operator ->(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -17734,7 +24971,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr___ref__(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr___ref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (CNTK::NDArrayView *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->operator *();
+  {
+    try {
+      result = (CNTK::NDArrayView *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->operator *(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -17756,7 +25012,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_GetPtr(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_GetPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (CNTK::NDArrayView *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->GetPtr();
+  {
+    try {
+      result = (CNTK::NDArrayView *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *)arg1)->GetPtr(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDArrayView, 0 |  0 );
   return resultobj;
 fail:
@@ -17778,7 +25053,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_Device(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_Device" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->Device();
+  {
+    try {
+      result = (*arg1)->Device(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17800,7 +25094,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_GetDataType(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_GetDataType" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (CNTK::DataType)(*arg1)->GetDataType();
+  {
+    try {
+      result = (CNTK::DataType)(*arg1)->GetDataType(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -17822,7 +25135,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_GetStorageFormat(PyObject *SWIGUNUSEDP
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_GetStorageFormat" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (CNTK::StorageFormat)(*arg1)->GetStorageFormat();
+  {
+    try {
+      result = (CNTK::StorageFormat)(*arg1)->GetStorageFormat(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_int(static_cast< int >(result));
   return resultobj;
 fail:
@@ -17844,7 +25176,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_Shape(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_Shape" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->Shape();
+  {
+    try {
+      result = (*arg1)->Shape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17866,7 +25217,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_IsSparse(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_IsSparse" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (bool)(*arg1)->IsSparse();
+  {
+    try {
+      result = (bool)(*arg1)->IsSparse(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -17888,7 +25258,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_IsReadOnly(PyObject *SWIGUNUSEDPARM(se
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_IsReadOnly" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (bool)(*arg1)->IsReadOnly();
+  {
+    try {
+      result = (bool)(*arg1)->IsReadOnly(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
@@ -17919,7 +25308,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_DeepClone__SWIG_0(PyObject *SWIGUNUSED
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayViewPtr_DeepClone" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = (*arg1)->DeepClone(arg2);
+  {
+    try {
+      result = (*arg1)->DeepClone(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -17941,7 +25349,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_DeepClone__SWIG_1(PyObject *SWIGUNUSED
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_DeepClone" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->DeepClone();
+  {
+    try {
+      result = (*arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18018,7 +25445,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayViewPtr_Alias" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = (*arg1)->Alias(arg2);
+  {
+    try {
+      result = (*arg1)->Alias(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18040,7 +25486,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_Alias" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->Alias();
+  {
+    try {
+      result = (*arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18119,7 +25584,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_CopyFrom(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayViewPtr_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDArrayView * >(argp2);
-  (*arg1)->CopyFrom((CNTK::NDArrayView const &)*arg2);
+  {
+    try {
+      (*arg1)->CopyFrom((CNTK::NDArrayView const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -18127,22 +25611,41 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayViewPtr_DataBufferFloat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayViewPtr_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *arg1 = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
-  float *result = 0 ;
+  PyObject *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayViewPtr_DataBufferFloat",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayViewPtr_ToNumPy",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_DataBufferFloat" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_ToNumPy" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (float *)CNTK_NDArrayView_DataBufferFloat((CNTK::NDArrayView*)(arg1)->operator ->());
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  {
+    try {
+      result = (PyObject *)CNTK_NDArrayView_ToNumPy((CNTK::NDArrayView*)(arg1)->operator ->()); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = result;
   return resultobj;
 fail:
   return NULL;
@@ -18163,7 +25666,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_AddReference(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->AddReference();
+  {
+    try {
+      result = (*arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18185,7 +25707,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_RemoveReference(PyObject *SWIGUNUSEDPA
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->RemoveReference();
+  {
+    try {
+      result = (*arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18207,7 +25748,26 @@ SWIGINTERN PyObject *_wrap_NDArrayViewPtr_GetReferenceCount(PyObject *SWIGUNUSED
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayViewPtr_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView > * >(argp1);
-  result = (*arg1)->GetReferenceCount();
+  {
+    try {
+      result = (*arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18244,7 +25804,26 @@ SWIGINTERN PyObject *_wrap_new_ValuePtr__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
       SWIG_exception_fail(SWIG_ArgError(res), "in method '" "new_ValuePtr" "', argument " "2"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value >::_ReferenceCounterDeleter""'"); 
     }
   }
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >(arg1,arg2);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18266,7 +25845,26 @@ SWIGINTERN PyObject *_wrap_new_ValuePtr__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_ValuePtr" "', argument " "1"" of type '" "CNTK::Value *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Value * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >(arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18279,7 +25877,26 @@ SWIGINTERN PyObject *_wrap_new_ValuePtr__SWIG_2(PyObject *SWIGUNUSEDPARM(self), 
   CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_ValuePtr")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18304,7 +25921,26 @@ SWIGINTERN PyObject *_wrap_new_ValuePtr__SWIG_3(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ValuePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const &)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18329,7 +25965,26 @@ SWIGINTERN PyObject *_wrap_new_ValuePtr__SWIG_4(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ValuePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > &&)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< Value >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18418,7 +26073,26 @@ SWIGINTERN PyObject *_wrap_delete_ValuePtr(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ValuePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -18440,7 +26114,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr___deref__(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr___deref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (CNTK::Value *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->operator ->();
+  {
+    try {
+      result = (CNTK::Value *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->operator ->(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Value, 0 |  0 );
   return resultobj;
 fail:
@@ -18462,7 +26155,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr___ref__(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr___ref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (CNTK::Value *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->operator *();
+  {
+    try {
+      result = (CNTK::Value *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->operator *(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Value, 0 |  0 );
   return resultobj;
 fail:
@@ -18484,7 +26196,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_GetPtr(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_GetPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (CNTK::Value *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->GetPtr();
+  {
+    try {
+      result = (CNTK::Value *)((CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *)arg1)->GetPtr(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Value, 0 |  0 );
   return resultobj;
 fail:
@@ -18506,7 +26237,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_Data(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_Data" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->Data();
+  {
+    try {
+      result = (*arg1)->Data(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDArrayViewPtr(static_cast< const CNTK::NDArrayViewPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18528,7 +26278,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_Mask(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_Mask" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->Mask();
+  {
+    try {
+      result = (*arg1)->Mask(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18559,7 +26328,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ValuePtr_DeepClone" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = (*arg1)->DeepClone(arg2);
+  {
+    try {
+      result = (*arg1)->DeepClone(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18581,7 +26369,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_DeepClone" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->DeepClone();
+  {
+    try {
+      result = (*arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18658,7 +26465,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ValuePtr_Alias" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
-  result = (*arg1)->Alias(arg2);
+  {
+    try {
+      result = (*arg1)->Alias(arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18680,7 +26506,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_Alias" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->Alias();
+  {
+    try {
+      result = (*arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::ValuePtr(static_cast< const CNTK::ValuePtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -18759,7 +26604,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ValuePtr_CopyFrom" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Value * >(argp2);
-  (*arg1)->CopyFrom((CNTK::Value const &)*arg2);
+  {
+    try {
+      (*arg1)->CopyFrom((CNTK::Value const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -18781,7 +26645,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_AddReference(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->AddReference();
+  {
+    try {
+      result = (*arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18803,7 +26686,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_RemoveReference(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->RemoveReference();
+  {
+    try {
+      result = (*arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18825,7 +26727,26 @@ SWIGINTERN PyObject *_wrap_ValuePtr_GetReferenceCount(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValuePtr_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< Value > * >(argp1);
-  result = (*arg1)->GetReferenceCount();
+  {
+    try {
+      result = (*arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -18862,7 +26783,26 @@ SWIGINTERN PyObject *_wrap_new_NDMaskPtr__SWIG_0(PyObject *SWIGUNUSEDPARM(self),
       SWIG_exception_fail(SWIG_ArgError(res), "in method '" "new_NDMaskPtr" "', argument " "2"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >::_ReferenceCounterDeleter""'"); 
     }
   }
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >(arg1,arg2);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18884,7 +26824,26 @@ SWIGINTERN PyObject *_wrap_new_NDMaskPtr__SWIG_1(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_NDMaskPtr" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDMask * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >(arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18897,7 +26856,26 @@ SWIGINTERN PyObject *_wrap_new_NDMaskPtr__SWIG_2(PyObject *SWIGUNUSEDPARM(self),
   CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_NDMaskPtr")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18922,7 +26900,26 @@ SWIGINTERN PyObject *_wrap_new_NDMaskPtr__SWIG_3(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDMaskPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > const &)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -18947,7 +26944,26 @@ SWIGINTERN PyObject *_wrap_new_NDMaskPtr__SWIG_4(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_NDMaskPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > &&)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19036,7 +27052,26 @@ SWIGINTERN PyObject *_wrap_delete_NDMaskPtr(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NDMaskPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19058,7 +27093,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr___deref__(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr___deref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (CNTK::NDMask *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->operator ->();
+  {
+    try {
+      result = (CNTK::NDMask *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->operator ->(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDMask, 0 |  0 );
   return resultobj;
 fail:
@@ -19080,7 +27134,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr___ref__(PyObject *SWIGUNUSEDPARM(self), PyO
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr___ref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (CNTK::NDMask *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->operator *();
+  {
+    try {
+      result = (CNTK::NDMask *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->operator *(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDMask, 0 |  0 );
   return resultobj;
 fail:
@@ -19102,7 +27175,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_GetPtr(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_GetPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (CNTK::NDMask *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->GetPtr();
+  {
+    try {
+      result = (CNTK::NDMask *)((CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *)arg1)->GetPtr(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__NDMask, 0 |  0 );
   return resultobj;
 fail:
@@ -19149,7 +27241,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_MaskSection(PyObject *SWIGUNUSEDPARM(self),
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMaskPtr_MaskSection" "', argument " "3"" of type '" "CNTK::NDShape const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::NDShape * >(argp3);
-  (*arg1)->MaskSection((std::vector< size_t,std::allocator< size_t > > const &)*arg2,(CNTK::NDShape const &)*arg3);
+  {
+    try {
+      (*arg1)->MaskSection((std::vector< size_t,std::allocator< size_t > > const &)*arg2,(CNTK::NDShape const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
@@ -19172,7 +27283,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_Clear(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_Clear" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  (*arg1)->Clear();
+  {
+    try {
+      (*arg1)->Clear(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19194,7 +27324,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_Device(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_Device" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->Device();
+  {
+    try {
+      result = (*arg1)->Device(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::DeviceDescriptor(static_cast< const CNTK::DeviceDescriptor& >(result))), SWIGTYPE_p_CNTK__DeviceDescriptor, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -19216,7 +27365,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_Shape(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_Shape" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->Shape();
+  {
+    try {
+      result = (*arg1)->Shape(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDShape(static_cast< const CNTK::NDShape& >(result))), SWIGTYPE_p_CNTK__NDShape, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -19238,7 +27406,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_DeepClone(PyObject *SWIGUNUSEDPARM(self), P
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_DeepClone" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->DeepClone();
+  {
+    try {
+      result = (*arg1)->DeepClone(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -19260,7 +27447,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_Alias(PyObject *SWIGUNUSEDPARM(self), PyObj
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_Alias" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->Alias();
+  {
+    try {
+      result = (*arg1)->Alias(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::NDMaskPtr(static_cast< const CNTK::NDMaskPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -19293,7 +27499,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_CopyFrom(PyObject *SWIGUNUSEDPARM(self), Py
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMaskPtr_CopyFrom" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDMask * >(argp2);
-  (*arg1)->CopyFrom((CNTK::NDMask const &)*arg2);
+  {
+    try {
+      (*arg1)->CopyFrom((CNTK::NDMask const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19315,7 +27540,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_AddReference(PyObject *SWIGUNUSEDPARM(self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->AddReference();
+  {
+    try {
+      result = (*arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19337,7 +27581,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_RemoveReference(PyObject *SWIGUNUSEDPARM(se
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->RemoveReference();
+  {
+    try {
+      result = (*arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19359,7 +27622,26 @@ SWIGINTERN PyObject *_wrap_NDMaskPtr_GetReferenceCount(PyObject *SWIGUNUSEDPARM(
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMaskPtr_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > * >(argp1);
-  result = (*arg1)->GetReferenceCount();
+  {
+    try {
+      result = (*arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19396,7 +27678,26 @@ SWIGINTERN PyObject *_wrap_new_BackPropStatePtr__SWIG_0(PyObject *SWIGUNUSEDPARM
       SWIG_exception_fail(SWIG_ArgError(res), "in method '" "new_BackPropStatePtr" "', argument " "2"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >::_ReferenceCounterDeleter""'"); 
     }
   }
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >(arg1,arg2);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >(arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19418,7 +27719,26 @@ SWIGINTERN PyObject *_wrap_new_BackPropStatePtr__SWIG_1(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_BackPropStatePtr" "', argument " "1"" of type '" "CNTK::BackPropState *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::BackPropState * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >(arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19431,7 +27751,26 @@ SWIGINTERN PyObject *_wrap_new_BackPropStatePtr__SWIG_2(PyObject *SWIGUNUSEDPARM
   CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)":new_BackPropStatePtr")) SWIG_fail;
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >();
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19456,7 +27795,26 @@ SWIGINTERN PyObject *_wrap_new_BackPropStatePtr__SWIG_3(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_BackPropStatePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > const &)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19481,7 +27839,26 @@ SWIGINTERN PyObject *_wrap_new_BackPropStatePtr__SWIG_4(PyObject *SWIGUNUSEDPARM
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_BackPropStatePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > &&""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > * >(argp1);
-  result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > &&)*arg1);
+  {
+    try {
+      result = (CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *)new CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >((CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t, SWIG_POINTER_NEW |  0 );
   return resultobj;
 fail:
@@ -19570,7 +27947,26 @@ SWIGINTERN PyObject *_wrap_delete_BackPropStatePtr(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BackPropStatePtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  delete arg1;
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19592,7 +27988,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr___deref__(PyObject *SWIGUNUSEDPARM(s
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr___deref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (CNTK::BackPropState *)((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->operator ->();
+  {
+    try {
+      result = (CNTK::BackPropState *)((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->operator ->(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__BackPropState, 0 |  0 );
   return resultobj;
 fail:
@@ -19614,7 +28029,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr___ref__(PyObject *SWIGUNUSEDPARM(sel
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr___ref__" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (CNTK::BackPropState *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->operator *();
+  {
+    try {
+      result = (CNTK::BackPropState *) &((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->operator *(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__BackPropState, 0 |  0 );
   return resultobj;
 fail:
@@ -19636,7 +28070,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr_GetPtr(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr_GetPtr" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (CNTK::BackPropState *)((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->GetPtr();
+  {
+    try {
+      result = (CNTK::BackPropState *)((CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *)arg1)->GetPtr(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__BackPropState, 0 |  0 );
   return resultobj;
 fail:
@@ -19658,7 +28111,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr_Function(PyObject *SWIGUNUSEDPARM(se
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr_Function" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (*arg1)->Function();
+  {
+    try {
+      result = (*arg1)->Function(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_NewPointerObj((new CNTK::FunctionPtr(static_cast< const CNTK::FunctionPtr& >(result))), SWIGTYPE_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
@@ -19680,7 +28152,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr_AddReference(PyObject *SWIGUNUSEDPAR
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr_AddReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (*arg1)->AddReference();
+  {
+    try {
+      result = (*arg1)->AddReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19702,7 +28193,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr_RemoveReference(PyObject *SWIGUNUSED
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr_RemoveReference" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (*arg1)->RemoveReference();
+  {
+    try {
+      result = (*arg1)->RemoveReference(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19724,7 +28234,26 @@ SWIGINTERN PyObject *_wrap_BackPropStatePtr_GetReferenceCount(PyObject *SWIGUNUS
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropStatePtr_GetReferenceCount" "', argument " "1"" of type '" "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > * >(argp1);
-  result = (*arg1)->GetReferenceCount();
+  {
+    try {
+      result = (*arg1)->GetReferenceCount(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
   resultobj = SWIG_From_size_t(static_cast< size_t >(result));
   return resultobj;
 fail:
@@ -19739,46 +28268,39 @@ SWIGINTERN PyObject *BackPropStatePtr_swigregister(PyObject *SWIGUNUSEDPARM(self
   return SWIG_Py_Void();
 }
 
-SWIGINTERN int Swig_var_bla_set(PyObject *_val) {
+SWIGINTERN PyObject *_wrap_delete_Callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  Callback *arg1 = (Callback *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_Callback",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Callback, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Callback" "', argument " "1"" of type '" "Callback *""'"); 
+  }
+  arg1 = reinterpret_cast< Callback * >(argp1);
   {
-    size_t val;
-    int res = SWIG_AsVal_size_t(_val, &val);
-    if (!SWIG_IsOK(res)) {
-      SWIG_exception_fail(SWIG_ArgError(res), "in variable '""bla""' of type '""size_t""'");
+    try {
+      delete arg1; 
     }
-    bla = static_cast< size_t >(val);
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  return 0;
-fail:
-  return 1;
-}
-
-
-SWIGINTERN PyObject *Swig_var_bla_get(void) {
-  PyObject *pyobj = 0;
-  
-  pyobj = SWIG_From_size_t(static_cast< size_t >(bla));
-  return pyobj;
-}
-
-
-SWIGINTERN PyObject *_wrap_stuff(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *arg1 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:stuff",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "stuff" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "stuff" "', argument " "1"" of type '" "std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > &""'"); 
-  }
-  arg1 = reinterpret_cast< std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > * >(argp1);
-  stuff(*arg1);
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19786,23 +28308,51 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_naivestuff(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Callback_forward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
-  std::map< CNTK::Variable,int,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,int > > > *arg1 = 0 ;
+  Callback *arg1 = (Callback *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
+  Swig::Director *director = 0;
+  bool upcall = false;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:naivestuff",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t,  0 );
+  if (!PyArg_ParseTuple(args,(char *)"O:Callback_forward",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Callback, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "naivestuff" "', argument " "1"" of type '" "std::map< CNTK::Variable,int,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,int > > > &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Callback_forward" "', argument " "1"" of type '" "Callback *""'"); 
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "naivestuff" "', argument " "1"" of type '" "std::map< CNTK::Variable,int,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,int > > > &""'"); 
+  arg1 = reinterpret_cast< Callback * >(argp1);
+  director = SWIG_DIRECTOR_CAST(arg1);
+  upcall = (director && (director->swig_get_self()==obj0));
+  try {
+    {
+      try {
+        if (upcall) {
+          (arg1)->Callback::forward();
+        } else {
+          (arg1)->forward();
+        } 
+      }
+      catch (Swig::DirectorException &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::runtime_error &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::invalid_argument &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::logic_error &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (...) {
+        SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+      }
+    }
+  } catch (Swig::DirectorException&) {
+    SWIG_fail;
   }
-  arg1 = reinterpret_cast< std::map< CNTK::Variable,int,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,int > > > * >(argp1);
-  naivestuff(*arg1);
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -19810,49 +28360,363 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_data_from_value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Callback_backward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
-  float *arg1 = (float *) 0 ;
-  float *arg2 = (float *) 0 ;
-  int arg3 ;
+  Callback *arg1 = (Callback *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  PyObject *array2 = NULL ;
+  PyObject * obj0 = 0 ;
+  Swig::Director *director = 0;
+  bool upcall = false;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:Callback_backward",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Callback, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Callback_backward" "', argument " "1"" of type '" "Callback *""'"); 
+  }
+  arg1 = reinterpret_cast< Callback * >(argp1);
+  director = SWIG_DIRECTOR_CAST(arg1);
+  upcall = (director && (director->swig_get_self()==obj0));
+  try {
+    {
+      try {
+        if (upcall) {
+          (arg1)->Callback::backward();
+        } else {
+          (arg1)->backward();
+        } 
+      }
+      catch (Swig::DirectorException &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::runtime_error &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::invalid_argument &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (std::logic_error &e) {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+      }
+      catch (...) {
+        SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+      }
+    }
+  } catch (Swig::DirectorException&) {
+    SWIG_fail;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  PyObject * obj0 = 0 ;
+  Callback *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_Callback",&obj0)) SWIG_fail;
+  arg1 = obj0;
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    if ( arg1 != Py_None ) {
+      /* subclassed */
+      result = (Callback *)new SwigDirector_Callback(arg1); 
+    } else {
+      result = (Callback *)new Callback(); 
+    }
+    
+    Py_END_ALLOW_THREADS;
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Callback, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_disown_Callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  Callback *arg1 = (Callback *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:disown_Callback",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Callback, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_Callback" "', argument " "1"" of type '" "Callback *""'"); 
+  }
+  arg1 = reinterpret_cast< Callback * >(argp1);
+  {
+    Swig::Director *director = SWIG_DIRECTOR_CAST(arg1);
+    if (director) director->swig_disown();
+  }
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *Callback_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_Callback, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_new_FunctionInCNTK(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_FunctionInCNTK")) SWIG_fail;
+  {
+    try {
+      result = (FunctionInCNTK *)new FunctionInCNTK(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FunctionInCNTK, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_FunctionInCNTK(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_FunctionInCNTK",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FunctionInCNTK" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+  }
+  arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
+  {
+    try {
+      delete arg1; 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_delCallback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:FunctionInCNTK_delCallback",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_delCallback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+  }
+  arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
+  {
+    try {
+      (arg1)->delCallback(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_setCallback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
+  Callback *arg2 = (Callback *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:data_from_value",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!PyArg_ParseTuple(args,(char *)"OO:FunctionInCNTK_setCallback",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "data_from_value" "', argument " "1"" of type '" "float *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_setCallback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
   }
-  arg1 = reinterpret_cast< float * >(argp1);
+  arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_Callback, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FunctionInCNTK_setCallback" "', argument " "2"" of type '" "Callback *""'"); 
+  }
+  arg2 = reinterpret_cast< Callback * >(argp2);
   {
-    npy_intp dims[1];
-    if (!PyInt_Check(obj1))
-    {
-      const char* typestring = pytype_string(obj1);
-      PyErr_Format(PyExc_TypeError,
-        "Int dimension expected.  '%s' given.",
-        typestring);
-      SWIG_fail;
+    try {
+      (arg1)->setCallback(arg2); 
     }
-    arg3 = (int) PyInt_AsLong(obj1);
-    dims[0] = (npy_intp) arg3;
-    array2 = PyArray_SimpleNew(1, dims, NPY_FLOAT);
-    if (!array2) SWIG_fail;
-    arg2 = (float*) array_data(array2);
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
-  data_from_value(arg1,arg2,arg3);
   resultobj = SWIG_Py_Void();
-  {
-    resultobj = SWIG_Python_AppendOutput(resultobj,(PyObject*)array2);
-  }
   return resultobj;
 fail:
   return NULL;
 }
 
+
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_forward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:FunctionInCNTK_forward",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_forward" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+  }
+  arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
+  {
+    try {
+      (arg1)->forward(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_backward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:FunctionInCNTK_backward",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_backward" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+  }
+  arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
+  {
+    try {
+      (arg1)->backward(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *FunctionInCNTK_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_FunctionInCNTK, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
 
 static PyMethodDef SwigMethods[] = {
 	 { (char *)"SWIG_PyInstanceMethod_New", (PyCFunction)SWIG_PyInstanceMethod_New, METH_O, NULL},
@@ -19899,7 +28763,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"NDShape___getitem__", _wrap_NDShape___getitem__, METH_VARARGS, NULL},
 	 { (char *)"delete_NDShape", _wrap_delete_NDShape, METH_VARARGS, NULL},
 	 { (char *)"NDShape_swigregister", NDShape_swigregister, METH_VARARGS, NULL},
-	 { (char *)"new_NDArrayView", _wrap_new_NDArrayView, METH_VARARGS, NULL},
 	 { (char *)"delete_NDArrayView", _wrap_delete_NDArrayView, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_Device", _wrap_NDArrayView_Device, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_GetDataType", _wrap_NDArrayView_GetDataType, METH_VARARGS, NULL},
@@ -19910,8 +28773,10 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"NDArrayView_DeepClone", _wrap_NDArrayView_DeepClone, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_Alias", _wrap_NDArrayView_Alias, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_CopyFrom", _wrap_NDArrayView_CopyFrom, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_DataBufferFloat", _wrap_NDArrayView_DataBufferFloat, METH_VARARGS, NULL},
+	 { (char *)"new_NDArrayView", _wrap_new_NDArrayView, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_ToNumPy", _wrap_NDArrayView_ToNumPy, METH_VARARGS, NULL},
 	 { (char *)"new_NDArrayViewFloat", _wrap_new_NDArrayViewFloat, METH_VARARGS, NULL},
+	 { (char *)"new_NDArrayViewDouble", _wrap_new_NDArrayViewDouble, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_swigregister", NDArrayView_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_NDMask", _wrap_new_NDMask, METH_VARARGS, NULL},
 	 { (char *)"delete_NDMask", _wrap_delete_NDMask, METH_VARARGS, NULL},
@@ -20037,6 +28902,33 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"MapVarValuePtr_upper_bound", _wrap_MapVarValuePtr_upper_bound, METH_VARARGS, NULL},
 	 { (char *)"delete_MapVarValuePtr", _wrap_delete_MapVarValuePtr, METH_VARARGS, NULL},
 	 { (char *)"MapVarValuePtr_swigregister", MapVarValuePtr_swigregister, METH_VARARGS, NULL},
+	 { (char *)"VarSet_iterator", _wrap_VarSet_iterator, METH_VARARGS, NULL},
+	 { (char *)"VarSet___nonzero__", _wrap_VarSet___nonzero__, METH_VARARGS, NULL},
+	 { (char *)"VarSet___bool__", _wrap_VarSet___bool__, METH_VARARGS, NULL},
+	 { (char *)"VarSet___len__", _wrap_VarSet___len__, METH_VARARGS, NULL},
+	 { (char *)"VarSet_append", _wrap_VarSet_append, METH_VARARGS, NULL},
+	 { (char *)"VarSet___contains__", _wrap_VarSet___contains__, METH_VARARGS, NULL},
+	 { (char *)"VarSet___getitem__", _wrap_VarSet___getitem__, METH_VARARGS, NULL},
+	 { (char *)"VarSet_add", _wrap_VarSet_add, METH_VARARGS, NULL},
+	 { (char *)"VarSet_discard", _wrap_VarSet_discard, METH_VARARGS, NULL},
+	 { (char *)"new_VarSet", _wrap_new_VarSet, METH_VARARGS, NULL},
+	 { (char *)"VarSet_empty", _wrap_VarSet_empty, METH_VARARGS, NULL},
+	 { (char *)"VarSet_size", _wrap_VarSet_size, METH_VARARGS, NULL},
+	 { (char *)"VarSet_clear", _wrap_VarSet_clear, METH_VARARGS, NULL},
+	 { (char *)"VarSet_swap", _wrap_VarSet_swap, METH_VARARGS, NULL},
+	 { (char *)"VarSet_count", _wrap_VarSet_count, METH_VARARGS, NULL},
+	 { (char *)"VarSet_begin", _wrap_VarSet_begin, METH_VARARGS, NULL},
+	 { (char *)"VarSet_end", _wrap_VarSet_end, METH_VARARGS, NULL},
+	 { (char *)"VarSet_rbegin", _wrap_VarSet_rbegin, METH_VARARGS, NULL},
+	 { (char *)"VarSet_rend", _wrap_VarSet_rend, METH_VARARGS, NULL},
+	 { (char *)"VarSet_erase", _wrap_VarSet_erase, METH_VARARGS, NULL},
+	 { (char *)"VarSet_find", _wrap_VarSet_find, METH_VARARGS, NULL},
+	 { (char *)"VarSet_lower_bound", _wrap_VarSet_lower_bound, METH_VARARGS, NULL},
+	 { (char *)"VarSet_upper_bound", _wrap_VarSet_upper_bound, METH_VARARGS, NULL},
+	 { (char *)"VarSet_equal_range", _wrap_VarSet_equal_range, METH_VARARGS, NULL},
+	 { (char *)"VarSet_insert", _wrap_VarSet_insert, METH_VARARGS, NULL},
+	 { (char *)"delete_VarSet", _wrap_delete_VarSet, METH_VARARGS, NULL},
+	 { (char *)"VarSet_swigregister", VarSet_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_FunctionPtr", _wrap_new_FunctionPtr, METH_VARARGS, NULL},
 	 { (char *)"delete_FunctionPtr", _wrap_delete_FunctionPtr, METH_VARARGS, NULL},
 	 { (char *)"FunctionPtr___deref__", _wrap_FunctionPtr___deref__, METH_VARARGS, NULL},
@@ -20074,7 +28966,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"NDArrayViewPtr_DeepClone", _wrap_NDArrayViewPtr_DeepClone, METH_VARARGS, NULL},
 	 { (char *)"NDArrayViewPtr_Alias", _wrap_NDArrayViewPtr_Alias, METH_VARARGS, NULL},
 	 { (char *)"NDArrayViewPtr_CopyFrom", _wrap_NDArrayViewPtr_CopyFrom, METH_VARARGS, NULL},
-	 { (char *)"NDArrayViewPtr_DataBufferFloat", _wrap_NDArrayViewPtr_DataBufferFloat, METH_VARARGS, NULL},
+	 { (char *)"NDArrayViewPtr_ToNumPy", _wrap_NDArrayViewPtr_ToNumPy, METH_VARARGS, NULL},
 	 { (char *)"NDArrayViewPtr_AddReference", _wrap_NDArrayViewPtr_AddReference, METH_VARARGS, NULL},
 	 { (char *)"NDArrayViewPtr_RemoveReference", _wrap_NDArrayViewPtr_RemoveReference, METH_VARARGS, NULL},
 	 { (char *)"NDArrayViewPtr_GetReferenceCount", _wrap_NDArrayViewPtr_GetReferenceCount, METH_VARARGS, NULL},
@@ -20119,9 +29011,19 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"BackPropStatePtr_RemoveReference", _wrap_BackPropStatePtr_RemoveReference, METH_VARARGS, NULL},
 	 { (char *)"BackPropStatePtr_GetReferenceCount", _wrap_BackPropStatePtr_GetReferenceCount, METH_VARARGS, NULL},
 	 { (char *)"BackPropStatePtr_swigregister", BackPropStatePtr_swigregister, METH_VARARGS, NULL},
-	 { (char *)"stuff", _wrap_stuff, METH_VARARGS, NULL},
-	 { (char *)"naivestuff", _wrap_naivestuff, METH_VARARGS, NULL},
-	 { (char *)"data_from_value", _wrap_data_from_value, METH_VARARGS, NULL},
+	 { (char *)"delete_Callback", _wrap_delete_Callback, METH_VARARGS, NULL},
+	 { (char *)"Callback_forward", _wrap_Callback_forward, METH_VARARGS, NULL},
+	 { (char *)"Callback_backward", _wrap_Callback_backward, METH_VARARGS, NULL},
+	 { (char *)"new_Callback", _wrap_new_Callback, METH_VARARGS, NULL},
+	 { (char *)"disown_Callback", _wrap_disown_Callback, METH_VARARGS, NULL},
+	 { (char *)"Callback_swigregister", Callback_swigregister, METH_VARARGS, NULL},
+	 { (char *)"new_FunctionInCNTK", _wrap_new_FunctionInCNTK, METH_VARARGS, NULL},
+	 { (char *)"delete_FunctionInCNTK", _wrap_delete_FunctionInCNTK, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_delCallback", _wrap_FunctionInCNTK_delCallback, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_setCallback", _wrap_FunctionInCNTK_setCallback, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_forward", _wrap_FunctionInCNTK_forward, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_backward", _wrap_FunctionInCNTK_backward, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_swigregister", FunctionInCNTK_swigregister, METH_VARARGS, NULL},
 	 { NULL, NULL, 0, NULL }
 };
 
@@ -20163,7 +29065,7 @@ static swig_type_info _swigt__p_CNTK__NDShape = {"_p_CNTK__NDShape", "CNTK::NDSh
 static swig_type_info _swigt__p_CNTK__Parameter = {"_p_CNTK__Parameter", "CNTK::Parameter *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__Placeholder = {"_p_CNTK__Placeholder", "CNTK::Placeholder *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__Value = {"_p_CNTK__Value", "CNTK::Value *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_CNTK__Variable = {"_p_CNTK__Variable", "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type *|CNTK::Variable *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_CNTK__Variable = {"_p_CNTK__Variable", "std::set< CNTK::Variable >::key_type *|std::set< CNTK::Variable >::value_type *|std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::key_type *|CNTK::Variable *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounter = {"_p_CNTK___Internal___ReferenceCounter", "CNTK::_Internal::_ReferenceCounter *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t = {"_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__BackPropState_t", "CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState > *|CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::BackPropState > *|CNTK::BackPropStatePtr *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t = {"_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t", "CNTK::FunctionPtr *|CNTK::_Internal::_ReferenceCounterSharedPtr< Function > *|CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > *", 0, 0, (void*)0, 0};
@@ -20171,10 +29073,13 @@ static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNT
 static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t = {"_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t", "CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask > *|CNTK::NDMaskPtr *|CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::NDMask > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t = {"_p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t", "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > >::mapped_type *|CNTK::_Internal::_ReferenceCounterSharedPtr< Value > *|CNTK::ValuePtr *|CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t = {"_p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t", "CNTK::_Internal::_SimpleVector< CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Function > > *|CNTK::_Internal::_SimpleVector< CNTK::FunctionPtr > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_Callback = {"_p_Callback", "Callback *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_FunctionInCNTK = {"_p_FunctionInCNTK", "FunctionInCNTK *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p___int64 = {"_p___int64", "__int64 *|LONGLONG *|LONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_allocator_type = {"_p_allocator_type", "allocator_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_char = {"_p_char", "CHAR *|TCHAR *|char *|CCHAR *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_difference_type = {"_p_difference_type", "difference_type *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_double = {"_p_double", "double *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_f_p_CNTK___Internal___ReferenceCounter__void = {"_p_f_p_CNTK___Internal___ReferenceCounter__void", "CNTK::_Internal::_ReferenceCounterSharedPtr< Value >::_ReferenceCounterDeleter|CNTK::_Internal::_ReferenceCounterSharedPtr< NDMask >::_ReferenceCounterDeleter|CNTK::_Internal::_ReferenceCounterSharedPtr< Function >::_ReferenceCounterDeleter|CNTK::_Internal::_ReferenceCounterSharedPtr< NDArrayView >::_ReferenceCounterDeleter|CNTK::_Internal::_ReferenceCounterSharedPtr< BackPropState >::_ReferenceCounterDeleter|void (*)(CNTK::_Internal::_ReferenceCounter *)", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_float = {"_p_float", "FLOAT *|float *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_int = {"_p_int", "BOOL *|CNTK::SparseIndexType *|INT32 *|int *|INT *|INT_PTR *|LONG32 *", 0, 0, (void*)0, 0};
@@ -20193,12 +29098,9 @@ static swig_type_info _swigt__p_std__initializer_listT_CNTK___Internal___Referen
 static swig_type_info _swigt__p_std__initializer_listT_size_t_t = {"_p_std__initializer_listT_size_t_t", "std::initializer_list< size_t > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__invalid_argument = {"_p_std__invalid_argument", "std::invalid_argument *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__lessT_CNTK__Variable_t = {"_p_std__lessT_CNTK__Variable_t", "std::less< CNTK::Variable > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t = {"_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t", "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const > > > *|std::map< CNTK::Variable,CNTK::ValuePtr const,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr const > > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t = {"_p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t", "std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value >,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > > > *|std::map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > *|std::map< CNTK::Variable,CNTK::ValuePtr > *|std::map< CNTK::Variable,CNTK::ValuePtr,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,CNTK::ValuePtr > > > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t = {"_p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t", "std::map< CNTK::Variable,int,std::less< CNTK::Variable >,std::allocator< std::pair< CNTK::Variable const,int > > > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__setT_CNTK__Variable_t = {"_p_std__setT_CNTK__Variable_t", "std::set< CNTK::Variable > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t = {"_p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t", "std::set< CNTK::Variable,std::less< CNTK::Variable >,std::allocator< CNTK::Variable > > *|std::set< CNTK::Variable > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t = {"_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t", "std::unordered_map< CNTK::Placeholder,CNTK::Variable > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t = {"_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t", "std::unordered_map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > const > *|std::unordered_map< CNTK::Variable,CNTK::ValuePtr const > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t = {"_p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t", "std::unordered_map< CNTK::Variable,CNTK::_Internal::_ReferenceCounterSharedPtr< CNTK::Value > > *|std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Constant_t = {"_p_std__unordered_setT_CNTK__Constant_t", "std::unordered_set< CNTK::Constant > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
@@ -20235,10 +29137,13 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t,
   &_swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t,
   &_swigt__p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t,
+  &_swigt__p_Callback,
+  &_swigt__p_FunctionInCNTK,
   &_swigt__p___int64,
   &_swigt__p_allocator_type,
   &_swigt__p_char,
   &_swigt__p_difference_type,
+  &_swigt__p_double,
   &_swigt__p_f_p_CNTK___Internal___ReferenceCounter__void,
   &_swigt__p_float,
   &_swigt__p_int,
@@ -20257,12 +29162,9 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__initializer_listT_size_t_t,
   &_swigt__p_std__invalid_argument,
   &_swigt__p_std__lessT_CNTK__Variable_t,
-  &_swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t,
   &_swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,
-  &_swigt__p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t,
-  &_swigt__p_std__setT_CNTK__Variable_t,
+  &_swigt__p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t,
   &_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  &_swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t,
   &_swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,
   &_swigt__p_std__unordered_setT_CNTK__Constant_t,
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
@@ -20299,10 +29201,13 @@ static swig_cast_info _swigc__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNT
 static swig_cast_info _swigc__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t[] = {  {&_swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t[] = {  {&_swigt__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t[] = {  {&_swigt__p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_Callback[] = {  {&_swigt__p_Callback, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FunctionInCNTK[] = {  {&_swigt__p_FunctionInCNTK, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p___int64[] = {  {&_swigt__p___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_allocator_type[] = {  {&_swigt__p_allocator_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_difference_type[] = {  {&_swigt__p_difference_type, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_double[] = {  {&_swigt__p_double, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_f_p_CNTK___Internal___ReferenceCounter__void[] = {  {&_swigt__p_f_p_CNTK___Internal___ReferenceCounter__void, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_float[] = {  {&_swigt__p_float, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0}};
@@ -20321,12 +29226,9 @@ static swig_cast_info _swigc__p_std__initializer_listT_CNTK___Internal___Referen
 static swig_cast_info _swigc__p_std__initializer_listT_size_t_t[] = {  {&_swigt__p_std__initializer_listT_size_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__invalid_argument[] = {  {&_swigt__p_std__invalid_argument, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__lessT_CNTK__Variable_t[] = {  {&_swigt__p_std__lessT_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t[] = {  {&_swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t[] = {  {&_swigt__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t[] = {  {&_swigt__p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__setT_CNTK__Variable_t[] = {  {&_swigt__p_std__setT_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t[] = {  {&_swigt__p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Constant_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Constant_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -20363,10 +29265,13 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__NDMask_t,
   _swigc__p_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t,
   _swigc__p_CNTK___Internal___SimpleVectorT_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Function_t_t,
+  _swigc__p_Callback,
+  _swigc__p_FunctionInCNTK,
   _swigc__p___int64,
   _swigc__p_allocator_type,
   _swigc__p_char,
   _swigc__p_difference_type,
+  _swigc__p_double,
   _swigc__p_f_p_CNTK___Internal___ReferenceCounter__void,
   _swigc__p_float,
   _swigc__p_int,
@@ -20385,12 +29290,9 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__initializer_listT_size_t_t,
   _swigc__p_std__invalid_argument,
   _swigc__p_std__lessT_CNTK__Variable_t,
-  _swigc__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t_t_t,
   _swigc__p_std__mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t_t_t,
-  _swigc__p_std__mapT_CNTK__Variable_int_std__lessT_CNTK__Variable_t_std__allocatorT_std__pairT_CNTK__Variable_const_int_t_t_t,
-  _swigc__p_std__setT_CNTK__Variable_t,
+  _swigc__p_std__setT_CNTK__Variable_std__lessT_CNTK__Variable_t_std__allocatorT_CNTK__Variable_t_t,
   _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  _swigc__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_const_t,
   _swigc__p_std__unordered_mapT_CNTK__Variable_CNTK___Internal___ReferenceCounterSharedPtrT_CNTK__Value_t_t,
   _swigc__p_std__unordered_setT_CNTK__Constant_t,
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
@@ -21121,7 +30023,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "VariableKind_Parameter",SWIG_From_int(static_cast< int >(CNTK::VariableKind::Parameter)));
   SWIG_Python_SetConstant(d, "VariableKind_Constant",SWIG_From_int(static_cast< int >(CNTK::VariableKind::Constant)));
   SWIG_Python_SetConstant(d, "VariableKind_Placeholder",SWIG_From_int(static_cast< int >(CNTK::VariableKind::Placeholder)));
-  SWIG_addvarlink(SWIG_globals(),(char*)"bla",Swig_var_bla_get, Swig_var_bla_set);
 #if PY_VERSION_HEX >= 0x03000000
   return m;
 #else
