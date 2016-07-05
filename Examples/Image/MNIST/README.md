@@ -74,7 +74,7 @@ As a result, it achieves around 0.8% of error after training for just 2 epochs (
 To run the sample, navigate to the Data folder and run the following command:  
 `cntk configFile=../Config/03_ConvBatchNorm.cntk`
 
-4. 04_DeConv.ndl illustrates the usage of Deconvolution and Unpooling. It is a network with one Convolution, one Pooling, one Unpooling and one Deconvolution layer. In fact it is an auto-encoder network where Rectified Linear Unit (ReLU) or Sigmoid layer is now replaced with Convolutional ReLU (for encoding) and Deconvolutional ReLU (for decoding) layers. The network goal is to reconstruct the original signal, with Mean Squared Error (MSE) used to minimize the reconstruction error. More generally case such networks are used in semantic segmentation.  
+4. 04_DeConv.ndl illustrates the usage of Deconvolution and Unpooling. It is a network with one Convolution, one Pooling, one Unpooling and one Deconvolution layer. In fact it is an auto-encoder network where Rectified Linear Unit (ReLU) or Sigmoid layer is now replaced with Convolutional ReLU (for encoding) and Deconvolutional ReLU (for decoding) layers. The network goal is to reconstruct the original signal, with Mean Squared Error (MSE) used to minimize the reconstruction error. Generally such networks are used in semantic segmentation.  
 To run the sample, navigate to the Data folder and run the following command:  
 `cntk configFile=../Config/04_DeConv.cntk` 
 
