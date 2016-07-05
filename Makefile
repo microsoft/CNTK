@@ -539,7 +539,7 @@ SRC+=$(CSparsePCReader_SRC)
 
 $(CSparsePCReader): $(CSparsePCReader_OBJ) $(CSparsePCReader_COBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
 # SparsePCReader plugin
