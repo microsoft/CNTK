@@ -2251,7 +2251,7 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
         m_learners.push_back(::CNTK::FSAdaGradLearner(parameters, additionalParameters));
         break;
     case GradientsUpdateType::RmsProp:
-        m_learners.push_back(::CNTK::RmsPropLearner(parameters,
+        m_learners.push_back(::CNTK::RMSPropLearner(parameters,
         m_rpi.gamma, m_rpi.inc, m_rpi.max, m_rpi.dec, m_rpi.min, m_needAveMultiplier, additionalParameters));
         break;
     default:
@@ -2537,6 +2537,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_enableDistributedMBReading = false;
     m_parallelizationStartEpochNum = 0;
     m_modelAggregationBlockSize = 0; 
+    m_resetSGDMomentum = false;
 
     if (configSGD.Exists(L"ParallelTrain"))
     {

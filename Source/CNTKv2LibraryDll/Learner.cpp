@@ -15,15 +15,15 @@
      auto dtype = smoothedGradient->Data()->GetDataType(); \
      UPDATE_FUNCTION(float)           \
      UPDATE_FUNCTION(double)          \
-     NOT_IMPLEMENTED; 
-     
+     NOT_IMPLEMENTED;
+
 
 using namespace ::CNTK::_Internal;
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
 
-namespace CNTK 
+namespace CNTK
 {
 
 template <typename ElementType>
@@ -46,7 +46,7 @@ template <typename ElementType>
 
 /*static*/ bool LearnerBase::HasNan(const ValuePtr& value, const char* name)
 {
-    auto data = value->Data();
+    const auto& data = value->Data();
     switch (data->GetDataType())
     {
     case DataType::Float:
@@ -55,13 +55,12 @@ template <typename ElementType>
         return data->GetMatrix<double>()->HasNan(name);
     default:
         LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
-        break;
     }
 }
 
 /*static*/ void LearnerBase::Print(const ValuePtr& value, const char* msg)
 {
-    auto data = value->Data();
+    const auto& data = value->Data();
     switch (data->GetDataType())
     {
     case DataType::Float:
@@ -72,7 +71,6 @@ template <typename ElementType>
         break;
     default:
         LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
-        break;
     }
 }
 
@@ -98,13 +96,13 @@ void LearnerBase::ClipGradient(Matrix<ElementType>& gradient, size_t actualMBSiz
 }
 
 template <typename ElementType>
-void LearnerBase::PreProcess(const Variable& learnableParameter, const ValuePtr&  gradient, 
-    const ValuePtr& parameter,  size_t actualMBSize) const
+void LearnerBase::PreProcess(const Variable& learnableParameter, const ValuePtr& gradient,
+                             const ValuePtr& parameter, size_t actualMBSize) const
 {
     UNUSED(learnableParameter);
 
-    auto gradientMatrix = gradient->Data()->GetWritableMatrix<ElementType>();
-    
+    const auto& gradientMatrix = gradient->Data()->GetWritableMatrix<ElementType>();
+
     // clipping gradients to prevent outliers
     ClipGradient<ElementType>(*gradientMatrix, actualMBSize);
 
@@ -113,21 +111,21 @@ void LearnerBase::PreProcess(const Variable& learnableParameter, const ValuePtr&
     {
         // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
         auto weight = ElementType(m_L2RegWeight * actualMBSize);
-        auto parameterMatrix = parameter->Data()->GetWritableMatrix<ElementType>();
+        const auto& parameterMatrix = parameter->Data()->GetWritableMatrix<ElementType>();
         Matrix<ElementType>::ScaleAndAdd(weight, *parameterMatrix, *gradientMatrix);
     }
 }
 
 template <typename ElementType>
-void LearnerBase::PostProcess(const Variable& learnableParameter, const ValuePtr&  gradient, 
-    const ValuePtr& parameter, size_t actualMBSize) const
+void LearnerBase::PostProcess(const Variable& learnableParameter, const ValuePtr& gradient,
+                              const ValuePtr& parameter, size_t actualMBSize) const
 {
-    auto parameterMatrix = parameter->Data()->GetWritableMatrix<ElementType>();
+    const auto& parameterMatrix = parameter->Data()->GetWritableMatrix<ElementType>();
     if (m_GaussianNoiseInjectStd > 0)
     {
-        auto gradientMatrix = gradient->Data()->GetWritableMatrix<ElementType>();
+        const auto& gradientMatrix = gradient->Data()->GetWritableMatrix<ElementType>();
 
-        Matrix<ElementType> sgdUpdateNoise((DEVICEID_TYPE) parameterMatrix->GetDeviceId());
+        Matrix<ElementType> sgdUpdateNoise((DEVICEID_TYPE)parameterMatrix->GetDeviceId());
 
         // get the gradient structure since gradient is sparse
         sgdUpdateNoise.SetValue(*gradientMatrix);
@@ -135,10 +133,10 @@ void LearnerBase::PostProcess(const Variable& learnableParameter, const ValuePtr
         // reset its value to random
         sgdUpdateNoise.SetGaussianRandomValue(ElementType(0.0), ElementType(m_GaussianNoiseInjectStd));
 
-         Matrix<ElementType>::ScaleAndAdd(ElementType(1.0), sgdUpdateNoise, *parameterMatrix);
+        Matrix<ElementType>::ScaleAndAdd(ElementType(1.0), sgdUpdateNoise, *parameterMatrix);
     }
 
-     // L1 regularizer with proximal gradient descent method
+    // L1 regularizer with proximal gradient descent method
     if (m_L1RegWeight > 0)
     {
         auto learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
@@ -166,13 +164,13 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     m_sampleCount(0)
 {
     const unordered_set<Variable>& parameterSet = parameters;
-    for (auto parameter : parameterSet)
+    for (const auto& parameter : parameterSet)
     {
-        // TODO: using the same device to allocate data for all smoothed gradients. Is this correct? 
+        // TODO: using the same device to allocate data for all smoothed gradients. Is this correct?
         // Should the device be specified on the per-parameter basis?
         if (parameter.GetDataType() == DataType::Float)
         {
-            m_smoothedGradients.Insert(parameter, new Value(new NDArrayView(0.0f, parameter.Shape(), additionalParameters.device))); 
+            m_smoothedGradients.Insert(parameter, new Value(new NDArrayView(0.0f, parameter.Shape(), additionalParameters.device)));
         }
         else
         {
@@ -181,11 +179,11 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
 
         if (additionalParameters.learningRateMultipliers.Contains(parameter))
         {
-             m_learningRateMultipliers.Insert(parameter, additionalParameters.learningRateMultipliers[parameter]);
+            m_learningRateMultipliers.Insert(parameter, additionalParameters.learningRateMultipliers[parameter]);
         }
         else
         {
-             m_learningRateMultipliers.Insert(parameter, 1.0);
+            m_learningRateMultipliers.Insert(parameter, 1.0);
         }
     }
 }
@@ -194,48 +192,49 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
 {
     for (const auto& learnableParameter : Parameters())
     {
-        auto& smoothedGradient = m_smoothedGradients[learnableParameter];
-        auto data = smoothedGradient->Data();
+        const auto& smoothedGradient = m_smoothedGradients[learnableParameter];
+        const auto& data = smoothedGradient->Data();
         switch (data->GetDataType())
         {
         case DataType::Float:
-            return data->SetValue(0.0f);
+            data->SetValue(0.0f);
+            break;
         case DataType::Double:
-            return data->SetValue(0.0);
+            data->SetValue(0.0);
+            break;
         default:
             LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
-            break;
         }
     }
 }
 
 /* virtual */ bool LearnerBase::Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
-    const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
-    size_t trainingSampleCount) /* override */
+                                       const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
+                                       size_t trainingSampleCount) /* override */
 {
     // make sure trainingSampleCount is a valid value
     assert(trainingSampleCount > 0);
 
     for (const auto& learnableParameter : Parameters())
     {
-        auto smoothedGradient = m_smoothedGradients[learnableParameter];
-        auto gradient = gradients[learnableParameter];
-        auto parameter = parameters[learnableParameter];
+        const auto& smoothedGradient = m_smoothedGradients[learnableParameter];
+        const auto& gradient = gradients[learnableParameter];
+        const auto& parameter = parameters[learnableParameter];
 
 #if DUMPOUTPUT
-            LOGPRINTF(stderr, "Update_%ls\n", learnableParameter.Name().c_str());
+        LOGPRINTF(stderr, "Update_%ls\n", learnableParameter.Name().c_str());
 #endif
 
 #ifdef _DEBUG
         if (HasNan(smoothedGradient, "TrainOneEpoch/UpdateWeights/Learner::Update(): "))
             LogicError("%ls has NaNs in smoothedGradient.", learnableParameter.Name().c_str());
 #endif
-        
+
 #if DUMPOUTPUT
         LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
-            m_learningRatePerSample, m_momentumPerSample, trainingSampleCount);
+                  m_learningRatePerSample, m_momentumPerSample, trainingSampleCount);
         LOGPRINTF(stderr, "GradUpdateType()=%ls, GradientUpdateNoiseStd()=%0.8f\n",
-            LearnerType().c_str(), m_GaussianNoiseInjectStd);
+                  LearnerType().c_str(), m_GaussianNoiseInjectStd);
         Print(gradient, "Gradient Update");
         Print(smoothedGradient, "Smoothed Gradient Input");
 #endif
@@ -248,30 +247,30 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
 
 #ifdef _DEBUG
         if (HasNan(parameter, "TrainOneEpoch/UpdateWeights/Learner::Update(): "))
-            LogicError("%ls has NaNs in parameter values after parameter update.",  learnableParameter.Name().c_str());
+            LogicError("%ls has NaNs in parameter values after parameter update.", learnableParameter.Name().c_str());
 #endif
     }
     m_sampleCount += trainingSampleCount;
     return false;
 }
 
-/* virtual */ Dictionary LearnerBase::GetCheckpointState() const /* override */ 
+/* virtual */ Dictionary LearnerBase::GetCheckpointState() const /* override */
 {
     Dictionary checkpoint;
 
     for (const auto& learnableParameter : Parameters())
     {
         // TODO: parameter name is not guaranteed to be unique. Instead, all serializable objects
-        // need to expose "UId" property -- a persistent unique internal name. 
+        // need to expose "UId" property -- a persistent unique internal name.
         // Switch to UId as soon as it's available.
         if (checkpoint.Contains(learnableParameter.Name()))
         {
             LogicError("Parameter names must be unique");
         }
-        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+        const auto& smoothedGradient = m_smoothedGradients[learnableParameter];
 
         // Potentially, could store things like dimensions, element size, format, etc., but
-        // that seems to be redundant, since all of that is passed in the constructor. 
+        // that seems to be redundant, since all of that is passed in the constructor.
         checkpoint[learnableParameter.Name()] = SerializeToVector(smoothedGradient->Data());
     }
     return checkpoint;
@@ -285,7 +284,7 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
         {
             LogicError("Checkpoint does not contain state for parameter %ls", learnableParameter.Name().c_str());
         }
-        auto smoothedGradient = m_smoothedGradients[learnableParameter];
+        const auto& smoothedGradient = m_smoothedGradients[learnableParameter];
 
         const DictionaryValue& state = checkpoint[learnableParameter.Name()];
 
@@ -293,60 +292,57 @@ LearnerBase::LearnerBase(const _SimpleSet<Variable>& parameters, const Learner::
     }
 }
 
-Learners::SGDLearner::SGDLearner(const _SimpleSet<Variable>& parameters, bool useNesterovAcceleration, 
-    const Learner::AdditionalParameters& additionalParameters)
-    : LearnerBase(parameters, additionalParameters),
-    m_useNesterovAcceleration(useNesterovAcceleration)
+Learners::SGDLearner::SGDLearner(const _SimpleSet<Variable>& parameters, bool useNesterovAcceleration,
+                                 const Learner::AdditionalParameters& additionalParameters)
+                                 : LearnerBase(parameters, additionalParameters),
+                                 m_useNesterovAcceleration(useNesterovAcceleration)
 {
 }
 
-/*virtual*/ void Learners::SGDLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const /*override*/
+/*virtual*/ void Learners::SGDLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                              const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const /*override*/
 {
     UPDATE_FUNCTION_BODY;
 }
 
 template <typename ElementType>
-void Learners::SGDLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const
+void Learners::SGDLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                  const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const
 {
     UNUSED(trainingSampleCount);
 
-    auto smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
-    auto gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
-    auto parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
+    const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
+    const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
+    const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
 
-    //const double momentum = MomentumPerMB(m_momentumPerSample, trainingSampleCount);
+    const auto& learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
 
-    auto learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
-   
-    smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix, 
-        learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
+    smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix,
+                                       learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
 }
-
 
 Learners::AdaGradLearner::AdaGradLearner(const _SimpleSet<Variable>& parameters, bool needAveMultiplier,
-    const Learner::AdditionalParameters& additionalParameters)
-    : LearnerBase(parameters, additionalParameters),
-    m_needAveMultiplier(needAveMultiplier)
+                                         const Learner::AdditionalParameters& additionalParameters)
+                                         : LearnerBase(parameters, additionalParameters),
+                                         m_needAveMultiplier(needAveMultiplier)
 {
 }
 
-/*virtual*/ void Learners::AdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const /*override*/
+/*virtual*/ void Learners::AdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                                  const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const /*override*/
 {
     UPDATE_FUNCTION_BODY;
 }
 
 template <typename ElementType>
-void Learners::AdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const
+void Learners::AdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                      const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const
 {
     UNUSED(trainingSampleCount);
 
-    auto smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
-    auto gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
-    auto parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
+    const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
+    const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
+    const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
 
     auto learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
 
@@ -354,80 +350,78 @@ void Learners::AdaGradLearner::Update(const Variable& learnableParameter, const 
     Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
 }
 
-
 Learners::FSAdaGradLearner::FSAdaGradLearner(const _SimpleSet<Variable>& parameters,
-    const Learner::AdditionalParameters& additionalParameters)
-    : LearnerBase(parameters, additionalParameters)
+                                             const Learner::AdditionalParameters& additionalParameters)
+                                             : LearnerBase(parameters, additionalParameters)
 {
 }
 
-/*virtual*/ void Learners::FSAdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const /*override*/
+/*virtual*/ void Learners::FSAdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                                    const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const /*override*/
 {
     UPDATE_FUNCTION_BODY;
 }
 
 template <typename ElementType>
-void Learners::FSAdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const
+void Learners::FSAdaGradLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const
 {
 
     UNUSED(trainingSampleCount);
 
-    auto smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
-    auto gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
-    auto parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
+    const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
+    const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
+    const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
 
     //const double momentum = MomentumPerMB(m_momentumPerSample, trainingSampleCount);
 
     auto learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
 
     smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix,
-        learningRate, ElementType(m_momentumPerSample));
+                                      learningRate, ElementType(m_momentumPerSample));
 }
 
-
-Learners::RmsPropLearner::RmsPropLearner(const _SimpleSet<Variable>& parameters, RMSPropInfo info, 
-    bool needAveMultiplier, const Learner::AdditionalParameters& additionalParameters)
-    : LearnerBase(parameters, additionalParameters),
-    m_info(info),
-    m_needAveMultiplier(needAveMultiplier)
+Learners::RMSPropLearner::RMSPropLearner(const _SimpleSet<Variable>& parameters, RMSPropInfo info,
+                                         bool needAveMultiplier, const Learner::AdditionalParameters& additionalParameters)
+                                         : LearnerBase(parameters, additionalParameters),
+                                         m_info(info),
+                                         m_needAveMultiplier(needAveMultiplier)
 {
 }
 
-/*virtual*/ void Learners::RmsPropLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const /*override*/
+/*virtual*/ void Learners::RMSPropLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                                  const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const /*override*/
 {
     UPDATE_FUNCTION_BODY;
 }
 
 template <typename ElementType>
-void Learners::RmsPropLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient, 
-    const ValuePtr& gradient, const ValuePtr&  parameter, size_t trainingSampleCount) const
+void Learners::RMSPropLearner::Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
+                                      const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const
 {
     UNUSED(trainingSampleCount);
 
-    auto smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
-    auto gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
-    auto parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
+    const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradient->Data());
+    const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradient->Data());
+    const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameter->Data());
 
     auto learningRate = ElementType(ParameterDependentLearningRate(learnableParameter));
 
-    auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix, 
-        ElementType(m_info.gamma), ElementType(m_info.inc), 
-        ElementType(m_info.max), ElementType(m_info.dec), 
-        ElementType(m_info.min), m_needAveMultiplier);
+    auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
+                                                         ElementType(m_info.gamma), ElementType(m_info.inc),
+                                                         ElementType(m_info.max), ElementType(m_info.dec),
+                                                         ElementType(m_info.min), m_needAveMultiplier);
     Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
 }
 
 LearnerPtr _SGDLearner(const _SimpleSet<Variable>& parameters, bool useNesterovAcceleration,
-    const Learner::AdditionalParameters& additionalParameters)
+                       const Learner::AdditionalParameters& additionalParameters)
 {
     return new Learners::SGDLearner(parameters, useNesterovAcceleration, additionalParameters);
 }
 
 LearnerPtr _AdaGradLearner(const _SimpleSet<Variable>& parameters, bool needAveMultiplier,
-    const Learner::AdditionalParameters& additionalParameters)
+                           const Learner::AdditionalParameters& additionalParameters)
 {
     return new Learners::AdaGradLearner(parameters, needAveMultiplier, additionalParameters);
 }
@@ -437,13 +431,12 @@ LearnerPtr _FSAdaGradLearner(const _SimpleSet<Variable>& parameters, const Learn
     return new Learners::FSAdaGradLearner(parameters, additionalParameters);
 }
 
-LearnerPtr _RmsPropLearner(const _SimpleSet<Variable>& parameters, 
-    double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
-    const Learner::AdditionalParameters& additionalParameters)
+LearnerPtr _RMSPropLearner(const _SimpleSet<Variable>& parameters,
+                           double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
+                           const Learner::AdditionalParameters& additionalParameters)
 {
-    return new Learners::RmsPropLearner(parameters, { gamma, inc, dec, max, min }, needAveMultiplier, additionalParameters);
+    return new Learners::RMSPropLearner(parameters, { gamma, inc, dec, max, min }, needAveMultiplier, additionalParameters);
 }
-
 
 // Explicit template instantiations
 template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr arrayView);

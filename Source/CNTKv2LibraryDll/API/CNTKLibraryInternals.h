@@ -50,6 +50,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <typename ElementType>
     class ComputationNode;
 
+    template <typename ElementType>
+    class SGD;
+
     class File;
 }}}
 

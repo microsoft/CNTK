@@ -299,6 +299,7 @@ namespace CNTK
         friend class CompositeFunction;
         friend class Learner;
         friend class LearnerBase;
+        template<typename T> friend class Microsoft::MSR::CNTK::SGD;
 
     public:
         ///
@@ -306,7 +307,7 @@ namespace CNTK
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
         /// as large as the total size of the specified 'viewShape' and must outlive the created NDArrayView object.
         ///
-        NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
+        NDArrayView(DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
@@ -318,12 +319,12 @@ namespace CNTK
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
         ///
-        NDArrayView(::CNTK::DataType dataType, ::CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device);
+        NDArrayView(DataType dataType, StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device);
 
         ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified 'device'.
         ///
-        NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device)
+        NDArrayView(DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device)
             : NDArrayView(dataType, StorageFormat::Dense, viewShape, device)
         {}
 
@@ -466,7 +467,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-        NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
+        NDArrayView(DataType dataType, const DeviceDescriptor& device, StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
@@ -487,9 +488,9 @@ namespace CNTK
         void SetValue(double value);
 
     private:
-        ::CNTK::DataType m_dataType;
+        DataType m_dataType;
         DeviceDescriptor m_device;
-        ::CNTK::StorageFormat m_storageFormat;
+        StorageFormat m_storageFormat;
         NDShape m_viewShape;
         bool m_isReadOnly;
 
@@ -843,7 +844,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name = L"")
+        Variable(const NDShape& shape, DataType dataType, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, false, name)
         {
         }
@@ -851,7 +852,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, const std::wstring& name = L"")
+        Variable(const NDShape& shape, bool isSparse, DataType dataType, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
@@ -859,7 +860,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
+        Variable(const NDShape& shape, DataType dataType, bool needsGradient, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, false, name)
         {
         }
@@ -867,7 +868,7 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
+        Variable(const NDShape& shape, bool isSparse, DataType dataType, bool needsGradient, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis }, isSparse, name)
         {
         }
@@ -875,7 +876,7 @@ namespace CNTK
         ///
         /// Create an 'Output' variable
         ///
-        Variable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
+        Variable(const NDShape& shape, DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, false, name)
         {
         }
@@ -980,7 +981,7 @@ namespace CNTK
         }
 
     protected:
-        Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
+        Variable(const NDShape& shape, VariableKind varType, DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
             : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, false, name)
         {
         }
@@ -992,7 +993,7 @@ namespace CNTK
         }
 
     private:
-        Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
+        Variable(const NDShape& shape, VariableKind varType, DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
             : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
         {
         }
@@ -1003,7 +1004,7 @@ namespace CNTK
         {
             NDShape m_shape;
             VariableKind m_varKind;
-            ::CNTK::DataType m_dataType;
+            DataType m_dataType;
             Function* m_ownerFunction; // Variable does not keep the Function alive
             NDArrayViewPtr m_value;
             bool m_needsGradient;
@@ -1011,7 +1012,7 @@ namespace CNTK
             _Internal::_SimpleVector<Axis> m_dynamicAxes;
             bool m_isSparse;
 
-            _VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
+            _VariableFields(const NDShape& shape, VariableKind varType, DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
                 : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_isSparse(isSparse), m_name(nullptr)
             {
                 if (name != nullptr)
@@ -1148,7 +1149,7 @@ namespace CNTK
     {
         template <typename T>
         friend struct std::hash;
-        
+
         friend class Function;
 
     public:
@@ -1183,7 +1184,7 @@ namespace std {
             return std::hash<std::wstring>()(x.Name());
         }
     };
-    
+
     template <> struct hash<::CNTK::Variable>
     {
         size_t operator()(const ::CNTK::Variable& x) const
@@ -1386,7 +1387,7 @@ namespace CNTK
         }
 
         ///
-        /// Returns a set comprising of all input variables of 'this' Function  variables that are not of kind 'Parameter' or 'Constant'.
+        /// Returns a set comprising of all input variables of 'this' Function variables that are not of kind 'Parameter' or 'Constant'.
         ///
         std::unordered_set<Variable> Arguments() const
         {
@@ -1539,7 +1540,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
-    
+
     ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
@@ -1593,7 +1594,7 @@ namespace CNTK
         auto operandVector = _Internal::_SimpleVector<FunctionPtr>::CreateSimpleVector(operands);
         return _Combine(operandVector, name);
     }
-    
+
     ///
     /// A serializable value represents one of:
     /// a) Boolean
@@ -1618,22 +1619,25 @@ namespace CNTK
 
         static const char* TypeName(Type type)
         {
-            if (type == Type::None)
+            switch (type)
+            {
+            case Type::None:
                 return "None";
-            else if (type == Type::Bool)
+            case Type::Bool:
                 return "Bool";
-            else if (type == Type::SizeT)
+            case Type::SizeT:
                 return "SizeT";
-            else if (type == Type::Float)
+            case Type::Float:
                 return "Float";
-            else if (type == Type::Double)
+            case Type::Double:
                 return "Double";
-            else if (type == Type::NDShape)
+            case Type::NDShape:
                 return "NDShape";
-            else if (type == Type::Vector)
+            case Type::Vector:
                 return "Vector";
-            else
+            default:
                 LogicError("Unknown DictionaryValue::Type");
+            }
         }
 
     public:
@@ -1650,7 +1654,7 @@ namespace CNTK
         {
             m_data.m_sizeT = value;
         }
-        
+
         DictionaryValue(float value) : m_valueType(GetValueType<float>())
         {
             m_data.m_float = value;
@@ -1665,8 +1669,8 @@ namespace CNTK
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
             static_assert(std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
-                "Unsupported ValueType");
+                          std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
+                          "Unsupported ValueType");
 
             AllocateDataPtr(value);
         }
@@ -1752,25 +1756,19 @@ namespace CNTK
         static Type GetValueType()
         {
             static_assert(std::is_same<T, bool>::value ||
-                std::is_same<T, size_t>::value ||
-                std::is_same<T, float>::value ||
-                std::is_same<T, double>::value ||
-                std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
-                "Unsupported ValueType");
+                          std::is_same<T, size_t>::value ||
+                          std::is_same<T, float>::value ||
+                          std::is_same<T, double>::value ||
+                          std::is_same<T, NDShape>::value ||
+                          std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
+                          "Unsupported ValueType");
 
-            if (std::is_same<T, bool>::value)
-                return Type::Bool;
-            else if (std::is_same<T, size_t>::value)
-                return Type::SizeT;
-            else if (std::is_same<T, float>::value)
-                return Type::Float;
-            else if (std::is_same<T, double>::value)
-                return Type::Double;
-            else if (std::is_same<T, NDShape>::value)
-                return Type::NDShape;
-            else if (std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value)
-                return Type::Vector;
+            if (std::is_same<T, bool>::value)                                      return Type::Bool;
+            if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
+            if (std::is_same<T, float>::value)                                     return Type::Float;
+            if (std::is_same<T, double>::value)                                    return Type::Double;
+            if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
+            if (std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value) return Type::Vector;
         }
 
         template <typename T>
@@ -1803,7 +1801,7 @@ namespace CNTK
     };
 
     ///
-    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed). 
+    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
     ///
     class CNTK_API Dictionary
     {
@@ -1847,13 +1845,11 @@ namespace CNTK
         const size_t version = 1;
     };
 
-
-
 #pragma warning(push)
 #pragma warning(disable : 4251 4275)
     ///
     /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
-    /// For e.g momentum, AdaGrad, RmsProp etc. are different types of learners with their own algorithms for 
+    /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
     class CNTK_API Learner : public _Internal::_ReferenceCounter
@@ -1864,8 +1860,8 @@ namespace CNTK
         // learning has stopped for all of the parameters associated with this learner
         //
         bool Update(const std::unordered_map<Variable, ValuePtr>& parameters,
-            const std::unordered_map<Variable, const ValuePtr>& gradients,
-            size_t trainingSampleCount)
+                    const std::unordered_map<Variable, const ValuePtr>& gradients,
+                    size_t trainingSampleCount)
         {
             auto abisSafeParametersMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(parameters);
             auto abisSafeGradientsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(gradients);
@@ -1876,12 +1872,12 @@ namespace CNTK
         /// Returns the set of parameters associated with this learner.
         ///
         std::unordered_set<Variable> Parameters() const { return m_parameters; }
-        
+
         ///
         /// Optionally overridable method to checkpoint the learner's state.
         ///
         virtual Dictionary GetCheckpointState() const = 0;
-        
+
         ///
         /// Optionally overridable method to restore the learner's state from a previous checkpoint.
         ///
@@ -1906,7 +1902,7 @@ namespace CNTK
 
             void SetLearningRateMultipliers(const std::unordered_map<Variable, double>& multipliers)
             {
-               learningRateMultipliers = _Internal::_SimpleMap<Variable, double>::CreateSimpleMap(multipliers);
+                learningRateMultipliers = _Internal::_SimpleMap<Variable, double>::CreateSimpleMap(multipliers);
             }
         };
 
@@ -1922,37 +1918,37 @@ namespace CNTK
     protected:
         Learner(const _Internal::_SimpleSet<Variable>& parameters)
             : m_parameters(parameters)
-        {   
+        {
         }
 
         virtual bool Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
-            const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
-            size_t trainingSampleCount) = 0;
+                            const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
+                            size_t trainingSampleCount) = 0;
 
-       _Internal::_SimpleSet<Variable> m_parameters;
+        _Internal::_SimpleSet<Variable> m_parameters;
 
     };
 
 #pragma warning(pop)
 
     CNTK_API LearnerPtr _SGDLearner(const _Internal::_SimpleSet<Variable>& parameters, bool useNesterovAcceleration = false,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+                                    const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
     CNTK_API LearnerPtr _AdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters, bool needAveMultiplier = true,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+                                        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
     CNTK_API LearnerPtr _FSAdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+                                          const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
-    CNTK_API LearnerPtr _RmsPropLearner(const _Internal::_SimpleSet<Variable>& parameters,
-        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
+    CNTK_API LearnerPtr _RMSPropLearner(const _Internal::_SimpleSet<Variable>& parameters,
+                                        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+                                        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
-    inline LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, bool useNesterovAcceleration = false, 
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    inline LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, bool useNesterovAcceleration = false,
+                                 const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
     {
         return _SGDLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), useNesterovAcceleration, additionalParameters);
     }
@@ -1960,8 +1956,8 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    inline LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true, 
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    inline LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true,
+                                     const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
     {
         return _AdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), needAveMultiplier, additionalParameters);
     }
@@ -1970,19 +1966,19 @@ namespace CNTK
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
     inline LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+                                       const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
     {
         return _FSAdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), additionalParameters);
     }
 
     ///
-    /// Create an instance of the CNTK built-in RmsProp learner.
+    /// Create an instance of the CNTK built-in RMSProp learner.
     ///
-    inline LearnerPtr RmsPropLearner(const std::unordered_set<Variable>& parameters,
-        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
-        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
+    inline LearnerPtr RMSPropLearner(const std::unordered_set<Variable>& parameters,
+                                     double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+                                     const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
     {
-        return _RmsPropLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), 
-            gamma, inc, dec, max, min, needAveMultiplier, additionalParameters);
+        return _RMSPropLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters),
+                               gamma, inc, dec, max, min, needAveMultiplier, additionalParameters);
     }
 }

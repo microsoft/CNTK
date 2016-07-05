@@ -582,7 +582,13 @@ private:
     {
         if (matrix.GetMatrixType() == MatrixType::SPARSE) 
         {
-            RuntimeError("A sparse matrix currently cannot be wrapped into an NDArrayView");
+            // TODO: This is a temporary workaround that allows to wrap an existing sparse matrix in an NDViewArray.
+            auto tensorView = new TensorView<ElemType>(std::shared_ptr<Matrix<ElemType>>(&matrix, [](Matrix<ElemType>*){}), 
+                                                        TensorShape(matrix.GetNumRows(), matrix.GetNumCols()));
+
+            return new ::CNTK::NDArrayView(::CNTK::AsDataType<ElemType>(), GetDeviceDescriptor(matrix.GetDeviceId()),
+                                            ::CNTK::StorageFormat::SparseCSC, { matrix.GetNumRows(), matrix.GetNumCols() }, 
+                                            false, tensorView);
         }
 
         return new ::CNTK::NDArrayView({ matrix.GetNumRows(), matrix.GetNumCols() }, 
