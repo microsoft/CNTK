@@ -44,8 +44,8 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignSumOf(input0, input1);
     }
 
@@ -185,8 +185,8 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignElementwiseProductOf(input0, input1);
     }
 
@@ -268,7 +268,7 @@ protected:
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
     {
-        auto input = inputIndex < 0 ? this : Input(inputIndex).get();
+        auto input = inputIndex < 0 ? this : InputPtr(inputIndex);
         auto data = gradient ? input->GradientPtr() : input->ValuePtr();
         size_t rank = input->GetSampleLayout().GetRank();
         if (inputIndex == 0 && m_transpose && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
@@ -284,7 +284,7 @@ public:
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
-        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+        if (!fr.IsOneColumnWrt(InputPtr(0)->GetMBLayout()))
         {
             // recursively call ourselves for each individual time and sequence
             auto timeRange     = fr.GetTimeRange();
@@ -549,12 +549,14 @@ public:
 
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {           
-        if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
+    {
+        if (!fr.IsOneColumnWrt(InputPtr(0)->GetMBLayout()))
             Base::ForwardProp(fr); // It will come back
-        if (Input(0)->Value().GetMatrixType() != DENSE || Input(1)->Value().GetMatrixType() != DENSE)
+        if (InputPtr(0)->Value().GetMatrixType() != DENSE || InputPtr(1)->Value().GetMatrixType() != DENSE)
+        {
             Base::ForwardProp(fr); // Can't deal with this. We shouldn't be here.
-
+            return;
+        }
         TensorView<ElemType> input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         TensorView<ElemType> input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         TensorView<ElemType> output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
