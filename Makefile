@@ -507,6 +507,41 @@ $(CDENSEREADER): $(CDENSEREADER_OBJ) $(CDENSEREADER_COBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# CSparsePCReader plugin
+########################################
+
+CSparsePCReader_SRC =\
+	$(SOURCEDIR)/Readers/CSparsePCReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CSparsePCReader/CSparsePCReader.cpp
+
+CSparsePCReader_CSRC =\
+	$(SOURCEDIR)/Readers/CSparsePCReader/adler32.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/compress.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/crc32.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/deflate.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/gzlib.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/gzread.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/gzwrite.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/infback.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/inffast.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/inflate.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/inftrees.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/trees.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/uncompr.c \
+	$(SOURCEDIR)/Readers/CSparsePCReader/zutil.c
+
+CSparsePCReader_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CSparsePCReader_SRC))
+CSparsePCReader_COBJ := $(patsubst %.c, $(OBJDIR)/%.o, $(CSparsePCReader_CSRC))
+
+CSparsePCReader:=$(LIBDIR)/CSparsePCReader.so
+ALL += $(CSparsePCReader)
+SRC+=$(CSparsePCReader_SRC)
+
+$(CSparsePCReader): $(CSparsePCReader_OBJ) $(CSparsePCReader_COBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
 # SparsePCReader plugin
 ########################################
 
