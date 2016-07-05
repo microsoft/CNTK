@@ -338,7 +338,6 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
     let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
     let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != numColumns;
-
     // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
     // As a consequence, some configurations will simply not work currently.
     // We minimize the chance of this by using the original storage object whenever possible.
@@ -470,18 +469,26 @@ void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, b
     auto shapeB = b.m_shape;
     auto shapeC = m_shape;
     FlattenShapesToMatrix(shapeA, transA, shapeB, /*transC*/false, shapeC, /*transC*/false);
-    BlockMultiplier<BlockHandlerAVX> mult;
-    //BlockMultiplier<BlockHandlerSSE> mult;
-    int16_t* newA;
-    ElemType scaleA;
-    let  B = b.Reshaped(shapeB).AsMatrix();
-    auto C = Reshaped(shapeC).AsMatrix();
-
     // mult is row-major. Since A and B are col-major, deal with this by swapping arguments.
     // Effectively we're flipping the whole computation around a 45 degree angle
     int m = (int)shapeA.GetDim(0);
     int k = (int)shapeA.GetDim(1);
     int l = (int)shapeB.GetDim(0);
+    assert(k == l); l;
+    int n = (int)shapeB.GetDim(1);
+
+    if (m < 8 || n < 8)
+    {
+        // Fall back. Not worth the overhead
+        AssignMatrixProductOf(false, a, transA, b, false);
+        return;
+    }
+    BlockMultiplier<BlockHandlerSSE> mult;
+    int16_t* newA;
+    ElemType scaleA;
+    let  B = b.Reshaped(shapeB).AsMatrix();
+    auto C = Reshaped(shapeC).AsMatrix();
+
 
     // If A is a constant we can reuse it.
     if (preppedA != nullptr && *preppedA != nullptr)
@@ -505,8 +512,6 @@ void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, b
         }
     }
 
-    assert(k == l); l;
-    int n = (int)shapeB.GetDim(1);
     int16_t* matB = mult.CreateMatrixB(k, n);
     int32_t* matC = mult.CreateMatrixC(m, n);
     ElemType scaleB = Scale(matB, B, B->GetNumCols(), /*trans*/ false);

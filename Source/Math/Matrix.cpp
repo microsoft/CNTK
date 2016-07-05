@@ -235,28 +235,42 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //        - read case: OK
     //        - write case: forbidden to call this function in this way
     //     - NONE -> !NONE: FORBIDDEN
-    if (m_currentDataLocation != location &&                  // it is attempted to change location
-        m_currentDataLocation != CurrentDataLocation::NONE && // from a valid object (NONE means we are a fresh object from ColumnSlice())
-        location != CurrentDataLocation::BOTH)                // and we are changing it not into a temporary copy for reading
+    
+    // from a valid object (NONE means we are a fresh object from ColumnSlice()?
+    bool validObject = m_currentDataLocation != CurrentDataLocation::NONE;
+    // Did we change location?
+    bool locationChanged = m_currentDataLocation != location;
+    // and we are changing it not into a temporary copy for reading
+    bool tempForReading = location == CurrentDataLocation::BOTH;
+
+    if (locationChanged && validObject && !tempForReading)                
     {
-        // we get here if we wrote into this object that was BOTH but is no longer, or if we move between CPU and GPU
+        // we get here if we wrote into this object that was BOTH but is no longer, or if we move between 
+        // CPU and GPU. 
         // Both is forbidden on shared views since we cannot inform other views of this change.
-        // We will now check any *valid* pointer will now be checked for uniqueness. There may be mismatching left-over pointers kept around in case they should be revived.
-        if (m_matrixType == MatrixType::DENSE) // note: this checks the current type, not the new one passed in. Asssumption: this tells us which pointers are valid.
+        // We will now check any *valid* pointer will now be checked for uniqueness. There may be mismatching 
+        // left-over pointers kept around in case they should be revived.
+        if (m_matrixType == MatrixType::DENSE) // note: this checks the current type, not the new one passed in.
+                                               // Assumption: this tells us which pointers are valid.
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMigratable("SetDataLocation [CPUMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMigratable("SetDataLocation [GPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU)
+                ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMigratable("SetDataLocation [CPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) 
+                ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMigratable("SetDataLocation [GPUMatrix]");
         }
         else if (m_matrixType == MatrixType::SPARSE)
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUSparseMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUSparseMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [CPUSparseMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [GPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::GPU) 
+                ((BaseMatrix<ElemType>*)m_CPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [CPUSparseMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) 
+                ((BaseMatrix<ElemType>*)m_GPUSparseMatrix.get())->VerifyMigratable("SetDataLocation [GPUSparseMatrix]");
         }
-        // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
+        // TODO: Why do we need these typecasts? (without it will fail with "cannot access private member 
+        // declared in class 'Microsoft::MSR::CNTK::CPUMatrix<float>'")
 
         if (m_baseMatrix && !OwnBuffer()) // same arguments for externally owned matrices: Can read a temp but not write.
             LogicError("SetDataLocation: A non-owning object cannot be written to in BOTH state.");
@@ -272,9 +286,20 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     // set m_baseMatrix (if location is unchanged, this will not change the pointer)
     // Note: m_currentDataLocation may also be CurrentDataLocation::BOTH, in which case the base matrix will be GPU.
     if (m_matrixType == MatrixType::DENSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUMatrix));
+    {
+        if (m_currentDataLocation == CurrentDataLocation::CPU)
+            m_baseMatrix = dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUMatrix);
+        else
+            m_baseMatrix = dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUMatrix);
+    }
     else if (m_matrixType == MatrixType::SPARSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUSparseMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUSparseMatrix));
+    {
+        if (m_currentDataLocation == CurrentDataLocation::CPU)
+            m_baseMatrix = dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUSparseMatrix);
+        else
+            m_baseMatrix = dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUSparseMatrix);
+    }
+
     // Note: Typecasts are necessary since C++ cannot figure out the common base type (probably due to shared_ptr).
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)

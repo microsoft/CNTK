@@ -51,7 +51,7 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
-        auto input  = Input(0)->ValueTensorFor(rank, fr);
+        auto input  = InputPtr(0)->ValueTensorFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
@@ -608,8 +608,8 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
 
         result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
