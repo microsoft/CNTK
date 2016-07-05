@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-07-05.* CNTK now supports *Deconvolution* and *Unpooling*. See the usage example in the Network number 4 in [MNIST Sample](https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md).
+
 *2016-06-23.* New License Terms for CNTK 1bit-SGD and related components.  
 Effective immediately the License Terms for CNTK 1bit-SGD and related components have changed. The new Terms provide more flexibility and enable new usage scenarios, especially in commercial environments. Read the new Terms at the [standard location](https://cntk1bitsgd.codeplex.com/license). Please note, that while the new Terms are significantly more flexible comparing to the previous ones, they are still **more restrictive** than the main CNTK License. Consequently everything described in [Enabling 1bit-SGD](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) section of the Wiki remains valid.
 
@@ -11,8 +13,6 @@ NuGet Package is added to CNTK v.1.5 binaries. See [CNTK Releases page](https://
 
 *2016-06-15.*  CNTK now supports building against a custom Intel® Math Kernel Library (MKL).
 See [setup instructions](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) on how to set this up for your platform.
-
-*2016-06-10.* See CNTK v.1.5 binary release announcement in the official [Microsoft Research Blog](https://blogs.msdn.microsoft.com/msr_er/2016/06/10/microsoft-improves-programming-flexibility-of-its-ai-toolkit/)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
