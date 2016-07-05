@@ -409,6 +409,13 @@ public:
     {
         ZeroInit();
     }
+    BaseMatrix(bool shallow)
+    {
+        if (shallow) // Only used for shallow copy. Avoid initializing it twice.
+            ;
+        else
+            ZeroInit();
+    }
     virtual ~BaseMatrix()
     {
         ZeroValues();

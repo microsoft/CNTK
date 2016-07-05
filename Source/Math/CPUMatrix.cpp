@@ -160,7 +160,15 @@ template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit();
-	SetValue(deepCopyFrom);
+    SetValue(deepCopyFrom);
+}
+
+//copy constructor, shallow copy
+template <class ElemType>
+CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow)
+    : BaseMatrix(shallow)
+{
+    ShallowCopyFrom(shallowCopyFrom);
 }
 
 //assignment operator, deep copy
@@ -174,9 +182,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
 //move constructor, shallow copy
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
+    : BaseMatrix(/*shallow*/ true)
 {
     ShallowCopyFrom(moveFrom);
-    moveFrom.ZeroValues();
+    moveFrom.m_sob = nullptr;
 }
 
 //move assignment operator, shallow copy
@@ -195,7 +204,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
 template <class ElemType>
 CPUMatrix<ElemType>::~CPUMatrix()
 {
-    Clear();
+    ZeroValues();
 }
 
 template <class ElemType>
@@ -212,11 +221,9 @@ template <class ElemType>
 CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
 
-    CPUMatrix<ElemType> slice;
-
-    slice.ShallowCopyFrom(*this);
+    CPUMatrix<ElemType> slice(*this, true);
     slice.m_numCols = numCols;
     slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
 

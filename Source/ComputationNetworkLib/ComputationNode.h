@@ -924,6 +924,24 @@ protected:
     // std containers such as list and map does not support class reference so we need to use pointer
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
+    // Fast input reference for the tight loop. We use this to avoid passing around shared pointers
+    // and doing dynamic_pointer_casts. These are very slow and become dominant when mbSize=1 
+    // (e.g. for evaluation)
+    typedef ComputationNode<ElemType>* ComputationNodeElemTypePtr;
+
+    std::vector<ComputationNodeElemTypePtr> m_inputPtrs;
+
+    ComputationNodeElemTypePtr InputPtr(size_t input)
+    {
+        return m_inputPtrs[input];
+    }
+
+    void UpdateInputPtrs()
+    {
+        m_inputPtrs.clear();
+        for (auto input : m_inputs)
+            m_inputPtrs.push_back(input ? &*DownCast(input) : nullptr);
+    }
 public:
 
     using ComputationNodeBase::AttachInputs; // import the convenience functions that take 1..6 parameters
@@ -1050,6 +1068,7 @@ public:
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
+        UpdateInputPtrs();
     }
 
 protected:
@@ -1111,6 +1130,7 @@ protected:
 
         // set the input value
         m_inputs[childIndex] = node;
+        UpdateInputPtrs();
     }
 
 public:
@@ -1211,7 +1231,7 @@ private:
         // We only get here if the tensor indeed describes an 1D or 2D object. In that case, just verify the dimensions.
         try
         {
-        data.VerifySize(numRows, numCols);
+            data.VerifySize(numRows, numCols);
         }
         catch (const std::exception& e)
         {
@@ -1332,8 +1352,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-        m.VerifySize(rows, cols);
-    }
+            m.VerifySize(rows, cols);
+        }
         catch (const std::exception& e)
         {
             Rethrow(e);
