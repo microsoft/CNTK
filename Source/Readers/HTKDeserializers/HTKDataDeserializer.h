@@ -34,8 +34,8 @@ public:
     // Retrieves data for a chunk.
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
-    // Gets sequence description by its key.
-    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    // Gets sequence description by the primary one.
+    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription&) override;
 
 private:
     class HTKChunk;
@@ -84,6 +84,10 @@ private:
     unsigned int m_samplePeriod = 0;
     size_t m_ioFeatureDimension = 0;
     std::string m_featureKind;
+
+    // A flag that indicates whether the utterance should be extended to the utterance from the primary deserializer.
+    // TODO: This should be moved to the packers when deserializers work in sequence mode only.
+    bool m_expandToPrimary;
 };
 
 typedef std::shared_ptr<HTKDataDeserializer> HTKDataDeserializerPtr;

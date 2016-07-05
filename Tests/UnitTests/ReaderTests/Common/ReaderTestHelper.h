@@ -295,17 +295,22 @@ struct ReaderFixture
     // readerSectionName    : the reader field name in the test section
 
     shared_ptr<DataReader> GetDataReader(
-        const string configFileName,
-        const string testSectionName,
-        const string readerSectionName)
+        const std::string& configFileName,
+        const std::string& testSectionName,
+        const std::string& readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters)
     {
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
 
-        wchar_t cntkName[] = L"CNTK";
-        wchar_t* arg[2]{cntkName, &configFileCommand[0]};
+        std::vector<wchar_t*> arg{ L"CNTK", &configFileCommand[0] };
+        for(auto& p : additionalConfigParameters)
+        {
+            arg.push_back(&p[0]);
+        }
+
         ConfigParameters config;
-        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine((int)arg.size(), &arg[0], config);
 
         config.ResolveVariables(rawConfigString);
         const ConfigParameters simpleDemoConfig = config(testSectionName);
@@ -345,14 +350,15 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         shared_ptr<StreamMinibatchInputs> inputsPtr =
             CreateStreamMinibatchInputs<ElemType>(numFeatureFiles, numLabelFiles,
             sparseFeatures, sparseLabels, useSharedLayout);
 
         shared_ptr<DataReader> readerPtr = GetDataReader(configFileName,
-            testSectionName, readerSectionName);
+            testSectionName, readerSectionName, additionalConfigParameters);
 
         // Perform the data reading
         HelperWriteReaderContentToFile<ElemType>(testDataFilePath, *readerPtr, *inputsPtr,
@@ -392,11 +398,12 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         HelperReadInAndWriteOut<ElemType>(configFileName, testDataFilePath, testSectionName, readerSectionName,
             epochSize, mbSize, epochs, numFeatureFiles, numLabelFiles, subsetNum,numSubsets,
-            sparseFeatures, sparseLabels, useSharedLayout);
+            sparseFeatures, sparseLabels, useSharedLayout, additionalConfigParameters);
 
         CheckFilesEquivalent(controlDataFilePath, testDataFilePath);
     }
@@ -409,10 +416,11 @@ struct ReaderFixture
     void HelperRunReaderTestWithException(
         string configFileName,
         string testSectionName,
-        string readerSectionName)
+        string readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         BOOST_CHECK_THROW(
-            GetDataReader(configFileName,testSectionName, readerSectionName),
+            GetDataReader(configFileName, testSectionName, readerSectionName, additionalConfigParameters),
             ExceptionType);
     }
 };
