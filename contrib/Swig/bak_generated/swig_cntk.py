@@ -98,6 +98,13 @@ except __builtin__.Exception:
         pass
     _newclass = 0
 
+try:
+    import weakref
+    weakref_proxy = weakref.proxy
+except __builtin__.Exception:
+    weakref_proxy = lambda x: x
+
+
 class SwigPyIterator(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, SwigPyIterator, name, value)
@@ -300,13 +307,6 @@ class NDArrayView(_ReferenceCounter):
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, NDArrayView, name)
     __repr__ = _swig_repr
-
-    def __init__(self, *args):
-        this = _swig_cntk.new_NDArrayView(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
     __swig_destroy__ = _swig_cntk.delete_NDArrayView
     __del__ = lambda self: None
 
@@ -337,13 +337,24 @@ class NDArrayView(_ReferenceCounter):
     def CopyFrom(self, source):
         return _swig_cntk.NDArrayView_CopyFrom(self, source)
 
-    def DataBufferFloat(self):
-        return _swig_cntk.NDArrayView_DataBufferFloat(self)
+    def __init__(self, *args):
+        this = _swig_cntk.new_NDArrayView(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def ToNumPy(self):
+        return _swig_cntk.NDArrayView_ToNumPy(self)
 NDArrayView_swigregister = _swig_cntk.NDArrayView_swigregister
 NDArrayView_swigregister(NDArrayView)
 
 def NDArrayViewFloat(*args):
     val = _swig_cntk.new_NDArrayViewFloat(*args)
+    return val
+
+def NDArrayViewDouble(*args):
+    val = _swig_cntk.new_NDArrayViewDouble(*args)
     return val
 
 class NDMask(_ReferenceCounter):
@@ -862,6 +873,98 @@ class MapVarValuePtr(_object):
 MapVarValuePtr_swigregister = _swig_cntk.MapVarValuePtr_swigregister
 MapVarValuePtr_swigregister(MapVarValuePtr)
 
+class VarSet(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, VarSet, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, VarSet, name)
+    __repr__ = _swig_repr
+
+    def iterator(self):
+        return _swig_cntk.VarSet_iterator(self)
+    def __iter__(self):
+        return self.iterator()
+
+    def __nonzero__(self):
+        return _swig_cntk.VarSet___nonzero__(self)
+
+    def __bool__(self):
+        return _swig_cntk.VarSet___bool__(self)
+
+    def __len__(self):
+        return _swig_cntk.VarSet___len__(self)
+
+    def append(self, x):
+        return _swig_cntk.VarSet_append(self, x)
+
+    def __contains__(self, x):
+        return _swig_cntk.VarSet___contains__(self, x)
+
+    def __getitem__(self, i):
+        return _swig_cntk.VarSet___getitem__(self, i)
+
+    def add(self, x):
+        return _swig_cntk.VarSet_add(self, x)
+
+    def discard(self, x):
+        return _swig_cntk.VarSet_discard(self, x)
+
+    def __init__(self, *args):
+        this = _swig_cntk.new_VarSet(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def empty(self):
+        return _swig_cntk.VarSet_empty(self)
+
+    def size(self):
+        return _swig_cntk.VarSet_size(self)
+
+    def clear(self):
+        return _swig_cntk.VarSet_clear(self)
+
+    def swap(self, v):
+        return _swig_cntk.VarSet_swap(self, v)
+
+    def count(self, x):
+        return _swig_cntk.VarSet_count(self, x)
+
+    def begin(self):
+        return _swig_cntk.VarSet_begin(self)
+
+    def end(self):
+        return _swig_cntk.VarSet_end(self)
+
+    def rbegin(self):
+        return _swig_cntk.VarSet_rbegin(self)
+
+    def rend(self):
+        return _swig_cntk.VarSet_rend(self)
+
+    def erase(self, *args):
+        return _swig_cntk.VarSet_erase(self, *args)
+
+    def find(self, x):
+        return _swig_cntk.VarSet_find(self, x)
+
+    def lower_bound(self, x):
+        return _swig_cntk.VarSet_lower_bound(self, x)
+
+    def upper_bound(self, x):
+        return _swig_cntk.VarSet_upper_bound(self, x)
+
+    def equal_range(self, x):
+        return _swig_cntk.VarSet_equal_range(self, x)
+
+    def insert(self, __x):
+        return _swig_cntk.VarSet_insert(self, __x)
+    __swig_destroy__ = _swig_cntk.delete_VarSet
+    __del__ = lambda self: None
+VarSet_swigregister = _swig_cntk.VarSet_swigregister
+VarSet_swigregister(VarSet)
+
 class FunctionPtr(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, FunctionPtr, name, value)
@@ -992,8 +1095,8 @@ class NDArrayViewPtr(_object):
     def CopyFrom(self, source):
         return _swig_cntk.NDArrayViewPtr_CopyFrom(self, source)
 
-    def DataBufferFloat(self):
-        return _swig_cntk.NDArrayViewPtr_DataBufferFloat(self)
+    def ToNumPy(self):
+        return _swig_cntk.NDArrayViewPtr_ToNumPy(self)
 
     def AddReference(self):
         return _swig_cntk.NDArrayViewPtr_AddReference(self)
@@ -1153,18 +1256,68 @@ class BackPropStatePtr(_object):
 BackPropStatePtr_swigregister = _swig_cntk.BackPropStatePtr_swigregister
 BackPropStatePtr_swigregister(BackPropStatePtr)
 
+class Callback(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Callback, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Callback, name)
+    __repr__ = _swig_repr
+    __swig_destroy__ = _swig_cntk.delete_Callback
+    __del__ = lambda self: None
 
-def stuff(mymap):
-    return _swig_cntk.stuff(mymap)
-stuff = _swig_cntk.stuff
+    def forward(self):
+        return _swig_cntk.Callback_forward(self)
 
-def naivestuff(mymap):
-    return _swig_cntk.naivestuff(mymap)
-naivestuff = _swig_cntk.naivestuff
+    def backward(self):
+        return _swig_cntk.Callback_backward(self)
 
-def data_from_value(cntk_data, data):
-    return _swig_cntk.data_from_value(cntk_data, data)
-data_from_value = _swig_cntk.data_from_value
+    def __init__(self):
+        if self.__class__ == Callback:
+            _self = None
+        else:
+            _self = self
+        this = _swig_cntk.new_Callback(_self, )
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    def __disown__(self):
+        self.this.disown()
+        _swig_cntk.disown_Callback(self)
+        return weakref_proxy(self)
+Callback_swigregister = _swig_cntk.Callback_swigregister
+Callback_swigregister(Callback)
+
+class FunctionInCNTK(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, FunctionInCNTK, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, FunctionInCNTK, name)
+    __repr__ = _swig_repr
+
+    def __init__(self):
+        this = _swig_cntk.new_FunctionInCNTK()
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _swig_cntk.delete_FunctionInCNTK
+    __del__ = lambda self: None
+
+    def delCallback(self):
+        return _swig_cntk.FunctionInCNTK_delCallback(self)
+
+    def setCallback(self, cb):
+        return _swig_cntk.FunctionInCNTK_setCallback(self, cb)
+
+    def forward(self):
+        return _swig_cntk.FunctionInCNTK_forward(self)
+
+    def backward(self):
+        return _swig_cntk.FunctionInCNTK_backward(self)
+FunctionInCNTK_swigregister = _swig_cntk.FunctionInCNTK_swigregister
+FunctionInCNTK_swigregister(FunctionInCNTK)
+
 # This file is compatible with both classic and new-style classes.
 
 
