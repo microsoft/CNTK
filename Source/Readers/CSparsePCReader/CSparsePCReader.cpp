@@ -179,7 +179,8 @@ namespace Microsoft {
 				this->m_bSparseDenseInfoInitialized = false;
 
 
-				m_inFile.open(m_file, ifstream::binary | ifstream::in);
+				std::string name = msra::strfun::utf8(m_file);
+				m_inFile.open(name, ifstream::binary | ifstream::in);
 
 				m_inFile.seekg(0, ios::end);
 				this->m_filePositionMax = (int64_t)m_inFile.tellg();
@@ -190,11 +191,11 @@ namespace Microsoft {
 				}
 
 				//Compress
-				auto start = clock();
-				printf("get zipped file info start\n");
+				//auto start = clock();
+				//printf("get zipped file info start\n");
 				GetZippedFileInfo();
-				auto sec = (clock() - start) / CLOCKS_PER_SEC;
-				printf("get zipped file info finished: %ds\n", sec);
+				//auto sec = (clock() - start) / CLOCKS_PER_SEC;
+				//printf("get zipped file info finished: %ds\n", sec);
 				
 
 				m_dThreadCnt = readerConfig(L"dThreadCnt", (int32_t)3);
