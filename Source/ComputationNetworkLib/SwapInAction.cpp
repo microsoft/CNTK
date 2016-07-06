@@ -28,11 +28,13 @@ void SwapInAction::SwapToGPU()
 {
         CUDA_CALL(cudaStreamSynchronize(m_swapOutStream));
         CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU->Data(), m_bufferGPU->BufferSize(), cudaMemcpyDefault, m_swapInStream));
+        m_isSwappingToGPU = true;
 }
 
 void SwapInAction::SynchronizeBufferBeforeUse()
 {
     CUDA_CALL(cudaStreamSynchronize(m_swapInStream));
+    m_isSwappingToGPU = false;
 }
 
 }}}

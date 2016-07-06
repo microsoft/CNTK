@@ -5,15 +5,15 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "Timer.h"
+#include "CUDATimer.h"
 #include <assert.h>
 
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-void Timer::tick(){	tick("default"); }
-void Timer::tick(std::string name)
+void CUDATimer::tick(){	tick("default"); }
+void CUDATimer::tick(std::string name)
 {
 	if (m_dictTickTock.count(name) > 0)
 	{
@@ -31,8 +31,8 @@ void Timer::tick(std::string name)
 }
 
 
-float Timer::tock(){ return tock("default"); }
-float Timer::tock(std::string name)
+float CUDATimer::tock(){ return tock("default"); }
+float CUDATimer::tock(std::string name)
 {
 	if (m_dictTickTockCumulative.count(name) > 0)
 	{
@@ -43,14 +43,14 @@ float Timer::tock(std::string name)
 	}
 	else
 	{
-		assert(("No tick event was registered for the name" + name, m_dictTickTock.count(name) > 0));
+        assert(m_dictTickTock.count(name) > 0);
 		float value = tock(m_dictTickTock[name]);
 		m_dictTickTock.erase(name);
 		return value;
 	}
 }
 
-cudaEvent_t* Timer::create_tick()
+cudaEvent_t* CUDATimer::create_tick()
 {
     cudaEvent_t* startstop;
     startstop = (cudaEvent_t*)malloc(2*sizeof(cudaEvent_t));
@@ -61,7 +61,7 @@ cudaEvent_t* Timer::create_tick()
     return startstop;
 }
 
-float Timer::tock(cudaEvent_t* startstop)
+float CUDATimer::tock(cudaEvent_t* startstop)
 {
 	float time;
 	cudaEventRecord(startstop[1], 0);

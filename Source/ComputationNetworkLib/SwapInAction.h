@@ -15,7 +15,7 @@ class SwapInAction : public SyncAction
 public:
 
     ~SwapInAction(){}
-    SwapInAction(CPUMatrix<float> *CPUBuffer, GPUMatrix<float> *GPUBuffer, cudaStream_t swapOutStream)
+    SwapInAction(Matrix<float> *CPUBuffer, Matrix<float> *GPUBuffer, cudaStream_t swapOutStream)
     {
         m_bufferCPU = CPUBuffer;
         m_bufferGPU = GPUBuffer;

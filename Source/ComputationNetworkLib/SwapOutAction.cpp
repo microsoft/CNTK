@@ -6,6 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "SwapOutAction.h"
+#include <iostream>
 
 #ifndef CPUONLY
 	#include <cuda_runtime.h>
@@ -14,6 +15,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+using std::cout;
+using std::endl;
 
 
 void SwapOutAction::executeAction()
@@ -31,10 +34,10 @@ void SwapOutAction::allocatePinnedBuffer()
     size_t cols = m_bufferGPU->GetNumCols();
     size_t rows = m_bufferGPU->GetNumRows();
 
-    float *pinnedBuffer;
-    //cudaHostAllocPortable preservse the page-lock even across threads
-    CUDA_CALL(cudaHostAlloc(&pinnedBuffer, sizeof(float)*cols*rows, cudaHostAllocPortable));
-    m_bufferCPU = new CPUMatrix<float>(rows, cols, pinnedBuffer);
+    //cout << cols << "x" << rows << endl;
+
+    //-1 = deviceId = CPU
+    m_bufferCPU = new Matrix<float>(rows, cols, -1);
 }
 
 }}}
