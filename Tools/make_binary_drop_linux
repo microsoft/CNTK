@@ -148,6 +148,10 @@ cp -r $buildPath/* $baseBinariesPath
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
 
+# Copy Scripts (Scripts folder from the root of the Repo)
+echo "Copying Scripts..." >&3
+cp -r Scripts $baseDropPath
+
 # Copy Extras
 echo "Copying Extras..." >&3
 cp -r $extrasPath/* $baseDropPath
