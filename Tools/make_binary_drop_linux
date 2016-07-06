@@ -151,6 +151,8 @@ cp -r Examples $baseDropPath
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
 cp -r Scripts $baseDropPath
+# Remove test related file(s)
+rm $baseDropPath/Scripts/pytest.ini 2> /dev/null
 
 # Copy Extras
 echo "Copying Extras..." >&3
