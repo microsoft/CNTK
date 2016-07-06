@@ -12,14 +12,14 @@ parallelTrain = true
 command = Train:Test
 
 precision = "float"
-deviceId = "auto"  
+deviceId = "auto"
 
 wordCount = 944    # number of words
 labelCount = 127   # number of labels 
 Train = [
-    action = train
+action = train
 
-    traceLevel = 1
+traceLevel = 1
 
     BrainScriptNetworkBuilder = [
 
@@ -29,13 +29,13 @@ Train = [
         featDim = inputDim*3   # contextual words are used as features: previous word, current word, next word.
         embDim = 150
         hiddenDim = 300
-		maxLayer = 1
+        maxLayer = 1
         initScale = 6
         initBias = -1.0
         useStabilizer = true
-        featuresPW = Input(inputDim)	# the previous word
-        featuresCW = Input(inputDim)	# the current word
-        featuresNW = Input(inputDim)	# the next word
+        featuresPW = Input(inputDim)    # the previous word
+        featuresCW = Input(inputDim)    # the current word
+        featuresNW = Input(inputDim)    # the next word
         features = RowStack(featuresPW : featuresCW : featuresNW)
         
         labels = Input(labelDim, tag = "label")
@@ -43,21 +43,22 @@ Train = [
         # embedding layer
         emb = LearnableParameter(embDim, featDim)
         featEmbedded = Times(emb, features)
-            
         
-		# this is the LSTM stack
-		lstmDims[i:0..maxLayer] = hiddenDim
-		NoAuxInputHook (input, lstmState) = BS.Constants.None
-		lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims, cellDims=lstmDims,
-			featEmbedded, inputDim=embDim,
-			previousHook=BS.RNNs.PreviousHC,
-			augmentInputHook=BS.RNNs.NoAuxInputHook, 
-			augmentInputDim=0,
-			enableSelfStabilization=false)
+        # build the LSTM stack of a single layer
+        lstmDims[i:0..maxLayer] = hiddenDim
+        NoAuxInputHook (input, lstmState) = BS.Constants.None
+        lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims, 
+            cellDims=lstmDims,
+            featEmbedded, 
+            inputDim=embDim,
+            previousHook=BS.RNNs.PreviousHC,
+            augmentInputHook=BS.RNNs.NoAuxInputHook, 
+            augmentInputDim=0,
+            enableSelfStabilization=false)
 
-		lstmOutputLayer = Length (lstmStack)-1
-		LSTMoutput = lstmStack[lstmOutputLayer].h
-	
+        lstmOutputLayer = Length (lstmStack)-1
+        LSTMoutput = lstmStack[lstmOutputLayer].h
+    
         W = Parameter(labelDim, hiddenDim, init = "uniform", initValueScale=initScale)
         b = Parameter(labelDim, 1, init = "fixedValue", value=0)
         outputs = W * LSTMoutput + b
