@@ -1348,8 +1348,6 @@ public:
     {
         Base::BeginForwardProp();
 
-        //synchronize streams for swapping and parallelism
-        m_syncManager->SynchronizeState(ComputationNodeBasePtr(this));
 
         // update the actual m_value allocation
         if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
@@ -1367,8 +1365,6 @@ public:
     {
         Base::EndForwardProp();
 
-        //synchronize streams for swapping and parallelism
-        m_syncManager->SynchronizeState(ComputationNodeBasePtr(this));   
 
 #ifdef _DEBUG
 #ifdef TRACK_GAP_NANS
@@ -1736,7 +1732,7 @@ protected:
 
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
-    shared_ptr<SynchronizationManager> m_syncManager;
+    SynchronizationManager *m_syncManager;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 };
@@ -1806,6 +1802,8 @@ public:
     // these two implement the ComputationNode<> interface
     void ForwardProp(const FrameRange& fr) override final
     {
+        //synchronize streams for swapping and parallelism
+        Base::m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
@@ -1813,6 +1811,8 @@ public:
     }
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
     {
+        //synchronize streams for swapping and parallelism
+        Base::m_syncManager->SynchronizeState(this, inputIndex, fr, false);
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
         else

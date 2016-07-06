@@ -19,13 +19,15 @@ class SyncAction
 protected:
     // this is needed so we can execute async actions first and while they are running we execute sync actions
     bool m_isAsynchronous; 
-    GPUMatrix<float> *m_bufferGPU;
-    CPUMatrix<float> *m_bufferCPU;
+    Matrix<float> *m_bufferGPU;
+    Matrix<float> *m_bufferCPU;
     
 
 public:
     ~SyncAction(){};
     virtual void executeAction() = 0;
+    Matrix<float> *GetGPUMatrix(){ return m_bufferGPU; }
+    Matrix<float> *GetCPUMatrix(){ return m_bufferCPU; }
 
 public:    
     bool GetIsAsynchronous()

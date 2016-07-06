@@ -350,7 +350,7 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 	$(SOURCEDIR)/Math/cudalib.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SwapInAction.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SwapOutAction.cpp \
-	$(SOURCEDIR)/ComputationNetworkLib/Timer.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/CUDATimer.cpp \
 
 else
 SEQUENCE_TRAINING_LIB_SRC +=\

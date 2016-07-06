@@ -13,11 +13,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class Timer
+class CUDATimer
 {
 public:
-    Timer(){}
-    ~Timer(){}
+    CUDATimer(){}
+    ~CUDATimer(){}
 	void tick(std::string name);
 	void tick();
 	float tock(std::string name);
