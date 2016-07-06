@@ -53,6 +53,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifndef _MSC_VER
 #define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
+static inline wchar_t* _wcsdup(const wchar_t *s)
+{
+    return ::wcsdup(s);
+}
 #endif
 
 namespace CNTK
@@ -132,102 +136,76 @@ namespace CNTK
     class CompositeFunction;
     class Function;
 
-    namespace _Internal
+    namespace Internal
     {
-        //  A reference counter to be used as the base class for all reference counted types.
-        class _ReferenceCounter
+        //  A reference count to be used as the base class for all reference counted types.
+        class CNTK_API ReferenceCount
         {
         public:
 
-            //  Constructor.
-            _ReferenceCounter() : m_rc(0) {}
+            ReferenceCount();
+            virtual ~ReferenceCount();
 
-            //  Destructor.
-            virtual ~_ReferenceCounter() {}
-
-            // Add a reference. 
-            // Thread-safe.
-            size_t AddReference()
-            {
-                return ++m_rc;
-            }
-
-            // Remove a reference. 
-            // Thread-safe.
-            size_t RemoveReference()
-            {
-                assert(m_rc.load() > 0);
-                return --m_rc;
-            }
-
-            // Return the reference count value
-            size_t GetReferenceCount()
-            {
-                return m_rc.load();
-            }
+            size_t AddReference();
+            size_t RemoveReference();
+            size_t GetReferenceCount();
 
         private:
-            std::atomic<size_t> m_rc;
+            std::atomic<size_t>* m_rc;
         };
 
         // A smart pointer to a reference counted object
-        // T must be a type derived from _Reference_counter
+        // T must be a type derived from ReferenceCount
         template <class T>
-        class _ReferenceCounterSharedPtr final
+        class CNTK_API ReferenceCountedPtr final
         {
-            typedef void(*_ReferenceCounterDeleter)(_ReferenceCounter* obj);
+            typedef void(*ReferenceCountedObjectDeleter)(ReferenceCount* obj);
 
         public:
 
-            // Constructor
-            _ReferenceCounterSharedPtr(T* ptr = nullptr, _ReferenceCounterDeleter deleter = nullptr) : m_objPtr(ptr), m_deleter(deleter)
+            ReferenceCountedPtr(T* ptr = nullptr, ReferenceCountedObjectDeleter deleter = nullptr) : m_objPtr(ptr), m_deleter(deleter)
             {
-                Init();
+                AddReferenceIfNeeded();
             }
 
-            // Copy constructor
-            _ReferenceCounterSharedPtr(const _ReferenceCounterSharedPtr& other) : m_objPtr(nullptr), m_deleter(nullptr)
+            ReferenceCountedPtr(const ReferenceCountedPtr& other) : m_objPtr(nullptr), m_deleter(nullptr)
             {
                 *this = other;
             }
 
-            // Move constructor
-            _ReferenceCounterSharedPtr(_ReferenceCounterSharedPtr&& other) : m_objPtr(nullptr), m_deleter(nullptr)
+            ReferenceCountedPtr(ReferenceCountedPtr&& other) : m_objPtr(nullptr), m_deleter(nullptr)
             {
                 *this = std::move(other);
             }
 
-            // Destructor
-            ~_ReferenceCounterSharedPtr()
+            ~ReferenceCountedPtr()
             {
-                UnInitialize(m_objPtr, m_deleter);
+                DeleteReferenceIfNeeded(m_objPtr, m_deleter);
             }
 
-            // Assignment operator
-            _ReferenceCounterSharedPtr& operator=(const _ReferenceCounterSharedPtr& other)
+            ReferenceCountedPtr& operator=(const ReferenceCountedPtr& other)
             {
                 if (this != &other)
                 {
                     T* oldPtr = m_objPtr;
-                    _ReferenceCounterDeleter oldDeleter = m_deleter;
+                    ReferenceCountedObjectDeleter oldDeleter = m_deleter;
 
                     m_objPtr = other.m_objPtr;
                     m_deleter = other.m_deleter;
-                    Init();
+                    AddReferenceIfNeeded();
 
-                    UnInitialize(oldPtr, oldDeleter);
+                    DeleteReferenceIfNeeded(oldPtr, oldDeleter);
                 }
 
                 return *this;
             }
 
-            // Move-assignment operator
-            _ReferenceCounterSharedPtr& operator=(_ReferenceCounterSharedPtr&& other)
+            ReferenceCountedPtr& operator=(ReferenceCountedPtr&& other)
             {
                 assert(this != &other);
 
                 T* oldPtr = m_objPtr;
-                _ReferenceCounterDeleter oldDeleter = m_deleter;
+                ReferenceCountedObjectDeleter oldDeleter = m_deleter;
 
                 m_objPtr = other.m_objPtr;
                 m_deleter = other.m_deleter;
@@ -236,16 +214,16 @@ namespace CNTK
                 other.m_objPtr = nullptr;
                 other.m_deleter = nullptr;
 
-                UnInitialize(oldPtr, oldDeleter);
+                DeleteReferenceIfNeeded(oldPtr, oldDeleter);
 
                 return *this;
             }
 
             // Conversion to a ReferenceCountedSharedPtr instance of a base type
             template <typename Base, typename std::enable_if<std::is_base_of<Base, T>::value>::type* = nullptr>
-            operator _ReferenceCounterSharedPtr<Base>()
+            operator ReferenceCountedPtr<Base>()
             {
-                return _ReferenceCounterSharedPtr<Base>(m_objPtr, m_deleter);
+                return ReferenceCountedPtr<Base>(m_objPtr, m_deleter);
             }
 
             T* operator->() const
@@ -269,25 +247,25 @@ namespace CNTK
             }
 
         private:
-            void Init()
+            void AddReferenceIfNeeded()
             {
-                static_assert(std::is_base_of<_ReferenceCounter, T>::value, "_ReferenceCounterSharedPtr<T> can only be used when _ReferenceCounter is a base type of T!");
+                static_assert(std::is_base_of<ReferenceCount, T>::value, "ReferenceCountedPtr<T> can only be used when ReferenceCount is a base type of T!");
 
                 if (m_objPtr != nullptr)
-                    reinterpret_cast<_ReferenceCounter*>(m_objPtr)->AddReference();
+                    reinterpret_cast<ReferenceCount*>(m_objPtr)->AddReference();
             }
 
-            static void UnInitialize(T* objPtr, _ReferenceCounterDeleter deleter)
+            static void DeleteReferenceIfNeeded(T* objPtr, ReferenceCountedObjectDeleter deleter)
             {
-                static_assert(std::is_base_of<_ReferenceCounter, T>::value, "_ReferenceCounterSharedPtr<T> can only be used when _ReferenceCounter is a base type of T!");
+                static_assert(std::is_base_of<ReferenceCount, T>::value, "ReferenceCountedPtr<T> can only be used when ReferenceCount is a base type of T!");
 
                 if (objPtr != nullptr)
                 {
-                    size_t refCountRemaining = reinterpret_cast<_ReferenceCounter*>(objPtr)->RemoveReference();
+                    size_t refCountRemaining = reinterpret_cast<ReferenceCount*>(objPtr)->RemoveReference();
                     if (refCountRemaining == 0)
                     {
                         if (deleter != nullptr)
-                            deleter(reinterpret_cast<_ReferenceCounter*>(objPtr));
+                            deleter(reinterpret_cast<ReferenceCount*>(objPtr));
                         else
                             delete objPtr;
                     }
@@ -296,35 +274,45 @@ namespace CNTK
 
         private:
             T* m_objPtr;
-            _ReferenceCounterDeleter m_deleter;
+            ReferenceCountedObjectDeleter m_deleter;
         };
 
         template <typename T>
-        bool operator==(const _ReferenceCounterSharedPtr<T>& first, const _ReferenceCounterSharedPtr<T>& second)
+        bool operator==(const ReferenceCountedPtr<T>& first, const ReferenceCountedPtr<T>& second)
         {
             return first.GetPtr() == second.GetPtr();
         }
 
-        // A simple vector implementation with a C ABI to allow usage across the library DLL boundary
+        // A wrapper around the STL vector implementation with a safe ABI to allow usage across the library DLL boundary
         // as STL vectors cannot be used across the DLL boundary
         template <typename T>
-        class CNTK_API _SimpleVector final
+        class CNTK_API SimpleVector final
         {
             template <typename ValueType>
-            friend CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
+            friend CNTK_API bool operator==(const SimpleVector<ValueType>& first, const SimpleVector<ValueType>& second);
 
             friend class CNTK::Function;
 
         public:
-            _SimpleVector();
-            _SimpleVector(size_t numElements, const T& initVal = T());
-            ~_SimpleVector();
+            SimpleVector();
 
-            _SimpleVector(const _SimpleVector& other);
-            _SimpleVector& operator=(const _SimpleVector& other);
+            template <typename ContainerType, typename std::enable_if<std::is_same<ContainerType, std::vector<T>>::value ||
+                                                                      std::is_same<ContainerType, std::initializer_list<T>>::value ||
+                                                                      std::is_same<ContainerType, std::array<T, sizeof(ContainerType) / sizeof(T)>>::value>::type* = nullptr>
+            SimpleVector(const ContainerType& initList)
+                : SimpleVector(initList.size())
+            {
+                std::copy(initList.begin(), initList.end(), Data());
+            }
 
-            _SimpleVector(_SimpleVector&& other);
-            _SimpleVector& operator=(_SimpleVector&& other);
+            SimpleVector(size_t numElements, const T& initVal = T());
+            ~SimpleVector();
+
+            SimpleVector(const SimpleVector& other);
+            SimpleVector& operator=(const SimpleVector& other);
+
+            SimpleVector(SimpleVector&& other);
+            SimpleVector& operator=(SimpleVector&& other);
 
             T& operator[](size_t idx);
             const T& operator[](size_t idx) const;
@@ -353,21 +341,10 @@ namespace CNTK
                 {
                     auto insertRet = retSet.insert(this->operator[](i));
                     if (ensureUnique && !insertRet.second)
-                        RuntimeError("A _SimpleVector with duplicate elements cannot be converted to an unordered_set");
+                        RuntimeError("A SimpleVector with duplicate elements cannot be converted to an unordered_set");
                 }
 
                 return retSet;
-            }
-
-            template <typename ContainerType, typename std::enable_if<std::is_same<ContainerType, std::vector<T>>::value ||
-                                                                      std::is_same<ContainerType, std::initializer_list<T>>::value ||
-                                                                      std::is_same<ContainerType, std::array<T, sizeof(ContainerType) / sizeof(T)>>::value>::type* = nullptr>
-            static _SimpleVector<T> CreateSimpleVector(const ContainerType& initList)
-            {
-                _SimpleVector<T> simpleVector(initList.size());
-                std::copy(initList.begin(), initList.end(), simpleVector.Data());
-
-                return simpleVector;
             }
 
         private:
@@ -375,51 +352,51 @@ namespace CNTK
         };
 
         template <typename ValueType>
-        CNTK_API bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second);
+        CNTK_API bool operator==(const SimpleVector<ValueType>& first, const SimpleVector<ValueType>& second);
 
         template <typename ValueType>
-        bool operator!=(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second)
+        bool operator!=(const SimpleVector<ValueType>& first, const SimpleVector<ValueType>& second)
         {
             return !(first == second);
         }
 
-        // A simple set implementation with a C ABI to allow usage across the library DLL boundary
+        // A wrapper around the STL set implementation with a safe ABI to allow usage across the library DLL boundary
         // as STL sets cannot be used across the DLL boundary
         template <typename KeyType>
-        class CNTK_API _SimpleSet final
+        class CNTK_API SimpleSet final
         {
             friend class CNTK::CompositeFunction;
 
             template <typename T>
-            friend CNTK_API bool operator==(const _SimpleSet<T>& first, const _SimpleSet<T>& second);
+            friend CNTK_API bool operator==(const SimpleSet<T>& first, const SimpleSet<T>& second);
 
         public:
-            _SimpleSet();
-            ~_SimpleSet();
+            SimpleSet();
+            ~SimpleSet();
 
-            _SimpleSet(const _SimpleSet& other);
-            _SimpleSet& operator=(const _SimpleSet& other);
+            SimpleSet(const SimpleSet& other);
+            SimpleSet& operator=(const SimpleSet& other);
 
-            _SimpleSet(_SimpleSet&& other);
-            _SimpleSet& operator=(_SimpleSet&& other);
+            SimpleSet(SimpleSet&& other);
+            SimpleSet& operator=(SimpleSet&& other);
 
             bool Insert(const KeyType& key);
             bool Contains(const KeyType& key) const;
 
             size_t Size() const;
 
-            operator _SimpleVector<KeyType>() const;
+            operator SimpleVector<KeyType>() const;
 
             operator std::unordered_set<KeyType>() const
             {
-                return ((_SimpleVector<KeyType>)(*this)).GetAsUnorderedSet();
+                return ((SimpleVector<KeyType>)(*this)).GetAsUnorderedSet();
             }
 
-            static _SimpleSet<KeyType> CreateSimpleSet(const std::unordered_set<KeyType>& initSet)
+            static SimpleSet<KeyType> CreateSimpleSet(const std::unordered_set<KeyType>& initSet)
             {
-                _SimpleSet<KeyType> simpleSet;
-                for (auto iter = initSet.begin(); iter != initSet.end(); ++iter)
-                    simpleSet.Insert(*iter);
+                SimpleSet<KeyType> simpleSet;
+                for (auto key : initSet)
+                    simpleSet.Insert(key);
 
                 return simpleSet;
             }
@@ -429,31 +406,31 @@ namespace CNTK
         };
 
         template <typename KeyType>
-        CNTK_API bool operator==(const _SimpleSet<KeyType>& first, const _SimpleSet<KeyType>& second);
+        CNTK_API bool operator==(const SimpleSet<KeyType>& first, const SimpleSet<KeyType>& second);
 
         template <typename KeyType>
-        bool operator!=(const _SimpleSet<KeyType>& first, const _SimpleSet<KeyType>& second)
+        bool operator!=(const SimpleSet<KeyType>& first, const SimpleSet<KeyType>& second)
         {
             return !(first == second);
         }
 
-        // A simple map implementation with a C ABI to allow usage across the library DLL boundary
+        // A wrapper aroound the STL map implementation with a safe ABI to allow usage across the library DLL boundary
         // as STL maps cannot be used across the DLL boundary
         template <typename KeyType, typename ValueType>
-        class CNTK_API _SimpleMap final
+        class CNTK_API SimpleMap final
         {
             friend class CNTK::CompositeFunction;
             friend class CNTK::Function;
 
         public:
-            _SimpleMap();
-            ~_SimpleMap();
+            SimpleMap();
+            ~SimpleMap();
 
-            _SimpleMap(const _SimpleMap& other);
-            _SimpleMap& operator=(const _SimpleMap& other);
+            SimpleMap(const SimpleMap& other);
+            SimpleMap& operator=(const SimpleMap& other);
 
-            _SimpleMap(_SimpleMap&& other);
-            _SimpleMap& operator=(_SimpleMap&& other);
+            SimpleMap(SimpleMap&& other);
+            SimpleMap& operator=(SimpleMap&& other);
 
             ValueType& operator[](const KeyType& key);
             const ValueType& operator[](const KeyType& key) const;
@@ -462,13 +439,13 @@ namespace CNTK
             bool Contains(const KeyType& key) const;
             size_t Size() const;
 
-            _SimpleSet<KeyType> Keys() const;
+            SimpleSet<KeyType> Keys() const;
 
-            static _SimpleMap<KeyType, ValueType> CreateSimpleMap(const std::unordered_map<KeyType, ValueType>& initMap)
+            static SimpleMap<KeyType, ValueType> CreateSimpleMap(const std::unordered_map<KeyType, ValueType>& initMap)
             {
-                _SimpleMap<KeyType, ValueType> simpleMap;
-                for (auto iter = initMap.begin(); iter != initMap.end(); ++iter)
-                    simpleMap.Insert(iter->first, iter->second);
+                SimpleMap<KeyType, ValueType> simpleMap;
+                for (auto keyValuePair : initMap)
+                    simpleMap.Insert(keyValuePair.first, keyValuePair.second);
 
                 return simpleMap;
             }
@@ -480,35 +457,28 @@ namespace CNTK
 
     // Forward declarations
     class NDArrayView;
-    typedef _Internal::_ReferenceCounterSharedPtr<NDArrayView> NDArrayViewPtr;
+    typedef Internal::ReferenceCountedPtr<NDArrayView> NDArrayViewPtr;
 
     class NDMask;
-    typedef _Internal::_ReferenceCounterSharedPtr<NDMask> NDMaskPtr;
+    typedef Internal::ReferenceCountedPtr<NDMask> NDMaskPtr;
 
     class Value;
-    typedef _Internal::_ReferenceCounterSharedPtr<Value> ValuePtr;
+    typedef Internal::ReferenceCountedPtr<Value> ValuePtr;
 
     class Function;
-    typedef _Internal::_ReferenceCounterSharedPtr<Function> FunctionPtr;
+    typedef Internal::ReferenceCountedPtr<Function> FunctionPtr;
 
-    inline wchar_t* CopyString(const wchar_t* source)
+    namespace Internal
     {
-        size_t len = wcslen(source) + 1;
-        wchar_t* copy = new wchar_t[len];
-#ifdef _WIN32
-        wcscpy_s(copy, len, source);
-#else
-        wcscpy(copy, source);
-#endif
-        return copy;
+        CNTK_API FunctionPtr Combine(const Internal::SimpleVector<FunctionPtr>& operands, const std::wstring& name = L"");
     }
 }
 
 namespace std {
     template <typename T>
-    struct hash<CNTK::_Internal::_ReferenceCounterSharedPtr<T>>
+    struct hash<CNTK::Internal::ReferenceCountedPtr<T>>
     {
-        size_t operator()(const CNTK::_Internal::_ReferenceCounterSharedPtr<T>& x) const
+        size_t operator()(const CNTK::Internal::ReferenceCountedPtr<T>& x) const
         {
             return std::hash<const void*>()(x.GetPtr());
         }

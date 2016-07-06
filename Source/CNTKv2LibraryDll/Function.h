@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <iterator>
@@ -19,7 +21,7 @@ namespace CNTK
         Tanh,
         Combine,
         CrossEntropyWithSoftmax,
-        PredictionError,
+        ClassificationError,
         Exp,
         PastValue,
         FutureValue,
@@ -29,6 +31,7 @@ namespace CNTK
 
     inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
     {
+        // TODO: Put these in table form
         if (opType == PrimitiveOpType::Plus)
             return "Plus";
         else if (opType == PrimitiveOpType::Times)
@@ -41,8 +44,8 @@ namespace CNTK
             return "Combine";
         else if (opType == PrimitiveOpType::CrossEntropyWithSoftmax)
             return "CrossEntropyWithSoftmax";
-        else if (opType == PrimitiveOpType::PredictionError)
-            return "PredictionError";
+        else if (opType == PrimitiveOpType::ClassificationError)
+            return "ClassificationError";
         else if (opType == PrimitiveOpType::Exp)
             return "Exp";
         else if (opType == PrimitiveOpType::PastValue)
@@ -65,17 +68,17 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& /*arguments*/,
-                                         _Internal::_SimpleMap<Variable, ValuePtr>& /*outputs*/,
-                                         const _Internal::_SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
+        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& /*arguments*/,
+                                         Internal::SimpleMap<Variable, ValuePtr>& /*outputs*/,
+                                         const Internal::SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
                                          const DeviceDescriptor& /*computeDevice*/) override
         {
             NOT_IMPLEMENTED;
         }
 
         virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const _Internal::_SimpleMap<Variable, const ValuePtr>& /*rootGradientValues*/,
-                              _Internal::_SimpleMap<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                              const Internal::SimpleMap<Variable, const ValuePtr>& /*rootGradientValues*/,
+                              Internal::SimpleMap<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
         }
@@ -91,6 +94,8 @@ namespace CNTK
         }
 
     private:
+        // The following helper functions are used to determine the output shape for different 
+        // types of primitive operations accounting for broadcasting and reductions where applicable.
         static NDShape UnaryElementwiseOpOutputShape(const NDShape& operandShape)
         {
             return operandShape;
@@ -98,17 +103,17 @@ namespace CNTK
 
         static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, const NDShape& leftOperandShape, const NDShape& rightOperandShape, bool broadcastAllowed = true)
         {
-            auto& shapeWithSmallerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? rightOperandShape : leftOperandShape;
-            auto& shapeWithLargerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? leftOperandShape : rightOperandShape;
+            const auto& shapeWithSmallerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? rightOperandShape : leftOperandShape;
+            const auto& shapeWithLargerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? leftOperandShape : rightOperandShape;
             size_t numOutputAxes = shapeWithLargerNumAxes.NumAxes();
             std::vector<size_t> outputDims(numOutputAxes);
             for (size_t i = 0; i < shapeWithSmallerNumAxes.NumAxes(); ++i)
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] != NDShape::InferredDimension))
+                else if (leftOperandShape[i] == NDShape::InferredDimension)
                     outputDims[i] = rightOperandShape[i];
-                else if ((leftOperandShape[i] != NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
+                else if (rightOperandShape[i] == NDShape::InferredDimension)
                     outputDims[i] = leftOperandShape[i];
                 else
                 {
@@ -126,7 +131,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape, bool broadcastAllowed = true)
+        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape)
         {
             if (rightOperandShape.NumAxes() > 2)
                 RuntimeError("The right operand of a times operation can have at most 2 axes");
@@ -166,6 +171,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
+        // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner)
         {
             std::vector<Variable> outputs;
@@ -175,9 +181,9 @@ namespace CNTK
 
             // We currently require that the inputs' dynamic axes if any match
             std::vector<Axis> outputDynamicAxes = inputs[0].DynamicAxes();
-            for (size_t i = 1; i < inputs.size(); ++i)
+            for (auto inputVar : inputs)
             {
-                auto currentInputDynamicAxes = inputs[i].DynamicAxes();
+                auto currentInputDynamicAxes = inputVar.DynamicAxes();
                 if (outputDynamicAxes.empty())
                     outputDynamicAxes = currentInputDynamicAxes;
                 else
@@ -210,7 +216,7 @@ namespace CNTK
                 outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
             case PrimitiveOpType::CrossEntropyWithSoftmax:
-            case PrimitiveOpType::PredictionError:
+            case PrimitiveOpType::ClassificationError:
             {
                 assert(inputs.size() == 2);
 
@@ -274,10 +280,10 @@ namespace CNTK
     private:
         std::pair<Variable, int64_t> m_evalTimeStamp;
     };
-    typedef _Internal::_ReferenceCounterSharedPtr<CNTKBackPropState> CNTKBackPropStatePtr;
+    typedef Internal::ReferenceCountedPtr<CNTKBackPropState> CNTKBackPropStatePtr;
 
     class CompositeFunction;
-    typedef _Internal::_ReferenceCounterSharedPtr<CompositeFunction> CompositeFunctionPtr;
+    typedef Internal::ReferenceCountedPtr<CompositeFunction> CompositeFunctionPtr;
 
     class CompositeFunction final : public Function
     {
@@ -286,53 +292,53 @@ namespace CNTK
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
         {
-            _Internal::_SimpleSet<FunctionPtr> visitedFunctions;
+            Internal::SimpleSet<FunctionPtr> visitedFunctions;
 
-            // Call _DetermineInputs to get the set of all functions in the graph
-            _DetermineInputs(rootFunction, visitedFunctions);
+            // Call DetermineInputs to get the set of all functions in the graph
+            DetermineInputs(rootFunction, visitedFunctions);
 
             auto func = new CompositeFunction(rootFunction, std::move(visitedFunctions), name);
-            return CompositeFunctionPtr(func, [](_ReferenceCounter* ptr) { delete ptr; });
+            return CompositeFunctionPtr(func, [](ReferenceCount* ptr) { delete ptr; });
         }
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
-                                         _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
-                                         const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
+        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
+                                         Internal::SimpleMap<Variable, ValuePtr>& outputs,
+                                         const Internal::SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                          const DeviceDescriptor& computeDevice) override;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const _Internal::_SimpleMap<Variable, const ValuePtr>& rootGradientValues,
-                              _Internal::_SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+                              const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
+                              Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
-        virtual void _ReplacePlaceholders(const _Internal::_SimpleMap<Placeholder, Variable>& placeholderReplacements, _Internal::_SimpleSet<const Function*>& visitedFunctions, _Internal::_SimpleSet<Placeholder>& replacedPlaceholders) override;
+        virtual void _ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders) override;
 
-        CompositeFunction(const FunctionPtr& rootFunction, _Internal::_SimpleSet<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
+        CompositeFunction(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
             : Function({}, rootFunction->Outputs(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
         {
         }
 
         std::vector<Variable> DetermineInputs() const
         {
-            _Internal::_SimpleSet<FunctionPtr> visitedFunctions;
-            return _DetermineInputs(RootFunction(), visitedFunctions);
+            Internal::SimpleSet<FunctionPtr> visitedFunctions;
+            return DetermineInputs(RootFunction(), visitedFunctions);
         }
 
-        static std::vector<Variable> _DetermineInputs(const FunctionPtr& rootFunction, _Internal::_SimpleSet<FunctionPtr>& visitedFunctions)
+        // Recursively traverses the Function graph underlying the 'rootFunction' to determine all the leaves (aka inputs) of the graph
+        static std::vector<Variable> DetermineInputs(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>& visitedFunctions)
         {
             visitedFunctions.Insert(rootFunction);
 
             std::vector<Variable> inputs;
             std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-            for (size_t i = 0; i < rootFunctionInputs.size(); ++i)
+            for (auto rootInput : rootFunctionInputs)
             {
-                Variable currentInput = rootFunctionInputs[i];
-                if (currentInput.Kind() != VariableKind::Output)
-                    inputs.push_back(currentInput);
-                else if (!visitedFunctions.Contains(currentInput.Owner()))
+                if (!rootInput.IsOutput())
+                    inputs.push_back(rootInput);
+                else if (!visitedFunctions.Contains(rootInput.Owner()))
                 {
-                    FunctionPtr function = currentInput.Owner();
-                    std::vector<Variable> functionInputs = _DetermineInputs(function, visitedFunctions);
+                    FunctionPtr function = rootInput.Owner();
+                    std::vector<Variable> functionInputs = DetermineInputs(function, visitedFunctions);
                     std::copy(functionInputs.begin(), functionInputs.end(), std::back_inserter(inputs));
                 }
             }
@@ -341,7 +347,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const _Internal::_SimpleSet<Variable>& backpropRoots);
+        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const Internal::SimpleSet<Variable>& backpropRoots);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
@@ -349,8 +355,8 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
 
-        void PopulateNetworkInputs(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments);
-        void PopulateNetworkGradients(const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients);
+        void PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments);
+        void PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
@@ -362,10 +368,23 @@ namespace CNTK
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout);
 
     private:
-        _Internal::_SimpleSet<FunctionPtr> m_allPrimitiveFunctions;
+
+        // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
+        // by holding strong references to them
+        Internal::SimpleSet<FunctionPtr> m_allPrimitiveFunctions;
+
+        // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
+
+        // A map that tells whether a Variable in the graph underlying 'this' Function is a root of the graph
         std::unordered_map<Variable, bool> m_isVariableRootMap;
+
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
+
+        // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
+        // This indicates for which of it's roots has 'this' Function retained required intermediate 
+        // states from the previos Forward call to be able to backpropagate gradients backwards from in
+        // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
     };
 }

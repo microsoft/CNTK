@@ -88,7 +88,7 @@ namespace CNTK
     ///
     /// Denotes a compute device instance.
     ///
-    class DeviceDescriptor final
+    class CNTK_API DeviceDescriptor final
     {
     public:
         ///
@@ -115,7 +115,7 @@ namespace CNTK
         /// Static method to get the descriptor of the default device for the current process.
         /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
         ///
-        CNTK_API static DeviceDescriptor DefaultDevice();
+        static DeviceDescriptor DefaultDevice();
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -140,7 +140,7 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
-    class NDShape final
+    class CNTK_API NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
     public:
@@ -162,14 +162,14 @@ namespace CNTK
         /// Contruct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::vector<size_t>& dimensions)
-            : m_shapeDims(_Internal::_SimpleVector<size_t>::CreateSimpleVector(dimensions))
+            : m_shapeDims(dimensions)
         {}
 
         ///
         /// Contruct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::initializer_list<size_t>& dimensions)
-            : m_shapeDims(_Internal::_SimpleVector<size_t>::CreateSimpleVector(dimensions))
+            : m_shapeDims(dimensions)
         {}
 
         ///
@@ -247,7 +247,7 @@ namespace CNTK
         }
 
     private:
-        _Internal::_SimpleVector<size_t> m_shapeDims;
+        Internal::SimpleVector<size_t> m_shapeDims;
     };
 
     inline bool operator==(const NDShape& first, const NDShape& second)
@@ -260,9 +260,6 @@ namespace CNTK
         return !(first == second);
     }
 
-#pragma warning(push)
-#pragma warning(disable : 4251 4275)
-
     typedef int SparseIndexType;
 
     ///
@@ -271,7 +268,7 @@ namespace CNTK
     /// The underlying data is stored in sparse or dense format, and is located on a specific device.
     /// The actual underlying storage is either external or internal in which case its lifetime is managed through reference counting.
     ///
-    class CNTK_API NDArrayView final : public _Internal::_ReferenceCounter
+    class CNTK_API NDArrayView final : public Internal::ReferenceCount
     {
         friend class CompositeFunction;
 
@@ -422,7 +419,7 @@ namespace CNTK
         NDArrayViewPtr DeepClone(bool readOnly = false) const;
 
         ///
-        /// Creates a new NDArrayView which is an alias of 'this' view.
+        /// Creates a new NDArrayView which is an alias of 'this' view; i.e. a new view of the same shape as 'this' over the same underlying data.
         ///
         NDArrayViewPtr Alias(bool readOnly = false) const;
 
@@ -487,7 +484,7 @@ namespace CNTK
     /// Denotes a multi-dimensional mask used for specifying specific sections of a NDArrayView object as masked/invalid.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDMask instance.
     ///
-    class CNTK_API NDMask final : public _Internal::_ReferenceCounter
+    class CNTK_API NDMask final : public Internal::ReferenceCount
     {
         friend class CompositeFunction;
 
@@ -558,7 +555,7 @@ namespace CNTK
     /// sample shape is data.Shape().SubShape(0, data.Shape().NumAxes() - mask.Shape().NumAxes)
     /// Also, note that the size of the data's trailing mask.Shape().NumAxes() dimensions must match the mask shape dimensions.
     /// 
-    class CNTK_API Value : public _Internal::_ReferenceCounter
+    class CNTK_API Value : public Internal::ReferenceCount
     {
     public:
         ///
@@ -643,7 +640,7 @@ namespace CNTK
             const wchar_t* staticAxisNamePrefix = L"staticAxis_";
             std::wstring tempName = staticAxisNamePrefix;
             tempName = tempName + std::to_wstring(staticAxisIdx);
-            m_name = CopyString(tempName.c_str());
+            m_name = _wcsdup(tempName.c_str());
         }
 
         ///
@@ -652,7 +649,7 @@ namespace CNTK
         Axis(const std::wstring& name)
             : m_staticAxisIdx(SIZE_MAX)
         {
-            m_name = CopyString(name.c_str());
+            m_name = _wcsdup(name.c_str());
         }
 
         ///
@@ -671,10 +668,10 @@ namespace CNTK
         {
             if (this != &other)
             {
-                delete[] m_name;
+                free(m_name);
 
                 m_staticAxisIdx = other.m_staticAxisIdx;
-                m_name = (other.m_name != nullptr) ? CopyString(other.m_name) : other.m_name;
+                m_name = (other.m_name != nullptr) ? _wcsdup(other.m_name) : other.m_name;
             }
 
             return *this;
@@ -696,7 +693,7 @@ namespace CNTK
         {
             assert(this != &other);
 
-            delete[] m_name;
+            free(m_name);
 
             m_staticAxisIdx = other.m_staticAxisIdx;
             m_name = other.m_name;
@@ -748,7 +745,7 @@ namespace CNTK
         ///
         ~Axis()
         {
-            delete[] m_name;
+            free(m_name);
         }
 
         ///
@@ -794,6 +791,8 @@ namespace CNTK
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
     /// A Variable is symbolic and does not represent the actual values.
+    /// Also, Variable type is a value type and copies of a Variable object are aliases of the
+    /// source Variable object itself and have the same identity.
     ///
     class CNTK_API Variable
     {
@@ -844,6 +843,13 @@ namespace CNTK
         /// Throws an exception if called for a Function instance with multiple outputs
         ///
         Variable(const FunctionPtr& function);
+
+        /// 
+        /// Default constructor for creating an invalid/null Variable instance. 
+        /// Required for use in a std::vector container.
+        /// 
+        Variable()
+        {}
 
         ///
         /// Returns the shape of 'this' variable
@@ -912,9 +918,6 @@ namespace CNTK
         ///
         DataType GetDataType() const { return m_dataFields->m_dataType; }
 
-        Variable()
-        {}
-
         ///
         /// Returns a boolean value indicating if gradient computation is enabled for this variable.
         ///
@@ -933,12 +936,12 @@ namespace CNTK
 
     private:
         Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
-            : m_dataFields(new _VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](_Internal::_ReferenceCounter* ptr) { delete ptr; })
+            : m_dataFields(new VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](Internal::ReferenceCount* ptr) { delete ptr; })
         {}
 
     private:
 
-        struct _VariableFields final : public _Internal::_ReferenceCounter
+        struct VariableFields final : public Internal::ReferenceCount
         {
             NDShape m_shape;
             VariableKind m_varKind;
@@ -947,28 +950,28 @@ namespace CNTK
             NDArrayViewPtr m_value;
             bool m_needsGradient;
             wchar_t* m_name;
-            _Internal::_SimpleVector<Axis> m_dynamicAxes;
+            Internal::SimpleVector<Axis> m_dynamicAxes;
             bool m_isSparse;
 
-            _VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(_Internal::_SimpleVector<Axis>::CreateSimpleVector(dynamicAxes)), m_isSparse(isSparse), m_name(nullptr)
+            VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const wchar_t* name)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(nullptr)
             {
                 if (name != nullptr)
-                    m_name = CopyString(name);
+                    m_name = _wcsdup(name);
             }
 
-            ~_VariableFields()
+            ~VariableFields()
             {
-                delete[] m_name;
+                free(m_name);
             }
 
         private:
             // Disallow copy and move construction and assignment
-            _VariableFields(const _VariableFields&) = delete; _VariableFields& operator=(const _VariableFields& other) = delete; _VariableFields(_VariableFields&&) = delete; _VariableFields& operator=(_VariableFields&&) = delete;
+            VariableFields(const VariableFields&) = delete; VariableFields& operator=(const VariableFields& other) = delete; VariableFields(VariableFields&&) = delete; VariableFields& operator=(VariableFields&&) = delete;
         };
-        typedef _Internal::_ReferenceCounterSharedPtr<_VariableFields> _VariableFieldsPtr;
+        typedef Internal::ReferenceCountedPtr<VariableFields> VariableFieldsPtr;
 
-        _VariableFieldsPtr m_dataFields;
+        VariableFieldsPtr m_dataFields;
     };
 
     inline bool operator==(const Variable& first, const Variable& second)
@@ -1021,6 +1024,10 @@ namespace CNTK
         }
     };
 
+    // Implementation note: The Variable type is a value type and not polymorphic in nature. 
+    // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
+    // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
+    // but it should be good enough for catching any accidental additon of fields.
     static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
@@ -1068,6 +1075,10 @@ namespace CNTK
         }
     };
 
+    // Implementation note: The Variable type is a value type and not polymorphic in nature. 
+    // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
+    // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
+    // but it should be good enough for catching any accidental additon of fields.
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what it's base type 'Variable' has.");
 
     ///
@@ -1101,7 +1112,6 @@ namespace CNTK
     };
 
     static_assert(sizeof(Placeholder) == sizeof(Variable), "The Placeholder type should not have any data fields beyond what it's base type 'Variable' has.");
-#pragma warning(pop)
 }
 
 namespace std {
@@ -1150,10 +1160,10 @@ namespace CNTK
 {
     ///
     /// Encapsulates the internal computation state of a Function computed as part of the 'Forward' call on a Function
-    /// that must be passed to a a subsequent 'Backward' call on the same Function to backpropgate gradient values
+    /// that must be passed to a subsequent 'Backward' call on the same Function to backpropagate gradient values
     /// for the same computation backwards through the Function
     ///
-    class BackPropState : public _Internal::_ReferenceCounter
+    class BackPropState : public Internal::ReferenceCount
     {
     public:
         ///
@@ -1168,19 +1178,16 @@ namespace CNTK
     protected:
         FunctionPtr m_function;
     };
-    typedef _Internal::_ReferenceCounterSharedPtr<BackPropState> BackPropStatePtr;
-
-#pragma warning(push)
-#pragma warning(disable : 4251 4275)
+    typedef Internal::ReferenceCountedPtr<BackPropState> BackPropStatePtr;
 
     ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
-    /// A Function is a symbolic entity with zero or more input arguments and one or more outputs. 
+    /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
     /// A Function may be primitive or composite (comprised of other function instances whose inputs and outputs are wired together).
     /// A Function effectively is a computation graph composed of other primitive Functions (denoting computation) as nodes and Variable objects
     /// (denoting data) as the edges and leaves of the graph.
     ///
-    class CNTK_API Function : public _Internal::_ReferenceCounter
+    class CNTK_API Function : public Internal::ReferenceCount
     {
         friend class CompositeFunction;
 
@@ -1194,7 +1201,7 @@ namespace CNTK
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
-        /// 'outputsToRetainBackwardStateFor'outputs of the function to any of the inputs of the Function, in a subsequent Backward call.
+        /// 'outputsToRetainBackwardStateFor' outputs of the function to any of the inputs of the Function, in a subsequent Backward call.
         /// Note that the returned BackPropState instance also stores a reference to the supplied 'inputs' Values and generated 'outputs' Values
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
@@ -1204,15 +1211,21 @@ namespace CNTK
                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {})
         {
-            auto abisSafeArgumentsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(arguments);
-            auto abisSafeOutputsMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs);
-            auto abisSafeOutputsToRetainBackwardStateFor = _Internal::_SimpleSet<Variable>::CreateSimpleSet(outputsToRetainBackwardStateFor);
+            auto abiSafeArgumentsMap = Internal::SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(arguments);
+            auto abiSafeOutputsMap = Internal::SimpleMap<Variable, ValuePtr>::CreateSimpleMap(outputs);
+            auto abiSafeOutputsToRetainBackwardStateFor = Internal::SimpleSet<Variable>::CreateSimpleSet(outputsToRetainBackwardStateFor);
 
-            auto backPropState = Forward(abisSafeArgumentsMap, abisSafeOutputsMap, abisSafeOutputsToRetainBackwardStateFor, computeDevice);
+            auto backPropState = Forward(abiSafeArgumentsMap, abiSafeOutputsMap, abiSafeOutputsToRetainBackwardStateFor, computeDevice);
 
-            // Copy over the ValuePtr values in outputs
+            // Copy over the ValuePtr values in outputs. If the user passed in a pre-allocated non-null ValuePtr for a particular output Variable
+            // that should stay unchanged.
             for (auto outputVarValuePair : outputs)
-                outputs[outputVarValuePair.first] = abisSafeOutputsMap[outputVarValuePair.first];
+            {
+                if ((outputs[outputVarValuePair.first] != nullptr) && (outputs[outputVarValuePair.first] != abiSafeOutputsMap[outputVarValuePair.first]))
+                    LogicError("The Value object corresponding to an output Variable for which a pre-allocated non-null ValuePtr was specified should not change!");
+
+                outputs[outputVarValuePair.first] = abiSafeOutputsMap[outputVarValuePair.first];
+            }
 
             return backPropState;
         }
@@ -1230,27 +1243,33 @@ namespace CNTK
                       const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
                       std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
         {
-            auto abisSafeRootGradientValuesMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues);
-            auto abisSafeBackPropagatedGradientValuesForInputs = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs);
+            auto abisSafeRootGradientValuesMap = Internal::SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(rootGradientValues);
+            auto abisSafeBackPropagatedGradientValuesForInputs = Internal::SimpleMap<Variable, ValuePtr>::CreateSimpleMap(backPropagatedGradientValuesForInputs);
 
             Backward(state, abisSafeRootGradientValuesMap, abisSafeBackPropagatedGradientValuesForInputs);
 
-            // Copy over the ValuePtr values in backPropagatedGradientValuesForInputs
+            // Copy over the ValuePtr values in backPropagatedGradientValuesForInputs. If the user passed in a pre-allocated non-null ValuePtr for the gradient w.r.t.
+            // a particular input Variable that should stay unchanged.
             for (auto gradientVarValuePair : backPropagatedGradientValuesForInputs)
+            {
+                if ((backPropagatedGradientValuesForInputs[gradientVarValuePair.first] != nullptr) && (backPropagatedGradientValuesForInputs[gradientVarValuePair.first] != abisSafeBackPropagatedGradientValuesForInputs[gradientVarValuePair.first]))
+                    LogicError("The Value object corresponding to the gradient w.r.t. an input Variable for which a pre-allocated non-null ValuePtr was specified should not change!");
+
                 backPropagatedGradientValuesForInputs[gradientVarValuePair.first] = abisSafeBackPropagatedGradientValuesForInputs[gradientVarValuePair.first];
+            }
         }
 
     protected:
         // Mandatory methods to be overriden by new 'Function' types.
 
-        virtual BackPropStatePtr Forward(const _Internal::_SimpleMap<Variable, const ValuePtr>& arguments,
-                                         _Internal::_SimpleMap<Variable, ValuePtr>& outputs,
-                                         const _Internal::_SimpleSet<Variable>& outputsToRetainBackwardStateFor,
+        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
+                                         Internal::SimpleMap<Variable, ValuePtr>& outputs,
+                                         const Internal::SimpleSet<Variable>& outputsToRetainBackwardStateFor,
                                          const DeviceDescriptor& computeDevice) = 0;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const _Internal::_SimpleMap<Variable, const ValuePtr>& rootGradientValues,
-                              _Internal::_SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+                              const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
+                              Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
     public:
 
@@ -1261,7 +1280,7 @@ namespace CNTK
         ///
         virtual ~Function()
         {
-            delete[] m_name;
+            free(m_name);
         }
 
     public:
@@ -1287,7 +1306,7 @@ namespace CNTK
         ///
         std::vector<Variable> Inputs() const
         {
-            return _Inputs();
+            return InputsImpl();
         }
 
         ///
@@ -1296,7 +1315,7 @@ namespace CNTK
         Variable Output() const
         {
             if (m_outputs.Size() > 1)
-                RuntimeError("A Fuction instance with more than one output cannot be implicitly converted to a Variable");
+                RuntimeError("A Function instance with more than one output cannot be implicitly converted to a Variable");
 
             return m_outputs[0];
         }
@@ -1307,7 +1326,7 @@ namespace CNTK
         std::vector<Variable> Outputs() const { return m_outputs; }
 
         ///
-        /// Returns a set comprising of all input variables of 'this' Function  variables that are not of kind 'Parameter' or 'Constant'.
+        /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
         std::unordered_set<Variable> Arguments() const
         {
@@ -1352,9 +1371,9 @@ namespace CNTK
             if (RootFunction() == nullptr)
                 InvalidArgument("ReplacePlaceholders should never be called on primitive functions");
 
-            _Internal::_SimpleSet<const Function*> visitedFunctions;
-            _Internal::_SimpleSet<Placeholder> replacedPlaceholders;
-            auto abiSafePlaceholderReplacementsMap = _Internal::_SimpleMap<Placeholder, Variable>::CreateSimpleMap(placeholderReplacements);
+            Internal::SimpleSet<const Function*> visitedFunctions;
+            Internal::SimpleSet<Placeholder> replacedPlaceholders;
+            auto abiSafePlaceholderReplacementsMap = Internal::SimpleMap<Placeholder, Variable>::CreateSimpleMap(placeholderReplacements);
             _ReplacePlaceholders(abiSafePlaceholderReplacementsMap, visitedFunctions, replacedPlaceholders);
 
             if (abiSafePlaceholderReplacementsMap.Keys() != replacedPlaceholders)
@@ -1380,8 +1399,8 @@ namespace CNTK
 
         }
 
-        _Internal::_SimpleVector<Variable> _Inputs() const;
-        virtual void _ReplacePlaceholders(const _Internal::_SimpleMap<Placeholder, Variable>& placeholderReplacements, _Internal::_SimpleSet<const Function*>& visitedFunctions, _Internal::_SimpleSet<Placeholder>& replacedPlaceholders);
+        Internal::SimpleVector<Variable> InputsImpl() const;
+        virtual void _ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders);
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
@@ -1389,7 +1408,6 @@ namespace CNTK
     protected:
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the Function instance.
-        /// All 'inputs' specified must be Variables of type Constant, Parameter or Input.
         ///
         Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const FunctionPtr& rootFunction = nullptr, const std::wstring& name = L"")
             : m_rootFunction(rootFunction), m_name(nullptr)
@@ -1408,17 +1426,17 @@ namespace CNTK
                 }
             }
 
-            _Internal::_SimpleSet<Variable> uniqueOutputs;
+            std::unordered_set<Variable> uniqueOutputs;
             for (auto outputVar : outputs)
             {
-                if (uniqueOutputs.Contains(outputVar))
+                if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
                     RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
 
                 switch (outputVar.Kind())
                 {
                 case VariableKind::Output:
                     m_outputs.PushBack(outputVar);
-                    uniqueOutputs.Insert(outputVar);
+                    uniqueOutputs.insert(outputVar);
                     break;
                 default:
                     InvalidArgument("Function output has invalid VariableKind!");
@@ -1427,20 +1445,17 @@ namespace CNTK
             }
 
             if (name != L"")
-                m_name = CopyString(name.c_str());
+                m_name = _wcsdup(name.c_str());
         }
 
     private:
 
-        _Internal::_SimpleVector<Variable> m_inputs;
-        _Internal::_SimpleVector<Variable> m_outputs;
+        Internal::SimpleVector<Variable> m_inputs;
+        Internal::SimpleVector<Variable> m_outputs;
 
-        FunctionPtr m_rootFunction;
+        FunctionPtr m_rootFunction; // nullptr for primitive function instances
         wchar_t* m_name;
     };
-#pragma warning(pop)
-
-    CNTK_API FunctionPtr _Combine(const _Internal::_SimpleVector<FunctionPtr>& operands, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
@@ -1471,7 +1486,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    CNTK_API FunctionPtr PredictionError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise exp operation with the specified input operand.
@@ -1510,7 +1525,6 @@ namespace CNTK
     ///
     inline FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name = L"")
     {
-        auto operandVector = _Internal::_SimpleVector<FunctionPtr>::CreateSimpleVector(operands);
-        return _Combine(operandVector, name);
+        return Internal::Combine(operands, name);
     }
 }

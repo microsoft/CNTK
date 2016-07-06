@@ -9,36 +9,61 @@
 
 namespace CNTK
 {
-    namespace _Internal
+    namespace Internal
     {
-#pragma region _SimpleVector
+        ReferenceCount::ReferenceCount()
+            : m_rc(new std::atomic<size_t>(0)) 
+        {}
+
+        /*virtual*/ ReferenceCount::~ReferenceCount() 
+        {
+            delete m_rc;
+        }
+
+        size_t ReferenceCount::AddReference()
+        {
+            return ++(*m_rc);
+        }
+
+        size_t ReferenceCount::RemoveReference()
+        {
+            assert(m_rc->load() > 0);
+            return --(*m_rc);
+        }
+
+        size_t ReferenceCount::GetReferenceCount()
+        {
+            return m_rc->load();
+        }
+
+#pragma region SimpleVector
 
         template <typename T>
-        _SimpleVector<T>::_SimpleVector()
+        SimpleVector<T>::SimpleVector()
             : m_vector(new std::vector<T>())
         {
         }
 
         template <typename T>
-        _SimpleVector<T>::_SimpleVector(size_t numElements, const T& initVal/* = T()*/)
+        SimpleVector<T>::SimpleVector(size_t numElements, const T& initVal/* = T()*/)
             : m_vector(new std::vector<T>(numElements, initVal))
         {
         }
 
         template <typename T>
-        _SimpleVector<T>::~_SimpleVector()
+        SimpleVector<T>::~SimpleVector()
         {
             delete m_vector;
         }
 
         template <typename T>
-        _SimpleVector<T>::_SimpleVector(const _SimpleVector<T>& other)
+        SimpleVector<T>::SimpleVector(const SimpleVector<T>& other)
             : m_vector(new std::vector<T>(*other.m_vector))
         {
         }
 
         template <typename T>
-        _SimpleVector<T>& _SimpleVector<T>::operator=(const _SimpleVector<T>& other)
+        SimpleVector<T>& SimpleVector<T>::operator=(const SimpleVector<T>& other)
         {
             if (this != &other)
             {
@@ -50,14 +75,14 @@ namespace CNTK
         }
 
         template <typename T>
-        _SimpleVector<T>::_SimpleVector(_SimpleVector<T>&& other)
+        SimpleVector<T>::SimpleVector(SimpleVector<T>&& other)
             : m_vector(nullptr)
         {
             *this = std::move(other);
         }
 
         template <typename T>
-        _SimpleVector<T>& _SimpleVector<T>::operator=(_SimpleVector<T>&& other)
+        SimpleVector<T>& SimpleVector<T>::operator=(SimpleVector<T>&& other)
         {
             assert(this != &other);
 
@@ -70,88 +95,88 @@ namespace CNTK
         }
 
         template <typename T>
-        T& _SimpleVector<T>::operator[](size_t idx)
+        T& SimpleVector<T>::operator[](size_t idx)
         {
             assert(idx < Size());
             return (*m_vector)[idx];
         }
 
         template <typename T>
-        const T& _SimpleVector<T>::operator[](size_t idx) const
+        const T& SimpleVector<T>::operator[](size_t idx) const
         {
             assert(idx < Size());
             return (*m_vector)[idx];
         }
 
         template <typename T>
-        size_t _SimpleVector<T>::Size() const
+        size_t SimpleVector<T>::Size() const
         {
             return m_vector->size();
         }
 
         template <typename T>
-        T* _SimpleVector<T>::Data()
+        T* SimpleVector<T>::Data()
         {
             return m_vector->data();
         }
 
         template <typename T>
-        const T* _SimpleVector<T>::Data() const
+        const T* SimpleVector<T>::Data() const
         {
             return m_vector->data();
         }
 
         template <typename T>
-        void _SimpleVector<T>::PushBack(const T& value)
+        void SimpleVector<T>::PushBack(const T& value)
         {
             m_vector->push_back(value);
         }
 
         template <typename T>
-        void _SimpleVector<T>::PushBack(T&& value)
+        void SimpleVector<T>::PushBack(T&& value)
         {
             m_vector->push_back(std::move(value));
         }
 
         template <typename ValueType>
-        bool operator==(const _SimpleVector<ValueType>& first, const _SimpleVector<ValueType>& second)
+        bool operator==(const SimpleVector<ValueType>& first, const SimpleVector<ValueType>& second)
         {
             return *first.m_vector == *second.m_vector;
         }
 
         // Explicit template instantiations
-        template class _SimpleVector<Variable>;
-        template class _SimpleVector<size_t>;
-        template class _SimpleVector<Axis>;
-        template class _SimpleVector<FunctionPtr>;
+        template class SimpleVector<Variable>;
+        template class SimpleVector<size_t>;
+        template class SimpleVector<Axis>;
+        template class SimpleVector<FunctionPtr>;
 
-        template bool operator==(const _SimpleVector<size_t>& first, const _SimpleVector<size_t>& second);
+        template bool operator==(const SimpleVector<size_t>& first, const SimpleVector<size_t>& second);
 	
-#pragma endregion _SimpleVector
+#pragma endregion SimpleVector
 
-#pragma region _SimpleSet
+#pragma region SimpleSet
 
         template <typename KeyType>
-        _SimpleSet<KeyType>::_SimpleSet()
+        SimpleSet<KeyType>::SimpleSet()
             : m_set(new std::unordered_set<KeyType>())
         {
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>::~_SimpleSet()
+        SimpleSet<KeyType>::~SimpleSet()
         {
             delete m_set;
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>::_SimpleSet(const _SimpleSet& other)
+        SimpleSet<KeyType>::SimpleSet(const SimpleSet& other)
             : m_set(nullptr)
         {
             *this = other;
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>& _SimpleSet<KeyType>::operator=(const _SimpleSet& other)
+        SimpleSet<KeyType>& SimpleSet<KeyType>::operator=(const SimpleSet& other)
         {
             if (this != &other)
             {
@@ -163,14 +188,14 @@ namespace CNTK
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>::_SimpleSet(_SimpleSet&& other)
+        SimpleSet<KeyType>::SimpleSet(SimpleSet&& other)
             : m_set(nullptr)
         {
             *this = std::move(other);
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>& _SimpleSet<KeyType>::operator=(_SimpleSet&& other)
+        SimpleSet<KeyType>& SimpleSet<KeyType>::operator=(SimpleSet&& other)
         {
             assert(this != &other);
 
@@ -182,73 +207,73 @@ namespace CNTK
         }
 
         template <typename KeyType>
-        bool _SimpleSet<KeyType>::Insert(const KeyType& key)
+        bool SimpleSet<KeyType>::Insert(const KeyType& key)
         {
             return m_set->insert(key).second;
         }
 
         template <typename KeyType>
-        bool _SimpleSet<KeyType>::Contains(const KeyType& key) const
+        bool SimpleSet<KeyType>::Contains(const KeyType& key) const
         {
             return (m_set->find(key) != m_set->end());
         }
 
         template <typename KeyType>
-        size_t _SimpleSet<KeyType>::Size() const
+        size_t SimpleSet<KeyType>::Size() const
         {
             return m_set->size();
         }
 
         template <typename KeyType>
-        _SimpleSet<KeyType>::operator _SimpleVector<KeyType>() const
+        SimpleSet<KeyType>::operator SimpleVector<KeyType>() const
         {
-            _SimpleVector<KeyType> retVector;
-            for (auto iter = m_set->begin(); iter != m_set->end(); ++iter)
-                retVector.PushBack(*iter);
+            SimpleVector<KeyType> retVector;
+            for (auto key : *m_set)
+                retVector.PushBack(key);
 
             return retVector;
         }
 
         template <typename KeyType>
-        bool operator==(const _SimpleSet<KeyType>& first, const _SimpleSet<KeyType>& second)
+        bool operator==(const SimpleSet<KeyType>& first, const SimpleSet<KeyType>& second)
         {
             return *first.m_set == *second.m_set;
         }
 
         // Explicit template instantiations
-        template class _SimpleSet<FunctionPtr>;
-        template class _SimpleSet<Variable>;
-        template class _SimpleSet<Placeholder>;
-        template class _SimpleSet<const Function*>;
+        template class SimpleSet<FunctionPtr>;
+        template class SimpleSet<Variable>;
+        template class SimpleSet<Placeholder>;
+        template class SimpleSet<const Function*>;
 
-        template bool operator==(const _SimpleSet<Variable>& first, const _SimpleSet<Variable>& second);
-        template bool operator==(const _SimpleSet<Placeholder>& first, const _SimpleSet<Placeholder>& second);
+        template bool operator==(const SimpleSet<Variable>& first, const SimpleSet<Variable>& second);
+        template bool operator==(const SimpleSet<Placeholder>& first, const SimpleSet<Placeholder>& second);
 
-#pragma endregion _SimpleSet
+#pragma endregion SimpleSet
 
-#pragma region _SimpleMap
+#pragma region SimpleMap
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>::_SimpleMap()
+        SimpleMap<KeyType, ValueType>::SimpleMap()
             : m_map(new std::unordered_map<KeyType, ValueType>())
         {
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>::~_SimpleMap()
+        SimpleMap<KeyType, ValueType>::~SimpleMap()
         {
             delete m_map;
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>::_SimpleMap(const _SimpleMap& other)
+        SimpleMap<KeyType, ValueType>::SimpleMap(const SimpleMap& other)
             : m_map(nullptr)
         {
             *this = other;
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>& _SimpleMap<KeyType, ValueType>::operator=(const _SimpleMap& other)
+        SimpleMap<KeyType, ValueType>& SimpleMap<KeyType, ValueType>::operator=(const SimpleMap& other)
         {
             if (this != &other)
             {
@@ -260,14 +285,14 @@ namespace CNTK
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>::_SimpleMap(_SimpleMap&& other)
+        SimpleMap<KeyType, ValueType>::SimpleMap(SimpleMap&& other)
             : m_map(nullptr)
         {
             *this = std::move(other);
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleMap<KeyType, ValueType>& _SimpleMap<KeyType, ValueType>::operator=(_SimpleMap&& other)
+        SimpleMap<KeyType, ValueType>& SimpleMap<KeyType, ValueType>::operator=(SimpleMap&& other)
         {
             assert(this != &other);
 
@@ -279,51 +304,51 @@ namespace CNTK
         }
 
         template <typename KeyType, typename ValueType>
-        ValueType& _SimpleMap<KeyType, ValueType>::operator[](const KeyType& key)
+        ValueType& SimpleMap<KeyType, ValueType>::operator[](const KeyType& key)
         {
             return (*m_map)[key];
         }
 
         template <typename KeyType, typename ValueType>
-        const ValueType& _SimpleMap<KeyType, ValueType>::operator[](const KeyType& key) const
+        const ValueType& SimpleMap<KeyType, ValueType>::operator[](const KeyType& key) const
         {
             return (*m_map)[key];
         }
 
         template <typename KeyType, typename ValueType>
-        bool _SimpleMap<KeyType, ValueType>::Insert(const KeyType& key, const ValueType& value)
+        bool SimpleMap<KeyType, ValueType>::Insert(const KeyType& key, const ValueType& value)
         {
             return m_map->insert({ key, value }).second;
         }
 
         template <typename KeyType, typename ValueType>
-        bool _SimpleMap<KeyType, ValueType>::Contains(const KeyType& key) const
+        bool SimpleMap<KeyType, ValueType>::Contains(const KeyType& key) const
         {
             return (m_map->find(key) != m_map->end());
         }
 
         template <typename KeyType, typename ValueType>
-        size_t _SimpleMap<KeyType, ValueType>::Size() const
+        size_t SimpleMap<KeyType, ValueType>::Size() const
         {
             return m_map->size();
         }
 
         template <typename KeyType, typename ValueType>
-        _SimpleSet<KeyType> _SimpleMap<KeyType, ValueType>::Keys() const
+        SimpleSet<KeyType> SimpleMap<KeyType, ValueType>::Keys() const
         {
-            _SimpleSet<KeyType> keys;
-            for (auto iter = m_map->begin(); iter != m_map->end(); ++iter)
-                keys.Insert(iter->first);
+            SimpleSet<KeyType> keys;
+            for (auto keyValuePair : *m_map)
+                keys.Insert(keyValuePair.first);
 
             return keys;
         }
 
         // Explicit template instantiations
-        template class _SimpleMap<Variable, ValuePtr>;
-        template class _SimpleMap<Variable, const ValuePtr>;
-        template class _SimpleMap<Placeholder, Variable>;
+        template class SimpleMap<Variable, ValuePtr>;
+        template class SimpleMap<Variable, const ValuePtr>;
+        template class SimpleMap<Placeholder, Variable>;
 
-#pragma endregion _SimpleMap
+#pragma endregion SimpleMap
 
     }
 
