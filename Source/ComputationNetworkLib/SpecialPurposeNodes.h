@@ -42,7 +42,7 @@ public:
     virtual void /*IComputationNode::*/ BeginForwardProp() override;
     virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
 ;
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override;
     virtual void /*ComputationNode::*/ Validate(bool isFinalValidationPass) override;
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -90,7 +90,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         // get the right slice
         const size_t colsPrior = Input(0)->GetSampleMatrixNumCols();

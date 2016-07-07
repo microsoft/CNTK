@@ -72,6 +72,7 @@ private:
     void RegisterBuffers(ComputationNodeBase *node);
     void GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
 
+    void MeasureSwapTime(ComputationNodeBase *node, std::string name);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
     std::string GetBufferName(ComputationNodeBase *node, bool isForward);
 

@@ -462,7 +462,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::BackpropTo(const size_t /*inputIndex*/, const FrameRange&) /*override*/
+/*virtual*/ void LearnableParameter<ElemType>::BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) /*override*/
 {
     LogicError("%ls %ls operation is a leaf node. BackpropTo() should never be called.", NodeName().c_str(), OperationName().c_str());
 }

@@ -19,6 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
+inline int SampleSize(){ return 100; }
+
 SynchronizationManager* SynchronizationManager::s_synchronizationManager = nullptr;
 
 SynchronizationManager* SynchronizationManager::GetSynchronizationManager()
@@ -44,7 +46,8 @@ void SynchronizationManager::SynchronizeState(ComputationNodeBase *node, const s
             SynchronizeState(node, idx, fr, isForward);
             break;
         case RegisteringBuffers:
-            if(m_stepName2StepNumber.count(GetStepName(node, isForward)) > 0)
+            cout << "register buffers" << endl;
+            if(m_stepName2StepNumber.count(GetStepName(node, isForward)) < 0)
             {
                 m_currentState = GatheringRuntimeStatistics;
                 SynchronizeState(node, idx, fr, isForward);
@@ -60,10 +63,12 @@ void SynchronizationManager::SynchronizeState(ComputationNodeBase *node, const s
                 cout << GetStepName(node, isForward) << " is forward: " << isForward << endl;
 
                 RegisterBuffers(node);
+                cout << GetStepName(node, isForward) << endl;
                 m_currentStepNumber++;
             }
             break;
         case GatheringRuntimeStatistics:
+            cout << "gathering stats" << endl;
             GatherRuntimeStatistics(node, idx, fr, isForward);
             break;
         case Benchmarking:
@@ -73,50 +78,57 @@ void SynchronizationManager::SynchronizeState(ComputationNodeBase *node, const s
 }
 
 
-inline std::string BoolToString(bool b){ return b ? std::string("true") : std::string("false"); }
+inline std::string BoolToString(bool b){ return b ? std::string("_forward") : std::string("_backprop"); }
 std::string SynchronizationManager::GetStepName(ComputationNodeBase *node, bool isForward)
 {
     
-    int inputCount = node->GetNumInputs();
-    std::string name = "";
-    for(int i = 0; i < inputCount; i++)
-    {
-       name += std::to_string((long)node->Input(i)->ValuePtr().get()); 
-    }
+    //int inputCount = node->GetNumInputs();
+    //std::string name = "";
+    //cout << inputCount << endl;
+    //std::wstring wname = node->GetName();
+    //cout << std::string(wname.begin(), wname.end()) << endl;
+    //for(int i = 0; i < inputCount; i++)
+    //{
+    //   name += std::to_string((long)node->Input(i)->ValuePtr().get()); 
+    //}
+    //cout << "post ValuePtr" << endl;
 
-    name += std::to_string((long)node->ValuePtr().get()); 
-    name += std::to_string((long)node->GradientPtr().get()); 
+    //name += std::to_string((long)node->ValuePtr().get()); 
+    //cout << "post ValuePtr2" << endl;
+    //name += std::to_string((long)node->GradientPtr().get()); 
+    //cout << "post gradptr" << endl;
 
-    name += BoolToString(isForward);
+    //name += BoolToString(isForward);
    
 
-    return name;
+    //return name;
+    std::wstring wname = node->GetName();
+    return std::string(wname.begin(), wname.end()) + BoolToString(isForward);
 }
 
 
 void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node)
 {
     
-    int inputCount = node->GetNumInputs();
-    for(int i = 0; i < inputCount; i++)
-    {
-       m_stepNumber2Buffer[m_currentStepNumber].push_back(node->Input(i)->ValuePtr().get());
-       m_buffer2StepNumbers[node->Input(i)->ValuePtr().get()].push_back(m_currentStepNumber);
-    }
+    //int inputCount = node->GetNumInputs();
+    //for(int i = 0; i < inputCount; i++)
+    //{
+    //   m_stepNumber2Buffer[m_currentStepNumber].push_back(node->Input(i)->ValuePtr().get());
+    //   m_buffer2StepNumbers[node->Input(i)->ValuePtr().get()].push_back(m_currentStepNumber);
+    //}
 
-    m_stepNumber2Buffer[m_currentStepNumber].push_back(node->ValuePtr().get());
-    m_stepNumber2Buffer[m_currentStepNumber].push_back(node->GradientPtr().get());
+    //m_stepNumber2Buffer[m_currentStepNumber].push_back(node->ValuePtr().get());
+    //m_stepNumber2Buffer[m_currentStepNumber].push_back(node->GradientPtr().get());
 
-    m_buffer2StepNumbers[node->ValuePtr().get()].push_back(m_currentStepNumber);
-    m_buffer2StepNumbers[node->GradientPtr().get()].push_back(m_currentStepNumber);
+    //m_buffer2StepNumbers[node->ValuePtr().get()].push_back(m_currentStepNumber);
+    //m_buffer2StepNumbers[node->GradientPtr().get()].push_back(m_currentStepNumber);
 }  
 
 
 void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    int sampleSize = 100;
     m_timer.tick(GetStepName(node, isForward));
-    for(int i = 0; i < sampleSize; i++)
+    for(int i = 0; i < SampleSize(); i++)
     {
         if(isForward)
         {
@@ -140,10 +152,18 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
         m_currentState = FindingSwapOrder;
     }
 
-
     Stats s = m_stepName2Stats[name];
-    if(isForward){ s.forwardTime = t/sampleSize; }
+    if(isForward){ s.forwardTime = t/SampleSize(); }
     else{ s.backpropTime = t/100.0f; }
+
+    MeasureSwapTime(node, name);
+}
+
+
+void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::string name)
+{
+    float t = 0.0f;
+    Stats s = m_stepName2Stats[name];
 
     int inputCount = node->GetNumInputs();
     for(int i = 0; i < inputCount; i++)
@@ -156,18 +176,18 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
 
 
            m_timer.tick("Swap out");
-           for(int i = 0; i < sampleSize ; i++)
+           for(int i = 0; i < SampleSize(); i++)
            {
                out->executeAction();
                cudaStreamSynchronize(out->GetSwapSteam());
            }
            t = m_timer.tock("Swap out");
-           s.swapOutTimes.push_back(t/sampleSize);
+           s.swapOutTimes.push_back(t/SampleSize());
            
            cout << "out: " << t << endl;
 
            m_timer.tick("Swap in");
-           for(int i = 0; i < sampleSize; i++)
+           for(int i = 0; i < SampleSize(); i++)
            {
                // swap in
                in->executeAction();
@@ -175,19 +195,15 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
                in->executeAction();
            }
            t = m_timer.tock("Swap in");
-           s.swapInTimes.push_back(t/100.0f);
+           s.swapInTimes.push_back(t/SampleSize());
 
            cout << "in: " << t << endl;
        }
     }
 
     std::wstring wname = node->GetName();
-
     cout << std::string(wname.begin(), wname.end()) << endl;
     s.PrintStats();
-
-    
-
 }
 
 void SynchronizationManager::ExecuteActions(ComputationNodeBase *node)

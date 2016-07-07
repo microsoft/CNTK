@@ -402,7 +402,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override
     {
         InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
@@ -504,7 +504,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override
     {
         InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }

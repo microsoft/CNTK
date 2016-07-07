@@ -56,7 +56,7 @@ public:
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         assert(inputIndex == 0), inputIndex;
 
@@ -177,7 +177,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         assert(inputIndex == 0);
         inputIndex;
@@ -474,7 +474,7 @@ public:
         result.AssignCondOf(input0, input1, input2);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0) // derivative of the first input (the flag) is always 0 => no action.
             return;
@@ -542,7 +542,7 @@ public:
         result.AssignClipOf(input0, input1, input2);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         // there is only a gradient for the input tensor that is to be clipped
         if (inputIndex == 2)
@@ -619,7 +619,7 @@ public:
         result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         // Function is piecewise constant --> gradient = 0
     }

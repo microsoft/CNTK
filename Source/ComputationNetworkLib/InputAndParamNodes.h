@@ -86,7 +86,7 @@ public:
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
     virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override;
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
     // called from ComputationNode::ValidateInferInputDimsFrom()
@@ -142,7 +142,7 @@ public:
         RuntimeError("%ls is a special node only to be used as input to the Input() node.", NodeDescription().c_str());
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&)
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeDescription().c_str());
     }
@@ -295,7 +295,7 @@ public:
         // we have been filled by the Reader
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&)
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeName().c_str());
     }
@@ -507,7 +507,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& t) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& t) override
     {
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
