@@ -18,13 +18,12 @@ The example is under folder:
 ## Data File Format
 There are four files under `data` sub-folder
 
-|Files                  | Content |
-|:----------------------|:---|
-|ATIS.train.cntk.sparse | featurized training data set
-|ATIS.test.cntk.sparse  | featurized test data set
-|ATIS.vocab             | all words extracted from training data. Vocab size: 944
-|ATIS.labels            | all semantic labels extracted from training data. Total labels: 127
-
+|Files                  |Content |
+|:----------------------|:--------|
+|ATIS.train.cntk.sparse |featurized training data set  
+|ATIS.test.cntk.sparse  |featurized test data set 
+|ATIS.vocab             |all words extracted from training data. Vocab size: 944 
+|ATIS.labels            |all semantic labels extracted from training data. Total labels: 127 
 
 We preprocess ATIS data by converting words into word indexes, and labels into label IDs in order to use 
 [CNTKTextFormatReader](https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader). You can use any 
