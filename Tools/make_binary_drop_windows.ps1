@@ -102,7 +102,7 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
-Copy-Item Examples -Recurse -Destination $baseDropPath\Scripts
+Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
 # Remove test related file(s) if exist(s)
 If (Test-Path $baseDropPath\Scripts\pytest.ini)
 {
