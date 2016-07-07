@@ -215,6 +215,17 @@ private:
 
 public:
     // -----------------------------------------------------------------------
+    // optimization: Methods for optimizing the graph.
+    // -----------------------------------------------------------------------
+
+    // For evaluation only
+
+    // Replace times nodes with quantized versions (for CPU evaluation).
+    // This can have a benefit for larger node sizes (e.g. 500).
+    void QuantizeTimesNodes();
+
+public:
+    // -----------------------------------------------------------------------
     // evaluation: traversal
     // These three functions create and cache traversal orders of the network.
     // -----------------------------------------------------------------------

@@ -415,7 +415,7 @@ ElemType GetAbsMax(const ElemType* data, size_t numElements)
 
 // Scale and round to ScalarT, e.g. map from float to int16.
 template<typename ElemType, typename ScalarT>
-ElemType Scale(ScalarT* quantized, shared_ptr<Matrix<ElemType>> matrix, size_t dim, bool transpose)
+ElemType ScaleUp(ScalarT* quantized, shared_ptr<Matrix<ElemType>> matrix, size_t dim, bool transpose)
 {
     const ElemType* data = matrix->Data();
 
@@ -424,15 +424,10 @@ ElemType Scale(ScalarT* quantized, shared_ptr<Matrix<ElemType>> matrix, size_t d
     ElemType scale = (numeric_limits<ScalarT>::max() - 1) / max / dim;
 
     // Then apply. Do the transpose while we're at it.
-    if (!transpose)
+    if (transpose)
     {
-        for (int i = 0; i < matrix->GetNumElements(); ++i)
-            *quantized++ = (ScalarT)(data[i] * scale + 0.5);
-    }
-    else
-    {
-        size_t yStride = transpose ? matrix->GetNumCols() : 1;
-        size_t xStride = transpose ? 1 : matrix->GetNumRows();
+        size_t yStride = matrix->GetNumCols();
+        size_t xStride = 1;
         size_t i = 0;
 
         for (size_t x = 0; x < matrix->GetNumCols(); ++x)
@@ -440,29 +435,31 @@ ElemType Scale(ScalarT* quantized, shared_ptr<Matrix<ElemType>> matrix, size_t d
             size_t xOffset = xStride * x;
             for (size_t y = 0; y < matrix->GetNumRows(); ++y)
             {
-                //quantized[yStride * y + xOffset] = (ScalarT)std::round(data[i] * scale); // Too slow
-                quantized[yStride * y + xOffset] = (ScalarT)(data[i] * scale + 0.5);
+                quantized[yStride * y + xOffset] = (ScalarT)(data[i] * scale + 0.5); // std::round is too slow.
                 ++i;
             }
         }
     }
-    return scale;
-}
-
-// Inverse of scale.
-template<typename ElemType, typename ScalarT>
-ElemType Descale(shared_ptr<Matrix<ElemType>> matrix, ScalarT* quantized, ElemType scale)
-{
-    ElemType* data = matrix->Data();
-    for (size_t i = 0; i < matrix->GetNumElements(); ++i)
+    else
     {
-        *data++ = quantized[i] / scale;  
+        for (int i = 0; i < matrix->GetNumElements(); ++i)
+            *quantized++ = (ScalarT)(data[i] * scale + 0.5);
     }
     return scale;
 }
 
+// Inverse of ScaleUp.
+template<typename ElemType, typename ScalarT>
+ElemType ScaleDown(shared_ptr<Matrix<ElemType>> matrix, ScalarT* quantized, ElemType scale)
+{
+    ElemType* data = matrix->Data();
+    for (size_t i = 0; i < matrix->GetNumElements(); ++i)
+        *data++ = quantized[i] / scale;  
+    return scale;
+}
 
-template <class ElemType>
+
+template <typename ElemType>
 void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, bool transA, const TensorView& b, int16_t** preppedA, ElemType* preppedScaleA)
 {
     auto shapeA = a.m_shape;
@@ -501,7 +498,7 @@ void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, b
     {
         let  A = a.Reshaped(shapeA).AsMatrix();
         int16_t* matA = mult.CreateMatrixA(m, k);
-        scaleA = Scale(matA, A, transA ? A->GetNumCols() : A->GetNumRows(), transA);
+        scaleA = ScaleUp(matA, A, transA ? A->GetNumCols() : A->GetNumRows(), transA);
         newA = mult.PrepareB(matA, k, m);
         mult.FreeMatrix(matA);
         if (preppedA != nullptr)
@@ -514,20 +511,27 @@ void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, b
 
     int16_t* matB = mult.CreateMatrixB(k, n);
     int32_t* matC = mult.CreateMatrixC(m, n);
-    ElemType scaleB = Scale(matB, B, B->GetNumCols(), /*trans*/ false);
+    ElemType scaleB = ScaleUp(matB, B, B->GetNumCols(), /*trans*/ false);
     // Flip!  m <-> n  and A <-> B
     mult.MultiplyMatrices(matB, n, k, newA, m, matC, (int16_t)1, (int16_t)0);
     // And convert back
-    Descale(C, matC, scaleA * scaleB);
+    ScaleDown(C, matC, scaleA * scaleB);
 
     // We could save those for later as well!
-    mult.FreeMatrix(matB);
-    mult.FreeMatrix(matC);
+    FreeQuantizedMatrix(matB);
+    FreeQuantizedMatrix(matC);
 
     // If caller wants to get the pointer, he will own it.
     if (preppedA == nullptr)
-        mult.FreeMatrix(newA);
+        FreeQuantizedMatrix(newA);
 }
+
+template <typename ElemType>
+void TensorView<ElemType>::FreeQuantizedMatrix(int16_t* matrix)
+{
+    BlockMultiplier<BlockHandlerSSE>::FreeMatrix(matrix); // Template arg doesn't matter.
+}
+
 
 template class TensorView<float>;
 template class TensorView<double>;

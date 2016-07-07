@@ -11,6 +11,7 @@
 #include "RecurrentNodes.h"
 #include <string>
 #include <set>
+#include "LinearAlgebraNodes.h"
 
 using namespace std;
 
@@ -106,13 +107,13 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
                 assert(node->m_numNonDelayedParentsInLoop == 0); // (in PurgeStateForFormingRecurrentLoops())
         }
         for (let& node : nestedNodes)
-            {
+        {
             for (auto& input : node->GetInputs())
-                {
+            {
                 if (input->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
                     input->m_numNonDelayedParentsInLoop++; // cound #parents of 'input' that are not delay nodes
-                }
             }
+        }
 
         // re-traverse the graph for all nestedNodes, starting with the first
         // Then update m_nestedNodes with the re-traversed order.
@@ -301,18 +302,18 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             for (let& iter : m_allSEQNodes)
             {
                 for (let& iter2 : iter->m_nestedNodes)
-            {
-                    if (iter2 == cur)
                 {
-                    bFound = true;
-                        // validate that the loop is really the same, by a set comparison
-                        unordered_set<ComputationNodeBasePtr> newLoop     (        nestedNodes.begin(),         nestedNodes.end());
-                        unordered_set<ComputationNodeBasePtr> existingLoop(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end());
-                        if (newLoop != existingLoop)
-                            LogicError("DetermineSCCsR: %ls %ls operation rediscovered in a loop, but that loop is not the same as last time.", cur->NodeName().c_str(), cur->OperationName().c_str());
-                    break;
+                    if (iter2 == cur)
+                    {
+                        bFound = true;
+                            // validate that the loop is really the same, by a set comparison
+                            unordered_set<ComputationNodeBasePtr> newLoop     (        nestedNodes.begin(),         nestedNodes.end());
+                            unordered_set<ComputationNodeBasePtr> existingLoop(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end());
+                            if (newLoop != existingLoop)
+                                LogicError("DetermineSCCsR: %ls %ls operation rediscovered in a loop, but that loop is not the same as last time.", cur->NodeName().c_str(), cur->OperationName().c_str());
+                        break;
+                    }
                 }
-            }
             }
             if (bFound)
                 fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());
@@ -470,6 +471,43 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
                    nestedNodes.front()->NodeName().c_str(), nestedNodes.front()->OperationName().c_str());
     // BUGBUG: Multiple recurrence dimensions not yet supported beyond this point.
     return steppingDirection;
+}
+
+template<typename ElemType>
+void ReplaceTimesNodeWithQuantized(std::vector<ComputationNodeBasePtr>& replacedNodes, ComputationNodeBasePtr n)
+{
+    if (n->Is<TimesNode<ElemType>>())
+    {
+        QuantizedBlockTimesNode<ElemType, false> qTimes(n->GetDeviceId(), n->GetName(),
+            n->As<TimesNode<ElemType>>()->GetOutputRank());
+        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, false>>(move(qTimes)));
+    }
+    else if (n->Is<TransposeTimesNode<ElemType>>())
+    {
+        QuantizedBlockTimesNode<ElemType, true> qTimes(n->GetDeviceId(), n->GetName(),
+            n->As<TransposeTimesNode<ElemType>>()->GetOutputRank());
+        replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, true>>(move(qTimes)));
+    }
+}
+
+void ComputationNetwork::QuantizeTimesNodes()
+{
+    const auto& nodes = GetAllNodes();
+    std::vector<ComputationNodeBasePtr> replacedNodes;
+    for (const auto &n : nodes)
+    {
+        ReplaceTimesNodeWithQuantized<float>(replacedNodes, n);
+        ReplaceTimesNodeWithQuantized<double>(replacedNodes, n);
+    }
+    fprintf(stderr, "Replacing %d nodes with quantized times node\n", (int)replacedNodes.size());
+    for (auto& n : replacedNodes)
+    {
+        ReplaceNode(n->GetName(), n);
+    }
+    if (replacedNodes.size() > 0)
+    {
+        CompileNetwork();
+    }
 }
 
 }}}
