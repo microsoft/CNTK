@@ -47,7 +47,8 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
@@ -195,7 +196,8 @@ public:
     // derived class implement the actual non-linear operation
     virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) = 0;
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: once this gets reimplemented using TensorView, then this is no longer needed.
@@ -461,7 +463,8 @@ public:
         ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
@@ -527,7 +530,8 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
@@ -604,7 +608,8 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);

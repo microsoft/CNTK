@@ -948,7 +948,7 @@ protected:
             return L"SEQTraversalFlowControlNode";
         }
         virtual void BeginForwardProp() override;
-        virtual void ForwardProp(const FrameRange&) override;
+        virtual void ForwardPropSpecialization(const FrameRange&) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
@@ -1001,7 +1001,7 @@ protected:
         virtual void BeginForwardProp() override
         {
         }
-        virtual void ForwardProp(const FrameRange&) override;
+        virtual void ForwardPropSpecialization(const FrameRange&) override;
         virtual void EndForwardProp() override
         {
         }

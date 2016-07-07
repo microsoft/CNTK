@@ -129,7 +129,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
     }
 }
-/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardPropSpecialization(const FrameRange& fr) /*override*/
 {
     for (auto& node : m_nestedNodes)
     {
@@ -206,7 +206,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 // This evaluates all nodes in this FlowControlNode in SEQ mode: process the loop frame by frame in a nested loop.
 // This is where the time axis changes.
 // TODO: Once we do nested loops, then the FrameRange argument to this will refer to the outer loop.
-/*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ForwardProp(const FrameRange&) /*override*/
+/*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ForwardPropSpecialization(const FrameRange&) /*override*/
 {
     // get layout associated with this loop
     // All nodes share the same layout.

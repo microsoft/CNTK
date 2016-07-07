@@ -292,6 +292,7 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+       m_syncManager = SynchronizationManager::GetSynchronizationManager();
     }
     virtual ~ComputationNodeBase()
     {
@@ -428,6 +429,7 @@ public:
 
     // interpretation as a Matrix reference
 private:
+    SynchronizationManager *m_syncManager;
     void CheckTensorIsMatrix() const
     {
         if (HasMBLayout())
@@ -696,6 +698,14 @@ public:
 #endif
     }
 
+    virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
+
+    virtual void ForwardProp(const FrameRange& fr) override
+    {
+        m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
+        ForwardPropSpecialization(fr);
+    }
+
     // check whether a node is out of date w.r.t. its children, for lazy evaluation
     // If this returns true, node must be evaluated to update m_value.
     // This is virtual because it is overridden by traversal nodes, which would check all their nodes' inputs.
@@ -926,7 +936,6 @@ public:
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ComputationNodeBase(deviceId, name)
     {
-       m_syncManager = SynchronizationManager::GetSynchronizationManager();
     }
 
     // recover a shared_ptr from ourselves if given a naked pointer
@@ -1732,7 +1741,6 @@ protected:
 
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
-    SynchronizationManager *m_syncManager;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 };
@@ -1800,10 +1808,11 @@ public:
     }
 
     // these two implement the ComputationNode<> interface
+    void ForwardPropSpecialization(const FrameRange& fr) override {}
     void ForwardProp(const FrameRange& fr) override final
     {
         //synchronize streams for swapping and parallelism
-        Base::m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
+        //Base::m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
@@ -1812,7 +1821,7 @@ public:
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
     {
         //synchronize streams for swapping and parallelism
-        Base::m_syncManager->SynchronizeState(this, inputIndex, fr, false);
+        //Base::m_syncManager->SynchronizeState(this, inputIndex, fr, false);
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
         else

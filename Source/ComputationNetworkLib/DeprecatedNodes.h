@@ -30,7 +30,8 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         auto sliceInputValue  = Input(0)->ValueFor(fr);
         auto sliceOutputValue =           ValueFor(fr); // row vector

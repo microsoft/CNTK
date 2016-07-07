@@ -407,7 +407,8 @@ public:
         InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto output    =           ValueTensorFor(rank, fr);
@@ -508,7 +509,8 @@ public:
     }
 
     // feature ./ invStdDev + mean
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto output    =           ValueTensorFor(rank, fr);
