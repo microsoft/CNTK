@@ -17,8 +17,9 @@ The example is under folder:
 
 ## Data File Format
 There are four files under `data` sub-folder
-| Files                 | Content
-|:--------------------- |:---|
+
+|Files                  | Content |
+|:----------------------|:---|
 |ATIS.train.cntk.sparse | featurized training data set
 |ATIS.test.cntk.sparse  | featurized test data set
 |ATIS.vocab             | all words extracted from training data. Vocab size: 944
@@ -67,7 +68,7 @@ like and you can add more input as needed, e.g. words in a bigger window.
 Words "BOS" and "EOS" denote beginning of sentence and end of sentences respectively.
 
 Each line above represents one sample (word). E.g. the meaning of this line: `1	|PW 4:1	|CW 101:1	|NW 3:1	|L 48:1`:
-* the sequence Id is 1
+* the sequence ID is 1
 * the current word is "charlotte" whose word ID is 101
 * the previous word is "from" whose ID is 4
 * the next word is "to" whose ID is 3
