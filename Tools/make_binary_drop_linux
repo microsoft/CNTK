@@ -143,6 +143,10 @@ mkdir -p $baseBinariesPath
 # Copy build binaries
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
+# Remove unnessesary file(s) if exist(s)
+rm -f $baseBinariesPath/bin/v2librarytests
+rm -f $baseBinariesPath/bin/cppevalclient
+rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Copy Examples
 echo "Copying Examples..." >&3
@@ -153,7 +157,6 @@ echo "Copying Scripts..." >&3
 cp -r Scripts $baseDropPath
 # Remove test related file(s) if exist(s)
 rm -f $baseDropPath/Scripts/pytest.ini
-
 
 # Copy Extras
 echo "Copying Extras..." >&3
