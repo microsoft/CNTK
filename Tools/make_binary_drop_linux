@@ -152,9 +152,8 @@ cp -r Examples $baseDropPath
 echo "Copying Scripts..." >&3
 cp -r Scripts $baseDropPath
 # Remove test related file(s) if exist(s)
-set +e
-rm $baseDropPath/Scripts/pytest.ini
-set -e
+rm -f $baseDropPath/Scripts/pytest.ini
+
 
 # Copy Extras
 echo "Copying Extras..." >&3
