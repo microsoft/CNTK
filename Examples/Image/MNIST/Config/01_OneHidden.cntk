@@ -2,31 +2,26 @@
 # for example: cntk configFile=myConfigFile RootDir=../.. 
 # For running from Visual Studio add
 # currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
-RootDir = ".."
+rootDir = ".."
 
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
+configDir = "$rootDir$/Config"
+dataDir   = "$rootDir$/Data"
+outputDir = "$rootDir$/Output"
+modelDir  = "$outputDir$/Models"
 
 deviceId = 0
-imageLayout = "cudnn"
 # override the above as follows when running on CPU:
 # deviceId = -1
 
 command = train:test
 
 precision = "float"
-modelPath = "$ModelDir$/01_OneHidden"
-ndlMacros = "$ConfigDir$/Macros.ndl"
+modelPath = "$modelDir$/01_OneHidden"
 
-# uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/01_OneHidden_out"
-traceLevel=1
-numMBsToShowResult=500
-
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
+# uncomment the following line to write logs to a file
+# stderr = "$outputDir$/01_OneHidden_out"
+traceLevel = 1
+numMBsToShowResult = 500
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -35,18 +30,59 @@ initOnCPUOnly=true
 train = [
     action = "train"
 
+    # BrainScript version as described in Tutorial II.
+    # This is currently disabled. To run this, please remove the "_disabled" from "BrainScriptNetworkBuilder_disabled"
+    # and comment out the NDLNetworkBuilder below.
+    BrainScriptNetworkBuilder_disabled = [
+
+        # macros to include
+        include "Shared.bs"
+
+        featDim = 28 * 28                           # number of pixels
+        labelDim = 10                               # number of distinct labels
+
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+
+        hiddenDim = 200
+
+        # DNNSigmoidLayer and DNNLayer are defined in Shared.bs
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction         (labels, z)
+
+        # set top5Errs as an evaluation node to compute the top-5 error rate
+        # This is not marked tag="evaluation" since expensive during training.
+        # We explicitly select it as an output node in the "test" command.
+        top5Errs = ErrorPrediction (labels, z, topN=5)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+
+    # deprecated NDL version
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
-    
+
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
         maxEpochs = 30
     ]
-    
+
     reader = [
         readerType = "CNTKTextFormatReader"
         # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
@@ -70,7 +106,9 @@ train = [
 
 test = [
     action = "test"
-    minibatchSize = 16
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    evalNodeNames = ce:errs:top5Errs
 
     reader = [
         readerType = "CNTKTextFormatReader"

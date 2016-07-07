@@ -3075,6 +3075,17 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const
+{
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kMaxUnpooling<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                     Data(), poolInput.Data(), (int)GetNumRows(), input.Data(), (int)input.GetNumRows());
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
     const int BlockSize = 128;
@@ -3137,6 +3148,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         if (blendFactor > 0)
         {
             // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
+            // TODO: add a 'beta' parameter to ScaleAndAdd()
             Scale((ElemType)(1 - blendFactor), saveMean);
             ScaleAndAdd((ElemType)blendFactor, runMean, saveMean);
             Scale((ElemType)(1 - blendFactor), saveInvStdDev);
@@ -4408,6 +4420,11 @@ template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCo
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
+
+template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+template void GPUMatrix<char>::Reshape(const size_t, const size_t);
+template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
+template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

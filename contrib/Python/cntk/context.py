@@ -422,7 +422,8 @@ class LocalExecutionContext(AbstractContext):
                 [get_cntk_cmd(), 'configFile=%s' % filename],
                 stderr=subprocess.STDOUT)
             output = output_bytes.decode('utf-8')
-            with open(os.path.join(self.directory, 'cntk.log'), 'w') as log:
+            log_name = 'cntk_%s.log'%action_name
+            with open(os.path.join(self.directory, log_name), 'w') as log:
                 log.write(output)
 
         except subprocess.CalledProcessError as e:
@@ -571,7 +572,7 @@ class LocalExecutionContext(AbstractContext):
                 continue
             else:
                 data = LocalExecutionContext._sanitized_asarray(
-                    data).reshape(shape, order='F')
+                    data).reshape(shape, order='C')
 
             tensor_seq.append(data)
 
@@ -600,7 +601,13 @@ class LocalExecutionContext(AbstractContext):
             if '*' in v:
                 v = v.split('*')[0].strip()
 
-            result[k.strip()] = float(v)
+            if v[-1] == '%':
+                # In some cases, CNTK outputs data in percentage
+                v = float(v[:-1])/100
+            else:
+                v = float(v)
+
+            result[k.strip()] = v
 
         return result
 
@@ -755,12 +762,12 @@ class LocalExecutionContext(AbstractContext):
                         action_name = action_name)
 
         out_name = os.path.join(self.directory, CNTK_OUTPUT_FILENAME + '.')
+        node.tag = orig_node_tag
         if backward_pass:
-            n = input_name.name if isinstance(
-                input_name, ComputationNode) else input_name
+            n = input_name.name if isinstance(input_name, ComputationNode)\
+                    else input_name
             out_name += n + '.grad'
-        else:
-            node.tag = orig_node_tag
+        else:            
             out_name += node.name
 
         result_content = open(out_name).read()
@@ -904,3 +911,15 @@ class DeferredExecutionContext(AbstractContext):
             out.write("command=%s" % ":".join(self.actions))
                     
         return filename
+
+    def export_string(self):
+        '''
+        Exports the requested actions (via function calls like train()) to an
+        configuration string that will be executed on the cluster
+
+        Returns: 
+            content of configuration
+        '''                
+                
+
+        return '\n'.join(self.config + ["command=%s" % ":".join(self.actions)])

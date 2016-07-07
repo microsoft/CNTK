@@ -6,9 +6,6 @@ import os
 import struct
 import numpy as np
 
-sys.path.append("../../../../Source/Readers/CNTKTextFormatReader")
-from uci_to_cntk_text_format_converter import convert
-
 def loadData(src, cimg):
     print ('Downloading ' + src)
     gzfname, h = urllib.urlretrieve(src, './delete.me')
@@ -53,21 +50,28 @@ def loadLabels(src, cimg):
         os.remove(gzfname)
     return res.reshape((cimg, 1))
 
+def load(dataSrc, labelsSrc, cimg):
+    data = loadData(dataSrc, cimg)
+    labels = loadLabels(labelsSrc, cimg)
+    return np.hstack((data, labels))
+
+def savetxt(filename, ndarray):
+    with open(filename, 'w') as f:
+        labels = map(' '.join, np.eye(10, dtype=np.uint).astype(str))
+        for row in ndarray:
+            row_str = row.astype(str)
+            label_str = labels[row[-1]]
+            feature_str = ' '.join(row_str[:-1])
+            f.write('|labels {} |features {}\n'.format(label_str, feature_str))
 
 if __name__ == "__main__":
-    trnData = loadData('http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz', 60000)
-    trnLbl = loadLabels('http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz', 60000)
-    trn = np.hstack((trnLbl, trnData))
+    train = load('http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz',
+        'http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz', 60000)
     print 'Writing train text file...'
-    np.savetxt(r'./../Data/Train-28x28.txt', trn, fmt = '%u', delimiter='\t')
-    convert(r'./../Data/Train-28x28.txt', r'./../Data/Train-28x28_cntk_text.txt', 1, 784, 0, 1, 10)
-    os.remove(r'./../Data/Train-28x28.txt');
+    savetxt(r'./../Data/Train-28x28_cntk_text.txt', train)
     print 'Done.'
-    testData = loadData('http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz', 10000)
-    testLbl = loadLabels('http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz', 10000)
-    test = np.hstack((testLbl, testData))
+    test = load('http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz',
+        'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz', 10000)
     print 'Writing test text file...'
-    np.savetxt(r'./../Data/Test-28x28.txt', test, fmt = '%u', delimiter='\t')
-    convert(r'./../Data/Test-28x28.txt', r'./../Data/Test-28x28_cntk_text.txt', 1, 784, 0, 1, 10)
-    os.remove(r'./../Data/Test-28x28.txt');
+    savetxt(r'./../Data/Test-28x28_cntk_text.txt', test)
     print 'Done.'

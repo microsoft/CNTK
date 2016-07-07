@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+#
 
 configure=$0
 build_top=$PWD
@@ -12,9 +19,12 @@ have_acml=no
 acml_path=
 acml_check=include/acml.h
 
+# CNTK Custom MKL Version
+cntk_custom_mkl_version=1
+
 have_mkl=no
 mkl_path=
-mkl_check=mkl/include/mkl.h
+mkl_check=$cntk_custom_mkl_version/include/mkl.h
 
 # Experimental OpenBLAS support.
 have_openblas=no
@@ -23,7 +33,7 @@ openblas_check=include/openblas_config.h
 
 have_kaldi=no
 kaldi_path=
-kaldi_check=src/kaldi.mk 
+kaldi_check=src/kaldi.mk
 
 have_buildtype=no
 buildtype=
@@ -58,11 +68,11 @@ default_use_code_coverage=no
 enable_code_coverage=$default_use_code_coverage
 
 # List from best to worst choice
-default_path_list="/usr /usr/local /opt /opt/local /opt/intel"
+default_path_list="/usr /usr/local /opt /opt/local"
 
 # List from best to worst choice
 default_acmls="acml5.3.1/ifort64_mp"
-default_mkls=""
+default_mkls="CNTKCustomMKL"
 default_openblas=""
 
 # NOTE: Will get compilation errors with cuda-6.0
@@ -71,7 +81,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-4.0"
-default_opencvs="opencv-3.0.0"
+default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
 
 function default_paths ()
@@ -171,7 +181,7 @@ function is_hardlinked ()
     echo $r
 }
 
-function default_use_cuda () 
+function default_use_cuda ()
 {
     if test x$(find_cuda) = x || test x$(find_gdk) = x
     then
@@ -182,7 +192,7 @@ function default_use_cuda ()
 }
 enable_cuda=$(default_use_cuda)
 
-function show_default () 
+function show_default ()
 {
     if test x$1 = x
     then
@@ -207,6 +217,7 @@ function show_help ()
     echo "  --with-cudnn[=directory] $(show_default $(find_cudnn))"
     echo "  --with-acml[=directory] $(show_default $(find_acml))"
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
+    echo "  --with-mkl-sequential[=directory] $(show_default $(find_mkl))"
     echo "  --with-openblas[=directory] (experimental) $(show_default $(find_openblas))"
     echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
@@ -392,12 +403,16 @@ do
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
+            mkl_threading=parallel
+            case $key in
+                --with-mkl-sequential*) mkl_threading=sequential ;;
+            esac
             if test x$optarg = x
             then
                 mkl_path=$(find_mkl)
                 if test x$mkl_path = x
                 then
-                    echo "Cannot find mkl directory"
+                    echo "Cannot find CNTK custom MKL directory"
                     echo "Please specify a value for --with-mkl"
                     exit 1
                 fi
@@ -406,7 +421,7 @@ do
                 then
                     mkl_path=$optarg
                 else
-                    echo "Invalid mkl directory $optarg"
+                    echo "Invalid CNTK custom MKL directory $optarg"
                     exit 1
                 fi
             fi
@@ -534,7 +549,7 @@ then
         if test x$mkl_path = x
         then
             echo "Cannot find a CPU math library."
-            echo "Please specify --with-acml, --with-mkl, --with-openblas with a path."
+            echo "Please specify --with-acml, --with-mkl, --with-mkl-sequential, --with-openblas with a path."
             exit 1
         else
             mathlib=mkl
@@ -637,6 +652,8 @@ case $mathlib in
         ;;
     mkl)
         echo MKL_PATH=$mkl_path >> $config
+        echo MKL_THREADING=$mkl_threading >> $config
+        echo CNTK_CUSTOM_MKL_VERSION=$cntk_custom_mkl_version >> $config
         ;;
     openblas)
         echo OPENBLAS_PATH=$openblas_path >> $config
@@ -678,6 +695,6 @@ then
     echo all clean : >> $makefile
     printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> $makefile
 fi
-echo run 
+echo run
 echo '>make -j all'
 echo to build

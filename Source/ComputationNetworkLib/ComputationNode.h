@@ -37,7 +37,8 @@
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
 #define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
+#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_9
 
 extern bool g_shareNodeValueMatrices;
 
@@ -1418,6 +1419,20 @@ public:
     {
         UpdateDataSize(Gradient());
         Gradient().SetValue(val);
+
+        m_gradientInitialized = true;
+    }
+
+    // Assign the given matrix's value to this node's gradient. The matrix sizes must match.
+    void AssignGradient(const Matrix<ElemType>& val)
+    {
+        UpdateDataSize(Gradient());
+
+        // The specified value matrix's dimensions must match the gradient matrix dimensions
+        if ((val.GetNumRows() != Gradient().GetNumRows()) || (val.GetNumCols() != Gradient().GetNumCols()))
+            LogicError("%ls %ls operation: The value matrix specified for ResetGradient() does not match the dimensions of the gradient matrix.", NodeName().c_str(), OperationName().c_str());
+
+        Gradient().AssignValuesOf(val);
 
         m_gradientInitialized = true;
     }

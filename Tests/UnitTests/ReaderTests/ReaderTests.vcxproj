@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -29,12 +29,7 @@
   <PropertyGroup>
     <HasBoost>false</HasBoost>
     <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
-    <HasOpenCV>false</HasOpenCV>
-    <HasOpenCV Condition="Exists('$(OPENCV_PATH)')">true</HasOpenCV>
-    <ImageReaderDefine Condition="$(HasOpenCV)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
-    <UseZip>false</UseZip>
-    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
-    <ZipDefine Condition="$(HasOpenCV) And $(UseZip)">USE_ZIP</ZipDefine>
+    <ImageReaderDefine Condition="$(HasOpenCv)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -79,7 +74,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>htkmlfreader.lib;experimentalhtkmlfreader.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>htkmlfreader.lib;HTKDeserializers.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -204,6 +199,7 @@
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderGrayscale_map.txt" />
     <Text Include="Data\ImageReaderLabelOutOfRange_map.txt" />
+    <Text Include="Data\ImageReaderMissingImage_map.txt" />
     <Text Include="Data\ImageReaderMultiView_map.txt" />
     <Text Include="Data\ImageReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderZip_map.txt" />
@@ -222,18 +218,19 @@
     <None Include="Config\CNTKTextFormatReader\dense.cntk" />
     <None Include="Config\CNTKTextFormatReader\edge_cases.cntk" />
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk" />
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk" />
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk" />
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk" />
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop10_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop14_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop19_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop1_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop20_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop21_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop3_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop4_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
+    <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />
@@ -255,13 +252,13 @@
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
-  <PropertyGroup Condition="$(HasOpenCV)">
-    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll</ImageReaderDependencies>
+  <PropertyGroup Condition="$(HasOpenCv)">
+    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OpenCvBinPath)\$(OpenCvWorld).dll</ImageReaderDependencies>
     <ImageReaderDependencies Condition="$(UseZip)">$(ImageReaderDependencies);$(OutDir)..\zip.dll;$(OutDir)..\zlib1.dll</ImageReaderDependencies>
   </PropertyGroup>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\experimentalhtkmlfreader.dll;$(OutDir)..\compositedatareader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(ImageReaderDependencies);" />
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

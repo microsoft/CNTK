@@ -16,9 +16,18 @@
     <ClInclude Include="..\..\Common\Include\Eval.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="EvalCommon.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EvalWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CNTKException.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EvalExtendedWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

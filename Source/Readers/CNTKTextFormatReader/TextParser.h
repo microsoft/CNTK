@@ -42,37 +42,33 @@ private:
     // Builds an index of the input data.
     void Initialize();
 
-    // A buffer to keep data for all samples in a (variable length) sequence
-    // from a single input stream.
-    struct InputStreamBuffer
-    {
-        virtual ~InputStreamBuffer() { };
-
-        uint32_t m_numberOfSamples = 0;
-        std::vector<ElemType> m_buffer;
-    };
-
-    struct DenseInputStreamBuffer : InputStreamBuffer
+    struct DenseInputStreamBuffer : DenseSequenceData
     {
         // capacity = expected number of samples * sample size
         DenseInputStreamBuffer(size_t capacity)
         {
-            InputStreamBuffer::m_buffer.reserve(capacity);
+            m_buffer.reserve(capacity);
         }
+
+        std::vector<ElemType> m_buffer;
     };
 
     // In case of sparse input, we also need a vector of
     // indices (one index for each input value) and a vector
     // of NNZ counts (one for each sample).
-    struct SparseInputStreamBuffer : InputStreamBuffer
+    struct SparseInputStreamBuffer : SparseSequenceData
     {
-        IndexType m_totalNnzCount = 0;
-        std::vector<IndexType> m_indices;
-        std::vector<IndexType> m_nnzCounts;
+        SparseInputStreamBuffer()
+        {
+            m_totalNnzCount = 0;
+        }
+
+        std::vector<IndexType> m_indicesBuffer;
+        std::vector<ElemType> m_buffer;
     };
 
-    // A sequence buffer is a vector that contains an input buffer for each input stream.
-    typedef std::vector<std::unique_ptr<InputStreamBuffer>> SequenceBuffer;
+    // A sequence buffer is a vector that contains sequence data for each input stream.
+    typedef std::vector<SequenceDataPtr> SequenceBuffer;
 
     // A chunk of input data in the text format.
     class TextDataChunk;
@@ -175,6 +171,9 @@ private:
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
     TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams);
+
+    // Fills some metadata members to be conformant to the exposed SequenceData interface.
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, size_t sequenceId);
 
     void SetTraceLevel(unsigned int traceLevel);
 

@@ -1,33 +1,27 @@
 # Parameters can be overwritten on the command line
-# for example: cntk configFile=myConfigFile RootDir=../.. 
+# for example: cntk configFile=myConfigFile rootDir=../.. 
 # For running from Visual Studio add
 # currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
-RootDir = ".."
+rootDir = ".."
 
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
+configDir = "$rootDir$/Config"
+dataDir   = "$rootDir$/Data"
+outputDir = "$rootDir$/Output"
+modelDir  = "$outputDir$/Models"
 
 deviceId = 0
-imageLayout = "cudnn"
 # Override the above as follows when running on CPU:
 # deviceId = -1
-# Note: Compared to GPU, this runs very slow.
 
 command = train:test
 
 precision = "float"
-modelPath = "$ModelDir$/02_Convolution"
-ndlMacros = "$ConfigDir$/Macros.ndl"
+modelPath = "$modelDir$/02_Convolution"
 
-# uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/02_Convolution_out"
-traceLevel=1
-numMBsToShowResult=500
-
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
+# uncomment the following line to write logs to a file
+# stderr = "$outputDir$/02_Convolution_out"
+traceLevel = 1
+numMBsToShowResult = 500
 
 #######################################
 #  TRAINING CONFIG                    #
@@ -37,27 +31,32 @@ train = [
     action = "train"
 
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/02_Convolution.ndl"
     ]
-    
+
     SGD = [
         epochSize = 60000
         minibatchSize = 32
+        #learningRatesPerSample = 0.003125    # TODO
+        #momentumAsTimeConstant = 0
         learningRatesPerMB = 0.1*5:0.3
         momentumPerMB = 0*10:0.7
         maxEpochs = 15
     ]
-    
+
     reader = [
         readerType = "CNTKTextFormatReader"
         # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
         input = [
-        features = [
-            dim = 784
+            features = [
+                dim = 784
                 format = "dense"
-        ]
-        labels = [
+            ]
+            labels = [
                 dim = 10
                 format = "dense"
             ]
@@ -71,21 +70,17 @@ train = [
 
 test = [
     action = test
-    minibatchSize = 16
-    
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
-    ]
-    
+    minibatchSize = 1024
+
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test-28x28_cntk_text.txt"
         input = [
-        features = [
+            features = [
             dim = 784
-                format = "dense"
-        ]
-        labels = [
+            format = "dense"
+            ]
+            labels = [
                 dim = 10
                 format = "dense"
             ]

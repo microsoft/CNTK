@@ -143,6 +143,7 @@ public:
     void DoMatrixElementAndXOf(const TensorView& a, const TensorView& b);
     void SparseAssignCopyOf(const TensorView& a, const int RowOffset);
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
+    const TensorShape& GetShape() const { return m_shape; }
 
 private:
     // -------------------------------------------------------------------
@@ -151,7 +152,6 @@ private:
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
-    const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // sob members
