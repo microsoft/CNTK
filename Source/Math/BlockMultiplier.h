@@ -5,6 +5,7 @@
 #pragma once
 #include "BlockMultiplierPlatform.h"
 #include <malloc.h>
+#include <smmintrin.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <tmmintrin.h>
