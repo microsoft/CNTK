@@ -56,11 +56,11 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        Input(0)->ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-        Input(1)->ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
-        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), fr);
-        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
+        FrameRange fr(InputPtr(0)->GetMBLayout());
+        InputPtr(0)->ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        InputPtr(1)->ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+        MaskMissingColumnsToZero(*m_maxIndexes0, InputPtr(0)->GetMBLayout(), fr);
+        MaskMissingColumnsToZero(*m_maxIndexes1, InputPtr(1)->GetMBLayout(), fr);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 #if NANCHECK
         Value().HasNan("ErrorPrediction");
@@ -78,9 +78,9 @@ public:
         // TODO: Make topK a constructor parameter
         if (m_inputs.size() == 3)
         {
-            if (Input(2)->GetSampleLayout().GetNumElements() != 1)
+            if (InputPtr(2)->GetSampleLayout().GetNumElements() != 1)
                 InvalidArgument("%ls %ls operation requires TopK to be a scalar value.", NodeName().c_str(), OperationName().c_str());
-            m_topK = static_cast<int>(Input(2)->Get00Element());
+            m_topK = static_cast<int>(InputPtr(2)->Get00Element());
         }
     }
 
@@ -89,7 +89,7 @@ public:
         Base::UpdateFunctionMBSize();
 
         // resize the temporaries to their proper size
-        size_t cols = Input(0)->Value().GetNumCols();
+        size_t cols = InputPtr(0)->Value().GetNumCols();
         m_maxIndexes0->Resize(m_topK, cols);
         m_maxIndexes1->Resize(m_topK, cols);
         m_maxValues->Resize(m_topK, cols);

@@ -150,12 +150,12 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr));
+        ValueFor(fr).AssignValuesOf(InputPtr(0)->ValueFor(fr));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(inputIndex)->GradientFor(fr).AssignValuesOf(GradientFor(fr));
+        InputPtr(inputIndex)->GradientFor(fr).AssignValuesOf(GradientFor(fr));
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -248,21 +248,21 @@ public:
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
-        if (*m_pMBLayout != *Input(0)->GetMBLayout()) // this does a deep value-level comparison
+        if (*m_pMBLayout != *InputPtr(0)->GetMBLayout()) // this does a deep value-level comparison
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
-                            Input(0)->NodeName().c_str(), Input(0)->OperationName().c_str(),
-                            Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
+                            InputPtr(0)->NodeName().c_str(), InputPtr(0)->OperationName().c_str(),
+                            InputPtr(1)->NodeName().c_str(), InputPtr(1)->OperationName().c_str());
 
         // copy the data from 'dataInput'
-        ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout()))); // just propagate through
+        ValueFor(fr).AssignValuesOf(InputPtr(0)->ValueFor(fr.WithLayout(InputPtr(0)->GetMBLayout()))); // just propagate through
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
-            Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
+            InputPtr(0)->GradientFor(fr.WithLayout(InputPtr(0)->GetMBLayout())) += GradientFor(fr);
         // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
     }
 
@@ -340,13 +340,13 @@ public:
 private:
 
     // these implement numpy-style negative bound values to index from the end
-    size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
-    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + Input(0)->GetSampleLayout()[m_axis - 1]); }
+    size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + InputPtr(0)->GetSampleLayout()[m_axis - 1]); }
+    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + InputPtr(0)->GetSampleLayout()[m_axis - 1]); }
 
     // determine the tensor shape that represents slice of the input that we are taking
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
-        auto inputSlice = Input(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
+        auto inputSlice = InputPtr(0)->GetTensorSliceFor(rank, fr);    // input must be narrowed down
         inputSlice.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
         return inputSlice;
     }
@@ -357,7 +357,7 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto output =                                ValueTensorFor(           rank, fr);
-        let   input = TensorView<ElemType>(Input(0)->ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
+        let   input = TensorView<ElemType>(InputPtr(0)->ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
 
@@ -365,7 +365,7 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         let outputGrad =                                GradientTensorFor(           rank, fr);
-        auto inputGrad = TensorView<ElemType>(Input(0)->GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
+        auto inputGrad = TensorView<ElemType>(InputPtr(0)->GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         inputGrad.AddCopyOf(outputGrad);
     }
 
@@ -464,7 +464,7 @@ public:
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+            let input = InputPtr(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
             let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
             auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
             output.AssignCopyOf(input);
@@ -476,7 +476,7 @@ public:
         size_t rank = DetermineElementwiseTensorRank();
         let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
 
-        auto inputGrad = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto inputGrad = InputPtr(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
         let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
         let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
         inputGrad.AddCopyOf(outputGrad);
@@ -607,12 +607,12 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignRepeatOf(Input(0)->ValueFor(fr), m_numRepeat, 1);
+        ValueFor(fr).AssignRepeatOf(InputPtr(0)->ValueFor(fr), m_numRepeat, 1);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
+        InputPtr(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -792,7 +792,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
+        InputPtr(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
 #if NANCHECK
         Value().HasNan("Diagonal");
 #endif
@@ -1048,17 +1048,17 @@ public:
             if (weStack())
             {
                 // going from many samples to one: layout entry will get no flags
-                if (Input(0)->GetMBLayout()->GetNumTimeSteps() * Input(0)->GetSampleMatrixNumRows() / m_numTargetRows != 1)
+                if (InputPtr(0)->GetMBLayout()->GetNumTimeSteps() * InputPtr(0)->GetSampleMatrixNumRows() / m_numTargetRows != 1)
                     LogicError("LegacyReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
                 // we are in frame mode now
-                m_pMBLayout->InitAsFrameMode(Input(0)->GetNumParallelSequences());
+                m_pMBLayout->InitAsFrameMode(InputPtr(0)->GetNumParallelSequences());
             }
             else
             {
                 // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
-                if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
+                if (InputPtr(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                     LogicError("LegacyReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
-                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetMBLayout()->GetNumTimeSteps() * Input(0)->GetSampleMatrixNumRows() / m_numTargetRows);
+                m_pMBLayout->Init(InputPtr(0)->GetNumParallelSequences(), InputPtr(0)->GetMBLayout()->GetNumTimeSteps() * InputPtr(0)->GetSampleMatrixNumRows() / m_numTargetRows);
                 for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
                     m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, GetMBLayout()->GetNumTimeSteps());
                 // BUGBUG: In the future, NEW_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
@@ -1073,7 +1073,7 @@ public:
     //  - fr refers to *functionValues*, not the inputs
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
+        size_t rows = InputPtr(0)->Value().GetNumRows(), cols = InputPtr(0)->Value().GetNumCols();
         size_t newCols = cols * rows / m_numTargetRows;
         assert(newCols * m_numTargetRows == cols * rows); // follows from above check
         Value().VerifySize(m_numTargetRows, newCols);
@@ -1082,7 +1082,7 @@ public:
         // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
         if (!m_pMBLayout || factor() == 1)
         {
-            Value().Reshaped(newCols * m_numTargetRows, 1).AssignValuesOf(Input(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
+            Value().Reshaped(newCols * m_numTargetRows, 1).AssignValuesOf(InputPtr(0)->Value().Reshaped(cols * rows, 1)); // copy the values as one long vector
         }
         // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
         else
@@ -1092,29 +1092,29 @@ public:
             if (!fr.IsAllFrames())
                 InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
             if (weStack())
-                Base::Stack(fr, m_pMBLayout, Input(0)->Value(), Value(), factor(), false /*addTo*/);
+                Base::Stack(fr, m_pMBLayout, InputPtr(0)->Value(), Value(), factor(), false /*addTo*/);
             else
-                Base::Unstack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Value(), Value(), factor(), false /*addTo*/);
+                Base::Unstack(fr.WithLayout(InputPtr(0)->GetMBLayout()), InputPtr(0)->GetMBLayout(), InputPtr(0)->Value(), Value(), factor(), false /*addTo*/);
         }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
+        size_t rows = InputPtr(0)->Value().GetNumRows(), cols = InputPtr(0)->Value().GetNumCols();
         size_t newCols = cols * rows / m_numTargetRows;
 
         // no layout case: this is indeed just a reshape. Same for canonical case
         if (!m_pMBLayout || factor() == 1)
         {
-            Input(0)->Gradient().Reshaped(cols * rows, 1) += Gradient().Reshaped(newCols * m_numTargetRows, 1); // treat the values as one long vector
+            InputPtr(0)->Gradient().Reshaped(cols * rows, 1) += Gradient().Reshaped(newCols * m_numTargetRows, 1); // treat the values as one long vector
         }
         // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
         else
         {
             if (weStack())
-                Base::Unstack(fr, m_pMBLayout, Gradient(), Input(0)->Gradient(), factor(), true /*addTo*/);
+                Base::Unstack(fr, m_pMBLayout, Gradient(), InputPtr(0)->Gradient(), factor(), true /*addTo*/);
             else
-                Base::Stack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Gradient(), Input(0)->Gradient(), factor(), true /*addTo*/);
+                Base::Stack(fr.WithLayout(InputPtr(0)->GetMBLayout()), InputPtr(0)->GetMBLayout(), Gradient(), InputPtr(0)->Gradient(), factor(), true /*addTo*/);
         }
     }
 
@@ -1178,11 +1178,11 @@ private:
     size_t m_numTargetRows;
     bool weStack() const
     {
-        return m_numTargetRows > Input(0)->GetSampleMatrixNumRows();
+        return m_numTargetRows > InputPtr(0)->GetSampleMatrixNumRows();
     } // do we stack (multiple frames into one)
     size_t factor() const
     {
-        return m_numTargetRows > Input(0)->GetSampleMatrixNumRows() ? m_numTargetRows / Input(0)->GetSampleMatrixNumRows() : Input(0)->GetSampleMatrixNumRows() / m_numTargetRows;
+        return m_numTargetRows > InputPtr(0)->GetSampleMatrixNumRows() ? m_numTargetRows / InputPtr(0)->GetSampleMatrixNumRows() : InputPtr(0)->GetSampleMatrixNumRows() / m_numTargetRows;
     } // factor by which we stack or unstack
     TensorShape m_targetImageLayout;
 

@@ -931,7 +931,7 @@ protected:
 
     std::vector<ComputationNodeElemTypePtr> m_inputPtrs;
 
-    ComputationNodeElemTypePtr InputPtr(size_t input)
+    ComputationNodeElemTypePtr InputPtr(size_t input) const
     {
         return m_inputPtrs[input];
     }

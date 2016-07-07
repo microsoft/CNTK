@@ -461,17 +461,17 @@ public:
         // left Node must be a scalar
         if (inputIndex == 0) // left derivative
         {
-            BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
+            BackpropToLeft(*m_logSoftmaxOfRight, InputPtr(inputIndex)->Gradient(), Gradient());
         }
         else if (inputIndex == 1)
         {
-            FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+            FrameRange fr(InputPtr(0)->GetMBLayout());
+            BackpropToRight(*m_softmaxOfRight, InputPtr(0)->Value(), InputPtr(inputIndex)->Gradient(),
                             Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
-            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+            MaskMissingColumnsToZero(InputPtr(inputIndex)->Gradient(), InputPtr(0)->GetMBLayout(), fr);
 
 #ifdef _DEBUG
-            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
+            InputPtr(inputIndex)->InvalidateMissingGradientColumns(FrameRange(InputPtr(inputIndex)->GetMBLayout()));
 #endif
         }
         else if (inputIndex == 2)
@@ -479,8 +479,8 @@ public:
 #if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
             ; // gradient does not flow here
 #else
-            Input(inputIndex)->SetLearningRateMultiplier(0);
-            Input(inputIndex)->Gradient().SetValue(0.0); // BUGBUG: Gradients must always be added, since nodes may have multiple parents.
+            InputPtr(inputIndex)->SetLearningRateMultiplier(0);
+            InputPtr(inputIndex)->Gradient().SetValue(0.0); // BUGBUG: Gradients must always be added, since nodes may have multiple parents.
 #endif
         }
         else
@@ -539,16 +539,16 @@ public:
             m_gammaCalcInitialized = true;
         }
         // softmax
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputPtr(1)->Value() /*prediction*/, true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
-        m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
-                                        Input(0)->Value() /*labels*/, *m_gammaFromLattice,
-                                        m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
-                                        Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+        m_gammaCalculator.calgammaformb(Value(), m_lattices, InputPtr(2)->Value() /*log LLs*/,
+                                        InputPtr(0)->Value() /*labels*/, *m_gammaFromLattice,
+                                        m_uids, m_boundaries, InputPtr(1)->GetNumParallelSequences(),
+                                        InputPtr(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
 
 #if NANCHECK
         Value().HasNan("SequenceWithSoftmaxNode");
@@ -706,7 +706,7 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputPtr(0)->GetMBLayout());
         if (inputIndex == 0)
             LogicError("DummyCriterionNode: Gradients with respect to objective features are not necessary, not implemented.\n");
         else if (inputIndex == 1)
@@ -714,8 +714,8 @@ public:
         else if (inputIndex == 2)
         {
             // predictionsGradient += userSuppliedGradient * scalarGradientFromTop
-            auto gradient = Input(2)->GradientFor(fr);
-            Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, /*gradient from top:*/Gradient() /*1x1*/, /*user-supplied gradient:*/Input(1)->ValueFor(fr), 1.0f, /*add to:*/gradient);
+            auto gradient = InputPtr(2)->GradientFor(fr);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, /*gradient from top:*/Gradient() /*1x1*/, /*user-supplied gradient:*/InputPtr(1)->ValueFor(fr), 1.0f, /*add to:*/gradient);
         }
     }
 
@@ -727,8 +727,8 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         Value().VerifySize(1, 1);
-        assert(Input(0)->Value().GetNumRows() == 1);
-        Value().SetValue(Input(0)->Value().SumOfElements());
+        assert(InputPtr(0)->Value().GetNumRows() == 1);
+        Value().SetValue(InputPtr(0)->Value().SumOfElements());
 #if NANCHECK
         Value().HasNan("DummyCriterionNode");
 #endif
