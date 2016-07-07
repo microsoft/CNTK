@@ -74,15 +74,45 @@ Remove-Item $baseDropPath\cntk\*.pdb
 Remove-Item $baseDropPath\cntk\*.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
+# Remove specific items
+If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+{
+	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+}
+If (Test-Path $baseDropPath\cntk\CPPEvalClient.exe)
+{
+	Remove-Item $baseDropPath\cntk\CPPEvalClient.exe
+}
+If (Test-Path $baseDropPath\cntk\CSEvalClient.exe)
+{
+	Remove-Item $baseDropPath\cntk\CSEvalClient.exe
+}
+If (Test-Path $baseDropPath\cntk\CSEvalClient.exe.config)
+{
+	Remove-Item $baseDropPath\cntk\CSEvalClient.exe.config
+}
+If (Test-Path $baseDropPath\cntk\CommandEval.exe)
+{
+	Remove-Item $baseDropPath\cntk\CommandEval.exe
+}
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
+# Copy Scripts
+Write-Verbose "Copying Scripts ..."
+Copy-Item Examples -Recurse -Destination $baseDropPath\Scripts
+# Remove test related file(s) if exist(s)
+If (Test-Path $baseDropPath\Scripts\pytest.ini)
+{
+	Remove-Item $baseDropPath\Scripts\pytest.ini
+}
+
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
-# Copying with Robocopy. Maximum 2 retries, 30 sec waiting times in between
+# Copying with Robocopy. Maximum 2 retries, 30 sec waiting time in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
 robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
 # Check that Robocopy finished OK.
