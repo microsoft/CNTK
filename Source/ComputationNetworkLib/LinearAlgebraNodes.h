@@ -567,9 +567,9 @@ public:
             Base::ForwardProp(fr); // Can't deal with this. We shouldn't be here.
             return;
         }
-        TensorView<ElemType> input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-        TensorView<ElemType> input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
-        TensorView<ElemType> output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+        TensorView<ElemType> input0 = this->OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> input1 = this->OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+        TensorView<ElemType> output = this->OneSampleTensorFor(-1, /*gradient=*/false, fr);
         output.AssignQuantizedMatrixProductOf(input0, m_transpose/*transA*/, input1, m_reuseA ? &m_preparedA : nullptr, &m_scaleA);
     }
 private:

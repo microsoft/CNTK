@@ -166,7 +166,7 @@ CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 //copy constructor, shallow copy
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow)
-    : BaseMatrix(shallow)
+    : Base(shallow)
 {
     ShallowCopyFrom(shallowCopyFrom);
 }
@@ -182,7 +182,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
 //move constructor, shallow copy
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
-    : BaseMatrix(/*shallow*/ true)
+    : Base(/*shallow*/ true)
 {
     ShallowCopyFrom(moveFrom);
     moveFrom.m_sob = nullptr;
