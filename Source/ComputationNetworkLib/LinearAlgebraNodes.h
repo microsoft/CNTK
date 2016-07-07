@@ -109,12 +109,12 @@ public:
 
         if (inputIndex == 0)
         {
-            // d/dx (ln( exp(x) + (exp(y)) = (exp(x)/exp(x)+(exp(y))= 1/(1 + exp(y-x)) = sigmoid(x-y)
+            // d/dx (ln( exp(x) + (exp(y)) = exp(x) / (exp(x) + exp(y)) = 1 / (1 + exp(y-x)) = sigmoid(x-y)
             inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
         }
         else
         {
-            // d/dy (ln( exp(x) + (exp(y)) = (exp(y)/exp(x)+(exp(y))= 1/(1 + exp(x-y)) = sigmoid(y-x)
+            // d/dy (ln( exp(x) + (exp(y)) = exp(y) / (exp(x) + exp(y)) = 1 / (1 + exp(x-y)) = sigmoid(y-x)
             inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
         }
     }

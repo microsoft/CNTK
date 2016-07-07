@@ -125,6 +125,9 @@ def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
 
     from .. import log_plus
 
+    # Forward pass test
+    # ==================
+
     a = I([x])
     b = I([y])
 
@@ -133,7 +136,8 @@ def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
                     precision=precision,
                     clean_up=True, backward_pass=False)
 
-    #backward path
+    # Backward pass tests
+    # ==================
     op_node_a = log_plus(a, y)
     op_node_b = log_plus(x, b)
 
@@ -142,13 +146,6 @@ def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
 
     unittest_helper(op_node_b, None, grad_y, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=b)
-
-
-
-
-
-
-
 
 
 @pytest.mark.parametrize("batch",
