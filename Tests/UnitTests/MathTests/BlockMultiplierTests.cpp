@@ -193,15 +193,6 @@ BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKFourRowsMultiThread)
 
 BOOST_AUTO_TEST_CASE(BlockMultiplyTestRowColMajor)
 {
-
-    int m = 8;
-    int k = 128;
-    int n = 8;
-    TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
-}
-
-BOOST_AUTO_TEST_CASE(BlockMultiplyTestRowColMajor)
-{
     int m = 4, k = 10, n = 8;
     TestMultiplierSub<int16_t, int16_t, int32_t, BlockMultiplier<BlockHandlerSSE>>(m, k, n);
     BlockMultiplier<BlockHandlerSSE> mult;

@@ -143,9 +143,15 @@ public:
     // -------------------------------------------------------------------
     // Quantized matrix product. This scales inputs to 16 bit integers, performs
     // integer multiplication using SSE/AVX2, and transforms the results back.
-    // It is meant for forward pass only where:
-    // a) Both matrices are dense
-    void AssignQuantizedMatrixProductOf(const TensorView& a, bool transA, const TensorView& b, int16_t** preppedA = nullptr, ElemType* preppedScaleA = nullptr);
+    // Both matrices must be dense.
+    // preppedA: If not null and its contents is null, allocate a matrix (which
+    // must be freed using FreeQuantizedMatrix), and populate it with a scaled 
+    // version. In this case, the contents of preppedScaleA is also populated.
+    void AssignQuantizedMatrixProductOf(const TensorView& a, bool transA, const TensorView& b, 
+                                        int16_t** preppedA = nullptr, ElemType* preppedScaleA = nullptr);
+    
+    // Free the matrix allocated by AssignQuantizedMatrixProductOf.
+    static void FreeQuantizedMatrix(int16_t* matrix);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }

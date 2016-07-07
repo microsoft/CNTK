@@ -164,32 +164,7 @@ public:
 
         if (quantizeTimes)
         {
-            const auto& nodes = m_net->GetAllNodes();
-            std::vector<ComputationNodeBasePtr> replacedNodes;
-            for (const auto &n : nodes)
-            {
-                if (n->Is<TimesNode<ElemType>>())
-                {
-                    QuantizedBlockTimesNode<ElemType, false> qTimes(n->GetDeviceId(), n->GetName(),
-                        n->As<TimesNode<ElemType>>()->GetOutputRank());
-                    replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, false>>(move(qTimes)));
-                }
-                else if (n->Is<TransposeTimesNode<ElemType>>())
-                {
-                    QuantizedBlockTimesNode<ElemType, true> qTimes(n->GetDeviceId(), n->GetName(),
-                        n->As<TransposeTimesNode<ElemType>>()->GetOutputRank());
-                    replacedNodes.push_back(make_shared<QuantizedBlockTimesNode<ElemType, true>>(move(qTimes)));
-                }
-            }
-            fprintf(stderr, "Replacing %d nodes with quantized times node\n", (int)replacedNodes.size());
-            for (auto& n : replacedNodes)
-            {
-                m_net->ReplaceNode(n->GetName(), n);
-            }
-            if (replacedNodes.size() > 0)
-            {
-                m_net->CompileNetwork();
-            }
+            m_net->QuantizeTimesNodes();
         }
 
         if (!nodeUnitTest)                                        // regular operation
