@@ -27,6 +27,7 @@ public:
 
     // reinterpret a matrix storage object (SOB) as a TensorView with a given TensorShape  --this is the main constructor
     TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+
 #if 0
     // cast a Matrix as a 2D TensorView (without shape change)
     TensorView(const MatrixBasePtr& sob)
@@ -45,10 +46,18 @@ public:
     {
     }
 
+    TensorView() : m_sob(nullptr), m_shape() {}
+
     // reshaped view
     TensorView<ElemType> Reshaped(const TensorShape& shape) const
     {
         return TensorView(*this, shape);
+    }
+
+    // Same as Reshaped(), but in place
+    void ReshapeTo(const TensorShape& shape)
+    {
+        m_shape = shape;
     }
 
     // -------------------------------------------------------------------

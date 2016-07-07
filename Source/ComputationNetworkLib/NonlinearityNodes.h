@@ -50,8 +50,8 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input  = InputPtr(0)->ValueTensorFor(rank, fr);
+        auto& result =              ValueTensorRefFor(rank, fr);
+        auto& input  = InputPtr(0)->ValueTensorRefFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
@@ -464,10 +464,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input2 = InputPtr(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto& result =              ValueTensorRefFor(rank, fr);
+        auto& input0 = InputPtr(0)->ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto& input1 = InputPtr(1)->ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto& input2 = InputPtr(2)->ValueTensorRefFor(rank, fr.AllowBroadcast());
         result.AssignCondOf(input0, input1, input2);
     }
 
@@ -478,7 +478,7 @@ public:
 
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
-        auto input0        = InputPtr(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input0        = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto inputGradient = InputPtr(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -530,10 +530,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input2 = InputPtr(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto& result =           ValueTensorRefFor(rank, fr);
+        auto& input0 = InputPtr(0)->ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto& input1 = InputPtr(1)->ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto& input2 = InputPtr(2)->ValueTensorRefFor(rank, fr.AllowBroadcast());
 
         result.AssignClipOf(input0, input1, input2);
     }
@@ -607,9 +607,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input0 = InputPtr(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputPtr(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto& result =              ValueTensorRefFor(rank, fr);
+        auto& input0 = InputPtr(0)->ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto& input1 = InputPtr(1)->ValueTensorRefFor(rank, fr.AllowBroadcast());
 
         result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
