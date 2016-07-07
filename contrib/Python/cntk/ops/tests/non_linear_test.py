@@ -117,6 +117,7 @@ TENSORS = [
     ([     -1], [    -2], [[[m.log(m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-1) / (m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-2) / (m.exp(-1)+ m.exp(-2))]]]), # test case: second argument > first argument
     ([      0], [100000], [[[100000]]],                      [[[0]]],                                  [[[1]]]),                                  # test case: check that we don't have overflow
     ([ 100000], [     0], [[[100000]]],                      [[[1]]],                                  [[[0]]]),                                  # test case: check that we don't have overflow
+    ([ 100000], [   0,0], [[[100000, 100000]]],              [[[2]]],                                  [[[0,0]]]),                               # test case: broadcasting. Note the result for grad_x is two because of reduction in backward path
 ]
 
 @pytest.mark.parametrize("x, y, expected, grad_x, grad_y", TENSORS)
@@ -124,23 +125,17 @@ def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
 
     from .. import log_plus
 
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-
     a = I([x])
     b = I([y])
 
-    op_node_a = log_plus(a, y)
-    op_node_b = log_plus(x, b)
-
-    unittest_helper(op_node_a, None, expected,
+    unittest_helper(log_plus(a,b), None, expected,
                     device_id=device_id,
                     precision=precision,
                     clean_up=True, backward_pass=False)
+
+    #backward path
+    op_node_a = log_plus(a, y)
+    op_node_b = log_plus(x, b)
 
     unittest_helper(op_node_a, None, grad_x, device_id=device_id,
                     precision=precision, clean_up=False, backward_pass=True, input_node=a)

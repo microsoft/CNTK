@@ -67,6 +67,8 @@ template class PlusNode<double>;
 
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
+// Computes ln(exp(summand1) + exp(summand2)) in an overflow safe way.
+// Useful e.g. for computing softmax over sequence.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -112,6 +114,7 @@ public:
         }
         else
         {
+            // d/dy (ln( exp(x) + (exp(y)) = (exp(y)/exp(x)+(exp(y))= 1/(1 + exp(x-y)) = sigmoid(y-x)
             inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
         }
     }
