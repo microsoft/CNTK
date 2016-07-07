@@ -29,12 +29,7 @@
   <PropertyGroup>
     <HasBoost>false</HasBoost>
     <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
-    <HasOpenCV>false</HasOpenCV>
-    <HasOpenCV Condition="Exists('$(OPENCV_PATH)')">true</HasOpenCV>
-    <ImageReaderDefine Condition="$(HasOpenCV)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
-    <UseZip>false</UseZip>
-    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
-    <ZipDefine Condition="$(HasOpenCV) And $(UseZip)">USE_ZIP</ZipDefine>
+    <ImageReaderDefine Condition="$(HasOpenCv)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -257,8 +252,8 @@
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
-  <PropertyGroup Condition="$(HasOpenCV)">
-    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll</ImageReaderDependencies>
+  <PropertyGroup Condition="$(HasOpenCv)">
+    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OpenCvBinPath)\$(OpenCvWorld).dll</ImageReaderDependencies>
     <ImageReaderDependencies Condition="$(UseZip)">$(ImageReaderDependencies);$(OutDir)..\zip.dll;$(OutDir)..\zlib1.dll</ImageReaderDependencies>
   </PropertyGroup>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">

@@ -150,7 +150,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
 
     Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"Labels");
     auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
-    auto predictionFunction = PredictionError(classifierOutputFunction, labelsVar, L"predictionError");
+    auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"predictionError");
 
     auto LSTMClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"LSTMClassifier");
 
@@ -474,12 +474,18 @@ void TestSimpleRecurrence(size_t inputDim,
 void RecurrentFunctionTests()
 {
     TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), 3, false, false);
+#ifndef CPUONLY
     TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), 5, true, false);
+#endif
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), 2, true, true);
+#ifndef CPUONLY
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), 3, false, true);
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), 3, true, true, true);
+#endif
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), 2, false, true, true);
 
+#ifndef CPUONLY
     TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0));
+#endif
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice());
 }

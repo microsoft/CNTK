@@ -110,7 +110,7 @@ ifdef CUDA_PATH
   # This is a suggested/default location for NVML
   INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
   INCLUDEPATH+=$(CUB_PATH)
-  NVMLPATH=$(GDK_PATH)/src/gdk/nvml/lib
+  NVMLLIBPATH=$(GDK_PATH)/src/gdk/nvml/lib
 
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
@@ -232,6 +232,7 @@ ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
 
+RPATH=-Wl,-rpath,
 
 ########################################
 # Build info
@@ -245,7 +246,6 @@ BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success
 ifneq ("$(BUILDINFO_OUTPUT)","Success")
   $(error Could not generate $(BUILDINFO))
 endif
-
 
 ########################################
 # Math library
@@ -324,13 +324,11 @@ CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
 ########################################
 # CNTKLibrary
@@ -391,13 +389,11 @@ CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
 
 ########################################
 # CNTKLibrary tests
@@ -416,13 +412,11 @@ CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJ
 ALL+=$(CNTKLIBRARY_TESTS)
 SRC+=$(CNTKLIBRARY_TESTS_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
 ########################################
 # LibEval
@@ -456,13 +450,11 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-RPATH=-Wl,-rpath,
-
 $(EVAL_LIB): $(EVAL_OBJ) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
 
 ########################################
 # Eval Sample client
@@ -476,8 +468,6 @@ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SR
 
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
-
-RPATH=-Wl,-rpath,
 
 $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -797,7 +787,7 @@ $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs

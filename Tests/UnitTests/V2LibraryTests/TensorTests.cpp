@@ -81,8 +81,10 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
 void TensorTests()
 {
     TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0));
     TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0));
     TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0));
     TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0));
+#endif
 }

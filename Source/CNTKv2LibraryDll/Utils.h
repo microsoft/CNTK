@@ -75,7 +75,7 @@ namespace CNTK
             : m_valueType(GetValueType<T>())
         {
             static_assert(std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value,
+                std::is_same<T, Internal::SimpleVector<DictionaryValue>>::value,
                 "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -84,6 +84,8 @@ namespace CNTK
         DictionaryValue(const DictionaryValue& other)
             : m_valueType(Type::Bool)
         {
+            // The m_valueType must hvae been set to a non-ptr type to prevent an attempt to interpret
+            // the underlying underlying uninitialized value as a ptr and free it.
             *this = other;
         }
 
@@ -99,7 +101,7 @@ namespace CNTK
                 if (other.m_valueType == Type::NDShape)
                     AllocateDataPtr(other.GetValue<NDShape>());
                 else if (other.m_valueType == Type::Vector)
-                    AllocateDataPtr(other.GetValue<_Internal::_SimpleVector<DictionaryValue>>());
+                    AllocateDataPtr(other.GetValue<Internal::SimpleVector<DictionaryValue>>());
             }
 
             return *this;
@@ -131,7 +133,7 @@ namespace CNTK
             return m_data.m_double;
         }
 
-        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value>::type* = nullptr>
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, Internal::SimpleVector<DictionaryValue>>::value>::type* = nullptr>
         const T& GetValue() const
         {
             VerifyType<T>();
@@ -156,7 +158,7 @@ namespace CNTK
                 std::is_same<T, size_t>::value ||
                 std::is_same<T, double>::value ||
                 std::is_same<T, NDShape>::value ||
-                std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value ||
+                std::is_same<T, Internal::SimpleVector<DictionaryValue>>::value ||
                 std::is_same<T, CNTK::Dictionary>::value,
                 "Unsupported ValueType");
 
@@ -168,7 +170,7 @@ namespace CNTK
                 return Type::Double;
             else if (std::is_same<T, NDShape>::value)
                 return Type::NDShape;
-            else if (std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value)
+            else if (std::is_same<T, Internal::SimpleVector<DictionaryValue>>::value)
                 return Type::Vector;
         }
 
@@ -182,7 +184,7 @@ namespace CNTK
         template <typename T>
         void AllocateDataPtr(const T& value)
         {
-            static_assert(std::is_same<T, NDShape>::value || std::is_same<T, _Internal::_SimpleVector<DictionaryValue>>::value, "AllocateDataPtr called with invalid type");
+            static_assert(std::is_same<T, NDShape>::value || std::is_same<T, Internal::SimpleVector<DictionaryValue>>::value, "AllocateDataPtr called with invalid type");
             m_data.m_ptr = new T(value);
         }
 
@@ -200,7 +202,7 @@ namespace CNTK
             if (m_valueType == Type::NDShape)
                 FreePtrAsType<NDShape>();
             else if (m_valueType == Type::Vector)
-                FreePtrAsType<_Internal::_SimpleVector<DictionaryValue>>();
+                FreePtrAsType<Internal::SimpleVector<DictionaryValue>>();
         }
 
     private:
@@ -222,8 +224,7 @@ namespace CNTK
         ~Dictionary();
 
         // Disallow copy contruction and assignment
-        Dictionary(const Dictionary&) = delete;
-        Dictionary& operator=(const Dictionary&) = delete;
+        Dictionary(const Dictionary&) = delete; Dictionary& operator=(const Dictionary&) = delete;
 
         Dictionary(Dictionary&& other);
         Dictionary& operator=(Dictionary&& other);
@@ -266,9 +267,9 @@ namespace CNTK
 
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
-        if (device.Type() == DeviceType::CPU)
+        if (device.Type() == DeviceKind::CPU)
             return -1;
-        else if (device.Type() == DeviceType::GPU)
+        else if (device.Type() == DeviceKind::GPU)
             return device.Id();
         else
             NOT_IMPLEMENTED;
