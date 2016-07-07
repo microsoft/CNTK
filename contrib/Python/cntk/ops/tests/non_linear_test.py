@@ -138,10 +138,10 @@ def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
     op_node_b = log_plus(x, b)
 
     unittest_helper(op_node_a, None, grad_x, device_id=device_id,
-                    precision=precision, clean_up=False, backward_pass=True, input_node=a)
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
     unittest_helper(op_node_b, None, grad_y, device_id=device_id,
-                    precision=precision, clean_up=False, backward_pass=True, input_node=b)
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 
 
