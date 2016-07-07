@@ -112,7 +112,7 @@ def test_op_sigmoid(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-TENSORS = [
+LOG_PLUS_TESTCASES = [
     ([      1], [     2], [[[m.log(m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 1) / (m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 2) / (m.exp( 1)+ m.exp( 2))]]]), # test case: first argument < seond argument 
     ([     -1], [    -2], [[[m.log(m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-1) / (m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-2) / (m.exp(-1)+ m.exp(-2))]]]), # test case: second argument > first argument
     ([      0], [100000], [[[100000]]],                      [[[0]]],                                  [[[1]]]),                                  # test case: check that we don't have overflow
@@ -120,7 +120,7 @@ TENSORS = [
     ([ 100000], [   0,0], [[[100000, 100000]]],              [[[2]]],                                  [[[0,0]]]),                                # test case: broadcasting. Note the result for grad_x is two because of reduction in backward path
 ]
 
-@pytest.mark.parametrize("x, y, expected, grad_x, grad_y", TENSORS)
+@pytest.mark.parametrize("x, y, expected, grad_x, grad_y", LOG_PLUS_TESTCASES)
 def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
 
     from .. import log_plus
