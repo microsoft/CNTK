@@ -1426,7 +1426,7 @@ public:
         m_randomSeed = (unsigned long) CreateUniqId();
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
@@ -1690,7 +1690,7 @@ public:
         }
     }
 
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0) // derivative with respect to the input.
         {

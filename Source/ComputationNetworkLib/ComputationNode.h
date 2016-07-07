@@ -699,12 +699,20 @@ public:
     }
 
     virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
-
     virtual void ForwardProp(const FrameRange& fr) override
     {
         m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
         ForwardPropSpecialization(fr);
     }
+
+
+    virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) = 0;
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
+    {
+        m_syncManager->SynchronizeState(this, (size_t)0, fr, false);
+        BackpropToSpecialization(inputIndex, fr);
+    }
+
 
     // check whether a node is out of date w.r.t. its children, for lazy evaluation
     // If this returns true, node must be evaluated to update m_value.
@@ -1818,7 +1826,7 @@ public:
         else
             LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
+    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override final
     {
         //synchronize streams for swapping and parallelism
         //Base::m_syncManager->SynchronizeState(this, inputIndex, fr, false);

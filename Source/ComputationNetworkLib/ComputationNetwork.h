@@ -951,7 +951,7 @@ protected:
         virtual void ForwardPropSpecialization(const FrameRange&) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
+        virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         }
@@ -1008,7 +1008,7 @@ protected:
         virtual void BeginBackprop() override
         {
         }
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
+        virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         } // ugh, call Backprop() instead

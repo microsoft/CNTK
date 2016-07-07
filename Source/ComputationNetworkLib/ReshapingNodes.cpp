@@ -70,7 +70,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void ReduceElementsNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
+/*virtual*/ void ReduceElementsNode<ElemType>::BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
     assert(inputIndex == 0), inputIndex;
 

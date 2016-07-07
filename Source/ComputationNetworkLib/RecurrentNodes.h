@@ -181,7 +181,7 @@ public:
             fstream >> m_initialActivationValue;
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: change below accesses to TensorView, then this is no longer needed.
@@ -993,7 +993,7 @@ public:
         }
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         //     if (!fr.IsAllFrames())   // for measuring speed
         //         return;

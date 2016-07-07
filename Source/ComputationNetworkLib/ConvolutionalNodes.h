@@ -289,7 +289,7 @@ public:
         }
     }
 
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
@@ -461,7 +461,7 @@ public:
         m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
 
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
@@ -565,7 +565,7 @@ public:
         m_convEng->MaxUnpooling(unpoolInput, poolInput, sliceOutputValue);
     }
 
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex != 0)
             return;
@@ -695,7 +695,7 @@ public:
         m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
     }
 
-    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    void BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);

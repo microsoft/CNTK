@@ -108,7 +108,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void TraceNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
+/*virtual*/ void TraceNode<ElemType>::BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
     assert(inputIndex == 0); inputIndex;
 

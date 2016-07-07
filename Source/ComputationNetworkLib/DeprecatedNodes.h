@@ -39,7 +39,7 @@ public:
         Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         auto sliceInputGrad  = Input(0)->GradientFor(fr);
         auto sliceOutputGrad =           GradientFor(fr);
