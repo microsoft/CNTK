@@ -105,8 +105,15 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        // TODO: would be nice to state the derivative here in a comment
-        inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+        if (inputIndex == 0)
+        {
+            // d/dx (ln( exp(x) + (exp(y)) = (exp(x)/exp(x)+(exp(y))= 1/(1 + exp(y-x)) = sigmoid(x-y)
+            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
+        }
+        else
+        {
+            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+        }
     }
 };
 

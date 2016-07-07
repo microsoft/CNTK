@@ -706,6 +706,24 @@ def log(x, name=None):
     op.rank = op._.rank
     return op
 
+def log_plus(left, right, name=None):
+    """
+    Binary function computing log(exp(left) + exp(right)) in an overflow save way: 
+    
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name (str): the name of the node in the network            
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+    from cntk.ops.cntk1 import LogPlus
+    op = LogPlus(left, right, name=name)
+    wrap_numpy_arrays(op)
+    op.rank = max(op.leftMatrix.rank, op.rightMatrix.rank)
+    return op
+
 def sqrt(x, name=None):
     """
     Computes the element-wise square-root of `x`: 

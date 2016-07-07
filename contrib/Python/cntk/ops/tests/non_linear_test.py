@@ -10,6 +10,7 @@ the forward and the backward pass
 """
 
 import numpy as np
+import math as m;
 import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
@@ -111,6 +112,43 @@ def test_op_sigmoid(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+TENSORS = [
+    ([      1], [     2], [[[m.log(m.exp( 1)+ m.exp( 2))]]], [[m.exp(1) / (m.exp(1)+ m.exp(2))]], [[m.exp(1) / (m.exp(1)+ m.exp(2))]]), # test case: first argument < seond argument 
+#    ([     -1], [    -2], [[[m.log(m.exp(-1)+ m.exp(-2))]]], [[0]], [[0]]), # test case: second argument > first argument
+#    ([      0], [100000], [[[100000]]],                      [[0]], [[0]]),# test case: check that we don't have overflow
+#    ([ 100000], [     0], [[[100000]]],                      [[0]], [[0]]),# test case: check that we don't have overflow
+]
+
+@pytest.mark.parametrize("x, y, expected, gradx, grady", TENSORS)
+def test_op_log_plus(x, y, expected, gradx, grady, device_id, precision):
+
+    from .. import log_plus
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    op_node = log_plus(x, y)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+  #  unittest_helper(op_node, None, gradx, device_id=device_id,
+  #                  precision=precision, clean_up=False, backward_pass=True, input_node=x)
+
+
+
+
+
+
+
+
+
 
 @pytest.mark.parametrize("batch",
                          [
@@ -148,29 +186,6 @@ def test_op_softmax(batch, device_id, precision):
                     precision=precision,
                     clean_up=True, backward_pass=False)
 
-    # Backward pass test
-    # ==================
-    # The expected results for the backward pass is fi(1-fi) for i and -fi*fj
-    # for element j!=i.
-    def numpy_grad(x):
-        grads = np.zeros((len(x), len(x)), dtype=PRECISION_TO_TYPE[precision])
-
-        for i in range(len(x)):
-            # deriving wrt i-th element
-            for j in range(len(x)):
-                if i == j:
-                    grads[i, j] = x[i] * (1 - x[i])
-                else:
-                    grads[i, j] = x[i] * (-x[j])
-
-        return grads.sum(axis=0)
-
-    expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
-
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=input_node)
 
 
 @pytest.mark.parametrize("tensor", TENSORS)
