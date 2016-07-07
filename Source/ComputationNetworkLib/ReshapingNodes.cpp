@@ -61,7 +61,7 @@ template <class ElemType>
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
     auto result =           ValueTensorFor(rank, fr);
-    auto input  = Input(0)->ValueTensorFor(rank, fr);
+    auto input  = InputPtr(0)->ValueTensorFor(rank, fr);
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
     result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
@@ -76,7 +76,7 @@ template <class ElemType>
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
     auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
-    auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
+    auto sliceInputGrad  = InputPtr(0)->GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
     switch (m_op)
@@ -190,8 +190,8 @@ template <class ElemType>
 /*virtual*/ void WhereNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
     // gather all sequences
-    let& inMBLayout = Input(0)->GetMBLayout();
-    let& input = Input(0)->Value();
+    let& inMBLayout = InputPtr(0)->GetMBLayout();
+    let& input = InputPtr(0)->Value();
     let& sequences = inMBLayout->GetAllSequences();
     auto& indexSequences = m_indexSequenceBuffer;
     if (indexSequences.size() < sequences.size())
@@ -269,9 +269,9 @@ template class WhereNode<double>;
 template <class ElemType>
 /*virtual*/ void PackedIndexNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
-    let& sourceMBLayout = Input(SOURCEDATA)->GetMBLayout(); // only used for index conversion
-    let& indexMBLayout  = Input(INDEXDATA)->GetMBLayout();
-    let&  index  = Input(INDEXDATA)->Value(); // per-seq index values that are to be mapped
+    let& sourceMBLayout = InputPtr(SOURCEDATA)->GetMBLayout(); // only used for index conversion
+    let& indexMBLayout = InputPtr(INDEXDATA)->GetMBLayout();
+    let&  index = InputPtr(INDEXDATA)->Value(); // per-seq index values that are to be mapped
     auto& result =                   Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
@@ -330,9 +330,9 @@ template class PackedIndexNode<double>;
 template <class ElemType>
 /*virtual*/ void GatherPackedNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
-    Input(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(Input(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
-    let&  index  = Input(INDEXDATA)->Value();  // column indices to copy from
-    let&  source = Input(SOURCEDATA)->Value(); // source data to copy
+    InputPtr(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(InputPtr(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
+    let&  index  = InputPtr(INDEXDATA)->Value();  // column indices to copy from
+    let&  source = InputPtr(SOURCEDATA)->Value(); // source data to copy
     auto& output =                    Value(); // output goes here
     output.DoGatherColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }
@@ -342,8 +342,8 @@ template <class ElemType>
 {
     if (inputIndex == SOURCEDATA)
     {
-        let&  index          = Input(INDEXDATA)->Value();     // column indices to copy from
-        auto& sourceGradient = Input(SOURCEDATA)->Gradient(); // source to propagate the gradient intpu
+        let&  index          = InputPtr(INDEXDATA)->Value();     // column indices to copy from
+        auto& sourceGradient = InputPtr(SOURCEDATA)->Gradient(); // source to propagate the gradient intpu
         auto& outputGradient =                    Gradient(); // output gradient to propagate
         sourceGradient.DoScatterColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
     }
@@ -389,11 +389,11 @@ template class GatherPackedNode<double>;
 template <class ElemType>
 /*virtual*/ void ScatterPackedNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
-    if (*Input(INDEXDATA)->GetMBLayout() != *Input(SOURCEDATA)->GetMBLayout())
+    if (*InputPtr(INDEXDATA)->GetMBLayout() != *InputPtr(SOURCEDATA)->GetMBLayout())
         InvalidArgument("%ls %ls operation requires the minibatch layout of index and source data to be the same.", NodeName().c_str(), OperationName().c_str());
-    Input(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(Input(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
-    let&  index = Input(INDEXDATA)->Value();  // column indices to copy from
-    let&  source = Input(SOURCEDATA)->Value(); // source data to copy
+    InputPtr(INDEXDATA)->MaskMissingValueColumnsTo(FrameRange(InputPtr(INDEXDATA)->GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
+    let&  index = InputPtr(INDEXDATA)->Value();  // column indices to copy from
+    let&  source = InputPtr(SOURCEDATA)->Value(); // source data to copy
     auto& output =                    Value(); // output goes here
     output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }
@@ -403,8 +403,8 @@ template <class ElemType>
 {
     if (inputIndex == SOURCEDATA)
     {
-        let&  index          = Input(INDEXDATA)->Value();     // column indices to copy from
-        auto& sourceGradient = Input(SOURCEDATA)->Gradient(); // source to propagate the gradient input
+        let&  index          = InputPtr(INDEXDATA)->Value();     // column indices to copy from
+        auto& sourceGradient = InputPtr(SOURCEDATA)->Gradient(); // source to propagate the gradient input
         auto& outputGradient =                    Gradient(); // output gradient to propagate
         sourceGradient.DoGatherColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
     }

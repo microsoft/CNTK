@@ -506,17 +506,17 @@ public:
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
             // This is a reduction operation, hence we need to mask out gaps.
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+            Matrix<ElemType> sliceInput1Value = InputPtr(1)->MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, InputPtr(0)->GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+            Matrix<ElemType> sliceInput1Grad = InputPtr(1)->GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(InputPtr(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -554,8 +554,8 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
-        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
+        const Matrix<ElemType>&  input0 = InputPtr(0)->ValueAsMatrix();
+        Matrix<ElemType>         input1 = InputPtr(1)->ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();
@@ -578,13 +578,13 @@ public:
 
         if (isFinalValidationPass && !HasMBLayout())
             InvalidArgument("%ls %ls operation can only operate on minibatches.", NodeName().c_str(), OperationName().c_str());
-        if (isFinalValidationPass && Input(1)->GetSampleMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
+        if (isFinalValidationPass && InputPtr(1)->GetSampleMatrixNumRows() % InputPtr(0)->GetAsMatrixNumCols() != 0)
             InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols() /*note: can never be 0*/;
+        size_t wordsInEachSample = InputPtr(1)->GetSampleMatrixNumRows() / InputPtr(0)->GetAsMatrixNumCols() /*note: can never be 0*/;
 
         // TODO: Should this add a tensor dimension?
-        SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
+        SetDims(TensorShape(InputPtr(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
     }
 
     bool UnitTest()

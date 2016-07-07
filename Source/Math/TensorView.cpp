@@ -22,7 +22,7 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "TensorView.h"
-#include "../../../Source/Math/BlockMultiplier.h"
+#include "BlockMultiplier.h"
 #include <array>
 
 #ifndef let

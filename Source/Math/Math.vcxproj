@@ -151,7 +151,6 @@
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>$(MathDelayLoad)</DelayLoadDLLs>
