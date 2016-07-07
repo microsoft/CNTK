@@ -107,7 +107,7 @@ private:
     // Exposed streams.
     std::vector<StreamDescriptionPtr> m_streams;
 
-    // A map of data chunks.
+    // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
     // Last seen data chunk id.

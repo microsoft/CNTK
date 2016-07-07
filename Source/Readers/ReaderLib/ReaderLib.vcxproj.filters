@@ -76,6 +76,9 @@
     <ClInclude Include="TransformController.h">
       <Filter>Transformers</Filter>
     </ClInclude>
+    <ClInclude Include="ExceptionCapture.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">

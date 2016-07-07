@@ -196,7 +196,6 @@ public:
     // packing algorithm
     //  - width: maximum width of structure; set to maximum over sequence lengths
     //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
-    //  - [out] *pMBLayout: MBLayout that describes the created packed sequence set
     //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
     template<typename SequenceInfoVector>
     void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
@@ -255,6 +254,12 @@ public:
 
     size_t GetNumTimeSteps() const { return m_numTimeSteps; }
     size_t GetNumParallelSequences() const { return m_numParallelSequences; }
+    size_t GetNumSequences() const
+    {
+        return std::count_if(m_sequences.begin(), m_sequences.end(), [](const SequenceInfo& sequence) {
+            return sequence.seqId != GAP_SEQUENCE_ID;
+        });
+    }
 
     // axis names are for now only a debugging aid
     // In the future, there will be a mechanism to denote that axes are meant to be the same.

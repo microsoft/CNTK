@@ -30,18 +30,6 @@
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup>
-    <HasOpenCV>false</HasOpenCV>
-    <HasOpenCV Condition="Exists('$(OPENCV_PATH)')">true</HasOpenCV>
-    <UseZip>false</UseZip>
-    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
-  </PropertyGroup>
-  <PropertyGroup Condition="$(UseZip)">
-    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
-    <ZipDefine>USE_ZIP</ZipDefine>
-    <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
-    <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
-  </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
@@ -54,9 +42,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-    <OpenCVLib Condition="$(HasOpenCV)">opencv_world300.lib</OpenCVLib>
-  </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
@@ -71,26 +56,28 @@
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ReaderLib.lib;Common.lib;Math.lib;$(OpenCVLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ReaderLib.lib;Common.lib;Math.lib;$(OpenCvLib);$(ZipLibs);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if "$(HasOpenCv)" == "true" xcopy /I /D /Y "$(OPENCV_PATH)\x64\vc12\bin\opencv_world300.dll" "$(TargetDir)"
-if "$(UseZip)" == "true" xcopy /I /D /Y "$(ZLIB_PATH)\bin\zip.dll" "$(TargetDir)"
-if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (copy /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
-</Command>
+      <Command>
+        if "$(HasOpenCv)" == "true" xcopy /I /D /Y "$(OpenCvBinPath)\$(OpenCvWorld).dll" "$(TargetDir)"
+        if "$(UseZip)" == "true" xcopy /I /D /Y "$(ZLIB_PATH)\bin\zip.dll" "$(TargetDir)"
+        if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "$(ZLIB_PATH)\bin\zlib1.dll" "$(TargetDir)") else (copy /Y "$(ZLIB_PATH)\bin\zlib.dll" "$(TargetDir)\zlib1.dll")
+      </Command>
       <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OPENCV_PATH)\include;$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OpenCvInclude);$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(OutDir);$(OPENCV_PATH)\x64\vc12\lib;$(ZipLibPath)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(OpenCvLibPath);$(ZipLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -130,7 +117,7 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exports.cpp">
-      <ExcludedFromBuild Condition="!$(HasOpenCV)">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="!$(HasOpenCv)">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="ImageReader.cpp" />
     <ClCompile Include="ImageTransformers.cpp" />
@@ -140,10 +127,10 @@ if "$(UseZip)" == "true" if exist "$(ZLIB_PATH)\bin\zlib1.dll" (xcopy /I /D /Y "
     <ClCompile Include="ZipByteReader.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="Build" Condition="$(HasOpenCV)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
+  <Target Name="Build" Condition="$(HasOpenCv)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
+    <Warning Condition="!$(HasOpenCv)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
     <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#libzip for installation instructions." />
   </Target>
 </Project>

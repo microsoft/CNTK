@@ -91,6 +91,8 @@ public:
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
+    CPUSparseMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
+
     size_t BufferSize() const
     {
         return GetSizeAllocated() * sizeof(ElemType);
@@ -231,9 +233,9 @@ public:
     size_t NzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
-			return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
+            return GetCompIndex()[GetNumCols()] - GetCompIndex()[0];
         else if (GetFormat()== matrixFormatSparseCSR)
-			return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
+            return GetCompIndex()[GetNumRows()] - GetCompIndex()[0];
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return GetBlockSize() * GetNumRows();
         else
@@ -244,6 +246,19 @@ public:
     {
         return sizeof(ElemType) * NzCount();
     } // actual number of element bytes in use
+
+    void SetBlockSize(size_t newBlockSize)
+    {
+        BaseMatrix<ElemType>::SetBlockSize(newBlockSize);
+    }
+
+    size_t* BlockIdsLocation() const
+    {
+        if ((GetFormat() != matrixFormatSparseBlockCol) && (GetFormat() != matrixFormatSparseBlockRow))
+            LogicError("CPUSparseMatrix::BlockIdsLocation is only applicable to sparse block formats");
+
+        return GetBlockIds();
+    }
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {

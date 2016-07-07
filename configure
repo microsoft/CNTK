@@ -84,7 +84,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-4.0"
-default_opencvs="opencv-3.0.0"
+default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
 
 function default_paths ()

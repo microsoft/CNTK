@@ -209,7 +209,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
     else if (this->GetFormat() == matrixFormatSparseCSC)
     {
         // we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
-        cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
+        cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
 
         PrepareDevice();
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
@@ -229,6 +229,20 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
         }
 
         CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+    }
+    else if (this->GetFormat() == matrixFormatSparseBlockCol)
+    {
+        cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
+
+        PrepareDevice();
+        std::vector<GPUSPARSE_INDEX_TYPE> temp(GetBlockSize());
+        CUDA_CALL(cudaMemcpy(temp.data(), BlockId2ColOrRow(), GetBlockSize() * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyDeviceToHost));
+        for (size_t i = 0; i < temp.size(); ++i)
+            cpuSparseMatrix.BlockIdsLocation()[i] = temp[i];
+
+        cpuSparseMatrix.SetBlockSize(GetBlockSize());
+
+        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data(), NzSize(), cudaMemcpyDeviceToHost));
     }
     else
         NOT_IMPLEMENTED;
@@ -2682,6 +2696,8 @@ template GPUSparseMatrix<char>::~GPUSparseMatrix();
 template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t, size_t) const;
 template GPUMatrix<char> GPUSparseMatrix<char>::CopyColumnSliceToDense(size_t, size_t) const;
 template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix<char>&&);
+template void GPUSparseMatrix<char>::Reshape(const size_t, const size_t);
+template void GPUSparseMatrix<char>::ScaleAndAdd(char, GPUSparseMatrix<char> const &, GPUMatrix<char> &);
 
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();

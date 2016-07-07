@@ -67,6 +67,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\Include</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
@@ -89,7 +90,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -137,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BatchNormalizationEngineTests.cpp" />
+    <ClCompile Include="BlockMultiplierTests.cpp" />
     <ClCompile Include="constants.cpp" />
     <ClCompile Include="ConvolutionEngineTests.cpp" />
     <ClCompile Include="CPUSparseMatrixTests.cpp" />

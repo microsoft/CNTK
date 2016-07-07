@@ -1388,10 +1388,10 @@ void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 template <class ElemType>
 void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
-    VerifyResizable(__func__);
-
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
+
+    VerifyResizable(__func__);
 
     size_t numElements = numRows * numCols;
     if (numElements > GetSizeAllocated() ||                 // grow allocation
@@ -6358,6 +6358,10 @@ template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template char* CPUMatrix<char>::CopyToArray(void) const;
+
+template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+template void CPUMatrix<char>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 template CPUMatrix<int>::~CPUMatrix();
