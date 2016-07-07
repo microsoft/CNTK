@@ -1,5 +1,5 @@
-# configuration file for to build language understanding model with ATIS data
-# LSTM model is built to tage each word in sentences with its semantic label
+# The configuration file to build language understanding model with ATIS corpus.
+# LSTM model is built to tage each word in sentences with its semantic label.
 
 WorkDir = work
 DataDir = data
@@ -22,17 +22,14 @@ action = train
 traceLevel = 1
 
     BrainScriptNetworkBuilder = [
-
-        
         inputDim = $wordCount$
         labelDim = $labelCount$
         featDim = inputDim*3   # contextual words are used as features: previous word, current word, next word.
         embDim = 150
         hiddenDim = 300
-        maxLayer = 1
+        maxLayer = 0
         initScale = 6
         initBias = -1.0
-        useStabilizer = true
         featuresPW = Input(inputDim)    # the previous word
         featuresCW = Input(inputDim)    # the current word
         featuresNW = Input(inputDim)    # the next word
@@ -44,7 +41,7 @@ traceLevel = 1
         emb = LearnableParameter(embDim, featDim)
         featEmbedded = Times(emb, features)
         
-        # build the LSTM stack of a single layer
+        # build the LSTM stack
         lstmDims[i:0..maxLayer] = hiddenDim
         NoAuxInputHook (input, lstmState) = BS.Constants.None
         lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims, 
@@ -80,7 +77,7 @@ traceLevel = 1
         # minibatchSize should be larger than the maximum sentence length
         minibatchSize = 70
 
-        learningRatesPerSample = 0.007*2:0.015*18
+        learningRatesPerSample = 0.01*2:0.005*12:0.001
         gradUpdateType = "FSAdaGrad"
 
         gradientClippingWithTruncation = true
