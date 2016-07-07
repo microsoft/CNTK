@@ -69,7 +69,8 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void TraceNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+/*virtual*/ void TraceNode<ElemType>::ForwardPropSpecialization(const FrameRange& fr) 
+/*override*/
 {
     size_t rank = DetermineElementwiseTensorRank();
     auto result =           ValueTensorFor(rank, fr);

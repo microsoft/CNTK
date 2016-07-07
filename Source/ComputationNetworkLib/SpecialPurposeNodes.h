@@ -40,7 +40,8 @@ public:
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
     virtual void /*IComputationNode::*/ BeginForwardProp() override;
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+;
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
     virtual void /*ComputationNode::*/ Validate(bool isFinalValidationPass) override;
 
@@ -244,7 +245,8 @@ public:
     }
 
     // input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
         size_t numSamples = Input(3)->GetSampleMatrixNumCols();

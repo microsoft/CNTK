@@ -1450,7 +1450,8 @@ public:
             m_maskOfDropout->Resize(Input(0)->Value());
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);

@@ -85,7 +85,7 @@ public:
 
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override;
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
@@ -137,7 +137,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override
     {
         RuntimeError("%ls is a special node only to be used as input to the Input() node.", NodeDescription().c_str());
     }
@@ -290,7 +290,7 @@ public:
             LogicError("UpdateFunctionMBSize: m_value not matching m_sampleLayout");
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override
     {
         // we have been filled by the Reader
     }
@@ -556,7 +556,7 @@ public:
         gradientValues.Reshape(rowsp, colsp);
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& t) override
+    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& t) override
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);

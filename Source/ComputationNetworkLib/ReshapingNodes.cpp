@@ -57,7 +57,8 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+/*virtual*/ void ReduceElementsNode<ElemType>::ForwardPropSpecialization(const FrameRange& fr) 
+/*override*/
 {
     // get the args
     size_t rank = DetermineElementwiseTensorRank();

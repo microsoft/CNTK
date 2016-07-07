@@ -457,7 +457,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::ForwardProp(const FrameRange&) /*override*/
+/*virtual*/ void LearnableParameter<ElemType>::ForwardPropSpecialization(const FrameRange&) /*override*/
 {
 }
 

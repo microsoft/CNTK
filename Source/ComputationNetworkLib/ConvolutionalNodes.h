@@ -313,7 +313,8 @@ public:
         }
     }
 
-    void ForwardProp(const FrameRange& fr) override
+    void ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
@@ -520,7 +521,8 @@ public:
     }
 
 public:
-    void ForwardProp(const FrameRange& fr) override
+    void ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
@@ -621,7 +623,8 @@ public:
     }
 
 public:
-    void ForwardProp(const FrameRange& fr) override
+    void ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         const Matrix<ElemType>& unpoolInput = Input(0)->ValueFor(fr);
         const Matrix<ElemType>& poolInput = Input(1)->ValueFor(fr);
@@ -754,7 +757,8 @@ public:
         }
     }
 
-    void ForwardProp(const FrameRange& fr) override
+    void ForwardPropSpecialization(const FrameRange& fr) override
+
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
