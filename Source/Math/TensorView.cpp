@@ -518,12 +518,12 @@ void TensorView<ElemType>::AssignQuantizedMatrixProductOf(const TensorView& a, b
     ScaleDown(C, matC, scaleA * scaleB);
 
     // We could save those for later as well!
-    FreeQuantizedMatrix(matB);
-    FreeQuantizedMatrix(matC);
+    mult.FreeMatrix(matB);
+    mult.FreeMatrix(matC);
 
     // If caller wants to get the pointer, he will own it.
     if (preppedA == nullptr)
-        FreeQuantizedMatrix(newA);
+        mult.FreeMatrix(newA);
 }
 
 template <typename ElemType>
