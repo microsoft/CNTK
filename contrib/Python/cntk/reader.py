@@ -102,7 +102,7 @@ class CNTKTextFormatReader(AbstractReader):
        with a label.
 
        If your data is in matrix format (one column per feature), you can use
-       `uci_to_cntk_text_format_converter.py <https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
+       `uci2ctf.py <https://github.com/Microsoft/CNTK/blob/master/Scripts/uci2ctf.py>`_
        to convert it to the CNTKTextFormatReader format.
 
     Args:
