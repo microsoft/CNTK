@@ -31,7 +31,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
         throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
     NDArrayViewPtr dataView;
-    if ((device.Type() == DeviceType::CPU))
+    if ((device.Type() == DeviceKind::CPU))
         dataView = cpuDataView;
     else
     {
@@ -47,7 +47,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     ElementType* first = nullptr;
     const ElementType* second = cpuDataView->DataBuffer<ElementType>();
     NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-    if ((device.Type() == DeviceType::CPU))
+    if ((device.Type() == DeviceKind::CPU))
     {
         if (dataView->DataBuffer<ElementType>() != data.data())
             throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
@@ -69,10 +69,10 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     }
 
     first[0] += 1;
-    if ((device.Type() != DeviceType::CPU))
+    if ((device.Type() != DeviceKind::CPU))
         clonedView->CopyFrom(*temp1CpuDataView);
 
-    if ((device.Type() == DeviceType::CPU))
+    if ((device.Type() == DeviceKind::CPU))
     {
         first = clonedView->WritableDataBuffer<ElementType>();
         second = dataView->DataBuffer<ElementType>();
@@ -197,10 +197,12 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
 void NDArrayViewTests()
 {
     TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestNDArrayView<float>(0, DeviceDescriptor::GPUDevice(0));
     TestNDArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
 
     TestSparseCSCArrayView<float>(1, DeviceDescriptor::GPUDevice(0));
     TestSparseCSCArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
+#endif
     TestSparseCSCArrayView<float>(2, DeviceDescriptor::CPUDevice());
 }

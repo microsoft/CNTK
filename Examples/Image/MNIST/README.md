@@ -7,7 +7,7 @@
 |Purpose   |This example demonstrates usage of the NDL (Network Description Language) to define networks.
 |Network   |NDLNetworkBuilder, simple feed forward and convolutional networks, cross entropy with softmax.
 |Training  |Stochastic gradient descent both with and without momentum.
-|Comments  |There are two config files, details are provided below.
+|Comments  |There are four config files, details are provided below.
 
 ## Running the example
 
@@ -57,7 +57,7 @@ The output folder will be created inside Image/MNIST/.
 
 ### Config files
 
-There are three config files and corresponding network description files in the 'Config' folder:
+There are four config files and the corresponding network description files in the 'Config' folder:
 
 1. 01_OneHidden.ndl is a simple, one hidden layer network that produces 2.3% of error.
 To run the sample, navigate to the Data folder and run the following command:  
@@ -74,7 +74,11 @@ As a result, it achieves around 0.8% of error after training for just 2 epochs (
 To run the sample, navigate to the Data folder and run the following command:  
 `cntk configFile=../Config/03_ConvBatchNorm.cntk`
 
-For more details, refer to .ndl and corresponding .cntk files.
+4. 04_DeConv.ndl illustrates the usage of Deconvolution and Unpooling. It is a network with one Convolution, one Pooling, one Unpooling and one Deconvolution layer. In fact it is an auto-encoder network where Rectified Linear Unit (ReLU) or Sigmoid layer is now replaced with Convolutional ReLU (for encoding) and Deconvolutional ReLU (for decoding) layers. The network goal is to reconstruct the original signal, with Mean Squared Error (MSE) used to minimize the reconstruction error. Generally such networks are used in semantic segmentation.  
+To run the sample, navigate to the Data folder and run the following command:  
+`cntk configFile=../Config/04_DeConv.cntk` 
+
+For more details, refer to .ndl and the corresponding .cntk files.
 
 ### Additional files
 

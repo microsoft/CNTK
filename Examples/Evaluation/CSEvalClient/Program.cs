@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -43,6 +44,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// This case requires the 02_Convolution model and the Test-28x28_cntk_text.txt test file which are part of the <CNTK>/Examples/Image/MNIST example.
     /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md"/> for how to train
     /// the model used in this example.
+    /// 
+    /// EvaluateImageClassificationModel
+    /// -----------------------
+    /// This case requires the ResNet_18 trained model which can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>.
+    /// This case shows how to evaluate a model that was trained with the ImageReader.
+    /// The input for evaluation needs to be transformed in a similar manner as the ImageReader did during training.
+    /// 
     /// </description>
     class Program
     {
@@ -70,9 +78,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
-            
+
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
+
+            Console.WriteLine("\n====== EvaluateModelImageInput ========");
+            EvaluateImageClassificationModel();
 
             Console.WriteLine("Press <Enter> to terminate.");
             Console.ReadLine();
@@ -401,9 +412,67 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             sw.Stop();
             ModelEvaluator.DisposeAll();
-
+            
             Console.WriteLine("The file {0} was processed using {1} concurrent model(s) with an error rate of: {2:P2} ({3} error(s) out of {4} record(s)), and a throughput of {5:N2} records/sec", @"Test-28x28_cntk_text.txt", 
                 numConcurrentModels, (float)errorCount / count, errorCount, count, (count + errorCount) * 1000.0 / sw.ElapsedMilliseconds);
+        }
+
+        /// <summary>
+        /// This method shows how to evaluate a trained image classification model
+        /// </summary>
+        public static void EvaluateImageClassificationModel()
+        {
+            try
+            {
+                // This example requires the RestNet_18 model.
+                // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+                // The model is assumed to be located at: <CNTK>\Examples\Image\Miscellaneous\ImageNet\ResNet 
+                // along with a sample image file named "zebra.jpg".
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Miscellaneous\ImageNet\ResNet");
+                Environment.CurrentDirectory = initialDirectory;
+
+                List<float> outputs;
+
+                using (var model = new IEvaluateModelManagedF())
+                {
+                    string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
+
+                    // Prepare input value in the appropriate structure and size
+                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                    if (inDims.First().Value != 224 * 224 * 3)
+                    {
+                        throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
+                    }
+
+                    // Transform the image
+                    string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
+                    Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
+
+                    var resized = bmp.Resize(224, 224, true);
+                    var resizedCHW = resized.ParallelExtractCHW();
+                    var inputs = new Dictionary<string, List<float>>() { {inDims.First().Key, resizedCHW } };
+
+                    // We can call the evaluate method and get back the results (single layer output)...
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                    outputs = model.Evaluate(inputs, outDims.First().Key);
+                }
+
+                // Retrieve the outcome index (so we can compare it with the expected index)
+                var max = outputs.Select((value, index) => new { Value = value, Index = index })
+                    .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
+                    .Index;
+
+                Console.WriteLine("Outcome: {0}", max);
+            }
+            catch (CNTKException ex)
+            {
+                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            }
         }
 
         /// <summary>

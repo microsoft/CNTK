@@ -99,11 +99,11 @@ namespace CNTK
         NDMaskPtr newMask = new NDMask(this->Shape(), this->Device());
         newMask->CopyFrom(*this);
 
-        return NDMaskPtr(newMask, [](_ReferenceCounter* ptr) { delete ptr; });
+        return NDMaskPtr(newMask, [](ReferenceCount* ptr) { delete ptr; });
     }
 
     NDMaskPtr NDMask::Alias() const
     {
-        return NDMaskPtr(new NDMask(this->Shape(), new Matrix<char>(GetMatrix()->AsReference())), [](_ReferenceCounter* ptr) { delete ptr; });
+        return NDMaskPtr(new NDMask(this->Shape(), new Matrix<char>(GetMatrix()->AsReference())), [](ReferenceCount* ptr) { delete ptr; });
     }
 }
