@@ -122,5 +122,5 @@ namespace CNTK
 
     _Internal::_SimpleVector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
 
-    void DeserializeFromVector(NDArrayViewPtr&& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values);
+    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values);
 }

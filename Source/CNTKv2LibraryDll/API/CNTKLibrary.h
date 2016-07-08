@@ -50,7 +50,7 @@ namespace CNTK
     /// Get the 'DataType' corresponding to the ElementType template type argument.
     ///
     template <typename ElementType>
-    inline DataType const AsDataType()
+    inline DataType AsDataType()
     {
         if (std::is_same<ElementType, float>())
             return DataType::Float;
@@ -298,7 +298,7 @@ namespace CNTK
     {
         friend class CompositeFunction;
         friend class Learner;
-        friend class LearnerBase;
+        friend class Learners::LearnerBase;
         template<typename T> friend class Microsoft::MSR::CNTK::SGD;
 
     public:
@@ -1603,7 +1603,7 @@ namespace CNTK
     /// d) Signed long integer
     /// e) vector<DictionaryValue>
     ///
-    class CNTK_API DictionaryValue
+    class CNTK_API DictionaryValue final
     {
     public:
         enum class Type : unsigned int
@@ -1803,15 +1803,14 @@ namespace CNTK
     ///
     /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
     ///
-    class CNTK_API Dictionary
+    class CNTK_API Dictionary final
     {
     public:
         Dictionary();
         ~Dictionary();
 
         // Disallow copy contruction and assignment
-        Dictionary(const Dictionary&) = delete;
-        Dictionary& operator=(const Dictionary&) = delete;
+        Dictionary(const Dictionary&) = delete; Dictionary& operator=(const Dictionary&) = delete;
 
         Dictionary(Dictionary&& other);
         Dictionary& operator=(Dictionary&& other);
@@ -1845,140 +1844,87 @@ namespace CNTK
         const size_t version = 1;
     };
 
-#pragma warning(push)
-#pragma warning(disable : 4251 4275)
     ///
     /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
     /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
-    class CNTK_API Learner : public _Internal::_ReferenceCounter
+    class Learner : public std::enable_shared_from_this<Learner>
     {
     public:
         //
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
         //
-        bool Update(const std::unordered_map<Variable, ValuePtr>& parameters,
-                    const std::unordered_map<Variable, const ValuePtr>& gradients,
-                    size_t trainingSampleCount)
-        {
-            auto abisSafeParametersMap = _Internal::_SimpleMap<Variable, ValuePtr>::CreateSimpleMap(parameters);
-            auto abisSafeGradientsMap = _Internal::_SimpleMap<Variable, const ValuePtr>::CreateSimpleMap(gradients);
-            return Update(abisSafeParametersMap, abisSafeGradientsMap, trainingSampleCount);
-        }
+        CNTK_API virtual bool Update(const std::unordered_map<Variable, ValuePtr>& parameterValues,
+                                     const std::unordered_map<Variable, const ValuePtr>& gradientValues,
+                                     size_t trainingSampleCount);
 
         ///
         /// Returns the set of parameters associated with this learner.
         ///
-        std::unordered_set<Variable> Parameters() const { return m_parameters; }
+        const std::unordered_set<Variable>& Parameters() const { return m_parameters; }
 
+        // TODO: move the following two methods into ISerializable interface, make 
+        // Learner (and all other entities that need checkpointing capability) implement it.
         ///
         /// Optionally overridable method to checkpoint the learner's state.
         ///
-        virtual Dictionary GetCheckpointState() const = 0;
+        CNTK_API virtual Dictionary GetCheckpointState() const = 0;
 
         ///
         /// Optionally overridable method to restore the learner's state from a previous checkpoint.
         ///
-        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
 
         virtual ~Learner()
         {
         }
 
-        ///
-        /// Additional learning parameters.
-        ///
-        struct AdditionalParameters
-        {
-            double l1RegWeight = 0.0;
-            double l2RegWeight = 0.0;
-            double gaussianNoiseInjectStd = 0.0;
-            bool gradientClippingWithTruncation = false;
-            double clippingThresholdPerSample = 0.0;
-            DeviceDescriptor device = DeviceDescriptor::DefaultDevice();
-            _Internal::_SimpleMap<Variable, double> learningRateMultipliers;
-
-            void SetLearningRateMultipliers(const std::unordered_map<Variable, double>& multipliers)
-            {
-                learningRateMultipliers = _Internal::_SimpleMap<Variable, double>::CreateSimpleMap(multipliers);
-            }
-        };
-
-        static const AdditionalParameters s_defaultParameters;
-
-        virtual void SetLearningRate(double value) = 0;
-        virtual void SetMomentum(double value) = 0;
-
-        // TODO: should this be called ResetMomentum?
-        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
-        virtual void ResetSmoothedGradients() = 0;
-
     protected:
-        Learner(const _Internal::_SimpleSet<Variable>& parameters)
+        Learner(const std::unordered_set<Variable>& parameters)
             : m_parameters(parameters)
         {
         }
 
-        virtual bool Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
-                            const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
-                            size_t trainingSampleCount) = 0;
-
-        _Internal::_SimpleSet<Variable> m_parameters;
+        std::unordered_set<Variable> m_parameters;
 
     };
-
-#pragma warning(pop)
-
-    CNTK_API LearnerPtr _SGDLearner(const _Internal::_SimpleSet<Variable>& parameters, bool useNesterovAcceleration = false,
-                                    const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
-
-    CNTK_API LearnerPtr _AdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters, bool needAveMultiplier = true,
-                                        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
-
-    CNTK_API LearnerPtr _FSAdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters,
-                                          const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
-
-    CNTK_API LearnerPtr _RMSPropLearner(const _Internal::_SimpleSet<Variable>& parameters,
-                                        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
-                                        const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters);
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
-    inline LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters, bool useNesterovAcceleration = false,
-                                 const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
-    {
-        return _SGDLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), useNesterovAcceleration, additionalParameters);
-    }
+    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters,
+                                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+     ///
+    /// Create an instance of the CNTK built-in Momentum SGD learner.
+    ///
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Variable>& parameters,
+                                           const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+     ///
+    /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
+    ///
+    CNTK_API LearnerPtr NAGLearner(const std::unordered_set<Variable>& parameters,
+                                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    inline LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true,
-                                     const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
-    {
-        return _AdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), needAveMultiplier, additionalParameters);
-    }
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true,
+                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
-    inline LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
-                                       const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
-    {
-        return _FSAdaGradLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters), additionalParameters);
-    }
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
+                                         const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
-    inline LearnerPtr RMSPropLearner(const std::unordered_set<Variable>& parameters,
-                                     double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
-                                     const Learner::AdditionalParameters& additionalParameters = Learner::s_defaultParameters)
-    {
-        return _RMSPropLearner(_Internal::_SimpleSet<Variable>::CreateSimpleSet(parameters),
-                               gamma, inc, dec, max, min, needAveMultiplier, additionalParameters);
-    }
+    CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Variable>& parameters,
+                                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 }

@@ -1,175 +1,218 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 
-namespace CNTK {
-
-class LearnerBase : public Learner
+namespace CNTK 
 {
-public:
-
-    virtual Dictionary GetCheckpointState() const override;
-
-    virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
-
-protected:
-    LearnerBase(const _Internal::_SimpleSet<Variable>& parameters, const Learner::AdditionalParameters& additionalParameters);
-
-    virtual bool Update(const _Internal::_SimpleMap<Variable, ValuePtr>& parameters,
-                        const _Internal::_SimpleMap<Variable, const ValuePtr>& gradients,
-                        size_t trainingSampleCount) override;
-
-    virtual void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const = 0;
-
-    double ParameterDependentLearningRate(const Variable& parameter) const
+    // A collection of additional options that are applicable for all standard learners 
+    // (after these options are set, they retain their value for the entire lifespan of a learner).
+    struct AdditionalLearningOptions
     {
-        return m_learningRatePerSample * m_learningRateMultipliers[parameter];
-    }
+        double l1RegularizationWeight = 0.0;
+        double l2RegularizationWeight = 0.0;
+        double gaussianNoiseInjectionStdDev = 0.0;
+        bool gradientClippingWithTruncation = false;
+        double gradientClippingThresholdPerSample = 0.0;
+        std::unordered_map<Variable, double> learningRateMultipliers;
+    };
 
-    virtual std::wstring LearnerType() = 0;
+    // An abstract base class at the root of the standard learners hierarchy
+    // It implements most of the learner functionality, except for the actual update function,
+    // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
+    class LearnerBase : public Learner
+    {
+    public:
 
-    double m_learningRatePerSample;
-    double m_momentumPerSample;
+        CNTK_API virtual bool Update(const std::unordered_map<Variable, ValuePtr>& parameterValues,
+                                     const std::unordered_map<Variable, const ValuePtr>& gradientValues,
+                                     size_t trainingSampleCount) override final;
 
-    double m_L1RegWeight;
-    double m_L2RegWeight;
-    double m_GaussianNoiseInjectStd;
+        CNTK_API virtual Dictionary GetCheckpointState() const override;
 
-    bool m_gradientClippingWithTruncation;
-    double m_clippingThresholdPerSample;
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
-    size_t m_sampleCount;
+        // TODO: move learning rate and momentum scheduling and adjustment functionality 
+        // inside the learner and drop these setters.
+        void SetLearningRate(double value) { m_learningRatePerSample = value; }
 
-    _Internal::_SimpleSet<Variable> m_parameters;
+        CNTK_API void SetAdditionalOptions(const AdditionalLearningOptions& additionalOptions)
+        {
+            m_additionalOptions = additionalOptions;
+        }
 
-    _Internal::_SimpleMap<Variable, double> m_learningRateMultipliers;
+        // TODO: should this be called ResetMomentum?
+        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
+        CNTK_API void ResetSmoothedGradients();
 
-    _Internal::_SimpleMap<Variable, ValuePtr> m_smoothedGradients;
+    protected:
+        LearnerBase(const std::unordered_set<Variable>& parameters,
+                    const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
-    template <typename ElementType>
-    static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr arrayView);
+        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const = 0;
 
-    template <typename ElementType>
-    static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(NDArrayViewPtr arrayView);
+        double ParameterDependentLearningRate(const Variable& parameter) const
+        {
+            return m_learningRatePerSample * m_additionalOptions.learningRateMultipliers.at(parameter);
+        }
 
-    template <typename ElementType>
-    static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr arrayView);
+        std::string LearnerType() const;
 
-    template <typename ElementType>
-    static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(NDArrayViewPtr arrayView);
+        double m_learningRatePerSample;
 
-    template <typename ElementType>
-    void ClipGradient(Microsoft::MSR::CNTK::Matrix<ElementType>& gradient, size_t actualMBSize) const;
+        AdditionalLearningOptions m_additionalOptions;
 
-    template <typename ElementType>
-    void PreProcess(const Variable& learnableParameter, const ValuePtr& gradient, const ValuePtr& parameter, size_t actualMBSize) const;
+        size_t m_sampleCount;
 
-    template <typename ElementType>
-    void PostProcess(const Variable& learnableParameter, const ValuePtr& gradient, const ValuePtr& parameter, size_t actualMBSize) const;
+        std::unordered_map<Variable, ValuePtr> m_smoothedGradientValues;
 
-    virtual void SetLearningRate(double value) override { m_learningRatePerSample = value; }
-    virtual void SetMomentum(double value) override { m_momentumPerSample = value; }
+        // The following four static protected methods expose private methods of NDArrayView class
+        // (which declares LearnerBase as friend class), so that they are available to subclasses.
+        template <typename ElementType>
+        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr arrayView);
 
-    virtual void ResetSmoothedGradients() override;
+        template <typename ElementType>
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(NDArrayViewPtr arrayView);
 
-private:
-    // TODO: make these functions friends of NDViewArray and move to Utils?
-    static bool HasNan(const ValuePtr& value, const char* name);
-    static void Print(const ValuePtr& value, const char* msg);
-};
+        template <typename ElementType>
+        static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr arrayView);
 
-namespace Learners {
+        template <typename ElementType>
+        static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(NDArrayViewPtr arrayView);
 
-class SGDLearner : public LearnerBase
-{
-public:
+        template <typename ElementType>
+        void ClipGradient(Microsoft::MSR::CNTK::Matrix<ElementType>& gradient, size_t actualMBSize) const;
 
-    SGDLearner(const _Internal::_SimpleSet<Variable>& parameters, bool useNesterovAcceleration,
-               const Learner::AdditionalParameters& additionalParameters);
+        // Performs additional preprocessing before calling the update method 
+        // (gradient clipping and L2 regularization depending on the additional learning parameters).
+        template <typename ElementType>
+        bool PreProcess(const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t actualMBSize) const;
 
-protected:
+        // Performs additional postprocessing after the update method has been executed
+        // (noise injection and L1 regularization specified by the additional learning parameters).
+        template <typename ElementType>
+        bool PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
+                         const ValuePtr& parameterValue, size_t actualMBSize) const;
+    private:
+        // TODO: make these functions friends of NDViewArray and move to Utils?
+        static bool HasNan(const ValuePtr& value, const char* name);
+        static void Print(const ValuePtr& value, const char* msg);
+    };
 
-    bool m_useNesterovAcceleration;
+    // Vanilla gradient descent optimization algorithm.
+    class LearnerSGD : public LearnerBase
+    {
+    public:
 
-    virtual void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const override;
+        LearnerSGD(const std::unordered_set<Variable>& parameters,
+                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
+                   : LearnerBase(parameters, device),
+                   m_momentumPerSample(0.0),
+                   m_useNesterovAcceleration(false)
+        {
+        }
 
-    template <typename ElementType>
-    void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const;
+    protected:
 
-    virtual std::wstring LearnerType() override { return L"SGD Learner"; }
-};
+        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
-class AdaGradLearner : public LearnerBase
-{
-public:
+        template <typename ElementType>
+        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
 
-    AdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters, bool needAveMultiplier,
-                   const Learner::AdditionalParameters& additionalParameters);
+        double m_momentumPerSample;
+        bool m_useNesterovAcceleration;
+    };
 
-protected:
-    bool m_needAveMultiplier;
+    // SGD optimization with momentum. 
+    class LearnerMomentumSGD : public LearnerSGD
+    {
+    public:
 
-    virtual void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const override;
+        LearnerMomentumSGD(const std::unordered_set<Variable>& parameters,
+                           const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
+                           : LearnerSGD(parameters, device)
+        {
+        }
 
-    template <typename ElementType>
-    void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const;
+        void SetMomentum(double value) { m_momentumPerSample = value; }
+    };
 
-    virtual std::wstring LearnerType() override { return L"AdaGrad Learner"; }
-};
+    // Nesterov's accelerated SGDLearnerBase descent. 
+    class LearnerNesterov : public LearnerSGD
+    {
+    public:
 
-class FSAdaGradLearner : public LearnerBase
-{
-public:
+        LearnerNesterov(const std::unordered_set<Variable>& parameters,
+                        const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
+                        : LearnerSGD(parameters, device)
+        {
+            m_useNesterovAcceleration = true;
+        }
+    };
 
-    FSAdaGradLearner(const _Internal::_SimpleSet<Variable>& parameters,
-                     const Learner::AdditionalParameters& additionalParameters);
+    class LearnerAdaGrad : public LearnerBase
+    {
+    public:
 
-protected:
+        LearnerAdaGrad(const std::unordered_set<Variable>& parameters, bool needAveMultiplier,
+                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
-    virtual void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const override;
+    protected:
+        bool m_needAveMultiplier;
 
-    template <typename ElementType>
-    void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const;
+        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
-    virtual std::wstring LearnerType() override { return L"FSAdaGrad Learner"; }
-};
+        template <typename ElementType>
+        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+    };
 
-struct RMSPropInfo
-{
-    double gamma;
-    double inc;
-    double dec;
-    double max;
-    double min;
-};
+    class LearnerFSAdaGrad : public LearnerMomentumSGD
+    {
+    public:
 
-class RMSPropLearner : public LearnerBase
-{
-public:
+        LearnerFSAdaGrad(const std::unordered_set<Variable>& parameters,
+                         const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
-    RMSPropLearner(const _Internal::_SimpleSet<Variable>& parameters, RMSPropInfo info,
-                   bool needAveMultiplier, const Learner::AdditionalParameters& additionalParameters);
+    protected:
 
-protected:
+        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
-    double m_rmsGamma;
-    RMSPropInfo m_info;
-    bool m_needAveMultiplier;
+        template <typename ElementType>
+        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+    };
 
-    virtual void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                        const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const override;
+    class LearnerRMSProp : public LearnerBase
+    {
+    public:
 
-    template <typename ElementType>
-    void Update(const Variable& learnableParameter, const ValuePtr& smoothedGradient,
-                const ValuePtr& gradient, const ValuePtr& parameter, size_t trainingSampleCount) const;
+        LearnerRMSProp(const std::unordered_set<Variable>& parameters,
+                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
+                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 
-    virtual std::wstring LearnerType() override { return L"RMSProp Learner"; }
-};
-}
+    protected:
+
+        double m_gamma;
+        double m_inc;
+        double m_dec;
+        double m_max;
+        double m_min;
+        bool m_needAveMultiplier;
+
+        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+    };
 }

@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          {
          }
          
-         virtual void OnEpochStart(const std::list<ComputationNodeBasePtr>& /*LearnableNodes*/)
+         virtual void OnEpochStart(const std::list<ComputationNodeBasePtr>& /*learnableNodes*/)
          {
              m_MAworkerStatus.resize(m_numWorkers);
              std::fill(m_MAworkerStatus.begin(), m_MAworkerStatus.end(), MAWorkerStatus::DataProcessing);
@@ -146,9 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              m_perfReporter.OnEpochStart();
          }
 
-         virtual bool OnEpochEnd(const std::list<ComputationNodeBasePtr>&    LearnableNodes,
-                                    size_t                                      samplesSinceLastSync 
-                                    )
+         virtual bool OnEpochEnd(const std::list<ComputationNodeBasePtr>& learnableNodes, size_t samplesSinceLastSync)
          {
              m_MAworkerStatus[m_myRank] = MAWorkerStatus::DataEnd;
              Timer syncPointTimer; syncPointTimer.Start(); 
@@ -161,7 +159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              if (read2sync)
              {
                  m_numSyncPerformed++;
-                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, totalSamplesProcessed, secondsOnCommunication);
+                 ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, totalSamplesProcessed, secondsOnCommunication);
                  m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              
@@ -171,7 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          }
 
          virtual bool OnArrivingAtSyncPoint(
-            const std::list<ComputationNodeBasePtr>& LearnableNodes,        /* input/output: */
+            const std::list<ComputationNodeBasePtr>& learnableNodes,        /* input/output: */
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
              )
          {
@@ -186,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              if (read2Sync)
              {
                  m_numSyncPerformed++;
-                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, totalSamplesProcessed, secondsOnCommunication);
+                 ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, totalSamplesProcessed, secondsOnCommunication);
                  m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              return read2Sync;
@@ -199,7 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              float&                                    secondsOnCommunication   /* out */) = 0; 
          
          virtual void SaveToCheckPoint(File& fstream){}
-         virtual void LoadFromCheckPoint(File& fstream){}
+         virtual void LoadFromCheckPoint(File& fstream, size_t ckpVersion){}
          
 
     protected:

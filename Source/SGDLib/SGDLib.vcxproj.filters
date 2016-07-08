@@ -25,10 +25,10 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h">
-      <Filter>from ComputationNetworkLib\Network</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
@@ -49,19 +49,19 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
@@ -112,19 +112,22 @@
       <Filter>Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
+      <Filter>from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="MASGD.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="Criterion.h">
       <Filter>SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKv2LibraryDll\Learner.h">
+      <Filter>from CNTKv2LibraryDll</Filter>
     </ClInclude>
     <ClInclude Include="..\CNTKv2LibraryDll\API\CNTKLibrary.h">
       <Filter>from CNTKv2LibraryDll\API</Filter>
@@ -152,15 +155,6 @@
     <Filter Include="Eval">
       <UniqueIdentifier>{c263e5cd-26a3-4277-bf2f-f3de466267a3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from ComputationNetworkLib">
-      <UniqueIdentifier>{d5cc574b-5fd1-476b-b69e-0c6428a55262}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from ComputationNetworkLib\Network">
-      <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from ComputationNetworkLib\Nodes">
-      <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="from Math">
       <UniqueIdentifier>{4c82e709-ff3e-43ab-b94c-763e300b637e}</UniqueIdentifier>
     </Filter>
@@ -172,6 +166,15 @@
     </Filter>
     <Filter Include="from CNTKv2LibraryDll\API">
       <UniqueIdentifier>{883a1c27-39bb-4252-bc68-376ad51930d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKv2LibraryDll\from ComputationNetworkLib">
+      <UniqueIdentifier>{d5cc574b-5fd1-476b-b69e-0c6428a55262}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKv2LibraryDll\from ComputationNetworkLib\Network">
+      <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKv2LibraryDll\from ComputationNetworkLib\Nodes">
+      <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

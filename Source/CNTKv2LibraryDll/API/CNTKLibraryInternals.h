@@ -138,8 +138,11 @@ namespace CNTK
     // Forward declarations
     class CompositeFunction;
     class Function;
-    class LearnerBase;
     class Dictionary;
+    
+    namespace Learners {
+        class LearnerBase;
+    }
 
     namespace _Internal
     {
@@ -398,7 +401,7 @@ namespace CNTK
         class CNTK_API _SimpleSet final
         {
             friend class ::CNTK::CompositeFunction;
-            friend class ::CNTK::LearnerBase;
+            friend class ::CNTK::Learners::LearnerBase;
 
             template <typename T>
             friend CNTK_API bool operator==(const _SimpleSet<T>& first, const _SimpleSet<T>& second);
@@ -502,9 +505,8 @@ namespace CNTK
     typedef _Internal::_ReferenceCounterSharedPtr<Function> FunctionPtr;
 
     class Learner;
-    typedef _Internal::_ReferenceCounterSharedPtr<Learner> LearnerPtr;
+    typedef std::shared_ptr<Learner> LearnerPtr;
 
-    class LearnerBase;
 
     inline wchar_t* CopyString(const wchar_t* source)
     {

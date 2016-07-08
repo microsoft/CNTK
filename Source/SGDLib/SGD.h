@@ -587,8 +587,8 @@ private:
                                                         TensorShape(matrix.GetNumRows(), matrix.GetNumCols()));
 
             return new ::CNTK::NDArrayView(::CNTK::AsDataType<ElemType>(), GetDeviceDescriptor(matrix.GetDeviceId()),
-                                            ::CNTK::StorageFormat::SparseCSC, { matrix.GetNumRows(), matrix.GetNumCols() }, 
-                                            false, tensorView);
+                                           ::CNTK::StorageFormat::SparseCSC, { matrix.GetNumRows(), matrix.GetNumCols() }, 
+                                           false, tensorView);
         }
 
         return new ::CNTK::NDArrayView({ matrix.GetNumRows(), matrix.GetNumCols() }, 

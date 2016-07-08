@@ -354,15 +354,16 @@ namespace CNTK
             FreePtrAsType<_Internal::_SimpleVector<DictionaryValue>>();
     }
 
-    Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us) 
+    Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us)
     {
         size_t version;
         stream >> version;
 
         stream >> us.m_valueType;
-        
-        switch (us.ValueType()) {
-        case DictionaryValue::Type::Bool: 
+
+        switch (us.ValueType())
+        {
+        case DictionaryValue::Type::Bool:
             stream >> us.m_data.m_boolean;
             break;
         case DictionaryValue::Type::SizeT:
@@ -403,13 +404,15 @@ namespace CNTK
         }
         return stream;
     }
-    
-    Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us) {
+
+    Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us)
+    {
         stream << us.version;
 
         stream << us.ValueType();
-        
-        switch (us.ValueType()) {
+
+        switch (us.ValueType())
+        {
         case DictionaryValue::Type::Bool:
             stream << us.m_data.m_boolean;
             break;
@@ -494,10 +497,10 @@ namespace CNTK
         return (m_dictionaryData->find(key) != m_dictionaryData->end());
     }
 
-    Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us) 
+    Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us)
     {
         stream << us.version;
-        stream << us.m_dictionaryData->size(); 
+        stream << us.m_dictionaryData->size();
         for (auto it = us.m_dictionaryData->begin(); it != us.m_dictionaryData->end(); ++it)
         {
             stream << it->first;
@@ -506,11 +509,11 @@ namespace CNTK
         return stream;
     }
 
-    Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us) 
+    Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us)
     {
         size_t version;
         stream >> version;
-        size_t size; 
+        size_t size;
         stream >> size;
         us.m_dictionaryData->reserve(size);
         for (auto i = 0; i < size; i++)
@@ -523,104 +526,101 @@ namespace CNTK
         }
         return stream;
     }
+    
+    namespace _Internal
+    {
 
+        template <typename T>
+        _Internal::_SimpleVector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr)
+        {
+            if (viewPtr->IsSparse())
+            {
+                LogicError("Sparse NDArrayView cannot be serialized into a vector.");
+            }
+
+            auto numElements = viewPtr->Shape().TotalSize();
+
+            _Internal::_SimpleVector<DictionaryValue> values(numElements);
+
+            NDArrayViewPtr cpuDataViewPtr = viewPtr;
+            if ((viewPtr->Device().Type() != DeviceType::CPU))
+            {
+                cpuDataViewPtr = new NDArrayView(viewPtr->GetDataType(), viewPtr->Shape(), DeviceDescriptor::CPUDevice());
+                cpuDataViewPtr->CopyFrom(*viewPtr);
+            }
+
+            const T* buffer = cpuDataViewPtr->DataBuffer<T>();
+            for (auto i = 0; i < numElements; ++i)
+            {
+                T v = buffer[i];
+                values[i] = DictionaryValue(v);
+            }
+
+            return values;
+        }
+
+        template <typename T>
+        void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values)
+        {
+            if (viewPtr->IsSparse())
+            {
+                LogicError("Sparse NDArrayView cannot be deserialized from a vector.");
+            }
+
+            auto numElements = viewPtr->Shape().TotalSize();
+
+            if (values.Size() != numElements)
+            {
+                LogicError("Number of elements (%lu) in the deserialized representation does not match the expected value (%lu)",
+                           values.Size(), numElements);
+            }
+
+            NDArrayViewPtr cpuDataViewPtr = viewPtr;
+            if ((viewPtr->Device().Type() != DeviceType::CPU))
+            {
+                cpuDataViewPtr = new NDArrayView(viewPtr->GetDataType(), viewPtr->Shape(), DeviceDescriptor::CPUDevice());
+            }
+
+            T* buffer = cpuDataViewPtr->WritableDataBuffer<T>();
+            for (auto i = 0; i < numElements; ++i)
+            {
+                buffer[i] = values[i].GetValue<T>();
+            }
+
+            if ((viewPtr->Device().Type() != DeviceType::CPU))
+            {
+                viewPtr->CopyFrom(*cpuDataViewPtr);
+            }
+        }
+    }
 
     // TODO: we store the type info for every element in the vector, which is extremely redundant.
     // Instead, it'd be nice to introduce some sort of DictionaryValueVector.
     _Internal::_SimpleVector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr)
-    {        
-        if (viewPtr->IsSparse())
-        {
-            LogicError("Sparse NDArrayView cannot be serialized into a vector.");
-        }
-
-        auto numElements = viewPtr->Shape().TotalSize();
-
-        _Internal::_SimpleVector<DictionaryValue> values(numElements);
-
-        NDArrayViewPtr cpuDataViewPtr = viewPtr;
-        if ((viewPtr->Device().Type() != DeviceType::CPU))
-        {
-            cpuDataViewPtr = new NDArrayView(viewPtr->GetDataType(), viewPtr->Shape(), DeviceDescriptor::CPUDevice());
-            cpuDataViewPtr->CopyFrom(*viewPtr);
-        }
-
-        switch (cpuDataViewPtr->GetDataType())
+    {
+        switch (viewPtr->GetDataType())
         {
         case DataType::Float:
-        {
-            const float* buffer = cpuDataViewPtr->DataBuffer<float>();
-            for (auto i = 0; i < numElements; ++i)
-            {
-                float v = buffer[i];
-                values[i] = DictionaryValue(v);
-            }
-            break; 
-        }
+            return _Internal::SerializeToVector<float>(viewPtr);
         case DataType::Double:
-        {
-            const double* buffer = cpuDataViewPtr->DataBuffer<double>();
-            for (auto i = 0; i < numElements; ++i)
-            {
-                values[i] = DictionaryValue(buffer[i]);
-            }
-            break;
-        }
-        default:
-            LogicError("Unsupported DataType %s", DataTypeName(cpuDataViewPtr->GetDataType()));
-        }
-
-        return values;
-    }
-
-    void DeserializeFromVector(NDArrayViewPtr&& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values)
-    {        
-        if (viewPtr->IsSparse())
-        {
-            LogicError("Sparse NDArrayView cannot be deserialized from a vector.");
-        }
-
-        auto numElements = viewPtr->Shape().TotalSize();
-
-        if (values.Size() != numElements) 
-        {
-            LogicError("Number of elements (%lu) in the deserialized representation does not match the expected value (%lu)",
-                values.Size(), numElements);
-        }
-
-        NDArrayViewPtr cpuDataViewPtr = viewPtr;
-        if ((viewPtr->Device().Type() != DeviceType::CPU))
-        {
-            cpuDataViewPtr = new NDArrayView(viewPtr->GetDataType(), viewPtr->Shape(), DeviceDescriptor::CPUDevice());
-        }
-
-        switch (cpuDataViewPtr->GetDataType())
-        {
-        case DataType::Float:
-        {
-            float* buffer = cpuDataViewPtr->WritableDataBuffer<float>();
-            for (auto i = 0; i < numElements; ++i)
-            {
-                buffer[i] = values[i].GetValue<float>();
-            }
-            break;
-        }
-        case DataType::Double:
-        {
-            double* buffer = cpuDataViewPtr->WritableDataBuffer<double>();
-            for (auto i = 0; i < numElements; ++i)
-            {
-                buffer[i] = values[i].GetValue<double>();
-            }
-            break;
-        }
+            return _Internal::SerializeToVector<double>(viewPtr);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(viewPtr->GetDataType()));
         }
+    }
 
-        if ((viewPtr->Device().Type() != DeviceType::CPU))
+    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values) 
+    {
+        switch (viewPtr->GetDataType())
         {
-            viewPtr->CopyFrom(*cpuDataViewPtr);
+        case DataType::Float:
+            _Internal::DeserializeFromVector<float>(viewPtr, values);
+            break;
+        case DataType::Double:
+            _Internal::DeserializeFromVector<double>(viewPtr, values);
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(viewPtr->GetDataType()));
         }
     }
      
