@@ -708,9 +708,8 @@ def log(x, name=None):
 
 def log_plus(left, right, name=None):
     """
-    Binary function computing log(exp(left) + exp(right)) in an overflow save way: 
+    Binary function computing :math:`ln({e^{left} + e^{right}})` in an overflow save way.
     
-
     Args:
         left: left side tensor
         right: right side tensor
