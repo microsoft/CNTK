@@ -1519,7 +1519,8 @@ public:
             RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
-        m_valueDefaultView = TensorView<ElemType>(m_value, TensorShape());
+        // Attach matrix to default view. The shape will be overwritten when it is used.
+        m_valueDefaultView = TensorView<ElemType>(m_value, TensorShape(array<size_t, 2>{m_value->GetNumRows(), m_value->GetNumCols()}));
     }
 
     // release temp matrices that are only used by forward computation
