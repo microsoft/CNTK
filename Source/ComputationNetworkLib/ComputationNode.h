@@ -2067,6 +2067,7 @@ protected:                                                                      
     using Base::ValueFor;                                                                                                                                \
     using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
+    using Base::ValueTensorRefFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \
     using Base::WriteMinibatchWithFormatting;                                                                                                            \
