@@ -112,42 +112,6 @@ def test_op_sigmoid(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
-LOG_PLUS_TESTCASES = [
-    ([      1], [     2], [[[m.log(m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 1) / (m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 2) / (m.exp( 1)+ m.exp( 2))]]]), # test case: first argument < seond argument 
-    ([     -1], [    -2], [[[m.log(m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-1) / (m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-2) / (m.exp(-1)+ m.exp(-2))]]]), # test case: second argument > first argument
-    ([      0], [100000], [[[100000]]],                      [[[0]]],                                  [[[1]]]),                                  # test case: check that we don't have overflow
-    ([ 100000], [     0], [[[100000]]],                      [[[1]]],                                  [[[0]]]),                                  # test case: check that we don't have overflow
-    ([ 100000], [   0,0], [[[100000, 100000]]],              [[[2]]],                                  [[[0,0]]]),                                # test case: broadcasting. Note the result for grad_x is two because of reduction in backward path
-]
-
-@pytest.mark.parametrize("x, y, expected, grad_x, grad_y", LOG_PLUS_TESTCASES)
-def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
-
-    from .. import log_plus
-
-    # Forward pass test
-    # ==================
-
-    a = I([x])
-    b = I([y])
-
-    unittest_helper(log_plus(a,b), None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-    # Backward pass tests
-    # ==================
-    op_node_a = log_plus(a, y)
-    op_node_b = log_plus(x, b)
-
-    unittest_helper(op_node_a, None, grad_x, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
-
-    unittest_helper(op_node_b, None, grad_y, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
-
-
 @pytest.mark.parametrize("batch",
                          [
                              [  # 2 samples having 4 classes
@@ -184,6 +148,29 @@ def test_op_softmax(batch, device_id, precision):
                     precision=precision,
                     clean_up=True, backward_pass=False)
 
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is fi(1-fi) for i and -fi*fj
+    # for element j!=i.
+    def numpy_grad(x):
+        grads = np.zeros((len(x), len(x)), dtype=PRECISION_TO_TYPE[precision])
+
+        for i in range(len(x)):
+            # deriving wrt i-th element
+            for j in range(len(x)):
+                if i == j:
+                    grads[i, j] = x[i] * (1 - x[i])
+                else:
+                    grads[i, j] = x[i] * (-x[j])
+
+        return grads.sum(axis=0)
+
+    expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
 
 
 @pytest.mark.parametrize("tensor", TENSORS)
@@ -511,3 +498,42 @@ def test_op_cond(flag, value_a, value_b, device_id, precision):
     result = cond(cond_as_const, value_a_as_const, value_b_as_input)
     unittest_helper(result, None, expected, device_id=device_id, 
                     precision=precision, clean_up=True, backward_pass=True, input_node=value_b_as_input)
+
+
+
+LOG_PLUS_TESTCASES = [
+    ([      1], [     2], [[[m.log(m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 1) / (m.exp( 1)+ m.exp( 2))]]], [[[m.exp( 2) / (m.exp( 1)+ m.exp( 2))]]]), # test case: first argument < seond argument 
+    ([     -1], [    -2], [[[m.log(m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-1) / (m.exp(-1)+ m.exp(-2))]]], [[[m.exp(-2) / (m.exp(-1)+ m.exp(-2))]]]), # test case: second argument > first argument
+    ([      0], [100000], [[[100000]]],                      [[[0]]],                                  [[[1]]]),                                  # test case: check that we don't have overflow
+    ([ 100000], [     0], [[[100000]]],                      [[[1]]],                                  [[[0]]]),                                  # test case: check that we don't have overflow
+    ([ 100000], [   0,0], [[[100000, 100000]]],              [[[2]]],                                  [[[0,0]]]),                                # test case: broadcasting. Note the result for grad_x is two because of reduction in backward path
+]
+
+@pytest.mark.parametrize("x, y, expected, grad_x, grad_y", LOG_PLUS_TESTCASES)
+def test_op_log_plus(x, y, expected, grad_x, grad_y, device_id, precision):
+
+    from .. import log_plus
+
+    # Forward pass test
+    # ==================
+
+    a = I([x])
+    b = I([y])
+
+    unittest_helper(log_plus(a,b), None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass tests
+    # ==================
+    op_node_a = log_plus(a, y)
+    op_node_b = log_plus(x, b)
+
+    unittest_helper(op_node_a, None, grad_x, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
+
+    unittest_helper(op_node_b, None, grad_y, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
+
+
