@@ -227,11 +227,12 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 template <class ElemType>
 void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
-    if (m_miniBatchSize != mbSize || m_qValues == NULL || m_dValues == NULL || m_labels == NULL)
+    if (m_miniBatchSize != mbSize || m_dIdValues == NULL || m_qEmbValues == NULL || m_dEmbValues == NULL || m_labels == NULL)
     {
         m_miniBatchSize = mbSize;
-        m_qValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
-        m_dValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
+        m_dIdValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_numWordsPerDoc * m_miniBatchSize);
+        m_qEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
+        m_dEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
         m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
 
         memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
@@ -269,18 +270,26 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     for (int i = 0; i <= m_numDocs; i++)
     {
         char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer);
-        char* tgtAddrBase = (char*)(i == 0 ? m_qValues : m_dValues);
+        char* tgtAddrBase = (char*)(i == 0 ? m_qEmbValues : m_dEmbValues);
         size_t numWordsPerFeatureSample = (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
         size_t numRows = m_vectorSize * numWordsPerFeatureSample;
-        std::wstring featureName = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
+        std::wstring featureNameIdentity = (i == 0 ? L"Qi" : L"Di" + std::to_wstring(i - 1));
+        std::wstring featureNameEmbedding = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
+        bool inclIdentityFeature = (i > 0 && matrices.HasInput(featureNameIdentity));
+        bool inclEmbeddingFeature = matrices.HasInput(featureNameEmbedding);
 
-        if (!matrices.HasInput(featureName))
+        if (!inclIdentityFeature && !inclEmbeddingFeature)
             continue;
 
-        Matrix<ElemType>& features = matrices.GetInputMatrix<ElemType>(featureName);
-        features.Resize(numRows, actualMiniBatchSize);
+        if (inclIdentityFeature)
+        {
+            memset(m_dIdValues, 0, sizeof(ElemType) * m_numWordsPerQuery * m_numWordsPerDoc * actualMiniBatchSize);
+        }
 
-        memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * actualMiniBatchSize);
+        if (inclEmbeddingFeature)
+        {
+            memset(tgtAddrBase, 0, sizeof(ElemType) * numRows * actualMiniBatchSize);
+        }
 
         for (int j = 0; j < actualMiniBatchSize; j++)
         {
@@ -291,16 +300,47 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                                                     + j * m_bytesPerSample
                                                     + (i > 0 ? m_numWordsPerQuery + (i - 1) * m_numWordsPerDoc : 0) * sizeof(int32_t)
                                                     + k * sizeof(int32_t));
+
                 if (wordId == 0)
                     continue;
 
-                char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector;
-                char* tgtAddr = tgtAddrBase + (j * numWordsPerFeatureSample + k) * m_bytesPerVector;
-                memcpy(tgtAddr, srcAddr, m_bytesPerVector);
+                if (inclIdentityFeature)
+                {
+                    ElemType* tgtIdAddr = (ElemType*)(m_dIdValues + (j * m_numWordsPerDoc + k) * m_numWordsPerQuery * sizeof(ElemType));
+                    for (int l = 0; l < m_numWordsPerQuery; l++)
+                    {
+                        int32_t qWordId = *(int32_t*)((char*)m_dataBuffer
+                                                            + m_currOffset
+                                                            + j * m_bytesPerSample
+                                                            + l * sizeof(int32_t));
+
+                        if (wordId == qWordId)
+                            tgtIdAddr[l] = (ElemType)1;
+                    }
+                }
+
+                if (inclEmbeddingFeature && wordId < m_vocabSize)
+                {
+                    char* srcAddr = srcAddrBase + (wordId - 1) * m_bytesPerVector;
+                    char* tgtAddr = tgtAddrBase + (j * numWordsPerFeatureSample + k) * m_bytesPerVector;
+                    memcpy(tgtAddr, srcAddr, m_bytesPerVector);
+                }
             }
         }
 
-        features.SetValue(numRows, actualMiniBatchSize, features.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
+        if (inclIdentityFeature)
+        {
+            Matrix<ElemType>& featuresIdentity = matrices.GetInputMatrix<ElemType>(featureNameIdentity);
+            featuresIdentity.Resize(m_numWordsPerQuery * m_numWordsPerDoc, actualMiniBatchSize);
+            featuresIdentity.SetValue(m_numWordsPerQuery * m_numWordsPerDoc, actualMiniBatchSize, featuresIdentity.GetDeviceId(), (ElemType*)m_dIdValues, matrixFlagNormal);
+        }
+
+        if (inclEmbeddingFeature)
+        {
+            Matrix<ElemType>& featuresEmbedding = matrices.GetInputMatrix<ElemType>(featureNameEmbedding);
+            featuresEmbedding.Resize(numRows, actualMiniBatchSize);
+            featuresEmbedding.SetValue(numRows, actualMiniBatchSize, featuresEmbedding.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
+        }
     }
 
     if (matrices.HasInput(L"L"))

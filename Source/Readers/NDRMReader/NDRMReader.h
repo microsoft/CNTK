@@ -35,8 +35,9 @@ class NDRMReader : public DataReaderBase
     size_t m_miniBatchSize;
     size_t m_bytesPerSample;
     size_t m_bytesPerVector;
-    char* m_qValues;
-    char* m_dValues;
+    char* m_dIdValues;
+    char* m_qEmbValues;
+    char* m_dEmbValues;
     char* m_labels;
     MBLayoutPtr m_pMBLayout;
 
