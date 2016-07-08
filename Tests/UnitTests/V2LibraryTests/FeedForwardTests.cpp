@@ -44,7 +44,7 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
 
     Variable labelsVar({ numOutputClasses }, DataType::Float, L"Labels");
     auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"LossFunction");
-    auto predictionFunction = CNTK::PredictionError(classifierOutputFunction, labelsVar, L"PredictionError");
+    auto predictionFunction = CNTK::ClassificationError(classifierOutputFunction, labelsVar, L"ClassificationError");
 
     auto ffNet = CNTK::Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"ClassifierModel");
 
@@ -128,7 +128,7 @@ void TestTimesAndPlus(size_t inputDim,
         if (usePreAllocatedOutputs)
         {
             auto outputAllocationDevice = outputOnSpecifiedDevice ? device : DeviceDescriptor::CPUDevice();
-            if (outputAllocationDevice.Type() == DeviceType::CPU)
+            if (outputAllocationDevice.Type() == DeviceKind::CPU)
                 outputValue = new Value(new NDArrayView(outputShape, outputData.data(), outputData.size(), outputAllocationDevice, false));
             else
                 outputValue = new Value(new NDArrayView(AsDataType<ElementType>(), outputShape, outputAllocationDevice));
@@ -143,7 +143,7 @@ void TestTimesAndPlus(size_t inputDim,
         // Perform backprop
         std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue;
-        if (device.Type() == DeviceType::CPU)
+        if (device.Type() == DeviceKind::CPU)
             rootGradientValue = new Value(new NDArrayView(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
         else
         {
@@ -159,7 +159,7 @@ void TestTimesAndPlus(size_t inputDim,
         if (usePreAllocatedOutputs)
         {
             auto outputAllocationDevice = outputOnSpecifiedDevice ? device : DeviceDescriptor::CPUDevice();
-            if (outputAllocationDevice.Type() == DeviceType::CPU)
+            if (outputAllocationDevice.Type() == DeviceKind::CPU)
             {
                 plusParameterGradientValue = new Value(new NDArrayView(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), outputAllocationDevice, false));
                 timesParameterGradientValue = new Value(new NDArrayView(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), outputAllocationDevice, false));
@@ -181,7 +181,7 @@ void TestTimesAndPlus(size_t inputDim,
         }
 
         // Verify forward prop results
-        if (!usePreAllocatedOutputs || (outputOnSpecifiedDevice && (device.Type() != DeviceType::CPU)))
+        if (!usePreAllocatedOutputs || (outputOnSpecifiedDevice && (device.Type() != DeviceKind::CPU)))
         {
             NDArrayViewPtr cpuArrayView = new NDArrayView(outputShape, outputData.data(), outputData.size(), DeviceDescriptor::CPUDevice(), false);
             cpuArrayView->CopyFrom(*outputValue->Data());
@@ -201,7 +201,7 @@ void TestTimesAndPlus(size_t inputDim,
         FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 
         // Verify backward prop results
-        if (device.Type() != DeviceType::CPU)
+        if (device.Type() != DeviceKind::CPU)
         {
             NDArrayViewPtr cpuArrayView = new NDArrayView(AsDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*plusParameterGradientValue->Data());
@@ -236,9 +236,11 @@ void TestTimesAndPlus(size_t inputDim,
 void FeedForwardTests()
 {
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
+#ifndef CPUONLY
     TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
     TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false);
 
     TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0));
+#endif
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice());
 }

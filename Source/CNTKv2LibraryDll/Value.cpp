@@ -15,13 +15,14 @@ namespace CNTK
     Value::Value(const NDArrayViewPtr& data, const NDMaskPtr& mask)
         : m_data(data), m_mask(mask)
     {
-        if ((mask != nullptr) && (mask->Shape().NumAxes() > data->Shape().NumAxes()))
-            InvalidArgument("The number of axes of the mask of a Value object cannot exceed the number of axes of the data NDArrayView object");
-
         if (mask != nullptr)
         {
             auto dataShape = data->Shape();
             auto maskShape = mask->Shape();
+
+            if (maskShape.NumAxes() > dataShape.NumAxes())
+                InvalidArgument("The number of axes of the mask of a Value object cannot exceed the number of axes of the data NDArrayView object");
+
             if (dataShape.SubShape(dataShape.NumAxes() - maskShape.NumAxes()) != maskShape)
                 InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data do not match the dimensions of the mask");
         }
@@ -49,7 +50,7 @@ namespace CNTK
         if (needsMask)
         {
             NDShape valueMaskShape = { maxSequenceLength, numSequences };
-            deviceValueMask = NDMaskPtr(new NDMask(valueMaskShape, device), [](_Internal::_ReferenceCounter* ptr) {delete ptr; });
+            deviceValueMask = NDMaskPtr(new NDMask(valueMaskShape, device), [](Internal::ReferenceCount* ptr) {delete ptr; });
             for (size_t i = 0; i < numSequences; ++i)
                 deviceValueMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
         }
@@ -86,8 +87,8 @@ namespace CNTK
         }
 
         colStarts[numSequences * maxSequenceLength] = (SparseIndexType)(nonZeroValues.size());
-        NDArrayViewPtr deviceValueData(new NDArrayView(valueDataShape, colStarts.data(), rowIndices.data(), nonZeroValues.data(), nonZeroValues.size(), device, readOnly), [](_ReferenceCounter* ptr) { delete ptr; });
-        return ValuePtr(new Value(deviceValueData, deviceValueMask), [](_ReferenceCounter* ptr) { delete ptr; });
+        NDArrayViewPtr deviceValueData(new NDArrayView(valueDataShape, colStarts.data(), rowIndices.data(), nonZeroValues.data(), nonZeroValues.size(), device, readOnly), [](ReferenceCount* ptr) { delete ptr; });
+        return ValuePtr(new Value(deviceValueData, deviceValueMask), [](ReferenceCount* ptr) { delete ptr; });
     }
 
     template <typename ElementType>
@@ -99,7 +100,7 @@ namespace CNTK
 
         size_t numSequences = sequences.size();
         NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
-        NDArrayViewPtr valueData(new NDArrayView(AsDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice()), [](_ReferenceCounter* ptr) { delete ptr; });
+        NDArrayViewPtr valueData(new NDArrayView(AsDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice()), [](ReferenceCount* ptr) { delete ptr; });
         ElementType* dataBuffer = valueData->WritableDataBuffer<ElementType>();
         for (size_t i = 0; i < numSequences; ++i)
             std::copy(sequences[i].data(), sequences[i].data() + sequences[i].size(), dataBuffer + (maxSequenceLength * i * sampleSize));
@@ -114,13 +115,13 @@ namespace CNTK
         }
         else
         {
-            deviceValueData = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), valueDataShape, device), [](_ReferenceCounter* ptr) { delete ptr; });
+            deviceValueData = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), valueDataShape, device), [](ReferenceCount* ptr) { delete ptr; });
             deviceValueData->CopyFrom(*valueData);
             if (readOnly)
                 deviceValueData = deviceValueData->Alias(true);
         }
 
-        return ValuePtr(new Value(deviceValueData, deviceValueMask), [](_ReferenceCounter* ptr) { delete ptr; });
+        return ValuePtr(new Value(deviceValueData, deviceValueMask), [](ReferenceCount* ptr) { delete ptr; });
     }
 
     /*virtual*/ Value::~Value()
@@ -142,13 +143,13 @@ namespace CNTK
     /*virtual*/ ValuePtr Value::DeepClone(bool readOnly/* = false*/) const
     {
         // TODO: Check if this is a derived type and throw an exception in that case
-        return ValuePtr(new Value(Data()->DeepClone(readOnly), (Mask() != nullptr) ? Mask()->DeepClone() : nullptr), [](_ReferenceCounter* ptr) { delete ptr; });
+        return ValuePtr(new Value(Data()->DeepClone(readOnly), (Mask() != nullptr) ? Mask()->DeepClone() : nullptr), [](ReferenceCount* ptr) { delete ptr; });
     }
 
     /*virtual*/ ValuePtr Value::Alias(bool readOnly/* = false*/) const
     {
         // TODO: Check if this is a derived type and throw an exception in that case
-        return ValuePtr(new Value(Data()->Alias(readOnly), (Mask() != nullptr) ? Mask()->Alias() : nullptr), [](_ReferenceCounter* ptr) { delete ptr; });
+        return ValuePtr(new Value(Data()->Alias(readOnly), (Mask() != nullptr) ? Mask()->Alias() : nullptr), [](ReferenceCount* ptr) { delete ptr; });
     }
 
     /*virtual*/ void Value::CopyFrom(const Value& source)
