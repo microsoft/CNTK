@@ -15,6 +15,8 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    using namespace Internal;
+
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
                                                        const DeviceDescriptor& device,
@@ -60,7 +62,7 @@ namespace CNTK
                                                                                             matrixDims.second,
                                                                                             AsCNTKImplDeviceId(device),
                                                                                             IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                                            AsCNTKMatrixFormat(storageType));
+                                                                                            AsCNTKImplMatrixFormat(storageType));
         return new TensorView<ElementType>(matrix, AsTensorShape(viewShape));
     }
 
@@ -150,7 +152,8 @@ namespace CNTK
         size_t splitPoint = rowColSplitPoint;
         if (splitPoint == NDArrayView::AutoSelectRowColSplitPoint)
         {
-            // Determine the split point
+            // Determine the split point by determining which of the axes can be 
+            // folded and selecting the non-foldable axis as the split point
             std::vector<bool> dimsToDrop(tensorShape.GetRank(), false);
             for (size_t k = 1; k < tensorShape.GetRank(); ++k)
                 if (tensorShape.CanFlatten(k))
@@ -211,7 +214,7 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::DeepClone(bool readOnly/* = false*/) const
     {
-        NDArrayViewPtr newView(new NDArrayView(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device()), [](ReferenceCount* ptr) { delete ptr; });
+        NDArrayViewPtr newView = MakeReferenceCountedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device());
         switch (m_dataType)
         {
         case DataType::Float:
@@ -234,9 +237,7 @@ namespace CNTK
         }
 
         newView->m_isReadOnly = readOnly;
-        return NDArrayViewPtr(newView, [](ReferenceCount* ptr) {
-            delete ptr;
-        });
+        return newView;
     }
 
     void NDArrayView::CopyFrom(const NDArrayView& source)
@@ -285,8 +286,7 @@ namespace CNTK
             break;
         }
 
-        auto aliasView = new NDArrayView(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);;
-        return NDArrayViewPtr(aliasView, [](ReferenceCount* ptr) { delete ptr; });
+        return MakeReferenceCountedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
     // TODO: This could actually be strided?
@@ -322,8 +322,7 @@ namespace CNTK
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
         auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShape(shape));
 
-        auto view = new NDArrayView(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
-        return NDArrayViewPtr(view, [](ReferenceCount* ptr) { delete ptr; });
+        return MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
     // Explicit template instantiations

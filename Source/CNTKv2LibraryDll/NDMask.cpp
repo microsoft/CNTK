@@ -14,13 +14,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    using namespace Internal;
+
     static Matrix<char>* AllocateMatrix(const NDShape& viewShape, const DeviceDescriptor& device)
     {
         auto matrixDims = GetMatrixDimensions(viewShape);
-        auto maskMatrix = new Matrix<char>(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device));
-        maskMatrix->SetValue(1);
-
-        return maskMatrix;
+        return new Matrix<char>(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device));
     }
 
     NDMask::NDMask(const NDShape& shape, Matrix<char>* matrix)
@@ -33,6 +32,8 @@ namespace CNTK
     {
         if (shape.NumAxes() > 2)
             LogicError("NDMask instances with more than 2 axes are currently unsupported");
+
+        Clear();
     }
 
     NDMask::~NDMask()
@@ -78,6 +79,7 @@ namespace CNTK
 
     void NDMask::Clear()
     {
+        // Clear the mask by marking all samples as Valid; i.e. a value of 1
         GetMatrix()->SetValue(1);
     }
 
@@ -96,14 +98,14 @@ namespace CNTK
 
     NDMaskPtr NDMask::DeepClone() const
     {
-        NDMaskPtr newMask = new NDMask(this->Shape(), this->Device());
+        NDMaskPtr newMask = MakeReferenceCountedObject<NDMask>(this->Shape(), this->Device());
         newMask->CopyFrom(*this);
 
-        return NDMaskPtr(newMask, [](ReferenceCount* ptr) { delete ptr; });
+        return newMask;
     }
 
     NDMaskPtr NDMask::Alias() const
     {
-        return NDMaskPtr(new NDMask(this->Shape(), new Matrix<char>(GetMatrix()->AsReference())), [](ReferenceCount* ptr) { delete ptr; });
+        return MakeReferenceCountedObject<NDMask>(this->Shape(), new Matrix<char>(GetMatrix()->AsReference()));
     }
 }

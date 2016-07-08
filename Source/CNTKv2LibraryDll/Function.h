@@ -289,6 +289,9 @@ namespace CNTK
     {
         friend class Function;
 
+        template <typename T, typename ...CtorArgTypes>
+        friend static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
         {
@@ -297,8 +300,7 @@ namespace CNTK
             // Call DetermineInputs to get the set of all functions in the graph
             DetermineInputs(rootFunction, visitedFunctions);
 
-            auto func = new CompositeFunction(rootFunction, std::move(visitedFunctions), name);
-            return CompositeFunctionPtr(func, [](ReferenceCount* ptr) { delete ptr; });
+            return MakeReferenceCountedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name);
         }
 
         virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
@@ -311,7 +313,7 @@ namespace CNTK
                               Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
-        virtual void _ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders) override;
+        virtual void ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders) override;
 
         CompositeFunction(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
             : Function({}, rootFunction->Outputs(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
@@ -355,7 +357,12 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
 
+        template <typename ElementType>
+        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
         void PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments);
+
+        template <typename ElementType>
+        static void PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
         void PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);

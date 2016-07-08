@@ -275,7 +275,7 @@ namespace CNTK
             NOT_IMPLEMENTED;
     }
 
-    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKMatrixFormat(StorageFormat storageFormat)
+    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)
     {
         if (storageFormat == StorageFormat::Dense)
             return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense;
@@ -357,5 +357,10 @@ namespace CNTK
         size_t matrixColSize = (viewShape.NumAxes() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
 
         return{ matrixRowSize, matrixColSize };
+    }
+
+    inline bool IsSparseInput(const Variable& var)
+    {
+        return var.IsInput() && var.IsSparse();
     }
 }

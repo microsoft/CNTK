@@ -135,12 +135,24 @@ namespace CNTK
     // Forward declarations
     class CompositeFunction;
     class Function;
+    class Variable;
+
+    namespace Internal
+    {
+        template <typename T>
+        class ReferenceCountedPtr;
+    }
+
+    template <typename T, typename ...CtorArgTypes>
+    static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
 
     namespace Internal
     {
         //  A reference count to be used as the base class for all reference counted types.
         class CNTK_API ReferenceCount
         {
+            typedef void(*ReferenceCountedObjectDeleter)(ReferenceCount* obj);
+
         public:
 
             ReferenceCount();
@@ -149,9 +161,12 @@ namespace CNTK
             size_t AddReference();
             size_t RemoveReference();
             size_t GetReferenceCount();
+            void SetDeleter(ReferenceCountedObjectDeleter deleter);
+            ReferenceCountedObjectDeleter GetDeleter() const;
 
         private:
             std::atomic<size_t>* m_rc;
+            ReferenceCountedObjectDeleter m_deleter;
         };
 
         // A smart pointer to a reference counted object
@@ -159,28 +174,33 @@ namespace CNTK
         template <class T>
         class CNTK_API ReferenceCountedPtr final
         {
-            typedef void(*ReferenceCountedObjectDeleter)(ReferenceCount* obj);
+            friend class Variable;
+            friend class Function;
+
+            template <typename T, typename ...CtorArgTypes>
+            friend static ReferenceCountedPtr<T> CNTK::MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
+
+            template <typename U>
+            friend class ReferenceCountedPtr;
 
         public:
+            
+            ReferenceCountedPtr(nullptr_t) : ReferenceCountedPtr(reinterpret_cast<T*>(nullptr)) {}
+            ReferenceCountedPtr() : ReferenceCountedPtr(nullptr) {}
 
-            ReferenceCountedPtr(T* ptr = nullptr, ReferenceCountedObjectDeleter deleter = nullptr) : m_objPtr(ptr), m_deleter(deleter)
-            {
-                AddReferenceIfNeeded();
-            }
-
-            ReferenceCountedPtr(const ReferenceCountedPtr& other) : m_objPtr(nullptr), m_deleter(nullptr)
+            ReferenceCountedPtr(const ReferenceCountedPtr& other) : m_objPtr(nullptr)
             {
                 *this = other;
             }
 
-            ReferenceCountedPtr(ReferenceCountedPtr&& other) : m_objPtr(nullptr), m_deleter(nullptr)
+            ReferenceCountedPtr(ReferenceCountedPtr&& other) : m_objPtr(nullptr)
             {
                 *this = std::move(other);
             }
 
             ~ReferenceCountedPtr()
             {
-                DeleteReferenceIfNeeded(m_objPtr, m_deleter);
+                DeleteReferenceIfNeeded(m_objPtr);
             }
 
             ReferenceCountedPtr& operator=(const ReferenceCountedPtr& other)
@@ -188,13 +208,10 @@ namespace CNTK
                 if (this != &other)
                 {
                     T* oldPtr = m_objPtr;
-                    ReferenceCountedObjectDeleter oldDeleter = m_deleter;
-
                     m_objPtr = other.m_objPtr;
-                    m_deleter = other.m_deleter;
                     AddReferenceIfNeeded();
 
-                    DeleteReferenceIfNeeded(oldPtr, oldDeleter);
+                    DeleteReferenceIfNeeded(oldPtr);
                 }
 
                 return *this;
@@ -205,16 +222,13 @@ namespace CNTK
                 assert(this != &other);
 
                 T* oldPtr = m_objPtr;
-                ReferenceCountedObjectDeleter oldDeleter = m_deleter;
-
                 m_objPtr = other.m_objPtr;
-                m_deleter = other.m_deleter;
+
                 // No change to ref-count of the adopted pointer.
 
                 other.m_objPtr = nullptr;
-                other.m_deleter = nullptr;
 
-                DeleteReferenceIfNeeded(oldPtr, oldDeleter);
+                DeleteReferenceIfNeeded(oldPtr);
 
                 return *this;
             }
@@ -223,7 +237,7 @@ namespace CNTK
             template <typename Base, typename std::enable_if<std::is_base_of<Base, T>::value>::type* = nullptr>
             operator ReferenceCountedPtr<Base>()
             {
-                return ReferenceCountedPtr<Base>(m_objPtr, m_deleter);
+                return ReferenceCountedPtr<Base>(m_objPtr);
             }
 
             T* operator->() const
@@ -247,34 +261,37 @@ namespace CNTK
             }
 
         private:
-            void AddReferenceIfNeeded()
+            ReferenceCountedPtr(T* ptr) : m_objPtr(ptr)
             {
                 static_assert(std::is_base_of<ReferenceCount, T>::value, "ReferenceCountedPtr<T> can only be used when ReferenceCount is a base type of T!");
-
-                if (m_objPtr != nullptr)
-                    reinterpret_cast<ReferenceCount*>(m_objPtr)->AddReference();
+                AddReferenceIfNeeded();
             }
 
-            static void DeleteReferenceIfNeeded(T* objPtr, ReferenceCountedObjectDeleter deleter)
+            void AddReferenceIfNeeded()
             {
-                static_assert(std::is_base_of<ReferenceCount, T>::value, "ReferenceCountedPtr<T> can only be used when ReferenceCount is a base type of T!");
+                if (m_objPtr != nullptr)
+                {
+                    assert(m_objPtr->GetDeleter() != nullptr);
+                    reinterpret_cast<ReferenceCount*>(m_objPtr)->AddReference();
+                }
+            }
 
+            static void DeleteReferenceIfNeeded(T* objPtr)
+            {
                 if (objPtr != nullptr)
                 {
                     size_t refCountRemaining = reinterpret_cast<ReferenceCount*>(objPtr)->RemoveReference();
                     if (refCountRemaining == 0)
                     {
-                        if (deleter != nullptr)
-                            deleter(reinterpret_cast<ReferenceCount*>(objPtr));
-                        else
-                            delete objPtr;
+                        auto deleter = objPtr->GetDeleter();
+                        assert(deleter != nullptr);
+                        deleter(reinterpret_cast<ReferenceCount*>(objPtr));
                     }
                 }
             }
 
         private:
             T* m_objPtr;
-            ReferenceCountedObjectDeleter m_deleter;
         };
 
         template <typename T>
@@ -453,6 +470,17 @@ namespace CNTK
         private:
             std::unordered_map<KeyType, ValueType>* m_map;
         };
+    }
+
+    template <typename T, typename ...CtorArgTypes>
+    static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs)
+    {
+        static_assert(std::is_base_of<Internal::ReferenceCount, T>::value, "MakeReferenceCountedObject<T> can only be used when ReferenceCount is a base type of T!");
+
+        auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
+        objPtr->SetDeleter([](Internal::ReferenceCount* ptr) { delete ptr; });
+
+        return Internal::ReferenceCountedPtr<T>(objPtr);
     }
 
     // Forward declarations

@@ -12,7 +12,7 @@ namespace CNTK
     namespace Internal
     {
         ReferenceCount::ReferenceCount()
-            : m_rc(new std::atomic<size_t>(0)) 
+            : m_rc(new std::atomic<size_t>(0)), m_deleter(nullptr)
         {}
 
         /*virtual*/ ReferenceCount::~ReferenceCount() 
@@ -34,6 +34,17 @@ namespace CNTK
         size_t ReferenceCount::GetReferenceCount()
         {
             return m_rc->load();
+        }
+
+        void ReferenceCount::SetDeleter(ReferenceCountedObjectDeleter deleter)
+        {
+            assert(m_deleter == nullptr);
+            m_deleter = deleter;
+        }
+
+        ReferenceCount::ReferenceCountedObjectDeleter ReferenceCount::GetDeleter() const
+        {
+            return m_deleter;
         }
 
 #pragma region SimpleVector

@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
+#include <sstream>
 
 namespace CNTK
 {
@@ -194,7 +195,7 @@ namespace CNTK
         {
             endAxisId = (endAxisId == SIZE_MAX) ? NumAxes() : endAxisId;
             if ((endAxisId < beginAxisId) || (endAxisId > NumAxes()))
-                InvalidArgument("NDShape::SubShape : The specified endAxisId cannot exceed the number of axes of 'this' NDShape and must be >= than the specified beginAxisId");
+                InvalidArgument("NDShape::SubShape : The specified endAxisId (%d) cannot exceed the number of axes (%d) of 'this' NDShape and must be >= than the specified beginAxisId (%d)", (int)endAxisId, (int)NumAxes(), (int)beginAxisId);
 
             NDShape subShape(endAxisId - beginAxisId);
             for (size_t i = 0; i < subShape.NumAxes(); ++i)
@@ -246,6 +247,24 @@ namespace CNTK
             return newShape;
         }
 
+        ///
+        /// Create a string representation of 'this' NDShape for display/printing purposes
+        ///
+        std::wstring AsString() const
+        {
+            std::wstringstream wStrStream(L"{");
+            for (size_t i = 0; i < NumAxes(); i++)
+            {
+                if (i != 0)
+                    wStrStream << L", ";
+
+                wStrStream << m_shapeDims.Data()[i];
+            }
+
+            wStrStream << L"}";
+            return wStrStream.str();
+        }
+
     private:
         Internal::SimpleVector<size_t> m_shapeDims;
     };
@@ -271,6 +290,9 @@ namespace CNTK
     class CNTK_API NDArrayView final : public Internal::ReferenceCount
     {
         friend class CompositeFunction;
+
+        template <typename T, typename ...CtorArgTypes>
+        friend static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
         ///
@@ -488,6 +510,9 @@ namespace CNTK
     {
         friend class CompositeFunction;
 
+        template <typename T, typename ...CtorArgTypes>
+        friend static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
         ///
         /// Construct a new Mask object of specified shape
@@ -551,7 +576,7 @@ namespace CNTK
 
     /// 
     /// Denotes a multi-dimensional array with an optional mask and is the actual data fed into or produced from a computation.
-    /// The mask is typically lower dimensionailty than the data, meaning data is masked in coarse individual sample units where
+    /// The mask is typically lower dimensionality than the data, meaning data is masked in coarse individual sample units where
     /// sample shape is data.Shape().SubShape(0, data.Shape().NumAxes() - mask.Shape().NumAxes)
     /// Also, note that the size of the data's trailing mask.Shape().NumAxes() dimensions must match the mask shape dimensions.
     /// 
@@ -869,9 +894,9 @@ namespace CNTK
         ///
         /// Returns a boolean value indicating if 'this' variable denotes sparse data
         ///
-        bool IsSparseInput() const
+        bool IsSparse() const
         {
-            return IsInput() && (m_dataFields->m_isSparse);
+            return (m_dataFields->m_isSparse);
         }
 
         ///
@@ -936,7 +961,7 @@ namespace CNTK
 
     private:
         Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
-            : m_dataFields(new VariableFields(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()), [](Internal::ReferenceCount* ptr) { delete ptr; })
+            : m_dataFields(MakeReferenceCountedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, (name == L"") ? nullptr : name.c_str()))
         {}
 
     private:
@@ -1002,7 +1027,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), new NDArrayView(initValue, shape, device), true, {}, name)
+            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeReferenceCountedObject<NDArrayView>(initValue, shape, device), true, {}, name)
         {}
 
         ///
@@ -1053,7 +1078,7 @@ namespace CNTK
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), new NDArrayView(initValue, shape, device), false, {}, name)
+            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeReferenceCountedObject<NDArrayView>(initValue, shape, device), false, {}, name)
         {}
 
         ///
@@ -1374,7 +1399,7 @@ namespace CNTK
             Internal::SimpleSet<const Function*> visitedFunctions;
             Internal::SimpleSet<Placeholder> replacedPlaceholders;
             auto abiSafePlaceholderReplacementsMap = Internal::SimpleMap<Placeholder, Variable>::CreateSimpleMap(placeholderReplacements);
-            _ReplacePlaceholders(abiSafePlaceholderReplacementsMap, visitedFunctions, replacedPlaceholders);
+            ReplacePlaceholders(abiSafePlaceholderReplacementsMap, visitedFunctions, replacedPlaceholders);
 
             if (abiSafePlaceholderReplacementsMap.Keys() != replacedPlaceholders)
                 InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
@@ -1400,7 +1425,7 @@ namespace CNTK
         }
 
         Internal::SimpleVector<Variable> InputsImpl() const;
-        virtual void _ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders);
+        virtual void ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders);
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;

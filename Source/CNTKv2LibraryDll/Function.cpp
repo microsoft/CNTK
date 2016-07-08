@@ -17,6 +17,8 @@ bool g_shareNodeValueMatrices = true;
 
 namespace CNTK
 {
+    using namespace Internal;
+
     Internal::SimpleVector<Variable> Function::InputsImpl() const
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
@@ -26,7 +28,9 @@ namespace CNTK
             return Internal::SimpleVector<Variable>(compositeFunction->DetermineInputs());
     }
 
-    /*virtual*/ void Function::_ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements,
+    // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
+    // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
+    /*virtual*/ void Function::ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements,
                                                     Internal::SimpleSet<const Function*>& visitedFunctions,
                                                     Internal::SimpleSet<Placeholder>& replacedPlaceholders)
     {
@@ -44,7 +48,31 @@ namespace CNTK
                 }
             }
             else if (inputVar.IsOutput() && !visitedFunctions.Contains(inputVar.Owner()))
-                inputVar.Owner()->_ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+                inputVar.Owner()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+        }
+    }
+
+    // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
+    // should have been replaced before performing any Forward compute of 'this' Function.
+    /*virtual*/ void CompositeFunction::ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements,
+                                                            Internal::SimpleSet<const Function*>& visitedFunctions,
+                                                            Internal::SimpleSet<Placeholder>& replacedPlaceholders)
+    {
+        RootFunction()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+
+        // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath each of those to 'm_allPrimitiveFunctions' set
+        for (auto replacedPlaceholder : *replacedPlaceholders.m_set)
+        {
+            auto replacingVariable = placeholderReplacements[replacedPlaceholder];
+            if (replacingVariable.IsOutput())
+            {
+                auto ownerFunc = replacingVariable.Owner();
+                Internal::SimpleSet<FunctionPtr> visitedFunctions;
+                DetermineInputs(ownerFunc, visitedFunctions);
+
+                // Add the newly visited functions to 'm_allPrimitiveFunctions' set
+                m_allPrimitiveFunctions.m_set->insert(visitedFunctions.m_set->begin(), visitedFunctions.m_set->end());
+            }
         }
     }
 
@@ -79,7 +107,7 @@ namespace CNTK
         else if (variable.IsInput())
         {
             // TODO: Specify dynamic axis
-            if (variable.IsSparseInput())
+            if (IsSparseInput(variable))
                 computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
             else
                 computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
@@ -326,10 +354,10 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->Data()->GetDataType()));
 
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
-        if (var.IsSparseInput() && !value->Data()->IsSparse())
+        if (IsSparseInput(var) && !value->Data()->IsSparse())
             InvalidArgument("Dense input data supplied for a sparse input Variable");
 
-        if (var.IsSparseInput() && (value->Data()->GetStorageFormat() != StorageFormat::SparseCSC))
+        if (IsSparseInput(var) && (value->Data()->GetStorageFormat() != StorageFormat::SparseCSC))
             InvalidArgument("Sparse Input data must be in SparseCSC format");
 
         if (value->Data()->Shape().NumAxes() == var.Shape().NumAxes())
@@ -413,7 +441,7 @@ namespace CNTK
                                                                     layout->GetNumCols(),
                                                                     AsCNTKImplDeviceId(value->Data()->Device()),
                                                                     value->Data()->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                    AsCNTKMatrixFormat(value->Data()->GetStorageFormat()));
+                                                                    AsCNTKImplMatrixFormat(value->Data()->GetStorageFormat()));
 
             std::vector<size_t> sequencesShorterThanLongestSequence;
             for (size_t i = 0; i < numSequences; ++i)
@@ -458,8 +486,8 @@ namespace CNTK
         {
             // Just create a view over the existing matrix itself
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView), [](ReferenceCount* ptr) { delete ptr; });
-            return ValuePtr(new Value(data), [](ReferenceCount* ptr) { delete ptr; });
+            auto data = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView);
+            return MakeReferenceCountedObject<Value>(data);
         }
 
         if (layout->GetNumCols() != matrix.GetNumCols())
@@ -509,7 +537,7 @@ namespace CNTK
         NDMaskPtr mask;
         if (!sequencesShorterThanLongestSequence.empty())
         {
-            mask = NDMaskPtr(new NDMask({ maxNumTimeSteps, numSequences }, AsDeviceDescriptor(matrix.GetDeviceId())), [](ReferenceCount* ptr) { delete ptr; });
+            mask = MakeReferenceCountedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), AsDeviceDescriptor(matrix.GetDeviceId()));
             for (auto shortSequenceIdx : sequencesShorterThanLongestSequence)
             {
                 mask->MaskSection({ sequenceLengths[shortSequenceIdx], shortSequenceIdx }, { NDShape::InferredDimension, 1 });
@@ -517,8 +545,22 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = NDArrayViewPtr(new NDArrayView(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView), [](ReferenceCount* ptr) { delete ptr; });
-        return ValuePtr(new Value(data, mask), [](ReferenceCount* ptr) { delete ptr; });
+        auto data = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView);
+        return MakeReferenceCountedObject<Value>(data, mask);
+    }
+
+    template <typename ElementType>
+    /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode)
+    {
+        auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
+        MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
+
+        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
+
+        // Switch the node matrix to the right matrix type
+        nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
+        nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
+        computationNode->GetMBLayout()->CopyFrom(layout);
     }
 
     void CompositeFunction::PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments)
@@ -540,38 +582,32 @@ namespace CNTK
             switch (argumentValue->Data()->GetDataType())
             {
             case DataType::Float:
-            {
-                auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(argument, argumentValue);
-                layout = CNTKMatrixAndMBLayout.second;
-
-                auto& nodeData = argumentComputationNode->As<ComputationNode<float>>()->Value();
-                // Switch the node matrix to the right matrix type
-                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
-                nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
+                PopulateComputationNodeValue<float>({ argument, argumentValue }, argumentComputationNode);
                 break;
-            }
             case DataType::Double:
-            {
-                auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(argument, argumentValue);
-                layout = CNTKMatrixAndMBLayout.second;
-
-                auto& nodeData = argumentComputationNode->As<ComputationNode<double>>()->Value();
-                // Switch the node matrix to the right matrix type
-                nodeData.SwitchToMatrixType(CNTKMatrixAndMBLayout.first->GetMatrixType(), CNTKMatrixAndMBLayout.first->GetFormat(), false);
-                nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
+                PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode);
                 break;
-            }
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(argumentValue->Data()->GetDataType()));
                 break;
             }
-
-            argumentComputationNode->GetMBLayout()->CopyFrom(layout);
         }
 
         m_computationNetwork->BumpEvalTimeStamp(inputNodes);
     }
 
+    template <typename ElementType>
+    /*static*/ void CompositeFunction::PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode)
+    {
+        auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second);
+        MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
+        auto nodeLayout = computationNode->GetMBLayout();
+        if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
+            InvalidArgument("The layout of the specified gradient Value in incompatible with the layout of the corresponding Variable computed during Forward call");
+        computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
+    }
+
+    // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
     void CompositeFunction::PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients)
     {
         auto functionOutputs = this->Outputs();
@@ -583,31 +619,16 @@ namespace CNTK
                 InvalidArgument("Gradients cannot be specified for a Variable that is not an Output of the Function");
 
             auto outputComputationNode = m_variableToNodeMap[gradientVarValuePair.first];
-            auto nodeLayout = outputComputationNode->GetMBLayout();
-
             ValuePtr gradientValue = gradientVarValuePair.second;
 
-            MBLayoutPtr layout;
             switch (gradientValue->Data()->GetDataType())
             {
             case DataType::Float:
-            {
-                auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(gradientVarValuePair.first, gradientValue);
-                layout = CNTKMatrixAndMBLayout.second;
-                if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-                    InvalidArgument("The layout of the specified gradient Value in incompatible with the layout of the corresponding Variable computed during Forward call");
-                outputComputationNode->As<ComputationNode<float>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
+                PopulateComputationNodeGradient<float>(gradientVarValuePair, outputComputationNode);
                 break;
-            }
             case DataType::Double:
-            {
-                auto CNTKMatrixAndMBLayout = GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(gradientVarValuePair.first, gradientValue);
-                layout = CNTKMatrixAndMBLayout.second;
-                if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-                    InvalidArgument("The layout of the specified gradient Value in incompatible with the layout of the corresponding Variable computed during Forward call");
-                outputComputationNode->As<ComputationNode<double>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
+                PopulateComputationNodeGradient<double>(gradientVarValuePair, outputComputationNode);
                 break;
-            }
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(gradientValue->Data()->GetDataType()));
                 break;
@@ -618,6 +639,8 @@ namespace CNTK
     static NDShape GetValueShape(const Variable& var, const ComputationNodeBasePtr& computationNodePtr)
     {
         size_t outputValueNumAxes = var.Shape().NumAxes();
+
+        // Add the batch and dynamic axes if needed
         if (computationNodePtr->GetMBLayout() != nullptr)
             outputValueNumAxes += 2;
 
@@ -650,37 +673,27 @@ namespace CNTK
                     InvalidArgument("The shape %s of the specified Value object for output does not match the actual output shape %s", AsString(outputValuePtr->Data()->Shape()).c_str(), AsString(outputShape).c_str());
             }
 
+            ValuePtr nodeValue;
             switch (outputVarValuePair.first.GetDataType())
             {
             case DataType::Float:
-            {
-                auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Value(), computationNodePtr->GetMBLayout());
-                if (outputValuePtr == nullptr)
-                {
-                    auto data = NDArrayViewPtr(new NDArrayView(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](ReferenceCount* ptr) { delete ptr; });
-                    auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](ReferenceCount* ptr) { delete ptr; }) : nullptr;
-                    outputValuePtr = ValuePtr(new Value(data, mask), [](ReferenceCount* ptr) { delete ptr; });
-                }
-                outputValuePtr->CopyFrom(*nodeValue);
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Value(), computationNodePtr->GetMBLayout());
                 break;
-            }
             case DataType::Double:
-            {
-                auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Value(), computationNodePtr->GetMBLayout());
-                if (outputValuePtr == nullptr)
-                {
-                    auto data = NDArrayViewPtr(new NDArrayView(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](ReferenceCount* ptr) { delete ptr; });
-                    auto mask = (nodeValue->Mask() != nullptr) ? NDMaskPtr(new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()), [](ReferenceCount* ptr) { delete ptr; }) : nullptr;
-                    outputValuePtr = ValuePtr(new Value(data, mask), [](ReferenceCount* ptr) { delete ptr; });
-                }
-                outputValuePtr->CopyFrom(*nodeValue);
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Value(), computationNodePtr->GetMBLayout());
                 break;
-            }
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(outputVarValuePair.first.GetDataType()));
                 break;
             }
 
+            if (outputValuePtr == nullptr)
+            {
+                auto data = MakeReferenceCountedObject<NDArrayView>(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
+                auto mask = (nodeValue->Mask() != nullptr) ? MakeReferenceCountedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
+                outputValuePtr = MakeReferenceCountedObject<Value>(data, mask);
+            }
+            outputValuePtr->CopyFrom(*nodeValue);
             outputs[outputVarValuePair.first] = outputValuePtr;
         }
     }
@@ -713,38 +726,28 @@ namespace CNTK
             if (!computationNodePtr->NeedsGradient())
                 LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
 
+            ValuePtr nodeValue;
             switch (gradientVarValuePair.first.GetDataType())
             {
             case DataType::Float:
-            {
-                auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Gradient(), computationNodePtr->GetMBLayout());
-                if (gradientValuePtr == nullptr)
-                {
-                    auto data = NDArrayViewPtr(new NDArrayView(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](ReferenceCount* ptr) { delete ptr; });
-                    auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](ReferenceCount* ptr) { delete ptr; });
-                    gradientValuePtr = ValuePtr(new Value(data, mask), [](ReferenceCount* ptr) { delete ptr; });
-                }
-                gradientValuePtr->CopyFrom(*nodeValue);
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Gradient(), computationNodePtr->GetMBLayout());
                 break;
-            }
             case DataType::Double:
-            {
-                auto nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Gradient(), computationNodePtr->GetMBLayout());
-                if (gradientValuePtr == nullptr)
-                {
-                    auto data = NDArrayViewPtr(new NDArrayView(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId())), [](ReferenceCount* ptr) { delete ptr; });
-                    auto mask = NDMaskPtr((nodeValue->Mask() != nullptr) ? new NDMask(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr, [](ReferenceCount* ptr) { delete ptr; });
-                    gradientValuePtr = ValuePtr(new Value(data, mask), [](ReferenceCount* ptr) { delete ptr; });
-
-                }
-                gradientValuePtr->CopyFrom(*nodeValue);
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Gradient(), computationNodePtr->GetMBLayout());
                 break;
-            }
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(gradientVarValuePair.first.GetDataType()));
                 break;
             }
 
+            if (gradientValuePtr == nullptr)
+            {
+                auto data = MakeReferenceCountedObject<NDArrayView>(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
+                auto mask = (nodeValue->Mask() != nullptr) ? MakeReferenceCountedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
+                gradientValuePtr = MakeReferenceCountedObject<Value>(data, mask);
+            }
+
+            gradientValuePtr->CopyFrom(*nodeValue);
             gradients[gradientVarValuePair.first] = gradientValuePtr;
         }
     }
@@ -793,18 +796,18 @@ namespace CNTK
 
         // TODO: How to deal with the specified 'computeDevice'
 
-        return (outputsToRetainBackwardStateFor.Size() > 0) ? BackPropStatePtr(new CNTKBackPropState(this, { arguments.m_map->begin()->first, m_variableToNodeMap[arguments.m_map->begin()->first]->GetEvalTimeStamp() }), [](ReferenceCount* ptr) { delete ptr; }) : nullptr;
+        return (outputsToRetainBackwardStateFor.Size() > 0) ? MakeReferenceCountedObject<CNTKBackPropState>(this, std::make_pair(arguments.m_map->begin()->first, m_variableToNodeMap[arguments.m_map->begin()->first]->GetEvalTimeStamp())) : nullptr;
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
                                                  const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
                                                  Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
     {
-        if ((state == nullptr) || (dynamic_cast<const CNTKBackPropState*>(state.GetPtr()) == nullptr))
+        auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.GetPtr());
+        if (backpropState == nullptr)
             InvalidArgument("Invalid backprop state specified");
 
         // TODO: Support multiple concurrent backprop states
-        auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.GetPtr());
         if (backpropState->EvalTimeStamp().second != m_variableToNodeMap[backpropState->EvalTimeStamp().first]->GetEvalTimeStamp())
             LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
                        "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
@@ -830,44 +833,24 @@ namespace CNTK
         // TODO: How to deal with the specified 'computeDevice'
     }
 
-    /*virtual*/ void CompositeFunction::_ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders)
-    {
-        RootFunction()->_ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
-
-        // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath each of those to 'm_allPrimitiveFunctions' set
-        for (auto replacedPlaceholder : *replacedPlaceholders.m_set)
-        {
-            auto replacingVariable = placeholderReplacements[replacedPlaceholder];
-            if (replacingVariable.IsOutput())
-            {
-                auto ownerFunc = replacingVariable.Owner();
-                Internal::SimpleSet<FunctionPtr> visitedFunctions;
-                DetermineInputs(ownerFunc, visitedFunctions);
-
-                // Add the newly visited functions to 'm_allPrimitiveFunctions' set
-                m_allPrimitiveFunctions.m_set->insert(visitedFunctions.m_set->begin(), visitedFunctions.m_set->end());
-            }
-        }
-    }
-
     FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Times, { leftOperand, rightOperand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Times, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Plus, { leftOperand, rightOperand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Plus, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Sigmoid, { operand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Sigmoid, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Tanh, { operand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Tanh, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
     namespace Internal
@@ -886,23 +869,23 @@ namespace CNTK
                 std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
             }
 
-            return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Combine, inputs, Dictionary(), name), name);
+            return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Combine, inputs, Dictionary(), name), name);
         }
     }
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& output, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::CrossEntropyWithSoftmax, { output, labels }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::CrossEntropyWithSoftmax, std::vector<Variable>({ output, labels }), Dictionary(), name), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::ClassificationError, { prediction, labels }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, std::vector<Variable>({ prediction, labels }), Dictionary(), name), name);
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::Exp, { operand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Exp, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
     FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
@@ -912,7 +895,7 @@ namespace CNTK
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::PastValue, { initialState, operand }, std::move(additionalProperties), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::PastValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
     }
 
     FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
@@ -922,16 +905,16 @@ namespace CNTK
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::FutureValue, { initialState, operand }, std::move(additionalProperties), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::FutureValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
     }
 
     FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::ElementTimes, { leftOperand, rightOperand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ElementTimes, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(new PrimitiveFunction(PrimitiveOpType::ReduceSum, { operand }, Dictionary(), name), name);
+        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ReduceSum, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 }
