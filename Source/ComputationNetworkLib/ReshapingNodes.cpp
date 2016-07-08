@@ -34,9 +34,9 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axis      = m_axis;
-        node->m_operation = m_operation;
-        node->m_op        = m_op;
+        node->m_axis        = m_axis;
+        node->m_operation   = m_operation;
+        node->m_reductionOp = m_reductionOp;
     }
 }
 
@@ -64,7 +64,7 @@ template <class ElemType>
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
     // some reductions are currently only on CPU
-    switch (m_op)
+    switch (m_reductionOp)
     {
         case ElementWiseOperator::opMax:
         case ElementWiseOperator::opMin:
@@ -73,7 +73,7 @@ template <class ElemType>
     }
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
+    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_reductionOp);
     // note: we can implement "Mean" by passing 1/dim for alpha
 }
 
@@ -88,7 +88,7 @@ template <class ElemType>
     auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
-    switch (m_op)
+    switch (m_reductionOp)
     {
     case ElementWiseOperator::opSum:
         // "Sum": broadcast the gradient
@@ -129,7 +129,7 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::OutputUsedInComputingInputNodesGradients() const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
     case ElementWiseOperator::opMax: return true;
     case ElementWiseOperator::opMin: return true;
@@ -141,7 +141,7 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::InputUsedInComputingInputNodesGradients(size_t inputIndex) const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
     case ElementWiseOperator::opMax: return true;
     case ElementWiseOperator::opMin: return true;
@@ -155,12 +155,12 @@ template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
 #if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
-    else if (m_operation == L"Max") m_op = ElementWiseOperator::opMax;
-    else if (m_operation == L"Min") m_op = ElementWiseOperator::opMin;
+    if (m_operation == L"Sum"     ) m_reductionOp = ElementWiseOperator::opSum;
+    else if (m_operation == L"Max") m_reductionOp = ElementWiseOperator::opMax;
+    else if (m_operation == L"Min") m_reductionOp = ElementWiseOperator::opMin;
 
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
