@@ -18,8 +18,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
     template <class ElemType> struct TensorTest;
 }}}}
 
-template <class ElemType> struct TensorTest;
-
 // This class is exported from the Math.dll.
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -155,7 +153,6 @@ private:
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }    
-    friend struct ::TensorTest<ElemType>;
     friend Microsoft::MSR::CNTK::Test::TensorTest<ElemType>;
 
     // -------------------------------------------------------------------
