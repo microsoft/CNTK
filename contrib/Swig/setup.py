@@ -3,9 +3,10 @@ import os
 import numpy
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
-SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
+CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
+CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")
 
-print( os.path.join(SOURCE_PATH, "CNTKv2LibraryDll", "API"))
+print( os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"))
 
 ext_modules = [
     Extension(
@@ -16,16 +17,16 @@ ext_modules = [
            sources=[r"swig_cntk_wrap.cxx"],
 
            libraries=[
-               r"CNTKLibrary-2.0",
-               r"Math"
+               os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
+               os.path.join(CNTK_LIB_PATH, "Math")
                ],
-           library_dirs=[os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")],
+           library_dirs=[CNTK_LIB_PATH],
 
            include_dirs=[
                #r"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include",
-               os.path.join(SOURCE_PATH, "CNTKv2LibraryDll", "API"),
-               os.path.join(SOURCE_PATH, "Math"),
-               os.path.join(SOURCE_PATH, "Common", "Include"),
+               os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
+               os.path.join(CNTK_SOURCE_PATH, "Math"),
+               os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
                numpy.get_include(),
                ],
 
