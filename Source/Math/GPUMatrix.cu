@@ -4279,10 +4279,12 @@ template <class ElemType>
 static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
 {
     // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
-    // And using a plain array so this will never get freed, avoiding free-after-DLL-unload issues.
-    static shared_ptr<GPUMatrix<ElemType>> onesCache[32]; // cache of objects
-    if (deviceId >= _countof(onesCache))
-        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", (int) _countof(onesCache), (int) deviceId + 1);
+    // And using a dynamically allocated array so this will never get freed, avoiding free-after-DLL-unload issues.
+    // Using a plain array would lead the destructor to be called for every element in the array
+    const int CacheSize = 32;
+    static shared_ptr<GPUMatrix<ElemType>>* onesCache = new shared_ptr<GPUMatrix<ElemType>>[CacheSize]; // cache of objects
+    if (deviceId >= CacheSize)
+        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", CacheSize, (int)deviceId + 1);
     auto p = onesCache[deviceId];
     if (!p || p->GetNumRows() < N) // must (re-)allocate
     {
