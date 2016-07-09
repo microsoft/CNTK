@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <string>
 #include <sstream>
+#include<algorithm>
 
 namespace CNTK
 {
@@ -211,7 +212,7 @@ namespace CNTK
         ///
         bool HasInferredDimension() const
         {
-            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), InferredDimension) != m_shapeDims.end());
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)InferredDimension) != m_shapeDims.end());
         }
 
         ///
