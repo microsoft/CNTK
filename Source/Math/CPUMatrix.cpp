@@ -204,7 +204,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
 template <class ElemType>
 CPUMatrix<ElemType>::~CPUMatrix()
 {
-    ZeroValues();
+    // ZeroValues(); // Done by ~BaseMatrix
 }
 
 template <class ElemType>
