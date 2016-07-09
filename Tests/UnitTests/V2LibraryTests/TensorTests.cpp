@@ -30,30 +30,30 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
         leftInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
     auto leftInputValueShape = leftInputShape.AppendShape({ 1, 1 });
-    ValuePtr leftInputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(leftInputValueShape, leftInputData, true));
+    ValuePtr leftInputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(leftInputValueShape, leftInputData, true));
 
     std::vector<ElementType> rightInputData(rightInputShape.TotalSize());
     for (size_t i = 0; i < rightInputData.size(); ++i)
         rightInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
     auto rightInputValueShape = rightInputShape.AppendShape({ 1, 1 });
-    ValuePtr rightInputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(rightInputValueShape, rightInputData, true));
+    ValuePtr rightInputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(rightInputValueShape, rightInputData, true));
 
     NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1, 1 });
     std::vector<ElementType> outputData(outputShape.TotalSize());
-    ValuePtr outputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(outputShape, outputData, false));
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { plusFunc->Output(), outputValue } };
     auto backPropState = plusFunc->Forward({ { leftInputVar, leftInputValue }, { rightInputVar, rightInputValue } }, outputs, device, { plusFunc->Output() });
 
     // Perform backprop
     std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
-    ValuePtr rootGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(outputShape, rootGradientsData, true));
+    ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData, true));
 
     std::vector<ElementType> leftInputGradientsData(leftInputValueShape.TotalSize());
-    ValuePtr leftInputGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(leftInputValueShape, leftInputGradientsData, false));
+    ValuePtr leftInputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(leftInputValueShape, leftInputGradientsData, false));
     std::vector<ElementType> rightInputGradientsData(rightInputValueShape.TotalSize());
-    ValuePtr rightInputGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(rightInputValueShape, rightInputGradientsData, false));
+    ValuePtr rightInputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(rightInputValueShape, rightInputGradientsData, false));
 
     std::unordered_map<Variable, ValuePtr> gradients = { { leftInputVar, leftInputGradientValue }, { rightInputVar, rightInputGradientValue } };
     plusFunc->Backward(backPropState, { { plusFunc->Output(), rootGradientValue } }, gradients);

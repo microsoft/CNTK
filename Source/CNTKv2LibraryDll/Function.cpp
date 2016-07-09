@@ -17,61 +17,81 @@ bool g_shareNodeValueMatrices = true;
 
 namespace CNTK
 {
-    using namespace Internal;
-
-    Internal::SimpleVector<Variable> Function::InputsImpl() const
+    std::shared_ptr<std::vector<Variable>> Function::InputsImpl() const
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
+        std::vector<Variable> inputs;
         if (compositeFunction == nullptr)
-            return m_inputs;
+            inputs = m_inputs;
         else
-            return Internal::SimpleVector<Variable>(compositeFunction->DetermineInputs());
+            inputs = compositeFunction->DetermineInputs();
+
+        return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
+    }
+
+    FunctionPtr Function::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements)
+    {
+        // Cannot be called on primitive functions
+        if (RootFunction() == nullptr)
+            InvalidArgument("ReplacePlaceholders should never be called on primitive functions");
+
+        std::unordered_set<const Function*> visitedFunctions;
+        std::unordered_set<Placeholder> replacedPlaceholders;
+        ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+
+        for (auto replacementPair : placeholderReplacements)
+        {
+            if (replacedPlaceholders.find(replacementPair.first) == replacedPlaceholders.end())
+                InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
+        }
+
+        return this->shared_from_this();
     }
 
     // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
     // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
-    /*virtual*/ void Function::ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements,
-                                                    Internal::SimpleSet<const Function*>& visitedFunctions,
-                                                    Internal::SimpleSet<Placeholder>& replacedPlaceholders)
+    /*virtual*/ void Function::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
+                                                   std::unordered_set<const Function*>& visitedFunctions,
+                                                   std::unordered_set<Placeholder>& replacedPlaceholders)
     {
-        visitedFunctions.Insert(this);
+        visitedFunctions.insert(this);
 
-        for (auto& inputVar : *(m_inputs.m_vector))
+        for (auto& inputVar : m_inputs)
         {
             if (inputVar.IsPlaceholder())
             {
                 Placeholder placeholder(inputVar);
-                if (placeholderReplacements.Contains(placeholder))
+                if (placeholderReplacements.find(placeholder) != placeholderReplacements.end())
                 {
-                    inputVar = placeholderReplacements[placeholder];
-                    replacedPlaceholders.Insert(placeholder);
+                    inputVar = placeholderReplacements.at(placeholder);
+                    replacedPlaceholders.insert(placeholder);
                 }
             }
-            else if (inputVar.IsOutput() && !visitedFunctions.Contains(inputVar.Owner()))
+            else if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
                 inputVar.Owner()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
         }
     }
 
     // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
     // should have been replaced before performing any Forward compute of 'this' Function.
-    /*virtual*/ void CompositeFunction::ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements,
-                                                            Internal::SimpleSet<const Function*>& visitedFunctions,
-                                                            Internal::SimpleSet<Placeholder>& replacedPlaceholders)
+    /*virtual*/ void CompositeFunction::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
+                                                            std::unordered_set<const Function*>& visitedFunctions,
+                                                            std::unordered_set<Placeholder>& replacedPlaceholders)
     {
         RootFunction()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
         // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath each of those to 'm_allPrimitiveFunctions' set
-        for (auto replacedPlaceholder : *replacedPlaceholders.m_set)
+        for (auto replacedPlaceholder : replacedPlaceholders)
         {
-            auto replacingVariable = placeholderReplacements[replacedPlaceholder];
+            auto replacingVariable = placeholderReplacements.at(replacedPlaceholder);
             if (replacingVariable.IsOutput())
             {
                 auto ownerFunc = replacingVariable.Owner();
-                Internal::SimpleSet<FunctionPtr> visitedFunctions;
+                std::unordered_set<FunctionPtr> visitedFunctions;
                 DetermineInputs(ownerFunc, visitedFunctions);
 
                 // Add the newly visited functions to 'm_allPrimitiveFunctions' set
-                m_allPrimitiveFunctions.m_set->insert(visitedFunctions.m_set->begin(), visitedFunctions.m_set->end());
+                m_allPrimitiveFunctions.insert(visitedFunctions.begin(), visitedFunctions.end());
             }
         }
     }
@@ -139,7 +159,7 @@ namespace CNTK
     {
         assert(variable.IsOutput());
 
-        Function* function = variable.Owner();
+        Function* function = variable.Owner().get();
         ComputationNodeBasePtr computationNodePtr;
         if (dynamic_cast<PrimitiveFunction*>(function))
         {
@@ -250,14 +270,14 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const Internal::SimpleSet<Variable>& backpropRoots)
+    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots)
     {
         if (m_computationNetwork != nullptr)
         {
             // TODO: We should either invalidate and readapt the network if he backpropRoots change compared to what was specified when the network
             // was last constructed, to just recreate a new network.
             // For now just disallow changing the backpropRoots after the network is created
-            if (m_currentBackpropRoots != *backpropRoots.m_set)
+            if (m_currentBackpropRoots != backpropRoots)
                 LogicError("Changing backprop roots across different Forward calls on a CNTK composite Function is currently unsupported");
 
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
@@ -272,7 +292,7 @@ namespace CNTK
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
             // TODO: We current only support one backprop root
-            if (backpropRoots.Size() > 1)
+            if (backpropRoots.size() > 1)
                 LogicError("More than one backprop roots is currently unsupported");
 
             ComputationNodeBasePtr backpropRootNode;
@@ -286,7 +306,7 @@ namespace CNTK
                 auto currentRootNode = GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
                 forwardRootNodes.push_back(currentRootNode);
 
-                if (backpropRoots.Contains(rootOutput))
+                if (backpropRoots.find(rootOutput) != backpropRoots.end())
                     backpropRootNode = m_variableToNodeMap[rootOutput];
             }
 
@@ -309,7 +329,7 @@ namespace CNTK
                 if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
                 {
                     // We found a null input; this variable must correspond to a PastValue or FutureValue function
-                    const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(varNodePair.first.Owner().GetPtr());
+                    const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(varNodePair.first.Owner().get());
                     if ((primitiveFunc == nullptr) || ((primitiveFunc->OpType() != PrimitiveOpType::PastValue) && (primitiveFunc->OpType() != PrimitiveOpType::FutureValue)))
                         InvalidArgument("Invalid Function graph detected; recurrence found at a Function that is not a PastValue/FutureValue function");
 
@@ -486,8 +506,8 @@ namespace CNTK
         {
             // Just create a view over the existing matrix itself
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView);
-            return MakeReferenceCountedObject<Value>(data);
+            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView);
+            return MakeSharedObject<Value>(data);
         }
 
         if (layout->GetNumCols() != matrix.GetNumCols())
@@ -537,7 +557,7 @@ namespace CNTK
         NDMaskPtr mask;
         if (!sequencesShorterThanLongestSequence.empty())
         {
-            mask = MakeReferenceCountedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), AsDeviceDescriptor(matrix.GetDeviceId()));
+            mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), AsDeviceDescriptor(matrix.GetDeviceId()));
             for (auto shortSequenceIdx : sequencesShorterThanLongestSequence)
             {
                 mask->MaskSection({ sequenceLengths[shortSequenceIdx], shortSequenceIdx }, { NDShape::InferredDimension, 1 });
@@ -545,8 +565,8 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView);
-        return MakeReferenceCountedObject<Value>(data, mask);
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView);
+        return MakeSharedObject<Value>(data, mask);
     }
 
     template <typename ElementType>
@@ -563,20 +583,20 @@ namespace CNTK
         computationNode->GetMBLayout()->CopyFrom(layout);
     }
 
-    void CompositeFunction::PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments)
+    void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, const ValuePtr>& arguments)
     {
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
         for (auto argument : functionArguments)
         {
             // Ensure we have values for all arguments of the function
-            if (!arguments.Contains(argument))
+            if (arguments.find(argument) == arguments.end())
                 InvalidArgument("Value not specified for required Function Argument");
 
             auto argumentComputationNode = m_variableToNodeMap[argument];
             inputNodes.push_back(argumentComputationNode);
 
-            ValuePtr argumentValue = arguments[argument];
+            ValuePtr argumentValue = arguments.at(argument);
 
             MBLayoutPtr layout;
             switch (argumentValue->Data()->GetDataType())
@@ -608,11 +628,10 @@ namespace CNTK
     }
 
     // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
-    void CompositeFunction::PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients)
+    void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, const ValuePtr>& gradients)
     {
         auto functionOutputs = this->Outputs();
-        std::unordered_map<Variable, const ValuePtr>& gradientsValueMap = *gradients.m_map;
-        for (auto gradientVarValuePair : gradientsValueMap)
+        for (auto gradientVarValuePair : gradients)
         {
             // Only gradients for roots of the function can be specified
             if (std::find(functionOutputs.begin(), functionOutputs.end(), gradientVarValuePair.first) == functionOutputs.end())
@@ -689,9 +708,9 @@ namespace CNTK
 
             if (outputValuePtr == nullptr)
             {
-                auto data = MakeReferenceCountedObject<NDArrayView>(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
-                auto mask = (nodeValue->Mask() != nullptr) ? MakeReferenceCountedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
-                outputValuePtr = MakeReferenceCountedObject<Value>(data, mask);
+                auto data = MakeSharedObject<NDArrayView>(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
+                auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
+                outputValuePtr = MakeSharedObject<Value>(data, mask);
             }
             outputValuePtr->CopyFrom(*nodeValue);
             outputs[outputVarValuePair.first] = outputValuePtr;
@@ -742,9 +761,9 @@ namespace CNTK
 
             if (gradientValuePtr == nullptr)
             {
-                auto data = MakeReferenceCountedObject<NDArrayView>(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
-                auto mask = (nodeValue->Mask() != nullptr) ? MakeReferenceCountedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
-                gradientValuePtr = MakeReferenceCountedObject<Value>(data, mask);
+                auto data = MakeSharedObject<NDArrayView>(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
+                auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
+                gradientValuePtr = MakeSharedObject<Value>(data, mask);
             }
 
             gradientValuePtr->CopyFrom(*nodeValue);
@@ -752,14 +771,14 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
-                                                            Internal::SimpleMap<Variable, ValuePtr>& outputs,
-                                                            const Internal::SimpleSet<Variable>& outputsToRetainBackwardStateFor,
-                                                            const DeviceDescriptor& computeDevice)
+    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+                                                            std::unordered_map<Variable, ValuePtr>& outputs,
+                                                            const DeviceDescriptor& computeDevice,
+                                                            const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
     {
         // TODO: How about zero argument functions?
         // TODO: We need a better way to determine the ElementType for the network
-        auto dataType = arguments.m_map->begin()->second->Data()->GetDataType();
+        auto dataType = arguments.begin()->second->Data()->GetDataType();
         if (dataType == DataType::Float)
             GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor);
         else
@@ -770,10 +789,10 @@ namespace CNTK
         // Feed data into the arguments of the network
         PopulateNetworkInputs(arguments);
 
-        std::unordered_set<Variable> functionOutputs = Internal::SimpleVector<Variable>(this->Outputs()).GetAsUnorderedSet();
+        std::unordered_set<Variable> functionOutputs(this->Outputs().begin(), this->Outputs().end());
         std::vector<ComputationNodeBasePtr> outputsToEvaluate;
 
-        for (auto outputVarValuePair : *outputs.m_map)
+        for (auto outputVarValuePair : outputs)
         {
             // Ensure that only a subset of this function's outputs are being asked to be evaluated
             if (functionOutputs.find(outputVarValuePair.first) == functionOutputs.end())
@@ -784,26 +803,26 @@ namespace CNTK
         }
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
-        for (auto rootVarForBackprop : *outputsToRetainBackwardStateFor.m_set)
+        for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
         {
-            if (outputs.m_map->find(rootVarForBackprop) == outputs.m_map->end())
+            if (outputs.find(rootVarForBackprop) == outputs.end())
                 outputsToEvaluate.push_back(m_variableToNodeMap[rootVarForBackprop]);
         }
 
         m_computationNetwork->ForwardProp(outputsToEvaluate);
 
-        GetNetworkOutputs(*(outputs.m_map));
+        GetNetworkOutputs(outputs);
 
         // TODO: How to deal with the specified 'computeDevice'
 
-        return (outputsToRetainBackwardStateFor.Size() > 0) ? MakeReferenceCountedObject<CNTKBackPropState>(this, std::make_pair(arguments.m_map->begin()->first, m_variableToNodeMap[arguments.m_map->begin()->first]->GetEvalTimeStamp())) : nullptr;
+        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), std::make_pair(arguments.begin()->first, m_variableToNodeMap[arguments.begin()->first]->GetEvalTimeStamp())) : nullptr;
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
-                                                 const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
-                                                 Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
+                                                 const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
+                                                 std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
     {
-        auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.GetPtr());
+        auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
             InvalidArgument("Invalid backprop state specified");
 
@@ -812,80 +831,77 @@ namespace CNTK
             LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
                        "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
 
-        if (rootGradientValues.Size() > 1)
+        if (rootGradientValues.size() > 1)
             LogicError("Currently gradient backprop from only one of the Function Outputs is supported");
 
         // TODO: Avoid copying the data when possible
 
         // Zero all gradients of nodes below the root nodes
-        for (auto rootGradientVarValuePair : *rootGradientValues.m_map)
+        for (auto rootGradientVarValuePair : rootGradientValues)
             m_computationNetwork->ZeroInputGradients(m_variableToNodeMap[rootGradientVarValuePair.first]);
 
         // Feed data into the arguments of the network
         PopulateNetworkGradients(rootGradientValues);
 
         // Backpropagate through the network
-        auto rootComputationNodePtr = m_variableToNodeMap[rootGradientValues.m_map->begin()->first];
+        auto rootComputationNodePtr = m_variableToNodeMap[rootGradientValues.begin()->first];
         m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
 
-        GetNetworkGradients(*(backPropagatedGradientValuesForInputs.m_map));
+        GetNetworkGradients(backPropagatedGradientValuesForInputs);
 
         // TODO: How to deal with the specified 'computeDevice'
     }
 
     FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Times, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Times, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Plus, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Plus, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Sigmoid, std::vector<Variable>({ operand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Sigmoid, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Tanh, std::vector<Variable>({ operand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Tanh, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
-    namespace Internal
+    FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
     {
-        FunctionPtr Combine(const Internal::SimpleVector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
+        std::unordered_set<FunctionPtr> uniqueOperands;
+        std::vector<Variable> inputs;
+        for (auto operand : operands)
         {
-            Internal::SimpleSet<FunctionPtr> uniqueOperands;
-            std::vector<Variable> inputs;
-            for (size_t i = 0; i < operands.Size(); ++i)
-            {
-                if (uniqueOperands.Contains(operands[i]))
-                    LogicError("All function operands specified to Combine must be unique");
+            if (uniqueOperands.find(operand) != uniqueOperands.end())
+                LogicError("All function operands specified to Combine must be unique");
 
-                uniqueOperands.Insert(operands[i]);
-                auto currentFunctionOutputs = operands[i]->Outputs();
-                std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
-            }
-
-            return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Combine, inputs, Dictionary(), name), name);
+            uniqueOperands.insert(operand);
+            auto currentFunctionOutputs = operand->Outputs();
+            std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
         }
+
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, inputs, Dictionary(), name), name);
     }
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& output, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::CrossEntropyWithSoftmax, std::vector<Variable>({ output, labels }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CrossEntropyWithSoftmax, std::vector<Variable>({ output, labels }), Dictionary(), name), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, std::vector<Variable>({ prediction, labels }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, std::vector<Variable>({ prediction, labels }), Dictionary(), name), name);
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::Exp, std::vector<Variable>({ operand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Exp, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
     FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
@@ -895,7 +911,7 @@ namespace CNTK
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::PastValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::PastValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
     }
 
     FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
@@ -905,16 +921,16 @@ namespace CNTK
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::FutureValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::FutureValue, std::vector<Variable>({ initialState, operand }), std::move(additionalProperties), name), name);
     }
 
     FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ElementTimes, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ElementTimes, std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return CompositeFunction::Create(MakeReferenceCountedObject<PrimitiveFunction>(PrimitiveOpType::ReduceSum, std::vector<Variable>({ operand }), Dictionary(), name), name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ReduceSum, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 }

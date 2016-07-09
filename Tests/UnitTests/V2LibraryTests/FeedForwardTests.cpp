@@ -70,14 +70,14 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
             inputData[i] = ((float)rand()) / RAND_MAX;
 
         NDShape inputShape = { inputDim, 1, numSamples };
-        ValuePtr inputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i = 0; i < numSamples; ++i)
             labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
         NDShape labelShape = { numOutputClasses, 1, numSamples };
-        ValuePtr labelValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
+        ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
         std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutputFunction->Output(), outputValue }, { predictionFunction->Output(), predictionErrorValue } };
@@ -86,7 +86,7 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
         // Perform backprop
         NDShape outputShape = trainingLossFunction->Output().Shape();
         std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
-        ValuePtr rootGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
         auto allParams = ffNet->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
@@ -106,8 +106,8 @@ void TestTimesAndPlus(size_t inputDim,
                       bool outputOnSpecifiedDevice = false,
                       unsigned int seed = 1)
 {
-    Parameter timesParam(MakeReferenceCountedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
-    Parameter plusParam(MakeReferenceCountedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device));
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device));
 
     Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
@@ -120,7 +120,7 @@ void TestTimesAndPlus(size_t inputDim,
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
         NDShape inputShape = { inputDim, 1, numSamples };
-        ValuePtr inputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         NDShape outputShape = { outputDim, 1, numSamples };
         std::vector<ElementType> outputData(outputShape.TotalSize());
@@ -129,9 +129,9 @@ void TestTimesAndPlus(size_t inputDim,
         {
             auto outputAllocationDevice = outputOnSpecifiedDevice ? device : DeviceDescriptor::CPUDevice();
             if (outputAllocationDevice.Type() == DeviceKind::CPU)
-                outputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(outputShape, outputData.data(), outputData.size(), outputAllocationDevice, false));
+                outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData.data(), outputData.size(), outputAllocationDevice, false));
             else
-                outputValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, outputAllocationDevice));
+                outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, outputAllocationDevice));
         }
 
         std::unordered_map<Variable, ValuePtr> outputs = { { timesAndPlusFunc->Output(), outputValue } };
@@ -144,13 +144,13 @@ void TestTimesAndPlus(size_t inputDim,
         std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue;
         if (device.Type() == DeviceKind::CPU)
-            rootGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+            rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
         else
         {
-            NDArrayViewPtr cpuArrayView = MakeReferenceCountedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
-            NDArrayViewPtr gpuArrayView = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+            NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
             gpuArrayView->CopyFrom(*cpuArrayView);
-            rootGradientValue = MakeReferenceCountedObject<Value>(gpuArrayView);
+            rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
         }
 
         std::vector<ElementType> plusParameterGradientData(plusParam.Shape().TotalSize());
@@ -161,13 +161,13 @@ void TestTimesAndPlus(size_t inputDim,
             auto outputAllocationDevice = outputOnSpecifiedDevice ? device : DeviceDescriptor::CPUDevice();
             if (outputAllocationDevice.Type() == DeviceKind::CPU)
             {
-                plusParameterGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), outputAllocationDevice, false));
-                timesParameterGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), outputAllocationDevice, false));
+                plusParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), outputAllocationDevice, false));
+                timesParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), outputAllocationDevice, false));
             }
             else
             {
-                plusParameterGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), plusParam.Shape(), outputAllocationDevice));
-                timesParameterGradientValue = MakeReferenceCountedObject<Value>(MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), timesParam.Shape(), outputAllocationDevice));
+                plusParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), plusParam.Shape(), outputAllocationDevice));
+                timesParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), timesParam.Shape(), outputAllocationDevice));
             }
         }
 
@@ -183,7 +183,7 @@ void TestTimesAndPlus(size_t inputDim,
         // Verify forward prop results
         if (!usePreAllocatedOutputs || (outputOnSpecifiedDevice && (device.Type() != DeviceKind::CPU)))
         {
-            NDArrayViewPtr cpuArrayView = MakeReferenceCountedObject<NDArrayView>(outputShape, outputData.data(), outputData.size(), DeviceDescriptor::CPUDevice(), false);
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, outputData.data(), outputData.size(), DeviceDescriptor::CPUDevice(), false);
             cpuArrayView->CopyFrom(*outputValue->Data());
         }
 
@@ -203,12 +203,12 @@ void TestTimesAndPlus(size_t inputDim,
         // Verify backward prop results
         if (device.Type() != DeviceKind::CPU)
         {
-            NDArrayViewPtr cpuArrayView = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), plusParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*plusParameterGradientValue->Data());
             const ElementType* cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(plusParameterGradientData.data(), cpuArrayViewBuffer, plusParam.Shape().TotalSize() * sizeof(ElementType));
 
-            cpuArrayView = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), timesParam.Shape(), DeviceDescriptor::CPUDevice());
+            cpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), timesParam.Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*timesParameterGradientValue->Data());
             cpuArrayViewBuffer = cpuArrayView->DataBuffer<ElementType>();
             memcpy(timesParameterGradientData.data(), cpuArrayViewBuffer, timesParam.Shape().TotalSize() * sizeof(ElementType));

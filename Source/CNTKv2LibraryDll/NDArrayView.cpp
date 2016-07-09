@@ -15,8 +15,6 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
-    using namespace Internal;
-
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
                                                        const DeviceDescriptor& device,
@@ -101,12 +99,30 @@ namespace CNTK
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView)
-        : m_dataType(dataType), m_device(device), m_storageFormat(storageType), m_viewShape(viewShape), m_isReadOnly(readOnly), m_tensorView(tensorView)
+        : m_dataType(dataType), m_device(device), m_storageFormat(storageType), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
+        m_tensorView = std::shared_ptr<void>(tensorView, [this](void*) {
+            switch (m_dataType)
+            {
+            case DataType::Float:
+                delete GetTensorView<float>();
+                break;
+            case DataType::Double:
+                delete GetTensorView<double>();
+                break;
+            default:
+                LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+                break;
+            }
+        });
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorView(dataType, storageType, viewShape, device))
+    {
+    }
+
+    NDArrayView::~NDArrayView()
     {
     }
 
@@ -124,22 +140,6 @@ namespace CNTK
             LogicError("Filling a NDArrayView with a scalar is only allowed for NDArrayView objects with dense storage format");
 
         GetWritableMatrix<double>()->SetValue(value);
-    }
-
-    NDArrayView::~NDArrayView()
-    {
-        switch (m_dataType)
-        {
-        case DataType::Float:
-            delete GetTensorView<float>();
-            break;
-        case DataType::Double:
-            delete GetTensorView<double>();
-            break;
-        default:
-            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
-            break;
-        }
     }
 
     template <typename ElementType>
@@ -200,7 +200,7 @@ namespace CNTK
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
-        return (const TensorView<ElementType>*)(m_tensorView);
+        return (const TensorView<ElementType>*)(m_tensorView.get());
     }
 
     template <typename ElementType>
@@ -214,7 +214,7 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::DeepClone(bool readOnly/* = false*/) const
     {
-        NDArrayViewPtr newView = MakeReferenceCountedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device());
+        NDArrayViewPtr newView = MakeSharedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device());
         switch (m_dataType)
         {
         case DataType::Float:
@@ -286,7 +286,7 @@ namespace CNTK
             break;
         }
 
-        return MakeReferenceCountedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
     // TODO: This could actually be strided?
@@ -322,7 +322,7 @@ namespace CNTK
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
         auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShape(shape));
 
-        return MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
+        return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
     // Explicit template instantiations

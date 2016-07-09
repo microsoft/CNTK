@@ -7,8 +7,6 @@
 
 namespace CNTK
 {
-    using namespace Internal;
-
     Value::Value(const NDArrayViewPtr& data)
         : Value(data, nullptr)
     {
@@ -53,7 +51,7 @@ namespace CNTK
         if (needsMask)
         {
             NDShape valueMaskShape = { maxSequenceLength, numSequences };
-            deviceValueMask = MakeReferenceCountedObject<NDMask>(valueMaskShape, device);
+            deviceValueMask = MakeSharedObject<NDMask>(valueMaskShape, device);
             for (size_t i = 0; i < numSequences; ++i)
                 deviceValueMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
         }
@@ -90,8 +88,8 @@ namespace CNTK
         }
 
         colStarts[numSequences * maxSequenceLength] = (SparseIndexType)(nonZeroValues.size());
-        NDArrayViewPtr deviceValueData = MakeReferenceCountedObject<NDArrayView>(valueDataShape, colStarts.data(), rowIndices.data(), nonZeroValues.data(), nonZeroValues.size(), device, readOnly);
-        return MakeReferenceCountedObject<Value>(deviceValueData, deviceValueMask);
+        NDArrayViewPtr deviceValueData = MakeSharedObject<NDArrayView>(valueDataShape, colStarts.data(), rowIndices.data(), nonZeroValues.data(), nonZeroValues.size(), device, readOnly);
+        return MakeSharedObject<Value>(deviceValueData, deviceValueMask);
     }
 
     template <typename ElementType>
@@ -103,7 +101,7 @@ namespace CNTK
 
         size_t numSequences = sequences.size();
         NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
-        NDArrayViewPtr valueData = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice());
+        NDArrayViewPtr valueData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), valueDataShape, DeviceDescriptor::CPUDevice());
         ElementType* dataBuffer = valueData->WritableDataBuffer<ElementType>();
         for (size_t i = 0; i < numSequences; ++i)
             std::copy(sequences[i].data(), sequences[i].data() + sequences[i].size(), dataBuffer + (maxSequenceLength * i * numElementsPerSample));
@@ -118,13 +116,13 @@ namespace CNTK
         }
         else
         {
-            deviceValueData = MakeReferenceCountedObject<NDArrayView>(AsDataType<ElementType>(), valueDataShape, device);
+            deviceValueData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), valueDataShape, device);
             deviceValueData->CopyFrom(*valueData);
             if (readOnly)
                 deviceValueData = deviceValueData->Alias(true);
         }
 
-        return MakeReferenceCountedObject<Value>(deviceValueData, deviceValueMask);
+        return MakeSharedObject<Value>(deviceValueData, deviceValueMask);
     }
 
     /*virtual*/ Value::~Value()
@@ -146,13 +144,13 @@ namespace CNTK
     /*virtual*/ ValuePtr Value::DeepClone(bool readOnly/* = false*/) const
     {
         // TODO: Check if this is a derived type and throw an exception in that case
-        return MakeReferenceCountedObject<Value>(Data()->DeepClone(readOnly), (Mask() != nullptr) ? Mask()->DeepClone() : nullptr);
+        return MakeSharedObject<Value>(Data()->DeepClone(readOnly), (Mask() != nullptr) ? Mask()->DeepClone() : nullptr);
     }
 
     /*virtual*/ ValuePtr Value::Alias(bool readOnly/* = false*/) const
     {
         // TODO: Check if this is a derived type and throw an exception in that case
-        return MakeReferenceCountedObject<Value>(Data()->Alias(readOnly), (Mask() != nullptr) ? Mask()->Alias() : nullptr);
+        return MakeSharedObject<Value>(Data()->Alias(readOnly), (Mask() != nullptr) ? Mask()->Alias() : nullptr);
     }
 
     /*virtual*/ void Value::CopyFrom(const Value& source)

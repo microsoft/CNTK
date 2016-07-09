@@ -68,17 +68,17 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& /*arguments*/,
-                                         Internal::SimpleMap<Variable, ValuePtr>& /*outputs*/,
-                                         const Internal::SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
-                                         const DeviceDescriptor& /*computeDevice*/) override
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& /*arguments*/,
+                                         std::unordered_map<Variable, ValuePtr>& /*outputs*/,
+                                         const DeviceDescriptor& /*computeDevice*/,
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
         {
             NOT_IMPLEMENTED;
         }
 
         virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const Internal::SimpleMap<Variable, const ValuePtr>& /*rootGradientValues*/,
-                              Internal::SimpleMap<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                              const std::unordered_map<Variable, const ValuePtr>& /*rootGradientValues*/,
+                              std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
         }
@@ -280,56 +280,58 @@ namespace CNTK
     private:
         std::pair<Variable, int64_t> m_evalTimeStamp;
     };
-    typedef Internal::ReferenceCountedPtr<CNTKBackPropState> CNTKBackPropStatePtr;
+    typedef std::shared_ptr<CNTKBackPropState> CNTKBackPropStatePtr;
 
     class CompositeFunction;
-    typedef Internal::ReferenceCountedPtr<CompositeFunction> CompositeFunctionPtr;
+    typedef std::shared_ptr<CompositeFunction> CompositeFunctionPtr;
 
     class CompositeFunction final : public Function
     {
         friend class Function;
 
         template <typename T, typename ...CtorArgTypes>
-        friend static Internal::ReferenceCountedPtr<T> MakeReferenceCountedObject(CtorArgTypes&& ...ctorArgs);
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
         {
-            Internal::SimpleSet<FunctionPtr> visitedFunctions;
+            std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call DetermineInputs to get the set of all functions in the graph
             DetermineInputs(rootFunction, visitedFunctions);
 
-            return MakeReferenceCountedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name);
+            return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name);
         }
 
-        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
-                                         Internal::SimpleMap<Variable, ValuePtr>& outputs,
-                                         const Internal::SimpleSet<Variable>& outputsToRetainBackwardStateFor,
-                                         const DeviceDescriptor& computeDevice) override;
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+                                         std::unordered_map<Variable, ValuePtr>& outputs,
+                                         const DeviceDescriptor& computeDevice,
+                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
-                              Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+                              const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
+                              std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
-        virtual void ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders) override;
+        virtual void ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
+                                         std::unordered_set<const Function*>& visitedFunctions,
+                                         std::unordered_set<Placeholder>& replacedPlaceholders) override;
 
-        CompositeFunction(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
             : Function({}, rootFunction->Outputs(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
         {
         }
 
         std::vector<Variable> DetermineInputs() const
         {
-            Internal::SimpleSet<FunctionPtr> visitedFunctions;
+            std::unordered_set<FunctionPtr> visitedFunctions;
             return DetermineInputs(RootFunction(), visitedFunctions);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' to determine all the leaves (aka inputs) of the graph
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>& visitedFunctions)
+        static std::vector<Variable> DetermineInputs(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions)
         {
-            visitedFunctions.Insert(rootFunction);
+            visitedFunctions.insert(rootFunction);
 
             std::vector<Variable> inputs;
             std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
@@ -337,7 +339,7 @@ namespace CNTK
             {
                 if (!rootInput.IsOutput())
                     inputs.push_back(rootInput);
-                else if (!visitedFunctions.Contains(rootInput.Owner()))
+                else if (visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
                     FunctionPtr function = rootInput.Owner();
                     std::vector<Variable> functionInputs = DetermineInputs(function, visitedFunctions);
@@ -349,7 +351,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const Internal::SimpleSet<Variable>& backpropRoots);
+        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
@@ -359,11 +361,11 @@ namespace CNTK
 
         template <typename ElementType>
         static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
-        void PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments);
+        void PopulateNetworkInputs(const std::unordered_map<Variable, const ValuePtr>& arguments);
 
         template <typename ElementType>
         static void PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
-        void PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients);
+        void PopulateNetworkGradients(const std::unordered_map<Variable, const ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
@@ -378,7 +380,7 @@ namespace CNTK
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
         // by holding strong references to them
-        Internal::SimpleSet<FunctionPtr> m_allPrimitiveFunctions;
+        std::unordered_set<FunctionPtr> m_allPrimitiveFunctions;
 
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
