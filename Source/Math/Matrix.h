@@ -131,10 +131,10 @@ private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID);                                  // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
-    void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
+    void Init(DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
+    void InitFields(DEVICEID_TYPE deviceID);
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
     void ShallowCopyFrom(const Matrix<ElemType>& other);
-
 public:
     // down-cast to make life easier
     template <class T>
