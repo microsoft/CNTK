@@ -454,6 +454,16 @@ public:
     {
     }
 
+    static void DropSilenceFrames(Matrix<ElemType>& gradients, const MBLayoutPtr& pMBLayout, const std::vector<size_t>& uids, const float dropRatio)
+    {
+#if 0 // in the future we can use the tensor lib to implement this
+
+#else
+        const auto &maskMatrix = pMBLayout->GetSilenceDropMask(uids, dropRatio, gradients.GetDeviceId());
+        gradients.MaskColumnsValue(maskMatrix, (ElemType)0);
+       // gradients.Print("error", gradients.GetNumRows() - 2, gradients.GetNumRows() - 1, 0, gradients.GetNumCols() - 1);
+#endif
+    }
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
@@ -467,8 +477,9 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold, m_seqGammarUsesMBR);
             MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+
 
 #ifdef _DEBUG
             Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
@@ -503,7 +514,7 @@ public:
 
     static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh, bool SMBR)
     {
 #if DUMPOUTPUT
         softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -511,9 +522,8 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-
-        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
-        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
+        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element(), SMBR);
+        //inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
@@ -548,7 +558,7 @@ public:
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                                         m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
-                                        Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+                                        Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment, m_frameDropThreshold);
 
 #if NANCHECK
         Value().HasNan("SequenceWithSoftmaxNode");
@@ -637,6 +647,7 @@ public:
         param.bMMIfactor = bMMIfactor;
         param.sMBRmode = sMBR;
         m_gammaCalculator.SetGammarCalculationParams(param);
+        m_seqGammarUsesMBR = sMBR;
     }
 
     void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
@@ -655,7 +666,7 @@ protected:
     double m_seqGammarLMF;
     double m_seqGammarWP;
     double m_seqGammarbMMIFactor;
-    double m_seqGammarUsesMBR;
+    bool m_seqGammarUsesMBR;
     bool m_doReferenceAlignment;
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
     msra::asr::simplesenonehmm m_hmm;

@@ -394,6 +394,7 @@ struct parallelstateimpl
           uidsgpu(msra::cuda::newushortvector(deviceid)),
           senone2classmapgpu(msra::cuda::newushortvector(deviceid)),
           errorsignalgpu(new Microsoft::MSR::CNTK::Matrix<float>((int) deviceid)),
+          accgpu(new Microsoft::MSR::CNTK::Matrix<float>((int) deviceid)),
           errorsignalneggpu(new Microsoft::MSR::CNTK::Matrix<float>((int) deviceid)),
           errorsignalgpustorage(new Microsoft::MSR::CNTK::Matrix<float>((int) deviceid)),
           errorsignalneggpustorage(new Microsoft::MSR::CNTK::Matrix<float>((int) deviceid)),
@@ -541,6 +542,7 @@ struct parallelstateimpl
     std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalgpustorage;
     std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalneggpustorage;
     std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalgpu;
+    std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> accgpu;
     std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalneggpu;
 
     // cache current lattice
@@ -580,6 +582,10 @@ struct parallelstateimpl
     void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls)
     {
         loglls.SetValue(*errorsignalgpu);
+    }
+    void getpps(Microsoft::MSR::CNTK::Matrix<float>& loglls)
+    {
+        loglls.SetValue(*accgpu);
     }
     template <class edgealignments>
     void copyalignments(edgealignments& edgeAlignments)
@@ -627,16 +633,17 @@ struct parallelstateimpl
     {
         if (errorsignalgpustorage->GetNumRows() != 0 && errorsignalgpustorage->GetNumRows() != errorsignal.rows())
             LogicError("gpumatrixstorage->rows() shall be fixed once allocated");
-        if (errorsignalgpustorage->GetNumCols() < errorsignal.cols())
+        if (errorsignalgpustorage->GetNumCols() < errorsignal.cols() * 2)
         {
             // Note: This is required because otherwise errorsignalgpustorage will be a view of the storage object in
             // errorsignalgpustorage, and thuse it can't resize. This is perhaps not the optimal way to do this, but
             // how else? Why do these two matrices exist? Why not just one?
             errorsignalgpu = nullptr;
-            errorsignalgpustorage->Resize(errorsignal.rows(), errorsignal.cols());
+            accgpu = nullptr;
+            errorsignalgpustorage->Resize(errorsignal.rows(), errorsignal.cols() * 2);
         }
         errorsignalgpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalgpustorage->ColumnSlice(0, errorsignal.cols()));
-
+        accgpu = make_unique<Microsoft::MSR::CNTK::Matrix<float>>(errorsignalgpustorage->ColumnSlice(errorsignal.cols(), errorsignal.cols()));
         if (cacheerrsignalneg)
         {
             if (errorsignalneggpustorage->GetNumRows() != 0 && errorsignalneggpustorage->GetNumRows() != errorsignal.rows())
@@ -740,8 +747,16 @@ void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<float>& logll
     pimpl->getgamma(loglls);
 }
 
+void lattice::parallelstate::getpps(Microsoft::MSR::CNTK::Matrix<float>& loglls)
+{
+    pimpl->getpps(loglls);
+}
 // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
 void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<double>& /*loglls*/)
+{
+    throw ::logic_error("Double precision not supported for sequence training");
+}
+void lattice::parallelstate::getpps(Microsoft::MSR::CNTK::Matrix<double>& /*loglls*/)
 {
     throw ::logic_error("Double precision not supported for sequence training");
 }
@@ -949,7 +964,7 @@ void lattice::parallelmmierrorsignal(parallelstate& parallelstate, const edgeali
 
         std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));
         latticefunctions->mmierrorsignal(*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
-                                         *parallelstate->nodesgpu.get(), *parallelstate->logppsgpu.get(), *parallelstate->errorsignalgpu.get());
+                                         *parallelstate->nodesgpu.get(), *parallelstate->logppsgpu.get(), *parallelstate->accgpu.get());
 
         // parallelstate->errorsignalgpu->fetch (0, errorsignal.rows(), 0, errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride(), true);
     }

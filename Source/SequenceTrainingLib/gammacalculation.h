@@ -96,7 +96,7 @@ public:
                        size_t samplesInRecurrentStep, /* numParallelUtterance ? */
                        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                        std::vector<size_t>& extrauttmap,
-                       bool doreferencealign)
+                       bool doreferencealign,double frameDropThreshold)
     {
         // check total frame number to be added ?
         // int deviceid = loglikelihood.GetDeviceId();
@@ -107,13 +107,18 @@ public:
         // convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
         size_t numrows = loglikelihood.GetNumRows();
         size_t numcols = loglikelihood.GetNumCols();
-        Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> denaccs(m_deviceid), tempmatrix(m_deviceid), tempmatrix2(m_deviceid);
 
+        if (seqsMBRmode)
+            denaccs.Resize(loglikelihood);
         // copy loglikelihood to pred
+
         if (numcols > pred.cols())
         {
             pred.resize(numrows, numcols);
             dengammas.resize(numrows, numcols);
+            if (seqsMBRmode)
+                gammasbuffer.resize(numrows, numcols);
         }
 
         if (doreferencealign)
@@ -205,30 +210,54 @@ public:
             numavlogp /= numframes;
 
             // auto_timer dengammatimer;
-            double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
+            double denavlogp;
+            if (!seqsMBRmode)
+            {
+                denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
                                                                    lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
-            objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
+                objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
+            }
+            else
+            {
+                msra::dbn::matrixstripe gammasbufferstripe(gammasbuffer, ts, numframes);
+                denavlogp = lattices[i]->second.forwardbackward(parallellattice,
+                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
+                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbufferstripe /*empty, not used*/,
+                    lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
+                objectValue += (ElemType)(denavlogp * numframes);
 
+            }
             if (samplesInRecurrentStep == 1)
             {
                 tempmatrix = gammafromlattice.ColumnSlice(ts, numframes);
+                if (seqsMBRmode)
+                    tempmatrix2 = denaccs.ColumnSlice(ts, numframes);
             }
-
             // copy gamma to tempmatrix
             if (m_deviceid == CPUDEVICE)
             {
                 CopyFromSSEMatrixToCNTKMatrix(dengammas, numrows, numframes, tempmatrix, gammafromlattice.GetDeviceId());
             }
             else
+            {
                 parallellattice.getgamma(tempmatrix);
-
+                if (seqsMBRmode && frameDropThreshold > 0.0)
+                {                    
+                    parallellattice.getpps(tempmatrix2);
+                }
+            }
             // set gamma for multi channel
             if (samplesInRecurrentStep > 1)
             {
                 Microsoft::MSR::CNTK::Matrix<ElemType> gammaFromLatticeForCurrentParallelUtterance = gammafromlattice.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
                 gammaFromLatticeForCurrentParallelUtterance.CopyColumnsStrided(tempmatrix, numframes, 1, samplesInRecurrentStep);
+                if (seqsMBRmode)
+                {
+                    Microsoft::MSR::CNTK::Matrix<ElemType> denaccsForCurrentParallelUtterance = denaccs.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
+                    denaccsForCurrentParallelUtterance.CopyColumnsStrided(tempmatrix2, numframes, 1, samplesInRecurrentStep);
+                }
             }
 
             if (doreferencealign)
@@ -247,7 +276,18 @@ public:
             fprintf(stderr, "dengamma value %f\n", denavlogp);
             ts += numframes;
         }
+        if (seqsMBRmode && frameDropThreshold > 0.0)
+        {
+            
+            //denaccs.Print("denacc");
+            gammafromlattice.DropFrame(labels, denaccs, (ElemType)frameDropThreshold);
+            //fprintf(stderr, "after drop\n");
+        }
         functionValues.SetValue(objectValue);
+        /*Microsoft::MSR::CNTK::Matrix<ElemType> rowsum(m_deviceid);
+        rowsum.Resize(1, denaccs.GetNumCols());
+        denaccs.VectorSum(denaccs, rowsum, true);
+        rowsum.Print("row sum");*/
     }
 
 private:

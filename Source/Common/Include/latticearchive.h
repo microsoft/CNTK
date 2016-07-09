@@ -1098,6 +1098,8 @@ public:
         void setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls);
         void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls);
         void getgamma(Microsoft::MSR::CNTK::Matrix<double>& loglls);
+        void getpps(Microsoft::MSR::CNTK::Matrix<float>& loglls);
+        void getpps(Microsoft::MSR::CNTK::Matrix<double>& loglls);
     };
 
     // forward-backward function

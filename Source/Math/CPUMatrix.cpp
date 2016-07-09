@@ -5993,11 +5993,19 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DropFrame(const CPUMatrix<ElemType>& l
 
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label,
-                                                              const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha)
+                                                              const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha, bool SMBR)
 {
     auto& us = *this;
-    foreach_coord (i, j, us)
-        us(i, j) += alpha * (label(i, j) - (1 - hsmoothingWeight) * dnnoutput(i, j) - hsmoothingWeight * gamma(i, j));
+    if (!SMBR)
+    {
+        foreach_coord(i, j, us)
+            us(i, j) -= alpha * (label(i, j) - (1 - hsmoothingWeight) * dnnoutput(i, j) - hsmoothingWeight * gamma(i, j));
+    }
+    else
+    {
+        foreach_coord(i, j, us)
+            us(i, j) -= alpha * ((1 - hsmoothingWeight) * (label(i, j) - dnnoutput(i, j)) + hsmoothingWeight * gamma(i, j));
+    }
     return *this;
 }
 

@@ -633,7 +633,7 @@ struct latticefunctionskernels
     // TODO: change this later on
     static inline __device__ bool issilencestate(size_t stateid, size_t numsenones)
     {
-        if (numsenones == 9304 && (stateid == 7670 || stateid == 7671 || stateid == 7672))
+        if (numsenones == 5980 && (stateid == 2509 || stateid == 2509 || stateid == 2510 || stateid < 9))
             return true;
         else
             return false;
@@ -669,7 +669,7 @@ struct latticefunctionskernels
         const bool boostmmi = (boostingfactor != 0.0f);
         // compute the frames-correct count for this edge
         double logframescorrectedgej = LOGZERO;
-        const size_t numsenones = 9304; // WARNING: this is a hack, please fix this once smbr or bmmi is working! [v-hansu]
+        const size_t numsenones = 5980; // WARNING: this is a hack, please fix this once smbr or bmmi is working! [v-hansu]
         bool skipsilence = true;        // currently we skip silence for BMMI and sMBR [v-hansu]
         if (returnEframescorrect || boostmmi)
         {

@@ -108,7 +108,7 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_silFrameDropMask(CPUDEVICE)
     {
         Init(numParallelSequences, numTimeSteps);
         SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
@@ -291,6 +291,7 @@ public:
     size_t GetActualNumSamples() const;
 
     const Matrix<char>& GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
+    const Matrix<char>& GetSilenceDropMask(const std::vector<size_t>& uids, const float dropRatio, DEVICEID_TYPE deviceId) const; //chanliu
 
     // compare whether two layouts are the same
     bool operator==(const MBLayout& other) const
@@ -556,6 +557,7 @@ private:
     // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
     mutable Matrix<char> m_columnsValidityMask;
 
+    mutable Matrix<char> m_silFrameDropMask; //chanliu
     // A boolean flag indicating whether the MBLayout can be further modified
     // When it's value is false, no set operations are allowed on the MBLayout.
     // Meant to guard in lazy creation of m_columnsValidityMask.
@@ -875,6 +877,168 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
     return m_columnsValidityMask;
 }
 
+inline const Matrix<char> &MBLayout::GetSilenceDropMask(const std::vector<size_t>& uids, const float dropRatio, DEVICEID_TYPE deviceId) const
+{
+    CheckIsValid();
+    dropRatio;
+    if (m_silFrameDropMask.IsEmpty())
+    {
+        Lock();
+
+        // Determine indices of all invalid columns in the minibatch
+        // TODO: This can be done more efficiently by using m_sequences[].
+        size_t nT = GetNumTimeSteps();
+        size_t nS = GetNumParallelSequences();
+
+        std::vector<char> columnsDropMask(nT * nS, 1); // form the mask in a CPU-side STL vector first
+
+#if 1
+        srand((unsigned int)time(NULL));
+
+        size_t uidStart = 0;
+        for (size_t u = 0; u < m_sequences.size(); u++)
+        {
+            ptrdiff_t tBegin = m_sequences[u].tBegin > 0 ? m_sequences[u].tBegin : 0;
+            ptrdiff_t tEnd = m_sequences[u].tEnd > nT ? nT : m_sequences[u].tEnd;
+            ptrdiff_t tEndExcludeGap = tEnd;
+
+            size_t s = m_sequences[u].s;
+
+            size_t silTotalNum = 0;
+            size_t silDropNum = 0;
+
+            //find the real end of the utterance (exclude gap)
+            for (tEndExcludeGap = tBegin; tEndExcludeGap < tEnd; tEndExcludeGap++)
+            {
+                if (m_distanceToStart(s, tEndExcludeGap) < 0) // -1 indicates a gap frame
+                    break;
+            }
+
+            //count the silence frame numbers in this utterance.
+            for (ptrdiff_t t = tBegin; t < tEndExcludeGap; t++)
+            {
+                if (uids[uidStart + t] > 6007)
+                    silTotalNum++;
+            }
+
+            for (ptrdiff_t t = tBegin; t < tEndExcludeGap; t++)
+            {
+                if (uids[uidStart + t] < 6008)
+                    break;
+                columnsDropMask[(t * nS) + s] = 0;
+                silDropNum++;
+            }
+
+            for (ptrdiff_t t = tEndExcludeGap - 1; t >= tBegin; t--)
+            {
+                if (uids[uidStart + t] < 6008)
+                    break;
+                columnsDropMask[(t * nS) + s] = 0;
+                silDropNum++;
+            }
+            /*for (ptrdiff_t t = tBegin; t < tEndExcludeGap; t++)
+            {
+                if (uids[uidStart + t] == 5350 || uids[uidStart + t] == 5351 || uids[uidStart + t] == 5352)
+                {
+                    if ((float)rand() / (float)RAND_MAX < 10000 + dropRatio)
+                    {
+                        columnsDropMask[(t * nS) + s] = 0;
+                        silDropNum++;
+                    }
+                }
+            }*/
+
+            float dropRate = silTotalNum == 0 ? 0 : (float)silDropNum / (float)silTotalNum;
+            fprintf(stderr, "Drop %d silence frames. Drop Rate: %.2f. Total frame number: %d. Total silence frame number: %d.\n",
+                silDropNum, dropRate, tEndExcludeGap - tBegin, silTotalNum);
+
+            uidStart += (tEndExcludeGap - tBegin);
+        }
+
+#else
+        size_t keepSilFrameNum = (size_t)dropRatio;
+
+        size_t uidStart = 0;
+        for (size_t u = 0; u < m_sequences.size(); u++)
+        {
+            ptrdiff_t tBegin = m_sequences[u].tBegin > 0 ? m_sequences[u].tBegin : 0;
+            ptrdiff_t tEnd = m_sequences[u].tEnd > nT ? nT : m_sequences[u].tEnd;
+            ptrdiff_t tEndExcludeGap = tBegin;
+
+            size_t s = m_sequences[u].s;
+         
+            //Get some statistical information
+            size_t silTotalNum = 0;
+            size_t silBeginDropNum = 0;
+            size_t silEndDropNum = 0;
+
+            //find the real end of the utterance (exclude gap)
+            for (tEndExcludeGap = tBegin; tEndExcludeGap < tEnd; tEndExcludeGap++)
+            {
+                if (m_distanceToStart(s, tEndExcludeGap) < 0) // -1 indicates a gap frame
+                    break;
+            }
+
+            //count the silence frame numbers in this utterance.
+            for (ptrdiff_t t = tBegin; t < tEndExcludeGap; t++)
+            {
+                if (uids[uidStart + t] == 5350 || uids[uidStart + t] == 5351 || uids[uidStart + t] == 5352)
+                    silTotalNum++;
+            }
+
+            ptrdiff_t accBeginSilIdx = tBegin;
+            for (ptrdiff_t t = tBegin; t < tEndExcludeGap; t++)
+            {
+                if (uids[uidStart + t] == 5350 || uids[uidStart + t] == 5351 || uids[uidStart + t] == 5352)
+                    accBeginSilIdx++;
+                else
+                    break;
+            }
+
+            //keep 50 frames in the begining of an utterance
+            for (ptrdiff_t t = accBeginSilIdx - keepSilFrameNum; t >= tBegin; t--)
+            {
+                columnsDropMask[(t * nS) + s] = 0;
+                silBeginDropNum++;
+            }
+            
+
+            ptrdiff_t accEndSilIdx = tEndExcludeGap - 1;
+            for (ptrdiff_t t = tEndExcludeGap - 1; t >= tBegin; t--)
+            {
+                if (uids[uidStart + t] == 5350 || uids[uidStart + t] == 5351 || uids[uidStart + t] == 5352)
+                    accEndSilIdx--;
+                else
+                    break;
+            }
+
+            //keep 50 frames in the end of an utterance
+            for (ptrdiff_t t = accEndSilIdx + keepSilFrameNum; t < tEndExcludeGap; t++)
+            {
+                columnsDropMask[(t * nS) + s] = 0; 
+                silEndDropNum++;
+            }
+
+            uidStart += (tEndExcludeGap - tBegin);
+
+            float dropRate = silTotalNum == 0 ? 0 : (float)(silBeginDropNum + silEndDropNum) / (float)silTotalNum;
+            fprintf(stderr, "Drop silence frames: %d from begining, %d from end. Drop Rate: %.2f. Total frame number: %d. Total silence frame number: %d.\n",
+                silBeginDropNum, silEndDropNum, dropRate, tEndExcludeGap - tBegin, silTotalNum);
+        }
+#endif
+        
+        for (int k = 0; k < columnsDropMask.size(); k++)
+        {
+            fprintf(stderr, " %d", columnsDropMask[k]);
+        }
+        fprintf(stderr, "\n");
+
+        m_silFrameDropMask = Matrix<char>(deviceId);
+        m_silFrameDropMask.SetValue(1, nS * nT, deviceId, columnsDropMask.data());
+    }
+
+    return m_silFrameDropMask;
+}
 // class for defining an iteration over a sequence, forward and backward
 // One day, we may also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
 class FrameRangeIteration

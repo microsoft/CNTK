@@ -1426,6 +1426,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     // sMBR mode
     else
     {
+        auto &dengammas = result; // result is denominator gammas
+        mmierrorsignal(parallelstate, minlogpp, origlogpps, abcs, softalignstates, logpps, hset, thisedgealignments, dengammas);
         auto &errorsignal = result;
         sMBRerrorsignal(parallelstate, errorsignal, errorsignalbuf, logpps, amf, minlogpp, origlogpps, logEframescorrect, logEframescorrecttotal, thisedgealignments);
 
