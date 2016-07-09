@@ -142,6 +142,9 @@ A few other notes about the config:
 - the gradUpdateType is set FSAdaGrad. This setting reports better model accuracy comparing any other update methods.
 - multiple LSTM layers can be used by changing the value of maxLayer.
 
+Three commands are configured: Train, Output and Test. The command "Train" is used to train a model, "Output" is used to evaluate the model against a test set and store
+the model output, and the command "Test" is to calculate the model's accuracy.
+
 ## Run the example
 
 One can run the example locally or on Philly (for Microsoft internal users). 
@@ -150,10 +153,12 @@ To run locally,
 
 ```sh
 > mkdir work              # the default work_dir
+> open ATIS.cntk and update the value of deviceId: -1 for CPU, auto for GPU
 > cntk.exe configFile=ATIS.cntk
 ```
 
-By default, the maxEpochs is set to 1 to save training time. One can change it to larger value such as 20 in order to get a good model accuracy. Depends on GPU, it normally takes about 20 minutes to run 20 epochs on single GPU, and slot F1 score is about 93.
+By default, the maxEpochs is set to 1 to save training time. One can change it to larger value such as 20 in order to get a good model accuracy. 
+Depends on GPU, it normally takes about 20 minutes to run 20 epochs on single GPU, and slot F1 score is about 93.
 
 **For Microsoft users only**, to run the job on Philly:
 - first upload data folder to philly cloud. e.g. `\\storage.gcr.philly.selfhost.corp.microsoft.com\pnrsy\<your_alias>\ATIS `
