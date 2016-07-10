@@ -22,7 +22,6 @@ for this software, unless other terms accompany those items. If so, those terms 
 
   a. **Distributable Code.** The software contains code that you are permitted to distribute in programs you develop if you comply with the terms below.  
   i.	**Right to Use and Distribute. The code and text files listed below are “Distributable Code.”**
-
     * *You may distribute the software solely as a single binary comprised of only the software and CNTK.* No other distribution is permitted. 
     * *Sample Code.* You may modify, copy, and distribute the source and source code form of sample code that is identified by being provided in the Examples directory.
     * *Third Party Distribution.* You may permit distributors of your programs that include the software *solely as a single binary comprised of only the software and CNTK* to copy and distribute the Distributable Code as part of those programs, subject to the terms of this agreement.
