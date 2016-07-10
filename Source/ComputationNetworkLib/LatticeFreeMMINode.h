@@ -87,7 +87,7 @@ public:
             // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
             if (m_ceweight != 0)
             {
-                m_softmax->InplaceExp();
+                //m_softmax->InplaceExp();
                 Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
                 Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
             }
@@ -152,9 +152,9 @@ public:
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
         m_likelihoods->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
-        if (m_ceweight != 0)
+        //if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-
+            m_softmax->InplaceExp();
         if (m_usePrior)
             (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 

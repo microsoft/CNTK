@@ -537,10 +537,10 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     m_likelihoodBuffer.resize(bufferSize);
     ElemType* refArr = &m_likelihoodBuffer[0];
     m_softmax->CopyToArray(refArr, bufferSize);
-   /* for (int i = 0; i < bufferSize; i++)
+    for (int i = 0; i < bufferSize; i++)
     {
         m_likelihoodBuffer[i] = log(m_likelihoodBuffer[i]);
-    }*/
+    }
 
     m_alphaNums.clear();
     m_alphaNums.resize(nstates * nf, DBL_MIN_EXP);
@@ -694,7 +694,8 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
                 logSum += curr * log(curr);
             }
         }
-
+        Matrix<ElemType> logsoftmax(m_softmax->GetDeviceId());
+        logsoftmax.AssignLogOf(*m_softmax);
         ElemType ce = Matrix<ElemType>::InnerProductOfMatrices(*m_posteriorsNum, *m_softmax);   // m_softmax is with logSoftmax of the NN output
         return (1 - m_ceweight) * logForwardScore - m_ceweight * (logSum - ce);
     }
