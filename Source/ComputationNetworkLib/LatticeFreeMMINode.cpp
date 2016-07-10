@@ -696,7 +696,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
         }
         Matrix<ElemType> logsoftmax(m_softmax->GetDeviceId());
         logsoftmax.AssignLogOf(*m_softmax);
-        ElemType ce = Matrix<ElemType>::InnerProductOfMatrices(*m_posteriorsNum, *m_softmax);   // m_softmax is with logSoftmax of the NN output
+        ElemType ce = Matrix<ElemType>::InnerProductOfMatrices(*m_posteriorsNum, logsoftmax);   // m_softmax is with logSoftmax of the NN output
         return (1 - m_ceweight) * logForwardScore - m_ceweight * (logSum - ce);
     }
 }
