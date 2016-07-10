@@ -536,11 +536,11 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     size_t bufferSize = nsenones * nf;
     m_likelihoodBuffer.resize(bufferSize);
     ElemType* refArr = &m_likelihoodBuffer[0];
-    m_likelihoods->CopyToArray(refArr, bufferSize);
-    for (int i = 0; i < bufferSize; i++)
+    m_softmax->CopyToArray(refArr, bufferSize);
+   /* for (int i = 0; i < bufferSize; i++)
     {
         m_likelihoodBuffer[i] = log(m_likelihoodBuffer[i]);
-    }
+    }*/
 
     m_alphaNums.clear();
     m_alphaNums.resize(nstates * nf, DBL_MIN_EXP);
@@ -682,9 +682,9 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
 
     // return the forward path score
-    //if (m_ceweight == 0)
+    if (m_ceweight == 0)
         return logForwardScore;
-    /*else
+    else
     {
         double logSum = 0;
         for (int i = 0; i < nf * nsenones; i++)
@@ -697,7 +697,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
 
         ElemType ce = Matrix<ElemType>::InnerProductOfMatrices(*m_posteriorsNum, *m_softmax);   // m_softmax is with logSoftmax of the NN output
         return (1 - m_ceweight) * logForwardScore - m_ceweight * (logSum - ce);
-    }*/
+    }
 }
 
 template <class ElemType>
@@ -720,7 +720,7 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
     m_obsp->SetValue(nstates, nf + 1, m_deviceId, &m_obspAtHost[0]);
 
     auto probpart = m_obsp->ColumnSlice(0, nf);
-    Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, smapTranspose, false, *m_likelihoods, false, (ElemType)1.0, probpart);
+    Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, smapTranspose, false, *m_softmax, false, (ElemType)1.0, probpart);
     
     const int rescale_interval = 1; // rescale every this many frames
     ElemType scale = 1.0;

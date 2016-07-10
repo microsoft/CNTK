@@ -89,7 +89,7 @@ public:
             {
                 m_softmax->InplaceExp();
                 Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
-                Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_posteriorsCTC, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
+                Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
             }
             if (m_l2NormFactor != 0)
             {
@@ -167,7 +167,6 @@ public:
         size_t nf = m_likelihoods->GetNumCols();
         double logNumeratorWithCE = CalculateNumeratorsWithCE(Input(0)->MaskedValueFor(fr), nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
-        double logCTC = CTCCalculation(Input(0)->MaskedValueFor(fr), nf);
 
         double l2NormScore = 0;
         if (m_l2NormFactor != 0)
@@ -176,7 +175,7 @@ public:
         }
 
         // Got the final numbers
-        ElemType finalValue = (ElemType)((1 - m_ceweight) * (logDenominator - logNumeratorWithCE) - m_ceweight*logCTC + l2NormScore);
+        ElemType finalValue = (ElemType)((1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
 
