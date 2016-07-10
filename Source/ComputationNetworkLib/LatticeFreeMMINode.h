@@ -247,7 +247,7 @@ public:
         RequestMatrixFromPool(m_maxLabelValues, matrixPool);
         RequestMatrixFromPool(m_posteriorsNum, matrixPool);
         RequestMatrixFromPool(m_posteriorsCTC, matrixPool);
-        if (m_ceweight != 0)
+       // if (m_ceweight != 0)
             RequestMatrixFromPool(m_softmax, matrixPool);
     }
 
