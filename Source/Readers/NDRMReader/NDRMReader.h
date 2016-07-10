@@ -27,6 +27,7 @@ class NDRMReader : public DataReaderBase
     std::wstring m_file;
     std::wstring m_qEmbeddingsFile;
     std::wstring m_dEmbeddingsFile;
+    std::wstring m_idfFile;
     size_t m_numDocs;
     size_t m_numWordsPerQuery;
     size_t m_numWordsPerDoc;
@@ -45,21 +46,26 @@ class NDRMReader : public DataReaderBase
     HANDLE m_hndl;
     HANDLE m_qEmbHndl;
     HANDLE m_dEmbHndl;
+    HANDLE m_idfHndl;
     HANDLE m_filemap;
     HANDLE m_qEmbFilemap;
     HANDLE m_dEmbFilemap;
+    HANDLE m_idfFilemap;
 #else
     int m_hndl;
     int m_qEmbHndl;
     int m_dEmbHndl;
+    int m_idfHndl;
 #endif
     void* m_dataBuffer;
     void* m_qEmbDataBuffer;
     void* m_dEmbDataBuffer;
+    void* m_idfDataBuffer;
    
     int64_t m_filePositionMax;
     int64_t m_qEmbFilePositionMax;
     int64_t m_dEmbFilePositionMax;
+    int64_t m_idfFilePositionMax;
     int64_t m_currOffset;
     size_t m_numSamplesPerEpoch;
     size_t m_numSamplesCurrEpoch;

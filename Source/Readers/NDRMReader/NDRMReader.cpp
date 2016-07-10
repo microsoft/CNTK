@@ -72,6 +72,18 @@ NDRMReader<ElemType>::~NDRMReader()
 
         CloseHandle(m_dEmbHndl);
     }
+
+    if (m_idfFilemap != NULL)
+    {
+        UnmapViewOfFile(m_idfFilemap);
+    }
+
+    if (m_idfDataBuffer != NULL)
+    {
+        UnmapViewOfFile(m_idfDataBuffer);
+    }
+
+    CloseHandle(m_idfHndl);
 #else
     munmap(m_dataBuffer, m_filePositionMax); 
     close(m_hndl);
@@ -84,6 +96,9 @@ NDRMReader<ElemType>::~NDRMReader()
         munmap(m_dEmbDataBuffer, m_dEmbFilePositionMax);
         close(m_dEmbHndl);
     }
+
+    munmap(m_idfDataBuffer, m_idfFilePositionMax);
+    close(m_idfHndl);
 #endif
 }
 
@@ -105,6 +120,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_file = (const wstring&)readerConfig(L"file");
     m_qEmbeddingsFile = (const wstring&)readerConfig(L"qEmbeddingsFile");
     m_dEmbeddingsFile = (const wstring&)readerConfig(L"dEmbeddingsFile");
+    m_idfFile = (const wstring&)readerConfig(L"idfFile");
     m_numDocs = readerConfig(L"numDocs", (size_t)1);
     m_numWordsPerQuery = readerConfig(L"numWordsPerQuery", (size_t)10);
     m_numWordsPerDoc = readerConfig(L"numWordsPerDoc", (size_t)2000);
@@ -170,6 +186,22 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
             LODWORD(0),
             0);
     }
+
+    m_idfHndl = CreateFile(m_idfFile.c_str(), GENERIC_READ,
+        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (m_idfHndl == INVALID_HANDLE_VALUE)
+    {
+        RuntimeError("Unable to Open/Create file %ls, error %x", m_idfFile.c_str(), GetLastError());
+    }
+
+    GetFileSizeEx(m_idfHndl, (PLARGE_INTEGER)&m_idfFilePositionMax);
+    m_idfFilemap = CreateFileMapping(m_idfHndl, NULL, PAGE_READONLY, 0, 0, NULL);
+
+    m_idfDataBuffer = (char*)MapViewOfFile(m_idfFilemap,
+        FILE_MAP_READ,
+        HIDWORD(0),
+        LODWORD(0),
+        0);
 #else
     m_hndl = open(msra::strfun::utf8(m_file).c_str(), O_RDONLY);
     if (m_hndl == -1)
@@ -216,6 +248,19 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
             m_dEmbDataBuffer = nullptr;
             RuntimeError("Could not memory map file %ls", m_dEmbeddingsFile.c_str());
         }
+    }
+
+    m_idfHndl = open(msra::strfun::utf8(m_idfFile).c_str(), O_RDONLY);
+    if (m_idfHndl == -1)
+        RuntimeError("Unable to Open/Create file %ls", m_idfFile.c_str());
+    if (fstat(m_idfHndl, &sb) == -1)
+        RuntimeError("Unable to Retrieve file size for file %ls", m_idfFile.c_str());
+    m_idfFilePositionMax = sb.st_size;
+    m_idfDataBuffer = (char*)mmap(nullptr, m_idfFilePositionMax, PROT_READ, MAP_PRIVATE, m_idfHndl, 0);
+    if (m_idfDataBuffer == MAP_FAILED)
+    {
+        m_idfDataBuffer = nullptr;
+        RuntimeError("Could not memory map file %ls", m_idfFile.c_str());
     }
 #endif
 }
@@ -315,7 +360,12 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                                                             + l * sizeof(int32_t));
 
                         if (wordId == qWordId)
-                            tgtIdAddr[l] = (ElemType)1;
+                        {
+                            if (wordId < m_vocabSize)
+                                tgtIdAddr[l] = *(ElemType*)((char*)m_idfDataBuffer + (wordId - 1) * sizeof(ElemType));
+                            else
+                                tgtIdAddr[l] = (ElemType)1;
+                        }
                     }
                 }
 
