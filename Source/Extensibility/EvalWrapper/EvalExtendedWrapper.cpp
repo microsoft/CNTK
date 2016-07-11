@@ -172,23 +172,10 @@ public:
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
     ModelEvaluationExtended(String^ funcName)
     {
-        auto dir = System::IO::Path::GetDirectoryName(System::Reflection::Assembly::GetExecutingAssembly()->Location);
-        auto dllFileName = System::IO::Path::Combine(dir, "evaldll.dll");
-        pin_ptr<const WCHAR> dllname = PtrToStringChars(dllFileName);
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
-        {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
-        }
-
         try
         {
-            msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
             pin_ptr <IEvaluateModelExtended<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
+            GetEvalExtended<ElemType>(p_eval);
         }
         catch (const exception& ex)
         {

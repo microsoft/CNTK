@@ -40,31 +40,15 @@ int main(int argc, char* argv[])
 
 #ifdef _WIN32
     path = app.substr(0, app.rfind("\\"));
-    // Load the eval library
-    auto hModule = LoadLibrary(L"evaldll.dll");
-    if (hModule == nullptr)
-    {       
-        fprintf(stderr, "Cannot find evaldll.dll library.");
-        return 1;
-    }
-
-    // Get the factory method to the evaluation engine
-    std::string func = "GetEvalF";
-    auto procAddress = GetProcAddress(hModule, func.c_str());
-    auto getEvalProc = (GetEvalProc<float>)procAddress;
-
-    // Native model evaluation instance   
-    getEvalProc(&model);
-
     // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
     const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
 #else // on Linux
     path = app.substr(0, app.rfind("/"));
-    GetEvalF(&model);
-
     // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
     const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
+
+    GetEvalF(&model);
 
     const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
 
