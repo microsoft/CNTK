@@ -496,7 +496,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
 
 // launch tensor op with CUDA
 template <class ElemType, C_size_t N, C_int M, C_int K>
-__global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
+__global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                 FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides, CUDA_LONG numElements,
                                 FixedArray<C_unsigned_int, M> reducingOpDims, FixedMatrix<C_int, N, M> reducingStrides)
 {
@@ -527,7 +527,7 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _launchTensorOp<ElemType, N, /*M=*/0, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
+    _launchTensorOp<ElemType, N, /*M=*/0, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, ElementWiseOperator::opSum /* dummy reductionOp */, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
 }
 
 // -----------------------------------------------------------------------
@@ -631,7 +631,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     {
         // we got enough elements to generate: do one element per thread, and reduction inside
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
-            beta, pointers, alpha, op,
+            beta, pointers, alpha, op, reductionOp,
             regularOpStrides, regularStrides, grid.m_N,
             reducingOpDims, reducingStrides);
     }
@@ -745,7 +745,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
 #else
             _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
-                beta, pointers, alpha, op,
+                beta, pointers, alpha, op, reductionOp,
                 regularOpStrides, regularStrides, grid.m_N,
                 reducingOpDims, reducingStrides);
             //for (size_t z = 0; z < numBlocksZ; z++)
