@@ -20,14 +20,15 @@ protected:
     // this is needed so we can execute async actions first and while they are running we execute sync actions
     bool m_isAsynchronous; 
     Matrix<float> *m_bufferGPU;
-    Matrix<float> *m_bufferCPU;
+    float *m_bufferCPU;
     
 
 public:
     ~SyncAction(){};
-    virtual void executeAction() = 0;
+    virtual void BeginAction() = 0;
+    virtual void endAction() = 0; // for synchronization and cleanup
     Matrix<float> *GetGPUMatrix(){ return m_bufferGPU; }
-    Matrix<float> *GetCPUMatrix(){ return m_bufferCPU; }
+    float *GetCPUMatrix(){ return m_bufferCPU; }
 
 public:    
     bool GetIsAsynchronous()

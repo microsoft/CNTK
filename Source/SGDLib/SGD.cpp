@@ -959,6 +959,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
+                if(epochNumber == 0 && ismb == 0 && numMBsRun == 0)
+                {
+                    fprintf(stdout, "epoch: %i epoch, %zu ismb\n", epochNumber, ismb);
+                    for(int i = 0; i < 1; i++)
+                    {
+                        //forward + backward pass for the synchronization manager
+                        fprintf(stdout, "iter: %i, mb: %i \n", i, numMBsRun);
+                        net->ForwardProp(evaluationNodes);
+                        net->ForwardProp(criterionNodes[0]);
+                        net->Backprop(criterionNodes[0]);
+                    }
+                    fprintf(stdout, "completed!");
+                }
+
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================
