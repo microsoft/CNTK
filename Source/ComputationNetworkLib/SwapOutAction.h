@@ -33,7 +33,8 @@ public:
     }
 
     //implementation of abstract method
-    void executeAction();
+    void BeginAction();
+    void endAction();
     cudaStream_t GetSwapSteam(){ return m_streamAsync; }
 
 private:

@@ -7,6 +7,7 @@
 
 #include "SwapOutAction.h"
 #include <iostream>
+#include <string>
 
 #ifndef CPUONLY
 	#include <cuda_runtime.h>
@@ -19,13 +20,18 @@ using std::cout;
 using std::endl;
 
 
-void SwapOutAction::executeAction()
+void SwapOutAction::BeginAction()
 {
-    // do we already have a pinned, that is page-locked buffer?
-    if (!m_bufferCPU){ allocatePinnedBuffer(); }
-
+    size_t cols = m_bufferGPU->GetNumCols();
+    size_t rows = m_bufferGPU->GetNumRows();
+    size_t bytes = cols*rows*sizeof(float);
     // perform the actual asynchronous copy
-    CUDA_CALL(cudaMemcpyAsync(m_bufferCPU->Data(), m_bufferGPU->Data(), m_bufferGPU->BufferSize(), cudaMemcpyDefault, m_streamAsync));
+    CUDA_CALL(cudaMemcpyAsync(m_bufferCPU, m_bufferGPU->Data(), bytes, cudaMemcpyDefault, m_streamAsync));
+}
+
+void SwapOutAction::endAction()
+{
+    CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
 }
 
 
@@ -33,11 +39,12 @@ void SwapOutAction::allocatePinnedBuffer()
 {
     size_t cols = m_bufferGPU->GetNumCols();
     size_t rows = m_bufferGPU->GetNumRows();
+    size_t bytes = cols*rows*sizeof(float);
 
-    //cout << cols << "x" << rows << endl;
-
-    //-1 = deviceId = CPU
-    m_bufferCPU = new Matrix<float>(rows, cols, -1);
+    float *pinnedBuffer;
+    //cudaHostAllocPortable preservse the page-lock even across threads
+    CUDA_CALL(cudaHostAlloc(&pinnedBuffer, bytes, cudaHostAllocPortable));
+    m_bufferCPU = pinnedBuffer;
 }
 
 }}}

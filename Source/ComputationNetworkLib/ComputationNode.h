@@ -292,7 +292,7 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
-       m_syncManager = SynchronizationManager::GetSynchronizationManager();
+       m_syncManager = SynchronizationManager::GetSynchronizationManager(0.0f);
     }
     virtual ~ComputationNodeBase()
     {
@@ -699,18 +699,20 @@ public:
     }
 
     virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
-    virtual void ForwardProp(const FrameRange& fr) override
+    virtual void ForwardProp(const FrameRange& fr) override final
     {
-        m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
+        m_syncManager->BeginSynchronizeState(this, (size_t)0, fr, true);
         ForwardPropSpecialization(fr);
+        m_syncManager->EndSynchronizeState(this, (size_t)0, fr, true);
     }
 
 
     virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) = 0;
     virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
     {
-        m_syncManager->SynchronizeState(this, (size_t)0, fr, false);
+        m_syncManager->BeginSynchronizeState(this, inputIndex, fr, false);
         BackpropToSpecialization(inputIndex, fr);
+        m_syncManager->EndSynchronizeState(this, inputIndex, fr, false);
     }
 
 
@@ -1816,11 +1818,10 @@ public:
     }
 
     // these two implement the ComputationNode<> interface
-    void ForwardPropSpecialization(const FrameRange& fr) override {}
-    void ForwardProp(const FrameRange& fr) override final
+    void ForwardPropSpecialization(const FrameRange& fr) override final
     {
         //synchronize streams for swapping and parallelism
-        //Base::m_syncManager->SynchronizeState(this, (size_t)0, fr, true);
+        //Base::m_syncManager->BeginSynchronizeState(this, (size_t)0, fr, true);
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
@@ -1829,7 +1830,7 @@ public:
     void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override final
     {
         //synchronize streams for swapping and parallelism
-        //Base::m_syncManager->SynchronizeState(this, inputIndex, fr, false);
+        //Base::m_syncManager->BeginSynchronizeState(this, inputIndex, fr, false);
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
         else

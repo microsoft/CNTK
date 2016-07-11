@@ -16,22 +16,17 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
-void SwapInAction::executeAction()
+void SwapInAction::BeginAction()
 {
-    if(!m_isSwappingToGPU)
-        SwapToGPU();
-    else
-        SynchronizeBufferBeforeUse();
+    size_t cols = m_bufferGPU->GetNumCols();
+    size_t rows = m_bufferGPU->GetNumRows();
+    size_t bytes = cols*rows*sizeof(float);
+
+    float *cpu = (float*)malloc(bytes);
+    CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU, bytes, cudaMemcpyDefault, m_swapInStream));
 }
 
-void SwapInAction::SwapToGPU()
-{
-        CUDA_CALL(cudaStreamSynchronize(m_swapOutStream));
-        CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU->Data(), m_bufferGPU->BufferSize(), cudaMemcpyDefault, m_swapInStream));
-        m_isSwappingToGPU = true;
-}
-
-void SwapInAction::SynchronizeBufferBeforeUse()
+void SwapInAction::endAction()
 {
     CUDA_CALL(cudaStreamSynchronize(m_swapInStream));
     m_isSwappingToGPU = false;
