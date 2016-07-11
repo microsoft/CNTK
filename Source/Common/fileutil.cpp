@@ -287,15 +287,44 @@ void fsetmode(FILE* f, char type)
 
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
-    // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
-    while (count > 0)
+    int numberOfTries = 3;
+    bool readSuccess = false;
+    void* originalPtr = ptr;
+    size_t originalCount = count;
+    long startPosition = ftell(f);
+    if (startPosition == -1L) // failure to get position in the stream
+        startPosition = 0;
+
+    while (numberOfTries > 0 && !readSuccess)
     {
-        size_t chunkn = min(count, (size_t) 15 * 1024 * 1024); // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
-        size_t n = fread(ptr, size, chunkn, f);
-        if (n != chunkn)
-            RuntimeError("error reading from file: %s", strerror(errno));
-        count -= n;
-        ptr = n * size + (char*) ptr;
+        readSuccess = true;
+        // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
+        while (count > 0)
+        {
+            size_t chunkn = min(count, (size_t)15 * 1024 * 1024); // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
+            size_t n = fread(ptr, size, chunkn, f);
+            if (n != chunkn)
+            {
+                // This attempt failed.
+                // Reset local variables and try again
+                numberOfTries--;
+                ptr = originalPtr;
+                count = originalCount;
+                readSuccess = false;
+                if (fseek(f, startPosition, SEEK_SET) != 0) // failure to set position in the stream
+                    numberOfTries = 0;
+
+                fprintf(stderr, "error reading from file: %s; %d attempt(s) left", strerror(errno), numberOfTries);
+                break;
+            }
+            count -= n;
+            ptr = n * size + (char*)ptr;
+        }
+    }
+
+    if (!readSuccess)
+    {
+        RuntimeError("error reading from file: %s", strerror(errno));
     }
 }
 
