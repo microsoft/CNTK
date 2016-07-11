@@ -19,6 +19,7 @@
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 #include <assert.h>
+#include<limits.h>
 
 #ifndef let
 #define let const auto
@@ -354,7 +355,7 @@ template <class ElemType, C_size_t N, C_int M, C_int K, bool parallelReduce, C_i
 struct TensorOpElement
 {
     // template-recursive version loops over indices
-    static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op,
+    static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const FixedArray<C_unsigned_int, K>& regularOpStrides, const FixedMatrix<C_int, N, K>& regularStrides,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides,
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
@@ -367,7 +368,7 @@ struct TensorOpElement
         for (C_size_t i = 0; i < N; i++)
             pointers[i] += index * regularStrides(i, (C_size_t) k); // now this dimension is taken care of
         // process the previous index
-        TensorOpElement<ElemType, N, M, K, parallelReduce, k - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
+        TensorOpElement<ElemType, N, M, K, parallelReduce, k - 1>::Compute(id, beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
     }
 };
 
@@ -376,7 +377,7 @@ template <class ElemType, C_size_t N, C_int M, C_int K, bool parallelReduce>
 struct TensorOpElement<ElemType, N, M, K, parallelReduce, /*k=*/0>
 {
     // template-recursive version loops over indices
-    static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op,
+    static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const FixedArray<C_unsigned_int, K>& regularOpStrides, const FixedMatrix<C_int, N, K>& regularStrides,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides,
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
@@ -387,7 +388,7 @@ struct TensorOpElement<ElemType, N, M, K, parallelReduce, /*k=*/0>
         for (C_size_t i = 0; i < N; i++)
             pointers[i] += index * regularStrides(i, 0); // now this dimension is taken care of
         // process the previous index
-        TensorOpElement<ElemType, N, M, K, parallelReduce, -1>::Compute(/*id*/ 0, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
+        TensorOpElement<ElemType, N, M, K, parallelReduce, -1>::Compute(/*id*/ 0, beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
     }
 };
 
@@ -397,7 +398,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
-    static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op,
+    static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const FixedArray<C_unsigned_int, K>& /*regularOpStrides*/, const FixedMatrix<C_int, N, K>& /*regularStrides*/,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides, CUDA_LONG /*reductionBegin*/, CUDA_LONG /*reductionChunkSize*/)
     {
@@ -423,7 +424,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
-    static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op,
+    static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const FixedArray<C_unsigned_int, K>& /*regularOpStrides*/, const FixedMatrix<C_int, N, K>& /*regularStrides*/,
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
     {
@@ -442,22 +443,66 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
         // compute the operation for this input coordinate
-        ReduceElemType sum = 0;
+        ReduceElemType aggregate = 0;
+
+        // Initialze aggregation variable depending in reduction operation.
+        switch (reductionOp)
+        {
+        case ElementWiseOperator::opMax:
+            aggregate = FLT_MIN;//TODO factor this out and make it depended on ElementType
+            break;
+        case ElementWiseOperator::opMin:
+            aggregate = FLT_MAX;//TODO factor this out and make it depended on ElementType
+            break;
+        case ElementWiseOperator::opSum:
+            aggregate = 0;
+            break;
+        }
+
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
             auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
-            sum += val;
+            switch (reductionOp)
+            {//TODO replace this with some operation
+            case ElementWiseOperator::opMax:
+                aggregate += val;
+                break;
+            case ElementWiseOperator::opMin:
+                if (val < aggregate)
+                    aggregate = val;
+                break;
+            case ElementWiseOperator::opSum:
+                if (val > aggregate)
+                    aggregate = val;
+                break;
+            }
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
         __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
-        accumulators[tid] = sum;
+        accumulators[tid] = aggregate;
         __syncthreads();
         static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
         for (CUDA_LONG i = 256; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
-                accumulators[tid] += accumulators[tid + i];
+            {
+                switch (reductionOp)
+                {//TODO replace this with some operation
+                case ElementWiseOperator::opMax:
+                    accumulators[tid] += accumulators[tid + i];
+                    break;
+                case ElementWiseOperator::opMin:
+                    if (accumulators[tid + i] < accumulators[tid])
+                        accumulators[tid] = accumulators[tid + i];
+                    break;
+                case ElementWiseOperator::opSum:
+                    if (accumulators[tid + i] > accumulators[tid])
+                        accumulators[tid] = accumulators[tid + i];
+                    break;
+                }
+
+            }
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
             // TODO: use volatile* and then we can skip the __syncthreads() for the last 32 values. See Amit's allreduce() function implementation in MatrixQuantizer_kernel.cu.
@@ -502,7 +547,7 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorOpElement<ElemType, N, M, K, false, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0);
+        TensorOpElement<ElemType, N, M, K, false, K - 1>::Compute(id, beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0);
 }
 
 template <class ElemType, C_size_t N, C_int K>
@@ -546,7 +591,7 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
-        TensorOpElement<ElemType, N, M, K, true, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
+        TensorOpElement<ElemType, N, M, K, true, K - 1>::Compute(id, beta, pointers, alpha, op, ElementWiseOperator::opSum /*TODO replace with op from parameters */, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
 }
 
 // helper function to provide a reduction buffer
