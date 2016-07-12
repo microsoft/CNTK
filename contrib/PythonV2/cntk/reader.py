@@ -8,8 +8,8 @@ from abc import ABCMeta, abstractmethod
 import collections
 import numpy as np
 
-from .utils import with_metaclass, MODEL_INDENTATION, tensors_to_text_format
-from .graph import ComputationNode
+from .utils import with_metaclass, tensors_to_text_format
+from .graph import TensorOpsMixin
 
 
 class AbstractReader(with_metaclass(ABCMeta)):
@@ -164,11 +164,11 @@ class CNTKTextFormatReader(AbstractReader):
 
     def map(self, node_or_name, **kw):
         '''
-        Create a mapping from a :class:`cntk.graph.ComputationNode` or a node's name in the
+        Create a mapping from a :class:`cntk.graph.TensorOpsMixin` or a node's name in the
         configuration file to a parameter dictionary. 
 
         Args:
-            node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
+            node_or_name (:class:`cntk.graph.TensorOpsMixin` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
 
         Returns:
@@ -177,111 +177,6 @@ class CNTKTextFormatReader(AbstractReader):
 
         return InputMap(self).map(node_or_name, **kw)
 
-    def _to_config_description(self, input_map):
-        '''
-        Write the reader configuration. For this, all previously registered
-        :class:`cntk.reader.LazyInputReader`'s will be serialized into one common file.
-
-        Args:
-            input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a reader
-
-        Returns:
-            string representation of the reader configuration
-        '''
-
-        if input_map.is_empty():
-            return ''
-
-        if input_map.has_mapped() and input_map.has_unmapped():
-            raise ValueError('it is not supported to have a reader together' +
-                    ' with inputs that are initialized without a reader' +
-                    ' (e.g. NumPy).')
-
-        if input_map.reader is not None and self is not input_map.reader:
-            raise ValueError('reader mismatch')
-
-        from cntk.context import get_context
-        configuration = {
-                'readerType': self.reader_type,
-                'file': self.filename,
-                'randomize': str(self.randomize).lower(),
-                'skipSequenceIds': str(self.skip_sequence_ids).lower(),
-                'maxErrors': self.max_errors,
-                'traceLevel': self.trace_level,
-                'chunkSizeInBytes': self.chunk_size_in_bytes,
-                'keepDataInMemory': str(self.keepDataInMemory).lower(),
-                'frameMode': str(self.frameMode).lower()
-                }
-
-        template = ''' 
-        reader = [
-            readerType = %(readerType)s
-            file = "%(file)s"                
-            randomize = %(randomize)s
-            skipSequenceIds = %(skipSequenceIds)s
-            maxErrors = %(maxErrors)s
-            traceLevel = %(traceLevel)i
-            chunkSizeInBytes = %(chunkSizeInBytes)i
-            keepDataInMemory = %(keepDataInMemory)s
-            frameMode = %(frameMode)s
-        ''' % configuration
-
-        if (self.randomizationWindow is not None):
-            template += '''
-            randomizationWindow = %i
-        ''' % self.randomizationWindow
-
-        template += '''
-            input = [
-        '''
-
-        if input_map.has_unmapped():
-            if len(input_map.node_map) > 0:
-                raise ValueError('you cannot have inputs initialized with '+
-                        'NumPy arrays together with inputs that are ' +
-                        ' initialized with a custom reader')
-
-            input_map._serialize_unmapped_nodes(
-                input_map.unmapped_nodes, self.filename)
-
-        for node_or_name, param_dict in input_map.node_map.items():
-            if (isinstance(node_or_name, ComputationNode)):
-                name = node_or_name.name
-            else:
-                name = node_or_name
-
-            if not 'format' in param_dict:
-                param_dict['format'] = 'dense'
-            
-            if not 'dim' in param_dict:
-                if isinstance(node_or_name.reader, _LazyInputReaderBase):
-                    lazy = node_or_name.reader
-                    param_dict.update(node_or_name.reader.param_dict)
-                else:
-                    raise ValueError('parameter "dim" not specified for node "%s"'%str(node_or_name))
-
-            indent =5*MODEL_INDENTATION*' '
-            params = ['%s%s = %s'%(indent, k,v) for k,v in
-                    param_dict.items()]
-
-            param_lines = '\n'.join(params)
-
-            if 'alias' in param_dict:
-                a = param_dict['alias']
-            else:
-                a = name
-
-            template += '''
-            {0}=[
-                {1}
-            ]'''.format(name, param_lines)
-
-        template += '''
-            ]
-        ]
-            '''
-
-        return template
 
 
 class _LazyInputReaderBase(object):
@@ -486,7 +381,7 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
         """Add an input to the reader
 
         Args:
-            node_or_name (str or ComputationNode): either name of the input in the network definition or the node itself
+            node_or_name (str or TensorOpsMixin): either name of the input in the network definition or the node itself
             input_start (int): the start column   
             input_dim (int): the number of columns
             num_of_classes (int): the number of classes
@@ -498,54 +393,6 @@ class UCIFastReaderAggregator(AbstractReaderAggregator):
         self.inputs_def.append(
             (node_or_name, input_start, input_dim, num_of_classes, label_mapping_file))
 
-    def _to_config_description(self):
-        """Generate the reader configuration block
-        """
-        template = '''\
-    reader = [
-        traceLevel = 2
-        readerType = "%(ReaderType)s"
-        file = "%(FileName)s"
-        randomize = "none"
-        verbosity = 1
-'''
-
-        if self['CustomDelimiter'] is not None:
-            template += '''\
-        customDelimiter = %(CustomDelimiter)s
-       '''
-
-        if self.inputs_def is not None:
-            for (node_or_name, start, dim, num_of_classes, map_file) in self.inputs_def:
-                if (isinstance(node_or_name, ComputationNode)):
-                    name = node_or_name.name
-                else:
-                    name = node_or_name
-
-                template += '''
-        {0} = [
-            start = {1}
-            dim = {2}
-            '''.format(name, start, dim)
-
-                if num_of_classes:
-                    template += '''\
-            labelDim= {0}
-                '''.format(num_of_classes)
-                if map_file:
-                    template += '''\
-            labelMappingFile= "{0}"
-                '''.format(map_file)
-
-                template += '''
-        ]
-'''
-
-            template += '''\
-    ]            
-'''
-
-        return template % self
 
 class InputMap(object):
     '''
@@ -570,7 +417,7 @@ class InputMap(object):
         if node_or_name in self.node_map:
             return True
 
-        if isinstance(node_or_name, ComputationNode):
+        if isinstance(node_or_name, TensorOpsMixin):
             if node_or_name.name and \
                     node_or_name.name in self.node_map:
                 return True
@@ -584,7 +431,7 @@ class InputMap(object):
         to the parameter settings in `kw`.
 
         Args:
-            node_or_name (:class:`cntk.graph.ComputationNode` or str): node or its variable name
+            node_or_name (:class:`cntk.graph.TensorOpsMixin` or str): node or its variable name
             kw (dict): currently supported parameters are ``alias``, ``dim`` (number of dimensions), and ``format`` (``dense`` or ``sparse``)
 
         Returns:
@@ -601,34 +448,6 @@ class InputMap(object):
 
     def is_empty(self):
         return not self.has_mapped() and not self.has_unmapped()
-
-    def _to_config_description(self, directory=None):
-        if self.reader is None:
-            if not self.unmapped_nodes:
-                # No inputs in the graph
-                return ''
-
-            # We have found only inputs that were directly initialized.
-            # In this case, we need to serialize them into one file.
-
-            from .utils import get_temp_filename
-
-            filename = get_temp_filename(directory)
-            if len(self.node_map) > 0:
-                raise ValueError('you cannot have inputs initialized with '+
-                        'NumPy arrays together with inputs that are ' +
-                        ' initialized with a custom reader')
-
-            self._serialize_unmapped_nodes(filename)
-            
-            # All the data we got, was through NumPy. In this case, we assume
-            # that all the required randomization has happened already.
-            r = CNTKTextFormatReader(filename, randomize=None)
-
-            return r._to_config_description(self)
-
-        else:
-            return self.reader._to_config_description(self)
 
     def _add_unmapped(self, node):
         '''

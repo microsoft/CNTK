@@ -50,8 +50,8 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
     # Set up the training data for CNTK. Before writing the CNTK configuration,
     # the data will be attached to X.reader.batch and y.reader.batch and then
     # serialized. 
-    X = C.input_numpy(train_X)
-    y = C.input_numpy(train_y)
+    X = C.input(values=train_X)
+    y = C.input(values=train_y)
 
     # define our network -- one weight tensor and a bias
     W = C.parameter(value=np.zeros(shape=(feature_dim, num_classes)))

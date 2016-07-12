@@ -10,6 +10,7 @@ namespace CNTK
     Value::Value(const NDArrayViewPtr& data)
         : Value(data, nullptr)
     {
+			printf("Value()@%p\n", (void*)this);
     }
 
     Value::Value(const NDArrayViewPtr& data, const NDMaskPtr& mask)
@@ -127,6 +128,7 @@ namespace CNTK
 
     /*virtual*/ Value::~Value()
     {
+			printf("~Value()@%p\n", (void*)this);
     }
 
     /*virtual*/ NDArrayViewPtr Value::Data() const

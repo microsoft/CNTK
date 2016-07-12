@@ -10,6 +10,7 @@ namespace CNTK
     Variable::Variable(const FunctionPtr& function)
         : Variable(function->Output())
     {
+			printf("Variable(%s)@%p\n", Name().c_str(), (void*)this);
     }
 
     FunctionPtr Variable::Owner() const 

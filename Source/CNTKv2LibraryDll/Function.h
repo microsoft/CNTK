@@ -83,7 +83,7 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        PrimitiveOpType OpType() const
+		PrimitiveOpType OpType() const
         {
             return m_op;
         }

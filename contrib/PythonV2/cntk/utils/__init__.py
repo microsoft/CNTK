@@ -9,17 +9,6 @@ import sys
 import numpy as np
 import scipy.sparse
 
-def get_cntk_cmd():
-    if "CNTK_EXECUTABLE_PATH" not in os.environ:
-        raise ValueError(
-            "you need to point environmental variable 'CNTK_EXECUTABLE_PATH' to the CNTK binary")
-
-    return os.environ['CNTK_EXECUTABLE_PATH']
-
-
-# Indent model description by how many spaces
-MODEL_INDENTATION = 4
-
 
 def cntk_to_numpy_shape(shape):
     '''
@@ -243,37 +232,177 @@ def get_rank(shape):
     else:
         return len(shape)
         
-def wrap_numpy_arrays(node):
-    '''
-    for a given computation node, wrapes its tensor inputs that are numpy arrays
-    into input and constant nodes
-    
+import sys
+from .. import cntk_py
+
+def sanitize_input(arg):
+    """
+    Convert to Variable or Constant so that it can be passed as Variable to the CNTK
+    operators. 
+     * If `arg` is a NumPy array and its type is neither `np.float32` nor
+    `np.float64`, it sets it to `np.float32`. 
+     * If `arg` is an op, it is assumed that it has only one output, which will be returned.
+
     Args:
-        node (:class:`cntk.graph.ComputationNode`): the computation node that will get its inputs wraped
-    '''
-    from ..graph import ComputationNode, _InputComputationNodeBase
-    from ..ops import input_numpy, constant
+        arg (number, NumPy array, `Variable`, or `Function`): input
+
+    Returns:
+        Constant, if `arg` was a number or NumPy array. Variable otherwise.
+    """
+
+    from cntk.ops.variables import Constant, Variable, Placeholder
+    if isinstance(arg, (Constant, Variable, Placeholder)):
+        return arg
+
+    try:
+        var_output = arg.Output()
+        if isinstance(var_output, Variable):
+            return var_output
+        else:
+            raise ValueError('Cannot convert argument of type "%s" to Variable'%type(arg))
+    except AttributeError:
+        # no function or function with more then one output
+        pass
     
-    # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
-    # wrap them with input and parameter nodes.
-    first = True
-    if node.params:
-        for p in node.params:
-            if p in node.inputs:
-                val = getattr(node, p)
-                #TODO: add support to tuple of numpy arrays, e.g. Splice(). 
-                #So each tuple element will be wrapped
-                if not (isinstance(val, ComputationNode) or isinstance(val, str)
-                    or isinstance(val, tuple)):
-                    # One param needs to be an Input() node. This will be fixed in 
-                    # CNTK soon, so that we can remove this workaround and evaluate a 
-                    # network with no inputs.
-                    if first:        
-                        ir = input_numpy([val])
-                        setattr(node, p, ir)
-                        first = False
-                    else:
-                        setattr(node, p, constant(getattr(node, p)))
-                else:
-                    if isinstance(val, _InputComputationNodeBase) and first:
-                        first = False    
+    if isinstance(arg, list):
+        if not arg:
+            raise ValueError('input is empty')
+
+        if not isinstance(arg[0], np.ndarray):
+            raise ValueError('Cannot convert list of "%s" to Variable'%type(arg[0]))
+
+    if not isinstance(arg, np.ndarray):
+        arg = np.asarray(arg, dtype=np.float32)
+
+    return Constant(value=arg)
+
+def pad_to_dense(batch):
+    """Appends the minimal required amount of zeroes at the end of each sample
+    in the batch so that it becomes rectangular. `batch` is assumed to be
+    row-major: first index is batch item, second is sequence item, then comes that
+    actual sample. The sequence length is assumed to be the only varying
+    dimension.
+
+    Args:
+        batch (list of NumPy arrays): list of arrays that differ only in their
+        first dimension (different sequence lengths)
+
+    Returns:
+        Padded NumPy array
+    
+    """
+
+    max_seq_len = max(len(r) for r in batch)
+
+    sample = np.asarray(batch[0][0])
+
+    Z = np.zeros((len(batch), max_seq_len)+(sample.shape), dtype=sample.dtype)
+    for idx, seq in enumerate(batch):
+        Z[idx, :len(seq)] += seq 
+    return Z
+
+def sanitize_batch(batch, data_type, dev):
+    """
+    Convert to Value with mask.
+
+    Args:
+        batch (list of NumPy arrays): input
+
+    Returns:
+        Value
+    """
+    from ..cntk_py import Value, ValuePtr
+
+    if isinstance(batch, Value):
+        return batch
+
+    num_seq = len(batch)
+    seq_lens = [len(seq) for seq in batch]
+
+    # First we create the mask 
+    from cntk.cntk_py import NDMask, NDMaskPtr
+    mask = NDMask((max(seq_lens), num_seq), dev)
+    for idx, seq_len in enumerate(seq_lens):
+        mask.MaskSection((seq_len, idx), (cntk_py.InferredDimension, 1)) 
+    mask_ptr = NDMaskPtr(mask)
+
+    # Then we pad the batch to rectangular shape
+    if isinstance(batch, list):
+        if len(batch)==0:
+            raise ValueError('batch is empty')
+
+        batch = pad_to_dense(batch)
+
+    # If it still is not an NumPy array, try brute force...
+    if not isinstance(batch, np.ndarray):
+        batch = np.asarray(batch, dtype=data_type)
+
+    '''
+    if is_tensor(values) or is_tensor_list(values):
+        values = np.asarray(values)
+        if dynamic_axis:
+            cntk_shape = values[0].shape[1:]
+        else:
+            cntk_shape = values[0].shape
+
+        if len(cntk_shape) == 0:
+            raise ValueError('values should be an array of input samples')
+    '''
+            
+    ndav_ptr = create_NDArrayViewPtr_from_NumPy(batch, dev)
+
+    return ValuePtr(Value(ndav_ptr, mask_ptr))
+
+
+def create_NDArrayViewPtr(shape, data_type, dev):
+    view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
+    view_ptr = cntk_py.NDArrayViewPtr(view)
+    return view_ptr
+
+def create_NDArrayViewPtr_from_NumPy(nd, dev):
+    ndav = cntk_py.NDArrayView(nd, dev, False)
+    view_ptr = cntk_py.NDArrayViewPtr(ndav)
+    return view_ptr
+
+def create_ValuePtr_for_Variable(var, dev=None):
+    if not dev:
+        dev = cntk_py.DeviceDescriptor_CPUDevice()
+
+    ndshape = var.Shape()+(1,1)
+    view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, ndshape, dev)
+    view_ptr = cntk_py.NDArrayViewPtr(view)
+    value = cntk_py.Value(view_ptr)
+    value_ptr = cntk_py.ValuePtr(value)
+    value_ptr.this.disown()
+    return value_ptr
+
+def create_ValuePtr(shape, data_type, dev):
+    value = cntk_py.Value(create_NDArrayViewPtr(shape, data_type, dev))
+    return cntk_py.ValuePtr(value)
+
+def create_ValuePtr_from_NumPy(nd, dev):
+    view_ptr = create_NDArrayViewPtr_from_NumPy(nd, dev)
+    value = cntk_py.Value(view_ptr)
+    return cntk_py.ValuePtr(value)
+
+def sanitize_dtype_numpy(dtype):
+    if dtype in ('float', 'float32', np.float32):
+        return np.float32
+    elif dtype in ('double', 'float64', np.float64):
+        return np.float64
+    else:
+        raise ValueError('data type "%s" is not supported'%dtype)
+
+def sanitize_dtype_cntk(dtype):
+    if dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double,
+            cntk_py.DataType_Unknown):
+        return dtype
+    if dtype in ('float', 'float32', np.float32):
+        return cntk_py.DataType_Float
+    elif dtype in ('double', 'float64', np.float64):
+        return cntk_py.DataType_Double
+    elif not dtype:
+        return cntk_py.DataType_Unknown
+    else:
+        raise ValueError('data type "%s" is not supported'%dtype)
+

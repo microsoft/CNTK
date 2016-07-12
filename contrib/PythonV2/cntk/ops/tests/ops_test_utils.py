@@ -15,13 +15,11 @@ from cntk.tests.test_utils import *
 
 from ...context import get_new_context
 from ...reader import *
-from .. import constant, input_numpy, sparse_input_numpy
+from .. import constant, input
 
 
 # Keeping things short
-I = input_numpy
-SI = sparse_input_numpy
-
+I = input
 
 # CNTK is column major and thus for broadcasting the axes are aligned to the left,
 # however, in Numpy they are aligned to the write, therefore, in order to perform 
