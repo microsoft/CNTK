@@ -48,12 +48,16 @@ If ($buildConfig -ne "Release")
 # Set Paths
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
+$baseIncludePath = Join-Path $basePath -ChildPath Include
 $zipFile = "BinaryDrops\BinaryDrops.zip"
 $buildPath = "x64\Release"
 If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
+$includePath = "Source\Common\Include"
+# TBD To be redone either via white-list or via array
+$includeFile = Join-Path $includePath -ChildPath EvalDll.lib
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
@@ -71,7 +75,8 @@ If (Test-Path $baseDropPath\cntk\UnitTests)
 }
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
-Remove-Item $baseDropPath\cntk\*.lib
+# Keep EvalDll.lib
+Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
@@ -95,6 +100,10 @@ If (Test-Path $baseDropPath\cntk\CommandEval.exe)
 {
 	Remove-Item $baseDropPath\cntk\CommandEval.exe
 }
+
+# Copy Include
+Write-Verbose "Copying Include files ..."
+Copy-Item $includeFile -Destination $baseIncludePath
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
