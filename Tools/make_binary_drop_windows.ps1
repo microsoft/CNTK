@@ -101,6 +101,9 @@ If (Test-Path $baseDropPath\cntk\CommandEval.exe)
 	Remove-Item $baseDropPath\cntk\CommandEval.exe
 }
 
+# Make Include folder
+New-Item -Path $baseIncludePath -ItemType directory
+
 # Copy Include
 Write-Verbose "Copying Include files ..."
 Copy-Item $includeFile -Destination $baseIncludePath
