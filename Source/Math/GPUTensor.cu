@@ -310,6 +310,33 @@ public:
 };
 
 
+// ----------------------------------------------------------------------------
+// Function to update an aggregate value for the specifed reduction operation
+// ----------------------------------------------------------------------------
+
+template<typename ReductionType, class ElemType> struct AggregationOp
+{
+public:
+    // update the 'aggregate' using 'val' witht the specified op.
+    __device__ static void Update(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
+    {
+        switch (reductionOp)
+        {
+        case ElementWiseOperator::opSum:
+            aggregate += val;
+            break;
+        case ElementWiseOperator::opMin:
+            if (val < aggregate)
+                aggregate = val;
+            break;
+        case ElementWiseOperator::opMax:
+            if (val > aggregate)
+                aggregate = val;
+            break;
+        }
+    }
+};
+
 
 // -----------------------------------------------------------------------
 // function to compute the value for a given output location (including reduction)
@@ -336,20 +363,7 @@ struct TensorOpReduce
             for (C_size_t i = 0; i < N - 1; i++) // N-1 because output is not used here
                 pointers[i] += reducingStrides(i, (C_size_t) m);
             ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-            switch (reductionOp)
-            {//TODO replace this with some operation
-            case ElementWiseOperator::opMax:
-                aggregate += val;
-                break;
-            case ElementWiseOperator::opMin:
-                if (val < aggregate)
-                    aggregate = val;
-                break;
-            case ElementWiseOperator::opSum:
-                if (val > aggregate)
-                    aggregate = val;
-                break;
-            }
+            AggregationOp<ReduceElemType, ElemType>::Update(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
     }
@@ -510,20 +524,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
             auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
-            switch (reductionOp)
-            {//TODO replace this with some operation
-            case ElementWiseOperator::opMax:
-                aggregate += val;
-                break;
-            case ElementWiseOperator::opMin:
-                if (val < aggregate)
-                    aggregate = val;
-                break;
-            case ElementWiseOperator::opSum:
-                if (val > aggregate)
-                    aggregate = val;
-                break;
-            }
+            AggregationOp<ReduceElemType, ElemType>::Update(aggregate, val, reductionOp);
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
@@ -535,21 +536,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         {
             if (tid < i && tid + i < tids)
             {
-                switch (reductionOp)
-                {//TODO replace this with some operation
-                case ElementWiseOperator::opMax:
-                    accumulators[tid] += accumulators[tid + i];
-                    break;
-                case ElementWiseOperator::opMin:
-                    if (accumulators[tid + i] < accumulators[tid])
-                        accumulators[tid] = accumulators[tid + i];
-                    break;
-                case ElementWiseOperator::opSum:
-                    if (accumulators[tid + i] > accumulators[tid])
-                        accumulators[tid] = accumulators[tid + i];
-                    break;
-                }
-
+                AggregationOp<volatile ReduceElemType, volatile ReduceElemType>::Update(accumulators[tid], accumulators[tid + i], reductionOp);
             }
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
