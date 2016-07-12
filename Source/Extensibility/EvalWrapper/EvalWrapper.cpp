@@ -43,21 +43,10 @@ public:
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
     IEvaluateModelManaged(String^ funcName)
     {
-        pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
-        {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
-        }
-
         try
         {
-            msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
             pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
+            GetEval<ElemType>(p_eval);
         }
         catch (const exception& ex)
         {

@@ -580,19 +580,19 @@ private:
 
     static ::CNTK::NDArrayViewPtr AsNDArrayView(Matrix<ElemType>& matrix)
     {
+        ::CNTK::NDShape shape = { matrix.GetNumRows(), matrix.GetNumCols() };
         if (matrix.GetMatrixType() == MatrixType::SPARSE) 
         {
             // TODO: This is a temporary workaround that allows to wrap an existing sparse matrix in an NDViewArray.
             auto tensorView = new TensorView<ElemType>(std::shared_ptr<Matrix<ElemType>>(&matrix, [](Matrix<ElemType>*){}), 
                                                         TensorShape(matrix.GetNumRows(), matrix.GetNumCols()));
 
-            return new ::CNTK::NDArrayView(::CNTK::AsDataType<ElemType>(), GetDeviceDescriptor(matrix.GetDeviceId()),
-                                           ::CNTK::StorageFormat::SparseCSC, { matrix.GetNumRows(), matrix.GetNumCols() }, 
-                                           false, tensorView);
+            return ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), GetDeviceDescriptor(matrix.GetDeviceId()),
+                                                                 ::CNTK::StorageFormat::SparseCSC, shape, false, tensorView);
         }
 
-        return new ::CNTK::NDArrayView({ matrix.GetNumRows(), matrix.GetNumCols() }, 
-            matrix.Data(), matrix.GetNumElements(), GetDeviceDescriptor(matrix.GetDeviceId()));
+        return ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(shape, matrix.Data(), matrix.GetNumElements(), 
+                                                             GetDeviceDescriptor(matrix.GetDeviceId()));
     }
 };
 

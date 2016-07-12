@@ -17,11 +17,8 @@
     { return false; }                                   
 
 
-
-using namespace ::CNTK::_Internal;
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
-
 
 namespace CNTK
 {
@@ -77,7 +74,7 @@ namespace CNTK
     template <typename ElementType>
     void LearnerBase::ClipGradient(Matrix<ElementType>& gradient, size_t actualMBSize) const
     {
-        if (m_additionalOptions.gradientClippingThresholdPerSample != std::numeric_limits<double>::infinity())
+        if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
             double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
@@ -176,14 +173,14 @@ namespace CNTK
             NDArrayViewPtr view;
             if (parameter.GetDataType() == DataType::Float)
             {
-                view = new NDArrayView(0.0f, parameter.Shape(), device);
+                view = MakeSharedObject<NDArrayView>(0.0f, parameter.Shape(), device);
             }
             else
             {
-                view = new NDArrayView(0.0f, parameter.Shape(), device);
+                view = MakeSharedObject<NDArrayView>(0.0f, parameter.Shape(), device);
             }
 
-            m_smoothedGradientValues.insert(make_pair(parameter, new Value(view)));
+            m_smoothedGradientValues.insert(make_pair(parameter, MakeSharedObject<Value>(view)));
             m_additionalOptions.learningRateMultipliers.insert(make_pair(parameter, 1.0));
         }
     }
@@ -192,7 +189,7 @@ namespace CNTK
     {
         for (const auto& parameter : Parameters())
         {
-            const auto& smoothedGradientValue = m_smoothedGradientValues[parameter];
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             const auto& data = smoothedGradientValue->Data();
             switch (data->GetDataType())
             {
@@ -217,9 +214,9 @@ namespace CNTK
 
         for (const auto& parameter : Parameters())
         {
-            const auto& smoothedGradientValue = m_smoothedGradientValues[parameter];
-            const auto& gradientValue = gradientValues[parameter];
-            const auto& parameterValue = parameterValues[parameter];
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+            const auto& gradientValue = gradientValues.at(parameter);
+            const auto& parameterValue = parameterValues.at(parameter);
 
 // TODO: make this a runtime parameter.
 #if DUMPOUTPUT
@@ -262,11 +259,13 @@ namespace CNTK
         return false;
     }
 
-    std::string LearnerBase::LearnerType() const
+    string LearnerBase::LearnerType() const
     {
         auto name = typeid(*this).name(); 
         if (strncmp(name, "class ", 6) == 0)
         {
+            // On Windows, the type name contains "class" prefix. 
+            // Return the actual name, omitting the prefix.
             return &name[6];
         } 
         return name;
@@ -285,7 +284,7 @@ namespace CNTK
             {
                 LogicError("Parameter names must be unique");
             }
-            const auto& smoothedGradientValue = m_smoothedGradientValues[parameter];
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
             // Potentially, could store things like dimensions, element size, format, etc., but
             // that seems to be redundant, since all of that is passed in the constructor.
@@ -302,13 +301,13 @@ namespace CNTK
             {
                 LogicError("Checkpoint does not contain state for parameter %ls", parameter.Name().c_str());
             }
-            const auto& smoothedGradientValue = m_smoothedGradientValues[parameter];
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
             const DictionaryValue& state = checkpoint[parameter.Name()];
 
             const auto& data = smoothedGradientValue->Data();
 
-            DeserializeFromVector(data, state.GetValue<_Internal::_SimpleVector<DictionaryValue>>());
+            DeserializeFromVector(data, state.GetValue<vector<DictionaryValue>>());
         }
     }
 
@@ -331,6 +330,8 @@ namespace CNTK
 
         const auto& learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
+        // TODO: break up the NormalGrad into 3 different functions, each with its own set of parameters
+        // (one for vanilla SGD, the other for momentum SGD, and the third one for NAG).
         smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix,
                                             learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
             
@@ -350,7 +351,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool AdaGradLearner::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    bool LearnerAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                 const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
         CHECK_DATA_TYPE(smoothedGradientValue);
@@ -380,8 +381,8 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool FSAdaGradLearner::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    bool LearnerFSAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                                  const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
         CHECK_DATA_TYPE(smoothedGradientValue);
         UNUSED(trainingSampleCount);
@@ -416,7 +417,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool RMSPropLearner::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    bool LearnerRMSProp::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                 const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
         CHECK_DATA_TYPE(smoothedGradientValue);
@@ -443,34 +444,34 @@ namespace CNTK
     
     LearnerPtr SGDLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
     {
-        return new LearnerSGD(parameters, device);
+        return MakeSharedObject<LearnerSGD>(parameters, device);
     }
 
     LearnerPtr MomentumSGDLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
     {
-        return new LearnerMomentumSGD(parameters, device);
+        return MakeSharedObject<LearnerMomentumSGD>(parameters, device);
     }
 
     LearnerPtr NesterovLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
     {
-        return new LearnerNesterov(parameters, device);
+        return MakeSharedObject<LearnerNesterov>(parameters, device);
     }
 
     LearnerPtr AdaGradLearner(const unordered_set<Variable>& parameters, bool needAveMultiplier, const DeviceDescriptor& device)
     {
-        return new LearnerAdaGrad(parameters, needAveMultiplier, device);
+        return MakeSharedObject<LearnerAdaGrad>(parameters, needAveMultiplier, device);
     }
 
     LearnerPtr FSAdaGradLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
     {
-        return new LearnerFSAdaGrad(parameters, device);
+        return MakeSharedObject<LearnerFSAdaGrad>(parameters, device);
     }
 
     LearnerPtr RMSPropLearner(const unordered_set<Variable>& parameters,
                                 double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
                                 const DeviceDescriptor& device)
     {
-        return new LearnerRMSProp(parameters, gamma, inc, dec, max, min, needAveMultiplier, device);
+        return MakeSharedObject<LearnerRMSProp>(parameters, gamma, inc, dec, max, min, needAveMultiplier, device);
     }
     
 }

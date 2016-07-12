@@ -665,7 +665,8 @@ public:
         std::swap(m_strides[i], m_strides[j]);
     }
 
-    // Flatten the shape in place to a 2D tensor. 
+    // Flatten a tensor shape into a 2D tensor, where splitPoint is the first index to go into the second dimension
+    // The tensor shape must be flattenable this way, i.e. each of the two index ranges must be dense.
     void FlattenTo2DInPlace(size_t splitPoint, const char* errorPrefix/* = nullptr*/)
     {
         // check & print meaningful error message

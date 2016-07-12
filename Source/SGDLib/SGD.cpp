@@ -1853,12 +1853,12 @@ void SGD<ElemType>::UpdateWeights(const double learnRatePerSample,
         // we use simple linear (instead of log linear) scaling here
         const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 
-        auto learnerBase = dynamic_cast<::CNTK::Learners::LearnerBase*>(learner.GetPtr());
+        auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(learner);
 
         // TODO: remove down-casting and setters as soon as Training control is implemented.
         learnerBase->SetLearningRate(learnRatePerSample);
 
-        auto momentumLearner = dynamic_cast<::CNTK::Learners::MomentumSGDLearner*>(learner.GetPtr());
+        auto momentumLearner = dynamic_pointer_cast<::CNTK::LearnerMomentumSGD>(learner);
 
         if (momentumLearner != nullptr)
         {
@@ -1882,11 +1882,8 @@ void SGD<ElemType>::UpdateWeights(const double learnRatePerSample,
             // TODO: the assumption here is that all matrices (both function and gradient values)
             // reside on the same device as smoothed gradients 
             // (allocated on the same device as given by net->GetDeviceId())
-
-            parameters.insert(make_pair(parameter, new ::CNTK::Value(AsNDArrayView(functionValues))));
-
-            // TODO: this does not quite work for sparse gradients (Text/SparseDSSM)
-            gradients.insert(make_pair(parameter, new ::CNTK::Value(AsNDArrayView(gradientValues))));
+            parameters.insert(make_pair(parameter, ::CNTK::MakeSharedObject<::CNTK::Value>(AsNDArrayView(functionValues))));
+            gradients.insert(make_pair(parameter, ::CNTK::MakeSharedObject<::CNTK::Value>(AsNDArrayView(gradientValues))));
         }
 
         learner->Update(parameters, gradients, actualMBSize);
@@ -2214,7 +2211,7 @@ void SGD<ElemType>::ResetSGDMomentum()
                     
     for (auto& learner : m_learners)
     {
-        auto learnerBase = dynamic_cast<::CNTK::Learners::LearnerBase*>(learner.GetPtr());
+        auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(learner);
         learnerBase->ResetSmoothedGradients();
     }                
 }
@@ -2251,7 +2248,7 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
         }
         else if (m_useNesterovMomentum)
         {
-            m_learners.push_back(::CNTK::NAGLearner(parameters, device));
+            m_learners.push_back(::CNTK::NesterovLearner(parameters, device));
         }
         else
         {
@@ -2273,7 +2270,7 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
         NOT_IMPLEMENTED;
     }  
 
-     ::CNTK::Learners::AdditionalLearningOptions additionalOptions;
+    ::CNTK::AdditionalLearningOptions additionalOptions;
     additionalOptions.l1RegularizationWeight = m_L1RegWeight;
     additionalOptions.l2RegularizationWeight = m_L2RegWeight;
     additionalOptions.gaussianNoiseInjectionStdDev = GradientUpdateNoiseStd();
@@ -2281,9 +2278,9 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
     additionalOptions.gradientClippingThresholdPerSample = m_clippingThresholdPerSample;
 
     // TODO: confirm that multipliers are not supposed to change during training.
-    additionalOptions.SetLearningRateMultipliers(learningRateMultipliers);
+    additionalOptions.learningRateMultipliers = learningRateMultipliers;
     
-    auto learnerBase = dynamic_cast<::CNTK::Learners::LearnerBase*>(m_learners.back().GetPtr());
+    auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(m_learners.back());
     learnerBase->SetAdditionalOptions(additionalOptions);
 }
 

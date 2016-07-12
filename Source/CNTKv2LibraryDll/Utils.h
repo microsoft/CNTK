@@ -28,15 +28,15 @@ namespace CNTK
 
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
-        if (device.Type() == DeviceType::CPU)
+        if (device.Type() == DeviceKind::CPU)
             return -1;
-        else if (device.Type() == DeviceType::GPU)
+        else if (device.Type() == DeviceKind::GPU)
             return device.Id();
         else
             NOT_IMPLEMENTED;
     }
 
-    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKMatrixFormat(StorageFormat storageFormat)
+    inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)
     {
         if (storageFormat == StorageFormat::Dense)
             return Microsoft::MSR::CNTK::MatrixFormat::matrixFormatDense;
@@ -120,7 +120,12 @@ namespace CNTK
         return{ matrixRowSize, matrixColSize };
     }
 
-    _Internal::_SimpleVector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
+    inline bool IsSparseInput(const Variable& var)
+    {
+        return var.IsInput() && var.IsSparse();
+    }
 
-    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const _Internal::_SimpleVector<DictionaryValue>& values);
+    std::vector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
+
+    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const std::vector<DictionaryValue>& values);
 }

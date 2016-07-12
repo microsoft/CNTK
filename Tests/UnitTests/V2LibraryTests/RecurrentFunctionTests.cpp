@@ -145,12 +145,12 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
     const size_t hiddenDim = 512;
     const size_t numOutputClasses = 9304;
 
-    Variable features({ inputDim }, AsDataType<ElementType>(), L"Features");
+    Variable features({ inputDim }, AsDataType<ElementType>(), L"features");
     auto classifierOutputFunction = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device);
 
-    Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"Labels");
+    Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
     auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
-    auto predictionFunction = PredictionError(classifierOutputFunction, labelsVar, L"predictionError");
+    auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"classificationError");
 
     auto LSTMClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"LSTMClassifier");
 
@@ -212,7 +212,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
         // Perform backprop
         NDShape outputShape = trainingLossFunction->Output().Shape();
         std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
-        ValuePtr rootGradientValue = new Value(new NDArrayView(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
         auto allParams = LSTMClassifier->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
@@ -237,8 +237,8 @@ void TestSimpleRecurrence(size_t inputDim,
     if (useOneHotSparseInputs && !useSparseInputs)
         throw std::runtime_error("useOneHotSparseInputs option can only be true when useSparseInputs is true");
 
-    Parameter timesParam(new NDArrayView((ElementType)0.5, { outputDim, inputDim }, device));
-    Parameter plusParam(new NDArrayView((ElementType)0.1, { outputDim }, device));
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)0.1, std::initializer_list<size_t>({ outputDim }), device));
 
     Variable inputVar({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
@@ -311,28 +311,28 @@ void TestSimpleRecurrence(size_t inputDim,
                 }
             }
 
-            NDArrayViewPtr inputValueData = new NDArrayView(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true);
+            NDArrayViewPtr inputValueData = MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true);
             if (useSparseInputs)
             {
-                NDArrayViewPtr sparseInputValueData = new NDArrayView(AsDataType<ElementType>(), StorageFormat::SparseCSC, inputShape, DeviceDescriptor::CPUDevice());
+                NDArrayViewPtr sparseInputValueData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), StorageFormat::SparseCSC, inputShape, DeviceDescriptor::CPUDevice());
                 sparseInputValueData->CopyFrom(*inputValueData);
                 inputValueData = sparseInputValueData->Alias(true);
             }
 
-            NDMaskPtr inputMask = new NDMask({ maxActualSequenceLength, numSequences }, DeviceDescriptor::CPUDevice());
+            NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }), DeviceDescriptor::CPUDevice());
             for (size_t i = 0; i < numSequences; ++i)
                 inputMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
 
-            inputValue = new Value(inputValueData, inputMask);
+            inputValue = MakeSharedObject<Value>(inputValueData, inputMask);
         }
 
         NDShape reducedOutputShape = {};
         std::vector<ElementType> reducedOutputData(reducedOutputShape.TotalSize());
-        ValuePtr reducedOutputValue = new Value(new NDArrayView(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
+        ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 
         NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
         std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
-        ValuePtr plusOutputValue = new Value(new NDArrayView(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), new NDMask(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
+        ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput->Output(), reducedOutputValue }, { plusOutput->Output(), plusOutputValue } };
         auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput->Output() });
@@ -352,14 +352,14 @@ void TestSimpleRecurrence(size_t inputDim,
             }
         }
 
-        ValuePtr rootGradientValue = new Value(new NDArrayView(plusOutputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true), inputValue->Mask()->DeepClone());
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true), inputValue->Mask()->DeepClone());
 
         std::vector<ElementType> plusParameterGradientData(plusParam.Shape().TotalSize());
         std::vector<ElementType> timesParameterGradientData(timesParam.Shape().TotalSize());
         std::vector<ElementType> inputGradientData(inputShape.TotalSize());
-        ValuePtr plusParameterGradientValue = new Value(new NDArrayView(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
-        ValuePtr timesParameterGradientValue = new Value(new NDArrayView(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
-        ValuePtr inputGradientValue = new Value(new NDArrayView(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
+        ValuePtr plusParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusParam.Shape(), plusParameterGradientData.data(), plusParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
+        ValuePtr timesParameterGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(timesParam.Shape(), timesParameterGradientData.data(), timesParameterGradientData.size(), DeviceDescriptor::CPUDevice(), false));
+        ValuePtr inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
 
         std::unordered_map<Variable, ValuePtr> outGradients = { { inputVar, inputGradientValue }, { plusParam, plusParameterGradientValue }, { timesParam, timesParameterGradientValue } };
         rootFunc->Backward(backpropState, { { plusOutput->Output(), rootGradientValue } }, outGradients);
@@ -474,12 +474,18 @@ void TestSimpleRecurrence(size_t inputDim,
 void RecurrentFunctionTests()
 {
     TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), 3, false, false);
+#ifndef CPUONLY
     TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), 5, true, false);
+#endif
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), 2, true, true);
+#ifndef CPUONLY
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), 3, false, true);
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), 3, true, true, true);
+#endif
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), 2, false, true, true);
 
+#ifndef CPUONLY
     TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0));
+#endif
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice());
 }
