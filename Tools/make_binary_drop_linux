@@ -157,7 +157,7 @@ rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 mkdir -p $baseIncludePath
 
 # Copy Include
-echo "Copying Scripts..." >&3
+echo "Copying Include files..." >&3
 CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
 
 # Copy Examples
