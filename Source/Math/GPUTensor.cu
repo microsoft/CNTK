@@ -646,7 +646,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     FixedMatrix<C_int,         N, M> reducingStrides(reducingStrideVectors);
 
     // launch the kernel
-    CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
+    CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual output element
     SyncGuard syncGuard;
 
     // do some optimization for reductions
@@ -731,7 +731,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
                 beta, pointers, alpha, op, reductionOp,
                 regularOpStrides, regularStrides, NN,
-                reducingOpDims, reducingStrides, 0, reductionChunkSize);
+                reducingOpDims, reducingStrides,/*reductionBegin*/ 0, reductionChunkSize);
         }
         // --- case (b)
         // Reduction across blocks. This is the difficult one.
