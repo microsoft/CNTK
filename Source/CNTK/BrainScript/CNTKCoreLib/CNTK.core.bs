@@ -1148,7 +1148,7 @@ RNNs =
     ].layers
 
 	# GRU -- GRU function with self-stabilization
-    # It returns a dictionary with one members: h.    
+    # It returns a dictionary with one member: h.    
     GRU (outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
