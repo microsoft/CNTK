@@ -48,7 +48,7 @@ If ($buildConfig -ne "Release")
 # Set Paths
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
-$baseIncludePath = Join-Path $basePath -ChildPath Include
+$baseIncludePath = Join-Path $baseDropPath -ChildPath Include
 $zipFile = "BinaryDrops\BinaryDrops.zip"
 $buildPath = "x64\Release"
 If ($targetConfig -eq "CPU")
