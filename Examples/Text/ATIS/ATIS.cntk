@@ -1,5 +1,5 @@
 # The configuration file to build language understanding model with ATIS corpus.
-# LSTM model is built to tage each word in sentences with its semantic label.
+# An LSTM model is built to tag each word in sentences with its semantic label.
 
 WorkDir = work
 DataDir = data
@@ -9,18 +9,17 @@ parallelTrain = true
 
 #stderr = $WorkDir$/log
 
-command = Train:Test
+command = Train:Output:Test
 
 precision = "float"
-deviceId = "auto"
+deviceId = "-1"        # change to "auto" to use GPUs
 
 wordCount = 944    # number of words
 labelCount = 127   # number of labels 
+
+# The command to train the LSTM model
 Train = [
-action = train
-
-traceLevel = 1
-
+    action = train
     BrainScriptNetworkBuilder = [
         inputDim = $wordCount$
         labelDim = $labelCount$
@@ -108,7 +107,7 @@ traceLevel = 1
 
         miniBatchMode = "partial" 
         randomize = true
-        input = [
+        input = [ 
             featuresPW = [ 
                 alias = "PW"    # previous word
                 dim = $wordCount$ 
@@ -123,32 +122,81 @@ traceLevel = 1
                 alias = "NW"    # next word
                 dim = $wordCount$ 
                 format = "sparse" 
-            ]
+            ]            
             
             labels = [ 
                 alias = "L"     # label
-                dim = $labelCount$
+                dim = $labelCount$        
                 format = "sparse" 
             ] 
         ]
     ]   
 ]
 
-# Test the model built from Train
-Test = [
-    action = write
+# Evaluate the model to predict labels
+Output = [
+    action = "write"
 
     traceLevel = 1
     epochSize = 0
 
     defaultHiddenActivity = 0.1
     BrainScriptNetworkBuilder = [
-      modelAsTrained = BS.Network.Load ("$modelPath$")
-      final = Softmax(modelAsTrained.outputs)
+        modelAsTrained = BS.Network.Load ("$modelPath$")
+        final = Hardmax(modelAsTrained.outputs)
     ]
     
     outputPath = $WorkDir$/model.writeaction
     outputNodeNames = final
+    
+    reader = [
+        readerType = "CNTKTextFormatReader" 
+        file = "$DataDir$/ATIS.test.cntk.sparse" 
+
+        miniBatchMode = "partial" 
+        randomize = false
+        input = [ 
+            featuresPW = [ 
+                alias = "PW"    # previous word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ] 
+            featuresCW = [ 
+                alias = "CW"    # current word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]
+            featuresNW = [ 
+                alias = "NW"    # next word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]            
+            
+            labels = [ 
+                alias = "L"     # label
+                dim = $labelCount$        
+                format = "sparse" 
+            ] 
+        ]
+    ]
+]
+
+# Evaluate the model's accuracy 
+Test = [
+    action = "test"
+
+    traceLevel = 1
+    epochSize = 0
+
+    defaultHiddenActivity = 0.1
+    BrainScriptNetworkBuilder = [
+        labels = Input($labelCount$, tag = "label")
+        modelAsTrained = BS.Network.Load ("$modelPath$")
+        final = Hardmax(modelAsTrained.outputs)
+        errorRate = ErrorPrediction(labels, final, tag='evaluation')
+    ]
+    
+    evalNodeNames  = errorRate
     
     reader = [
         readerType = "CNTKTextFormatReader" 
