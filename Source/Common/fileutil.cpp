@@ -1645,10 +1645,14 @@ static void strtoklines(char* s, LINES& lines)
         lines.push_back(p);
 }
 
-void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines)
+void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines, int numberOfTries)
 {
-    // load it into RAM in one huge chunk
-    const size_t len = fgetfilechars(path, buffer);
+    size_t len = 0;
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
+    {
+        // load it into RAM in one huge chunk
+        fgetfilechars(path, buffer, len);
+    });
 
     // parse into lines
     lines.resize(0);
@@ -1657,10 +1661,10 @@ void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, 
 }
 
 // same as above but returning const char* (avoiding the memory allocation)
-vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer)
+vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer, int numberOfTries)
 {
     size_t len = 0;
-    msra::util::attempt(5, [&]() // (can be reading from network)
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
     {
         // load it into RAM in one huge chunk
         fgetfilechars(path, buffer, len);
