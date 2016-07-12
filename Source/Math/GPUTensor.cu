@@ -262,6 +262,55 @@ struct TensorOps
     }
 };
 
+//----------------------------------------------------------------------------
+// For reductions we need the neutral elements of the corresponding binary ops
+//----------------------------------------------------------------------------
+template <class ElemType> class BinaryOpConstants
+{
+public:
+    __device__ static ElemType NeutralValue(ElementWiseOperator op) {
+        return 0; //error, only the explicit instantiations below should be used.
+    }
+};
+
+template <> class BinaryOpConstants <float>
+{
+public:
+    __device__ static float NeutralValue(ElementWiseOperator op) {
+        switch (op)
+        {
+        case ElementWiseOperator::opMax:
+            return FLT_MIN;
+        case ElementWiseOperator::opMin:
+            return FLT_MAX;
+        case ElementWiseOperator::opSum:
+            return 0;
+        default:
+            return 0; // error
+        }
+    }
+};
+
+template <> class BinaryOpConstants <double>
+{
+public:
+    __device__ static double NeutralValue(ElementWiseOperator op) {
+        switch (op)
+        {
+        case ElementWiseOperator::opMax:
+            return DBL_MIN;
+        case ElementWiseOperator::opMin:
+            return DBL_MAX;
+        case ElementWiseOperator::opSum:
+            return 0;
+        default:
+            return 0; // error
+        }
+    }
+};
+
+
+
 // -----------------------------------------------------------------------
 // function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
@@ -456,21 +505,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
         // compute the operation for this input coordinate
-        ReduceElemType aggregate = 0;
-
-        // Initialze aggregation variable depending in reduction operation.
-        switch (reductionOp)
-        {
-        case ElementWiseOperator::opMax:
-            aggregate = FLT_MIN;//TODO factor this out and make it depended on ElementType
-            break;
-        case ElementWiseOperator::opMin:
-            aggregate = FLT_MAX;//TODO factor this out and make it depended on ElementType
-            break;
-        case ElementWiseOperator::opSum:
-            aggregate = 0;
-            break;
-        }
+        ReduceElemType aggregate = BinaryOpConstants<ReduceElemType>::NeutralValue(reductionOp);
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
