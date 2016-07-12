@@ -6055,12 +6055,12 @@ struct TensorOpReduction
 
         if (reductionOp == ElementWiseOperator::opSum)
         {
-            // For sum we first aggregate always using double and cast to ElemType when we are done
+            // For sum-reduction we aggregate always using double and cast to ElemType when we are done.
             double precision_aggregate = 0;
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
             {
                 // need to descend into one loop deeper
-                precision_aggregate += TensorOpReduction<ElemType, OPFN, reductionOp, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+                precision_aggregate += TensorOpReduction<ElemType, OPFN, ElementWiseOperator::opSum, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
                 // advance the pointers
                 for (size_t i = 0; i < N - 1; i++)
                     pointers[i] += strides[i]; // note: last pointer (result) is unused and untouched here
@@ -6069,17 +6069,17 @@ struct TensorOpReduction
         }
         else if (reductionOp == ElementWiseOperator::opMax || reductionOp == ElementWiseOperator::opMin)
         {
-            // For min/max we first aways use ElemType for aggregating
+            // For min/max we aways use ElemType for aggregation.
             ElemType aggregate = reductionOp == ElementWiseOperator::opMax ? std::numeric_limits<ElemType>::min() : std::numeric_limits<ElemType>::max();
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
             {
                 if (reductionOp == ElementWiseOperator::opMax)
                 {
-                    aggregate = std::max<ElemType>(aggregate, TensorOpReduction<ElemType, OPFN, reductionOp, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides));
+                    aggregate = std::max<ElemType>(aggregate, TensorOpReduction<ElemType, OPFN, ElementWiseOperator::opMax, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides));
                 }
                 else if (reductionOp == ElementWiseOperator::opMin)
                 {
-                    aggregate = std::min<ElemType>(aggregate, TensorOpReduction<ElemType, OPFN, reductionOp, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides));
+                    aggregate = std::min<ElemType>(aggregate, TensorOpReduction<ElemType, OPFN, ElementWiseOperator::opMin, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides));
                 }
                 // advance the pointers
                 for (size_t i = 0; i < N - 1; i++)
@@ -6095,7 +6095,7 @@ struct TensorOpReduction
 
 // perform loop over reduction index m
 // This is the specialized version for m = -1, which terminates the recursion.
-template <class ElemType, typename OPFN, int reductionOp, size_t N>
+template <class ElemType, typename OPFN, ElementWiseOperator reductionOp, size_t N>
 struct TensorOpReduction<ElemType, OPFN, reductionOp, N, -1>
 {
     static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn,
