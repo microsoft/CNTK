@@ -121,6 +121,9 @@ declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "
 # cuDNN
 declare -a cudnnFiles=("libcudnn.so.4")
 
+# Include files
+declare -a includeFiles=("Eval.h")
+
 # Set dependency sources paths
 mklPath="/usr/local/CNTKCustomMKL/1/x64/parallel"
 opencvPath="/usr/local/opencv-3.1.0/lib"
@@ -134,6 +137,8 @@ basePath="BinaryDrops"
 baseDropPath="$basePath/cntk"
 baseBinariesPath="$baseDropPath/cntk"
 baseDependenciesPath="$baseBinariesPath/dependencies/lib"
+baseIncludePath="$baseBinariesPath/Include"
+includePath="Source/Common/Include"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
 gzipFile="BinaryDrops.tar.gz"
 
@@ -147,6 +152,12 @@ cp -r $buildPath/* $baseBinariesPath
 rm -f $baseBinariesPath/bin/v2librarytests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
+
+# Make Include directory
+mkdir -p $baseIncludePath
+
+# Copy Include
+CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
 
 # Copy Examples
 echo "Copying Examples..." >&3
