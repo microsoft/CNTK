@@ -109,16 +109,16 @@ public:
         size_t numcols = loglikelihood.GetNumCols();
         Microsoft::MSR::CNTK::Matrix<ElemType> denaccs(m_deviceid), tempmatrix(m_deviceid), tempmatrix2(m_deviceid);
 
-        if (seqsMBRmode)
-            denaccs.Resize(loglikelihood);
+        /*if (seqsMBRmode)
+            denaccs.Resize(loglikelihood);*/
         // copy loglikelihood to pred
 
         if (numcols > pred.cols())
         {
             pred.resize(numrows, numcols);
             dengammas.resize(numrows, numcols);
-            if (seqsMBRmode)
-                gammasbuffer.resize(numrows, numcols);
+            /*if (seqsMBRmode)
+                gammasbuffer.resize(numrows, numcols);*/
         }
 
         if (doreferencealign)
@@ -232,8 +232,8 @@ public:
             if (samplesInRecurrentStep == 1)
             {
                 tempmatrix = gammafromlattice.ColumnSlice(ts, numframes);
-                if (seqsMBRmode)
-                    tempmatrix2 = denaccs.ColumnSlice(ts, numframes);
+                /*if (seqsMBRmode)
+                    tempmatrix2 = denaccs.ColumnSlice(ts, numframes);*/
             }
             // copy gamma to tempmatrix
             if (m_deviceid == CPUDEVICE)
@@ -253,11 +253,11 @@ public:
             {
                 Microsoft::MSR::CNTK::Matrix<ElemType> gammaFromLatticeForCurrentParallelUtterance = gammafromlattice.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
                 gammaFromLatticeForCurrentParallelUtterance.CopyColumnsStrided(tempmatrix, numframes, 1, samplesInRecurrentStep);
-                if (seqsMBRmode)
+                /*if (seqsMBRmode)
                 {
                     Microsoft::MSR::CNTK::Matrix<ElemType> denaccsForCurrentParallelUtterance = denaccs.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
                     denaccsForCurrentParallelUtterance.CopyColumnsStrided(tempmatrix2, numframes, 1, samplesInRecurrentStep);
-                }
+                }*/
             }
 
             if (doreferencealign)
@@ -276,13 +276,13 @@ public:
             fprintf(stderr, "dengamma value %f\n", denavlogp);
             ts += numframes;
         }
-        if (seqsMBRmode && frameDropThreshold > 0.0)
+        /*if (seqsMBRmode && frameDropThreshold > 0.0)
         {
             
             //denaccs.Print("denacc");
             gammafromlattice.DropFrame(labels, denaccs, (ElemType)frameDropThreshold);
             //fprintf(stderr, "after drop\n");
-        }
+        }*/
         functionValues.SetValue(objectValue);
         /*Microsoft::MSR::CNTK::Matrix<ElemType> rowsum(m_deviceid);
         rowsum.Resize(1, denaccs.GetNumCols());
