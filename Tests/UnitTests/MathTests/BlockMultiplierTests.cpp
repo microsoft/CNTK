@@ -8,15 +8,11 @@
 namespace Microsoft { namespace MSR { namespace CNTK { namespace TEST {
 
 //The simplest possible matrix multiplier, used here as a check.
-template<typename ScalarAT, typename ScalarBT, typename ScalarCT, int MAXRANGE = 1 << ((8 * sizeof(ScalarAT)) - 3)> class ReferenceMultiplier
+template<typename ScalarAT, typename ScalarBT, typename ScalarCT> class ReferenceMultiplier
 {
     public:
 
-        typedef ScalarAT ScalarAT;
-        typedef ScalarBT ScalarBT;
-        typedef ScalarCT ScalarCT;
-
-        static const int MAXRANGE = MAXRANGE;
+        static const int MAXRANGE = 1 << ((8 * sizeof(ScalarAT)) - 3);
 
         ScalarBT* PrepareB(ScalarBT* oldB, int k, int n) { return oldB; }
         static ScalarAT* CreateMatrixA(int m, int n)
@@ -77,9 +73,17 @@ template<typename ScalarAT, typename ScalarBT, typename ScalarCT, int MAXRANGE =
         }
 };
 
-    template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
-            int m, int k, int n, MultiplierT& testMult, int numThreads = 1, ScalarCT epsilon = ScalarCT())
+template<typename ScalarCT> void CompareMatricesAndDump(const ScalarCT* ref, const ScalarCT* test,
+        int m, int /*k*/, int n)
+{
+    for (int i = 0; i < m * n; ++i)
+    {
+        BOOST_CHECK_EQUAL(ref[i], test[i]);
+    }
+}
 
+template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
+            int m, int k, int n, MultiplierT& testMult, int numThreads = 1, ScalarCT epsilon = ScalarCT())
 {
     epsilon;
     testMult.SetNumThreads(numThreads);
@@ -126,21 +130,11 @@ template<typename ScalarAT, typename ScalarBT, typename ScalarCT, int MAXRANGE =
 
 }
 
-
-    template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
+template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
             int m, int k, int n, int numThreads = 1, ScalarCT epsilon = ScalarCT())
 {
     MultiplierT testMult;
     TestMultiplierSub<ScalarAT, ScalarBT, ScalarCT, MultiplierT>(m, k, n, testMult, numThreads, epsilon);
-}
-
-template<typename ScalarCT> void CompareMatricesAndDump(const ScalarCT* ref, const ScalarCT* test,
-        int m, int /*k*/, int n)
-{
-    for (int i = 0; i < m * n; ++i)
-    {
-        BOOST_CHECK_EQUAL(ref[i], test[i]);
-    }
 }
 
 BOOST_AUTO_TEST_SUITE(BlockMultiplierSuite)
