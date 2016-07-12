@@ -57,7 +57,7 @@ If ($targetConfig -eq "CPU")
 }
 $includePath = "Source\Common\Include"
 # TBD To be redone either via white-list or via array
-$includeFile = Join-Path $includePath -ChildPath EvalDll.lib
+$includeFile = Join-Path $includePath -ChildPath Eval.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
