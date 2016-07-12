@@ -5,7 +5,7 @@
 //
 // F. Seide, V-hansu
 
-#define FORBID_INVALID_SIL_PATHS // [v-hansu] prune path that start from sil(sp) and go into sil, only used with addsil is adopted
+#undef FORBID_INVALID_SIL_PATHS // [v-hansu] prune path that start from sil(sp) and go into sil, only used with addsil is adopted
 
 #pragma once
 
@@ -633,7 +633,7 @@ struct latticefunctionskernels
     // TODO: change this later on
     static inline __device__ bool issilencestate(size_t stateid, size_t numsenones)
     {
-        if (numsenones == 5980 && (stateid == 2509 || stateid == 2509 || stateid == 2510 || stateid < 9))
+        if (numsenones == 5980 && (stateid == 2508 || stateid == 2509 || stateid == 2510 || stateid < 9))
             return true;
         else
             return false;
