@@ -1,0 +1,69 @@
+import numpy as np
+from cntk import cntk_py
+from cntk import DATATYPE
+from cntk.graph import TensorOpsMixin
+from .. import utils
+from cntk.context import get_context
+
+def _sanitize_value(shape, value, dtype, dev):
+    print("_sanitize_value %s"%dtype)
+
+    np_dtype = utils.sanitize_dtype_numpy(dtype)
+    cntk_dtype = utils.sanitize_dtype_cntk(dtype)
+
+    if value is None:
+        if shape is None:
+            raise ValueError('you need to specify at least shape or value')
+
+        if not np.isscalar(shape):
+            # cntk uses column major, thus we reverse the shape    
+            shape = tuple(reversed(shape))
+
+        ndav = utils.create_NDArrayViewPtr(shape, cntk_dtype, dev)
+            
+    else:
+        if not isinstance(value, np.ndarray):
+            value = np.asarray(value, dtype=np_dtype)
+
+        ndav = utils.create_NDArrayViewPtr_from_NumPy(value, dev)
+
+    return ndav
+
+class Variable(cntk_py.Variable, TensorOpsMixin):
+    pass
+
+class Parameter(cntk_py.Parameter, TensorOpsMixin):
+    def __init__(self, shape=None, value=None, data_type=None, dev=None, name=''):
+        print("parameter %s"%data_type)
+        if data_type is None:
+            data_type = get_context().precision_numpy
+        print("data_type=%s"%data_type)
+
+        if not dev:
+            dev = cntk_py.DeviceDescriptor_CPUDevice()
+
+        ndav = _sanitize_value(shape, value, data_type, dev)
+        super(Parameter, self).__init__(ndav, name)
+
+class Constant(cntk_py.Constant, TensorOpsMixin):
+    def __init__(self, shape=None, value=None, data_type=None, dev=None, name=''):
+        print("constant %s"%data_type)
+
+        if data_type is None:
+            data_type = get_context().precision_numpy
+        print("data_type=%s"%data_type)
+        if not dev:
+            dev = cntk_py.DeviceDescriptor_CPUDevice()
+        ndav = _sanitize_value(shape, value, data_type, dev)
+        super(Constant, self).__init__(ndav, name)
+
+class Placeholder(cntk_py.Placeholder, TensorOpsMixin):
+    def __init__(self, shape=None, data_type=None, name=''):
+        print("placeholder %s"%data_type)
+
+        if data_type is None:
+            data_type = get_context().precision_numpy
+        print("data_type=%s"%data_type)
+
+        dtype = utils.sanitize_dtype_cntk(data_type)
+        Variable.__init__(self, shape, dtype, name)
