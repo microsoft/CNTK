@@ -137,7 +137,7 @@ basePath="BinaryDrops"
 baseDropPath="$basePath/cntk"
 baseBinariesPath="$baseDropPath/cntk"
 baseDependenciesPath="$baseBinariesPath/dependencies/lib"
-baseIncludePath="$baseBinariesPath/Include"
+basePath="$baseBinariesPath/Include"
 includePath="Source/Common/Include"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
 gzipFile="BinaryDrops.tar.gz"
@@ -157,6 +157,7 @@ rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 mkdir -p $baseIncludePath
 
 # Copy Include
+echo "Copying Scripts..." >&3
 CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
 
 # Copy Examples
