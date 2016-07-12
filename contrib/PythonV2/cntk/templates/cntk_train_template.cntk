@@ -1,0 +1,16 @@
+%(ActionName)s=[
+    action="train"
+
+    run=BrainScriptNetworkBuilder
+
+    BrainScriptNetworkBuilder=[
+%(ModelDescription)s
+    ]
+    
+    SGD = [
+%(SGD)s
+    ]
+    
+%(Reader)s
+]
+
