@@ -719,6 +719,58 @@ RNNs =
             dim = layerDims[i] * 2  # output dimension
         ]
     ].layers
+
+	# GRU -- GRU function with self-stabilization
+    # It returns a dictionary with one members: h.    
+    GRU (outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+    [
+        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
+		cellDim = outputDim
+
+        _ = [     // encapsulate the inner workings
+
+            dh = prevState.h   // previous value
+            dhs = S(dh)        // previous value, stabilized       
+            # note: input does not get a stabilizer here, user is meant to do that outside
+
+            // parameter macros
+            # note: each invocation comes with its own set of weights
+            B() = Parameters.BiasParam (cellDim)
+            W() = Parameters.WeightParam (cellDim, inputDim)        // input            
+            H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden            
+
+            # projected contribution from input(s)
+            pin() = B() + W() * x       
+
+			# update gate z(t)
+			zt = Sigmoid (pin() + H() * dhs)
+
+			# reset gate r(t)
+			rt = Sigmoid (pin() + H() * dhs)
+
+			# "cell" c
+			rs = dhs .* rt
+			c = Tanh (pin() + H() * rs)
+
+            # hidden state ht / output
+			ht = (BS.Constants.OnesTensor (cellDim) - zt) .* c + zt .* dhs
+        ]
+
+        # our return value        
+        h = _.ht          // hidden state        
+    ]
+
+	# this implements a recurrent (stateful) GRU with self-stabilization
+    # It returns a record (h). To use its output, say .h
+    # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
+    RecurrentGRU   (outputDim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+    [
+        enableSelfStabilization1 = enableSelfStabilization
+		inputDim1 = inputDim	
+
+        prevState = previousHook (gruState, layerIndex=0)
+        gruState = BS.RNNs.GRU (outputDim, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+    ].gruState // that's the value we return
 ]
 
 ##############################################################################
