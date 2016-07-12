@@ -35,10 +35,6 @@ namespace CNTK
 
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
-        // TODO: move learning rate and momentum scheduling and adjustment functionality 
-        // inside the learner and drop these setters.
-        void SetLearningRate(double value) { m_learningRatePerSample = value; }
-
         CNTK_API void SetAdditionalOptions(const AdditionalLearningOptions& additionalOptions)
         {
             m_additionalOptions = additionalOptions;
@@ -47,6 +43,17 @@ namespace CNTK
         // TODO: should this be called ResetMomentum?
         // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
         CNTK_API void ResetSmoothedGradients();
+
+        // TODO: move learning rate and momentum scheduling and adjustment functionality 
+        // inside the learner and drop these setters.
+        void SetLearningRate(double value) { m_learningRatePerSample = value; }
+
+        // TODO: this is a stop-gap to support old serialization protocol.
+        template <typename ElementType>
+        CNTK_API void SaveSmoothGradient(Microsoft::MSR::CNTK::File& fstream, const Variable& parameter);
+
+        template <typename ElementType>
+        CNTK_API void LoadSmoothGradient(Microsoft::MSR::CNTK::File& fstream, const Variable& parameter);
 
     protected:
         LearnerBase(const std::unordered_set<Variable>& parameters,
@@ -65,8 +72,6 @@ namespace CNTK
         double m_learningRatePerSample;
 
         AdditionalLearningOptions m_additionalOptions;
-
-        size_t m_sampleCount;
 
         std::unordered_map<Variable, ValuePtr> m_smoothedGradientValues;
 
@@ -90,17 +95,25 @@ namespace CNTK
         // Performs additional preprocessing before calling the update method 
         // (gradient clipping and L2 regularization depending on the additional learning parameters).
         template <typename ElementType>
-        bool PreProcess(const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t actualMBSize) const;
+        void PreProcess(const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t actualMBSize) const;
 
         // Performs additional postprocessing after the update method has been executed
         // (noise injection and L1 regularization specified by the additional learning parameters).
         template <typename ElementType>
-        bool PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
+        void PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
                          const ValuePtr& parameterValue, size_t actualMBSize) const;
     private:
+        // Templatized update function, it invokes preprocess and postprocess using the provided
+        // template parameter and also invokes virtual Update method implemented in one of the subclasses.
+        template <typename ElementType>
+        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+
         // TODO: make these functions friends of NDViewArray and move to Utils?
         static bool HasNan(const ValuePtr& value, const char* name);
         static void Print(const ValuePtr& value, const char* msg);
+
+        size_t m_sampleCount;
     };
 
     // Vanilla gradient descent optimization algorithm.
@@ -122,7 +135,7 @@ namespace CNTK
                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                     const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
 
         double m_momentumPerSample;
@@ -170,7 +183,7 @@ namespace CNTK
                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                     const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
     };
 
@@ -187,7 +200,7 @@ namespace CNTK
                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                     const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
     };
 
@@ -212,7 +225,7 @@ namespace CNTK
                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        bool Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                     const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
     };
 }

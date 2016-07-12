@@ -6,15 +6,20 @@
 #include "Learner.h"
 #include "TensorView.h"
 #include "Utils.h"
+#include "File.h"
 
-#define UPDATE_FUNCTION                                                                                     \
-    if (!(Update<float>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount) ||  \
-        Update<double>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount)))    \
-        NOT_IMPLEMENTED;
-
-#define CHECK_DATA_TYPE(valuePtr)                                       \
-    if (valuePtr->Data()->GetDataType() != AsDataType<ElementType>()) \
-    { return false; }                                   
+#define UPDATE_FUNCTION                                                                                       \
+    switch (smoothedGradientValue->Data()->GetDataType())                                                     \
+    {                                                                                                         \
+    case DataType::Float:                                                                                     \
+        Update<float>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount);  \
+        break;                                                                                                \
+    case DataType::Double:                                                                                    \
+        Update<double>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount); \
+        break;                                                                                                \
+    default:                                                                                                  \
+        NOT_IMPLEMENTED;                                                                                      \
+    }
 
 
 using namespace Microsoft::MSR::CNTK;
@@ -95,10 +100,8 @@ namespace CNTK
     // Performs additional preprocessing before calling the update method 
     // (gradient clipping and L2 regularization depending on the additional learning parameters).
     template <typename ElementType>
-    bool LearnerBase::PreProcess(const ValuePtr& gradientValue,const ValuePtr& parameterValue, size_t actualMBSize) const
+    void LearnerBase::PreProcess(const ValuePtr& gradientValue,const ValuePtr& parameterValue, size_t actualMBSize) const
     {
-        CHECK_DATA_TYPE(gradientValue);
-
         const auto& gradientMatrix = gradientValue->Data()->GetWritableMatrix<ElementType>();
 
         // clipping gradients to prevent outliers
@@ -112,18 +115,14 @@ namespace CNTK
             const auto& parameterMatrix = parameterValue->Data()->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(weight, *parameterMatrix, *gradientMatrix);
         }
-
-        return true;
     }
 
     // Performs additional postprocessing after the update method has been executed
     // (noise injection and L1 regularization specified by the additional learning parameters).
     template <typename ElementType>
-    bool LearnerBase::PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
+    void LearnerBase::PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
                                     const ValuePtr& parameterValue, size_t actualMBSize) const
     {
-        CHECK_DATA_TYPE(gradientValue);
-
         const auto& parameterMatrix = parameterValue->Data()->GetWritableMatrix<ElementType>();
         if (m_additionalOptions.gaussianNoiseInjectionStdDev > 0)
         {
@@ -150,8 +149,6 @@ namespace CNTK
             auto weight = ElementType(learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize);
             parameterValue->Data()->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(weight);
         }
-
-        return true;
     }
 
     template <typename ElementType>
@@ -236,15 +233,7 @@ namespace CNTK
             Print(gradientValue, "Gradient Update");
             Print(smoothedGradientValue, "Smoothed Gradient Input");
 #endif
-            if (!(PreProcess<float>(gradientValue, parameterValue, trainingSampleCount) ||  
-                    PreProcess<double>(gradientValue, parameterValue, trainingSampleCount)))    
-                    NOT_IMPLEMENTED;
-
-            Update(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount);
-
-            if (!(PostProcess<float>(parameter, gradientValue, parameterValue, trainingSampleCount) ||  
-                PostProcess<double>(parameter, gradientValue, parameterValue, trainingSampleCount)))    
-                NOT_IMPLEMENTED;
+            UPDATE_FUNCTION;
 
 #if DUMPOUTPUT
             Print(parameterValue, "Parameter Update");
@@ -257,6 +246,15 @@ namespace CNTK
         }
         m_sampleCount += trainingSampleCount;
         return false;
+    }
+
+    template <typename ElementType>
+    void LearnerBase::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    {
+        PreProcess<ElementType>(gradientValue, parameterValue, trainingSampleCount);
+        Update(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount);
+        PostProcess<ElementType>(parameter, gradientValue, parameterValue, trainingSampleCount);
     }
 
     string LearnerBase::LearnerType() const
@@ -273,6 +271,7 @@ namespace CNTK
 
     /*virtual*/ Dictionary LearnerBase::GetCheckpointState() const /*override*/
     {
+        NOT_IMPLEMENTED; // Until the new checkpointing is fully fleshed out, nobody should be calling this.
         Dictionary checkpoint;
 
         for (const auto& parameter : Parameters())
@@ -295,6 +294,7 @@ namespace CNTK
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
+        NOT_IMPLEMENTED; // Until the new checkpointing is fully fleshed out, nobody should be calling this.
         for (const auto& parameter : Parameters())
         {
             if (!checkpoint.Contains(parameter.Name()))
@@ -311,6 +311,22 @@ namespace CNTK
         }
     }
 
+    template <typename ElementType>
+    void LearnerBase::SaveSmoothGradient(File& fstream, const Variable& parameter)
+    {
+        const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+        const auto& matrix = smoothedGradientValue->Data()->GetMatrix<ElementType>();
+        fstream << *matrix;
+    }
+
+    template <typename ElementType>
+    void LearnerBase::LoadSmoothGradient(File& fstream, const Variable& parameter)
+    {
+       const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+       const auto& matrix = smoothedGradientValue->Data()->GetWritableMatrix<ElementType>();
+       fstream >> *matrix;
+    }
+
     /*virtual*/ void LearnerSGD::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                         const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const /*override*/
     {
@@ -318,10 +334,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool LearnerSGD::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    void LearnerSGD::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
-        CHECK_DATA_TYPE(smoothedGradientValue);
         UNUSED(trainingSampleCount);
 
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
@@ -334,8 +349,6 @@ namespace CNTK
         // (one for vanilla SGD, the other for momentum SGD, and the third one for NAG).
         smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix,
                                             learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
-            
-        return true;
     }
 
     LearnerAdaGrad::LearnerAdaGrad(const unordered_set<Variable>& parameters, bool needAveMultiplier, const DeviceDescriptor& device)
@@ -351,10 +364,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool LearnerAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    void LearnerAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                 const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
-        CHECK_DATA_TYPE(smoothedGradientValue);
         UNUSED(trainingSampleCount);
 
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
@@ -365,8 +377,6 @@ namespace CNTK
 
         auto aveMultiplier = smoothedGradientMatrix->Adagrad(*gradientMatrix, m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
-
-        return true;
     }
 
     LearnerFSAdaGrad::LearnerFSAdaGrad(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
@@ -381,10 +391,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool LearnerFSAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    void LearnerFSAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                   const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
-        CHECK_DATA_TYPE(smoothedGradientValue);
         UNUSED(trainingSampleCount);
 
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
@@ -397,8 +406,6 @@ namespace CNTK
 
         smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix,
                                             learningRate, ElementType(m_momentumPerSample));
-
-        return true;
     }
 
     LearnerRMSProp::LearnerRMSProp(const unordered_set<Variable>& parameters,
@@ -417,10 +424,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    bool LearnerRMSProp::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
+    void LearnerRMSProp::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
                                 const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
     {
-        CHECK_DATA_TYPE(smoothedGradientValue);
         UNUSED(trainingSampleCount);
 
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
@@ -434,11 +440,13 @@ namespace CNTK
                                                                 ElementType(m_max), ElementType(m_dec),
                                                                 ElementType(m_min), m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
-
-        return true;
     }
 
     // Explicit template instantiations
+    template CNTK_API void LearnerBase::SaveSmoothGradient<float>(File& fstream, const Variable& parameter);
+    template CNTK_API void LearnerBase::SaveSmoothGradient<double>(File& fstream, const Variable& parameter);
+    template CNTK_API void LearnerBase::LoadSmoothGradient<float>(File& fstream, const Variable& parameter);
+    template CNTK_API void LearnerBase::LoadSmoothGradient<double>(File& fstream, const Variable& parameter);
     template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr arrayView);
     template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr arrayView);
     
@@ -473,5 +481,5 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerRMSProp>(parameters, gamma, inc, dec, max, min, needAveMultiplier, device);
     }
-    
+
 }

@@ -253,23 +253,23 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
-
+    
     auto device = GetDeviceDescriptor(net->GetDeviceId());
-
     GradientsUpdateType adpType = GradUpdateType();
     if (adpType == GradientsUpdateType::RmsProp || adpType == GradientsUpdateType::FSAdaGrad) 
     {
         list<ComputationNodeBasePtr> sparse, dense;
-        partition_copy (learnableNodes.begin(), learnableNodes.end(), sparse.begin(), dense.begin(), 
+        partition_copy(learnableNodes.begin(), learnableNodes.end(), sparse.begin(), dense.begin(), 
             [](const ComputationNodeBasePtr& node) 
         {  
-            // TODO: check if correct matrix type is already available at this point (result of the cast is not null).
-            return dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetMatrixType() == MatrixType::SPARSE;
+            ComputationNodePtr nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(node);
+            // TODO: check nodePtr is not nullptr? Is that necessary?
+            return nodePtr->Value().GetMatrixType() == MatrixType::SPARSE;
         });
 
         if (sparse.size() > 0) 
         {
-            // rmsprop and fsadagrad for sparse is not implemented yet, use adagrad instead.
+            // rmsprop and fsadagrad for sparse are not yet implemented, use adagrad instead.
             InstantiateLearner(GradientsUpdateType::AdaGrad, sparse, device);
         }
 
@@ -281,6 +281,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     else
     {
         InstantiateLearner(adpType, learnableNodes, device);
+    }
+
+    // This is pretty ugly, but we need to create a list of parameters in the order of node traversal,
+    // so that we're able to restore from old checkpoints.
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+       ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+
+       for (const auto& learner : m_learners)
+       {
+           for (const auto& parameter : learner->Parameters())
+           {
+               if (node == m_parameterToNodeMap.at(parameter))
+               {
+                   m_parameters.push_back(make_pair(parameter, learner));
+                   break;
+               }
+           }
+       }
     }
 
     double avgCriterion, lrControlCriterion;
@@ -1931,9 +1950,10 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-            for (auto& learner : m_learners)
+            for (auto& pair : m_parameters)
             {
-                fstream << learner->GetCheckpointState();
+                auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(pair.second);
+                learnerBase->SaveSmoothGradient<ElemType>(fstream, pair.first);
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -1996,11 +2016,6 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
 
-    if (ckpVersion < CURRENT_CNTK_CHECKPOINT_VERSION)
-    {
-        RuntimeError("Checkpoint version (%lu) is not supported.", ckpVersion); 
-    }
-
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
@@ -2019,11 +2034,10 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-    for (auto& learner : m_learners)
+    for (auto& pair : m_parameters)
     {
-        ::CNTK::Dictionary checkpoint;
-        fstream >> checkpoint;
-        learner->RestoreFromCheckpoint(checkpoint);
+        auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(pair.second);
+        learnerBase->LoadSmoothGradient<ElemType>(fstream, pair.first);
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2211,8 +2225,7 @@ void SGD<ElemType>::ResetSGDMomentum()
                     
     for (auto& learner : m_learners)
     {
-        auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(learner);
-        learnerBase->ResetSmoothedGradients();
+        dynamic_pointer_cast<::CNTK::LearnerBase>(learner)->ResetSmoothedGradients();
     }                
 }
 
@@ -2280,8 +2293,7 @@ void SGD<ElemType>::InstantiateLearner(GradientsUpdateType type,
     // TODO: confirm that multipliers are not supposed to change during training.
     additionalOptions.learningRateMultipliers = learningRateMultipliers;
     
-    auto learnerBase = dynamic_pointer_cast<::CNTK::LearnerBase>(m_learners.back());
-    learnerBase->SetAdditionalOptions(additionalOptions);
+    dynamic_pointer_cast<::CNTK::LearnerBase>(m_learners.back())->SetAdditionalOptions(additionalOptions);
 }
 
 template class SGD<float>;

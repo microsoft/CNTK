@@ -534,6 +534,11 @@ protected:
     // at the moment we only create two at most.
     std::list<::CNTK::LearnerPtr> m_learners;
 
+    // a list of parameters (stored in the order of traversal of learnable nodes -- same order
+    // smoothed gradients were serialized under the old protocol)
+    // TODO: drop this list as soon as proper backwards compatible checkpointing is implemented.
+    std::list<pair<::CNTK::Variable, ::CNTK::LearnerPtr>> m_parameters;
+
 private:
     void ResetSGDMomentum();
 
