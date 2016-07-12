@@ -11,4 +11,9 @@ namespace CNTK
         : Variable(function->Output())
     {
     }
+
+    FunctionPtr Variable::Owner() const 
+    {
+        return m_dataFields->m_ownerFunction->shared_from_this(); 
+    }
 }

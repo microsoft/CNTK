@@ -14,7 +14,21 @@ namespace CNTK
         return GPUDevice(0);
     }
 
-    /*static*/ Axis Axis::DefaultDynamicAxis = Axis(L"defaultDynamicAxis");
-    /*static*/ Axis Axis::BatchAxis = Axis(L"batchAxis");
-    /*static*/ Axis Axis::AllAxes = Axis(L"allAxes");
+    /*static*/ const Axis& Axis::DefaultDynamicAxis()
+    {
+        static Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
+        return s_defaultDynamicAxis;
+    }
+
+    /*static*/ const Axis& Axis::BatchAxis()
+    {
+        static Axis s_batchAxis(L"batchAxis");
+        return s_batchAxis;
+    }
+
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static Axis s_allAxes(L"allAxes");
+        return s_allAxes;
+    }
 }
