@@ -11,6 +11,7 @@
 %include <std_shared_ptr.i>
 
 %template() std::vector<size_t>;
+%template() std::vector<CNTK::Variable>;
 
 %{
 #define SWIG_FILE_WITH_INIT

@@ -69,7 +69,6 @@ def test_op_plus(left_operand, right_operand, device_id):#, precision):
 
     args = {a:left_value, b:right_value}
 
-    import ipdb;ipdb.set_trace()
     left_as_input = a + right_operand
     unittest_helper(left_as_input, args, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)
