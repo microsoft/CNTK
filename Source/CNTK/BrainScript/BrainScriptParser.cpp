@@ -90,8 +90,17 @@ struct Issue
 // Since often multiple contexts are on the same source line, we only print each source line once in a consecutive row of contexts.
 /*static*/ void TextLocation::PrintIssue(const vector<TextLocation>& locations, const wchar_t* errorKind, const wchar_t* kind, const wchar_t* what)
 {
+    wstring error = CreateIssueMessage(locations, errorKind, kind, what);
+    fprintf(stderr, "%ls", error.c_str());
+    fflush(stderr);
+}
+
+/*static*/ wstring TextLocation::CreateIssueMessage(const vector<TextLocation>& locations, const wchar_t* errorKind, const wchar_t* kind, const wchar_t* what)
+{
     vector<Issue> issues; // tracing the error backwards
     size_t symbolIndex = 0;
+    wstring message;
+
     for (size_t n = 0; n < locations.size(); n++)
     {
         let& location = locations[n];
@@ -125,20 +134,23 @@ struct Issue
     if (!locations.empty()) // (be resilient to some throwers not having a TextLocation; to be avoided)
     {
         let& firstLoc = issues.front().location;
-        fprintf(stderr, "[CALL STACK]\n");
+        message += wstrprintf(L"[CALL STACK]\n");
         for (auto i = issues.rbegin(); i != issues.rend(); i++)
         {
             let& issue = *i;
             auto& where = issue.location;
             const auto& lines = where.GetSourceFile().lines;
             const auto line = (where.lineNo == lines.size()) ? L"(end)" : lines[where.lineNo].c_str();
-            fprintf(stderr, "  %ls\n  %ls\n", line, issue.markup.c_str());
+            message += wstrprintf(L"  %ls\n  %ls\n", line, issue.markup.c_str());
         }
-        fprintf(stderr, "%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int)firstLoc.lineNo + 1 /*report 1-based*/);
+        message += wstrprintf(L"%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int)firstLoc.lineNo + 1 /*report 1-based*/);
     }
     else
-        fprintf(stderr, "%ls while %ls", errorKind, kind);
-    fprintf(stderr, ": %ls\n", what), fflush(stderr);
+    {
+        message += wstrprintf(L"%ls while %ls", errorKind, kind);
+    }
+    message += wstrprintf(L": %ls\n", what);
+    return message;
 }
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
