@@ -14,6 +14,11 @@
 #include <msclr\marshal_cppstd.h>
 
 #include "CNTKException.h"
+#pragma warning(push)
+#pragma warning(disable : 4793) // Function compiled as native
+#include "Basics.h"
+#include "ScriptableObjects.h"
+#pragma warning(pop)
 #include "EvalCommon.h"
 #include "Eval.h"
 
@@ -263,7 +268,14 @@ public:
             outputNodeNames.push_back(context.marshal_as<std::wstring>(output));
         }
 
-        m_eval->StartForwardEvaluation(outputNodeNames);
+        try
+        {
+            m_eval->StartForwardEvaluation(outputNodeNames);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
     }
 
     //
@@ -366,6 +378,11 @@ private:
         else if (typeid(ex) == typeid(bad_alloc))
         {
             return gcnew CNTKBadAllocException(gcnew System::String(ex.what()));
+        }
+        else if (dynamic_cast<const ScriptableObjects::ScriptingException*>(&ex) != nullptr) // Includes derived classes
+        {
+            const auto& err = dynamic_cast<const ScriptableObjects::ScriptingException&>(ex);
+            return gcnew CNTKLogicErrorException(gcnew System::String(wstrprintf(L"%ls\n%ls", utf16(err.what()).c_str(), err.GetError(L"").c_str()).c_str()), nullptr);
         }
         else
         {
