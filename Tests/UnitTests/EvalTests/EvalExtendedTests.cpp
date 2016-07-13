@@ -26,25 +26,7 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     // Native model evaluation instance
     IEvaluateModelExtended<float> *eval;
 
-#ifdef _WIN32
-    // Load the eval library
-    auto hModule = LoadLibrary(L"evaldll.dll");
-    if (hModule == nullptr)
-    {
-        auto err = GetLastError();
-        throw std::exception((boost::format("Cannot load evaldll.dll: 0x%08lx") % err).str().c_str());
-    }
-
-    // Get the factory method to the evaluation engine
-    std::string func = "GetEvalExtendedF";
-    auto procAddress = GetProcAddress(hModule, func.c_str());
-    auto getEvalProc = (GetEvalProc<float>)procAddress;
-        
-    getEvalProc(&eval);
-
-#else // on Linux
     GetEvalExtendedF(&eval);
-#endif
 
     try
     {
