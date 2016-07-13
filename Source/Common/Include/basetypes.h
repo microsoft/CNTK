@@ -411,7 +411,7 @@ static inline void byteswap(V &v) throw()
 
 // execute a block with retry
 // Block must be restartable.
-// Use this when writing small files to those unreliable Windows servers.
+// Use this when writing/reading small files to those unreliable Windows servers.
 // TODO: This will fail to compile under VS 2008--we need an #ifdef around this
 template <typename FUNCTION>
 static void attempt(int retries, const FUNCTION &body)
