@@ -26,7 +26,7 @@ void SwapInAction::BeginAction()
     CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU, bytes, cudaMemcpyDefault, m_swapInStream));
 }
 
-void SwapInAction::endAction()
+void SwapInAction::EndAction()
 {
     CUDA_CALL(cudaStreamSynchronize(m_swapInStream));
     m_isSwappingToGPU = false;

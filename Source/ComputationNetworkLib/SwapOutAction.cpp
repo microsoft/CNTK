@@ -20,6 +20,11 @@ using std::cout;
 using std::endl;
 
 
+SwapOutAction::~SwapOutAction()
+{
+    deallocatePinnedBuffer();
+}
+
 void SwapOutAction::BeginAction()
 {
     size_t cols = m_bufferGPU->GetNumCols();
@@ -29,7 +34,7 @@ void SwapOutAction::BeginAction()
     CUDA_CALL(cudaMemcpyAsync(m_bufferCPU, m_bufferGPU->Data(), bytes, cudaMemcpyDefault, m_streamAsync));
 }
 
-void SwapOutAction::endAction()
+void SwapOutAction::EndAction()
 {
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
 }
@@ -45,6 +50,11 @@ void SwapOutAction::allocatePinnedBuffer()
     //cudaHostAllocPortable preservse the page-lock even across threads
     CUDA_CALL(cudaHostAlloc(&pinnedBuffer, bytes, cudaHostAllocPortable));
     m_bufferCPU = pinnedBuffer;
+}
+
+void SwapOutAction::deallocatePinnedBuffer()
+{
+    CUDA_CALL(cudaFree(m_bufferCPU));
 }
 
 }}}

@@ -28,7 +28,7 @@ public:
 
     //implementation of abstract method
     void BeginAction();
-    void endAction();
+    void EndAction();
 
 private:
     cudaStream_t m_swapInStream;
