@@ -63,15 +63,6 @@ template <class ElemType>
     auto result =           ValueTensorFor(rank, fr);
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
-    // some reductions are currently only on CPU
-    switch (m_reductionOp)
-    {
-        case ElementWiseOperator::opMax:
-        case ElementWiseOperator::opMin:
-            // Make sure that computation is exucted on CPU. TODO: will this work? Are parameters right.
-            Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ true);
-    }
-
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
     result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_reductionOp);
     // note: we can implement "Mean" by passing 1/dim for alpha
@@ -96,24 +87,13 @@ template <class ElemType>
         break;
 
     case ElementWiseOperator::opMax:
-    {
-                                       // "Sum": broadcast the gradient
-                                       auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
-                                       auto output = ValueTensorFor(rank, fr.AllowBroadcast());
-
-                                       sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
-    }
-        break;
-
     case ElementWiseOperator::opMin:
-    {
-                                       // "Sum": broadcast the gradient
-                                       auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
-                                       auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-                                       sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
-    }
+        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
         break;
+
         // more coming
 
         // "LogPlus": softmax
@@ -121,8 +101,6 @@ template <class ElemType>
         //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  - ReduceLogPlus(x))
         // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
         // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
-
-        // "Max": Copy the gradient only to the max value. targetGradient += gradientFromTop .* (outputValue == inputValue). Needs its own opcode. --TODO : verify
     }
 }
 
@@ -150,7 +128,7 @@ template <class ElemType>
     LogicError("Should not get here.");
 }
 
-// map the operation specific as a string to an ElementWiseOperator to pass to 
+// map the operation specified as a string to an ElementWiseOperator value.
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
