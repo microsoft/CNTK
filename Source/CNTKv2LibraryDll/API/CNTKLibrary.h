@@ -285,6 +285,7 @@ namespace CNTK
     class NDArrayView final : public std::enable_shared_from_this<NDArrayView>
     {
         friend class CompositeFunction;
+        friend class LearnerBase;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -1396,4 +1397,342 @@ namespace CNTK
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
     CNTK_API FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name = L"");
+
+    ///
+    /// A serializable value represents one of:
+    /// a) Boolean
+    /// b) Signed long integer
+    /// c) Single and double precision floating point values
+    /// d) NDShape
+    /// e) vector<DictionaryValue>
+    ///
+    /// TODO:  we need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
+    class CNTK_API DictionaryValue final
+    {
+    public:
+        enum class Type : unsigned int
+        {
+            None,
+            Bool,
+            SizeT,
+            Float,
+            Double,
+            NDShape,
+            Vector
+        };
+
+        static const char* TypeName(Type type)
+        {
+            switch (type)
+            {
+            case Type::None:
+                return "None";
+            case Type::Bool:
+                return "Bool";
+            case Type::SizeT:
+                return "SizeT";
+            case Type::Float:
+                return "Float";
+            case Type::Double:
+                return "Double";
+            case Type::NDShape:
+                return "NDShape";
+            case Type::Vector:
+                return "Vector";
+            default:
+                LogicError("Unknown DictionaryValue::Type");
+            }
+        }
+
+    public:
+        DictionaryValue() : m_valueType(Type::None)
+        {
+        }
+
+        DictionaryValue(bool value) : m_valueType(GetValueType<bool>())
+        {
+            m_data.m_boolean = value;
+        }
+
+        DictionaryValue(size_t value) : m_valueType(GetValueType<size_t>())
+        {
+            m_data.m_sizeT = value;
+        }
+
+        DictionaryValue(float value) : m_valueType(GetValueType<float>())
+        {
+            m_data.m_float = value;
+        }
+
+        DictionaryValue(double value) : m_valueType(GetValueType<double>())
+        {
+            m_data.m_double = value;
+        }
+
+        template <typename T>
+        DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
+        {
+            static_assert(std::is_same<T, NDShape>::value ||
+                          std::is_same<T, std::vector<DictionaryValue>>::value,
+                          "Unsupported ValueType");
+
+            AllocateDataPtr(value);
+        }
+
+        DictionaryValue(const DictionaryValue& other) : m_valueType(Type::Bool)
+        {
+            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
+            // the underlying underlying uninitialized value as a ptr and free it.
+            *this = other;
+        }
+
+        DictionaryValue& operator=(const DictionaryValue& other)
+        {
+            if (this != &other)
+            {
+                FreeDataPtr();
+
+                m_valueType = other.m_valueType;
+                m_data = other.m_data;
+
+                if (other.m_valueType == Type::NDShape)
+                    AllocateDataPtr(other.GetValue<NDShape>());
+                else if (other.m_valueType == Type::Vector)
+                    AllocateDataPtr(other.GetValue<std::vector<DictionaryValue>>());
+            }
+
+            return *this;
+        }
+
+        ~DictionaryValue()
+        {
+            FreeDataPtr();
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_boolean;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_sizeT;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_float;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return m_data.m_double;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, std::vector<DictionaryValue>>::value>::type* = nullptr>
+        const T& GetValue() const
+        {
+            VerifyType<T>();
+            return *(reinterpret_cast<T*>(m_data.m_ptr));
+        }
+
+        bool HasValue() const
+        {
+            return m_valueType != Type::None;
+        }
+
+        Type ValueType() const
+        {
+            return m_valueType;
+        }
+
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us);
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us);
+
+    private:
+        template <typename T>
+        static Type GetValueType()
+        {
+            static_assert(std::is_same<T, bool>::value ||
+                          std::is_same<T, size_t>::value ||
+                          std::is_same<T, float>::value ||
+                          std::is_same<T, double>::value ||
+                          std::is_same<T, NDShape>::value ||
+                          std::is_same<T, std::vector<DictionaryValue>>::value,
+                          "Unsupported ValueType");
+
+            if (std::is_same<T, bool>::value)                                      return Type::Bool;
+            if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
+            if (std::is_same<T, float>::value)                                     return Type::Float;
+            if (std::is_same<T, double>::value)                                    return Type::Double;
+            if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
+            if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
+        }
+
+        template <typename T>
+        void VerifyType() const
+        {
+            if (GetValueType<T>() != m_valueType)
+                RuntimeError("Reading a DictionaryValue as the wrong type; Reading as type %s when actual type is %s", typeid(T).name(), DictionaryValue::TypeName(m_valueType));
+        }
+
+        template <typename T>
+        void AllocateDataPtr(const T& value);
+
+        template <typename T>
+        void FreePtrAsType();
+
+        void FreeDataPtr();
+
+        Type m_valueType;
+
+        union ValueData
+        {
+            bool m_boolean;
+            size_t m_sizeT;
+            float m_float;
+            double m_double;
+            void* m_ptr;
+        } m_data;
+
+        const size_t version = 1;
+    };
+
+    ///
+    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
+    ///
+    class CNTK_API Dictionary final
+    {
+    public:
+        Dictionary();
+        ~Dictionary();
+
+        // Disallow copy construction and assignment
+        Dictionary(const Dictionary&) = delete; Dictionary& operator=(const Dictionary&) = delete;
+
+        Dictionary(Dictionary&& other);
+        Dictionary& operator=(Dictionary&& other);
+
+        DictionaryValue& operator[](const std::wstring& key)
+        {
+            return operator[](key.c_str());
+        }
+
+        DictionaryValue& operator[](const wchar_t* key);
+
+        DictionaryValue operator[](const std::wstring& key) const
+        {
+            return operator[](key.c_str());
+        }
+
+        DictionaryValue operator[](const wchar_t* key) const;
+
+        bool Contains(const std::wstring& key) const
+        {
+            return Contains(key.c_str());
+        }
+
+        bool Contains(const wchar_t* key) const;
+
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us);
+        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us);
+
+    private:
+        std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
+        const size_t version = 1;
+    };
+
+    ///
+    /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
+    /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    /// learning parameter values using first order gradients.
+    ///
+    class Learner : public std::enable_shared_from_this<Learner>
+    {
+    public:
+        //
+        // Method to update the parameters associated with this learner. By returning false, this method indicates that
+        // learning has stopped for all of the parameters associated with this learner
+        //
+        CNTK_API virtual bool Update(const std::unordered_map<Variable, ValuePtr>& parameterValues,
+                                     const std::unordered_map<Variable, const ValuePtr>& gradientValues,
+                                     size_t trainingSampleCount) = 0;
+
+        ///
+        /// Returns the set of parameters associated with this learner.
+        ///
+        const std::unordered_set<Variable>& Parameters() const { return m_parameters; }
+
+        // TODO: move the following two methods into ISerializable interface, make 
+        // Learner (and all other entities that need checkpointing capability) implement it.
+        ///
+        /// Optionally overridable method to checkpoint the learner's state.
+        ///
+        CNTK_API virtual Dictionary GetCheckpointState() const = 0;
+
+        ///
+        /// Optionally overridable method to restore the learner's state from a previous checkpoint.
+        ///
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
+
+        virtual ~Learner()
+        {
+        }
+
+    protected:
+        Learner(const std::unordered_set<Variable>& parameters)
+            : m_parameters(parameters)
+        {
+        }
+
+        std::unordered_set<Variable> m_parameters;
+
+    };
+
+    ///
+    /// Create an instance of the CNTK built-in SGD learner.
+    ///
+    /// TODO: add additional SGD parameters here (a collection of learning rate values)
+    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters,
+                                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+    ///
+    /// Create an instance of the CNTK built-in Momentum SGD learner.
+    ///
+    /// TODO: add additional Momentum parameters here (a collection of momentum rate values)
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Variable>& parameters,
+                                           const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+    ///
+    /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
+    ///
+    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Variable>& parameters,
+                                        const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+    ///
+    /// Create an instance of the CNTK built-in AdaGrad learner.
+    ///
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true,
+                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+    ///
+    /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
+    ///
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
+                                         const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+
+    ///
+    /// Create an instance of the CNTK built-in RMSProp learner.
+    ///
+    CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Variable>& parameters,
+                                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
+                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
 }
