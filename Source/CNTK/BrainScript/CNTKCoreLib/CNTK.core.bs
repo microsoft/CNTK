@@ -1038,7 +1038,7 @@ Network = [
     Editing = [
         // Create a lambda that returns its argument unless that argument == 'old', then it will return 'replacement'
         ReplaceLinksToNode (old, replacement) = (node => if IsSameObject (node, old) then replacement else node)
-        ReplaceLinksToNamedNode (name, replacement) = (node => if node.name == name then replacement else node)
+        ReplaceLinksToNamedNode (name, replacement) = (node => if node.name == name.name then replacement else node)
     ]
 ]
 
