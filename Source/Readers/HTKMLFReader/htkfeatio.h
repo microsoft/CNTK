@@ -107,7 +107,10 @@ protected:
             sampkind = (short) 9; // user type
             int nRows = swapint(fgetint(f));
             int nCols = swapint(fgetint(f));
-            sampsize = (unsigned short) (nRows * nCols); // features are stored as bytes;
+            int rawsampsize = nRows * nCols;
+            if (rawsampsize > UINT16_MAX)
+                RuntimeError("reading idx feature cache header: sample size overflow");
+            sampsize = (unsigned short)rawsampsize; // features are stored as bytes;
         }
 
         void write(FILE* f)
@@ -220,7 +223,10 @@ public:
         H.nsamples = 0; // unknown for now, updated in close()
         H.sampperiod = period;
         const int bytesPerValue = sizeof(float); // we do not support compression for now
-        H.sampsize = (unsigned short) featdim * bytesPerValue;
+        size_t rawsampsize = featdim * bytesPerValue;
+        if (rawsampsize > UINT16_MAX)
+            RuntimeError("htkfeatwriter: sample size overflow");
+        H.sampsize = (unsigned short)rawsampsize;
         H.sampkind = parsekind(kind);
         if (needbyteswapping)
             H.byteswap();
