@@ -6,7 +6,7 @@ Microsoft 1-bit Stochastic Gradient Descent for the Computational Network Toolki
 * CNTK 1bit-SGD Non-Commercial Usage License
 
 
-Both Licenses are included in the root folder of the CNTK 1bit-SGD Repository.
+Both Licenses are included in this folder.
 
 See the descriptions of the Licenses listed above in CNTK Wiki at https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License
 
