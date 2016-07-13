@@ -599,8 +599,7 @@ RNNs =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
 
-        # TODO: rename to just _
-        _privateInnards = [     // encapsulate the inner workings
+        _ = [     // encapsulate the inner workings
             dh = prevState.h // previous values
             dc = prevState.c
 
@@ -634,13 +633,13 @@ RNNs =
         ]
 
         # our return values
-        c = _privateInnards.ct          // cell value
+        c = _.ct                        // cell value
         h = if outputDim != cellDim     // output/hidden state
             then [                      // project
                 Wmr = Parameters.WeightParam (outputDim, cellDim);
-                htp = Wmr * S(_privateInnards.ht)
+                htp = Wmr * S(_.ht)
             ].htp
-            else _privateInnards.ht     // no projection
+            else _.ht                   // no projection
         dim = outputDim
     ]
 
@@ -721,12 +720,12 @@ RNNs =
         ]
     ].layers
 
-	# GRU -- GRU function with self-stabilization
+    # GRU -- GRU function with self-stabilization
     # It returns a dictionary with one member: h.    
     GRU (outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
-		cellDim = outputDim
+        cellDim = outputDim
 
         _ = [     // encapsulate the inner workings
 
@@ -743,31 +742,31 @@ RNNs =
             # projected contribution from input(s)
             pin() = B() + W() * x       
 
-			# update gate z(t)
-			zt = Sigmoid (pin() + H() * dhs)
+            # update gate z(t)
+            zt = Sigmoid (pin() + H() * dhs)
 
-			# reset gate r(t)
-			rt = Sigmoid (pin() + H() * dhs)
+            # reset gate r(t)
+            rt = Sigmoid (pin() + H() * dhs)
 
-			# "cell" c
-			rs = dhs .* rt
-			c = Tanh (pin() + H() * rs)
+            # "cell" c
+            rs = dhs .* rt
+            c = Tanh (pin() + H() * rs)
 
             # hidden state ht / output
-			ht = (BS.Constants.OnesTensor (cellDim) - zt) .* c + zt .* dhs
+            ht = (BS.Constants.OnesTensor (cellDim) - zt) .* c + zt .* dhs
         ]
 
         # our return value        
         h = _.ht          // hidden state        
     ]
 
-	# this implements a recurrent (stateful) GRU with self-stabilization
+    # this implements a recurrent (stateful) GRU with self-stabilization
     # It returns a record (h). To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
     RecurrentGRU   (outputDim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
     [
         enableSelfStabilization1 = enableSelfStabilization
-		inputDim1 = inputDim	
+        inputDim1 = inputDim
 
         prevState = previousHook (gruState, layerIndex=0)
         gruState = BS.RNNs.GRU (outputDim, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
