@@ -375,6 +375,8 @@ CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
+    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+
 
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)

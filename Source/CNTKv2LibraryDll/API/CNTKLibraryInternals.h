@@ -47,6 +47,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
+
+    class File;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -158,4 +160,7 @@ namespace CNTK
 
     class Function;
     typedef std::shared_ptr<Function> FunctionPtr;
+
+    class Learner;
+    typedef std::shared_ptr<Learner> LearnerPtr;
 }
