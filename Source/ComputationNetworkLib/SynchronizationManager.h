@@ -29,6 +29,7 @@ public:
     float backpropTime;
     std::vector<float> swapInTimes;
     std::vector<float> swapOutTimes;
+    std::vector<Matrix<float>*> buffers;
     std::vector<std::string> dim;
     void PrintStats()
     {
@@ -43,8 +44,7 @@ class SynchronizationManager
 {
 
 private:
-    typedef std::shared_ptr<SyncAction> SyncActionPtr;
-    std::unordered_map<ComputationNodeBase *, std::vector<SyncActionPtr> > m_actionTable;
+    std::unordered_map<std::string, std::vector<SyncAction*> > m_stepName2Actions;
     SynchronizationManager(float performanceCosts);
     SynchronizationManager(){};
     static SynchronizationManager* s_synchronizationManager;
@@ -56,11 +56,13 @@ private:
     // needed in order to determine dependencies
     std::unordered_map<Matrix<float>*, std::vector<int> > m_buffer2StepNumbers; 
     std::unordered_map<std::string, Stats*> m_stepName2Stats; 
+    std::vector<Stats*> m_vecStats; 
 
     std::unordered_map<Matrix<float>*, SwapInAction*> m_buffer2SwapIn;
     std::unordered_map<Matrix<float>*, SwapOutAction*> m_buffer2SwapOut;
     std::unordered_map<Matrix<float>*, bool> m_buffer2IsFreed;
     std::unordered_map<Matrix<float>*, std::pair<int, int> > m_buffer2Dim;
+    std::unordered_map<Matrix<float>*, bool> m_buffer2Swappable;
     float m_performanceCostLimit;
 
     CUDATimer m_timer;
@@ -72,7 +74,7 @@ private:
         RegisteringBuffers = 1,
         GatheringRuntimeStatistics = 2,
         FindingSwapOrder = 4,
-        GeneratingAllocationScheme = 8,
+        CleaningUp = 8,
         ExecutingActions = 16,
     };
 
@@ -82,10 +84,10 @@ private:
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
     void SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
     void CheckForStateTransitions(ComputationNodeBase *node, bool isForward);
-    void ExecuteActions(ComputationNodeBase *node);
-    void RegisterBuffers(ComputationNodeBase *node);
+    void RegisterBuffers(ComputationNodeBase *node, bool isForward);
     void GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     void FindSwapOrder();
+    void CleanUp();
 
     void MeasureSwapTime(ComputationNodeBase *node, std::string name);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);

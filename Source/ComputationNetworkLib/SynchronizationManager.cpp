@@ -45,19 +45,16 @@ void SynchronizationManager::CheckForStateTransitions(ComputationNodeBase *node,
     {
         case Uninitialized:
             m_currentState = RegisteringBuffers;
+            cout << "Registering swap buffers..." << endl;
             break;
         case RegisteringBuffers:
             if(m_stepName2StepNumber.count(name) > 0)
             {
-
                 if(m_stepName2StepNumber[name] == 0)
                 {
                     // we already encountered this node, and it is the first node
                     // so we made a full roundtrip and can change the state
-                    cout << "-----------------" << endl;
-                    cout << "SWITCHING TO STATS" << endl;
-                    cout << "-----------------" << endl;
-                    cout << GetStepName(node, isForward);
+                    cout << "Gathering swapping stats..." << endl;
                     m_currentState = GatheringRuntimeStatistics;
                 }
             }
@@ -69,20 +66,57 @@ void SynchronizationManager::CheckForStateTransitions(ComputationNodeBase *node,
                 {
                     // we already recorded stats of this node and it is the first node
                     // thus we made a full roundtrip and change the state
-                    cout << "-----------------" << endl;
-                    cout << "SWITCHING TO FINDING SWAP ORDER" << endl;
-                    cout << "-----------------" << endl;
-                    cout << GetStepName(node, isForward);
+                    cout << "Finding swap order..." << endl;
                     m_currentState = FindingSwapOrder;
                 }
             }
             break;
         case FindingSwapOrder:
+            if(m_buffer2Swappable.size() > 0)
+            {
+                m_currentState = CleaningUp;
+                cout << "Cleaning up unused buffers..." << endl;
+            }
+        case CleaningUp:
+            if(m_buffer2Swappable.size() == m_buffer2SwapIn.size())
+                m_currentState = ExecutingActions;
         default:
             break;
     }
  
 }
+
+void SynchronizationManager::CleanUp()
+{
+   // 1. remove all swap actions which are not needed, that is which are too slow
+   // 2. remove stats and other temporary structures which are not needed for execution
+
+    Matrix<float> *buffer;
+    for(int i = 0; i < m_stepNumber2Buffer.size(); i++)
+    {
+        std::vector<Matrix<float> *> buffers = m_stepNumber2Buffer[i];
+
+        for(int j = 0; j < buffers.size(); j++)
+        {
+            buffer = buffers[j];
+
+            if(m_buffer2Swappable.count(buffer) == 0)
+            {
+                //m_buffer2SwapOut[buffer]->deallocatePinnedBuffer();
+
+                m_buffer2SwapOut.erase(buffer);
+                m_buffer2IsFreed.erase(buffer);
+                m_buffer2SwapIn.erase(buffer);
+                m_buffer2Dim.erase(buffer);
+            }
+            else
+            {
+            }
+        }
+    }
+
+}
+
 
 void PrintFreeMemory()
 {
@@ -93,36 +127,119 @@ void PrintFreeMemory()
 
 void SynchronizationManager::FindSwapOrder()
 {
-    
+    //TODO: refactor this, current is not needed at all
+    Stats *prev = NULL;
+    Stats *current = NULL;
+    float totalMemorySwappedInMB = 0.0f;
+    float totalMemoryNotSwappedInMB = 0.0f;
+    for(int i = 0; i < m_vecStats.size(); i++)
+    {
+        current = m_vecStats[i];
+        if(prev == NULL){ prev = current; continue; }
 
-    
+
+        float computeTime = prev->forwardTime > prev->backpropTime ? prev->forwardTime : prev->backpropTime;
+        Matrix<float> *buffer;
+        for(int j = 0 ; j < prev->buffers.size(); j++)
+        {
+            buffer = prev->buffers[j];
+            float swapTime = prev->swapInTimes[j] > prev->swapOutTimes[j] ? prev->swapInTimes[j] : prev->swapOutTimes[j]; 
+
+            //cout << "compute vs. swap: " << computeTime << " vs. " << swapTime << endl;
+            if(swapTime < computeTime + (computeTime *m_performanceCostLimit))
+            {
+                //cout << "swap it" << endl;
+                m_buffer2Swappable[buffer] = true;
+                std::string name = prev->name;
+
+                m_stepName2Actions[name].push_back(m_buffer2SwapOut[buffer]); 
+                m_stepName2Actions[name].push_back(m_buffer2SwapIn[buffer]); 
+                totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)*8.0/1024/1024;
+            }
+            else
+            {
+                m_buffer2Swappable[buffer] = false;
+                totalMemoryNotSwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)*8.0/1024/1024;
+            }
+
+           //cout << "is swappable: " << m_buffer2Swappable[buffer] << " for buffer: " << buffer << endl;
+        }
+             
+        prev = current;
+    }
+    cout << "Total swappable memory: " << totalMemorySwappedInMB << "MB" << endl;
+    cout << "Total unswappable memory: " << totalMemoryNotSwappedInMB << "MB" << endl;
 }
 
 void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    CheckForStateTransitions(node, isForward);
 
-    if(m_currentState <= RegisteringBuffers)
-        RegisterBuffers(node);
-    if(m_currentState <= GatheringRuntimeStatistics)
+    std::string name = GetStepName(node, isForward);
+
+
+
+
+    if(m_stepName2StepNumber.count(name) > 0)
     {
-        SwapInFreedBuffers(node, isForward);
-        GatherRuntimeStatistics(node, idx, fr, isForward);
-    }
-    if(m_currentState == FindingSwapOrder)
 
-    PrintFreeMemory();
+    	if(m_stepName2StepNumber[name] == 0 && isForward == true)
+    	{
+    		cout << "NAME: " << name << endl;
+        	m_currentState = FindingSwapOrder;
+    	}
+    }
+
+    if(m_currentState <= FindingSwapOrder)
+    {
+    	RegisterBuffers(node, isForward);
+    	SwapInFreedBuffers(node, isForward);
+    	GatherRuntimeStatistics(node, idx, fr, isForward);
+    }
+
+    if(m_currentState == FindingSwapOrder)
+    {
+        FindSwapOrder();
+        //CleanUp();
+        m_currentState = ExecutingActions;
+    }
+
+    SwapInFreedBuffers(node, isForward);
+    if(m_currentState == ExecutingActions)
+    {
+        std::string name = GetStepName(node, isForward);
+        std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
+        if (actionsToDo.size() == 0){ return; }
+
+        for (int i = 0; i < actionsToDo.size(); i++)
+                actionsToDo[i]->BeginAction();
+    }
+
+
+
+
+    //PrintFreeMemory();
 }
 
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    
+
     if(m_currentState <= GatheringRuntimeStatistics)
     {
         // end synchronize is called after the forward / backward pass, thus we can free
         // the memory now
         FreeBuffersForDryRun(node, isForward);
     }
+
+    if(m_currentState == ExecutingActions)
+    {
+        std::string name = GetStepName(node, isForward);
+        std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
+        if (actionsToDo.size() == 0){ return; }
+
+        for (int i = 0; i < actionsToDo.size(); i++)
+                actionsToDo[i]->EndAction();
+    }
+    m_currentStepNumber++;
 }
 
 void PrintPtrAttributes(float *ptr)
@@ -150,9 +267,10 @@ void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool 
             int rows = m_buffer2Dim[buffer].first;
             int cols = m_buffer2Dim[buffer].second;
 
+            //TODO: set GPU id
             buffer->Resize(rows,cols);
             swp->BeginAction(); // initiate swapping
-            swp->endAction(); // synchronize swapping
+            swp->EndAction(); // synchronize swapping
             m_buffer2IsFreed[buffer] = false;
         }
     }
@@ -167,6 +285,7 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
     if(node->IsValueSharable()){ return; }
 
     std::string name = GetStepName(node, isForward);
+    cout << "FREEING: " << name << endl;
     int stepNumber = m_stepName2StepNumber[name];
     for(int i = 0; i < m_stepNumber2Buffer[stepNumber].size(); i++) 
     {
@@ -178,6 +297,7 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
                 continue;
 
         m_buffer2Dim[buffer] = std::make_pair<int,int>(buffer->GetNumRows(), buffer->GetNumCols());
+        //TODO: set GPU id -> resize does this automatically?
         buffer->Resize(0,0,false); // force a shrink to 0 memory
         m_buffer2IsFreed[buffer] = true;
     }
@@ -191,12 +311,14 @@ std::string SynchronizationManager::GetStepName(ComputationNodeBase *node, bool 
 }
 
 
-void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node)
+void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isForward)
 {
     
     int inputCount = node->GetNumInputs();
-    // 0 == special value for flow control node, who do not have any buffers
-    cout << inputCount << endl;
+    std::string name = GetStepName(node, isForward);
+    m_stepName2StepNumber[name] = m_currentStepNumber;
+    cout << name << " to " << m_currentStepNumber << endl;
+    // 0 == special value for flow control node, who does not have any buffers
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
     {
@@ -214,7 +336,6 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node)
 
 void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    cout << "stats" << endl;
     m_timer.tick(GetStepName(node, isForward));
     for(int i = 0; i < SampleSize(); i++)
     {
@@ -230,9 +351,10 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     std::string name = GetStepName(node, isForward);
     float t = m_timer.tock(name);
 
-        cout << m_stepName2StepNumber[name] << ": " << name << endl;
     Stats *s = new Stats();
     m_stepName2Stats[name] = s;
+    m_vecStats.push_back(s);
+    
     s->name = name;
     if(isForward){ s->forwardTime = t/SampleSize(); }
     else{ s->backpropTime = t/SampleSize(); }
@@ -255,19 +377,19 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
     for(int i = 0; i < inputCount; i++)
     {
        Matrix<float> *input = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       s->buffers.push_back(input); 
        if(input != NULL)
        {
            SwapOutAction *out = new SwapOutAction(input);
            SwapInAction *in =  new SwapInAction(out->GetCPUMatrix(), out->GetGPUMatrix());
            m_buffer2SwapOut[input] = out;
            m_buffer2SwapIn[input] = in;
-           cout << "ADDED SWAP FOR: " << input << endl;
 
            m_timer.tick("Swap out");
            for(int i = 0; i < SampleSize(); i++)
            {
                out->BeginAction();
-               out->endAction();
+               out->EndAction();
            }
            t = m_timer.tock("Swap out");
            s->swapOutTimes.push_back(t/SampleSize());
@@ -276,7 +398,7 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
            for(int i = 0; i < SampleSize(); i++)
            {
                in->BeginAction();
-               in->endAction();
+               in->EndAction();
            }
            t = m_timer.tock("Swap in");
            s->swapInTimes.push_back(t/SampleSize());
@@ -284,40 +406,9 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
            size_t cols = out->GetGPUMatrix()->GetNumCols();
            s->dim.push_back(std::to_string(rows) + "x" + std::to_string(cols));
        }
-       else{ cout << "IS NULL: " << input << endl; }
     }
     //cout << name << endl;
     //s->PrintStats();
-}
-
-void SynchronizationManager::ExecuteActions(ComputationNodeBase *node)
-{
-    std::vector<SyncActionPtr> actionsToDo = m_actionTable[node];
-
-    if (actionsToDo.size() == 0){ return; }
-
-    // 1. first execute all asynchronous actions
-    // 2. then execute all synchronous actions (while the asynchronous are already running)
-
-    for (int i = 0; i < actionsToDo.size(); i++)
-    {
-        // async actions
-        if (actionsToDo[i]->GetIsAsynchronous())
-        {
-            actionsToDo[i]->BeginAction();
-            actionsToDo[i]->endAction();
-        }
-    }
-
-    for (int i = 0; i < actionsToDo.size(); i++)
-    {
-        // sync actions
-        if (!actionsToDo[i]->GetIsAsynchronous())
-        {
-            actionsToDo[i]->BeginAction();
-            actionsToDo[i]->endAction();
-        }
-    }
 }
 
 }}}

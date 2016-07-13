@@ -26,7 +26,7 @@ protected:
 public:
     ~SyncAction(){};
     virtual void BeginAction() = 0;
-    virtual void endAction() = 0; // for synchronization and cleanup
+    virtual void EndAction() = 0; // for synchronization and cleanup
     Matrix<float> *GetGPUMatrix(){ return m_bufferGPU; }
     float *GetCPUMatrix(){ return m_bufferCPU; }
 

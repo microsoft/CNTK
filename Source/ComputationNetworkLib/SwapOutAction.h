@@ -18,7 +18,7 @@ class SwapOutAction : public SyncAction
 {
 
 public:
-    ~SwapOutAction(){}
+    ~SwapOutAction();
     SwapOutAction(Matrix<float> *GPUbuffer)
     {
         m_bufferCPU = NULL;
@@ -34,8 +34,9 @@ public:
 
     //implementation of abstract method
     void BeginAction();
-    void endAction();
+    void EndAction();
     cudaStream_t GetSwapSteam(){ return m_streamAsync; }
+    void deallocatePinnedBuffer();
 
 private:
     cudaStream_t m_streamAsync; 

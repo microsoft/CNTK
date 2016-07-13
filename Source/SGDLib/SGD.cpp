@@ -959,7 +959,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                if(epochNumber == 0 && ismb == 0 && numMBsRun == 0)
+                if(ismb == 0 && numMBsRun == 0)
                 {
                     fprintf(stdout, "epoch: %i epoch, %zu ismb\n", epochNumber, ismb);
                     for(int i = 0; i < 1; i++)
