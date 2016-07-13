@@ -27,10 +27,10 @@ import numpy as np
 # TODO: perhaps include some rand() testing; and
 TENSOR_PAIRS = [
     ([30.], [10.]),
-    # ([[30.]], [[10.]]),
-    # ([[1.5, 2.1]], [[10., 20.]]),
-    # ([[100., 200.], [300., 400.], [10., 20.]],
-     # [[10., 20.], [30., 40.], [1., 2.]]),
+    ([[30.]], [[10.]]),
+    ([[1.5, 2.1]], [[10., 20.]]),
+    ([[100., 200.], [300., 400.], [10., 20.]],
+      [[10., 20.], [30., 40.], [1., 2.]]),
     # Test with broadcast
     # TODO: adjust the broadcast according to the decision on col/row major
     #([5], [[10, 20], [30,40], [1,2]]),     
@@ -55,30 +55,36 @@ def test_op_plus(left_operand, right_operand, device_id):#, precision):
     left_value = AA(left_operand, dtype=np_type) 
     right_value = AA(right_operand, dtype=np_type)
 
+    # TODO because we have to be col-major until 2.0 API has row-major read
+    # functions exposed
     a = I(shape=left_value.shape, data_type=sanitize_dtype_cntk(np_type),
             name='a')
     b = I(shape=right_value.shape, data_type=sanitize_dtype_cntk(np_type),
             name='b')
     
-    expected = left_value + right_value
+    expected = [np.asarray([left_value + right_value])]
     #expected.shape += (1,1)
 
     # create batch
-    left_value.shape += (1,1)
-    right_value.shape += (1,1)
+    left_value.shape = (1,1) + left_value.shape
+    right_value.shape = (1,1) + right_value.shape
 
-    args = {a:left_value, b:right_value}
-
-    left_as_input = a + right_operand
-    unittest_helper(left_as_input, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
+    args = {b:right_value}
     right_as_input = left_operand + b
     unittest_helper(right_as_input, args, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)
 
+    args = {a:left_value, b:right_value}
     unittest_helper(a + b, args, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=False)
+
+    args = {a:left_value}
+    left_as_input = a + right_operand
+    unittest_helper(left_as_input, args, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=False)
+
+
+    return
 
     # Backward pass test
     #==================

@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.join("..",".."))
-import cntk_py
+from cntk import cntk_py
 
 # class MyVariable(cntk_py.Variable):
 def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
@@ -64,7 +64,7 @@ def forward_backward():
     # Forward
     #
     backpropstate = op.ForwardMap(arguments, outputs, dev, outputs_retain)
-    forward_data = output_value_ptr.Data().ToNumPy().reshape(output_shape)
+    forward_data = output_value_ptr.Data().ToNumPy()#.reshape(output_shape)
     print("Result forward:")
     print(forward_data)
 

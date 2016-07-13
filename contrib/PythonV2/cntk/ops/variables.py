@@ -6,8 +6,6 @@ from .. import utils
 from cntk.context import get_context
 
 def _sanitize_value(shape, value, dtype, dev):
-    print("_sanitize_value %s"%dtype)
-
     np_dtype = utils.sanitize_dtype_numpy(dtype)
     cntk_dtype = utils.sanitize_dtype_cntk(dtype)
 
@@ -34,10 +32,8 @@ class Variable(cntk_py.Variable, TensorOpsMixin):
 
 class Parameter(cntk_py.Parameter, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, dev=None, name=''):
-        print("parameter %s"%data_type)
         if data_type is None:
             data_type = get_context().precision_numpy
-        print("data_type=%s"%data_type)
 
         if not dev:
             dev = cntk_py.DeviceDescriptor_CPUDevice()
@@ -47,11 +43,10 @@ class Parameter(cntk_py.Parameter, TensorOpsMixin):
 
 class Constant(cntk_py.Constant, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, dev=None, name=''):
-        print("constant %s"%data_type)
 
         if data_type is None:
             data_type = get_context().precision_numpy
-        print("data_type=%s"%data_type)
+
         if not dev:
             dev = cntk_py.DeviceDescriptor_CPUDevice()
         ndav = _sanitize_value(shape, value, data_type, dev)
@@ -59,11 +54,8 @@ class Constant(cntk_py.Constant, TensorOpsMixin):
 
 class Placeholder(cntk_py.Placeholder, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, name=''):
-        print("placeholder %s"%data_type)
-
         if data_type is None:
             data_type = get_context().precision_numpy
-        print("data_type=%s"%data_type)
 
         dtype = utils.sanitize_dtype_cntk(data_type)
         Variable.__init__(self, shape, dtype, name)

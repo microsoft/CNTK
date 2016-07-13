@@ -265,10 +265,6 @@ class LocalExecutionContext(AbstractContext):
                 raise ValueError(
                     'an input name is required when backward pass is enabled')
 
-        if backward_pass:
-            raise ValueError('not yet supported')
-
-
         var_map = cntk_py.MapVarValuePtr()
         if input_map:
             for var, val in input_map.items():
@@ -287,7 +283,6 @@ class LocalExecutionContext(AbstractContext):
 
                 var_map[var] = val
 
-
         outputs =  cntk_py.MapVarValuePtr()
         outputs_retain =  cntk_py.VarSet()
         for v in op.Outputs():
@@ -300,9 +295,11 @@ class LocalExecutionContext(AbstractContext):
 
         all_outputs_data = {}
         for v in op.Outputs():
-            all_outputs_data[v] = outputs[v].Data().ToNumPy() 
+            np_data = outputs[v].Data().ToNumPy() 
+            # hack needed until we get row-major support in CNTK 2.0
+            np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+            all_outputs_data[v] = np_data
 
-        print(all_outputs_data)
         if len(all_outputs_data)==1:
             for val in all_outputs_data.values():
                 return val

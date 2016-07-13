@@ -7,14 +7,13 @@
 
 namespace CNTK
 {
-    Variable::Variable(const FunctionPtr& function)
-        : Variable(function->Output())
-    {
-			printf("Variable(%s)@%p\n", Name().c_str(), (void*)this);
-    }
+	Variable::Variable(const FunctionPtr& function)
+		: Variable(function->Output())
+	{
+	}
 
-    FunctionPtr Variable::Owner() const 
-    {
-        return m_dataFields->m_ownerFunction->shared_from_this(); 
-    }
+	FunctionPtr Variable::Owner() const
+	{
+		return m_dataFields->m_ownerFunction->shared_from_this();
+	}
 }
