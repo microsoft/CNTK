@@ -48,9 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - supports general strides
 //  - input broadcasting is supported by stride=0
 //  - the operation is denoted by an opCode
-//  - reduction is supported, including summation (dual to broadcasting when computing gradients)
-//  - reduction operation is given by an opCode. Only a few specific opCodes may be used for reduction.
-//    Note: reduction opCodes are not implemented yet, only summation is supported.
+//  - reduction is supported, including summation, min, max (dual to broadcasting when computing gradients)
+//  - reduction operation is given by an opCode: opSum, opMin, opMax.
 //
 // This library makes extensive use of templates and macros.
 // Specifically, templates are used recursively to recurse over tensor dimensions.
@@ -607,7 +606,7 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _launchTensorOp<ElemType, N, /*M=*/0, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, (ElementWiseOperator)(-1) /* dummy reductionOp */, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
+    _launchTensorOp<ElemType, N, /*M=*/0, K> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >>>(beta, pointers, alpha, op, (ElementWiseOperator)(-1) /* dummy reductionOp */, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
 }
 
 // -----------------------------------------------------------------------
