@@ -174,7 +174,7 @@ namespace CNTK
             }
             else
             {
-                view = MakeSharedObject<NDArrayView>(0.0f, parameter.Shape(), device);
+                view = MakeSharedObject<NDArrayView>(0.0, parameter.Shape(), device);
             }
 
             m_smoothedGradientValues.insert(make_pair(parameter, MakeSharedObject<Value>(view)));
