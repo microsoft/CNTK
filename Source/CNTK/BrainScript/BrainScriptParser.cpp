@@ -92,6 +92,7 @@ struct Issue
 {
     wstring error = CreateIssueMessage(locations, errorKind, kind, what);
     fprintf(stderr, "%ls", error.c_str());
+    fflush(stderr);
 }
 
 /*static*/ wstring TextLocation::CreateIssueMessage(const vector<TextLocation>& locations, const wchar_t* errorKind, const wchar_t* kind, const wchar_t* what)
@@ -145,8 +146,10 @@ struct Issue
         message += wstrprintf(L"%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int)firstLoc.lineNo + 1 /*report 1-based*/);
     }
     else
+    {
         message += wstrprintf(L"%ls while %ls", errorKind, kind);
-    message += wstrprintf(L": %ls\n", what), fflush(stderr);
+    }
+    message += wstrprintf(L": %ls\n", what);
     return message;
 }
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
