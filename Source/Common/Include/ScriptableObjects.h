@@ -29,7 +29,8 @@ public:
         runtime_error(msg)
     {
     }
-    virtual void PrintError(const std::wstring& linePrefix) const = 0;
+    virtual std::wstring GetError(const std::wstring& /*linePrefix*/) const = 0;
+    virtual void PrintError(const std::wstring& /*linePrefix*/) const = 0;
 };
 
 // -----------------------------------------------------------------------
