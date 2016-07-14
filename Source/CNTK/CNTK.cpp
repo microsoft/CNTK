@@ -306,6 +306,8 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
 
+            SynchronizationManager::GetSynchronizationManager(0.15f)->ClearActionsAndTheirMemory();
+
             // Synchronize all ranks before proceeding to next action/command
             if (mpi)
                 mpi->WaitAll();

@@ -46,7 +46,7 @@ SynchronizationManager* SynchronizationManager::GetSynchronizationManager(float 
         SynchronizationManager::s_synchronizationManager->m_currentState = Uninitialized;
         SynchronizationManager::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
-        SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = performanceCostLimit;
+        SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 0.15f;
         SynchronizationManager::s_synchronizationManager->m_isExecuting = false;
     }
 
@@ -79,6 +79,20 @@ void SynchronizationManager::CleanUp()
         }
     }
 }
+
+void SynchronizationManager::ClearActionsAndTheirMemory()
+{
+    for(std::pair<std::string, std::vector<SyncAction*> > pair : m_stepName2Actions)
+    {
+       for(SyncAction *action : pair.second)
+           action->ReleaseMemory();
+       pair.second.clear();
+    }
+    m_stepName2Actions.clear();
+
+    m_isExecuting = false;
+}
+
 
 void SynchronizationManager::FindSwapOrder()
 {
@@ -119,13 +133,19 @@ void SynchronizationManager::FindSwapOrder()
             float swapOutTime = m_buffer2SwapTime[buffer].first;
             float swapInTime = m_buffer2SwapTime[buffer].second;
             float computationTimeOut = m_stepNumber2Stats[swapOutStepNumber]->computationTime;
+            
+            if(m_stepNumber2CumulativeSwapInTime.count(swapOutStepNumber) == 0)
+            { m_stepNumber2CumulativeSwapInTime[swapOutStepNumber] = std::make_pair(0.0f,0.0f); }
+            float cumulativeSwapOutTime = m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first;
             // we just look if we can swap under the current operation
             // we can make it more complex anytime later to also look at other timesteps
-            if(swapOutTime > computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+            if(swapOutTime + cumulativeSwapOutTime > 
+               computationTimeOut + (computationTimeOut * m_performanceCostLimit))
             {
                 cout << "------------------" << endl;
                 cout << m_stepNumber2StepName[swapOutStepNumber] << endl;
                 cout << swapOutTime << " vs. " << computationTimeOut << endl;
+                cout << swapOutTime + cumulativeSwapOutTime << " vs. " << computationTimeOut << endl;
                 cout << "Memory: " << ((float)buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float))/1024.0f/1024.0f << endl;
                 cout << "------------------" << endl;
             }
@@ -135,11 +155,14 @@ void SynchronizationManager::FindSwapOrder()
                 cout << "FITS" << endl;
                 cout << m_stepNumber2StepName[swapOutStepNumber] << endl;
                 cout << swapOutTime << " vs. " << computationTimeOut << endl;
+                cout << swapOutTime + cumulativeSwapOutTime << " vs. " << computationTimeOut << endl;
                 cout << "Memory: " << ((float)buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float))/1024.0f/1024.0f << endl;
                 cout << "------------------" << endl;
 
             }
-            if(swapOutTime > computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+
+            if(swapOutTime + cumulativeSwapOutTime > 
+               computationTimeOut + (computationTimeOut * m_performanceCostLimit))
             { continue; }
             // find a place where we can swap-in the buffer just in time when it is needed
             while(swapInStepNumber > swapOutStepNumber+1)
@@ -148,7 +171,8 @@ void SynchronizationManager::FindSwapOrder()
 
                 Stats *s = m_stepNumber2Stats[swapInStepNumber];
                 float computationTimeIn = s->computationTime;
-                if(swapInTime < computationTimeIn  + (computationTimeIn * m_performanceCostLimit))
+                float cumulativeSwapInTime = m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second;
+                if(swapInTime + cumulativeSwapInTime < computationTimeIn  + (computationTimeIn * m_performanceCostLimit))
                 { break; }
                 
                 swapInStepNumber--;
@@ -156,11 +180,18 @@ void SynchronizationManager::FindSwapOrder()
 
             if(swapInStepNumber < swapOutStepNumber+1){ continue; } 
 
+            // we found a suitable pair of swap-in and swap-out
+            // 1. create swap actions and register them with a step-name (=step-number)
+            // 2. add to the cumulative swap time, that is additional swap operations
+            //    under the same time steps are more expensive
             SwapOutAction *swpOut = new SwapOutAction(buffer);
             SwapInAction *swpIn = new SwapInAction(swpOut->GetCPUMatrix(), buffer);
 
             m_stepName2Actions[m_stepNumber2StepName[swapOutStepNumber]].push_back(swpOut);
             m_stepName2Actions[m_stepNumber2StepName[swapInStepNumber]].push_back(swpIn);
+
+            m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first += swapOutTime;
+            m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += swapInTime;
 
             totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
         }
@@ -233,7 +264,9 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
         if (actionsToDo.size() == 0){ return; }
 
         for (int i = 0; i < actionsToDo.size(); i++)
-                actionsToDo[i]->EndAction();
+        {
+            actionsToDo[i]->EndAction();
+        }
     }
 }
 

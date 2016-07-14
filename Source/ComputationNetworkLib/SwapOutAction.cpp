@@ -33,25 +33,18 @@ void PrintPtrAttributes2(float *ptr)
 
 SwapOutAction::~SwapOutAction()
 {
-    deallocatePinnedBuffer();
+    ReleaseMemory();
 }
 
 void SwapOutAction::BeginAction()
 {
-    size_t cols = m_bufferGPU->GetNumCols();
-    size_t rows = m_bufferGPU->GetNumRows();
-    size_t bytes = cols*rows*sizeof(float);
-    // perform the actual asynchronous copy
-    //cout << "pre internal " << endl;
-    //PrintPtrAttributes2(m_bufferCPU);
-    //PrintPtrAttributes2(m_bufferGPU->Data());
     if(m_isSwapping)
     {
         cout << "Warning: Overlapping swap-outs detected!" << endl;
         //EndAction();
     }
-    CUDA_CALL(cudaMemcpyAsync(m_bufferCPU, m_bufferGPU->Data(), bytes, cudaMemcpyDefault, m_streamAsync));
-    //cout << "post internal " << endl;
+    // perform the actual asynchronous copy
+    CUDA_CALL(cudaMemcpyAsync(m_bufferCPU, m_bufferGPU->Data(), m_bytes, cudaMemcpyDefault, m_streamAsync));
     m_isSwapping = true;
 }
 
@@ -59,6 +52,7 @@ void SwapOutAction::EndAction()
 {
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
     m_isSwapping = false;
+    m_bufferGPU->Resize(0,0,false);
 }
 
 
@@ -74,9 +68,9 @@ void SwapOutAction::allocatePinnedBuffer()
     m_bufferCPU = pinnedBuffer;
 }
 
-void SwapOutAction::deallocatePinnedBuffer()
+void SwapOutAction::ReleaseMemory()
 {
-    CUDA_CALL(cudaFree(m_bufferCPU));
+    CUDA_CALL(cudaFreeHost(m_bufferCPU));
 }
 
 }}}
