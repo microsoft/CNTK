@@ -26,15 +26,14 @@ class Stats
 {
 public:
     std::string name;
-    float forwardTime;
-    float backpropTime;
+    float computationTime;
     std::vector<float> swapInTimes;
     std::vector<float> swapOutTimes;
     std::vector<Matrix<float>*> buffers;
     std::vector<std::string> dim;
     void PrintStats()
     {
-       fprintf(stdout, "%s: Forward: %f, Backprop: %f. ", name.c_str(), forwardTime, backpropTime);
+       fprintf(stdout, "%s: Computation time:%f ", name.c_str(), computationTime);
        fprintf(stdout, "Swap times: \n");
        for(int i = 0; i < swapInTimes.size(); i++)
             fprintf(stdout, "For input %s idx %i: (in %f, out %f)\n", dim[i].c_str(), i, swapInTimes[i], swapOutTimes[i]);
@@ -56,7 +55,7 @@ private:
     // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
     std::unordered_map<int, std::vector<Matrix<float>*> > m_stepNumber2Buffer; 
     // needed in order to determine dependencies
-    std::unordered_map<Matrix<float>*, std::set<int> > m_buffer2StepNumbers; 
+    std::unordered_map<Matrix<float>*, std::vector<int> > m_buffer2StepNumbers; 
     std::unordered_map<std::string, Stats*> m_stepName2Stats; 
     std::unordered_map<int, Stats*> m_stepNumber2Stats; 
     std::unordered_map<int, bool> m_stepNumber2IsForward;
@@ -66,7 +65,9 @@ private:
     std::unordered_map<Matrix<float>*, bool> m_buffer2IsFreed;
     std::unordered_map<Matrix<float>*, std::pair<int, int> > m_buffer2Dim;
     std::unordered_map<Matrix<float>*, bool> m_buffer2Swappable;
-    std::unordered_map<Matrix<float>*, float> m_buffer2SwapTime;
+    std::unordered_map<Matrix<float>*, std::pair<float, float> > m_buffer2SwapTime;
+    std::set<Matrix<float> *> m_bufferSet;
+    std::unordered_map<int, float> m_stepNumber2CumulativeSwapInTime;
     float m_performanceCostLimit;
 
     bool m_isExecuting;

@@ -84,69 +84,90 @@ void SynchronizationManager::FindSwapOrder()
 {
     //TODO: refactor this, current is not needed at all
     float totalMemorySwappedInMB = 0.0f;
-    float totalMemoryNotSwappedInMB = 0.0f;
-    Stats *stats;
-    for(int stepNum = 0; stepNum < m_currentStepNumber; stepNum++)
+    float totalMemoryInMB  = 0.0f;
+    for(Matrix<float>* buffer : m_bufferSet)
     {
-        if(m_stepNumber2Stats.count(i) == 0){ continue; } // no stats, no swap
-        stats = m_stepNumber2Stats[i];
-
-        float computeTime = m_stepNumber2IsForward[stepNum] ? prev->forwardTime : prev->backpropTime;
-        Matrix<float> *buffer;
-        for(int j = 0 ; j < prev->buffers.size(); j++)
+        totalMemoryInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
+        for(int i = 0; i < m_buffer2StepNumbers[buffer].size(); i++)
         {
-            buffer = prev->buffers[j];
-            // swap in and swap out and be both in forward and backward, and thus we just take the max swap time here
-            float swapTime = prev->swapInTimes[j] > prev->swapOutTimes[j] ? prev->swapInTimes[j] : prev->swapOutTimes[j];
-            if(swapTime < computeTime + (computeTime *m_performanceCostLimit))
+            bool isSwappable = true;
+            // by default we want to swap out the inputs to the current operation
+            // this means the inputs to a matrix multiplication or convolution operation
+            // that is we swap out the activities of the previous layer
+            int swapOutStepNumber = m_buffer2StepNumbers[buffer][i];
+            // when the buffer is needed for the next time
+            int neededByStepNumber = (i+1) >= m_buffer2StepNumbers[buffer].size() ?
+                                             m_buffer2StepNumbers[buffer][0] :
+                                             m_buffer2StepNumbers[buffer][i+1];
+
+            cout << "swap out: " << swapOutStepNumber << " needed by step: " << neededByStepNumber << endl;
+
+            // by default we try to swap one timestep before the buffer is needed
+            // if this does not work out we will look for timesteps before that and
+            // try to fit the swap-in operation there
+            int swapInStepNumber = neededByStepNumber-1; 
+            // we get memory benefits only if we at least have one step with no swap operation
+            if(swapInStepNumber < swapOutStepNumber+1){ continue; } 
+            // this is a special case not worth handling
+            if(swapOutStepNumber > m_currentStepNumber-1){ continue; }
+            if(m_stepNumber2Stats.count(swapOutStepNumber) == 0)
             {
-                // we can swap out this buffer just in time 
-                bool isSwappable = true;
-                for(int needValueAtStepNumber : m_buffer2StepNumbers[buffer])
-                { 
-                    //can we swap in the given buffer just in time?
-                    if(needValueAtStepNumber == 0){ isSwappable = false; break; } // nothing to hide the swap under -> not swappable
+              cout << "no stats" << endl;
+            }
+            if(m_stepNumber2Stats.count(swapOutStepNumber) == 0){ continue; }
 
-                    if(m_stepNumber2Stats.count(needValueAtStepNumber-1) == 0){ isSwappable = false; break; }
-                    Stats *s = m_stepNumber2Stats[needValueAtStepNumber-1];
-                    if(s == NULL){ isSwappable = false; break; } // TODO: Is this needed? Should not happen
-
-                    float computeTimeSwapIn  = m_stepNumber2IsForward[needValueAtStepNumber-1] ? prev->forwardTime : prev->backpropTime;
-                    if(swapTime > computeTimeSwapIn + (computeTimeSwapIn * m_performanceCostLimit))
-                    { isSwappable = false; break; }
-
-                }
-
-                if(!isSwappable){ continue; }
-                for(int needValueAtStepNumber : m_buffer2StepNumbers[buffer])
-                {    
-                    SwapInAction *swp = new SwapInAction(buffer);  
-                    m_stepName2Actions[m_stepNumber2StepName[swapInTimeStep]].push_back(m_buffer2SwapIn[buffer]);
-                    m_buffer2Swappable[buffer] = true;
-                }
-
-                m_buffer2Swappable[buffer] = true;
-                std::string name = prev->name;
-                //cout << "swappable: " << name << endl;
-
-                m_stepName2Actions[name].push_back(m_buffer2SwapOut[buffer]); 
-                totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)*8.0/1024/1024;
+            float swapOutTime = m_buffer2SwapTime[buffer].first;
+            float swapInTime = m_buffer2SwapTime[buffer].second;
+            float computationTimeOut = m_stepNumber2Stats[swapOutStepNumber]->computationTime;
+            // we just look if we can swap under the current operation
+            // we can make it more complex anytime later to also look at other timesteps
+            if(swapOutTime > computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+            {
+                cout << "------------------" << endl;
+                cout << m_stepNumber2StepName[swapOutStepNumber] << endl;
+                cout << swapOutTime << " vs. " << computationTimeOut << endl;
+                cout << "Memory: " << ((float)buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float))/1024.0f/1024.0f << endl;
+                cout << "------------------" << endl;
             }
             else
             {
-                std::string name = prev->name;
-                //cout << "not swappable: " << name << endl;
-                m_buffer2Swappable[buffer] = false;
-                totalMemoryNotSwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)*8.0/1024/1024;
+                cout << "------------------" << endl;
+                cout << "FITS" << endl;
+                cout << m_stepNumber2StepName[swapOutStepNumber] << endl;
+                cout << swapOutTime << " vs. " << computationTimeOut << endl;
+                cout << "Memory: " << ((float)buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float))/1024.0f/1024.0f << endl;
+                cout << "------------------" << endl;
+
+            }
+            if(swapOutTime > computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+            { continue; }
+            // find a place where we can swap-in the buffer just in time when it is needed
+            while(swapInStepNumber > swapOutStepNumber+1)
+            {
+                if(m_stepNumber2Stats.count(swapInStepNumber) == 0){ swapInStepNumber--; continue; }
+
+                Stats *s = m_stepNumber2Stats[swapInStepNumber];
+                float computationTimeIn = s->computationTime;
+                if(swapInTime < computationTimeIn  + (computationTimeIn * m_performanceCostLimit))
+                { break; }
+                
+                swapInStepNumber--;
             }
 
-           //cout << "is swappable: " << m_buffer2Swappable[buffer] << " for buffer: " << buffer << endl;
+            if(swapInStepNumber < swapOutStepNumber+1){ continue; } 
+
+            SwapOutAction *swpOut = new SwapOutAction(buffer);
+            SwapInAction *swpIn = new SwapInAction(swpOut->GetCPUMatrix(), buffer);
+
+            m_stepName2Actions[m_stepNumber2StepName[swapOutStepNumber]].push_back(swpOut);
+            m_stepName2Actions[m_stepNumber2StepName[swapInStepNumber]].push_back(swpIn);
+
+            totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
         }
-             
-        prev = current;
+
     }
     cout << "Total swappable memory: " << totalMemorySwappedInMB << "MB" << endl;
-    cout << "Total unswappable memory: " << totalMemoryNotSwappedInMB << "MB" << endl;
+    cout << "Total memory: " << totalMemoryInMB << "MB" << endl;
 }
 
 void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
@@ -293,8 +314,11 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
     {
-       m_stepNumber2Buffer[m_currentStepNumber].push_back((Matrix<float>*)node->Input(i)->ValuePtr().get());
-       m_buffer2StepNumbers[(Matrix<float>*)node->Input(i)->ValuePtr().get()].insert(m_currentStepNumber);
+       Matrix<float> *buffer = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       m_stepNumber2Buffer[m_currentStepNumber].push_back(buffer);
+       m_buffer2StepNumbers[buffer].push_back(m_currentStepNumber);
+
+       m_bufferSet.insert(buffer);
     }
 
     cout << m_currentStepNumber << " " << name << endl;
@@ -311,30 +335,30 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
 void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
     // swapping sharable nodes does not save any memory
-    if(node->IsValueSharable()){ return; }
+    //if(node->IsValueSharable()){ return; }
 
-    m_timer.tick(GetStepName(node, isForward));
-    for(int i = 0; i < SampleSize(); i++)
-    {
-        if(isForward)
-        {
-            node->ForwardPropSpecialization(fr);
-        }
-        else
-        {
-            node->BackpropToSpecialization(idx, fr);
-        }
-    }
     std::string name = GetStepName(node, isForward);
+    // it is difficult to sample these operations as the CUDA compiler will remove duplicate
+    // operations within a loop; so instead we synchronize the device and hope that our
+    // measurement is quite reliable (it often is)
+    CUDA_CALL(cudaDeviceSynchronize());
+    m_timer.tick(name);
+    if(isForward)
+    {
+        node->ForwardPropSpecialization(fr);
+    }
+    else
+    {
+        node->BackpropToSpecialization(idx, fr);
+    }
     float t = m_timer.tock(name);
-
     Stats *s = new Stats();
+
     m_stepName2Stats[name] = s;
     m_stepNumber2Stats[m_stepName2StepNumber[name]] = s;
     
     s->name = name;
-    if(isForward){ s->forwardTime = t/SampleSize(); }
-    else{ s->backpropTime = t/SampleSize(); }
+    s->computationTime = t;
 
     MeasureSwapTime(node, name);
 }
@@ -365,7 +389,8 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
                out->EndAction();
            }
            t = m_timer.tock("Swap out");
-           s->swapOutTimes.push_back(t/SampleSize());
+           float swapOutTime = t/SampleSize();
+           s->swapOutTimes.push_back(swapOutTime);
 
            m_timer.tick("Swap in");
            for(int i = 0; i < SampleSize(); i++)
@@ -374,10 +399,12 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
                in->EndAction();
            }
            t = m_timer.tock("Swap in");
-           s->swapInTimes.push_back(t/SampleSize());
+           float swapInTime = t/SampleSize();
+           s->swapInTimes.push_back(swapInTime);
            size_t rows = out->GetGPUMatrix()->GetNumRows();
            size_t cols = out->GetGPUMatrix()->GetNumCols();
            s->dim.push_back(std::to_string(rows) + "x" + std::to_string(cols));
+           m_buffer2SwapTime[input] = std::make_pair(swapOutTime, swapInTime);
        }
     }
 }
