@@ -1070,8 +1070,9 @@ RNNs =
             ht = (BS.Constants.OnesTensor (cellDim) - zt) .* c + zt .* dhs
         ]
 
-        # our return value        
-        h = _.ht          // hidden state        
+        # our return values      
+        h = _.ht          // hidden state
+        dim = outputDim
     ]
 
     # this implements a recurrent (stateful) GRU with self-stabilization
