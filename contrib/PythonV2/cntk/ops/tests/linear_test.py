@@ -31,8 +31,8 @@ TENSOR_PAIRS = [
     ([[1.5, 2.1]], [[10., 20.]]),
     ([[100., 200.], [300., 400.], [10., 20.]],
       [[10., 20.], [30., 40.], [1., 2.]]),
-    # Test with 
-    ([5,6], [[10, 20], [30,40], [1,2]]),     
+
+    #([[5],[6],[7]], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
     ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
@@ -41,8 +41,7 @@ TENSOR_PAIRS = [
 # -- plus operation tests --
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_plus(left_operand, right_operand, device_id):#, precision):
-    precision='double'
+def test_op_plus(left_operand, right_operand, device_id, precision):
     ctx = get_context()
     ctx.precision = precision
     # Forward/backward test
@@ -72,7 +71,7 @@ def test_op_plus(left_operand, right_operand, device_id):#, precision):
     forward_input = {a:left_value}
     backward_input = {a:np.ones(left_value.shape)}
     expected_backward = {
-            a: [[[np.ones_like(x) for x in left_operand]]],
+            a: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
             }
     unittest_helper(input_plus_constant, 
             forward_input, expected_forward, 
@@ -83,7 +82,7 @@ def test_op_plus(left_operand, right_operand, device_id):#, precision):
     forward_input = {b:right_value}
     backward_input = {b:np.ones(right_value.shape)}
     expected_backward = {
-            b: [[[np.ones_like(x) for x in right_operand]]]
+            b: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
             }
     unittest_helper(constant_plus_input, 
             forward_input, expected_forward, 
@@ -94,8 +93,8 @@ def test_op_plus(left_operand, right_operand, device_id):#, precision):
     forward_input = {a:left_value, b:right_value}
     backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
     expected_backward = {
-            a: [[[np.ones_like(x) for x in right_operand]]],
-            b: [[[np.ones_like(x) for x in right_operand]]]
+            a: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]],
+            b: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
             }
     unittest_helper(input_plus_input, 
         forward_input, expected_forward, 
