@@ -729,7 +729,7 @@ public:
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
     template <class MATRIX>
-    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion=false)
+    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion=false, const int& numShift=0)
     {
         // open the file and check dimensions
         size_t numframes = open(ppath);
@@ -742,7 +742,7 @@ public:
         }
         else
         {
-            if (feat.cols() != numframes || feat.rows() != featdim)
+            if (feat.cols() != numframes + numShift || feat.rows() != featdim)
                 LogicError("read: stripe read called with wrong dimensions");
         }
         if (kindstr != featkind || period != featperiod)
@@ -762,6 +762,9 @@ public:
                     }
                 }
             }
+			for (int t = numframes; t < feat.cols(); ++t)
+				for (int k=0; k<feat.rows(); ++k)
+					feat(k, t)=feat(k, numframes-1);
         }
         catch (...)
         {

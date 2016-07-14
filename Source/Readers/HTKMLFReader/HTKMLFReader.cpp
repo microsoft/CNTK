@@ -30,6 +30,8 @@
 #include <vld.h> // for memory leak detection
 #endif
 
+//hahaha
+
 #ifdef __unix__
 #include <limits.h>
 typedef unsigned long DWORD;
@@ -64,7 +66,7 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
 {
     m_truncated = readerConfig(L"truncated", false);
     m_convertLabelsToTargets = false;
-
+	m_numShift = readerConfig(L"numShift", 0);
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
     m_numSeqsPerMBForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
 
@@ -324,6 +326,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     }
 
     m_frameMode = readerConfig(L"frameMode", true);
+
+	if (m_frameMode && m_numShift > 0)
+		RuntimeError("The duplication only support for framemode=false");
+
     m_verbosity = readerConfig(L"verbosity", 0);
 
     if (m_frameMode && m_truncated)
@@ -521,7 +527,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, 
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         minimizeReaderMemoryFootprint, m_expandToUtt));
+                                                                         minimizeReaderMemoryFootprint, m_expandToUtt, m_numShift));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
