@@ -1095,7 +1095,7 @@ RNNs =
     [
         previousHook1 = previousHook
         useStabilizer = enableSelfStabilization
-		
+
         layers[i:0..Length (layerDims)-1] =
             RecurrentGRU (layerDims[i],
                           if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
