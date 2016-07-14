@@ -18,6 +18,7 @@
 
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
+#include "SynchronizationManager.h"
 
 #include <map>
 #include <set>
@@ -767,6 +768,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
+    double learningRateTemp = learnRatePerSample;
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
     epochEvalErrors.assign(epochEvalErrors.size(), EpochCriterion(0));
@@ -959,8 +961,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                if(ismb == 0 && numMBsRun == 0)
+                if(ismb == 0 && numMBsRun == 0 && !SynchronizationManager::GetSynchronizationManager(0.0f)->IsExecuting())
                 {
+                	// we produce 100 gradients during the swap in/out sampling and because we apply gradients via
+                	// learning rate per sample this will move the weights in the wrong direction
+                	// solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
+                	double *ptr = (double*)(&learnRatePerSample);
+                	*ptr = 0.0;
+
                     fprintf(stdout, "epoch: %i epoch, %zu ismb\n", epochNumber, ismb);
                     for(int i = 0; i < 1; i++)
                     {
@@ -971,6 +979,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         net->Backprop(criterionNodes[0]);
                     }
                     fprintf(stdout, "completed!");
+                }
+                else
+                {
+                	// reset the learning rate to its original value
+                	double *ptr = (double*)(&learnRatePerSample);
+                	*ptr = learningRateTemp;
                 }
 
                 // ===========================================================

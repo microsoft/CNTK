@@ -22,9 +22,19 @@ void SwapInAction::BeginAction()
     size_t rows = m_bufferGPU->GetNumRows();
     size_t bytes = cols*rows*sizeof(float);
 
-    float *cpu = (float*)malloc(bytes);
+    if(m_isSwappingToGPU)
+    {
+        // swap in already active; this happens if we need this buffer in two timesteps in a row
+        // all fine!
+        //cout << "Warning: Overlapping swap-ins detected!" << endl;
+        return;
+        //EndAction();
+    }
+
     CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU, bytes, cudaMemcpyDefault, m_swapInStream));
+    m_isSwappingToGPU = true;
 }
+
 
 void SwapInAction::EndAction()
 {

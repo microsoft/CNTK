@@ -11,6 +11,7 @@
 #include <string>
 #include "CUDATimer.h"
 #include <utility>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -51,19 +52,24 @@ private:
 
     // needed to identify a step
     std::unordered_map<std::string, int> m_stepName2StepNumber; 
+    std::unordered_map<int, std::string> m_stepNumber2StepName; 
     // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
     std::unordered_map<int, std::vector<Matrix<float>*> > m_stepNumber2Buffer; 
     // needed in order to determine dependencies
-    std::unordered_map<Matrix<float>*, std::vector<int> > m_buffer2StepNumbers; 
+    std::unordered_map<Matrix<float>*, std::set<int> > m_buffer2StepNumbers; 
     std::unordered_map<std::string, Stats*> m_stepName2Stats; 
-    std::vector<Stats*> m_vecStats; 
+    std::unordered_map<int, Stats*> m_stepNumber2Stats; 
+    std::unordered_map<int, bool> m_stepNumber2IsForward;
 
     std::unordered_map<Matrix<float>*, SwapInAction*> m_buffer2SwapIn;
     std::unordered_map<Matrix<float>*, SwapOutAction*> m_buffer2SwapOut;
     std::unordered_map<Matrix<float>*, bool> m_buffer2IsFreed;
     std::unordered_map<Matrix<float>*, std::pair<int, int> > m_buffer2Dim;
     std::unordered_map<Matrix<float>*, bool> m_buffer2Swappable;
+    std::unordered_map<Matrix<float>*, float> m_buffer2SwapTime;
     float m_performanceCostLimit;
+
+    bool m_isExecuting;
 
     CUDATimer m_timer;
 
@@ -83,7 +89,6 @@ private:
 
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
     void SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
-    void CheckForStateTransitions(ComputationNodeBase *node, bool isForward);
     void RegisterBuffers(ComputationNodeBase *node, bool isForward);
     void GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     void FindSwapOrder();
@@ -99,6 +104,7 @@ public:
     static SynchronizationManager* GetSynchronizationManager(float performanceCostLimit);
     void BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     void EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    bool IsExecuting(){ return m_isExecuting; }
 	
 };
 
