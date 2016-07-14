@@ -1180,38 +1180,6 @@ namespace CNTK
 			const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
 			std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
-		BackPropStatePtr ForwardMap(const std::map<Variable, ValuePtr>& arguments,
-			std::map<Variable, ValuePtr>& outputs,
-			const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
-			const std::set<Variable>& outputsToRetainBackwardStateFor = {})
-		{
-			const std::unordered_map<Variable, const ValuePtr> arguments_umap(arguments.begin(), arguments.end());
-
-			std::unordered_map<Variable, ValuePtr> outputs_umap(outputs.begin(), outputs.end());
-
-			const std::unordered_set<Variable> outputsRetain_umap(outputsToRetainBackwardStateFor.begin(), outputsToRetainBackwardStateFor.end());
-
-			auto backPropState = Forward(arguments_umap, outputs_umap, computeDevice, outputsRetain_umap);
-
-			// Copy over the ValuePtr values in outputs
-			for (auto iter = outputs.begin(); iter != outputs.end(); ++iter)
-				outputs[iter->first] = outputs_umap[iter->first];
-
-			return backPropState;
-		}
-
-		void BackwardMap(const BackPropStatePtr& state, const std::map<Variable, ValuePtr>& rootGradientValues,
-			std::map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
-		{
-			const std::unordered_map<Variable, const ValuePtr> rootGradientValues_umap(rootGradientValues.begin(), rootGradientValues.end());
-			std::unordered_map<Variable, ValuePtr> backPropagatedGradientValuesForInputs_umap(backPropagatedGradientValuesForInputs.begin(), backPropagatedGradientValuesForInputs.end());
-
-			Backward(state, rootGradientValues_umap, backPropagatedGradientValuesForInputs_umap);
-
-			// Copy over the ValuePtr values in backPropagatedGradientValuesForInputs
-			for (auto iter = backPropagatedGradientValuesForInputs.begin(); iter != backPropagatedGradientValuesForInputs.end(); ++iter)
-				backPropagatedGradientValuesForInputs[iter->first] = backPropagatedGradientValuesForInputs_umap[iter->first];
-		}
 	public:
 
 		// Optional overrides

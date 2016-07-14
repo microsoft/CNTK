@@ -31,12 +31,11 @@ TENSOR_PAIRS = [
     ([[1.5, 2.1]], [[10., 20.]]),
     ([[100., 200.], [300., 400.], [10., 20.]],
       [[10., 20.], [30., 40.], [1., 2.]]),
-    # Test with broadcast
-    # TODO: adjust the broadcast according to the decision on col/row major
-    #([5], [[10, 20], [30,40], [1,2]]),     
+    # Test with 
+    ([5,6], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
-    # ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
@@ -44,59 +43,64 @@ TENSOR_PAIRS = [
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_plus(left_operand, right_operand, device_id):#, precision):
     precision='double'
-    get_context().precision = precision
-    # Forward pass test
+    ctx = get_context()
+    ctx.precision = precision
+    # Forward/backward test
     #==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-    np_type = get_context().precision_numpy
-    left_value = AA(left_operand, dtype=np_type) 
-    right_value = AA(right_operand, dtype=np_type)
+    # We need two surrounding brackets: the first for sequences (length=1,
+    # since we have dynamic_axis=''), the second for batch of one sample.
+    # The expected results for the backward pass is all ones.
+    left_value = AA(left_operand, dtype=ctx.precision_numpy) 
+    right_value = AA(right_operand, dtype=ctx.precision_numpy)
 
-    # TODO because we have to be col-major until 2.0 API has row-major read
-    # functions exposed
-    a = I(shape=left_value.shape, data_type=sanitize_dtype_cntk(np_type),
+    a = I(shape=left_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
             name='a')
-    b = I(shape=right_value.shape, data_type=sanitize_dtype_cntk(np_type),
+    b = I(shape=right_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
             name='b')
     
-    expected = [np.asarray([left_value + right_value])]
-    #expected.shape += (1,1)
+    expected_forward = [np.asarray([left_value + right_value])]
 
     # create batch
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
 
-    args = {b:right_value}
-    right_as_input = left_operand + b
-    unittest_helper(right_as_input, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+    input_plus_constant = a + right_operand
+    forward_input = {a:left_value}
+    backward_input = {a:np.ones(left_value.shape)}
+    expected_backward = {
+            a: [[[np.ones_like(x) for x in left_operand]]],
+            }
+    unittest_helper(input_plus_constant, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=device_id, precision=precision, clean_up=True)
 
-    args = {a:left_value, b:right_value}
-    unittest_helper(a + b, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+    constant_plus_input = left_operand + b
+    forward_input = {b:right_value}
+    backward_input = {b:np.ones(right_value.shape)}
+    expected_backward = {
+            b: [[[np.ones_like(x) for x in right_operand]]]
+            }
+    unittest_helper(constant_plus_input, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=device_id, precision=precision, clean_up=True)
 
-    args = {a:left_value}
-    left_as_input = a + right_operand
-    unittest_helper(left_as_input, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
-
-    return
-
-    # Backward pass test
-    #==================
-    # the expected results for the backward pass is all ones
-
-    expected = [[[np.ones_like(x) for x in left_operand]]]    
-    unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
-    
-    expected = [[[np.ones_like(x) for x in right_operand]]]
-    unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
+    input_plus_input = a + b
+    forward_input = {a:left_value, b:right_value}
+    backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
+    expected_backward = {
+            a: [[[np.ones_like(x) for x in right_operand]]],
+            b: [[[np.ones_like(x) for x in right_operand]]]
+            }
+    unittest_helper(input_plus_input, 
+        forward_input, expected_forward, 
+        backward_input, expected_backward,
+        device_id=device_id, precision=precision, clean_up=True)
 
 # -- minus operation tests --
 

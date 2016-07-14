@@ -28,7 +28,12 @@ def _sanitize_value(shape, value, dtype, dev):
     return ndav
 
 class Variable(cntk_py.Variable, TensorOpsMixin):
-    pass
+    def __init__(self, shape=None, data_type=None, needs_gradient=True, name=''):
+        if data_type is None:
+            data_type = get_context().precision_numpy
+
+        dtype = utils.sanitize_dtype_cntk(data_type)
+        super(Variable, self).__init__(shape, dtype, needs_gradient, name)
 
 class Parameter(cntk_py.Parameter, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, dev=None, name=''):
