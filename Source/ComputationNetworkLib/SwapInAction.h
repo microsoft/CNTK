@@ -24,6 +24,7 @@ public:
         cudaStream_t stream;
         CUDA_CALL(cudaStreamCreate(&stream));
         m_swapInStream = stream;
+        m_isSwappingToGPU = false;
     }
 
     //implementation of abstract method

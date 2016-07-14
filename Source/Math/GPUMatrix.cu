@@ -3552,14 +3552,17 @@ void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& alpha, 
     {
         a.PrepareDevice();
 
-        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
-               a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols());
-
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
               a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
         {
+            fprintf(stdout, "Dim a: %zu x %zu\n", a.GetNumRows(), a.GetNumCols());
+            fprintf(stdout, "Dim b: %zu x %zu\n", b.GetNumRows(), b.GetNumCols());
+            fprintf(stdout, "Dim c: %zu x %zu\n", c.GetNumRows(), c.GetNumCols());
             InvalidArgument("AddScaledDifference: a, b, and c must have same dimension.");
         }
+
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
+               a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols());
 
         if (a.IsEmpty())
             LogicError("AddScaledDifference: Input matrix a is empty.");

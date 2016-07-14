@@ -27,6 +27,7 @@ public:
         cudaStream_t stream;
         CUDA_CALL(cudaStreamCreate(&stream));
         m_streamAsync = stream;
+        m_isSwapping = false;
 
         // do we already have a pinned, that is page-locked buffer?
         if (!m_bufferCPU){ allocatePinnedBuffer(); }
@@ -40,6 +41,7 @@ public:
 
 private:
     cudaStream_t m_streamAsync; 
+    bool m_isSwapping;
     void allocatePinnedBuffer();
 
 };
