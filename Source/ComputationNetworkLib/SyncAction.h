@@ -21,21 +21,22 @@ protected:
     bool m_isAsynchronous; 
     Matrix<float> *m_bufferGPU;
     float *m_bufferCPU;
+    int m_rows;
+    int m_cols;
+    size_t m_bytes;
     
 
 public:
     ~SyncAction(){};
     virtual void BeginAction() = 0;
     virtual void EndAction() = 0; // for synchronization and cleanup
+    virtual void ReleaseMemory() = 0;
     Matrix<float> *GetGPUMatrix(){ return m_bufferGPU; }
     float *GetCPUMatrix(){ return m_bufferCPU; }
-
-public:    
     bool GetIsAsynchronous()
     {
         return m_isAsynchronous;
     }
-
 
 };
 

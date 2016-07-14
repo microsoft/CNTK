@@ -28,6 +28,9 @@ public:
         CUDA_CALL(cudaStreamCreate(&stream));
         m_streamAsync = stream;
         m_isSwapping = false;
+        m_rows = m_bufferGPU->GetNumRows();
+        m_cols = m_bufferGPU->GetNumCols();
+        m_bytes = m_rows*m_cols*sizeof(float);
 
         // do we already have a pinned, that is page-locked buffer?
         if (!m_bufferCPU){ allocatePinnedBuffer(); }
@@ -38,6 +41,7 @@ public:
     void EndAction();
     cudaStream_t GetSwapSteam(){ return m_streamAsync; }
     void deallocatePinnedBuffer();
+    void ReleaseMemory();
 
 private:
     cudaStream_t m_streamAsync; 

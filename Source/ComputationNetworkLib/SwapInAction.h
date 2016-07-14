@@ -25,11 +25,16 @@ public:
         CUDA_CALL(cudaStreamCreate(&stream));
         m_swapInStream = stream;
         m_isSwappingToGPU = false;
+
+        m_rows = m_bufferGPU->GetNumRows();
+        m_cols = m_bufferGPU->GetNumCols();
+        m_bytes = m_rows*m_cols*sizeof(float);
     }
 
     //implementation of abstract method
     void BeginAction();
     void EndAction();
+    void ReleaseMemory(){};
 
 private:
     cudaStream_t m_swapInStream;

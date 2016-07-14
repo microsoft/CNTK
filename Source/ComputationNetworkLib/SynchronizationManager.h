@@ -67,7 +67,7 @@ private:
     std::unordered_map<Matrix<float>*, bool> m_buffer2Swappable;
     std::unordered_map<Matrix<float>*, std::pair<float, float> > m_buffer2SwapTime;
     std::set<Matrix<float> *> m_bufferSet;
-    std::unordered_map<int, float> m_stepNumber2CumulativeSwapInTime;
+    std::unordered_map<int, std::pair<float,float> > m_stepNumber2CumulativeSwapInTime;
     float m_performanceCostLimit;
 
     bool m_isExecuting;
@@ -106,6 +106,7 @@ public:
     void BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     void EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     bool IsExecuting(){ return m_isExecuting; }
+    void ClearActionsAndTheirMemory();
 	
 };
 
