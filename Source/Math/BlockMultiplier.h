@@ -9,6 +9,7 @@
 #include <emmintrin.h>
 #include <tmmintrin.h>
 #include <immintrin.h>
+#include <smmintrin.h>
 #include <assert.h>
 #include <cstdint>
 #include <iostream>

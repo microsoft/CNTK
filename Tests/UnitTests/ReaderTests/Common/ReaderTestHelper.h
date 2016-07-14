@@ -64,13 +64,13 @@ struct ReaderFixture
                     if (!envVariableErrorMessage.empty())
                     {
                         BOOST_TEST_MESSAGE(envVariableErrorMessage);
-                        fprintf(stderr, envVariableErrorMessage.c_str());
+                        fprintf(stderr, "%s\n", envVariableErrorMessage.c_str());
                     }
 
                     newCurrentPath = m_testDataPath;
                 }
             }
-            else if ((subPath[0] == '/' && subPath[1] == '//') || (subPath[0] == '\\' && subPath[1] == '\\'))
+            else if ((subPath[0] == '/' && subPath[1] == '/') || (subPath[0] == '\\' && subPath[1] == '\\'))
             {
                 newCurrentPath = subPath;
             }
@@ -302,7 +302,8 @@ struct ReaderFixture
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
 
-        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
+        wchar_t cntkName[] = L"CNTK";
+        wchar_t* arg[2]{cntkName, &configFileCommand[0]};
         ConfigParameters config;
         const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
 
