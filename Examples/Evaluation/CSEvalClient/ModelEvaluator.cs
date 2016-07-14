@@ -110,9 +110,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         public static bool Evaluate(string record)
         {
             var model = Models.Take();
-            var outcome = model.EvaluateRecord(record);
-            Models.Add(model);
-            return outcome;
+            try
+            {
+                var outcome = model.EvaluateRecord(record);
+                return outcome;
+            }
+            finally
+            { 
+                Models.Add(model); 
+            }
         }
 
         /// <summary>
@@ -123,9 +129,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         public static List<float> Evaluate(List<float> inputs)
         {
             var model = Models.Take();
-            var outcome = model.EvaluateInput(inputs);
-            Models.Add(model);
-            return outcome;
+            try
+            {
+                var outcome = model.EvaluateInput(inputs);
+                return outcome;
+            }
+            finally
+            {
+                Models.Add(model);
+            }
         }
 
         /// <summary>
