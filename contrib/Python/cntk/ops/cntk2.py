@@ -8,6 +8,26 @@
 
 from cntk.graph import ComputationNode, _InputComputationNodeBase, _ImageInputComputationNodeBase
 
+class Slice(ComputationNode):
+    def __init__(self, _, beginIndex, endIndex, axis=1, op_name='CNTK2.Slice',
+            name=None):
+        super(Slice, self).__init__(params=['_', 'beginIndex', 'endIndex', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.beginIndex = beginIndex
+        self.endIndex = endIndex
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
+class Splice(ComputationNode):
+    def __init__(self, _, axis=1, op_name='CNTK2.Splice',
+            name=None):
+        super(Splice, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
 class Ceil(ComputationNode):
     def __init__(self, _, op_name='CNTK2.Ceil', name=None):
         super(Ceil, self).__init__(params=['_'], op_name=op_name, name=name)
@@ -127,6 +147,54 @@ class Plus(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['_', 'y']
 
+class Less(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Less', name=None):
+        super(Less, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class Equal(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Equal', name=None):
+        super(Equal, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class Greater(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.Greater', name=None):
+        super(Greater, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class GreaterEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.GreaterEqual', name=None):
+        super(GreaterEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class NotEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.NotEqual', name=None):
+        super(NotEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
+class LessEqual(ComputationNode):
+    def __init__(self, _, y, op_name='CNTK2.LessEqual', name=None):
+        super(LessEqual, self).__init__(params=['_', 'y'], op_name=op_name, name=name)
+        self._ = _
+        self.y = y
+        self.params_with_defaults = []
+        self.inputs = ['_', 'y']
+
 class Tanh(ComputationNode):
     def __init__(self, _, op_name='CNTK2.Tanh', name=None):
         super(Tanh, self).__init__(params=['_'], op_name=op_name, name=name)
@@ -191,3 +259,71 @@ class ErrorPrediction(ComputationNode):
         self.params_with_defaults = []
         self.inputs = ['_', 'outVectorSequence']
 
+class Log(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Log', name=None):
+        super(Log, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+
+class Exp(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Exp', name=None):
+        super(Exp, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+        
+class Sqrt(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Sqrt', name=None):
+        super(Sqrt, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']        
+        
+class Square(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Square', name=None):
+        super(Square, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']                
+
+class Identity(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Identity', name=None):
+        super(Identity, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']     
+
+class Dropout(ComputationNode):
+    def __init__(self, _, op_name='CNTK2.Dropout', name=None):
+        super(Dropout, self).__init__(params=['_'], op_name=op_name, name=name)
+        self._ = _
+        self.params_with_defaults = []
+        self.inputs = ['_']
+        
+class TransposeDimensions(ComputationNode):
+    def __init__(self, _, axis1, axis2, op_name='CNTK2.TransposeDimensions', name=None):
+        super(TransposeDimensions, self).__init__(params=['_', 'axis1', 'axis2'], op_name=op_name, name=name)
+        self._ = _
+        self.axis1 = axis1
+        self.axis2 = axis2
+        self.params_with_defaults = []
+        self.inputs = ['_']        
+
+class ReduceSum(ComputationNode):
+    def __init__(self, _, axis=0, op_name='CNTK2.ReduceSum',
+            name=None):
+        super(ReduceSum, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
+class ReduceLogSum(ComputationNode):
+    def __init__(self, _, axis=0, op_name='CNTK2.ReduceLogSum',
+            name=None):
+        super(ReduceLogSum, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']

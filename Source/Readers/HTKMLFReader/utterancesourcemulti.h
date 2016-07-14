@@ -496,7 +496,7 @@ class minibatchutterancesourcemulti : public minibatchsource
 
                 for (;;) // (randomization retry loop)
                 {
-                    size_t tswap = msra::dbn::rand(postbegin, postend); // random frame position within allowed range
+                    size_t tswap = Microsoft::MSR::CNTK::rand(postbegin, postend); // random frame position within allowed range
                     // We want to swap 't' to 'tswap' and 'tswap' to 't'.
                     //  - Both may have been swapped before.
                     //  - Both must stay within the randomization window of their respective position.
@@ -604,7 +604,7 @@ class minibatchutterancesourcemulti : public minibatchsource
 
                     for (;;) // (randomization retry loop)
                     {
-                        size_t tswap = msra::dbn::rand(postbegin, postend); // random frame position within allowed range
+                        size_t tswap = Microsoft::MSR::CNTK::rand(postbegin, postend); // random frame position within allowed range
                         // We want to swap 't' to 'tswap' and 'tswap' to 't'.
                         //  - Both may have been swapped before.
                         //  - Both must stay within the randomization window of their respective position.
@@ -1204,7 +1204,7 @@ private:
         foreach_index (i, v)
         {
             // pick a random location
-            const size_t irand = msra::dbn::rand(0, v.size());
+            const size_t irand = Microsoft::MSR::CNTK::rand(0, v.size());
 
             // swap element i with it
             if (irand == (size_t) i)
@@ -1364,7 +1364,7 @@ private:
                 for (;;)
                 {
                     // pick a random location
-                    const size_t j = msra::dbn::rand(posbegin, posend); // a random number within the window
+                    const size_t j = Microsoft::MSR::CNTK::rand(posbegin, posend); // a random number within the window
                     if (i == j)
                         break; // the random gods say "this one points to its original position"... nothing wrong about that, but better not try to swap
 

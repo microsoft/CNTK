@@ -9,7 +9,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-ChunkPtr ChunkCache::GetChunk(size_t chunkId)
+ChunkPtr ChunkCache::GetChunk(ChunkIdType chunkId)
 {
     auto it = m_chunkMap.find(chunkId);
     if (it != m_chunkMap.end())

@@ -266,7 +266,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpnode")
+                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
                 {
                     DumpNodeInfo<ElemType>(commandParams);
                 }
@@ -479,6 +479,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -550,7 +551,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -577,6 +577,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -673,7 +674,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 

@@ -14,7 +14,11 @@ import pytest
 from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
-from .. import clip, cond, constant, exp, relu, sigmoid, softmax, tanh
+from .. import constant
+
+EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
+BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
+LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
 
 CLIP_TUPLES = [
     ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
@@ -40,7 +44,8 @@ CLIP_TUPLES = [
 # -- clip operation tests --
 @pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
 def test_op_clip(min_value, max_value, x, device_id, precision):    
-
+    from .. import clip
+    
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -71,9 +76,10 @@ TENSORS = [
       [0.001, 0.01], [0.1, 1], [10, 100]]),
 ]
 
-
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
+
+    from .. import sigmoid
 
     def numpy_op(x):
         return 1.0 / (1.0 + np.exp(-AA(x, dtype=PRECISION_TO_TYPE[precision])))
@@ -114,7 +120,8 @@ def test_op_sigmoid(tensor, device_id, precision):
                              ],
                          ])
 def test_op_softmax(batch, device_id, precision):
-
+    from .. import softmax
+    
     def numpy_op(x):
         x = AA(x, dtype=PRECISION_TO_TYPE[precision])
         # Expecting classes of one sample
@@ -168,6 +175,7 @@ def test_op_softmax(batch, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_exp(tensor, device_id, precision):
+    from .. import exp
 
     def numpy_op(x):
         return np.exp(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -198,9 +206,137 @@ def test_op_exp(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_log(tensor, device_id, precision):
+
+    from .. import log
+
+    def numpy_op(x):
+        a = np.log(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        # CNTK returns -85.1 for log(x) if x is negative or zero.
+        # CNTK uses 1e-37f as the smallest float number for log
+        # becuase this is the only guaranteed precision accross platforms
+        # something to change in CNTK and perhapas return some standard symbols
+        # like (nan and -inf) for numpy
+        a[np.isnan(a)] = LOG_OF_EPS_IN_LOG
+        a[np.isneginf(a)] = LOG_OF_EPS_IN_LOG       
+        return a
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = log(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad(x):
+        a = np.divide(1, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        a[np.isinf(a)] = BACKWARD_RESULST_FOR_LOG_EPS
+        a[a<=0] = BACKWARD_RESULST_FOR_LOG_EPS
+        return a
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is 1/x
+    expected = [[numpy_op_grad(tensor)]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_sqrt(tensor, device_id, precision):
+    from .. import sqrt
+
+    def numpy_op(x):
+        a = np.sqrt(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+        # CNTK returns zero for sqrt of negative nubmers, perhaps it should be
+        # changed to return something linke nan for numpy
+        a[np.isnan(a)] = 0
+        return a
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = sqrt(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad(x):
+        return np.divide(0.5, numpy_op(AA(x, dtype=PRECISION_TO_TYPE[precision])))
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is 0.5/sqrt(x)
+    expected = [[numpy_op_grad(tensor)]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
+@pytest.mark.parametrize("tensor", TENSORS)
+def test_op_square(tensor, device_id, precision):
+    from .. import square
+
+    def numpy_op(x):
+        return np.square(AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = square(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+
+    def numpy_op_grad(x):
+        return np.multiply(2, AA(x, dtype=PRECISION_TO_TYPE[precision]))
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is 2x
+    expected = [[numpy_op_grad(tensor)]]
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_tanh(tensor, device_id, precision):
+
+    from .. import tanh
 
     def numpy_op(x):
         return np.tanh(AA(x, dtype=PRECISION_TO_TYPE[precision]))
@@ -234,6 +370,8 @@ def test_op_tanh(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_relu(tensor, device_id, precision):
+
+    from .. import relu
 
     def numpy_op(x):
         npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
@@ -273,7 +411,7 @@ def test_op_relu(tensor, device_id, precision):
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_abs(tensor, device_id, precision):
-
+    from .. import abs
     np_tensor = AA(tensor, dtype=PRECISION_TO_TYPE[precision])
 
     # Forward pass test
@@ -316,6 +454,8 @@ COND_TUPLES = [
 # -- cond operation tests --
 @pytest.mark.parametrize("flag, value_a, value_b", COND_TUPLES)
 def test_op_cond(flag, value_a, value_b, device_id, precision):    
+
+    from .. import cond
 
     #Forward pass test
     #==================

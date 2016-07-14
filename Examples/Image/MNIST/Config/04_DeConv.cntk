@@ -1,0 +1,95 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+
+deviceId = 0
+imageLayout = "cudnn"
+# Override the above as follows when running on CPU:
+# deviceId = -1
+
+command = train:test
+
+precision = "float"
+modelPath = "$ModelDir$/04_DeConv"
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+# uncomment the following line to write logs to a file 
+# stderr = "$OutputDir$/04_DeConv_out"
+traceLevel=1
+numMBsToShowResult=500
+
+prefetch=true
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = [
+    action = "train"
+
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/04_DeConv.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerMB = 0.001
+        momentumPerMB = 0.9
+        maxEpochs = 10
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]   
+]
+
+#######################################
+#  TEST CONFIG                        #
+#######################################
+
+test = [
+    action = test
+    minibatchSize = 16
+    
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/04_DeConv.ndl"
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]

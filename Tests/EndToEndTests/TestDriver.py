@@ -265,6 +265,7 @@ class Test:
       os.environ["MPI_BINARY"] = "mpiexec"
     if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
+    os.environ["TEST_BIN_DIR"] = os.path.dirname(os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
     os.environ["TEST_RUN_DIR"] = runDir

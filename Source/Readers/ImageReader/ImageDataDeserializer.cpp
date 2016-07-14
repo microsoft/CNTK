@@ -223,7 +223,7 @@ ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
     return result;
 }
 
-void ImageDataDeserializer::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void ImageDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
 {
     // Currently a single sequence per chunk.
     result.push_back(m_imageSequences[chunkId]);
@@ -243,7 +243,6 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     PathReaderMap knownReaders;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
-    description.m_isValid = true;
 
     auto& stringRegistry = corpus->GetStringRegistry();
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
@@ -264,8 +263,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         }
 
         // Skipping sequences that are not included in corpus.
-        auto key = msra::strfun::utf16(sequenceKey);
-        if (!corpus->IsIncluded(key))
+        if (!corpus->IsIncluded(sequenceKey))
         {
             continue;
         }
@@ -283,13 +281,18 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
+        if (CHUNKID_MAX < curId + itemsPerLine)
+        {
+            RuntimeError("Maximum number of chunks exceeded.");
+        }
+
         for (size_t start = curId; curId < start + itemsPerLine; curId++)
         {
             description.m_id = curId;
-            description.m_chunkId = curId;
+            description.m_chunkId = (ChunkIdType)curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = stringRegistry[key];
+            description.m_key.m_sequence = stringRegistry[sequenceKey];
             description.m_key.m_sample = 0;
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
@@ -299,7 +302,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     }
 }
 
-ChunkPtr ImageDataDeserializer::GetChunk(size_t chunkId)
+ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
 {
     auto sequenceDescription = m_imageSequences[chunkId];
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
@@ -359,19 +362,17 @@ cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }
 
-static SequenceDescription s_invalidSequence{0, 0, 0, false};
-
-void ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
     auto index = m_keyToSequence.find(key.m_sequence);
     // Checks whether it is a known sequence for us.
     if (key.m_sample != 0 || index == m_keyToSequence.end())
     {
-        result = s_invalidSequence;
-        return;
+        return false;
     }
 
     result = m_imageSequences[index->second];
+    return true;
 }
 
 }}}
