@@ -1346,9 +1346,13 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
-    assert(numRows * numCols == GetNumElements());
+
     if (numRows * numCols != GetNumElements())
+    {
+        cout << "Rows*Cols != elements: " << numRows << '*' << numCols << " != " << GetNumElements() << endl;
         InvalidArgument("Reshape: Total number of elements does not match.");
+    }
+    assert(numRows * numCols == GetNumElements());
 
     m_numRows = numRows;
     m_numCols = numCols;

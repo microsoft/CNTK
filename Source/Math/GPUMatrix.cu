@@ -1483,9 +1483,12 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
-    assert(numRows * numCols == GetNumElements());
+
     if (numRows * numCols != GetNumElements())
-        InvalidArgument("Reshape: total number of elements does not match.");
+    {
+        cout << "Rows*Cols != elements: " << numRows << '*' << numCols << " != " << GetNumElements() << endl;
+        InvalidArgument("Reshape: Total number of elements does not match.");
+    }
 
     m_numRows = numRows;
     m_numCols = numCols;
@@ -1501,19 +1504,20 @@ void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
-    VerifyResizable(__func__);
-
+    //VerifyResizable(__func__); do we really need this at this point? Can we call it later?
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
     size_t numElements = numRows * numCols;
+    
     if (numElements > GetSizeAllocated() ||                 // grow allocation
         (!growOnly && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
     {
+        VerifyResizable(__func__);
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
-            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+            pArray = TracingGPUMemoryAllocator::AllocateNoTrace<ElemType>(GetComputeDeviceId(), numElements);
 
         // If the buffer exists, free it
         if (Buffer())
@@ -1528,6 +1532,11 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     m_numRows = numRows;
     m_numCols = numCols;
 }
+
+/*
+template <class ElemType>
+void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols){ Resize(numRows, numCols, true); }
+*/
 
 template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const

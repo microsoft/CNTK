@@ -9,27 +9,13 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+class SwapOutAction;
 class SwapInAction : public SyncAction
 {
 
 public:
-
     ~SwapInAction(){}
-    SwapInAction(float *CPUBuffer, Matrix<float> *GPUBuffer)
-    {
-        m_bufferCPU = CPUBuffer;
-        m_bufferGPU = GPUBuffer;
-        m_isAsynchronous = true;
-
-        cudaStream_t stream;
-        CUDA_CALL(cudaStreamCreate(&stream));
-        m_swapInStream = stream;
-        m_isSwappingToGPU = false;
-
-        m_rows = m_bufferGPU->GetNumRows();
-        m_cols = m_bufferGPU->GetNumCols();
-        m_bytes = m_rows*m_cols*sizeof(float);
-    }
+    SwapInAction(SwapOutAction *swpout, Matrix<float> *GPUBuffer);
 
     //implementation of abstract method
     void BeginAction();
@@ -39,6 +25,7 @@ public:
 private:
     cudaStream_t m_swapInStream;
     bool m_isSwappingToGPU;
+    SwapOutAction *m_swpout;
 
 };
 }}}

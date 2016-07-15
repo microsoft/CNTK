@@ -22,6 +22,8 @@ public:
 	void tick();
 	float tock(std::string name);
 	float tock();
+	float tockp();
+	float tockp(std::string name);
 private:
 	std::unordered_map<std::string,cudaEvent_t*> m_dictTickTock;
 	std::unordered_map<std::string,float> m_dictTickTockCumulative;

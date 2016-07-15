@@ -19,23 +19,8 @@ class SwapOutAction : public SyncAction
 
 public:
     ~SwapOutAction();
-    SwapOutAction(Matrix<float> *GPUbuffer)
-    {
-        m_bufferCPU = NULL;
-        m_bufferGPU = GPUbuffer;
-        m_isAsynchronous = false;
-        cudaStream_t stream;
-        CUDA_CALL(cudaStreamCreate(&stream));
-        m_streamAsync = stream;
-        m_isSwapping = false;
-        m_rows = m_bufferGPU->GetNumRows();
-        m_cols = m_bufferGPU->GetNumCols();
-        m_bytes = m_rows*m_cols*sizeof(float);
-
-        // do we already have a pinned, that is page-locked buffer?
-        if (!m_bufferCPU){ allocatePinnedBuffer(); }
-    }
-
+    SwapOutAction(Matrix<float> *GPUbuffer);
+    
     //implementation of abstract method
     void BeginAction();
     void EndAction();
@@ -46,6 +31,7 @@ public:
 private:
     cudaStream_t m_streamAsync; 
     bool m_isSwapping;
+    bool m_isFreed;
     void allocatePinnedBuffer();
 
 };
