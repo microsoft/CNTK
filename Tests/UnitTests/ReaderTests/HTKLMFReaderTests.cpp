@@ -24,7 +24,7 @@ struct iVectorFixture : ReaderFixture
 {
     iVectorFixture()
         : ReaderFixture(
-        "%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/iVector",
+        "%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/iVector",
         "This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location. \n Refer to the 'Setting up CNTK on Windows' documentation.)")
     {
     }
