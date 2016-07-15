@@ -153,7 +153,7 @@ private:
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }    
-    friend Microsoft::MSR::CNTK::Test::TensorTest<ElemType>;
+    friend Test::TensorTest<ElemType>;
 
     // -------------------------------------------------------------------
     // sob members

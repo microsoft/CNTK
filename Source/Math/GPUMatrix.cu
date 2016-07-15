@@ -4276,19 +4276,18 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
 // helper to provide a vector of ones of at least the given number of elements
 // TODO: Use this to implement ComputationNode::ConstOnes? Or do we even need that anymore?
 template <class ElemType>
-static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
+static GPUMatrix<ElemType> * GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
 {
-    // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
     // And using a dynamically allocated array so this will never get freed, avoiding free-after-DLL-unload issues.
     // Using a plain array would lead the destructor to be called for every element in the array
     const int CacheSize = 32;
-    static shared_ptr<GPUMatrix<ElemType>>* onesCache = new shared_ptr<GPUMatrix<ElemType>>[CacheSize]; // cache of objects
+    static GPUMatrix<ElemType> ** onesCache = new GPUMatrix<ElemType> * [CacheSize]; // cache of objects
     if (deviceId >= CacheSize)
         LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", CacheSize, (int)deviceId + 1);
     auto p = onesCache[deviceId];
     if (!p || p->GetNumRows() < N) // must (re-)allocate
     {
-        p = make_shared<GPUMatrix<ElemType>>(GPUMatrix<ElemType>::Ones(N, 1, deviceId));
+        p = new GPUMatrix<ElemType>(GPUMatrix<ElemType>::Ones(N, 1, deviceId));
         onesCache[deviceId] = p; // this will replace the pointer thread-safely (although weird race conditions may happen where a larger entry is overwritten by a smaller one; will still run correctly)
     }
     return p;
