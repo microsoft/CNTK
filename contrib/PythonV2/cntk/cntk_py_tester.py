@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.join("..",".."))
-from cntk import cntk_py
+import cntk_py
 
 # class MyVariable(cntk_py.Variable):
 def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
@@ -52,18 +52,18 @@ def forward_backward():
     outputVariable = op.Output()
     output_value_ptr = create_ValuePtr(output_shape+(1,1), cntk_py.DataType_Float, dev) 
 
-    arguments = cntk_py.MapVarValuePtr()
+    arguments = {} 
     arguments[left_var] = left_value_ptr
     arguments[right_var] = right_value_ptr
 
-    outputs = cntk_py.MapVarValuePtr()
+    outputs = {} 
     outputs[outputVariable] = output_value_ptr
 
-    outputs_retain = cntk_py.VarSet([outputVariable])
+    outputs_retain = {outputVariable} # cntk_py.VarSet([outputVariable])
     #
     # Forward
     #
-    backpropstate = op.ForwardMap(arguments, outputs, dev, outputs_retain)
+    backpropstate = op.Forward(arguments, outputs, dev, outputs_retain)
     forward_data = output_value_ptr.Data().ToNumPy()#.reshape(output_shape)
     print("Result forward:")
     print(forward_data)
@@ -75,15 +75,15 @@ def forward_backward():
             cntk_py.DataType_Float, dev)
     grad_right_value_ptr = create_ValuePtr(right_shape+(1,1),
             cntk_py.DataType_Float, dev) 
-    gradients = cntk_py.MapVarValuePtr()
+    gradients = {} 
     gradients[left_var] = grad_left_value_ptr
     gradients[right_var] = grad_right_value_ptr
 
-    rootGradients = cntk_py.MapVarValuePtr()
+    rootGradients = {} 
     rootGradientValuePtr = create_ValuePtr_with_value(outputVariable.Shape().Dimensions()+(1,1), cntk_py.DataType_Float, 1, dev) 
     rootGradients[outputVariable] = rootGradientValuePtr
  
-    op.BackwardMap(backpropstate, rootGradients, gradients)
+    op.Backward(backpropstate, rootGradients, gradients)
     left_grad_data = grad_left_value_ptr.Data().ToNumPy().reshape(output_shape)
     print("Result backward left:")
     print(left_grad_data)

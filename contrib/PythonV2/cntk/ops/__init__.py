@@ -1130,7 +1130,7 @@ def dropout(x, name=''):
 ################################################################################
 
 
-def input(shape, dynamic_axis='', data_type=None, name=''):
+def input(shape, dynamic_axis='', data_type=None, needs_gradient=True, name=''):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
@@ -1143,14 +1143,16 @@ def input(shape, dynamic_axis='', data_type=None, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
+    if dynamic_axis:
+        raise NotImplemented
 
-    from .variables import Placeholder
+    from .variables import Variable
     if not np.isscalar(shape):
         # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))
 
     # TODO dynamic axis
-    op = Placeholder(shape, name=name, data_type=data_type)
+    op = Variable(shape, data_type, needs_gradient, name=name)
     
     return op
 

@@ -9,7 +9,6 @@ import sys
 import numpy as np
 import scipy.sparse
 
-
 def cntk_to_numpy_shape(shape):
     '''
     Removes the dynamic axis and returns a tuple representing the NumPy shape.
@@ -316,6 +315,7 @@ def sanitize_batch(batch, data_type, dev):
     if isinstance(batch, Value):
         return batch
 
+    '''
     num_seq = len(batch)
     seq_lens = [len(seq) for seq in batch]
 
@@ -332,8 +332,9 @@ def sanitize_batch(batch, data_type, dev):
 
         batch = pad_to_dense(batch)
 
+    '''
     # If it still is not an NumPy array, try brute force...
-    if not isinstance(batch, np.ndarray):
+    if not isinstance(batch, np.ndarray) or batch.dtype != data_type:
         batch = np.asarray(batch, dtype=data_type)
 
     '''
@@ -348,35 +349,70 @@ def sanitize_batch(batch, data_type, dev):
             raise ValueError('values should be an array of input samples')
     '''
             
-    ndav_ptr = create_NDArrayViewPtr_from_NumPy(batch, dev)
+    ndav = create_NDArrayView_from_NumPy(batch, dev)
+    value = Value(ndav)#, mask)
 
-    return Value(ndav_ptr, mask)
+    return value
 
+def sanitize_var_map(input_map, ctx):
+    '''
+    Sanitizes a dictionary of `Variable`s to input data such that it can be
+    handed off to the `Forward` method.
 
-def create_NDArrayViewPtr(shape, data_type, dev):
+    Args:
+        input_map (`dict`): `Variable` to input (NumPy array or simple list of lists)
+        ctx (`Context`): `Context` from which to tak ethe precision and device information
+
+    Returns:
+        `dict`
+    '''
+    var_map = {}
+    if input_map:
+        for var, val in input_map.items():
+            if isinstance(val, np.ndarray):
+                if val.dtype not in (np.float32, np.float64):
+                    raise ValueError('only float32 and float64 are supported')
+                val = sanitize_batch(val, ctx.precision_numpy, ctx.device)
+            else:
+                if is_tensor(val):
+                    val = np.asarray(val, dtype=ctx.precision_numpy)
+                    val = create_Value_from_NumPy(val, ctx.device)
+                elif is_tensor_list(val):
+                    val = sanitize_batch(val, ctx.precision_numpy, ctx.device)
+                else:
+                    raise ValueError('values of input_map need to be NumPy arrays, lists of lists or list of NumPy arrays, but you gave a "%s"'%type(val))
+
+            var_map[var] = val
+
+    return var_map
+
+def create_NDArrayView(shape, data_type, dev):
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
-def create_NDArrayViewPtr_from_NumPy(nd, dev):
+def create_NDArrayView_from_NumPy(nd, dev):
+    # reshaping just to get it running (values will be wrong)
+    nd = nd.reshape(tuple(reversed(nd.shape)))
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 
-def create_ValuePtr_for_Variable(var, dev=None):
+def create_Value_for_Variable(var, shape=None, dev=None):
     if not dev:
         dev = cntk_py.DeviceDescriptor_CPUDevice()
 
-    ndshape = var.Shape().Dimensions()+(1,1)
-    view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, ndshape, dev)
+    if shape is None:
+        shape = var.Shape().Dimensions()
+    view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, shape, dev)
     value = cntk_py.Value(view)
     return value
 
-def create_ValuePtr(shape, data_type, dev):
-    value = cntk_py.Value(create_NDArrayViewPtr(shape, data_type, dev))
+def create_Value(shape, data_type, dev):
+    value = cntk_py.Value(create_NDArrayView(shape, data_type, dev))
     return value
 
-def create_ValuePtr_from_NumPy(nd, dev):
-    view_ptr = create_NDArrayViewPtr_from_NumPy(nd, dev)
-    value = cntk_py.Value(view_ptr)
+def create_Value_from_NumPy(nd, dev):
+    view = create_NDArrayView_from_NumPy(nd, dev)
+    value = cntk_py.Value(view)
     return value
 
 def sanitize_dtype_numpy(dtype):

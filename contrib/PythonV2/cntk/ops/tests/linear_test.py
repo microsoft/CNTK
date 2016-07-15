@@ -31,72 +31,80 @@ TENSOR_PAIRS = [
     ([[1.5, 2.1]], [[10., 20.]]),
     ([[100., 200.], [300., 400.], [10., 20.]],
       [[10., 20.], [30., 40.], [1., 2.]]),
-    # Test with broadcast
-    # TODO: adjust the broadcast according to the decision on col/row major
-    #([5], [[10, 20], [30,40], [1,2]]),     
+
+    #([[5],[6],[7]], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
-    # ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_plus(left_operand, right_operand, device_id):#, precision):
-    precision='double'
-    get_context().precision = precision
-    # Forward pass test
-    #==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-    np_type = get_context().precision_numpy
-    left_value = AA(left_operand, dtype=np_type) 
-    right_value = AA(right_operand, dtype=np_type)
+def test_op_plus(left_operand, right_operand, device_id, precision):
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
 
-    # TODO because we have to be col-major until 2.0 API has row-major read
-    # functions exposed
-    a = I(shape=left_value.shape, data_type=sanitize_dtype_cntk(np_type),
-            name='a')
-    b = I(shape=right_value.shape, data_type=sanitize_dtype_cntk(np_type),
-            name='b')
+    expected_forward = [AA([left_operand]) + AA([right_operand])]
+
+    expected_backward = {
+            'left':  [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
+            'right': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
+            }
+
+    _test_binary_op(ctx, '+',
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
     
-    expected = [np.asarray([left_value + right_value])]
-    #expected.shape += (1,1)
+
+def _test_binary_op(ctx, op_str,
+        left_operand, right_operand, 
+        expected_forward, expected_backward_all):
+    
+    left_value = AA(left_operand, dtype=ctx.precision_numpy) 
+    right_value = AA(right_operand, dtype=ctx.precision_numpy)
+
+    a = I(shape=left_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='a')
+
+    b = I(shape=right_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='b')
 
     # create batch
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
 
-    args = {b:right_value}
-    right_as_input = left_operand + b
-    unittest_helper(right_as_input, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+    input_op_constant = eval('a %s right_operand'%op_str)
+    forward_input = {a:left_value}
+    backward_input = {a:np.ones(left_value.shape)}
+    expected_backward = { a: expected_backward_all['left'], }
+    unittest_helper(input_op_constant, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
-    args = {a:left_value, b:right_value}
-    unittest_helper(a + b, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+    constant_op_input = eval('left_operand %s b'%op_str)
+    forward_input = {b:right_value}
+    backward_input = {b:np.ones(right_value.shape)}
+    expected_backward = { b: expected_backward_all['right'], }
+    unittest_helper(constant_op_input, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
-    args = {a:left_value}
-    left_as_input = a + right_operand
-    unittest_helper(left_as_input, args, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
-
-    return
-
-    # Backward pass test
-    #==================
-    # the expected results for the backward pass is all ones
-
-    expected = [[[np.ones_like(x) for x in left_operand]]]    
-    unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
-    
-    expected = [[[np.ones_like(x) for x in right_operand]]]
-    unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
+    input_op_input = eval('a %s b'%op_str)
+    forward_input = {a:left_value, b:right_value}
+    backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
+    expected_backward = { a: expected_backward_all['left'], b: expected_backward_all['right'], }
+    unittest_helper(input_op_input, 
+        forward_input, expected_forward, 
+        backward_input, expected_backward,
+        device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
 # -- minus operation tests --
 
