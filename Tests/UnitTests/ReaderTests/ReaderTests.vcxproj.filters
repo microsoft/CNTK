@@ -415,7 +415,9 @@
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk" />
+    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Data\ImageNet1K_intensity.xml">

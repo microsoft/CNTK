@@ -302,8 +302,8 @@ struct ReaderFixture
     {
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
-
-        std::vector<wchar_t*> arg{ L"CNTK", &configFileCommand[0] };
+        std::wstring cntk(L"CNTK");
+        std::vector<wchar_t*> arg{ &cntk[0], &configFileCommand[0] };
         for(auto& p : additionalConfigParameters)
         {
             arg.push_back(&p[0]);
