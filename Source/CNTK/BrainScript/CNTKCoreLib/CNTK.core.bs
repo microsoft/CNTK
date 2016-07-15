@@ -720,9 +720,11 @@ RNNs =
         ]
     ].layers
 
-    # GRU -- GRU function with self-stabilization
-    # It returns a dictionary with one member: h.    
-    GRU (outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+    # GRU -- GRU function with projection and self-stabilization
+    # It returns a dictionary with three members: the hidden state h, the cell state c, and dim=h.dim.
+    # While c isn't required, we return it for implementations like seq2seq that expect it so that this can be a proper drop-in replacement for LSTM
+    # Like the LSTM function, it also takes an optional auxiliary input, e.g. for suporting attention models.  
+    GRU (outputDim, cellDim=outputDim, x, inputDim=x.dim, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
         cellDim = outputDim
@@ -736,11 +738,14 @@ RNNs =
             // parameter macros
             # note: each invocation comes with its own set of weights
             B() = Parameters.BiasParam (cellDim)
-            W() = Parameters.WeightParam (cellDim, inputDim)        // input            
-            H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden            
+            W() = Parameters.WeightParam (cellDim, inputDim)        // input
+            A() = Parameters.WeightParam (cellDim, auxDim)          // aux input
+            H() = Parameters.WeightParam (cellDim, outputDim)       // hidden-to-hidden
 
-            # projected contribution from input(s)
-            pin() = B() + W() * x       
+            # projected contribution from input(s) and bias
+            pin() = if Constants.IsNone (aux)
+                    then B() + W() * x
+                    else B() + W() * x + A() * aux
 
             # update gate z(t)
             zt = Sigmoid (pin() + H() * dhs)
@@ -750,45 +755,82 @@ RNNs =
 
             # "cell" c
             rs = dhs .* rt
-            c = Tanh (pin() + H() * rs)
+            ct = Tanh (pin() + H() * rs)
 
             # hidden state ht / output
-            ht = (BS.Constants.OnesTensor (cellDim) - zt) .* c + zt .* dhs
+            ht = (BS.Constants.OnesTensor (cellDim) - zt) .* ct + zt .* dhs
         ]
 
-        # our return values      
-        h = _.ht          // hidden state
+        # our return values (projection)
+        h = if outputDim != cellDim     // output/hidden state
+        then [                          // project
+            Wmr = Parameters.WeightParam (outputDim, cellDim);
+            htp = Wmr * S(_.ht)
+        ].htp
+        else _.ht                       // no projection
+        
+        c = _.ct        
         dim = outputDim
     ]
 
     # this implements a recurrent (stateful) GRU with self-stabilization
-    # It returns a record (h). To use its output, say .h
+    # It returns a record (h,c) to be compatible with the LSTM version. To use its output, say .h
     # By default, this is left-to-right. Pass previousHook=BS.RNNs.NextHC for a right-to-left model.
-    RecurrentGRU   (outputDim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, layerIndex=0, enableSelfStabilization=false) =
+    RecurrentGRU   (outputDim/*h.dim*/, cellDim=outputDim,
+                    x, inputDim=x.dim,
+                    previousHook=BS.RNNs.PreviousHC,
+                    augmentInputHook=NoAuxInputHook, augmentInputDim=0,
+                    layerIndex=0,
+                    enableSelfStabilization=false) =
     [
-        enableSelfStabilization1 = enableSelfStabilization
-        inputDim1 = inputDim
-        layerIndex1 = layerIndex
+        enableSelfStabilization1 = enableSelfStabilization ; cellDim1 = cellDim ; inputDim1 = inputDim ; layerIndex1 = layerIndex # workaround
 
-        prevState = previousHook (gruState, layerIndex=layerIndex1)
-        gruState = BS.RNNs.GRU (outputDim, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        prevState = previousHook (gruState, layerIndex=layerIndex1) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
+
+        auxInput = augmentInputHook(x, prevState)   # optionally augment input. Constants.None if none.
+
+        gruState = BS.RNNs.GRU (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, aux=auxInput, auxDim=augmentInputDim, prevState, enableSelfStabilization=enableSelfStabilization1)
     ].gruState // that's the value we return
 
     # a stack of recurrent GRUs (unidirectional)
     RecurrentGRUStack (layerDims, cellDims=layerDims,
                        input, inputDim=input.dim,
                        previousHook=PreviousHC,
+                       augmentInputHook=NoAuxInputHook, augmentInputDim=0,
                        enableSelfStabilization=false) =
     [
-        previousHook1 = previousHook
-        useStabilizer = enableSelfStabilization
-
+        previousHook1 = previousHook ; useStabilizer = enableSelfStabilization ; augmentInputHook1 = augmentInputHook ; augmentInputDim1 = augmentInputDim
         layers[i:0..Length (layerDims)-1] =
-            RecurrentGRU (layerDims[i],
-                          if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
-                          previousHook=previousHook1,
-                          layerIndex=i,
-                          enableSelfStabilization=useStabilizer)
+            RecurrentGRU   (layerDims[i], cellDim=cellDims[i],
+                            if i == 0 then input else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer), inputDim=if i == 0 then inputDim else layers[i-1].dim,
+                            previousHook=previousHook1,
+                            augmentInputHook=if i == 0 then augmentInputHook1 else NoAuxInputHook, augmentInputDim=if i == 0 then augmentInputDim1 else 0,
+                            layerIndex=i,
+                            enableSelfStabilization=useStabilizer)
+    ].layers
+
+    # a stack of recurrent GRUs (bidirectional)
+    # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
+    RecurrentBirectionalGRUStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+        previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
+        layers[i:0..Length (layerDims)-1] =
+        [
+            v    = if i == 0 then input    else Parameters.Stabilize (layers[i-1].h, enabled=useStabilizer)
+            vDim = if i == 0 then inputDim else                       layers[i-1].dim
+            fwd = RecurrentGRU   (layerDims[i], cellDim=cellDims[i],
+                                  v, inputDim=vDim,
+                                  previousHook=previousHook1,
+                                  layerIndex=i,
+                                  enableSelfStabilization=useStabilizer)
+            bwd = RecurrentGRU   (layerDims[i], cellDim=cellDims[i],
+                                  v, inputDim=vDim,
+                                  previousHook=nextHook1,
+                                  layerIndex=i,
+                                  enableSelfStabilization=useStabilizer)
+            h = Splice ((fwd.h : bwd.h), axis=1)
+            c = Splice ((fwd.c : bwd.c), axis=1)
+            dim = layerDims[i] * 2  # output dimension
+        ]
     ].layers
 ]
 
