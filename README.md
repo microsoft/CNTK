@@ -1,6 +1,9 @@
 # CNTK
 
 ## Latest news
+*2016-07-15.* V 1.6 Binary release  
+CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-07-12.* We have further expanded Licensing options for CNTK 1bit-SGD and related components. See the details at the [Wiki page](https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License). These new options are an extension of the new CNTK 1bit-SGD License that we have announced on Jun 23, 2016.
 
 *2016-07-05.* CNTK now supports *Deconvolution* and *Unpooling*. See the usage example in the Network number 4 in [MNIST Sample](https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md).
@@ -9,9 +12,6 @@
 Effective immediately the License Terms for CNTK 1bit-SGD and related components have changed. The new Terms provide more flexibility and enable new usage scenarios, especially in commercial environments. Read the new Terms at the [standard location](https://cntk1bitsgd.codeplex.com/license). Please note, that while the new Terms are significantly more flexible comparing to the previous ones, they are still **more restrictive** than the main CNTK License. Consequently everything described in [Enabling 1bit-SGD](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) section of the Wiki remains valid.
 
 *2016-06-20.* A [post](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/) on Intel MKL and CNTK is published in the [Intel IT Peer Network](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/)
-
-*2016-06-16.* V 1.5 Binary release. NuGet Package with CNTK Model Evaluation Libraries.  
-NuGet Package is added to CNTK v.1.5 binaries. See [CNTK Releases page](https://github.com/Microsoft/CNTK/releases) and [NuGet Package description](https://github.com/Microsoft/CNTK/wiki/Nuget-Package-for-Evaluation).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
