@@ -162,15 +162,21 @@
         }
 
         int typecode = PyArray_TYPE(array);
-
-        void* buf = PyArray_DATA(array);
+        
+        void* buf;
 
         if (typecode == NPY_FLOAT)
         {
+            size_t num_bytes = num_elements * sizeof(float);
+            buf = malloc(num_bytes);
+            memcpy(buf, PyArray_DATA(array), num_bytes);
             return new NDArrayView(NDShape(shape), (float*)buf, num_elements, device, readOnly);
         }
         else if (typecode == NPY_DOUBLE)
         {
+            size_t num_bytes = num_elements * sizeof(double);
+            buf = malloc(num_bytes);
+            memcpy(buf, PyArray_DATA(array), num_bytes);
             return new NDArrayView(NDShape(shape), (double*)buf, num_elements, device, readOnly);
         }
         else
@@ -211,6 +217,8 @@
 
 %template(NDArrayViewFloat) CNTK::NDArrayView::NDArrayView<float>;
 %template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
+%template(RandomUniformFloat) CNTK::NDArrayView::RandomUniform<float>;
+%template(RandomUniformDouble) CNTK::NDArrayView::RandomUniform<double>;
 
 // end of NDArrayView
 
