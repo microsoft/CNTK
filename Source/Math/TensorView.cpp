@@ -23,6 +23,7 @@
 #include "Basics.h"
 #include "TensorView.h"
 #include <array>
+#include <iostream>
 
 #ifndef let
 #define let const auto
@@ -315,16 +316,30 @@ template <class ElemType>
 shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 {
     assert(m_shape.GetRank() == 2);
-    if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
-        InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
 
+ 
+    if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
+    {
+        fprintf(stdout, "Matrix strides[0] differnt from 1 (%zu) AND matrix shape[0] differernt from 1 (%zu)", m_shape.GetStrides()[0], m_shape[0]);
+        InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
+       
+    }
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
     let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
     let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
+
+    
     if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
+    {
+        cout << "FirstColumn * Storage rows vs. matrix offset: " << firstColumn << "*" << m_sob->GetNumRows() << " vs. " << m_shape.GetOffset() << endl;
+        cout << "numColumns * Storage rows vs. matrix elements: " << numColumns << "*" << m_sob->GetNumRows() << " vs. " << m_shape.GetNumElements() << endl;
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
+    }   
+
+
+
 
     // now reinterpret this slice according to the new tensor shape
     // Example:

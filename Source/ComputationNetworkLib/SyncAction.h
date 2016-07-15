@@ -9,6 +9,7 @@
 #include <GPUMatrix.h>
 
 #include <unordered_map>
+#include "CUDATimer.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -24,6 +25,8 @@ protected:
     int m_rows;
     int m_cols;
     size_t m_bytes;
+    CUDATimer m_timer;
+    int m_syncCounter;
     
 
 public:
@@ -37,6 +40,10 @@ public:
     {
         return m_isAsynchronous;
     }
+
+    int GetRows(){ return m_rows; };
+    int GetCols(){ return m_cols; };
+    size_t GetBytes(){ return m_bytes; }
 
 };
 

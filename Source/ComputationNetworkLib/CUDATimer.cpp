@@ -7,8 +7,10 @@
 
 #include "CUDATimer.h"
 #include <assert.h>
+#include <iostream>
 
-
+using std::cout;
+using std::endl;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -31,15 +33,16 @@ void CUDATimer::tick(std::string name)
 }
 
 
+float CUDATimer::tockp(){ cout << "default: " << tock() << endl; }
 float CUDATimer::tock(){ return tock("default"); }
+float CUDATimer::tockp(std::string name){ cout << name << ": " << tock(name) << endl; }
 float CUDATimer::tock(std::string name)
 {
 	if (m_dictTickTockCumulative.count(name) > 0)
 	{
 		float cumulative_value = m_dictTickTockCumulative[name];
-		float value = tock(m_dictTickTock[name]);
 		m_dictTickTockCumulative.erase(name);
-		return value + cumulative_value;
+		return cumulative_value;
 	}
 	else
 	{
@@ -69,5 +72,4 @@ float CUDATimer::tock(cudaEvent_t* startstop)
 	cudaEventElapsedTime(&time, startstop[0], startstop[1]);
 	return time;
 }
-
 }}}

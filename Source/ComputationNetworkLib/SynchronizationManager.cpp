@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
-inline int SampleSize(){ return 100; }
+inline int SampleSize(){ return 250; }
 void PrintPtrAttributes(float *ptr)
 {
     cudaPointerAttributes att;
@@ -46,7 +46,7 @@ SynchronizationManager* SynchronizationManager::GetSynchronizationManager(float 
         SynchronizationManager::s_synchronizationManager->m_currentState = Uninitialized;
         SynchronizationManager::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
-        SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 0.15f;
+        SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 1.10f;
         SynchronizationManager::s_synchronizationManager->m_isExecuting = false;
     }
 
@@ -139,8 +139,8 @@ void SynchronizationManager::FindSwapOrder()
             float cumulativeSwapOutTime = m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first;
             // we just look if we can swap under the current operation
             // we can make it more complex anytime later to also look at other timesteps
-            if(swapOutTime + cumulativeSwapOutTime > 
-               computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+            if(m_performanceCostLimit*(swapOutTime + cumulativeSwapOutTime) > 
+               computationTimeOut)
             {
                 cout << "------------------" << endl;
                 cout << m_stepNumber2StepName[swapOutStepNumber] << endl;
@@ -161,8 +161,8 @@ void SynchronizationManager::FindSwapOrder()
 
             }
 
-            if(swapOutTime + cumulativeSwapOutTime > 
-               computationTimeOut + (computationTimeOut * m_performanceCostLimit))
+            if(m_performanceCostLimit*(swapOutTime + cumulativeSwapOutTime) > 
+               computationTimeOut)
             { continue; }
             // find a place where we can swap-in the buffer just in time when it is needed
             while(swapInStepNumber > swapOutStepNumber+1)
@@ -172,7 +172,7 @@ void SynchronizationManager::FindSwapOrder()
                 Stats *s = m_stepNumber2Stats[swapInStepNumber];
                 float computationTimeIn = s->computationTime;
                 float cumulativeSwapInTime = m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second;
-                if(swapInTime + cumulativeSwapInTime < computationTimeIn  + (computationTimeIn * m_performanceCostLimit))
+                if(m_performanceCostLimit*(swapInTime + cumulativeSwapInTime) < computationTimeIn)
                 { break; }
                 
                 swapInStepNumber--;
@@ -185,13 +185,15 @@ void SynchronizationManager::FindSwapOrder()
             // 2. add to the cumulative swap time, that is additional swap operations
             //    under the same time steps are more expensive
             SwapOutAction *swpOut = new SwapOutAction(buffer);
-            SwapInAction *swpIn = new SwapInAction(swpOut->GetCPUMatrix(), buffer);
+            SwapInAction *swpIn = new SwapInAction(swpOut, buffer);
 
             m_stepName2Actions[m_stepNumber2StepName[swapOutStepNumber]].push_back(swpOut);
             m_stepName2Actions[m_stepNumber2StepName[swapInStepNumber]].push_back(swpIn);
 
             m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first += swapOutTime;
             m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += swapInTime;
+            //m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first += 9999999.0f;
+            //m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += 9999999.0f;
 
             totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
         }
@@ -203,38 +205,38 @@ void SynchronizationManager::FindSwapOrder()
 
 void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-
-    std::string name = GetStepName(node, isForward);
-    if(m_currentState < ExecutingActions)
+    if(!m_isExecuting)
     {
-        if(m_stepName2StepNumber.count(name) > 0)
+            std::string name = GetStepName(node, isForward);
+        if(m_currentState < ExecutingActions)
         {
-
-            if(m_stepName2StepNumber[name] == 0 && isForward == true)
+            if(m_stepName2StepNumber.count(name) > 0)
             {
-                m_currentState = FindingSwapOrder;
+
+                if(m_stepName2StepNumber[name] == 0 && isForward == true)
+                {
+                    m_currentState = FindingSwapOrder;
+                }
             }
         }
-    }
 
-    if(m_currentState <= FindingSwapOrder)
-    {
-    	RegisterBuffers(node, isForward);
-    	//SwapInFreedBuffers(node, isForward);
-    	GatherRuntimeStatistics(node, idx, fr, isForward);
-    }
+        if(m_currentState <= FindingSwapOrder)
+        {
+            RegisterBuffers(node, isForward);
+            //SwapInFreedBuffers(node, isForward);
+            GatherRuntimeStatistics(node, idx, fr, isForward);
+        }
 
-    if(m_currentState == FindingSwapOrder)
-    {
-        cout << "SWAP CALL " << endl;
-        FindSwapOrder();
-        CleanUp();
-        m_currentState = ExecutingActions;
-        m_isExecuting = true;
+        if(m_currentState == FindingSwapOrder)
+        {
+            cout << "SWAP CALL " << endl;
+            FindSwapOrder();
+            CleanUp();
+            m_currentState = ExecutingActions;
+            m_isExecuting = true;
+        }
     }
-
-    //SwapInFreedBuffers(node, isForward);
-    if(m_currentState == ExecutingActions)
+    else
     {
         std::string name = GetStepName(node, isForward);
         std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
@@ -245,19 +247,20 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
         }
 
     }
+    //m_timer.tick("compute");
 }
 
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
+    //float t = m_timer.tock("compute");
 
-    if(m_currentState <= GatheringRuntimeStatistics)
+    if(!m_isExecuting)
     {
         // end synchronize is called after the forward / backward pass, thus we can free
         // the memory now
         //FreeBuffersForDryRun(node, isForward);
     }
-
-    if(m_currentState == ExecutingActions)
+    else
     {
         std::string name = GetStepName(node, isForward);
         std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
@@ -266,6 +269,8 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
         for (int i = 0; i < actionsToDo.size(); i++)
         {
             actionsToDo[i]->EndAction();
+            //if(actionsToDo[i]->m_syncCounter == 1000);
+            //    cout << "compute: " << t << endl;
         }
     }
 }
@@ -367,25 +372,36 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
 
 void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    // swapping sharable nodes does not save any memory
-    //if(node->IsValueSharable()){ return; }
+    //special nodes with no inputs can be ignored
+    if(node->GetNumInputs() == 0){ return; }
 
     std::string name = GetStepName(node, isForward);
     // it is difficult to sample these operations as the CUDA compiler will remove duplicate
     // operations within a loop; so instead we synchronize the device and hope that our
     // measurement is quite reliable (it often is)
     CUDA_CALL(cudaDeviceSynchronize());
-    m_timer.tick(name);
-    if(isForward)
+    for(int i = 0; i < SampleSize(); i++)
     {
-        node->ForwardPropSpecialization(fr);
+        m_timer.tick(name);
+        if(isForward)
+        {
+            node->ForwardPropSpecialization(fr);
+        }
+        else
+        {
+            node->BackpropToSpecialization(idx, fr);
+        }
+        m_timer.tick(name);
+        Matrix<float> *output = (Matrix<float>*)node->ValuePtr().get(); 
+        float *data = output->Data();
+        CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
+        CUDA_CALL(cudaDeviceSynchronize());
     }
-    else
-    {
-        node->BackpropToSpecialization(idx, fr);
-    }
-    float t = m_timer.tock(name);
+
+    
+    float t = m_timer.tock(name)/(float)SampleSize();
     Stats *s = new Stats();
+
 
     m_stepName2Stats[name] = s;
     m_stepNumber2Stats[m_stepName2StepNumber[name]] = s;
@@ -393,6 +409,7 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     s->name = name;
     s->computationTime = t;
 
+    CUDA_CALL(cudaDeviceSynchronize());
     MeasureSwapTime(node, name);
 }
 
@@ -411,26 +428,27 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
        if(input != NULL)
        {
            SwapOutAction *out = new SwapOutAction(input);
-           SwapInAction *in =  new SwapInAction(out->GetCPUMatrix(), out->GetGPUMatrix());
+           SwapInAction *in =  new SwapInAction(out, out->GetGPUMatrix());
            m_buffer2SwapOut[input] = out;
            m_buffer2SwapIn[input] = in;
 
-           m_timer.tick("Swap out");
            for(int i = 0; i < SampleSize(); i++)
            {
+
+               m_timer.tick("Swap out");
                out->BeginAction();
                out->EndAction();
+               m_timer.tick("Swap out");
+               m_timer.tick("Swap in");
+               in->BeginAction();
+               in->EndAction();
+               m_timer.tick("Swap in");
+               CUDA_CALL(cudaDeviceSynchronize());
            }
            t = m_timer.tock("Swap out");
            float swapOutTime = t/SampleSize();
            s->swapOutTimes.push_back(swapOutTime);
 
-           m_timer.tick("Swap in");
-           for(int i = 0; i < SampleSize(); i++)
-           {
-               in->BeginAction();
-               in->EndAction();
-           }
            t = m_timer.tock("Swap in");
            float swapInTime = t/SampleSize();
            s->swapInTimes.push_back(swapInTime);
