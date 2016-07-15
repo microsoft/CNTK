@@ -48,7 +48,6 @@
 
 %rename(NDShape_eq) operator==(const NDShape&, const NDShape&);
 %rename(Variable_eq) operator==(const Variable&, const Variable&);
-%rename(Variable_lt) operator<(const Variable&, const Variable&);
 
 //%attribute2(CNTK::Variable, CNTK::NDShape, shape, Shape);
 
