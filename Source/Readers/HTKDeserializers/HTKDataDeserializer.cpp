@@ -546,18 +546,20 @@ bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& prim
     auto chunkId = iter->second.first;
     auto utteranceIndexInsideChunk = iter->second.second;
     auto& chunk = m_chunks[chunkId];
-    auto sequence = chunk.GetUtterance(utteranceIndexInsideChunk);
+    auto utterance = chunk.GetUtterance(utteranceIndexInsideChunk);
 
     d.m_chunkId = (ChunkIdType)chunkId;
 
     // TODO: When we move frame mode from deserializer, expanding should go away and be done on the higher level.
+    // TODO: Currently for the frame mode the secondary deserializer does not know the size of the full utterance,
+    // becase each frame has its own sequence description. So we get the length by the max sample we have seen.
     if (m_expandToPrimary)
     {
         // Expanding for sequence length/or max seen frame.
         size_t maxLength = max(primary.m_numberOfSamples, (uint32_t)primary.m_key.m_sample + 1);
-        if (sequence->GetExpansionLength() < maxLength)
+        if (utterance->GetExpansionLength() < maxLength)
         {
-            sequence->SetExpansionLength(maxLength);
+            utterance->SetExpansionLength(maxLength);
         }
         d.m_id = utteranceIndexInsideChunk;
     }
@@ -565,7 +567,7 @@ bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& prim
     {
         d.m_id = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample : utteranceIndexInsideChunk;
     }
-    d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)sequence->GetNumberOfFrames();
+    d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)utterance->GetNumberOfFrames();
     return true;
 }
 

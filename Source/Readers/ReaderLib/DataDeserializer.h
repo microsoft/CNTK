@@ -161,9 +161,9 @@ public:
     // Gets sequence descriptions for a given a chunk.
     virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) = 0;
 
-    // Gets sequence description by the primary one.
+    // Gets sequence description given the sequence description of the primary deserializer.
     // Used for deserializers not in driving/primary mode.
-    // Returns false if provided sequence is not valid.
+    // Returns false if the corresponding secondary sequence is not valid.
     // TODO: Possibly move this out into a separate interface.
     virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) = 0;
 

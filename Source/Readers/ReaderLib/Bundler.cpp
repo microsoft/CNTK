@@ -61,7 +61,7 @@ void Bundler::CreateChunkDescriptions()
     }
 
     // Creating a table of weak chunks for non driving deserializers.
-    for (size_t i = 1; i < m_deserializers.size(); ++i)
+    for (size_t i = 0; i < m_deserializers.size(); ++i)
     {
         m_weakChunkTable.push_back(std::vector<std::weak_ptr<Chunk>>(m_deserializers[i]->GetChunkDescriptions().size()));
     }
@@ -257,9 +257,9 @@ public:
 
         // Creating sequence mapping and requiring underlying chunks.
         SequenceDescription s;
-        for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
+        for (size_t deserializerIndex = 1; deserializerIndex < deserializers.size(); ++deserializerIndex)
         {
-            auto& chunkTable = m_parent->m_weakChunkTable[deserializerIndex - 1];
+            auto& chunkTable = m_parent->m_weakChunkTable[deserializerIndex];
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
                 if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -275,7 +275,7 @@ public:
                 if (!secondaryChunk)
                 {
                     secondaryChunk = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
-                    m_parent->m_weakChunkTable[deserializerIndex - 1][s.m_chunkId] = secondaryChunk;
+                    chunkTable[s.m_chunkId] = secondaryChunk;
                 }
 
                 m_innerChunks[currentIndex] = secondaryChunk;
