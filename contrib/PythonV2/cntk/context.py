@@ -13,7 +13,7 @@ import re
 import numpy as np
 
 from .utils import with_metaclass
-from .utils import is_tensor, is_tensor_list, sanitize_var_map, create_ValuePtr_from_NumPy, create_ValuePtr_for_Variable
+from .utils import is_tensor, is_tensor_list, sanitize_var_map, create_Value_from_NumPy, create_Value_for_Variable
 
 from . import cntk_py
 
@@ -269,7 +269,8 @@ class LocalExecutionContext(AbstractContext):
         forward_out_var_map =  {}
         forward_retain = set()
         for v in op.Outputs():
-            forward_out_var_map[v] = create_ValuePtr_for_Variable(v)
+            forward_out_var_map[v] = create_Value_for_Variable(v, 
+                    shape=v.Shape().Dimensions()+(1,1))
             forward_retain.add(v)
 
         state = op.Forward(forward_in_var_map, forward_out_var_map, self.device, forward_retain)
@@ -284,10 +285,9 @@ class LocalExecutionContext(AbstractContext):
             root_gradients = {} 
             for v, o in forward_output.items():
                 ones_grad = np.ones(o.shape, dtype=self.precision_numpy)
-                root_grad_val = create_ValuePtr_from_NumPy(ones_grad,
+                root_grad_val = create_Value_from_NumPy(ones_grad,
                         self.device)
                 root_gradients[v] = root_grad_val
-
             backward_var_map = sanitize_var_map(gradient_map, self)
             op.Backward(state, root_gradients, backward_var_map)
 
