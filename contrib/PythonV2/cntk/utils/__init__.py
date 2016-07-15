@@ -349,8 +349,8 @@ def sanitize_batch(batch, data_type, dev):
             raise ValueError('values should be an array of input samples')
     '''
             
-    ndav_ptr = create_NDArrayViewPtr_from_NumPy(batch, dev)
-    value = Value(ndav_ptr)#, mask)
+    ndav = create_NDArrayView_from_NumPy(batch, dev)
+    value = Value(ndav)#, mask)
 
     return value
 
@@ -376,7 +376,7 @@ def sanitize_var_map(input_map, ctx):
             else:
                 if is_tensor(val):
                     val = np.asarray(val, dtype=ctx.precision_numpy)
-                    val = create_ValuePtr_from_NumPy(val, ctx.device)
+                    val = create_Value_from_NumPy(val, ctx.device)
                 elif is_tensor_list(val):
                     val = sanitize_batch(val, ctx.precision_numpy, ctx.device)
                 else:
@@ -386,32 +386,33 @@ def sanitize_var_map(input_map, ctx):
 
     return var_map
 
-def create_NDArrayViewPtr(shape, data_type, dev):
+def create_NDArrayView(shape, data_type, dev):
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
-def create_NDArrayViewPtr_from_NumPy(nd, dev):
+def create_NDArrayView_from_NumPy(nd, dev):
     # reshaping just to get it running (values will be wrong)
     nd = nd.reshape(tuple(reversed(nd.shape)))
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 
-def create_ValuePtr_for_Variable(var, dev=None):
+def create_Value_for_Variable(var, shape=None, dev=None):
     if not dev:
         dev = cntk_py.DeviceDescriptor_CPUDevice()
 
-    shape = var.Shape().Dimensions()+(1,1)
+    if shape is None:
+        shape = var.Shape().Dimensions()
     view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, shape, dev)
     value = cntk_py.Value(view)
     return value
 
-def create_ValuePtr(shape, data_type, dev):
-    value = cntk_py.Value(create_NDArrayViewPtr(shape, data_type, dev))
+def create_Value(shape, data_type, dev):
+    value = cntk_py.Value(create_NDArrayView(shape, data_type, dev))
     return value
 
-def create_ValuePtr_from_NumPy(nd, dev):
-    view_ptr = create_NDArrayViewPtr_from_NumPy(nd, dev)
-    value = cntk_py.Value(view_ptr)
+def create_Value_from_NumPy(nd, dev):
+    view = create_NDArrayView_from_NumPy(nd, dev)
+    value = cntk_py.Value(view)
     return value
 
 def sanitize_dtype_numpy(dtype):

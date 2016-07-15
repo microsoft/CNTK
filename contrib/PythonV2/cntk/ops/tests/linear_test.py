@@ -44,11 +44,24 @@ TENSOR_PAIRS = [
 def test_op_plus(left_operand, right_operand, device_id, precision):
     ctx = get_context()
     ctx.precision = precision
-    # Forward/backward test
-    #==================
-    # We need two surrounding brackets: the first for sequences (length=1,
-    # since we have dynamic_axis=''), the second for batch of one sample.
-    # The expected results for the backward pass is all ones.
+    ctx.device = device_id
+
+    expected_forward = [AA([left_operand]) + AA([right_operand])]
+
+    expected_backward = {
+            'left':  [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
+            'right': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
+            }
+
+    _test_binary_op(ctx, '+',
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
+    
+
+def _test_binary_op(ctx, op_str,
+        left_operand, right_operand, 
+        expected_forward, expected_backward_all):
+    
     left_value = AA(left_operand, dtype=ctx.precision_numpy) 
     right_value = AA(right_operand, dtype=ctx.precision_numpy)
 
@@ -56,50 +69,42 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             data_type=sanitize_dtype_cntk(ctx.precision_numpy),
             needs_gradient=True,
             name='a')
+
     b = I(shape=right_value.shape,
             data_type=sanitize_dtype_cntk(ctx.precision_numpy),
             needs_gradient=True,
             name='b')
-    
-    expected_forward = [np.asarray([left_value + right_value])]
 
     # create batch
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
 
-    input_plus_constant = a + right_operand
+    input_op_constant = eval('a %s right_operand'%op_str)
     forward_input = {a:left_value}
     backward_input = {a:np.ones(left_value.shape)}
-    expected_backward = {
-            a: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
-            }
-    unittest_helper(input_plus_constant, 
+    expected_backward = { a: expected_backward_all['left'], }
+    unittest_helper(input_op_constant, 
             forward_input, expected_forward, 
             backward_input, expected_backward,
-            device_id=device_id, precision=precision, clean_up=True)
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
-    constant_plus_input = left_operand + b
+    constant_op_input = eval('left_operand %s b'%op_str)
     forward_input = {b:right_value}
     backward_input = {b:np.ones(right_value.shape)}
-    expected_backward = {
-            b: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
-            }
-    unittest_helper(constant_plus_input, 
+    expected_backward = { b: expected_backward_all['right'], }
+    unittest_helper(constant_op_input, 
             forward_input, expected_forward, 
             backward_input, expected_backward,
-            device_id=device_id, precision=precision, clean_up=True)
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
-    input_plus_input = a + b
+    input_op_input = eval('a %s b'%op_str)
     forward_input = {a:left_value, b:right_value}
     backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
-    expected_backward = {
-            a: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]],
-            b: [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
-            }
-    unittest_helper(input_plus_input, 
+    expected_backward = { a: expected_backward_all['left'], b: expected_backward_all['right'], }
+    unittest_helper(input_op_input, 
         forward_input, expected_forward, 
         backward_input, expected_backward,
-        device_id=device_id, precision=precision, clean_up=True)
+        device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
 # -- minus operation tests --
 
