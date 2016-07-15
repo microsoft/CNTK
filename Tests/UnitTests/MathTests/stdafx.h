@@ -24,9 +24,6 @@
 #define BOOST_TEST_DYN_LINK
 #endif
 #include <boost/test/unit_test.hpp>
-<<<<<<< 2d4e16ed7592851224919859cd2877fcf9585d87
 
-=======
->>>>>>> Clean Math and MathPerformance test projects
 #include "constants.h"
 #include "fixtures.h"
