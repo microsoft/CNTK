@@ -17,13 +17,13 @@ def _sanitize_value(shape, value, dtype, dev):
             # cntk uses column major, thus we reverse the shape    
             shape = tuple(reversed(shape))
 
-        ndav = utils.create_NDArrayViewPtr(shape, cntk_dtype, dev)
+        ndav = utils.create_NDArrayView(shape, cntk_dtype, dev)
             
     else:
         if not isinstance(value, np.ndarray):
             value = np.asarray(value, dtype=np_dtype)
 
-        ndav = utils.create_NDArrayViewPtr_from_NumPy(value, dev)
+        ndav = utils.create_NDArrayView_from_NumPy(value, dev)
 
     return ndav
 

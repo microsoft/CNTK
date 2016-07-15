@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import get_rank, sanitize_input, create_NDArrayViewPtr
+from ..utils import get_rank, sanitize_input, create_NDArrayView
 from cntk import cntk_py
 
 ################################################################################
