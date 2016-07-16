@@ -3624,6 +3624,47 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
     _addElementToElement<ElemType><<<1, 1, 0, t_stream>>>(beta, a.Data(), (CUDA_LONG) a.LocateElement(ai, aj), c.Data(), (CUDA_LONG) c.LocateElement(ci, cj));
 }
 
+// assign the element wise max of matrix a and matrix b to matrix a
+template <class ElemType>
+/*static*/ void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+    //fprintf(stderr, "A Size: %d %d\n", a.GetNumRows(), a.GetNumCols());
+    //fprintf(stderr, "B Size: %d %d\n", b.GetNumRows(), b.GetNumCols());
+
+
+    if (a.GetNumRows() != b.GetNumRows() ||
+        a.GetNumCols() != b.GetNumCols())
+        InvalidArgument("DoElementMaxOf: the shapes of the input matrixes do not match.");
+
+    a.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+
+    _doElementMaxOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), n);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
+{
+
+
+    if (inputValue.GetNumRows() != outputValue.GetNumRows() ||
+        inputValue.GetNumCols() != outputValue.GetNumCols() ||
+        inputValue.GetNumRows() != outputGradient.GetNumRows() ||
+        inputValue.GetNumCols() != outputGradient.GetNumCols()
+        )
+        InvalidArgument("AddElementMaxGradient: the shapes of the input matrixes do not match.");
+
+    inputValue.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)inputValue.GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+
+    _addElementMaxGradient<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >>>(inputValue.Data(), 
+        outputValue.Data(), outputGradient.Data(), Data(), n);
+}
+
 template <class ElemType>
 /*static*/ void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& a)
 {

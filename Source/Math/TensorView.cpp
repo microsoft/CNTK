@@ -388,6 +388,26 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
 }
 
+//template <class ElemType>
+//void TensorView<ElemType>::AssignElementMaxOf(const TensorView& a)
+//{
+//    bool transA = false;
+//    bool transB = false;
+//
+//    // determine integration dimension offset
+//    auto shapeA = a.m_shape;
+//    auto shapeB = m_shape;
+//
+//    // flatten. This updates shapeA etc.
+//    FlattenToMatrix(shapeA, transA, 1);
+//    FlattenToMatrix(shapeB, transB, 1);
+//
+//    // create Matrix objects out of this
+//    let  A = a.Reshaped(shapeA).AsMatrix();
+//    auto B = Reshaped(shapeB).AsMatrix();
+//    Matrix<ElemType>::DoElementMaxOf(*B, *A);
+//}
+
 template class TensorView<float>;
 template class TensorView<double>;
 

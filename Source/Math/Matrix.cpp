@@ -5336,6 +5336,48 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
                             NOT_IMPLEMENTED);
     return *this;
 }
+
+// assign the element wise max of matrix a and matrix b to matrix a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    DecideAndMoveToRightDevice(a, b);
+
+    if (a.GetMatrixType() == DENSE && b.GetMatrixType() == DENSE)
+    {
+        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient)
+{
+
+
+    if (this->GetDeviceId() < 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
+
+        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE && 
+            outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
+        {
+            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
 #pragma endregion Static BLAS Functions
 
 // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.

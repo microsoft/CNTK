@@ -537,6 +537,66 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
     BOOST_CHECK(m1.IsEqualTo(m2));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMax, RandomSeedFixture)
+{
+    GPUMatrix<float> lhs = GPUMatrix<float>::Eye(4, c_deviceIdZero);
+    GPUMatrix<float> rhs = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
+
+    GPUMatrix<float>::DoElementMaxOf(lhs, rhs);
+
+    float *arr = lhs.CopyToArray();
+
+    BOOST_CHECK_EQUAL(1, arr[0]);
+    BOOST_CHECK_EQUAL(1, arr[1]);
+    BOOST_CHECK_EQUAL(1, arr[2]);
+    BOOST_CHECK_EQUAL(1, arr[3]);
+    BOOST_CHECK_EQUAL(1, arr[4]);
+    BOOST_CHECK_EQUAL(1, arr[5]);
+    BOOST_CHECK_EQUAL(1, arr[6]);
+    BOOST_CHECK_EQUAL(1, arr[7]);
+    BOOST_CHECK_EQUAL(1, arr[8]);
+    BOOST_CHECK_EQUAL(1, arr[9]);
+    BOOST_CHECK_EQUAL(1, arr[10]);
+    BOOST_CHECK_EQUAL(1, arr[11]);
+    BOOST_CHECK_EQUAL(1, arr[12]);
+    BOOST_CHECK_EQUAL(1, arr[13]);
+    BOOST_CHECK_EQUAL(1, arr[14]);
+    BOOST_CHECK_EQUAL(1, arr[15]);
+
+    delete[] arr;
+}
+
+BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMaxGradient, RandomSeedFixture)
+{
+    GPUMatrix<float> inputValue = GPUMatrix<float>::Eye(4, c_deviceIdZero);
+    GPUMatrix<float> outputValue = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
+    GPUMatrix<float> inputGradient = GPUMatrix<float>::Zeros(4, 4, c_deviceIdZero);
+    GPUMatrix<float> outputGradient = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
+    
+    inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
+
+    float *arr = inputGradient.CopyToArray();
+
+    BOOST_CHECK_EQUAL(1, arr[0]);
+    BOOST_CHECK_EQUAL(0, arr[1]);
+    BOOST_CHECK_EQUAL(0, arr[2]);
+    BOOST_CHECK_EQUAL(0, arr[3]);
+    BOOST_CHECK_EQUAL(0, arr[4]);
+    BOOST_CHECK_EQUAL(1, arr[5]);
+    BOOST_CHECK_EQUAL(0, arr[6]);
+    BOOST_CHECK_EQUAL(0, arr[7]);
+    BOOST_CHECK_EQUAL(0, arr[8]);
+    BOOST_CHECK_EQUAL(0, arr[9]);
+    BOOST_CHECK_EQUAL(1, arr[10]);
+    BOOST_CHECK_EQUAL(0, arr[11]);
+    BOOST_CHECK_EQUAL(0, arr[12]);
+    BOOST_CHECK_EQUAL(0, arr[13]);
+    BOOST_CHECK_EQUAL(0, arr[14]);
+    BOOST_CHECK_EQUAL(1, arr[15]);
+
+    delete[] arr;
+}
+
 #if 0 // Temporarily disabling
 BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
 {

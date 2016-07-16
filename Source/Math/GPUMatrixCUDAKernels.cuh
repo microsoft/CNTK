@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
@@ -2583,6 +2583,33 @@ __global__ void _addElementToElement(
     us += a[indexA];
     c[indexC] = us;
 }
+
+template <class ElemType>
+__global__ void _doElementMaxOf(
+    ElemType *a,
+    const ElemType *b,
+    CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    a[id] = max(a[id], b[id]);
+}
+
+template <class ElemType>
+__global__ void _addElementMaxGradient(
+    ElemType *inputValue,
+    ElemType *outputValue,
+    ElemType *outputGradient,
+    ElemType *inputGradient,
+    CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    inputGradient[id] = inputValue[id] == outputValue[id]？ outputGradient[id] : 0;
+}
+
 
 template <class ElemType>
 __global__ void _assignNumOfDiff(

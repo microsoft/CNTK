@@ -1942,6 +1942,16 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
 }
 
 template <class ElemType>
+void DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& /*a*/)
 {
 }
