@@ -126,7 +126,14 @@ namespace CNTK
         }
         else if (variable.IsInput())
         {
-            // TODO: Specify dynamic axis
+            // TODO: Support inputs with > 1 dynamic axes
+            if (variable.DynamicAxes().size() != 1)
+                LogicError("Currently only Input variables with one dynamic axis are supported");
+
+            auto dynamicAxis = variable.DynamicAxes()[0];
+            if (dynamicAxis != Axis::DefaultDynamicAxis())
+                LogicError("Currently only Input variables with DefaultDynamicAxis are supported");
+
             if (IsSparseInput(variable))
                 computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
             else
@@ -872,7 +879,7 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Tanh, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 
-    FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
+    FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
     {
         std::unordered_set<FunctionPtr> uniqueOperands;
         std::vector<Variable> inputs;

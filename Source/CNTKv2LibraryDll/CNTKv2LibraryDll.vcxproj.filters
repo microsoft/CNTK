@@ -11,6 +11,7 @@
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="Learner.cpp" />
+    <ClCompile Include="BackCompat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

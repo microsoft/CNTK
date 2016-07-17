@@ -220,7 +220,7 @@ namespace CNTK
             {
                 assert(inputs.size() == 2);
 
-                if (inputs[0].Shape().NumAxes() > 1)
+                if ((inputs[0].Shape().NumAxes() > 2) || ((inputs[0].Shape().NumAxes() > 1) && (inputs[0].Shape()[1] != 1)))
                     InvalidArgument("The shape of input operands for the %s operation should have at most one axis", PrimitiveOpTypeName(op));
 
                 auto predictionShape = inputs[0].Shape();
@@ -291,6 +291,9 @@ namespace CNTK
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        template <typename ElementType>
+        friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")

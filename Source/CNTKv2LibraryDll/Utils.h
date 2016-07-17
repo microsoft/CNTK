@@ -78,6 +78,18 @@ namespace CNTK
             LogicError("Unknown DataType");
     }
 
+    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
+    {
+        // The TensorShape should be flattenable to 1D
+        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+        {
+            if (!tensorShape.CanFlatten(i))
+                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+        }
+
+        return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
+    }
+
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;

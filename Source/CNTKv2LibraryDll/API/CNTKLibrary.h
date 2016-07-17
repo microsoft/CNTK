@@ -761,6 +761,13 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable.
         ///
+        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name = L"")
+            : Variable(shape, dataType, std::wstring(name))
+        {}
+
+        ///
+        /// Create an 'Input' Variable.
+        ///
         Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name = L"")
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis() }, false, name)
         {}
@@ -918,6 +925,11 @@ namespace CNTK
     inline bool operator==(const Variable& first, const Variable& second)
     {
         return first.m_dataFields == second.m_dataFields;
+    }
+
+    inline bool operator!=(const Variable& first, const Variable& second)
+    {
+        return !(first == second);
     }
 
     ///
@@ -1396,8 +1408,19 @@ namespace CNTK
     /// E.g. When creating a classification model, typically the CrossEntropy loss Function and the ClassificationError Function comprise the two roots
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
-    CNTK_API FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name = L"");
 
+    ///
+    /// Load a legacy CNTK v1 format model
+    ///
+    template <typename ElementType>
+    CNTK_API FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice());
+
+    /// 
+    /// Save a Composite Function instance to a file in CNTK legacy model format
+    ///
+    template <typename ElementType>
+    CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
     ///
     /// A serializable value represents one of:
     /// a) Boolean
