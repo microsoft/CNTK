@@ -760,7 +760,6 @@ namespace CNTK
 	class Variable
 	{
 		friend bool operator==(const Variable& first, const Variable& second);
-		friend bool operator<(const Variable& first, const Variable& second);
 
 		friend class Function;
 
@@ -928,11 +927,6 @@ namespace CNTK
 	inline bool operator==(const Variable& first, const Variable& second)
 	{
 		return first.m_dataFields == second.m_dataFields;
-	}
-
-	inline bool operator<(const Variable& first, const Variable& second)
-	{
-		return first.m_dataFields.get() < second.m_dataFields.get();
 	}
 	
 	///

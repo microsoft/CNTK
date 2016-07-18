@@ -20,7 +20,7 @@ def _sanitize_value(shape, value, dtype, dev):
         ndav = utils.create_NDArrayView(shape, cntk_dtype, dev)
             
     else:
-        if not isinstance(value, np.ndarray):
+        if not isinstance(value, np.ndarray) or value.dtype!=dtype:
             value = np.asarray(value, dtype=np_dtype)
 
         ndav = utils.create_NDArrayView_from_NumPy(value, dev)
