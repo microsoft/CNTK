@@ -2607,9 +2607,11 @@ __global__ void _addElementMaxGradient(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    inputGradient[id] = (inputValue[id] == outputValue[id]) ？ outputGradient[id] : 0;
+    if (inputValue[id] == outputValue[id])
+        inputGradient[id] = outputGradient[id];
+    else
+        inputGradient[id] = 0;
 }
-
 
 template <class ElemType>
 __global__ void _assignNumOfDiff(

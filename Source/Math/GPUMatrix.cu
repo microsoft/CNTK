@@ -3647,8 +3647,6 @@ template <class ElemType>
 template <class ElemType>
 void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
 {
-
-
     if (inputValue.GetNumRows() != outputValue.GetNumRows() ||
         inputValue.GetNumCols() != outputValue.GetNumCols() ||
         inputValue.GetNumRows() != outputGradient.GetNumRows() ||
@@ -3661,8 +3659,7 @@ void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue,
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
 
-    _addElementMaxGradient<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >>>(inputValue.Data(), 
-        outputValue.Data(), outputGradient.Data(), Data(), n);
+    _addElementMaxGradient<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >>>(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), n);
 }
 
 template <class ElemType>
