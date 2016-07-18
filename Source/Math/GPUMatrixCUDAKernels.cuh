@@ -2607,7 +2607,7 @@ __global__ void _addElementMaxGradient(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    inputGradient[id] = inputValue[id] == outputValue[id]？ outputGradient[id] : 0;
+    inputGradient[id] = (inputValue[id] == outputValue[id]) ？ outputGradient[id] : 0;
 }
 
 
