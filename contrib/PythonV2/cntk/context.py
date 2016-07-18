@@ -289,6 +289,7 @@ class LocalExecutionContext(AbstractContext):
                         self.device)
                 root_gradients[v] = root_grad_val
             backward_var_map = sanitize_var_map(gradient_map, self)
+
             op.Backward(state, root_gradients, backward_var_map)
 
             backward_output = {}

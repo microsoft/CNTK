@@ -23,6 +23,23 @@
 
 %apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
 
+%define %eq_for(DATA_TYPE, EQ)
+%rename(EQ) operator==(const DATA_TYPE&, const DATA_TYPE&);
+%enddef
+
+%extend CNTK::Variable {
+    const size_t __hash__() {
+        return std::hash<CNTK::Variable>()(*$self);
+    }
+}
+
+
+%eq_for(Variable, Variable_eq)
+%eq_for(Constant, Variable_eq)
+%eq_for(Placeholder, Variable_eq)
+%eq_for(Parameter, Variable_eq)
+
+
 %{
     #include "CNTKLibrary.h"
     using namespace CNTK;
@@ -45,9 +62,6 @@
 }
 
 %template() std::vector<CNTK::Variable>;
-
-%rename(NDShape_eq) operator==(const NDShape&, const NDShape&);
-%rename(Variable_eq) operator==(const Variable&, const Variable&);
 
 //%attribute2(CNTK::Variable, CNTK::NDShape, shape, Shape);
 
@@ -238,10 +252,45 @@
         $1 = args_set;
 
      } else {
-         SWIG_exception(SWIG_TypeError, "set expected");
+         SWIG_exception(SWIG_ValueError, "set expected");
      }
 }
 
+//
+// Converting std::unordered_set to Python list.
+// TOOD: figure out how to return a Python set instead of a list. For this,
+// we need to define a hash function on SwigPyObject.
+//
+
+%define %unordered_set_conversion(DATA_TYPE, _SWIG_TYPE)
+
+%typemap(out) std::unordered_set<CNTK::DATA_TYPE> {
+    PyObject* container = PyList_New(NULL);
+    if (container == NULL)
+    {
+        SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
+    }
+ 
+    // *&$1 -> $1 is the returned result being converted (unordered_set<...>*),
+    // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
+    // then access its value using '*'.
+    for (auto var : *&$1)
+    {
+        PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE(var)), _SWIG_TYPE, SWIG_POINTER_NEW);
+        // No error handling here, because the error will be passed directly to Python
+        PyList_Append(container, item);
+    }
+
+    Py_INCREF(container);
+
+    $result = container;
+}
+%enddef
+ 
+%unordered_set_conversion(Variable, SWIGTYPE_p_CNTK__Variable)
+%unordered_set_conversion(Constant, SWIGTYPE_p_CNTK__Constant)
+%unordered_set_conversion(Placeholder, SWIGTYPE_p_CNTK__Placeholder)
+%unordered_set_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
 
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
@@ -252,14 +301,6 @@
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
 %template() std::vector<CNTK::Variable>;
-
-/*
-%template(FunctionPtr) std::shared_ptr<CNTK::Function>;
-%template(NDArrayViewPtr) std::shared_ptr<CNTK::NDArrayView>;
-%template(ValuePtr) std::shared_ptr<CNTK::Value>;
-%template(NDMaskPtr) std::shared_ptr<CNTK::NDMask>;
-%template(BackPropStatePtr) std::shared_ptr<CNTK::BackPropState>;
-*/
 
 //
 // NDArrayView
@@ -344,19 +385,6 @@
 
 // end of NDArrayView
 
-%inline %{
-    std::shared_ptr<CNTK::NDArrayView> MakeNDArrayViewPtr(CNTK::NDArrayView* view) 
-    {
-        return std::shared_ptr<CNTK::NDArrayView>(view);
-    }
-
-    std::shared_ptr<CNTK::Value> MakeValuePtr(CNTK::Value* value) 
-    {
-        return std::shared_ptr<CNTK::Value>(value);
-    }
-%}
-
-
 //
 // The following callback code is only for testing. Will have to be merged with
 // the operator classes.
@@ -396,12 +424,25 @@ public:
   Py_END_ALLOW_THREADS;
 }
 
+//
+// Setting up hash calculation so that __hash__ on Swig objects
+// are redirected to the std::hash computation of the C++ API
+//
+%define %py_hash_for(DATA_TYPE, EQ)
+
 %pythoncode %{
-Variable.__eq__ = lambda a,b: Variable_eq(a,b)
+DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 %}
 
-%extend CNTK::Variable {
+%extend CNTK::DATA_TYPE {
     const size_t __hash__() {
-        return std::hash<CNTK::Variable>()(*$self);
+        return std::hash<CNTK::DATA_TYPE>()(*$self);
     }
 }
+%enddef
+
+%py_hash_for(Variable, Variable_eq)
+%py_hash_for(Constant, Variable_eq)
+%py_hash_for(Placeholder, Variable_eq)
+%py_hash_for(Parameter, Variable_eq)
+
