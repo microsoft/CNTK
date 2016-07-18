@@ -4278,11 +4278,16 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
 template <class ElemType>
 static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
 {
-    // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
-    // And using a plain array so this will never get freed, avoiding free-after-DLL-unload issues.
-    static shared_ptr<GPUMatrix<ElemType>> onesCache[32]; // cache of objects
-    if (deviceId >= _countof(onesCache))
-        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", (int) _countof(onesCache), (int) deviceId + 1);
+    // using a dynamically allocated array so this will never get freed, avoiding free-after-DLL-unload issues.
+    // and using shared_ptrs since we don't want to leak more than CacheSize elements
+    // when using a plain array we would have to control lifetime of the object and destructor would be called for every element in the array at the end
+    const int CacheSize = 32;
+    static shared_ptr<GPUMatrix<ElemType>> * onesCache = new shared_ptr<GPUMatrix<ElemType>>[CacheSize]; // cache of objects
+
+    if (deviceId >= CacheSize){
+        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", CacheSize, (int)deviceId + 1);
+    }
+
     auto p = onesCache[deviceId];
     if (!p || p->GetNumRows() < N) // must (re-)allocate
     {
