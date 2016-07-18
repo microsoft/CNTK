@@ -55,8 +55,9 @@
     <TargetName>EvalDll</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
-      <ClCompile>
+    <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath)</AdditionalLibraryDirectories>
@@ -133,8 +134,6 @@
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="CNTKEval.h" />
   </ItemGroup>
   <ItemGroup>
@@ -144,9 +143,6 @@
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CNTKEval.cpp" />
   </ItemGroup>

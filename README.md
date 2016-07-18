@@ -1,18 +1,17 @@
 # CNTK
 
 ## Latest news
-*2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
+*2016-07-15.* V 1.6 Binary release  
+CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
+*2016-07-12.* We have further expanded Licensing options for CNTK 1bit-SGD and related components. See the details at the [Wiki page](https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License). These new options are an extension of the new CNTK 1bit-SGD License that we have announced on Jun 23, 2016.
 
-*2016-05-05.* CNTK now supports *BlockMomentum* Stochastic Gradient Descent (SGD) algorithm. 
-See the details in the [Multiple GPUs and machines Wiki section](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+*2016-07-05.* CNTK now supports *Deconvolution* and *Unpooling*. See the usage example in the Network number 4 in [MNIST Sample](https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md).
 
-*2016-05-03.* New transformations are implemented for **Image Reader**. 
-See the description in the [Image Reader Wiki section](https://github.com/Microsoft/CNTK/wiki/Image-reader)
+*2016-06-23.* New License Terms for CNTK 1bit-SGD and related components.  
+Effective immediately the License Terms for CNTK 1bit-SGD and related components have changed. The new Terms provide more flexibility and enable new usage scenarios, especially in commercial environments. Read the new Terms at the [standard location](https://cntk1bitsgd.codeplex.com/license). Please note, that while the new Terms are significantly more flexible comparing to the previous ones, they are still **more restrictive** than the main CNTK License. Consequently everything described in [Enabling 1bit-SGD](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) section of the Wiki remains valid.
 
-*2016-04-25.* V 1.1 Binary release
-CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
+*2016-06-20.* A [post](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/) on Intel MKL and CNTK is published in the [Intel IT Peer Network](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
@@ -45,3 +44,8 @@ Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott Cyphers, Jasha D
 ## Disclaimer 
 
 CNTK is in active use at Microsoft and constantly evolving. There will be bugs.
+
+
+## Microsoft Open Source Code of Conduct
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.

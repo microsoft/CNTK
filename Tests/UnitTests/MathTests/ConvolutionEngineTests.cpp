@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c).DeepClone();
+        return buf.ColumnSlice(c, c);
     };
 
     int baseDeviceId = 0;
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 8), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 9), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
         }
     }
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c).DeepClone();
+        return buf.ColumnSlice(c, c);
     };
 
     int baseDeviceId = 0;
@@ -380,7 +380,7 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
         std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
         buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
         // Get center slice.
-        return buf.ColumnSlice(c, c).DeepClone();
+        return buf.ColumnSlice(c, c);
     };
 
     int baseDeviceId = 0;
@@ -496,6 +496,87 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
                 BOOST_REQUIRE_MESSAGE(CountNans(gradBuf) == crowIn * 2 * n, "grad" << msgNotNan);
             }
         }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(MaxUnpooling)
+{
+    using IntMatrix = Matrix<int>;
+
+    std::mt19937 rng(0);
+    std::uniform_int_distribution<> batchSizeG(1, 8);
+    // Using uniform distribution with positive values to avoid issues with
+    // unpooling negative values.
+    std::uniform_real_distribution<float> nd(0, 1);
+
+    auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int cpuDeviceId = -1;
+    int gpuDeviceId = 0;
+
+    for (const auto& g : GeneratePoolTestConfigs())
+    {
+        // cpuEng and gpuEng are used to compare results against each other.
+        auto cpuEng = ConvEng::Create(g, cpuDeviceId, ImageLayoutKind::CHW, 0, PoolKind::Max, ConvolutionEngineKind::Reference);
+        auto gpuEng = ConvEng::Create(g, gpuDeviceId, ImageLayoutKind::CHW, 0, PoolKind::Max, ConvolutionEngineKind::Reference);
+
+        size_t n = batchSizeG(rng);
+        vec buf;
+        buf.resize(g->InputShape().GetNumElements() * n);
+        std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+        SingleMatrix inC(g->InputShape().GetNumElements(), n, buf.data(), cpuDeviceId, matrixFlagNormal);
+        SingleMatrix inG(g->InputShape().GetNumElements(), n, buf.data(), gpuDeviceId, matrixFlagNormal);
+
+        // First, compute max pooling output and corresponding mask.
+        SingleMatrix outC(g->OutputShape().GetNumElements(), n, cpuDeviceId);
+        SingleMatrix outG(g->OutputShape().GetNumElements(), n, gpuDeviceId);
+
+        cpuEng->ForwardPooling(inC, outC);
+        gpuEng->ForwardPooling(inG, outG);
+        
+        // Second, do the unpooling.
+        size_t crowIn = g->InputShape().GetNumElements();
+        SingleMatrix inUBufC(cpuDeviceId);
+        SingleMatrix inUC = initMat(inUBufC, crowIn, n, buf);
+        SingleMatrix inUBufG(inUBufC.DeepClone(), gpuDeviceId);
+        SingleMatrix inUG = initMat(inUBufG, crowIn, n, buf);
+
+        cpuEng->MaxUnpooling(outC, inC, inUC);
+        gpuEng->MaxUnpooling(outG, inG, inUG);
+
+        // Check that CPU/GPU results are the same.
+        std::stringstream tmsg;
+        tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n;
+        std::string msg = " are not equal, " + tmsg.str();
+        std::string msgNan = " has NaNs, " + tmsg.str();
+        std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+        float relErr = 0;
+        float absErr = 0;
+        std::string emsg;
+
+        BOOST_REQUIRE_MESSAGE(!inUC.HasNan("inUC"), "inUC" << msgNan);
+        BOOST_REQUIRE_MESSAGE(!inUG.HasNan("inUG"), "inUG" << msgNan);
+        BOOST_REQUIRE_MESSAGE(CheckEqual(inUC, inUG, emsg, relErr, absErr), "inU" << msg << ". " << emsg);
+        BOOST_REQUIRE_MESSAGE(CountNans(inUBufC) == crowIn * 2 * n, "inUBufC" << msgNotNan);
+        BOOST_REQUIRE_MESSAGE(CountNans(inUBufG) == crowIn * 2 * n, "inUBufG" << msgNotNan);
+
+        // Now do the pooling from unpooled source and compare with original pooling.
+        SingleMatrix outC_2(g->OutputShape().GetNumElements(), n, cpuDeviceId);
+        SingleMatrix outG_2(g->OutputShape().GetNumElements(), n, gpuDeviceId);
+        cpuEng->ForwardPooling(inUC, outC_2);
+        gpuEng->ForwardPooling(inUG, outG_2);
+
+        BOOST_REQUIRE_MESSAGE(CheckEqual(outC_2, outC, emsg, relErr, absErr), "outC_2" << msg << ". " << emsg);
+        BOOST_REQUIRE_MESSAGE(CheckEqual(outG_2, outG, emsg, relErr, absErr), "outG_2" << msg << ". " << emsg);
     }
 }
 

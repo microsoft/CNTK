@@ -3076,6 +3076,17 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const
+{
+    const int BlockSize = 128;
+    auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
+    PrepareDevice();
+    SyncGuard syncGuard;
+    kMaxUnpooling<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
+                                                     Data(), poolInput.Data(), (int)GetNumRows(), input.Data(), (int)input.GetNumRows());
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
     const int BlockSize = 128;
@@ -3138,6 +3149,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         if (blendFactor > 0)
         {
             // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
+            // TODO: add a 'beta' parameter to ScaleAndAdd()
             Scale((ElemType)(1 - blendFactor), saveMean);
             ScaleAndAdd((ElemType)blendFactor, runMean, saveMean);
             Scale((ElemType)(1 - blendFactor), saveInvStdDev);
@@ -4298,11 +4310,16 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
 template <class ElemType>
 static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
 {
-    // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
-    // And using a plain array so this will never get freed, avoiding free-after-DLL-unload issues.
-    static shared_ptr<GPUMatrix<ElemType>> onesCache[32]; // cache of objects
-    if (deviceId >= _countof(onesCache))
-        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", (int) _countof(onesCache), (int) deviceId + 1);
+    // using a dynamically allocated array so this will never get freed, avoiding free-after-DLL-unload issues.
+    // and using shared_ptrs since we don't want to leak more than CacheSize elements
+    // when using a plain array we would have to control lifetime of the object and destructor would be called for every element in the array at the end
+    const int CacheSize = 32;
+    static shared_ptr<GPUMatrix<ElemType>> * onesCache = new shared_ptr<GPUMatrix<ElemType>>[CacheSize]; // cache of objects
+
+    if (deviceId >= CacheSize){
+        LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", CacheSize, (int)deviceId + 1);
+    }
+
     auto p = onesCache[deviceId];
     if (!p || p->GetNumRows() < N) // must (re-)allocate
     {
@@ -4440,6 +4457,11 @@ template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCo
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
+
+template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+template void GPUMatrix<char>::Reshape(const size_t, const size_t);
+template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
+template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

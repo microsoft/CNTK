@@ -13,7 +13,8 @@
 #include <memory>
 #include <msclr\marshal_cppstd.h>
 
-#include "ExceptionWithCallStack.h"
+#include "CNTKException.h"
+#include "EvalCommon.h"
 #include "Eval.h"
 
 #using <System.dll>
@@ -27,19 +28,9 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
-ref class CNTKException;
-
 // Used for retrieving the model appropriate for the element type (float / double)
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
-
-/// Enumeration for the types of nodes
-public enum class NodeGroup
-{
-    nodeInput,  // an input node
-    nodeOutput, // an output node
-    nodeSpecified
-};
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
@@ -52,21 +43,10 @@ public:
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
     IEvaluateModelManaged(String^ funcName)
     {
-        pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
-        {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
-        }
-
         try
         {
-            msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
             pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
+            GetEval<ElemType>(p_eval);
         }
         catch (const exception& ex)
         {
@@ -96,7 +76,7 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     void CreateNetwork(String^ networkDescription)
     {
@@ -118,7 +98,22 @@ public:
         }
     }
 
-    /// <summary>Creates a network based from the network description in the configuration</summary>
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("{0}\n{1}", outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
     /// <param name="networkDescription">The configuration file containing the network description</param>
     /// <param name="deviceId">The device ID to specify for the network</param>
     void CreateNetwork(String^ networkDescription, int deviceId)
@@ -128,7 +123,23 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        this->CreateNetwork(String::Format("deviceId={0}\n{1}", deviceId, networkDescription));
+        this->CreateNetwork(networkDescription, deviceId, nullptr);
+    }
+
+    /// <summary>Creates a network based on the network description in the configuration</summary>
+    /// <param name="networkDescription">The configuration file containing the network description</param>
+    /// <param name="deviceId">The device ID to specify for the network</param>
+    /// <param name="outputNodeNames">The output list of nodes (replaces the model's list of output nodes)</param>
+    void CreateNetwork(String^ networkDescription, int deviceId, List<String^>^ outputNodeNames)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
+        String^ outputNodeNamesProperty = outputNodeNames != nullptr ? String::Concat("outputNodeNames=", String::Join(":", outputNodeNames)) : "";
+        String^ newNetworkConfig = String::Format("deviceId={0}\n{1}\n{2}", deviceId, outputNodeNamesProperty, networkDescription);
+        this->CreateNetwork(newNetworkConfig);
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
@@ -216,7 +227,7 @@ public:
         try
         {
             std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-            int outputSize = GetNodeDimensions(NodeGroup::nodeOutput)[outputKey];
+            int outputSize = GetNodeDimensions(NodeGroup::Output)[outputKey];
 
             List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
             for (int i = 0; i < outputSize; i++)
@@ -362,7 +373,7 @@ public:
     /// <returns>Results for requested layer</returns>
     List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey)
     {
-        auto outDims = GetNodeDimensions(NodeGroup::nodeOutput);
+        auto outDims = GetNodeDimensions(NodeGroup::Output);
         int outputSize = outDims[outputKey];
 
         List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
@@ -524,61 +535,6 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
-{
-public:
-    CNTKException() : Exception()
-    {}
-
-    CNTKException(String^ message) : Exception(message)
-    {}
-
-    CNTKException(String^ message, String^ callstack) : Exception(message), NativeCallStack(callstack)
-    {}
-
-    const String^ NativeCallStack;
-};
-
-public ref class CNTKRuntimeException : CNTKException
-{
-public:
-    CNTKRuntimeException() : CNTKException()
-    {}
-
-    CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKLogicErrorException : CNTKException
-{
-public:
-    CNTKLogicErrorException() : CNTKException()
-    {}
-
-    CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKInvalidArgumentException : CNTKException
-{
-public:
-    CNTKInvalidArgumentException() : CNTKException()
-    {}
-
-    CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKBadAllocException : CNTKException
-{
-public:
-    CNTKBadAllocException() : CNTKException()
-    {}
-
-    CNTKBadAllocException(String^ message) : CNTKException(message)
-    {}
-};
-
 // This method tricks the compiler into emitting the methods of the classes
 // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
 // explanation to this behavior
@@ -594,7 +550,9 @@ void emit()
     f.Evaluate("");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
-    f.GetNodeDimensions(NodeGroup::nodeSpecified);
+    f.CreateNetwork("", nullptr);
+    f.CreateNetwork("", 0, nullptr);
+    f.GetNodeDimensions(NodeGroup::Specified);
 
     IEvaluateModelManagedD d;
     d.Init("");
@@ -603,7 +561,9 @@ void emit()
     d.Evaluate("");
     d.CreateNetwork("");
     d.CreateNetwork("", 0);
-    d.GetNodeDimensions(NodeGroup::nodeSpecified);
+    d.CreateNetwork("", nullptr);
+    d.CreateNetwork("", 0,nullptr);
+    d.GetNodeDimensions(NodeGroup::Specified);
 
     // Deprecated code, hush warnings locally only
 #pragma warning(push)

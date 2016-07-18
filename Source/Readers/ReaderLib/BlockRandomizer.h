@@ -107,11 +107,11 @@ private:
     // Exposed streams.
     std::vector<StreamDescriptionPtr> m_streams;
 
-    // A map of data chunks.
+    // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
     // Last seen data chunk id.
-    size_t m_lastSeenChunkId;
+    ChunkIdType m_lastSeenChunkId;
 
     // Decimation mode.
     DecimationMode m_decimationMode;
@@ -121,6 +121,15 @@ private:
     bool m_multithreadedGetNextSequences;
 
     // General configuration
+    // TODO generalize those for ReaderLib / Reader / CNTK
+    enum VerbosityLevel
+    {
+        Warning = 0,
+        Notification = 1,
+        Information = 2,
+        Debug = 3,
+    };
+
     int m_verbosity;
 };
 

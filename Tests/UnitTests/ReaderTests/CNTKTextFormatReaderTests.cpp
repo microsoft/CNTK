@@ -4,7 +4,14 @@
 //
 #include "stdafx.h"
 #include <algorithm>
+#ifdef _WIN32
 #include <io.h>
+#else // On Linux
+#define _dup2 dup2
+#define _dup dup
+#define _close close
+#define _fileno fileno
+#endif
 #include <cstdio>
 #include <boost/scope_exit.hpp>
 #include "Common/ReaderTestHelper.h"
@@ -25,13 +32,13 @@ public:
 
     CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(wstring(filename.begin(), filename.end()), streams)
+        m_parser(std::make_shared<CorpusDescriptor>(), wstring(filename.begin(), filename.end()), streams)
     {
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
         m_parser.SetChunkSize(SIZE_MAX);
         m_parser.SetNumRetries(0);
-        m_parser.Initialize(std::make_shared<CorpusDescriptor>());
+        m_parser.Initialize();
     }
     // Retrieves a chunk of data.
     void LoadChunk()
@@ -718,6 +725,86 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_200x200x2_seq2seq)
     auto controlFile = testDataPath() + "/Control/CNTKTextFormatReader/200x200x2_seq2seq_dense_sorted.txt";
 
    CheckFilesEquivalent(controlFile, outputFile);
+};
+
+// 5 sequences with up to 10 samples each
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_10)
+{
+    // Using one file with two streams inside to write the output file.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        "5x10_and_5x5_jagged",
+        "reader",
+        40,     // epoch size
+        10,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+
+    // Using two files with a stream per file to combine and check against the output written above.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_composite_Output.txt",
+        "5x10_and_5x5_jagged_composite",
+        "reader",
+        40,     // epoch size
+        10,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+};
+
+// 5 sequences with up to 10 samples each
+BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_21)
+{
+    // Using one file with two streams inside to write the output file.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        "5x10_and_5x5_jagged",
+        "reader",
+        413,     // epoch size
+        21,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
+
+    // Using two files with a stream per file to combine and check against the output written above.
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_Output.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/5x10_and_5x5_jagged_composite_Output.txt",
+        "5x10_and_5x5_jagged_composite",
+        "reader",
+        413,     // epoch size
+        21,     // mb size
+        3,      // num epochs
+        2,
+        0,
+        0,
+        1,
+        false,
+        false,
+        false);
 };
 
 BOOST_AUTO_TEST_SUITE_END()

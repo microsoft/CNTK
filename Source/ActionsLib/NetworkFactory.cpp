@@ -142,11 +142,11 @@ static void PatchOutputNodes(const ComputationNetworkPtr& net, const ConfigArray
 }
 
 template <class ConfigRecordType, typename ElemType>
-ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector)
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const wstring& outputNodeNamesConfig, vector<wstring>& outputNodeNamesVector)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    ConfigArray outputNodeNames = config(L"outputNodeNames", ConfigArray(""));
+    ConfigArray outputNodeNames = config(outputNodeNamesConfig.c_str(), ConfigArray(""));
 
     ComputationNetworkPtr net;
 
@@ -185,5 +185,5 @@ template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<Script
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, float>(const ConfigParameters& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, double>(const ConfigParameters& config);
-template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);
-template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float> (const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector);
