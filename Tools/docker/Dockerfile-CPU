@@ -62,6 +62,15 @@ RUN OPENBLAS_VERSION=0.2.18 && \
     make PREFIX=/usr/local/openblas install && \
     rm -rf /OpenBLAS-${OPENBLAS_VERSION}
 
+# Install Boost
+RUN BOOST_VERSION=1_59_0 && \
+    wget -q -O - https://sourceforge.net/projects/boost/files/boost/1.59.0/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
+    cd boost_${BOOST_VERSION} && \
+    ./bootstrap.sh --prefix=/usr/local --with-libraries=filesystem,system,test  && \
+    ./b2 install && \
+    rm -rf /boost_${BOOST_VERSION}
+
+
 # Install CNTK custom MKL, version 1
 RUN mkdir /usr/local/CNTKCustomMKL && \
     wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-1.tgz | \
