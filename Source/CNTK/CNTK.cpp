@@ -117,6 +117,23 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
     return maxEpochs;
 }
 
+#ifndef CPUONLY
+// abort execution is GPU is not supported (e.g. compute capability not supported)
+void CheckSupportForGpu(DEVICEID_TYPE deviceId)
+{
+    auto gpuData = GetGpuData(deviceId);
+    if (gpuData.validity == GpuValidity::ComputeCapabilityNotSupported)
+    {
+        InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", 
+                        gpuData.name.c_str(), gpuData.versionMajor, gpuData.versionMinor);
+    }
+    else if (gpuData.validity == GpuValidity::UnknownDevice)
+    {
+        InvalidArgument("CNTK: Unknown GPU with Device ID %d.", gpuData.deviceId);
+    }
+}
+#endif
+
 // special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
 static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
 {
@@ -265,7 +282,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpnode")
+                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
                 {
                     DumpNodeInfo<ElemType>(commandParams);
                 }
@@ -370,6 +387,30 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
+// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
+void PrintGpuInfo()
+{
+#ifndef CPUONLY
+    std::vector<GpuData> gpusData = GetAllGpusData();
+
+    if (gpusData.empty())
+    {
+        LOGPRINTF(stderr, "No GPUs found\n");
+        return;
+    }
+
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "GPU info:\n\n");
+
+    for (GpuData& data : gpusData)
+    {
+        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+    }
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+#endif
+}
+
 // ---------------------------------------------------------------------------
 // main() for use with BrainScript
 // ---------------------------------------------------------------------------
@@ -461,6 +502,21 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
+#ifndef CPUONLY
+    auto valpp = config.Find(L"deviceId");
+    if (valpp)
+    {
+        auto valp = *valpp;
+        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        {
+            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            {
+                CheckSupportForGpu(valp); // throws if gpu is not supported
+            }
+        }
+    }
+#endif
+
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
@@ -473,6 +529,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -497,6 +554,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo config info to log
     PrintBuiltInfo();
+
+    // echo gpu info to log
+    PrintGpuInfo();
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -544,7 +604,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -556,6 +615,18 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
     ConfigParameters config;
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+
+#ifndef CPUONLY
+    ConfigValue val = config("deviceId", "auto");
+    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
+    {
+        if (static_cast<int>(val) >= 0) // gpu (id >= 0)
+        {
+            CheckSupportForGpu(static_cast<int>(val)); // throws if gpu is not supported
+        }
+    }
+#endif
+
     bool timestamping = config(L"timestamping", false);
     if (timestamping)
     {
@@ -571,6 +642,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -598,6 +670,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     PrintBuiltInfo(); // this one goes to log file
+    PrintGpuInfo();
+
     std::string timestamp = TimeDateStamp();
 
     // dump config info
@@ -662,7 +736,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 

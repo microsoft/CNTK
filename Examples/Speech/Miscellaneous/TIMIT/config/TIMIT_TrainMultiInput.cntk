@@ -54,18 +54,17 @@ TIMIT_TrainMultiInput=[
         readerType=HTKMLFReader
         readMethod=blockRandomize
         # frameMode=true
-        readMethod=rollingWindow
         miniBatchMode=Partial
         randomize=Auto
         verbosity=0
         features1=[
             dim=792
-            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
             type=Real
         ]
         features2=[
             dim=39
-            scpFile=$ScpDir$/TIMIT.train.scp.mfcc.fullpath
+            scpFile=$ScpDir$/TIMIT.train.scp.mfcc.fullpath.rnn
             type=Real
         ]
         labels=[

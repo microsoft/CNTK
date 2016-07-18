@@ -1,5 +1,8 @@
 #!/bin/bash
-
+# ----------------------------------------------------------
+# Copyright (c) Microsoft Corporation.  All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+# ----------------------------------------------------------
 # Helper script containing common code used by run-test scripts of E2E tests
 
 BinaryPath=$TEST_CNTK_BINARY
@@ -25,6 +28,21 @@ MPIArgs=
 
 DeleteExistingModels=1
 DeleteModelsAfterTest=1
+
+# Print info needed by MetricsDriver.py to extract tests metrics
+printHardwareInfo()
+{
+  cpuName=$(cat /proc/cpuinfo 2> /dev/null | grep -m 1 'model name' | cut -d : -f 2- | tr -s " " | cut -c 2-)
+  totalMemory=$(cat /proc/meminfo 2> /dev/null | grep 'MemTotal' | cut -d : -f 2- | tr -s " " | cut -c 2-)
+  nproc=$(nproc)
+
+  # Note that MetricsDriver.py depends on this format
+  echo "CPU info:"
+  echo "    CPU Model Name: $cpuName"
+  echo "    Hardware threads: $nproc"
+  echo "    Total Memory: $totalMemory"
+  echo "-------------------------------------------------------------------"
+}
 
 # Helper function to print and run a command
 run()
@@ -119,3 +137,6 @@ cntkmpirun()
   cntkrun "$2" "$3"
   return $?
 }
+
+# place printHardwareInfo here, so that all tests print it
+printHardwareInfo

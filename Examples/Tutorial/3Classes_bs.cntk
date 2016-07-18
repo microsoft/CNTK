@@ -1,0 +1,118 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# 3 class classification with softmax - cntk script -- Network Description Language
+
+# which commands to run
+command=Train:Output:dumpNodeInfo:Test
+
+# required...
+modelPath = "Models/MC.dnn"      # where to write the model to
+deviceId = -1                    # -1 means CPU; use 0 for your first GPU, 1 for the second etc.
+dimension = 2                    # input data dimensions
+labelDimension = 3
+
+# training config
+Train = [
+    action="train"
+
+    # network description
+    BrainScriptNetworkBuilder=[
+
+        # sample and label dimensions
+        SDim = $dimension$
+        LDim = $labelDimension$
+
+        features = Input (SDim)
+        labels   = Input (LDim)
+
+        # parameters to learn
+        b = Parameter (LDim, 1)
+        w = Parameter (LDim, SDim)
+
+        # operations
+        z = w * features + b
+
+        ce = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction (labels, z)
+
+        # root nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+
+    # configuration parameters of the SGD procedure
+    SGD = [
+        epochSize = 0                   # =0 means size of the training set
+        minibatchSize = 25
+        learningRatesPerSample = 0.04   # gradient contribution from each sample
+        maxEpochs = 50
+    ]
+
+    # configuration of data reading
+    reader = [
+
+        readerType = "CNTKTextFormatReader"
+        file = "Train-3Classes_cntk_text.txt"
+        
+        input = [
+            features = [
+                dim = $dimension$
+                format = "dense"
+            ]
+            labels = [
+                dim = $labelDimension$     # there are 3 different labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+# test
+Test = [
+    action = "test"
+    reader = [
+        readerType="CNTKTextFormatReader"
+        file="Test-3Classes_cntk_text.txt"
+        input = [
+            features = [
+                dim = $dimension$
+                format = "dense"
+            ]
+            labels = [
+                dim = $labelDimension$     # there are 3 different labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+# output the results
+Output = [
+    action="write"
+    reader=[
+        readerType="CNTKTextFormatReader"
+        file="Test-3Classes_cntk_text.txt"        
+        
+        input = [
+            features = [
+                dim = $dimension$
+                format = "dense"
+            ]
+            labels = [
+                dim = $labelDimension$     # there are 3 different labels
+                format = "dense"
+            ]
+        ]
+    ]
+    outputPath = "MC.txt"        # dump the output to this text file
+]
+
+# dump parameter values
+DumpNodeInfo = [
+    action = "dumpNode"
+    printValues = true
+]

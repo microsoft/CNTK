@@ -16,6 +16,7 @@
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
+#include "basetypes.h" //for attemp()
 #include "fileutil.h"
 #include "ProgressTracing.h"
 
@@ -1632,6 +1633,11 @@ static size_t fgetfilechars(const std::wstring& path, vector<char>& buffer)
     return len;
 }
 
+static void fgetfilechars(const std::wstring& path, vector<char>& buffer, size_t& len)
+{
+    len = fgetfilechars(path, buffer);
+}
+
 template <class LINES>
 static void strtoklines(char* s, LINES& lines)
 {
@@ -1639,10 +1645,14 @@ static void strtoklines(char* s, LINES& lines)
         lines.push_back(p);
 }
 
-void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines)
+void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines, int numberOfTries)
 {
-    // load it into RAM in one huge chunk
-    const size_t len = fgetfilechars(path, buffer);
+    size_t len = 0;
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
+    {
+        // load it into RAM in one huge chunk
+        fgetfilechars(path, buffer, len);
+    });
 
     // parse into lines
     lines.resize(0);
@@ -1651,11 +1661,15 @@ void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, 
 }
 
 // same as above but returning const char* (avoiding the memory allocation)
-vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer)
+vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer, int numberOfTries)
 {
-    // load it into RAM in one huge chunk
-    const size_t len = fgetfilechars(path, buffer);
-
+    size_t len = 0;
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
+    {
+        // load it into RAM in one huge chunk
+        fgetfilechars(path, buffer, len);
+    });
+    
     // parse into lines
     vector<char*> lines;
     lines.reserve(len / 20);

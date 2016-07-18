@@ -2,12 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -48,6 +42,12 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="RNGHandle.cpp" />
+    <ClCompile Include="BlockHandlerAVX.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="BlockHandlerSSE.cpp">
+        <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -110,6 +110,18 @@
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="CPURNGHandle.h">
       <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockHandlerAVX.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockHandlerSSE.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockMultiplier.h">
+        <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockMultiplierPlatform.h">
+        <Filter>CPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

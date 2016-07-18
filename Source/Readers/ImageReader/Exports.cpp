@@ -38,7 +38,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 // A factory method for creating image deserializers.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
 {
-    if (type == L"ImageDataDeserializer")
+    if (type == L"ImageDeserializer")
         *deserializer = new ImageDataDeserializer(corpus, deserializerConfig);
     else
         // Unknown type.

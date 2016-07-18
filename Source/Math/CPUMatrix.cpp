@@ -715,11 +715,12 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     }
     else
     {
-		ElemType* bufPtr = Data();
+        ElemType* bufPtr = Data();
         long m = (long) GetNumElements();
         // 2-way thread parallelism is sufficient for the memory bound
         // operation of just setting the values of an array.
         const unsigned SETVALUE_NUM_THREADS = 2;
+        UNUSED(SETVALUE_NUM_THREADS); // in case OMP is turned off.
 #pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
@@ -1387,10 +1388,10 @@ void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 template <class ElemType>
 void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
-    VerifyResizable(__func__);
-
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
+
+    VerifyResizable(__func__);
 
     size_t numElements = numRows * numCols;
     if (numElements > GetSizeAllocated() ||                 // grow allocation
@@ -4315,6 +4316,51 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
+                                       const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput,
+                                       CPUMatrix<ElemType>& input) const
+{
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < GetNumRows(); row++)
+        {
+            int colBase = mpRowCol(row, 0);
+            assert(0 <= colBase && colBase < input.GetNumRows());
+
+            int i0 = mpRowIndices(row, 0);
+            int size = indices(i0++, 0);
+            assert(size > 0);
+
+            ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
+            ElemType prevMax = curMax;
+            int imax = 0;
+            for (int i = 1; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                assert(0 <= colBase + dcol && colBase + dcol < poolInput.GetNumRows());
+                curMax = std::max(curMax, poolInput(colBase + dcol, sample));
+                if (curMax > prevMax)
+                {
+                    prevMax = curMax;
+                    imax = i;
+                }
+            }
+
+            int dcol = indices(i0 + imax, 0);
+            assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            input(colBase + dcol, sample) = (*this)(row, sample);
+
+            //int i = (int)poolIn(row, sample);
+            //assert(0 <= i && i < size);
+            //int dcol = indices(i0 + i, 0);
+            //assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            //input(colBase + dcol, sample) = (*this)(row, sample);
+        }
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
@@ -6312,6 +6358,10 @@ template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template char* CPUMatrix<char>::CopyToArray(void) const;
+
+template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
+template void CPUMatrix<char>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 template CPUMatrix<int>::~CPUMatrix();

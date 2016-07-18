@@ -140,6 +140,7 @@ public:
     void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
+    const TensorShape& GetShape() const { return m_shape; }
 
 private:
     // -------------------------------------------------------------------
@@ -148,7 +149,6 @@ private:
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
-    const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // sob members
