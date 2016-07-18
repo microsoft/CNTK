@@ -130,6 +130,11 @@ else
   COMMON_FLAGS +=-DCPUONLY
 endif
 
+ifdef OPENMPI_PATH
+  INCLUDEPATH += $(OPENMPI_PATH)/include
+  LIBPATH += $(OPENMPI_PATH)/lib
+endif
+
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
