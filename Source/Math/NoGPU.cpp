@@ -1942,7 +1942,7 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
 }
 
 template <class ElemType>
-void DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
 {
 }
 

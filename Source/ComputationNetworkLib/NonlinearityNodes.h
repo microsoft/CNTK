@@ -703,7 +703,7 @@ public:
         {
             for (int i = 1; i < GetNumInputs(); i++)
             {
-                fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
+                //fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
                 // the dimension of column must be the same (i.e., the Minibatch size)
                 if (Input(i)->GetSampleMatrixNumCols() != Input(i - 1)->GetSampleMatrixNumCols() ||
                     Input(i)->GetSampleMatrixNumRows() != Input(i - 1)->GetSampleMatrixNumRows())
