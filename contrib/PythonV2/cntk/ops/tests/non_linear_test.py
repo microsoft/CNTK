@@ -60,6 +60,25 @@ def test_op_exp(tensor, device_id, precision):
             tensor, expected_forward, expected_backward)
 
 @pytest.mark.parametrize("tensor", TENSORS)
+def test_op_tanh(tensor, device_id, precision):
+
+    from .. import tanh
+    
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
+
+    t = np.tanh(AA(tensor, dtype=PRECISION_TO_TYPE[precision]))
+    expected_forward = [AA([t])]
+
+    expected_backward = {
+            'arg': [[1 - t**2]],
+            }
+
+    test_unary_op(ctx, tanh,
+            tensor, expected_forward, expected_backward)
+
+@pytest.mark.parametrize("tensor", TENSORS)
 def test_op_log(tensor, device_id, precision):
 
     from .. import log
@@ -185,41 +204,6 @@ def test_op_square(tensor, device_id, precision):
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
-
-@pytest.mark.parametrize("tensor", TENSORS)
-def test_op_tanh(tensor, device_id, precision):
-
-    from .. import tanh
-
-    def numpy_op(x):
-        return np.tanh(AA(x, dtype=PRECISION_TO_TYPE[precision]))
-
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-
-    expected = [[numpy_op(tensor)]]
-
-    input_node = I([tensor])
-    op_node = tanh(input_node)
-
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-    # Backward pass test
-    # ==================
-    # The expected results for the backward pass is 1-tanh(x)^2
-    expected = [[1 - numpy_op(tensor)**2]]
-
-    unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=input_node)
-
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_relu(tensor, device_id, precision):
