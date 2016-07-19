@@ -881,6 +881,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
 
+        auto profScope2 = ProfilerTimeBegin("Reader");
         auto profilerScope = ProfilerTimeBegin(profilerEvtInputProcessing);
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
             useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
@@ -891,6 +892,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             break;                                                                // end of epoch
         }
         ProfilerTimeEnd(profilerScope);
+        ProfilerTimeEnd(profScope2);
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
         // Must not touch them.
@@ -957,6 +959,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 {
+                    CustomScopeProfile prof("ForwardProp");
                     PROFILE_SCOPE(profilerEvtForwardPass);
                     net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
 
@@ -972,6 +975,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                 {
+                    CustomScopeProfile prof("BackwardProp");
                     PROFILE_SCOPE(profilerEvtBackwardPass);
                     net->Backprop(criterionNodes[0]);
                 }
@@ -1056,6 +1060,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
+            CustomScopeProfile prof("WeightUpdate");
             PROFILE_SCOPE(profilerEvtWeightUpdate);
 #if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
             // This will break test cases. So for now, we will only enable this for per-sample criteria.
@@ -1094,6 +1099,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
+            CustomScopeProfile prof("ModelAggregation");
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
             {
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);

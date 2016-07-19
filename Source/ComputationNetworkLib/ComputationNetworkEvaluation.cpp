@@ -224,7 +224,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 #endif
         if (node->IsOutOfDateWrtInputs())
         {
-            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("Op|%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
             NodePerfScope scope(node, false, "PAR");
             node->BeginForwardProp();
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
@@ -243,7 +243,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     {
         auto& node = *pnode;
 
-        CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+        CustomScopeProfile nodeScope2(msra::strfun::strprintf("Op|%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
         NodePerfScope scope(node, true, "PAR");
         node->BeginBackprop();
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
@@ -309,7 +309,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     {
         for (auto& node : m_nestedNodes)
         {
-            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("Op|%ls|%ls", node->OperationName().c_str(), node->GetName().c_str()).c_str());
             NodePerfScope scope(node, false, "SEQ");
             node->ForwardProp(t);
             node->BumpEvalTimeStamp();
@@ -342,7 +342,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
         {
             auto& node2 = *nodeIter2;
-            CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
+            CustomScopeProfile nodeScope2(msra::strfun::strprintf("Op|%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
             NodePerfScope scope(node2, true, "SEQ");
             node2->Backprop(t, true /*childrenInThisLoop*/, false /*childrenInOuterLoop*/);
             // The above flags tell Backprop() to skip back-propagation from inside a node into
@@ -359,7 +359,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
     {
         auto& node2 = *nodeIter2;
-        CustomScopeProfile nodeScope2(msra::strfun::strprintf("%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
+        CustomScopeProfile nodeScope2(msra::strfun::strprintf("Op|%ls|%ls", node2->OperationName().c_str(), node2->GetName().c_str()).c_str());
         NodePerfScope scope(node2, true, "SEQ");
         node2->Backprop(FrameRange(m_nestedNodes[0]->GetMBLayout()), false /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
     }
