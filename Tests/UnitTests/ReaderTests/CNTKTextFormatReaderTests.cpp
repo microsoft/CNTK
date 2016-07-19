@@ -4,7 +4,14 @@
 //
 #include "stdafx.h"
 #include <algorithm>
+#ifdef _WIN32
 #include <io.h>
+#else // On Linux
+#define _dup2 dup2
+#define _dup dup
+#define _close close
+#define _fileno fileno
+#endif
 #include <cstdio>
 #include <boost/scope_exit.hpp>
 #include "Common/ReaderTestHelper.h"

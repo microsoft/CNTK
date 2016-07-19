@@ -17,9 +17,9 @@ public:
     DataDeserializerBase()
     {}
 
-    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
+    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& result) override
     {
-        NOT_IMPLEMENTED;
+        return GetSequenceDescriptionByKey(primary.m_key, result);
     }
 
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
@@ -28,6 +28,11 @@ public:
     }
 
 protected:
+    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&)
+    {
+        NOT_IMPLEMENTED;
+    }
+
     // Streams this data deserializer can produce.
     std::vector<StreamDescriptionPtr> m_streams;
 

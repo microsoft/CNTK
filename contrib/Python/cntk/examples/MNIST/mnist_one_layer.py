@@ -8,8 +8,8 @@
 MNIST Example, one hidden layer neural network using training and testing data 
 through files. To generate the data first run fetch_mnist_data.py to fetch the data.
 Train and Test files obtained need to be converted to CNTKTextFormatReader format using
-`uci_to_cntk_text_format_converter.py 
-<https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
+`uci2ctf.py 
+<https://github.com/Microsoft/CNTK/blob/master/Scripts/uci2ctf.py>`_
 Rename train data to Train-28x28_text.txt and test data to Test-28x28_text.txt
 """
 

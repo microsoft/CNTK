@@ -31,4 +31,4 @@ testCases:
       - Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
       - TrainNodeClassBasedCrossEntropy = {{float,tolerance=0.05}}
-      - perplexity = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.1%}}

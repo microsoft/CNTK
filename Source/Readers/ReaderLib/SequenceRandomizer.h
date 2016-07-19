@@ -19,10 +19,10 @@ struct RandomizedSequenceDescription
 {
     // Sequence id.
     size_t m_id;
-    // Number of samples in sequence.
-    uint32_t m_numberOfSamples;
     // Randomized chunk this sequence belongs to.
     const RandomizedChunk* m_chunk;
+    // Number of samples in sequence.
+    uint32_t m_numberOfSamples;
 };
 
 // Class that given randomized chunks, randomizes sequence descriptions in a window of chunks.
@@ -64,14 +64,14 @@ private:
     // Randomize one more chunk if needed after the chunk cursor has been incremented.
     void RandomizeNextChunkIfNeeded();
 
-    // Checks if the randomized sequence is valid for a target position using its chunk randomization window.
-    bool IsValidForPosition(size_t targetPosition, const RandomizedSequenceDescription& seqDesc) const;
+    // Checks if the randomized sequence is valid for a target chunk.
+    bool IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const;
 
     // Gets randomized chunk index using a sequence position in the sweep.
-    ChunkIdType GetChunkIndexForSequencePosition(size_t sequencePosition) const;
+    ChunkIdType GetChunkIndexForSequencePosition(size_t sequenceSweepPosition) const;
 
-    // Gets randomized sequence by the sequence id.
-    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId);
+    // Gets randomized sequence by sequence position in sweep and its randomized chunk index.
+    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition);
 
     // Add randomizes sequences for the chunk with a given index.
     void AddRandomizedSequencesForChunk(ChunkIdType chunkIndex);

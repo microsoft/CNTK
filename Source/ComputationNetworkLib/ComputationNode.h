@@ -1423,8 +1423,8 @@ public:
         m_gradientInitialized = true;
     }
 
-    // resize and reset this node's gradient to a given matrix's value
-    void ResetGradient(const Matrix<ElemType>& val)
+    // Assign the given matrix's value to this node's gradient. The matrix sizes must match.
+    void AssignGradient(const Matrix<ElemType>& val)
     {
         UpdateDataSize(Gradient());
 

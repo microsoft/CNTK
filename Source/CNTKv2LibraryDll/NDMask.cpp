@@ -17,15 +17,13 @@ namespace CNTK
     static Matrix<char>* AllocateMatrix(const NDShape& viewShape, const DeviceDescriptor& device)
     {
         auto matrixDims = GetMatrixDimensions(viewShape);
-        auto maskMatrix = new Matrix<char>(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device));
-        maskMatrix->SetValue(1);
-
-        return maskMatrix;
+        return new Matrix<char>(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device));
     }
 
     NDMask::NDMask(const NDShape& shape, Matrix<char>* matrix)
-        : m_device(AsDeviceDescriptor(matrix->GetDeviceId())), m_maskShape(shape), m_matrixView(matrix)
+        : m_device(AsDeviceDescriptor(matrix->GetDeviceId())), m_maskShape(shape)
     {
+        m_matrixView = std::shared_ptr<Matrix<char>>(matrix, [](Matrix<char>* ptr) { delete ptr; });
     }
 
     NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/)
@@ -33,16 +31,17 @@ namespace CNTK
     {
         if (shape.NumAxes() > 2)
             LogicError("NDMask instances with more than 2 axes are currently unsupported");
+
+        Clear();
     }
 
     NDMask::~NDMask()
     {
-        delete m_matrixView;
     }
 
     void NDMask::MaskSection(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape)
     {
-        // TODO: Implement batching of masking operation for masks residing on GPUs to avoid making 
+        // TODO: Implement batching of masking operation for masks residing on GPUs to avoid making
         // GPU invocations for each MaskSection call.
 
         if (sectionOffset.size() > m_maskShape.NumAxes())
@@ -78,12 +77,13 @@ namespace CNTK
 
     void NDMask::Clear()
     {
+        // Clear the mask by marking all samples as Valid; i.e. a value of 1
         GetMatrix()->SetValue(1);
     }
 
     Matrix<char>* NDMask::GetMatrix() const
     {
-        return m_matrixView;
+        return m_matrixView.get();
     }
 
     void NDMask::CopyFrom(const NDMask& source)
@@ -96,14 +96,14 @@ namespace CNTK
 
     NDMaskPtr NDMask::DeepClone() const
     {
-        NDMaskPtr newMask = new NDMask(this->Shape(), this->Device());
+        NDMaskPtr newMask = MakeSharedObject<NDMask>(this->Shape(), this->Device());
         newMask->CopyFrom(*this);
 
-        return NDMaskPtr(newMask, [](_ReferenceCounter* ptr) { delete ptr; });
+        return newMask;
     }
 
     NDMaskPtr NDMask::Alias() const
     {
-        return NDMaskPtr(new NDMask(this->Shape(), new Matrix<char>(GetMatrix()->AsReference())), [](_ReferenceCounter* ptr) { delete ptr; });
+        return MakeSharedObject<NDMask>(this->Shape(), new Matrix<char>(GetMatrix()->AsReference()));
     }
 }
