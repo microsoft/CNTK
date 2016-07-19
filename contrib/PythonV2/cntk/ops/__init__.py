@@ -273,10 +273,10 @@ def plus(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    left = sanitize_input(left)
-    right = sanitize_input(right)
     from ..cntk_py import Plus
-    op = Plus(left, right, "hardcode name")
+    left = sanitize_input(left)
+    right = sanitize_input(right)    
+    op = Plus(left, right, name)
     return op
 
 def minus(left, right, name=''):
@@ -301,11 +301,10 @@ def minus(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
 
-    from cntk_py import Minus
+    from ..cntk_py import Minus
     left = sanitize_input(left)
     right = sanitize_input(right)
-    op = Minus(left, right, name=name)
-    op.rank = max(op._.rank, op.y.rank)
+    op = Minus(left, right, name)    
     return op
 
 def element_times(left, right, name=''):
@@ -329,11 +328,10 @@ def element_times(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import ElementTimes
+    from ..cntk_py import ElementTimes
     left = sanitize_input(left)
     right = sanitize_input(right)
-    op = ElementTimes(left, right, name=name)
-    op.rank = max(op._.rank, op.y.rank)
+    op = ElementTimes(left, right, name)    
     return op
 
 def element_divide(left, right, name=''):
