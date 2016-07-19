@@ -16,6 +16,8 @@
 #include <math.h>
 #include "GPUWatcher.h" // bring in this class as well so that it gets exported from this DLL
 #include <memory>
+#include "PerformanceProfiler.h"
+
 #ifndef CPUONLY
 #pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
 #endif
@@ -31,20 +33,36 @@
 // Helper to dispath matrix calls to the 4 underlying matrix libraries (CPU,GPU) x (DENSE,SPARSE)
 // 'MatrixPointerToCheck' determines where the operation takes place.
 // 'MatrixPointerToSetFlag' is the output. If not null and its location is BOTH, we collapse it to one.
-#define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+#define DISPATCH_MATRIX_ON_FLAG1(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse, profile) \
     {                                                                                                                   \
         CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                           \
         if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)                        \
         {                                                                                                               \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                          \
             {                                                                                                           \
-                GPUDense;                                                                                               \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Dense||%s", __func__).c_str());    \
+                    GPUDense;                                                                                           \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    GPUDense;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                  \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);   \
             }                                                                                                           \
             else                                                                                                        \
             {                                                                                                           \
-                GPUSparse;                                                                                              \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Sparse||%s", __func__).c_str());   \
+                    GPUSparse;                                                                                          \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    GPUSparse;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                  \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);  \
             }                                                                                                           \
@@ -53,13 +71,29 @@
         {                                                                                                               \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                          \
             {                                                                                                           \
-                CPUDense;                                                                                               \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Dense||%s", __func__).c_str());        \
+                    CPUDense;                                                                                               \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    CPUDense;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                  \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);   \
             }                                                                                                           \
             else                                                                                                        \
             {                                                                                                           \
-                CPUSparse;                                                                                              \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Sparse||%s", __func__).c_str());       \
+                    CPUSparse;                                                                                              \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    CPUSparse;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                  \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);  \
             }                                                                                                           \
@@ -70,21 +104,40 @@
         }                                                                                                               \
     }
 
+#define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+    DISPATCH_MATRIX_ON_FLAG1(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse, true)
+
 // version of dispatch macro that prefers the CPU if the 'MatrixPointerToCheck' location is BOTH
-#define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+#define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH1(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse, profile) \
     {                                                                                                                                \
         CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                                        \
         if (curLocation == CurrentDataLocation::GPU)                                                                                 \
         {                                                                                                                            \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
             {                                                                                                                        \
-                GPUDense;                                                                                                            \
+                if (profile)                                                                                                         \
+                {                                                                                                                    \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Dense|Cpu4Both|%s", __func__).c_str());         \
+                    GPUDense;                                                                                                        \
+                }                                                                                                                    \
+                else                                                                                                                 \
+                {                                                                                                                    \
+                    GPUDense;                                                                                                        \
+                }                                                                                                                    \
                 if (MatrixPointerToSetFlag != nullptr)                                                                               \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);                \
             }                                                                                                                        \
             else                                                                                                                     \
             {                                                                                                                        \
-                GPUSparse;                                                                                                           \
+                if (profile)                                                                                                         \
+                {                                                                                                                    \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Sparse|Cpu4Both|%s", __func__).c_str());        \
+                    GPUSparse;                                                                                                       \
+                }                                                                                                                    \
+                else                                                                                                                 \
+                {                                                                                                                    \
+                    GPUSparse;                                                                                                       \
+                }                                                                                                                    \
                 if (MatrixPointerToSetFlag != nullptr)                                                                               \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);               \
             }                                                                                                                        \
@@ -93,13 +146,29 @@
         {                                                                                                                            \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
             {                                                                                                                        \
-                CPUDense;                                                                                                            \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Dense|Cpu4Both|%s", __func__).c_str());                \
+                    CPUDense;                                                                                                            \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    CPUDense;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                               \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);                \
             }                                                                                                                        \
             else                                                                                                                     \
             {                                                                                                                        \
-                CPUSparse;                                                                                                           \
+                if (profile)                                                                                            \
+                {                                                                                                       \
+                    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Sparse|Cpu4Both|%s", __func__).c_str());            \
+                    CPUSparse;                                                                                                           \
+                }                                                                                                       \
+                else                                                                                                    \
+                {                                                                                                       \
+                    CPUSparse;                                                                                           \
+                }                                                                                                       \
                 if (MatrixPointerToSetFlag != nullptr)                                                                               \
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE);               \
             }                                                                                                                        \
@@ -109,6 +178,9 @@
             RuntimeError("Matrices do not exist in either CPU or GPU.");                                                             \
         }                                                                                                                            \
     }
+
+#define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH1(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse, true)
 
 // version of helper macro that executes both CPU and GPU macros if 'matrixPointer' location is BOTH
 #define DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(matrixPointer, CPUDense, GPUDense, CPUSparse, GPUSparse)  \
@@ -123,10 +195,12 @@
         {                                                                                               \
             if (curMatrixType == MatrixType::DENSE)                                                     \
             {                                                                                           \
+                CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Dense|Both4Both|%s", __func__).c_str());  \
                 GPUDense;                                                                               \
             }                                                                                           \
             else                                                                                        \
             {                                                                                           \
+                CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Sparse|Both4Both|%s", __func__).c_str());  \
                 GPUSparse;                                                                              \
             }                                                                                           \
         }                                                                                               \
@@ -134,10 +208,12 @@
         {                                                                                               \
             if (curMatrixType == MatrixType::DENSE)                                                     \
             {                                                                                           \
+                CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Sparse|Both4Both|%s", __func__).c_str());  \
                 CPUDense;                                                                               \
             }                                                                                           \
             else                                                                                        \
             {                                                                                           \
+                CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Sparse|Both4Both|%s", __func__).c_str());  \
                 CPUSparse;                                                                              \
             }                                                                                           \
         }                                                                                               \
@@ -915,6 +991,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
     {
         if (newMatrixType == MatrixType::SPARSE)
         {
+            CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Dense2Sparse|SwitchToMatrixType").c_str());
             if (!m_baseMatrix)
                 m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(newMatrixFormat);
             else
@@ -928,6 +1005,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         }
         else if (newMatrixType == MatrixType::DENSE)
         {
+            CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|CPU|Sparse2Dense|SwitchToMatrixType").c_str());
             if (!m_baseMatrix)
                 m_CPUMatrix = make_shared<CPUMatrix<ElemType>>();
             else
@@ -946,6 +1024,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
     {
         if (newMatrixType == MatrixType::SPARSE)
         {
+            CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Dense2Sparse|SwitchToMatrixType").c_str());
             if (!m_baseMatrix)
                 m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(GetDeviceId(), newMatrixFormat);
             else
@@ -959,6 +1038,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         }
         else if (newMatrixType == MatrixType::DENSE)
         {
+            CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|GPU|Sparse2Dense|SwitchToMatrixType").c_str());
             if (!m_baseMatrix)
                 m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(GetDeviceId());
             else
@@ -988,22 +1068,24 @@ void Matrix<ElemType>::CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, 
 template <class ElemType>
 ElemType Matrix<ElemType>::Get00Element() const
 {
-    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
+    DISPATCH_MATRIX_ON_FLAG1(this, nullptr,
         { return m_CPUMatrix->Get00Element(); },
         { return m_GPUMatrix->Get00Element(); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { NOT_IMPLEMENTED; }, 
+        /*profile*/false);
 }
 
 // const operator(,)
 template <class ElemType>
 const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) const
 {
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr,
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH1(this, nullptr,
         { return m_CPUMatrix->operator()(row, col); },
         { _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false); return m_CPUMatrix->operator()(row, col); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { NOT_IMPLEMENTED; },
+    /*profiler*/false);
 }
 
 // non-const operator(,)
@@ -1015,7 +1097,7 @@ const ElemType Matrix<ElemType>::operator()(const size_t row, const size_t col) 
 template <class ElemType>
 ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
 {
-    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this, nullptr,
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH1(this, nullptr,
         { return m_CPUMatrix->operator()(row, col); },
         {
             _transferFromDeviceToDevice(GetDeviceId(), CPUDEVICE, false);
@@ -1023,12 +1105,14 @@ ElemType& Matrix<ElemType>::operator()(const size_t row, const size_t col)
             return m_CPUMatrix->operator()(row, col);
         },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { NOT_IMPLEMENTED; },
+        /*profiler*/false);
 }
 
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::Transpose()
 {
+    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|%s||Transpose", GetDeviceId() < 0 ? "CPU" : "GPU").c_str());
     if (IsEmpty())
         LogicError("Transpose: Matrix is empty.");
 
@@ -1101,11 +1185,12 @@ void Matrix<ElemType>::SetValue(const ElemType v)
         return;
     }
 
-    DISPATCH_MATRIX_ON_FLAG(this, this,
+    DISPATCH_MATRIX_ON_FLAG1(this, this,
         { m_CPUMatrix->SetValue(v); },
         { m_GPUMatrix->SetValue(v); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { NOT_IMPLEMENTED; },
+        /*profile*/false);
 }
 
 template <class ElemType>
@@ -3470,11 +3555,12 @@ int Matrix<ElemType>::GetDeviceId() const
     if (m_currentDataLocation == CurrentDataLocation::NONE)
         return m_preferredDeviceId;
 
-    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
+    DISPATCH_MATRIX_ON_FLAG1(this, nullptr,
         { return CPUDEVICE; },
         { return m_GPUMatrix->GetComputeDeviceId(); },
         { return CPUDEVICE; },
-        { return m_GPUSparseMatrix->GetComputeDeviceId(); });
+        { return m_GPUSparseMatrix->GetComputeDeviceId(); }, 
+        /*profile*/false);
 }
 
 // TODO: Comment why we need a second ElemType.
@@ -3582,6 +3668,7 @@ void Matrix<ElemType>::_transferToDevice(int to_id, bool isBeingMoved /*= true*/
 template <class ElemType>
 void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved /*= true*/, bool emptyTransfer /* = false*/) const
 {
+    CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|%s|%s|TransferFromDeviceToDevice", from_id < 0 ? "CPU" : "GPU", to_id < 0 ? "CPU" : "GPU").c_str());
     if (from_id < 0)
         from_id = CPUDEVICE;
     if (to_id < 0)
@@ -3938,14 +4025,22 @@ Matrix<ElemType>& Matrix<ElemType>::AssignAveragePoolingResult(const Matrix<Elem
     return *this;
 }
 
+#define PROF() CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|%s||%s", GetDeviceId() < 0 ? "CPU" : "GPU", __func__).c_str())
+#define PROF1(matrix) CustomScopeProfile nodeScope(msra::strfun::strprintf("Matrix|%s||%s", matrix.GetDeviceId() < 0 ? "CPU" : "GPU", __func__).c_str())
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax)
 {
+    PROF();
     Resize(1, 1);
     if (GetDeviceId() < 0)
+    { 
         a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *m_CPUMatrix);
+    }
     else
+    {
         a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *m_GPUMatrix);
+    }
     return *this;
 }
 
@@ -3954,7 +4049,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemT
 {
     // if (a.GetMatrixType() != MatrixType::SPARSE)
     //    NOT_IMPLEMENTED;
-
+    PROF();
     Resize(1, 1);
     if (GetDeviceId() < 0)
         a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *m_CPUMatrix);
@@ -3966,6 +4061,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemT
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp)
 {
+    PROF();
     if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
         LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
@@ -3994,6 +4090,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignNoiseContrastiveEstimation(const Matri
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex)
 {
+    PROF();
     if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
         LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
@@ -4352,6 +4449,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
                                               ElemType beta, Matrix<ElemType>& c)
 {
     DecideAndMoveToRightDevice(a, b, c);
+    PROF1(c);
 
     if (c.GetDeviceId() < 0) // CPU
     {
@@ -4520,6 +4618,7 @@ void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemT
 {
     DecideAndMoveToRightDevice(a, b, c);
 
+    PROF1(c);
     if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
     {
         GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
@@ -4544,6 +4643,7 @@ template <class ElemType>
 
     DecideAndMoveToRightDevice(c, a);
 
+    PROF1(c);
     if (a.GetMatrixType() == c.GetMatrixType())
     {
         DISPATCH_MATRIX_ON_FLAG(&c, &c,
@@ -5087,6 +5187,7 @@ ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
 {
+    PROF();
     if (a.IsEmpty())
         LogicError("Shift: Matrix is empty.");
     else
