@@ -335,6 +335,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     {
         cout << "FirstColumn * Storage rows vs. matrix offset: " << firstColumn << "*" << m_sob->GetNumRows() << " vs. " << m_shape.GetOffset() << endl;
         cout << "numColumns * Storage rows vs. matrix elements: " << numColumns << "*" << m_sob->GetNumRows() << " vs. " << m_shape.GetNumElements() << endl;
+       
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
     }   
 

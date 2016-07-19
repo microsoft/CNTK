@@ -76,8 +76,9 @@ void SwapOutAction::EndAction()
     m_isSwapping = false;
     m_rows = m_bufferGPU->GetNumRows();
     m_cols = m_bufferGPU->GetNumCols();
+    //cout << "swap out: " << m_rows << "x" << m_cols << endl;
     //m_timer.tick("resize");
-    m_bufferGPU->Resize(0,0,0,false);
+    //m_bufferGPU->Resize(0,0,0,false);
     //cout << "free " << endl;
     //float *gpudata = m_bufferGPU->Data();
     //CUDA_CALL(cudaFree(gpudata));
