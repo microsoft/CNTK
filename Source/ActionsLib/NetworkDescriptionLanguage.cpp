@@ -212,6 +212,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseRowStackNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ElementMaxNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif

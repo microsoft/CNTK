@@ -3624,6 +3624,82 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
     _addElementToElement<ElemType><<<1, 1, 0, t_stream>>>(beta, a.Data(), (CUDA_LONG) a.LocateElement(ai, aj), c.Data(), (CUDA_LONG) c.LocateElement(ci, cj));
 }
 
+// assign the element wise max of matrix a and matrix b to matrix a
+template <class ElemType>
+/*static*/ void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+    //fprintf(stderr, "A Size: %d %d\n", a.GetNumRows(), a.GetNumCols());
+    //fprintf(stderr, "B Size: %d %d\n", b.GetNumRows(), b.GetNumCols());
+
+
+    if (a.GetNumRows() != b.GetNumRows() ||
+        a.GetNumCols() != b.GetNumCols())
+        InvalidArgument("DoElementMaxOf: the shapes of the input matrixes do not match.");
+
+    a.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+
+    _doElementMaxOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), n);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
+{
+    if (inputValue.GetNumRows() != outputValue.GetNumRows() ||
+        inputValue.GetNumCols() != outputValue.GetNumCols() ||
+        inputValue.GetNumRows() != outputGradient.GetNumRows() ||
+        inputValue.GetNumCols() != outputGradient.GetNumCols()
+        )
+        InvalidArgument("AddElementMaxGradient: the shapes of the input matrixes do not match.");
+
+    inputValue.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)inputValue.GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+
+    _addElementMaxGradient<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), inputSum.Data(), randomSplit.Data(), numInputs, inputIndex, n);
+
+    //ElemType *inmax = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *outmax = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *gin = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *gout = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *ram = (ElemType *)malloc(50 * sizeof(ElemType));
+
+    //cudaMemcpy(inmax, inputValue.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(outmax, outputValue.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(gin, Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(gout, outputGradient.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(ram, randomSplit.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+
+
+    //fprintf(stderr, "RandomSplit: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", ram[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Input Value: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", inmax[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Output Value: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", outmax[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Input Gradient: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", gin[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Output Gradient: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", gout[i]);
+    //fprintf(stderr, "\n");
+}
+
 template <class ElemType>
 /*static*/ void GPUMatrix<ElemType>::Scale(ElemType alpha, GPUMatrix<ElemType>& a)
 {

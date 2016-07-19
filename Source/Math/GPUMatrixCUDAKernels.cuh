@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
@@ -2582,6 +2582,46 @@ __global__ void _addElementToElement(
     ElemType us = beta ? beta * c[indexC] : 0; // do not multiply if beta is 0, could be a NaN
     us += a[indexA];
     c[indexC] = us;
+}
+
+template <class ElemType>
+__global__ void _doElementMaxOf(
+    ElemType *a,
+    const ElemType *b,
+    CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    a[id] = max(a[id], b[id]);
+}
+
+template <class ElemType>
+__global__ void _addElementMaxGradient(
+    ElemType *inputValue,
+    ElemType *outputValue,
+    ElemType *outputGradient,
+    ElemType *inputGradient,
+    ElemType *inputSum,
+    ElemType *randomSplit,
+    size_t numInputs,
+    size_t inputIndex,
+    CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (inputValue[id] == outputValue[id])
+    {
+        size_t setIndex = (size_t)(ceil(randomSplit[id])) % numInputs;
+        if (inputSum[id] == (ElemType)0 && setIndex != inputIndex)
+            inputGradient[id] = 0;
+        else
+            inputGradient[id] = outputGradient[id];
+    }
+    else
+        inputGradient[id] = 0;
 }
 
 template <class ElemType>

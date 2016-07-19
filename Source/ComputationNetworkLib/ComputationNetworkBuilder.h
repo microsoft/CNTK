@@ -157,6 +157,7 @@ public:
     ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"");
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
     ComputationNodePtr SparseRowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
+    ComputationNodePtr ElementMax(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
 #ifdef COMING_SOON
     ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"");
 #endif

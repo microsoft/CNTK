@@ -545,7 +545,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     {
         std::vector<void*> inputs = EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
 
-        if (cnNodeType == OperationNameOf(RowStackNode) || cnNodeType == OperationNameOf(SparseRowStackNode)) // support variable length inputs
+        if (cnNodeType == OperationNameOf(RowStackNode) || cnNodeType == OperationNameOf(SparseRowStackNode) || cnNodeType == OperationNameOf(ElementMaxNode)) // support variable length inputs
         {
             std::vector<ComputationNodeBasePtr> inputNodes;
             inputNodes.resize(inputs.size());

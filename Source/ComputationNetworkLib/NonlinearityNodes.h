@@ -647,4 +647,157 @@ DefineComparisonNode(GreaterNode,       1, 0)
 DefineComparisonNode(GreaterEqualNode, -1, 1)
 DefineComparisonNode(NotEqualNode,      0, 1)
 DefineComparisonNode(LessEqualNode,     1, 1)
+
+// -----------------------------------------------------------------------
+// ElementMax (input0, input1, ...)
+// Element Wise Max of the input (dense) matrixes
+// The output is also a dense matrix
+// -----------------------------------------------------------------------
+template <class ElemType>
+class ElementMaxNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ElementMax"; }
+
+public:
+    DeclareConstructorFromConfig(ElementMaxNode);
+    ElementMaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> input0 = Input(0)->ValueFor(fr);
+
+        result.AssignValuesOf(input0);
+   
+        if (GetNumInputs() > 1) {
+            for (size_t inputIndex = 1; inputIndex < GetNumInputs(); inputIndex++)
+            {
+                let input = Input(inputIndex)->ValueFor(fr);
+                Matrix<ElemType>::DoElementMaxOf(result, input);
+            }
+        }
+
+
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //InvalidArgument("BackpropTo not supported for SparseRowStackNode");
+        Matrix<ElemType> outputGradient = GradientFor(fr);
+        Matrix<ElemType> outputValue = ValueFor(fr);
+        Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
+        Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
+
+        // Determine if inputs are equal to zero
+        Matrix<ElemType> inputSum = inputValue.DeepClone();
+        Matrix<ElemType> randomSplit = inputValue.DeepClone();
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            if (i == inputIndex)
+                continue;
+
+            let input = Input(inputIndex)->ValueFor(fr);
+            inputSum += input;
+        }
+
+        randomSplit.SetUniformRandomValue((ElemType)0 /*low*/, (ElemType)GetNumInputs() /*high*/, 0 /*seed*/);
+
+        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, inputSum, randomSplit, GetNumInputs(), inputIndex);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        // the dimension of column must be the same (i.e., the Minibatch size)
+        if (isFinalValidationPass)
+        {
+            for (int i = 1; i < GetNumInputs(); i++)
+            {
+                //fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
+                // the dimension of column must be the same (i.e., the Minibatch size)
+                if (Input(i)->GetSampleMatrixNumCols() != Input(i - 1)->GetSampleMatrixNumCols() ||
+                    Input(i)->GetSampleMatrixNumRows() != Input(i - 1)->GetSampleMatrixNumRows())
+                    LogicError("%ls: Input matrix size does not match.", NodeDescription().c_str());
+            }
+        }
+
+        // calculate the row size of the output matrix
+        auto dims = Input(0)->GetSampleLayout().GetDims();
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+
+//template <class ElemType>
+//class ElementMaxNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+//{
+//    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+//    static const std::wstring TypeName() { return L"ElementMax"; }
+//
+//public:
+//    DeclareConstructorFromConfig(ElementMaxNode);
+//    ElementMaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+//        : Base(deviceId, name)
+//    {
+//    }
+//
+//    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+//    {
+//        size_t rank = DetermineElementwiseTensorRank();
+//        auto result = ValueTensorFor(rank, fr);
+//        auto input0 = Input(0)->ValueTensorFor(rank, fr);
+//
+//        result.AssignCopyOf(input0);
+//
+//        if (GetNumInputs() > 1) {
+//            for (size_t inputIndex = 1; inputIndex < GetNumInputs(); inputIndex++)
+//            {
+//                let input = Input(inputIndex)->ValueTensorFor(rank, fr);
+//                result.AssignElementMaxOf(input);
+//            }
+//        }
+//    }
+//
+//    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+//    {
+//        //InvalidArgument("BackpropTo not supported for SparseRowStackNode");
+//        Matrix<ElemType> outputGradient = GradientFor(fr);
+//        Matrix<ElemType> outputValue = ValueFor(fr);
+//        Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
+//        Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
+//
+//        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
+//    }
+//
+//    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+//    {
+//        Base::Validate(isFinalValidationPass);
+//        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+//
+//        // the dimension of column must be the same (i.e., the Minibatch size)
+//        if (isFinalValidationPass)
+//        {
+//            for (int i = 1; i < GetNumInputs(); i++)
+//            {
+//                fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
+//                // the dimension of column must be the same (i.e., the Minibatch size)
+//                if (Input(i)->GetSampleMatrixNumCols() != Input(i - 1)->GetSampleMatrixNumCols() ||
+//                    Input(i)->GetSampleMatrixNumRows() != Input(i - 1)->GetSampleMatrixNumRows())
+//                    LogicError("%ls: Input matrix size does not match.", NodeDescription().c_str());
+//            }
+//        }
+//
+//        // calculate the row size of the output matrix
+//        auto dims = Input(0)->GetSampleLayout().GetDims();
+//        SetDims(TensorShape(dims), HasMBLayout());
+//    }
+//};
+template class ElementMaxNode<float>;
+template class ElementMaxNode<double>;
+
 }}}
