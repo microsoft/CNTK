@@ -15,66 +15,127 @@ from cntk.tests.test_utils import *
 
 from ...context import get_new_context
 from ...reader import *
+from ...utils import sanitize_dtype_cntk
 from .. import constant, input
 
-
-# Keeping things short
 I = input
 
-# CNTK is column major and thus for broadcasting the axes are aligned to the left,
-# however, in Numpy they are aligned to the write, therefore, in order to perform 
-# CNTK's broadcast in Numpy we reverse the axes, performs the operation and 
-# reverse back.
-def _broadcast_col_major(tensor_a, tensor_b, func):
-    rev_shape_a = tuple(reversed(tensor_a.shape))
-    reshaped_a = np.reshape(tensor_a, rev_shape_a)    
-    rev_shape_b = tuple(reversed(tensor_b.shape))
-    reshaped_b = np.reshape(tensor_b, rev_shape_b)    
-    res = func(reshaped_a, reshaped_b)
-    rev_shape_res = tuple(reversed(res.shape))
-    return np.reshape(res, rev_shape_res)    
+@pytest.fixture(params=["dense", "sparse"])
+def left_matrix_type(request):
+    return request.param
 
+@pytest.fixture(params=["dense", "sparse"])
+def right_matrix_type(request):
+    return request.param
 
-# check whether a valid broadcast is possible between two tensors
-# it also returns the axes ids along which we perform reducion when
-# we call the backward pass of the node in question
-def _check_broadcasting_and_get_reduce_axes(tensor_a, tensor_b):    
-    axes_a=[]
-    axes_b=[]
-    # no broadcasting
-    if (tensor_a.shape == tensor_b.shape):
-        return (0,axes_a,axes_b) 
-    else:
-        for i in range(min(len(tensor_a.shape),len(tensor_b.shape))):            
-            if (tensor_a.shape[i] != tensor_b.shape[i]):  
-                #invalid broadcasting
-                if (tensor_a.shape[i]!=1 and tensor_b.shape[i]!=1):
-                    return (-1, None,None)
-                    
-                if (tensor_a.shape[i]==1):
-                    axes_a.append(i)
-                if (tensor_b.shape[i]==1):
-                    axes_b.append(i)
-        
-        # process the remaining axes        
-        if (len(tensor_a.shape)) > (len(tensor_b.shape)):
-            for i in range(len(tensor_b.shape), len(tensor_a.shape)):
-                axes_b.append(i)
-        else:
-            for i in range(len(tensor_a.shape), len(tensor_b.shape)):
-                axes_a.append(i)                            
-            
-    return (1,axes_a,axes_b)
-
-def _reduce_sum_on_multiple_axes(tensor, axes):        
-    res = tensor
-    axis_shift = 0
-    for a in axes:        
-        res = np.add.reduce(res, a+axis_shift)        
-        axis_shift-=1
-        
-    return res
+def test_unary_op(ctx, op_func,
+        operand, expected_forward, expected_backward_all):
     
+    value = AA(operand, dtype=ctx.precision_numpy) 
+    
+    a = I(shape=value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='a')
+
+    # create batch
+    value.shape = (1,1) + left_value.shape    
+
+    input_op = op_func(a)
+    forward_input = {a:value}
+    backward_input = {a:np.ones(value.shape)}
+    expected_backward = { a: expected_backward_all['arg'], }
+    unittest_helper(input_op, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
+
+    constant_op = op_func(operand)
+    forward_input = None
+    backward_input = None
+    expected_backward = None
+    unittest_helper(constant_op_input, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
+   
+def test_binary_op(ctx, op_str,
+        left_operand, right_operand, 
+        expected_forward, expected_backward_all):
+    
+    left_value = AA(left_operand, dtype=ctx.precision_numpy) 
+    right_value = AA(right_operand, dtype=ctx.precision_numpy)
+
+    a = I(shape=left_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='a')
+
+    b = I(shape=right_value.shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='b')
+
+    # create batch
+    left_value.shape = (1,1) + left_value.shape
+    right_value.shape = (1,1) + right_value.shape
+
+    input_op_constant = eval('a %s right_operand'%op_str)
+    forward_input = {a:left_value}
+    backward_input = {a:np.ones(left_value.shape)}
+    expected_backward = { a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
+
+    constant_op_input = eval('left_operand %s b'%op_str)
+    forward_input = {b:right_value}
+    backward_input = {b:np.ones(right_value.shape)}
+    expected_backward = { b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input, 
+            forward_input, expected_forward, 
+            backward_input, expected_backward,
+            device_id=ctx.device, precision=ctx.precision, clean_up=True)
+
+    input_op_input = eval('a %s b'%op_str)
+    forward_input = {a:left_value, b:right_value}
+    backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
+    expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
+    unittest_helper(input_op_input, 
+        forward_input, expected_forward, 
+        backward_input, expected_backward,
+        device_id=ctx.device, precision=ctx.precision, clean_up=True)
+
+def unittest_helper(root_node, 
+        forward_input, expected_forward, 
+        backward_input, expected_backward,
+        device_id=-1, precision="float", clean_up=True):
+
+    from cntk.context import get_new_context
+    with get_new_context() as ctx:
+        ctx.clean_up = clean_up
+        ctx.device_id = device_id
+        ctx.precision = precision
+        assert not ctx.input_nodes
+        result = ctx.eval(root_node, forward_input, backward_input)
+
+        if backward_input is None:
+            forward = result
+        else:
+            forward, backward = result
+            for key in expected_backward:
+                res, exp = backward[key], expected_backward[key]
+                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+                assert res.shape == AA(exp).shape
+
+        # for forward we always expect only one result
+        assert len(forward)==1
+        forward = list(forward.values())[0]
+        
+        for res, exp in zip(forward, expected_forward):
+            assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+            assert res.shape == AA(exp).shape
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''
@@ -156,3 +217,5 @@ def test_batch_dense_to_sparse_zeros():
             ]
     assert s == (2,3)
     
+
+

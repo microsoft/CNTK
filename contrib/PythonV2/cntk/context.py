@@ -248,7 +248,7 @@ class LocalExecutionContext(AbstractContext):
     def eval(self, op, input_map=None, gradient_map=None):
         '''
         It evaluates `op` on the data provided by the reader. This is useful
-        mainly to explore the operators and for convenient unit testing. 
+        mainly to explore the operators and for unit testing. 
         
         Args:
             op (:class:`Function`): operation to evaluate
@@ -301,6 +301,6 @@ class LocalExecutionContext(AbstractContext):
             return forward_output, backward_output
 
         else:
-            return forward_output
+            return forward_output, None
 
 
