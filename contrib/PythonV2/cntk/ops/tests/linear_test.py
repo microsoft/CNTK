@@ -13,12 +13,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, test_unary_op, test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
-SI = None
-from ...graph import *
 from ...context import get_context
-from .. import *
-from ...reader import *
-import numpy as np
 
 # TODO: Test plus(), times(), etc, not only the overloaded opeartors (+,
 # *, etc.)
@@ -51,6 +46,10 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             'left_arg':  [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
             'right_arg': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
             }
+    from .. import plus
+    test_binary_op(ctx, plus,
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
 
     test_binary_op(ctx, '+',
             left_operand, right_operand, 
@@ -71,6 +70,10 @@ def _test_op_minus(left_operand, right_operand, device_id, precision):
             'right_arg': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
             }
 
+    from .. import minus
+    test_binary_op(ctx, minus,
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
     test_binary_op(ctx, '-',
             left_operand, right_operand, 
             expected_forward, expected_backward)
@@ -89,7 +92,11 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             'left_arg':  [[right_operand]],
             'right_arg': [[left_operand]]
             }
-
+    
+    from .. import element_times
+    test_binary_op(ctx, element_times,
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
     test_binary_op(ctx, '*',
             left_operand, right_operand, 
             expected_forward, expected_backward)
@@ -110,6 +117,10 @@ def _test_op_element_divide(left_operand, right_operand, device_id, precision):
             'right_arg': [[-AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) / AA(right_operand, dtype=PRECISION_TO_TYPE[precision])**2]]
             }
 
+    from .. import element_divide
+    test_binary_op(ctx, element_divide,
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
     test_binary_op(ctx, '/',
             left_operand, right_operand, 
             expected_forward, expected_backward)

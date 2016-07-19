@@ -39,7 +39,7 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import CrossEntropyWithSoftmax
+    from ..cntk_py import CrossEntropyWithSoftmax
     op = CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
     op.rank = 0
     return op
@@ -64,7 +64,7 @@ def square_error(target_matrix, output_matrix, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import SquareError
+    from ..cntk_py import SquareError
     target_matrix = sanitize_input(target_matrix)
     output_matrix = sanitize_input(output_matrix)
     op = SquareError(target_matrix, output_matrix, name = name)
@@ -94,7 +94,7 @@ def error_prediction(target_vector, output_vector, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import ErrorPrediction
+    from ..cntk_py import ErrorPrediction
     target_vector = sanitize_input(target_vector)
     output_vector = sanitize_input(output_vector)
     op = ErrorPrediction(target_vector, output_vector, name = name)
@@ -122,7 +122,7 @@ def less(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Less
+    from ..cntk_py import Less
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Less(left, right, name=name)
@@ -146,7 +146,7 @@ def equal(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Equal
+    from ..cntk_py import Equal
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Equal(left, right, name=name)
@@ -170,7 +170,7 @@ def greater(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Greater
+    from ..cntk_py import Greater
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Greater(left, right, name=name)
@@ -194,7 +194,7 @@ def greater_equal(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import GreaterEqual
+    from ..cntk_py import GreaterEqual
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = GreaterEqual(left, right, name=name)
@@ -218,7 +218,7 @@ def not_equal(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import NotEqual
+    from ..cntk_py import NotEqual
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = NotEqual(left, right, name=name)
@@ -242,7 +242,7 @@ def less_equal(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import LessEqual
+    from ..cntk_py import LessEqual
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = LessEqual(left, right, name=name)
@@ -399,7 +399,7 @@ def times(left, right, output_rank=1, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Times   
+    from ..cntk_py import Times   
     # CNTK uses column vectors and column major representation, thus we reverse
     # params    
     left = sanitize_input(left)
@@ -424,7 +424,7 @@ def identity(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Identity
+    from ..cntk_py import Identity
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Identity(x, name=name)
@@ -462,7 +462,7 @@ def floor(arg, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Floor
+    from ..cntk_py import Floor
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Floor(arg, name = name)
@@ -488,7 +488,7 @@ def ceil(arg, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Ceil
+    from ..cntk_py import Ceil
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Ceil(arg, name = name)
@@ -524,7 +524,7 @@ def round(arg, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Round
+    from ..cntk_py import Round
     left = sanitize_input(left)
     right = sanitize_input(right)
     op = Round(arg, name = name)
@@ -562,7 +562,7 @@ def clip(x, min_value, max_value, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk_py import Clip
+    from ..cntk_py import Clip
     x = sanitize_input(x)
     op = Clip(x, min_value, max_value, name = name)
     return op
@@ -584,7 +584,7 @@ def relu(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Relu
+    from ..cntk_py import Relu
     x = sanitize_input(x)
     op = Relu(x, name=name)
     return op
@@ -607,7 +607,7 @@ def sigmoid(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Sigmoid
+    from ..cntk_py import Sigmoid
     x = sanitize_input(x)
     op = Sigmoid(x, name=name)
     return op
@@ -629,7 +629,7 @@ def tanh(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Tanh
+    from ..cntk_py import Tanh
     x = sanitize_input(x)
     op = Tanh(x, name=name)
     return op
@@ -656,7 +656,7 @@ def softmax(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Softmax
+    from ..cntk_py import Softmax
     x = sanitize_input(x)
     op = Softmax(x)
     return op
@@ -677,7 +677,7 @@ def exp(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Exp
+    from ..cntk_py import Exp
     x = sanitize_input(x)
     op = Exp(x, name=name)
     return op
@@ -702,7 +702,7 @@ def log(x, name=''):
         number for `log`, because this is the only guaranteed precision across 
         platforms. This will be changed to return `NaN` and `-inf`.
     """
-    from cntk_py import Log
+    from ..cntk_py import Log
     x = sanitize_input(x)
     op = Log(x, name=name)
     return op
@@ -727,7 +727,7 @@ def sqrt(x, name=''):
         CNTK returns zero for sqrt of negative nubmers, this will be changed to 
         retrun NaN
     """
-    from cntk_py import Sqrt
+    from ..cntk_py import Sqrt
     x = sanitize_input(x)
     op = Sqrt(x, name=name)
     return op
@@ -746,7 +746,7 @@ def square(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Square
+    from ..cntk_py import Square
     x = sanitize_input(x)
     op = Square(x, name=name)
     return op
@@ -767,7 +767,7 @@ def abs(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import Abs
+    from ..cntk_py import Abs
     x = sanitize_input(x)
     op = Abs(x, name=name)
     return op
@@ -791,7 +791,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk_py import If
+    from ..cntk_py import If
     flag = sanitize_input(flag)
     op = If(flag, value_if_true, value_if_false, name = name)
     return op
@@ -829,7 +829,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
         :class:`cntk.graph.ComputationNode`
     """    
     
-    from cntk_py import FutureValue
+    from ..cntk_py import FutureValue
     x = sanitize_input(x)
     op = FutureValue(shape, x, time_step, default_hidden_activation, name = name)
     return op
@@ -863,7 +863,7 @@ def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
         :class:`cntk.graph.ComputationNode`
     """    
     
-    from cntk_py import PastValue
+    from ..cntk_py import PastValue
     x = sanitize_input(x)
     op = PastValue(shape, x, time_step, default_hidden_activation, name = name)
     return op
@@ -894,7 +894,7 @@ def reshape(x, shape, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk_py import NewReshape
+    from ..cntk_py import NewReshape
     if not np.isscalar(shape):
         # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))    
@@ -920,7 +920,7 @@ def transpose_dimensions(x, axis1, axis2, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk_py import TransposeDimensions
+    from ..cntk_py import TransposeDimensions
     x = sanitize_input(x)
     op = TransposeDimensions(x, axis1, axis2, name = name)    
     #cntk uses column major, thus it will read the indices of data passed from 
@@ -968,7 +968,7 @@ def _slice(x, begin_index, end_index, axis=0, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from cntk_py import Slice
+    from ..cntk_py import Slice
     x = sanitize_input(x)
     op = Slice(x, begin_index, end_index, axis, name=name)
     
@@ -1011,7 +1011,7 @@ def splice(inputs, axis=0, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from cntk_py import Splice
+    from ..cntk_py import Splice
     inputs = sanitize_input(inputs)
     op = Splice(inputs, axis, name=name)
 
@@ -1060,7 +1060,7 @@ def reduce_sum(x, axis=0, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from cntk_py import ReduceSum
+    from ..cntk_py import ReduceSum
     x = sanitize_input(x)
     op = ReduceSum(x, axis, name=name)
     # cntk uses column major, thus it will read the indices of data passed from 
@@ -1087,7 +1087,7 @@ def reduce_log_sum(inputs, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     '''
-    from cntk_py import ReduceLogSum
+    from ..cntk_py import ReduceLogSum
     inputs = sanitize_input(inputs)
     op = ReduceLogSum(inputs, 0, name=name)
     #TODO: Once axis != 0 is supported, expose it as argument, and compute the 
@@ -1117,7 +1117,7 @@ def dropout(x, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """    
-    from cntk_py import Dropout
+    from ..cntk_py import Dropout
     x = sanitize_input(x)
     op = Dropout(x, name = name)
     return op
@@ -1221,7 +1221,7 @@ def sparse_input(shape, dynamic_axis='', name=''):
         :class:`cntk.graph.ComputationNode`
     """
 
-    from cntk_py import SparseInput
+    from ..cntk_py import SparseInput
     if not np.isscalar(shape):
         # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))
@@ -1322,7 +1322,7 @@ def dynamic_axis(name=''):
         :class:`cntk.graph.ComputationNode`
     """
     
-    from cntk_py import DynamicAxis
+    from ..cntk_py import DynamicAxis
     op = DynamicAxis(name=name)
     op.rank = None
     return op
@@ -1345,7 +1345,7 @@ def reconcile_dynamic_axis(data_input, layout_input, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     
-    from cntk_py import ReconcileDynamicAxis
+    from ..cntk_py import ReconcileDynamicAxis
     op = ReconcileDynamicAxis(data_input, layout_input, name=name)
     op.rank = data_input.rank
     return op

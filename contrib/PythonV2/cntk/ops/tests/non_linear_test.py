@@ -9,66 +9,15 @@ Unit tests for non-linear operations. Each operation is tested for
 the forward and the backward pass
 """
 
+from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
-from ...graph import *
-from ...reader import *
-from .. import constant
+from .ops_test_utils import unittest_helper, test_unary_op, test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from ...context import get_context
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
 LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
-
-CLIP_TUPLES = [
-    ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
-    ([1.0], [2.0], [0.5]), # value should be clipped to 1.0; gradient is [0.0]
-    ([1.0], [2.0], [2.5]), # value should be clipped to 2.0; gradient is [0.0]
-    
-    # should clip to [1.5, 2.0, 1.0]; gradient is [[1.0, 0.0, 0.0]]
-    ([1.0], [2.0], [[1.5, 2.1, 0.9]]),
-
-    # should clip to [[1.0, 2.0], [1.0, 2.0], [1.5, 2.0]];
-    # gradient is [[0.0, 0.0], [1.0, 1.0], [1.0, 0.0]]
-    ([1.0], [2.0], [[0.0, 3.0], [1.0, 2.0], [1.5, 2.5]]),
-     
-    # test what happens if a user puts a higher "min" value than their "max" value
-    # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
-    # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
-    ([5.0], [0.5], [[1.5, 2.1, 0.9, -1.0, -2.0]]),
-     
-    # test a more complicated broadcasting scenario
-    ([[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]], [[-1.0, 2.0], [3.0, 4.0]]),
-    ]
-
-# -- clip operation tests --
-@pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
-def test_op_clip(min_value, max_value, x, device_id, precision):    
-    from .. import clip
-    
-    # Forward pass test
-    #==================
-    # we compute the expected output for the forward pass
-    # Compare to numpy's implementation of np.clip(x, min, max)
-    expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
-    
-    op_node = I([x])
-    a = constant(min_value)    
-    b = constant(max_value)
-    
-    result = clip(op_node, a, b)
-    unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=False)
-    
-    #Backward pass test
-    #==================
-    # The gradient of the clip() function is equal to 1 when the element 
-    # has not been clipped, and 0 if it has been clipped
-    expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
-
-    unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=op_node)
 
 TENSORS = [
     ([[0, -0.1]]),
@@ -78,9 +27,8 @@ TENSORS = [
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
-
     from .. import sigmoid
-
+    
     def numpy_op(x):
         return 1.0 / (1.0 + np.exp(-AA(x, dtype=PRECISION_TO_TYPE[precision])))
 
@@ -108,67 +56,6 @@ def test_op_sigmoid(tensor, device_id, precision):
     expected = [[s * (1 - s)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=input_node)
-
-
-@pytest.mark.parametrize("batch",
-                         [
-                             [  # 2 samples having 4 classes
-                                 [1, 1, 2, 3],
-                                 [0, 0, 0, 0]
-                             ],
-                         ])
-def test_op_softmax(batch, device_id, precision):
-    from .. import softmax
-    
-    def numpy_op(x):
-        x = AA(x, dtype=PRECISION_TO_TYPE[precision])
-        # Expecting classes of one sample
-        assert len(x.shape) == 1
-
-        ox = x - x.max()  # subtract max to avoid overflow
-
-        expX = np.exp(ox)
-        return expX / np.sum(expX)
-
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-
-    input_node = I(batch)
-    op_node = softmax(input_node)
-
-    expected = [[numpy_op(sample)] for sample in batch]
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-    # Backward pass test
-    # ==================
-    # The expected results for the backward pass is fi(1-fi) for i and -fi*fj
-    # for element j!=i.
-    def numpy_grad(x):
-        grads = np.zeros((len(x), len(x)), dtype=PRECISION_TO_TYPE[precision])
-
-        for i in range(len(x)):
-            # deriving wrt i-th element
-            for j in range(len(x)):
-                if i == j:
-                    grads[i, j] = x[i] * (1 - x[i])
-                else:
-                    grads[i, j] = x[i] * (-x[j])
-
-        return grads.sum(axis=0)
-
-    expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
-
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
@@ -444,6 +331,115 @@ def test_op_abs(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+@pytest.mark.parametrize("batch",
+                         [
+                             [  # 2 samples having 4 classes
+                                 [1, 1, 2, 3],
+                                 [0, 0, 0, 0]
+                             ],
+                         ])
+def test_op_softmax(batch, device_id, precision):
+    from .. import softmax
+    
+    def numpy_op(x):
+        x = AA(x, dtype=PRECISION_TO_TYPE[precision])
+        # Expecting classes of one sample
+        assert len(x.shape) == 1
+
+        ox = x - x.max()  # subtract max to avoid overflow
+
+        expX = np.exp(ox)
+        return expX / np.sum(expX)
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    input_node = I(batch)
+    op_node = softmax(input_node)
+
+    expected = [[numpy_op(sample)] for sample in batch]
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass is fi(1-fi) for i and -fi*fj
+    # for element j!=i.
+    def numpy_grad(x):
+        grads = np.zeros((len(x), len(x)), dtype=PRECISION_TO_TYPE[precision])
+
+        for i in range(len(x)):
+            # deriving wrt i-th element
+            for j in range(len(x)):
+                if i == j:
+                    grads[i, j] = x[i] * (1 - x[i])
+                else:
+                    grads[i, j] = x[i] * (-x[j])
+
+        return grads.sum(axis=0)
+
+    expected = [[numpy_grad(numpy_op(sample))] for sample in batch]
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
+CLIP_TUPLES = [
+    ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
+    ([1.0], [2.0], [0.5]), # value should be clipped to 1.0; gradient is [0.0]
+    ([1.0], [2.0], [2.5]), # value should be clipped to 2.0; gradient is [0.0]
+    
+    # should clip to [1.5, 2.0, 1.0]; gradient is [[1.0, 0.0, 0.0]]
+    ([1.0], [2.0], [[1.5, 2.1, 0.9]]),
+
+    # should clip to [[1.0, 2.0], [1.0, 2.0], [1.5, 2.0]];
+    # gradient is [[0.0, 0.0], [1.0, 1.0], [1.0, 0.0]]
+    ([1.0], [2.0], [[0.0, 3.0], [1.0, 2.0], [1.5, 2.5]]),
+     
+    # test what happens if a user puts a higher "min" value than their "max" value
+    # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
+    # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
+    ([5.0], [0.5], [[1.5, 2.1, 0.9, -1.0, -2.0]]),
+     
+    # test a more complicated broadcasting scenario
+    ([[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]], [[-1.0, 2.0], [3.0, 4.0]]),
+    ]
+
+# -- clip operation tests --
+@pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
+def test_op_clip(min_value, max_value, x, device_id, precision):    
+    from .. import clip
+    
+    # Forward pass test
+    #==================
+    # we compute the expected output for the forward pass
+    # Compare to numpy's implementation of np.clip(x, min, max)
+    expected = [[np.clip(AA(x, dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]]
+    
+    op_node = I([x])
+    a = constant(min_value)    
+    b = constant(max_value)
+    
+    result = clip(op_node, a, b)
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=False)
+    
+    #Backward pass test
+    #==================
+    # The gradient of the clip() function is equal to 1 when the element 
+    # has not been clipped, and 0 if it has been clipped
+    expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
+
+    unittest_helper(result, None, expected, device_id=device_id, 
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=op_node)
 
 COND_TUPLES = [ 
                 ([-1], [2], [3]), 

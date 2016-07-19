@@ -267,9 +267,6 @@ def sanitize_input(arg):
         if not arg:
             raise ValueError('input is empty')
 
-        if not isinstance(arg[0], np.ndarray):
-            raise ValueError('Cannot convert list of "%s" to Variable'%type(arg[0]))
-
     if not isinstance(arg, np.ndarray):
         arg = np.asarray(arg, dtype=np.float32)
 

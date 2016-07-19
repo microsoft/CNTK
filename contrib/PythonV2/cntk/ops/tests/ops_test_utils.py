@@ -58,8 +58,8 @@ def test_unary_op(ctx, op_func,
             forward_input, expected_forward, 
             backward_input, expected_backward,
             device_id=ctx.device, precision=ctx.precision, clean_up=True)
-   
-def test_binary_op(ctx, op_str,
+
+def test_binary_op(ctx, op_func,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
     
@@ -79,8 +79,16 @@ def test_binary_op(ctx, op_str,
     # create batch
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
+    
+    if (type(op_func) == str):
+        input_op_constant = eval('a %s right_operand'%op_func)
+        constant_op_input = eval('left_operand %s b'%op_func)
+        input_op_input = eval('a %s b'%op_func)
+    else:
+        input_op_constant = op_func(a, right_operand)
+        constant_op_input = op_func(left_operand, b)
+        input_op_input = op_func(a, b)
 
-    input_op_constant = eval('a %s right_operand'%op_str)
     forward_input = {a:left_value}
     backward_input = {a:np.ones(left_value.shape)}
     expected_backward = { a: expected_backward_all['left_arg'], }
@@ -88,17 +96,15 @@ def test_binary_op(ctx, op_str,
             forward_input, expected_forward, 
             backward_input, expected_backward,
             device_id=ctx.device, precision=ctx.precision, clean_up=True)
-
-    constant_op_input = eval('left_operand %s b'%op_str)
+        
     forward_input = {b:right_value}
     backward_input = {b:np.ones(right_value.shape)}
     expected_backward = { b: expected_backward_all['right_arg'], }
     unittest_helper(constant_op_input, 
             forward_input, expected_forward, 
             backward_input, expected_backward,
-            device_id=ctx.device, precision=ctx.precision, clean_up=True)
-
-    input_op_input = eval('a %s b'%op_str)
+            device_id=ctx.device, precision=ctx.precision, clean_up=True) 
+    
     forward_input = {a:left_value, b:right_value}
     backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
@@ -106,7 +112,7 @@ def test_binary_op(ctx, op_str,
         forward_input, expected_forward, 
         backward_input, expected_backward,
         device_id=ctx.device, precision=ctx.precision, clean_up=True)
-
+   
 def unittest_helper(root_node, 
         forward_input, expected_forward, 
         backward_input, expected_backward,
