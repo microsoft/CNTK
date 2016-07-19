@@ -358,11 +358,10 @@ def element_divide(left, right, name=''):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from cntk_py import ElementDivide
+    from ..cntk_py import ElementDivide
     left = sanitize_input(left)
     right = sanitize_input(right)
-    op = ElementDivide(left, right, name=name)
-    op.rank = max(op._.rank, op.y.rank)
+    op = ElementDivide(left, right, name)    
     return op
 
 def times(left, right, output_rank=1, name=''):

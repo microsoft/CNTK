@@ -95,6 +95,26 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
+
+# -- element divide tests --
+#TODO: enable once the function is exposed
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
+def t_est_op_element_divide(left_operand, right_operand, device_id, precision):
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
+
+    expected_forward = [AA([left_operand]) / AA([right_operand])]
+
+    expected_backward = {
+            'left':  [[[np.ones_like(x) / x for x in right_operand]]],
+            'right': [[-AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) / AA(right_operand, dtype=PRECISION_TO_TYPE[precision])**2]]
+            }
+
+    _test_binary_op(ctx, '/',
+            left_operand, right_operand, 
+            expected_forward, expected_backward)
+
 def _test_binary_op(ctx, op_str,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
@@ -143,44 +163,6 @@ def _test_binary_op(ctx, op_str,
         backward_input, expected_backward,
         device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
-# -- element divide tests --
-
-@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_element_divide(left_operand, right_operand, device_id, precision):
-
-    # Forward pass test
-    #==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-    expected = [[AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) / AA(right_operand, dtype=PRECISION_TO_TYPE[precision])]]
-
-    a = I([left_operand])
-    b = I([right_operand])
-
-    left_as_input = a / right_operand
-    unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
-    right_as_input = left_operand / b
-    unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
-    unittest_helper(a / b, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
-
-    # Backward pass test
-    #==================
-    # For left: d/da (a/b) = 1/b
-    # For right: d/db (a/b) = a * d/db (1/b) = a * -1/b^2 = -a/b^2
-    expected_left = [[[np.ones_like(x) / x for x in right_operand]]]
-    expected_right = [[-AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) / AA(right_operand, dtype=PRECISION_TO_TYPE[precision])**2]]
-
-    unittest_helper(left_as_input, None, expected_left, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=a)
-    unittest_helper(right_as_input, None, expected_right, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True, input_node=b)
 
 IDENTITY_TENSORS = [
     ([30.]),
