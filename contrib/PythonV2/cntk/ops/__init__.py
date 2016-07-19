@@ -631,7 +631,7 @@ def tanh(x, name=''):
     """
     from ..cntk_py import Tanh
     x = sanitize_input(x)
-    op = Tanh(x, name=name)
+    op = Tanh(x, name)
     return op
 
 def softmax(x, name=''):
@@ -679,7 +679,7 @@ def exp(x, name=''):
     """
     from ..cntk_py import Exp
     x = sanitize_input(x)
-    op = Exp(x, name=name)
+    op = Exp(x, name)
     return op
 
 def log(x, name=''):
