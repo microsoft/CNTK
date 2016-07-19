@@ -697,6 +697,9 @@ public:
         Matrix<ElemType> randomSplit = inputValue.DeepClone();
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
+            if (i == inputIndex)
+                continue;
+
             let input = Input(inputIndex)->ValueFor(fr);
             inputSum += input;
         }
