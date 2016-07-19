@@ -47,15 +47,15 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     features->m_storageType = StorageType::dense;
     m_streams.push_back(features);
 
-    ConfigParameters label = config(labelNames[0]);
-    size_t labelDimension = label("labelDim");
+    ConfigParameters labelSection = config(labelNames[0]);
+    size_t labelDimension = labelSection("labelDim");
 
-    auto labelSection = std::make_shared<StreamDescription>();
-    labelSection->m_id = 1;
-    labelSection->m_name = msra::strfun::utf16(label.ConfigName());
-    labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labelSection->m_storageType = StorageType::dense;
-    m_streams.push_back(labelSection);
+    auto labels = std::make_shared<StreamDescription>();
+    labels->m_id = 1;
+    labels->m_name = msra::strfun::utf16(labelSection.ConfigName());
+    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
+    labels->m_storageType = StorageType::dense;
+    m_streams.push_back(labels);
 
     m_mapPath = config(L"file");
 
@@ -75,17 +75,33 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
     }
 
+    std::string type = labelSection(L"labelType", "classification");
+    if (AreEqualIgnoreCase(type, "classification"))
+    {
+        m_labelType = LabelType::Classification;
+    }
+    else if (AreEqualIgnoreCase(type, "regression"))
+    {
+        m_labelType = LabelType::Regression;
+    }
+    else
+    {
+        RuntimeError("'labelType' parameter must be set to 'classification' or 'regression'");
+    }
+
     // Identify precision
     string precision = config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
     {
+        m_elementType = ElementType::tfloat;
         features->m_elementType = ElementType::tfloat;
-        labelSection->m_elementType = ElementType::tfloat;
+        labels->m_elementType = ElementType::tfloat;
     }
     else if (AreEqualIgnoreCase(precision, "double"))
     {
+        m_elementType = ElementType::tdouble;
         features->m_elementType = ElementType::tdouble;
-        labelSection->m_elementType = ElementType::tdouble;
+        labels->m_elementType = ElementType::tdouble;
     }
     else
     {
