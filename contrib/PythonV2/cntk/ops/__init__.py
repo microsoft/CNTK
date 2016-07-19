@@ -609,7 +609,7 @@ def sigmoid(x, name=''):
     """
     from ..cntk_py import Sigmoid
     x = sanitize_input(x)
-    op = Sigmoid(x, name=name)
+    op = Sigmoid(x, name)
     return op
 
 def tanh(x, name=''):

@@ -27,38 +27,21 @@ TENSORS = [
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_sigmoid(tensor, device_id, precision):
-    from .. import sigmoid
-    
-    def numpy_op(x):
-        return 1.0 / (1.0 + np.exp(-AA(x, dtype=PRECISION_TO_TYPE[precision])))
 
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
+    from .. import sigmoid    
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
 
-    expected = [[numpy_op(tensor)]]
+    s = 1.0 / (1.0 + np.exp(-AA(tensor, dtype=PRECISION_TO_TYPE[precision])))
+    expected_forward = [AA([s])]
 
-    input_node = I([tensor])
-    op_node = sigmoid(input_node)
+    expected_backward = {
+            'arg': [[s * (1 - s)]],            
+            }
 
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-    # Backward pass test
-    # ==================
-    # The expected results for the backward pass is sigmoid(x)*(1-sigmoid(x))
-    s = numpy_op(tensor)
-    expected = [[s * (1 - s)]]
-
-    unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=input_node)
-
+    test_unary_op(ctx, sigmoid,
+            tensor, expected_forward, expected_backward)
 
 @pytest.mark.parametrize("tensor", TENSORS)
 def test_op_exp(tensor, device_id, precision):

@@ -39,7 +39,7 @@ def test_unary_op(ctx, op_func,
             name='a')
 
     # create batch
-    value.shape = (1,1) + left_value.shape    
+    value.shape = (1,1) + value.shape    
 
     input_op = op_func(a)
     forward_input = {a:value}
@@ -49,16 +49,7 @@ def test_unary_op(ctx, op_func,
             forward_input, expected_forward, 
             backward_input, expected_backward,
             device_id=ctx.device, precision=ctx.precision, clean_up=True)
-
-    constant_op = op_func(operand)
-    forward_input = None
-    backward_input = None
-    expected_backward = None
-    unittest_helper(constant_op_input, 
-            forward_input, expected_forward, 
-            backward_input, expected_backward,
-            device_id=ctx.device, precision=ctx.precision, clean_up=True)
-
+   
 def test_binary_op(ctx, op_func,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
