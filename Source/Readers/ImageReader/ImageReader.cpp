@@ -39,7 +39,27 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
         omp_set_num_threads(threadCount);
     }
 
-    auto deserializer = std::make_shared<ImageDataDeserializer>(config);
+    const LabelType labelType = configHelper.GetLabelType();
+    const ElementType elementType = configHelper.GetElementType();
+
+    std::shared_ptr<DataDeserializerBase> deserializer;
+    switch (labelType)
+    {
+    case LabelType::Classification:
+        switch (elementType)
+        {
+        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, float>>(config); break;
+        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, double>>(config); break;
+        }
+        break;
+    case LabelType::Regression:
+        switch (elementType)
+        {
+        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, float>>(config); break;
+        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, double>>(config); break;
+        }
+        break;
+    }
 
     SequenceEnumeratorPtr randomizer;
     // Request multi-threaded randomizer operation to speed up CPU-intensive image-decoding and transformations.
