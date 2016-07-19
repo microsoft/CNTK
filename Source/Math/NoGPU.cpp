@@ -1947,7 +1947,7 @@ void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
 {
 }
 

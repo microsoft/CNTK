@@ -474,7 +474,7 @@ public:
     static void AddElementToElement(ElemType beta, const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
 
     static void DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
-    void AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient);
+    void AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex);
 
     // minus one at a specific position
     static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);

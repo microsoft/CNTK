@@ -5354,10 +5354,8 @@ template <class ElemType>
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient)
+void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
 {
-
-
     if (this->GetDeviceId() < 0)
     {
         NOT_IMPLEMENTED;
@@ -5369,7 +5367,7 @@ void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matri
         if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE && 
             outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
         {
-            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix);
+            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, *inputSum.m_GPUMatrix, *randomSplit.m_GPUMatrix, numInputs, inputIndex);
         }
         else
         {

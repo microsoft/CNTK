@@ -2602,13 +2602,24 @@ __global__ void _addElementMaxGradient(
     ElemType *outputValue,
     ElemType *outputGradient,
     ElemType *inputGradient,
+    ElemType *inputSum,
+    ElemType *randomSplit,
+    size_t numInputs,
+    size_t inputIndex,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
+
     if (inputValue[id] == outputValue[id])
-        inputGradient[id] = outputGradient[id];
+    {
+        size_t setIndex = (size_t)(ceil(randomSplit[id])) % numInputs;
+        if (inputSum[id] == (ElemType)0 && setIndex != inputIndex)
+            inputGradient[id] = 0;
+        else
+            inputGradient[id] = outputGradient[id];
+    }
     else
         inputGradient[id] = 0;
 }

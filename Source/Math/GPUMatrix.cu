@@ -3645,7 +3645,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
 {
     if (inputValue.GetNumRows() != outputValue.GetNumRows() ||
         inputValue.GetNumCols() != outputValue.GetNumCols() ||
@@ -3659,7 +3659,45 @@ void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue,
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
 
-    _addElementMaxGradient<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >>>(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), n);
+    _addElementMaxGradient<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), inputSum.Data(), randomSplit.Data(), numInputs, inputIndex, n);
+
+    //ElemType *inmax = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *outmax = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *gin = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *gout = (ElemType *)malloc(50 * sizeof(ElemType));
+    //ElemType *ram = (ElemType *)malloc(50 * sizeof(ElemType));
+
+    //cudaMemcpy(inmax, inputValue.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(outmax, outputValue.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(gin, Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(gout, outputGradient.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(ram, randomSplit.Data(), 50 * sizeof(ElemType), cudaMemcpyDeviceToHost);
+
+
+    //fprintf(stderr, "RandomSplit: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", ram[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Input Value: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", inmax[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Output Value: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", outmax[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Input Gradient: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", gin[i]);
+    //fprintf(stderr, "\n");
+
+    //fprintf(stderr, "Output Gradient: \n");
+    //for (int i = 0; i < 50; i++)
+    //    fprintf(stderr, "%f ", gout[i]);
+    //fprintf(stderr, "\n");
 }
 
 template <class ElemType>

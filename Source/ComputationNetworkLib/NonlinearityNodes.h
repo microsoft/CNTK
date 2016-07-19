@@ -670,7 +670,7 @@ public:
     {
         Matrix<ElemType> result = ValueFor(fr);
         Matrix<ElemType> input0 = Input(0)->ValueFor(fr);
-    
+
         result.AssignValuesOf(input0);
    
         if (GetNumInputs() > 1) {
@@ -680,6 +680,8 @@ public:
                 Matrix<ElemType>::DoElementMaxOf(result, input);
             }
         }
+
+
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -690,7 +692,18 @@ public:
         Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
         Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
 
-        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
+        // Determine if inputs are equal to zero
+        Matrix<ElemType> inputSum = inputValue.DeepClone();
+        Matrix<ElemType> randomSplit = inputValue.DeepClone();
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            let input = Input(inputIndex)->ValueFor(fr);
+            inputSum += input;
+        }
+
+        randomSplit.SetUniformRandomValue((ElemType)0 /*low*/, (ElemType)GetNumInputs() /*high*/, 0 /*seed*/);
+
+        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, inputSum, randomSplit, GetNumInputs(), inputIndex);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
