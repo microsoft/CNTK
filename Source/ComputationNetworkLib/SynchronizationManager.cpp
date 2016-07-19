@@ -114,7 +114,7 @@ void SynchronizationManager::FindSwapOrder()
                                              m_buffer2StepNumbers[buffer][0] :
                                              m_buffer2StepNumbers[buffer][i+1];
 
-            cout << "swap out: " << swapOutStepNumber << " needed by step: " << neededByStepNumber << endl;
+            //cout << "swap out: " << swapOutStepNumber << " needed by step: " << neededByStepNumber << endl;
 
             // by default we try to swap one timestep before the buffer is needed
             // if this does not work out we will look for timesteps before that and
@@ -139,6 +139,7 @@ void SynchronizationManager::FindSwapOrder()
             float cumulativeSwapOutTime = m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first;
             // we just look if we can swap under the current operation
             // we can make it more complex anytime later to also look at other timesteps
+            /*
             if(m_performanceCostLimit*(swapOutTime + cumulativeSwapOutTime) > 
                computationTimeOut)
             {
@@ -160,6 +161,7 @@ void SynchronizationManager::FindSwapOrder()
                 cout << "------------------" << endl;
 
             }
+            */
 
             if(m_performanceCostLimit*(swapOutTime + cumulativeSwapOutTime) > 
                computationTimeOut)
@@ -196,6 +198,7 @@ void SynchronizationManager::FindSwapOrder()
             //m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += 9999999.0f;
 
             totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
+            cout << "Swapping buffer: " << buffer << " with dim "  << buffer->GetNumRows() << "x" << buffer->GetNumCols() <<  " out: " << swapOutStepNumber << ", in:" << swapInStepNumber << endl;
         }
 
     }
@@ -238,11 +241,50 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
     }
     else
     {
+        //cout << "IS SHAREBLE: " << node->IsValueSharable() << endl;
         std::string name = GetStepName(node, isForward);
         std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
+
+
+
         for (int i = 0; i < actionsToDo.size(); i++)
         {
                //cout << name << endl;
+               if(node->HasMBLayout())
+                //cout << "MBLAYOUT: " << node->GetSampleMatrixNumRows() << "x" << node->GetSampleMatrixNumCols() << endl;
+               //actionsToDo[i]->SetRows(node->GetSampleMatrixNumRows());
+               //actionsToDo[i]->SetCols(node->GetSampleMatrixNumCols());
+               //if(node->HasSampleLayout())
+               //{
+               //    TensorShape shape = node->GetSampleLayout();
+               //    int size = shape.GetRank();               
+               //    cout << "local tensor: ";
+               //    for(int k = 0; k < size; k++)
+               //         cout << shape.GetDim(k) << "x";
+               //    cout << endl;
+               //}
+               //for(int j = 0; j < node->GetNumInputs(); j++)
+               //{
+               //    if(!node->Input(j)->HasSampleLayout()){ continue; }
+               //    TensorShape shape = node->GetInputSampleLayout(j);
+               //    int size = shape.GetRank();               
+               //    cout << "TENSOR SHAPE: ";
+               //    for(int k = 0; k < size; k++)
+               //         cout << shape.GetDim(k) << "x";
+               //    cout << endl;
+               ////cout << "TENSOR SHAPE: " << ->GetDim(
+               //}
+               //if(node->HasMBLayout())
+               //{
+               //    int MBSize = node->GetSampleMatrixNumCols();
+               //    if(actionsToDo[i]->GetCols() != MBSize &&
+               //       actionsToDo[i]->GetRows() != MBSize)
+               //       {
+               //            //cout << actionsToDo[i]->GetRows() << "x" << actionsToDo[i]->GetCols() <<  " vs. " << MBSize << endl;
+               //            //actionsToDo[i]->SetCols(MBSize);
+
+               //       }
+               //}
                actionsToDo[i]->BeginAction();
         }
 
@@ -352,11 +394,13 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
     {
+       //cout << "IS SHARABLE: " << node->Input(i)->IsValueSharable() << endl;;
        Matrix<float> *buffer = (Matrix<float>*)node->Input(i)->ValuePtr().get();
        m_stepNumber2Buffer[m_currentStepNumber].push_back(buffer);
        m_buffer2StepNumbers[buffer].push_back(m_currentStepNumber);
 
-       m_bufferSet.insert(buffer);
+       if(!node->Input(i)->IsValueSharable())
+           m_bufferSet.insert(buffer);
     }
 
     cout << m_currentStepNumber << " " << name << endl;
@@ -392,6 +436,10 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
             node->BackpropToSpecialization(idx, fr);
         }
         m_timer.tick(name);
+
+        // CUDA makes sure that calculations are only done once. 
+        // we have to do this, otherwise the calls will be aborted because the values were already
+        // calculated.
         Matrix<float> *output = (Matrix<float>*)node->ValuePtr().get(); 
         float *data = output->Data();
         CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));

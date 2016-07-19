@@ -68,7 +68,18 @@ void SwapInAction::BeginAction()
     //    cout << m_bufferGPU->GetNumRows() << "x" << m_bufferGPU->GetNumCols() << endl;
     //}
     //m_timer.tick("resize");
-    m_bufferGPU->Resize(m_rows,m_cols);
+
+
+    if(m_rows != m_bufferGPU->GetNumRows() ||
+       m_cols != m_bufferGPU->GetNumCols())
+       {
+    //cout << "VIOLATION: " << m_rows << "x" << m_cols <<  " vs. " << m_bufferGPU->GetNumRows() << "x" << m_bufferGPU->GetNumCols() << endl;
+    
+    //cout << "VIOLATION: " << m_swpout->GetRows() << "x" << m_swpout->GetCols() <<  " vs. " << m_bufferGPU->GetNumRows() << "x" << m_bufferGPU->GetNumCols() << endl;
+    }
+    //cout << "VIOLATION: " << m_rows << "x" << m_cols <<  " vs. " << m_bufferGPU->GetNumRows() << "x" << m_bufferGPU->GetNumCols() << endl;
+    m_bufferGPU->Resize(m_swpout->GetRows(),m_swpout->GetCols());
+
     //float *gpupointer = m_bufferGPU->Data();
     //cout << "GPU pointer: " << gpupointer << endl;
     //cout << "alloc" << endl;

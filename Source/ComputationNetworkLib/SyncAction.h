@@ -44,6 +44,8 @@ public:
     int GetRows(){ return m_rows; };
     int GetCols(){ return m_cols; };
     size_t GetBytes(){ return m_bytes; }
+    void SetRows(int rows){ m_rows = rows; };
+    void SetCols(int cols){ m_cols = cols; };
 
 };
 

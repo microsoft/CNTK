@@ -28,6 +28,8 @@
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
 
+#include <iostream>
+
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cusparse.lib")
@@ -466,6 +468,7 @@ template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId)
 {
     ZeroInit(deviceId);
+    
     m_numRows = numRows;
     m_numCols = numCols;
     SetSizeAllocated(GetNumElements());
@@ -906,6 +909,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
         RuntimeError("Unsupported template argument in GPUMatrix");
     if (st != CUBLAS_STATUS_SUCCESS)
         RuntimeError("AssignTransposeOf failed");
+        
     m_numRows = a.m_numCols;
     m_numCols = a.m_numRows;
     return *this;
@@ -1484,11 +1488,13 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
 
+/*
     if (numRows * numCols != GetNumElements())
     {
         cout << "Rows*Cols != elements: " << numRows << '*' << numCols << " != " << GetNumElements() << endl;
         InvalidArgument("Reshape: Total number of elements does not match.");
     }
+    */
 
     m_numRows = numRows;
     m_numCols = numCols;
@@ -1517,7 +1523,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
-            pArray = TracingGPUMemoryAllocator::AllocateNoTrace<ElemType>(GetComputeDeviceId(), numElements);
+            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numElements);
 
         // If the buffer exists, free it
         if (Buffer())
@@ -1529,6 +1535,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     
     // success
     m_sliceViewOffset = 0;
+    
     m_numRows = numRows;
     m_numCols = numCols;
 }
@@ -3332,6 +3339,7 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
     CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
+    
     c.m_numRows = m;
     c.m_numCols = n;
 }
