@@ -40,40 +40,8 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("ImageReader does not support the sample format '%s', only 'nchw' and 'nhwc' are supported.", mbFmt.c_str());
     }
 
-    auto features = std::make_shared<StreamDescription>();
-    features->m_id = 0;
-    features->m_name = msra::strfun::utf16(featureSection.ConfigName());
-    features->m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(w, h, c).AsTensorShape(m_dataFormat));
-    features->m_storageType = StorageType::dense;
-    m_streams.push_back(features);
-
     ConfigParameters labelSection = config(labelNames[0]);
     size_t labelDimension = labelSection("labelDim");
-
-    auto labels = std::make_shared<StreamDescription>();
-    labels->m_id = 1;
-    labels->m_name = msra::strfun::utf16(labelSection.ConfigName());
-    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labels->m_storageType = StorageType::dense;
-    m_streams.push_back(labels);
-
-    m_mapPath = config(L"file");
-
-    m_grayscale = config(L"grayscale", c == 1);
-    std::string rand = config(L"randomize", "auto");
-
-    if (AreEqualIgnoreCase(rand, "auto"))
-    {
-        m_randomize = true;
-    }
-    else if (AreEqualIgnoreCase(rand, "none"))
-    {
-        m_randomize = false;
-    }
-    else
-    {
-        RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
-    }
 
     std::string type = labelSection(L"labelType", "classification");
     if (AreEqualIgnoreCase(type, "classification"))
@@ -89,8 +57,39 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("'labelType' parameter must be set to 'classification' or 'regression'");
     }
 
+    auto features = std::make_shared<StreamDescription>();
+    features->m_id = 0;
+    features->m_name = msra::strfun::utf16(featureSection.ConfigName());
+    features->m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(w, h, c).AsTensorShape(m_dataFormat));
+    features->m_storageType = StorageType::dense;
+    m_streams.push_back(features);
+
+    auto labels = std::make_shared<StreamDescription>();
+    labels->m_id = 1;
+    labels->m_name = msra::strfun::utf16(labelSection.ConfigName());
+    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
+    labels->m_storageType = m_labelType == LabelType::Classification ? StorageType::sparse_csc : StorageType::dense;
+    m_streams.push_back(labels);
+
+    m_mapPath = config(L"file");
+    m_grayscale = config(L"grayscale", c == 1);
+
+    std::string rand = config(L"randomize", "auto");
+    if (AreEqualIgnoreCase(rand, "auto"))
+    {
+        m_randomize = true;
+    }
+    else if (AreEqualIgnoreCase(rand, "none"))
+    {
+        m_randomize = false;
+    }
+    else
+    {
+        RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
+    }
+
     // Identify precision
-    string precision = config.Find("precision", "float");
+    string precision = config(L"precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
     {
         m_elementType = ElementType::tfloat;
