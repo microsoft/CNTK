@@ -27,15 +27,15 @@ import numpy as np
 # TODO: perhaps include some rand() testing; and
 TENSOR_PAIRS = [
     ([30.], [10.]),
-    #([[30.]], [[10.]]),
-    #([[1.5, 2.1]], [[10., 20.]]),
-    #([[100., 200.], [300., 400.], [10., 20.]],
-    #  [[10., 20.], [30., 40.], [1., 2.]]),
+    ([[30.]], [[10.]]),
+    ([[1.5, 2.1]], [[10., 20.]]),
+    ([[100., 200.], [300., 400.], [10., 20.]],
+      [[10., 20.], [30., 40.], [1., 2.]]),
 
     #([[5],[6],[7]], [[10, 20], [30,40], [1,2]]),     
     
     # Adding two 3x2 inputs of sequence length 1
-    #([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
+    ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
 
 # -- plus operation tests --
@@ -115,6 +115,60 @@ def t_est_op_element_divide(left_operand, right_operand, device_id, precision):
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
+# -- identity function tests --
+
+IDENTITY_TENSORS = [
+    ([30.]),
+    ([[30.]]),
+    ([[1.5, 2.1]]),
+    ([[100., 200.], [300., 400.], [10., 20.]]),
+    ([[30,40], [1,2], [0.1, 0.2]])
+]
+
+@pytest.mark.parametrize("tensor", IDENTITY_TENSORS)
+def test_op_identity(tensor, device_id, precision):
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
+
+    expected_forward = [AA([tensor])]
+
+    expected_backward = {
+            'tensor': np.ones_like(expected_forward),            
+            }
+
+    _test_unary_op(ctx, identity,
+            tensor, expected_forward, expected_backward)
+
+    def numpy_op(x):
+        return AA(x, dtype=PRECISION_TO_TYPE[precision])
+
+    # Forward pass test
+    # ==================
+    # we compute the expected output for the forward pass
+    # we need two surrounding brackets
+    # the first for sequences (length=1, since we have dynamic_axis='')
+    # the second for batch of one sample
+
+    expected = [[numpy_op(tensor)]]
+
+    input_node = I([tensor])
+    op_node = identity(input_node)
+
+    unittest_helper(op_node, None, expected,
+                    device_id=device_id,
+                    precision=precision,
+                    clean_up=True, backward_pass=False)
+
+    # Backward pass test
+    # ==================
+    # The expected results for the backward pass of x is x
+    expected = np.ones_like(expected)
+
+    unittest_helper(op_node, None, expected, device_id=device_id,
+                    precision=precision, clean_up=True, backward_pass=True,
+                    input_node=input_node)
+
 def _test_binary_op(ctx, op_str,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
@@ -164,48 +218,7 @@ def _test_binary_op(ctx, op_str,
         device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
 
-IDENTITY_TENSORS = [
-    ([30.]),
-    ([[30.]]),
-    ([[1.5, 2.1]]),
-    ([[100., 200.], [300., 400.], [10., 20.]]),
-    ([[30,40], [1,2], [0.1, 0.2]])
-]
-
-# -- identity function tests --
-
-@pytest.mark.parametrize("tensor", IDENTITY_TENSORS)
-def test_op_identity(tensor, device_id, precision):
-
-    def numpy_op(x):
-        return AA(x, dtype=PRECISION_TO_TYPE[precision])
-
-    # Forward pass test
-    # ==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-
-    expected = [[numpy_op(tensor)]]
-
-    input_node = I([tensor])
-    op_node = identity(input_node)
-
-    unittest_helper(op_node, None, expected,
-                    device_id=device_id,
-                    precision=precision,
-                    clean_up=True, backward_pass=False)
-
-    # Backward pass test
-    # ==================
-    # The expected results for the backward pass of x is x
-    expected = np.ones_like(expected)
-
-    unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
-                    input_node=input_node)
-
+# -- times function tests --
 
 TIMES_PAIRS = [
     ([[30.]], [[10.]]),
@@ -213,6 +226,7 @@ TIMES_PAIRS = [
     ([[100., 200.]], [[10.], [20.]]),
 ]
 
+#TODO:enable this test once sparse is sorted out
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
 def _test_op_times(left_operand, right_operand, device_id, precision,
         left_matrix_type, right_matrix_type):
