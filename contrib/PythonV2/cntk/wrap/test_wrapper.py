@@ -29,19 +29,24 @@ def _input_plus_const():
 
 def test_hashability_1():
     left, right, op = _input_plus_const()
+    assert left != right
 
     outputVariables = op.Outputs()
     assert len(outputVariables) == 1
     assert op.Output() in op.Outputs()
 
+    # Swig creates always new references when underlying objects are requested.
+    # Here, we check whether the hashing is done properly on the C++ side.
     for o in outputVariables:
         assert o in op.Outputs()
 
     # constants are counted as inputs
     assert len(op.Inputs()) == 2
     assert left in op.Inputs()
+    assert right in op.Inputs()
 
     assert len(op.Constants()) == 1
+    assert left not in op.Constants()
     assert right in op.Constants()
 
     assert len(op.Placeholders()) == 0
