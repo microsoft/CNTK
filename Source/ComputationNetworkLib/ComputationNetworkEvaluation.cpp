@@ -31,42 +31,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 std::map<const std::wstring, int> g_nodes =
 {
-    { /*  1 */  L"ElementTimes", profilerEvtNodeElementTimes },
-    { /*  2 */  L"Exp", profilerEvtNodeExp },
-    { /*  3 */  L"FutureValue", profilerEvtNodeFutureValue },
-    { /*  4 */  L"GatherPacked", profilerEvtNodeGatherPacked },
-    { /*  5 */  L"Hardmax", profilerEvtNodeHardmax },
-    { /*  6 */  L"If", profilerEvtNodeIf },
-    { /*  7 */  L"InputValue", profilerEvtNodeInputValue },
-    { /*  8 */  L"LearnableParameter", profilerEvtNodeLearnableParameter },
-    { /*  9 */  L"Log", profilerEvtNodeLog },
-    { /* 10 */  L"Minus", profilerEvtNodeMinus },
-    { /* 11 */  L"PackedIndex", profilerEvtNodePackedIndex },
-    { /* 12 */  L"Pass", profilerEvtNodePass },
-    { /* 13 */  L"PastValue", profilerEvtNodePastValue },
-    { /* 15 */  L"Plus", profilerEvtNodePlus },
-    { /* 17 */  L"Reciprocal", profilerEvtNodeReciprocal },
-    { /* 18 */  L"ReduceElements", profilerEvtNodeReduceElements },
-    { /* 19 */  L"Reshape", profilerEvtNodeReshape },
-    { /* 20 */  L"RowStack", profilerEvtNodeRowStack },
-    { /* 21 */  L"SEQTraversalFlowControlNode", profilerEvtSEQTraversalFlowControlNode },
-    { /* 22 */  L"ScatterPacked", profilerEvtScatterPacked },
-    { /* 23 */  L"Sigmoid", profilerEvtSigmoid },
-    { /* 24 */  L"Slice", profilerEvtSlice },
-    { /* 25 */  L"Softmax", profilerEvtSoftmax },
-    { /* 26 */  L"SumColumnElements", profilerEvSumColumnElements },
-    { /* 28 */  L"Tanh", profilerEvtTanh },
-    { /* 29 */  L"Times", profilerEvtTimes },
-    { /* 30 */  L"TransposeTimes", profilerEvtTransposeTimes },
-    { /* 31 */  L"Where", profilerEvtWhere },
-    { /* 32 */  L"CrossEntropyWithSoftmax", profilerEvtNodeCrossEntropyWithSoftmax },
-    { /* 33 */  L"LogSoftmax", profilerEvtNodeLogSoftmax },
+    { /*  1 */  L"ElementTimes", profilerEvtNodeElementTimesF },
+    { /*  2 */  L"Exp", profilerEvtNodeExpF },
+    { /*  3 */  L"FutureValue", profilerEvtNodeFutureValueF },
+    { /*  4 */  L"GatherPacked", profilerEvtNodeGatherPackedF },
+    { /*  5 */  L"Hardmax", profilerEvtNodeHardmaxF },
+    { /*  6 */  L"If", profilerEvtNodeIfF },
+    { /*  7 */  L"InputValue", profilerEvtNodeInputValueF },
+    { /*  8 */  L"LearnableParameter", profilerEvtNodeLearnableParameterF },
+    { /*  9 */  L"Log", profilerEvtNodeLogF },
+    { /* 10 */  L"Minus", profilerEvtNodeMinusF },
+    { /* 11 */  L"PackedIndex", profilerEvtNodePackedIndexF },
+    { /* 12 */  L"Pass", profilerEvtNodePassF },
+    { /* 13 */  L"PastValue", profilerEvtNodePastValueF },
+    { /* 15 */  L"Plus", profilerEvtNodePlusF },
+    { /* 17 */  L"Reciprocal", profilerEvtNodeReciprocalF },
+    { /* 18 */  L"ReduceElements", profilerEvtNodeReduceElementsF },
+    { /* 19 */  L"Reshape", profilerEvtNodeReshapeF },
+    { /* 20 */  L"RowStack", profilerEvtNodeRowStackF },
+    { /* 21 */  L"SEQTraversalFlowControlNode", profilerEvtSEQTraversalFlowControlNodeF },
+    { /* 22 */  L"ScatterPacked", profilerEvtScatterPackedF },
+    { /* 23 */  L"Sigmoid", profilerEvtSigmoidF },
+    { /* 24 */  L"Slice", profilerEvtSliceF },
+    { /* 25 */  L"Softmax", profilerEvtSoftmaxF },
+    { /* 26 */  L"SumColumnElements", profilerEvSumColumnElementsF },
+    { /* 28 */  L"Tanh", profilerEvtTanhF },
+    { /* 29 */  L"Times", profilerEvtTimesF },
+    { /* 30 */  L"TransposeTimes", profilerEvtTransposeTimesF },
+    { /* 31 */  L"Where", profilerEvtWhereF },
+    { /* 32 */  L"CrossEntropyWithSoftmax", profilerEvtNodeCrossEntropyWithSoftmaxF },
+    { /* 33 */  L"LogSoftmax", profilerEvtNodeLogSoftmaxF },
+    { /* 34 */  L"UNKNOWN", profilerEvtNodeUnknown }, // For testing
 };
 
 class NodePerfScope 
 {
 
-    int Find(const std::wstring& name)
+    int Find(const std::wstring& name, bool isBackward)
     {
         auto it = g_nodes.find(name);
         if (it != g_nodes.end())
@@ -74,7 +75,7 @@ class NodePerfScope
 #if 0
             fprintf(stderr, ".");
 #endif
-            return it->second;
+            return it->second + isBackward ? 1 : 0;
         }
         fprintf(stderr, "*** %ls: unknown\n", name.c_str());
         return profilerEvtNodeUnknown;
@@ -91,7 +92,7 @@ public:
         m_node = node;
         m_isBackward = isBackward;
 
-        m_stateId = ProfilerTimeBegin(Find(node->OperationName()));
+        m_stateId = ProfilerTimeBegin(Find(node->OperationName(), isBackward));
     }
 
 
