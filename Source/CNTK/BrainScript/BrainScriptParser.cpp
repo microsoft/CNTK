@@ -13,6 +13,7 @@
 #include <set>
 #include <stdexcept>
 #include <algorithm>
+#include <iomanip>
 
 #ifndef let
 #define let const auto
@@ -588,7 +589,9 @@ void Expression::Dump(int indent) const
     {
         fprintf(stderr, "\n");
         for (const auto& arg : args)
+        {
             arg->Dump(indent + 2);
+        }
     }
     if (!namedArgs.empty())
     {
@@ -600,6 +603,45 @@ void Expression::Dump(int indent) const
         }
     }
     fprintf(stderr, "\n");
+}
+
+void Expression::DumpToStream(wstringstream & treeStream, int indent)
+{
+    treeStream << std::setfill(L' ') << std::setw(indent) << L" ";
+    treeStream << std::setw(0);
+
+    if (op == L"s")
+        treeStream << "'" << s.c_str() << "' ";
+    else if (op == L"d")
+        treeStream << std::setprecision(0) << d;
+    else if (op == L"b")
+        treeStream << b ? "true" : "false";
+    else if (op == L"id")
+        treeStream << id.c_str();
+    else if (op == L"new" || op == L"array" || op == L".")
+        treeStream << op.c_str() << " " << id.c_str();
+    else
+        treeStream << op.c_str();
+
+    if (!args.empty())
+    {
+        treeStream << std::endl;
+        for (const auto& arg : args)
+        {
+            arg->DumpToStream(treeStream, indent + 1);
+        }
+    }
+    if (!namedArgs.empty())
+    {
+        treeStream << std::endl;
+        for (const auto& arg : namedArgs)
+        {
+            treeStream << std::setfill(L' ') << std::setw(indent + 1) << L" ";
+            treeStream << arg.first.c_str() << L" =" << std::endl;
+            arg.second.second->DumpToStream(treeStream, indent + 2);
+        }
+    }
+    treeStream << std::endl;
 }
 
 class Parser : public Lexer

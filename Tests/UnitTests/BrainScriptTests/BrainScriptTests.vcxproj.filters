@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="ParserTests.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>From Brainscript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp">
+      <Filter>From Brainscript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp">
+      <Filter>From Brainscript</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.h">
+      <Filter>From Brainscript</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.h">
+      <Filter>From Brainscript</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="From Brainscript">
+      <UniqueIdentifier>{0fa7cb60-4399-439c-bdd5-643406ad0d67}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

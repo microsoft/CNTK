@@ -135,6 +135,7 @@ struct Expression
     }
     // diagnostics helper: print the content
     void Dump(int indent = 0) const;
+    void DumpToStream(wstringstream & treeStream, int indent = 0);
 };
 typedef Expression::ExpressionPtr ExpressionPtr; // circumvent some circular definition problem
 
