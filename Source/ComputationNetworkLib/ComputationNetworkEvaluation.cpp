@@ -75,7 +75,7 @@ class NodePerfScope
 #if 0
             fprintf(stderr, ".");
 #endif
-            return it->second + isBackward ? 1 : 0;
+            return it->second + (isBackward ? 1 : 0);
         }
         fprintf(stderr, "*** %ls: unknown\n", name.c_str());
         return profilerEvtNodeUnknown;
