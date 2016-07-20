@@ -122,9 +122,7 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     VerifyIsCompiled("ForwardProp");
 
     // traverse all nodes in the pre-determined evaluation order
-    fprintf(stderr, "************FWD************\n");
     GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
-    fprintf(stderr, "************FWD Done************\n");
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -149,7 +147,6 @@ static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - Backprop() for the training criterion
 void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
 {
-    fprintf(stderr, "************Backprop************\n");
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
 
@@ -162,7 +159,6 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
 
     // backpropagate through the network
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
-    fprintf(stderr, "************Backprop End************\n");
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
