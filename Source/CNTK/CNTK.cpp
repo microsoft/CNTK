@@ -307,7 +307,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
 
-            SynchronizationManager::GetSynchronizationManager(0.15f)->ClearActionsAndTheirMemory();
+            SynchronizationManager::GetSynchronizationManager()->ClearActionsAndTheirMemory();
 
             // Synchronize all ranks before proceeding to next action/command
             if (mpi)
@@ -622,7 +622,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     //  [1/26/2015 erw, add done file so that it can be used on HPC]
     wstring DoneFile = config(L"DoneFile", L"");
     ConfigArray command = config(L"command", "train");
-    SynchronizationManager::GetSynchronizationManager(0.0f)->m_useMemorySwapping = config(L"useMemorySwapping", "false");
+    SynchronizationManager::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "false");
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;

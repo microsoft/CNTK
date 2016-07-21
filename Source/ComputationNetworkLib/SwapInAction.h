@@ -17,13 +17,12 @@ public:
     ~SwapInAction(){}
     SwapInAction(SwapOutAction *swpout, Matrix<float> *GPUBuffer);
 
-    //implementation of abstract method
+    //implementation of abstract methods
     void BeginAction();
     void EndAction();
     void ReleaseMemory(){};
 private:
     cudaStream_t m_swapInStream;
-    bool m_isSwappingToGPU;
     SwapOutAction *m_swpout;
     int m_batchSize;
 

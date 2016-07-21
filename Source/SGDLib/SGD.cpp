@@ -768,7 +768,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
-    SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager(0.0f);
+    SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
 
     double learningRateTemp = learnRatePerSample;
     // bring our 'out' values into consistent state

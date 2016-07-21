@@ -27,9 +27,13 @@ class SynchronizationManager
 
 private:
     std::unordered_map<int, std::vector<SyncAction*> > m_stepNumber2Actions;
-    SynchronizationManager(float performanceCosts);
+    // singleton constructor
     SynchronizationManager(){};
+
     static SynchronizationManager* s_synchronizationManager;
+    bool m_isExecuting;
+    CUDATimer m_timer;
+    int m_currentStepNumber;
 
     // needed to identify a step
     std::unordered_map<std::string, int> m_stepName2StepNumber; 
@@ -45,14 +49,9 @@ private:
     std::unordered_map<int, std::vector<Matrix<float>*> > m_stepNumber2Buffer; 
 
     std::unordered_map<Matrix<float>*, std::pair<float, float> > m_buffer2SwapTime;
-    std::set<Matrix<float> *> m_bufferSet; // contains all buffers which have the potential to be swapped (non-sharable)
+    std::set<Matrix<float> *> m_bufferSet; // contains all buffers which have the potential to be swapped (that is they are non-sharable)
     std::unordered_map<int, std::pair<float,float> > m_stepNumber2CumulativeSwapInTime;
-    float m_performanceCostLimit;
 
-    bool m_isExecuting;
-
-    CUDATimer m_timer;
-    int m_currentStepNumber;
 
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
     void SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
@@ -63,16 +62,25 @@ private:
 
     void MeasureSwapTime(ComputationNodeBase *node, int stepNumber);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
-    std::string GetBufferName(ComputationNodeBase *node, bool isForward);
-
 
 public:
+    // we use a singleton here; we could also injected the manager during node creation, but
+    // sometimes this also makes sure that there is only a single instance available
+    // which is quite handy for such a critical resource as memory
+    static SynchronizationManager* GetSynchronizationManager();
+
     ~SynchronizationManager(){};
-    static SynchronizationManager* GetSynchronizationManager(float performanceCostLimit);
+    // this is called BEFORE a ForwardProp / BackpropTo method call
     void BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    // this is called AFTER a ForwardProp / BackpropTo method call
     void EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    // indicates the current state of the manager: 
+    // (1) gather stats and determine swap order, or 
+    // (2) active usage of swapping (=Executing==true)
     bool IsExecuting(){ return m_isExecuting; }
+    // the config sets this to false by default
     bool m_useMemorySwapping;
+    // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
 	
 };

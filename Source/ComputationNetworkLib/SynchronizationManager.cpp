@@ -20,32 +20,18 @@ using std::cout;
 using std::endl;
 
 inline int SampleSize(){ return 100; }
-void PrintPtrAttributes(float *ptr)
-{
-    cudaPointerAttributes att;
-    cudaPointerGetAttributes(&att,ptr);
-    cout << "memtype: " << att.memoryType << endl;
-    cout << "device: " << att.device << endl;
-    cout << "host: " << att.hostPointer << endl;
-    cout << "device ptr: " << att.devicePointer << endl;
-}
-
-void PrintFreeMemory()
-{
-    size_t free, total;
-    CUDA_CALL(cudaMemGetInfo(&free, &total));
-    cout << "free memory: " << free << endl;
-}
+inline float MeasurementUncertainty(){ return 1.15f; }
 
 SynchronizationManager* SynchronizationManager::s_synchronizationManager = nullptr;
-SynchronizationManager* SynchronizationManager::GetSynchronizationManager(float performanceCostLimit)
+
+// this fetches the singleton instance
+SynchronizationManager* SynchronizationManager::GetSynchronizationManager()
 {
     if (SynchronizationManager::s_synchronizationManager == NULL)
     {
         SynchronizationManager::s_synchronizationManager = new SynchronizationManager();
         SynchronizationManager::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
-        SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 1.10f;
         SynchronizationManager::s_synchronizationManager->m_isExecuting = false;
         SynchronizationManager::s_synchronizationManager->m_useMemorySwapping = false;
     }
@@ -57,7 +43,6 @@ void SynchronizationManager::CleanUp()
 {
    // 1. remove all swap actions which are not needed, that is which are too slow
    // 2. remove stats and other temporary structures which are not needed for execution
-
     Matrix<float> *buffer;
     for(int i = 0; i < m_stepNumber2Buffer.size(); i++)
     {
@@ -81,7 +66,6 @@ void SynchronizationManager::CleanUp()
 
 void SynchronizationManager::FindSwapOrder()
 {
-    //TODO: refactor this, current is not needed at all
     float totalMemorySwappedInMB = 0.0f;
     float totalMemoryInMB  = 0.0f;
     for(Matrix<float>* buffer : m_bufferSet)
@@ -144,7 +128,7 @@ void SynchronizationManager::FindSwapOrder()
             }
             */
 
-            if(m_performanceCostLimit*(swapOutTime + cumulativeSwapOutTime) > 
+            if(MeasurementUncertainty()*(swapOutTime + cumulativeSwapOutTime) > 
                computationTimeOut)
             { continue; }
             // find a place where we can swap-in the buffer just in time when it is needed
@@ -155,7 +139,7 @@ void SynchronizationManager::FindSwapOrder()
                 float computationTime = m_stepNumber2ComputationTime[swapInStepNumber];
                 float computationTimeIn = computationTime;
                 float cumulativeSwapInTime = m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second;
-                if(m_performanceCostLimit*(swapInTime + cumulativeSwapInTime) < computationTimeIn)
+                if(MeasurementUncertainty()*(swapInTime + cumulativeSwapInTime) < computationTimeIn)
                 { break; }
                 
                 swapInStepNumber--;
@@ -215,28 +199,18 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
             m_isExecuting = true;
         }
     }
-    else
+
+    if(m_isExecuting)
     {
         std::string name = GetStepName(node, isForward);
         int stepNumber = m_stepName2StepNumber[name];
         std::vector<SyncAction*> actionsToDo = m_stepNumber2Actions[stepNumber];
-
-        //if(m_buffer2IsFreed.size() > 0)
-            //SwapInFreedBuffers(node, isForward);
-
-        // we could manage swap in/outs with these buffers, but it makes it complicated to manage
-        // better keep the swap in/outs separate for dry run and execution
-        // everything must be swapped in (= not freed) before we can delete this memory
-        //bool temporarySwappingComplete = true;
-        //for(std::pair<Matrix<float>*,bool> pair : m_buffer2IsFreed)
-        //    temporarySwappingComplete &= !pair.second; 
-
-        //if(temporarySwappingComplete){ CleanUp(); }
-
         for (int i = 0; i < actionsToDo.size(); i++)
         {
-               if(node->HasMBLayout())
-               actionsToDo[i]->BeginAction();
+               // criteron, evaluation and input nodes do not have a MB layout?
+               // does not make sense to free those anyway
+               if(node->HasMBLayout()) 
+                   actionsToDo[i]->BeginAction();
         }
 
     }
@@ -244,7 +218,6 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
-    //float t = m_timer.tock("compute");
 	if(!m_useMemorySwapping){ return; }
 
     if(!m_isExecuting)
@@ -262,9 +235,10 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
 
         for (int i = 0; i < actionsToDo.size(); i++)
         {
-            actionsToDo[i]->EndAction();
-            //if(actionsToDo[i]->m_syncCounter == 1000);
-            //    cout << "compute: " << t << endl;
+           // criteron, evaluation and input nodes do not have a MB layout?
+           // does not make sense to free those anyway
+           if(node->HasMBLayout()) 
+                actionsToDo[i]->EndAction();
         }
     }
 }
