@@ -414,8 +414,8 @@ public:
         fstream >> m_l2NormFactor;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
-        m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
-        m_smapTranspose = make_shared<Matrix<ElemType>>(m_smap->Transpose(), m_deviceId);
+        //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
+        //m_smapTranspose = make_shared<Matrix<ElemType>>(m_smap->Transpose(), m_deviceId);
         LoadFsa(fstream);
     }
 
