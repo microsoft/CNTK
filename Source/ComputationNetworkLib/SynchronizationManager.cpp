@@ -80,20 +80,6 @@ void SynchronizationManager::CleanUp()
     }
 }
 
-void SynchronizationManager::ClearActionsAndTheirMemory()
-{
-    for(std::pair<std::string, std::vector<SyncAction*> > pair : m_stepName2Actions)
-    {
-       for(SyncAction *action : pair.second)
-           action->ReleaseMemory();
-       pair.second.clear();
-    }
-    m_stepName2Actions.clear();
-
-    m_isExecuting = false;
-}
-
-
 void SynchronizationManager::FindSwapOrder()
 {
     //TODO: refactor this, current is not needed at all
@@ -189,8 +175,8 @@ void SynchronizationManager::FindSwapOrder()
             SwapOutAction *swpOut = new SwapOutAction(buffer);
             SwapInAction *swpIn = new SwapInAction(swpOut, buffer);
 
-            m_stepName2Actions[m_stepNumber2StepName[swapOutStepNumber]].push_back(swpOut);
-            m_stepName2Actions[m_stepNumber2StepName[swapInStepNumber]].push_back(swpIn);
+            m_stepNumber2Actions[swapOutStepNumber].push_back(swpOut);
+            m_stepNumber2Actions[swapInStepNumber].push_back(swpIn);
 
             m_stepNumber2CumulativeSwapInTime[swapOutStepNumber].first += swapOutTime;
             m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += swapInTime;
@@ -243,7 +229,8 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
     else
     {
         std::string name = GetStepName(node, isForward);
-        std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
+        int stepNumber = m_stepName2StepNumber[name];
+        std::vector<SyncAction*> actionsToDo = m_stepNumber2Actions[stepNumber];
 
         //if(m_buffer2IsFreed.size() > 0)
             //SwapInFreedBuffers(node, isForward);
@@ -280,7 +267,8 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
     else
     {
         std::string name = GetStepName(node, isForward);
-        std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
+        int stepNumber = m_stepName2StepNumber[name];
+        std::vector<SyncAction*> actionsToDo = m_stepNumber2Actions[stepNumber];
         if (actionsToDo.size() == 0){ return; }
 
         for (int i = 0; i < actionsToDo.size(); i++)
@@ -366,12 +354,10 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
         // already registered
         return;
     }
-    if(m_stepNumber2StepName.count(m_currentStepNumber) > 0)
+    if(m_stepNumber2Buffer.count(m_currentStepNumber) > 0)
     { m_currentStepNumber++; }
 
     m_stepName2StepNumber[name] = m_currentStepNumber;
-    m_stepNumber2StepName[m_currentStepNumber] = name;
-    m_stepNumber2IsForward[m_currentStepNumber] = isForward;
     // 0 == special value for flow control node, who does not have any buffers
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
@@ -407,6 +393,7 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     if(node->GetNumInputs() == 0){ return; }
 
     std::string name = GetStepName(node, isForward);
+    int stepNumber = m_stepName2StepNumber[name];
     // it is difficult to sample these operations as the CUDA compiler will remove duplicate
     // operations within a loop; so instead we synchronize the device and hope that our
     // measurement is quite reliable (it often is)
@@ -438,21 +425,20 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     Stats *s = new Stats();
 
 
-    m_stepName2Stats[name] = s;
-    m_stepNumber2Stats[m_stepName2StepNumber[name]] = s;
+    m_stepNumber2Stats[stepNumber] = s;
     
     s->name = name;
     s->computationTime = t;
 
     CUDA_CALL(cudaDeviceSynchronize());
-    MeasureSwapTime(node, name);
+    MeasureSwapTime(node, stepNumber);
 }
 
 
-void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::string name)
+void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int stepNumber)
 {
     float t = 0.0f;
-    Stats *s = m_stepName2Stats[name];
+    Stats *s = m_stepNumber2Stats[stepNumber];
 
     int inputCount = node->GetNumInputs();
     if(inputCount == 0){ return; }
@@ -499,5 +485,20 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
        }
     }
 }
+
+void SynchronizationManager::ClearActionsAndTheirMemory()
+{
+    for(std::pair<int, std::vector<SyncAction*> > pair : m_stepNumber2Actions)
+    {
+       for(SyncAction *action : pair.second)
+           action->ReleaseMemory();
+       pair.second.clear();
+    }
+    m_stepNumber2Actions.clear();
+
+    m_isExecuting = false;
+}
+
+
 
 }}}

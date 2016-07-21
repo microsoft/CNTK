@@ -959,7 +959,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         net->ForwardProp(criterionNodes[0]);
                         net->Backprop(criterionNodes[0]);
                     }
-                    fprintf(stderr, "Memory swapping benchmarking complete!");
+                    fprintf(stderr, "Memory swapping benchmarking complete!\n");
                 }
                 else
                 {
