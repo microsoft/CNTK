@@ -1,0 +1,34 @@
+dataDir: ../../../../../../Examples/Text/PennTreebank/Data
+
+tags:
+    # the complete suite (2 flavours x 2 devices) takes around
+    # 7 minutes with the longest test (debug cpu)
+    # running for ca. 4 minutes
+    # In BVT, run Release GPU
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly on Linux, run Debug GPU in addition
+    - nightly-e (build_sku=='gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs (with low train loss) must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - TrainNodeClassBasedCrossEntropy = {{float,tolerance=0.05}}
+      - learningRatePerSample = {{float,tolerance=0.1%}}
+
+  Per-minibatch (with low train loss) training results must match:
+    patterns:
+      - Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - TrainNodeClassBasedCrossEntropy = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.05}}

@@ -35,6 +35,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "SynchronizationManager.h"
 
 #include <string>
 #include <chrono>
@@ -621,6 +622,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     //  [1/26/2015 erw, add done file so that it can be used on HPC]
     wstring DoneFile = config(L"DoneFile", L"");
     ConfigArray command = config(L"command", "train");
+    SynchronizationManager::GetSynchronizationManager(0.0f)->m_useMemorySwapping = config(L"useMemorySwapping", "false");
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;

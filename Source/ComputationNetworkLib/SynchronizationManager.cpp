@@ -48,6 +48,7 @@ SynchronizationManager* SynchronizationManager::GetSynchronizationManager(float 
         SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
         SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 1.10f;
         SynchronizationManager::s_synchronizationManager->m_isExecuting = false;
+        SynchronizationManager::s_synchronizationManager->m_useMemorySwapping = false;
     }
 
     return SynchronizationManager::s_synchronizationManager;
@@ -198,16 +199,19 @@ void SynchronizationManager::FindSwapOrder()
             //m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second += 9999999.0f;
 
             totalMemorySwappedInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
-            cout << "Swapping buffer: " << buffer << " with dim "  << buffer->GetNumRows() << "x" << buffer->GetNumCols() <<  " out: " << swapOutStepNumber << ", in:" << swapInStepNumber << endl;
+            fprintf(stderr, "Swapping buffer: %p with dim %zux%zu out at step %i and in at step %i\n", buffer, buffer->GetNumRows(), buffer->GetNumCols(), swapOutStepNumber, swapInStepNumber);
         }
 
     }
-    cout << "Total swappable memory: " << totalMemorySwappedInMB << "MB" << endl;
-    cout << "Total memory: " << totalMemoryInMB << "MB" << endl;
+
+    fprintf(stderr, "Total swapped memory: %fMB\n", totalMemorySwappedInMB);
+    fprintf(stderr, "Total swappable memory: %fMB\n", totalMemoryInMB);
 }
 
 void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
+	if(!m_useMemorySwapping){ return; }
+
     if(!m_isExecuting)
     {
             std::string name = GetStepName(node, isForward);
@@ -232,7 +236,7 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 
         if(m_currentState == FindingSwapOrder)
         {
-            cout << "SWAP CALL " << endl;
+            //cout << "SWAP CALL " << endl;
             FindSwapOrder();
             CleanUp();
             m_currentState = ExecutingActions;
@@ -295,6 +299,7 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
     //float t = m_timer.tock("compute");
+	if(!m_useMemorySwapping){ return; }
 
     if(!m_isExecuting)
     {
@@ -396,6 +401,11 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
     {
        //cout << "IS SHARABLE: " << node->Input(i)->IsValueSharable() << endl;;
        Matrix<float> *buffer = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       if((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
+          buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
+          buffer->GetMatrixType() != MatrixType::DENSE)
+            { continue; }
+
        m_stepNumber2Buffer[m_currentStepNumber].push_back(buffer);
        m_buffer2StepNumbers[buffer].push_back(m_currentStepNumber);
 
@@ -403,7 +413,7 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
            m_bufferSet.insert(buffer);
     }
 
-    cout << m_currentStepNumber << " " << name << endl;
+    fprintf(stderr, "Step number: %i step name: %s\n", m_currentStepNumber, name.c_str());
 
     //TODO: Are these buffers needed?
     //m_stepNumber2Buffer[m_currentStepNumber].push_back(node->ValuePtr().get());
@@ -472,6 +482,11 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, std::str
     for(int i = 0; i < inputCount; i++)
     {
        Matrix<float> *input = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       if((input->GetDataLocation() != CurrentDataLocation::GPU &&
+          input->GetDataLocation() != CurrentDataLocation::BOTH) ||
+          input->GetMatrixType() != MatrixType::DENSE)
+          { continue; }
+
        s->buffers.push_back(input); 
        if(input != NULL)
        {
