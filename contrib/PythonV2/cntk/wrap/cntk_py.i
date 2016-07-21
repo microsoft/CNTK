@@ -106,7 +106,8 @@
 
 %ignore CNTK::NDShape::operator[];
 %ignore CNTK::NDShape::AppendShape;
-
+%ignore CNTK::Dictionary::AppendShape;
+%ignore CNTK::NDShape::AppendShape;
 
 // (size_t)-1 will result into an OverflowException
 %ignore CNTK::NDShape::InferredDimension;
@@ -223,7 +224,7 @@
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Variable"); 
         }
 
         while (item = PyIter_Next(iterator)) {
@@ -246,7 +247,7 @@
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Variable"); 
         }
 
         $1 = args_set;

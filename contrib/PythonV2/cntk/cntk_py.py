@@ -742,6 +742,116 @@ ReduceSum = _cntk_py.ReduceSum
 def Combine(*args):
     return _cntk_py.Combine(*args)
 Combine = _cntk_py.Combine
+class DictionaryValue(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, DictionaryValue, name)
+    __repr__ = _swig_repr
+    Type__None = _cntk_py.DictionaryValue_Type__None
+    Type_Bool = _cntk_py.DictionaryValue_Type_Bool
+    Type_SizeT = _cntk_py.DictionaryValue_Type_SizeT
+    Type_Float = _cntk_py.DictionaryValue_Type_Float
+    Type_Double = _cntk_py.DictionaryValue_Type_Double
+    Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
+    Type_Vector = _cntk_py.DictionaryValue_Type_Vector
+    if _newclass:
+        TypeName = staticmethod(_cntk_py.DictionaryValue_TypeName)
+    else:
+        TypeName = _cntk_py.DictionaryValue_TypeName
+
+    def __init__(self, *args):
+        this = _cntk_py.new_DictionaryValue(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_DictionaryValue
+    __del__ = lambda self: None
+
+    def HasValue(self):
+        return _cntk_py.DictionaryValue_HasValue(self)
+
+    def ValueType(self):
+        return _cntk_py.DictionaryValue_ValueType(self)
+DictionaryValue_swigregister = _cntk_py.DictionaryValue_swigregister
+DictionaryValue_swigregister(DictionaryValue)
+
+def DictionaryValue_TypeName(type):
+    return _cntk_py.DictionaryValue_TypeName(type)
+DictionaryValue_TypeName = _cntk_py.DictionaryValue_TypeName
+
+class Dictionary(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Dictionary, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Dictionary, name)
+    __repr__ = _swig_repr
+    __swig_destroy__ = _cntk_py.delete_Dictionary
+    __del__ = lambda self: None
+
+    def __init__(self, *args):
+        this = _cntk_py.new_Dictionary(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def Contains(self, *args):
+        return _cntk_py.Dictionary_Contains(self, *args)
+Dictionary_swigregister = _cntk_py.Dictionary_swigregister
+Dictionary_swigregister(Dictionary)
+
+class Learner(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Learner, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Learner, name)
+
+    def __init__(self, *args, **kwargs):
+        raise AttributeError("No constructor defined - class is abstract")
+    __repr__ = _swig_repr
+
+    def Update(self, parameterValues, gradientValues, trainingSampleCount):
+        return _cntk_py.Learner_Update(self, parameterValues, gradientValues, trainingSampleCount)
+
+    def Parameters(self):
+        return _cntk_py.Learner_Parameters(self)
+
+    def GetCheckpointState(self):
+        return _cntk_py.Learner_GetCheckpointState(self)
+
+    def RestoreFromCheckpoint(self, checkpoint):
+        return _cntk_py.Learner_RestoreFromCheckpoint(self, checkpoint)
+    __swig_destroy__ = _cntk_py.delete_Learner
+    __del__ = lambda self: None
+Learner_swigregister = _cntk_py.Learner_swigregister
+Learner_swigregister(Learner)
+
+
+def SGDLearner(*args):
+    return _cntk_py.SGDLearner(*args)
+SGDLearner = _cntk_py.SGDLearner
+
+def MomentumSGDLearner(*args):
+    return _cntk_py.MomentumSGDLearner(*args)
+MomentumSGDLearner = _cntk_py.MomentumSGDLearner
+
+def NesterovLearner(*args):
+    return _cntk_py.NesterovLearner(*args)
+NesterovLearner = _cntk_py.NesterovLearner
+
+def AdaGradLearner(*args):
+    return _cntk_py.AdaGradLearner(*args)
+AdaGradLearner = _cntk_py.AdaGradLearner
+
+def FSAdaGradLearner(*args):
+    return _cntk_py.FSAdaGradLearner(*args)
+FSAdaGradLearner = _cntk_py.FSAdaGradLearner
+
+def RMSPropLearner(*args):
+    return _cntk_py.RMSPropLearner(*args)
+RMSPropLearner = _cntk_py.RMSPropLearner
 class Callback(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Callback, name, value)
