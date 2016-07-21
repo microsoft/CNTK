@@ -22,24 +22,6 @@ class FrameRange;
 class SwapInAction;
 class SwapOutAction;
 
-class Stats
-{
-public:
-    std::string name;
-    float computationTime;
-    std::vector<float> swapInTimes;
-    std::vector<float> swapOutTimes;
-    std::vector<Matrix<float>*> buffers;
-    std::vector<std::string> dim;
-    void PrintStats()
-    {
-       fprintf(stdout, "%s: Computation time:%f ", name.c_str(), computationTime);
-       fprintf(stdout, "Swap times: \n");
-       for(int i = 0; i < swapInTimes.size(); i++)
-            fprintf(stdout, "For input %s idx %i: (in %f, out %f)\n", dim[i].c_str(), i, swapInTimes[i], swapOutTimes[i]);
-    }
-};
-
 class SynchronizationManager
 {
 
@@ -54,7 +36,7 @@ private:
     // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
     // needed in order to determine dependencies
     std::unordered_map<Matrix<float>*, std::vector<int> > m_buffer2StepNumbers; 
-    std::unordered_map<int, Stats*> m_stepNumber2Stats; 
+    std::unordered_map<int, float> m_stepNumber2ComputationTime; 
 
     //these are for managing full memory swapping during the dryrun
     std::unordered_map<Matrix<float>*, SwapInAction*> m_buffer2SwapIn;
@@ -70,19 +52,6 @@ private:
     bool m_isExecuting;
 
     CUDATimer m_timer;
-
-
-    enum SynchronizationState
-    {
-        Uninitialized = 0,
-        RegisteringBuffers = 1,
-        GatheringRuntimeStatistics = 2,
-        FindingSwapOrder = 4,
-        CleaningUp = 8,
-        ExecutingActions = 16,
-    };
-
-    SynchronizationState m_currentState;
     int m_currentStepNumber;
 
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);

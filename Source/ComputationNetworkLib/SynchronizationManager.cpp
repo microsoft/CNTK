@@ -43,7 +43,6 @@ SynchronizationManager* SynchronizationManager::GetSynchronizationManager(float 
     if (SynchronizationManager::s_synchronizationManager == NULL)
     {
         SynchronizationManager::s_synchronizationManager = new SynchronizationManager();
-        SynchronizationManager::s_synchronizationManager->m_currentState = Uninitialized;
         SynchronizationManager::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
         SynchronizationManager::s_synchronizationManager->m_performanceCostLimit = 1.10f;
@@ -110,15 +109,11 @@ void SynchronizationManager::FindSwapOrder()
             if(swapInStepNumber < swapOutStepNumber+1){ continue; } 
             // this is a special case not worth handling
             if(swapOutStepNumber > m_currentStepNumber-1){ continue; }
-            if(m_stepNumber2Stats.count(swapOutStepNumber) == 0)
-            {
-              cout << "no stats" << endl;
-            }
-            if(m_stepNumber2Stats.count(swapOutStepNumber) == 0){ continue; }
+            if(m_stepNumber2ComputationTime.count(swapOutStepNumber) == 0){ continue; } // do we have stats?
 
             float swapOutTime = m_buffer2SwapTime[buffer].first;
             float swapInTime = m_buffer2SwapTime[buffer].second;
-            float computationTimeOut = m_stepNumber2Stats[swapOutStepNumber]->computationTime;
+            float computationTimeOut = m_stepNumber2ComputationTime[swapOutStepNumber];
             
             if(m_stepNumber2CumulativeSwapInTime.count(swapOutStepNumber) == 0)
             { m_stepNumber2CumulativeSwapInTime[swapOutStepNumber] = std::make_pair(0.0f,0.0f); }
@@ -155,10 +150,10 @@ void SynchronizationManager::FindSwapOrder()
             // find a place where we can swap-in the buffer just in time when it is needed
             while(swapInStepNumber > swapOutStepNumber+1)
             {
-                if(m_stepNumber2Stats.count(swapInStepNumber) == 0){ swapInStepNumber--; continue; }
+                if(m_stepNumber2ComputationTime.count(swapInStepNumber) == 0){ swapInStepNumber--; continue; }
 
-                Stats *s = m_stepNumber2Stats[swapInStepNumber];
-                float computationTimeIn = s->computationTime;
+                float computationTime = m_stepNumber2ComputationTime[swapInStepNumber];
+                float computationTimeIn = computationTime;
                 float cumulativeSwapInTime = m_stepNumber2CumulativeSwapInTime[swapInStepNumber].second;
                 if(m_performanceCostLimit*(swapInTime + cumulativeSwapInTime) < computationTimeIn)
                 { break; }
@@ -199,30 +194,24 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 
     if(!m_isExecuting)
     {
+        bool allStatsGathered = false;
         std::string name = GetStepName(node, isForward);
-        if(m_currentState < ExecutingActions)
-        {
-            if(m_stepName2StepNumber.count(name) > 0)
-            {
-                if(m_stepName2StepNumber[name] == 0 && isForward == true)
-                {
-                    m_currentState = FindingSwapOrder;
-                }
-            }
-        }
 
-        if(m_currentState < FindingSwapOrder)
+        // the stats gathering ends when we are bad at stepNumber 0, that is in the forward pass
+        if(m_stepName2StepNumber.count(name) > 0)
+            if(m_stepName2StepNumber[name] == 0 && isForward == true)
+                allStatsGathered = true;
+        
+        if(!allStatsGathered)
         {
             RegisterBuffers(node, isForward);
             SwapInFreedBuffers(node, isForward);
             GatherRuntimeStatistics(node, idx, fr, isForward);
         }
-
-        if(m_currentState == FindingSwapOrder)
+        else
         {
             FindSwapOrder();
-            m_currentState = ExecutingActions;
-            CleanUp();
+            CleanUp(); // release all cpu memory that was used in the dry run
             m_isExecuting = true;
         }
     }
@@ -422,13 +411,9 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
 
     
     float t = m_timer.tock(name)/(float)SampleSize();
-    Stats *s = new Stats();
 
 
-    m_stepNumber2Stats[stepNumber] = s;
-    
-    s->name = name;
-    s->computationTime = t;
+    m_stepNumber2ComputationTime[stepNumber] = t;
 
     CUDA_CALL(cudaDeviceSynchronize());
     MeasureSwapTime(node, stepNumber);
@@ -438,8 +423,6 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
 void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int stepNumber)
 {
     float t = 0.0f;
-    Stats *s = m_stepNumber2Stats[stepNumber];
-
     int inputCount = node->GetNumInputs();
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
@@ -450,7 +433,6 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int step
           input->GetMatrixType() != MatrixType::DENSE)
           { continue; }
 
-       s->buffers.push_back(input); 
        if(input != NULL)
        {
            SwapOutAction *out = new SwapOutAction(input);
@@ -473,14 +455,9 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int step
            }
            t = m_timer.tock("Swap out");
            float swapOutTime = t/SampleSize();
-           s->swapOutTimes.push_back(swapOutTime);
 
            t = m_timer.tock("Swap in");
            float swapInTime = t/SampleSize();
-           s->swapInTimes.push_back(swapInTime);
-           size_t rows = out->GetGPUMatrix()->GetNumRows();
-           size_t cols = out->GetGPUMatrix()->GetNumCols();
-           s->dim.push_back(std::to_string(rows) + "x" + std::to_string(cols));
            m_buffer2SwapTime[input] = std::make_pair(swapOutTime, swapInTime);
        }
     }
@@ -494,8 +471,22 @@ void SynchronizationManager::ClearActionsAndTheirMemory()
            action->ReleaseMemory();
        pair.second.clear();
     }
-    m_stepNumber2Actions.clear();
+    m_stepName2StepNumber.clear();
+    m_buffer2StepNumbers.clear();
+    m_stepNumber2ComputationTime.clear();
+ 
+    m_buffer2SwapIn.clear();
+    m_buffer2SwapOut.clear();
+    m_buffer2IsFreed.clear();
+    m_stepNumber2Buffer.clear();
+    
+    m_buffer2SwapTime.clear();
+    m_stepNumber2CumulativeSwapInTime.clear();
 
+    m_stepNumber2Actions.clear();
+    m_bufferSet.clear();
+
+    m_currentStepNumber = 0;
     m_isExecuting = false;
 }
 
