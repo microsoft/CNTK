@@ -18,7 +18,7 @@ def _sanitize_value(shape, value, dtype, dev):
             shape = tuple(reversed(shape))
 
         ndav = utils.create_NDArrayView(shape, cntk_dtype, dev)
-            
+
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=dtype:
             value = np.asarray(value, dtype=np_dtype)
@@ -53,9 +53,26 @@ class Constant(cntk_py.Constant, TensorOpsMixin):
             data_type = get_context().precision_numpy
 
         if not dev:
-            dev = cntk_py.DeviceDescriptor_CPUDevice()
+            dev = cntk_py.DeviceDescriptor_CPUDevice()            
+
         ndav = _sanitize_value(shape, value, data_type, dev)
         super(Constant, self).__init__(ndav, name)
+
+def constant_from_scalar(shape=None, value=None, data_type=None, dev=None, name=''):
+    if not dev:
+        dev = cntk_py.DeviceDescriptor_CPUDevice()            
+
+    if data_type is None:
+            data_type = get_context().precision_numpy
+    dtype = utils.sanitize_dtype_cntk(data_type)
+
+    if not shape:
+        shape = ()
+    if dtype == cntk_py.DataType_Float:
+        return cntk_py.ConstantFloat(shape, value, dev, name)
+    elif dtype == cntk_py.DataType_Double:
+        return cntk_py.ConstantDouble(shape, value, dev, name)
+    raise ValueError('unrecognized data_type: %s', dtype)
 
 class Placeholder(cntk_py.Placeholder, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, name=''):

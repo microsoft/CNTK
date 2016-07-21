@@ -115,16 +115,7 @@ def unittest_helper(root_node,
         ctx.device_id = device_id
         ctx.precision = precision
         assert not ctx.input_nodes
-        result = ctx.eval(root_node, forward_input, backward_input)
-
-        if backward_input is None:
-            forward = result
-        else:
-            forward, backward = result
-            for key in expected_backward:
-                res, exp = backward[key], expected_backward[key]
-                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
-                assert res.shape == AA(exp).shape
+        forward, backward = ctx.eval(root_node, forward_input, backward_input)
 
         # for forward we always expect only one result
         assert len(forward)==1
@@ -133,6 +124,12 @@ def unittest_helper(root_node,
         for res, exp in zip(forward, expected_forward):
             assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
             assert res.shape == AA(exp).shape
+
+        if not backward_input:                                
+            for key in expected_backward:
+                res, exp = backward[key], expected_backward[key]
+                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+                assert res.shape == AA(exp).shape
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''

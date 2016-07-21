@@ -800,7 +800,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
 # recurrent ops
 ################################################################################
 
-def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
+def future_value(initial_value, x, time_step=1, name=''):
     """
     This function returns the future value wrt `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -820,10 +820,9 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
                 [  0.1,   0.1,   0.1,   0.1]])]
     
     Args:        
-        shape (tuple): dimensions of the input `x`, the shape will be inferred if zero is passed.
+        initial_value: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         x: the tensor (or its name) from which the future value is obtained. 
-        time_step (int): the number of time steps to look into the future (default 1)
-        default_hidden_activation (number): the default value to use when no future value is available (default 0.1)
+        time_step (int): the number of time steps to look into the future (default 1)        
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.graph.ComputationNode`
@@ -831,7 +830,7 @@ def future_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
     
     from ..cntk_py import FutureValue
     x = sanitize_input(x)
-    op = FutureValue(shape, x, time_step, default_hidden_activation, name = name)
+    op = FutureValue(initial_value, x, time_step, name)
     return op
     
 def past_value(shape, x, time_step=1, default_hidden_activation=0.1, name=''):
@@ -1300,10 +1299,13 @@ def constant(value, name='', data_type=None, dev=None):
     Returns:
         :class:`cntk.graph.ComputationNode`
     """
-    from .variables import Constant
+    from .variables import Constant, constant_from_scalar
 
     if dev is None:
         dev = cntk_py.DeviceDescriptor_CPUDevice()
+
+    if np.isscalar(value):
+        return constant_from_scalar(value=value, name=name, data_type=data_type, dev=dev)
 
     return Constant(value=value, name=name, data_type=data_type, dev=dev)
 
