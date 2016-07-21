@@ -380,4 +380,150 @@ public:
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetworkWithEdits> registerComputationNetworkWithEdits(L"ComputationNetworkWithEdits");
 
+// ===================================================================
+// CloneFunctionConfigLambda -- lambda to produce a clone of a network
+//  - creates a BrainScript function that carbon-copies a subsection of an existing network
+//  - the copy can be shallow or deep, where a deep copy gets its own copy of LearnableParameters
+//     - a shallow copy (parameters="shared") is a copy of all nodes that depend on the specified input(s),
+//       while all other nodes are shared from the original network section
+//     - a deep copy (parameters="lernable" or "constant") also copies all reachable LearnableParameters and their dependents
+//     - Input() nodes not listed as `inputNodes` are always shared
+//  - the source network may be a different network, e.g. loaded with BS.Network.Load()
+//  - a deep copy can be read-only (parameters="constant")
+//     - multiple uses of the lambda will share read-only parameters
+//  - example use cases:
+//     - adaptation (KL): a frozen read-only copy of the starting model is used as a KL-regularizer
+//     - adaptation (DLR): an injected input transform is trained while the network is fixed
+//     - image: lower layers of ImageNet networks serve as immutable feature extractors for another image task
+//     - DSSM: applying the same network subsection to two inputs
+// Usage:
+//    f = CloneFunction (inputNodes, outputNodes, parameters="lernable" /*|"constant"|"shared"*/)
+// Parameters:
+//  - inputNodes:  single node or array of nodes that will become parameters of the function.
+//                 Commonly, this list will include all Input()s that the outputNode(s) depend on.
+//  - outputNodes: single node or dictionary of nodes that the function will emit
+// Example:
+//    # create a BS function by copying a piece of network
+//    net = CloneFunction (network.features, network.logP)
+//    # apply the copy to a new input
+//    out = net (myFeatures)
+//    # This will create a copy of the subsection from network.features to network.logP
+//    # where all links to network.features get replaced by links to myFeatures.
+// Example with multiple input and output nodes:
+//    # create a BS function by copying a piece of network
+//    # This specific example converts a network back into a BrainScript function.
+//    # It passes two input nodes --> the BS function will have 2 inputs;
+//    # and it passes a record of output nodes --> the BS function will return a record with the same member names
+//    network = BS.Network.Load ("some.dnn")
+//    net = CloneFunction ((network.features:network.labels), [ ce = network.ce ; errs = network.errs ])
+//    # create a network from the BS function
+//    features = Input (13)
+//    labels = Input (42)
+//    out = net (features, labels)
+//    criterionNodes = (out.ce)
+//    evaluationNodes = (out.errs)
+// A specific example: Adapting a network, while using the original network as a regularizer (KLD)
+//    # load network
+//    network = BS.Network.Load ("some.dnn")
+//    # create a trainable clone and a read-only reference clone
+//    adaptNet = CloneFunction (network.features, [ z = network.z ], readOnly=false)
+//    # create a read-only clone
+//    refNet = CloneFunction (network.features, [ z = network.z ], readOnly=true)
+//    # create the main network
+//    features = Input (42)
+//    labels = Input (9000)
+//    z = adaptNet (features).z
+//    zRef = refNet (features).z
+//    # training criterion
+//    refWeight = 0.9
+//    kldLabels = labels * (1-refWeight) + Softmax (zRef) * refWeight  # interpolate with ref output
+//    ce = CrossEntropyWithSoftmax (z, kldLabels)
+//    errs = ErrorPrediction (z, labels)
+//    criterionNodes = (ce)
+//    evaluationNodes = (errs)
+// ===================================================================
+
+class CloneFunctionConfigLambda : public ConfigLambda
+{
+    // how we treat the parameters in the clone
+    enum class ParameterTreatment
+    {
+        learnable, // parameters are copied and kept trainable
+        constant,  // parameters are copied and made immutable (e.g. for use of this as a fixed feature extractor)
+        shared     // parameters are shared with where they came from (e.g. for parallel identical paths through a network)
+    };
+public:
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
+    // Executing this function from BrainScript merely sets up a lambda, but does not actually create any clone.
+    // This is so that the function can be called multiple times in order to create multiple clones.
+    CloneFunctionConfigLambda(const IConfigRecordPtr configp) :
+        ConfigLambda(CreateParamNames(*configp), NamedParams(), [this](vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName){ return this->DoClone(args, exprName); })
+    {
+        let& config = *configp;
+        // input nodes
+        inputNodes = GetInputNodes(config);
+        // output nodes
+        let outputNodesParam = config[L"outputNodes"];     // can be a node or a record
+        if (outputNodesParam.Is<ComputationNodeBase>()) // scalar case: result is a single node
+            outputNodes[L""] = outputNodesParam.AsPtr<ComputationNodeBase>(); // indicated by a "" node name in outputNodes[]
+        else                                               // multi-valued case: result is a record of nodes
+        {
+            let& outputNodesRecord = outputNodesParam.AsRef<IConfigRecord>();
+            for (let& nodeName : outputNodesRecord.GetMemberIds())
+                outputNodes[nodeName] = outputNodesRecord[nodeName].AsPtr<ComputationNodeBase>();
+        }
+        // treatment of parameters
+        wstring parametersOption = config[L"parameters"];
+        if      (parametersOption == L"learnable") parameterTreatment = ParameterTreatment::learnable;
+        else if (parametersOption == L"constant")  parameterTreatment = ParameterTreatment::constant;
+        else if (parametersOption == L"shared")    parameterTreatment = ParameterTreatment::shared;
+        else InvalidArgument("CloneFunction: 'parameters' option must be 'learnable', 'constant', or 'shared'.");
+    }
+
+private:
+    // get the input nodes from the config
+    static vector<ComputationNodeBasePtr> GetInputNodes(const IConfigRecord& config)
+    {
+        return ScriptableObjects::ConfigArray::FlattenedVectorFrom<ComputationNodeBasePtr>(config[L"inputNodes"]);
+    }
+    // create an array of parameter names for all inputs
+    // These names are never actually used, but required by the ConfigLambda constructor, and maybe useful for debugging.
+    static vector<wstring> CreateParamNames(const IConfigRecord& config)
+    {
+        let inputNodes = GetInputNodes(config);
+        vector<wstring> paramNames(inputNodes.size());
+        for (size_t i = 0; i < paramNames.size(); i++)
+            paramNames[i] = msra::strfun::wstrprintf(L"input_%d", (int)i);
+        return paramNames;
+    }
+
+private:
+    // -----------------------------------------------------------------------
+    // the cloning operation itself
+    // -----------------------------------------------------------------------
+
+    // execute the lambda
+    // This will clone all nodes that the outputNodes depend on, and rewire inputs matching inputNodes to inputArgs.
+    ConfigValuePtr DoClone(const vector<ConfigValuePtr>& inputValues, const std::wstring& exprName)
+    {
+        vector<ComputationNodeBasePtr> inputs;
+        for (let& inputValue : inputValues)
+            inputs.push_back(inputValue.ResolveValue()); // .AsPtr<ComputationNodeBase>());
+        return ConfigValuePtr();
+    }
+
+private:
+    // parameters
+    vector<ComputationNodeBasePtr> inputNodes;
+    map<wstring, ComputationNodeBasePtr> outputNodes;
+    ParameterTreatment parameterTreatment;
+    // other
+    map<ComputationNodeBasePtr, ComputationNodeBasePtr> clonedReadOnlyParameters; // if we clone 'constant' multiple times, we can share readOnly parameters
+};
+
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<CloneFunctionConfigLambda> registerCloneFunctionConfigLambda(L"CloneFunctionConfigLambda");
+
 }}}

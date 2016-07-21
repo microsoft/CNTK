@@ -1033,6 +1033,7 @@ Seq2Seq =
 
 Network = [
     Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
+    CloneFunction (inputNodes, outputNodes, parameters="learnable" /*|"constant"|"shared"*/) = new CloneFunctionConfigLambda [ /*args*/ ]
     Edit(inputModel, editFunctions, additionalRoots) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions, additionalRoots*/ ]
 
     Editing = [
