@@ -587,19 +587,11 @@ namespace CNTK
     {
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
-
-        for (auto argument : arguments)
-        {
-            // Ensure we have only values that are required as function arguments
-            if (functionArguments.find(argument.first) == functionArguments.end())
-                InvalidArgument("Value specified for not required function argument");
-        }
-
         for (auto argument : functionArguments)
         {
             // Ensure we have values for all arguments of the function
             if (arguments.find(argument) == arguments.end())
-                InvalidArgument("Value not specified for required function argument");
+                InvalidArgument("Value not specified for required Function Argument");
 
             auto argumentComputationNode = m_variableToNodeMap[argument];
             inputNodes.push_back(argumentComputationNode);
@@ -631,7 +623,7 @@ namespace CNTK
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
         if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-            InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
+            InvalidArgument("The layout of the specified gradient Value in incompatible with the layout of the corresponding Variable computed during Forward call");
         computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
     }
 
@@ -822,14 +814,8 @@ namespace CNTK
         GetNetworkOutputs(outputs);
 
         // TODO: How to deal with the specified 'computeDevice'
-        // TODO: How to deal with the specified 'computeDevice'
-        auto first = this->shared_from_this();
-        auto second_a = arguments.begin()->first;
-        auto node = m_variableToNodeMap[arguments.begin()->first];
-        auto second_b = node->GetEvalTimeStamp();
-        auto second = std::make_pair(second_a, second_b);
 
-        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(first, second) : nullptr;
+        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), std::make_pair(arguments.begin()->first, m_variableToNodeMap[arguments.begin()->first]->GetEvalTimeStamp())) : nullptr;
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
@@ -948,4 +934,3 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ReduceSum, std::vector<Variable>({ operand }), Dictionary(), name), name);
     }
 }
-
