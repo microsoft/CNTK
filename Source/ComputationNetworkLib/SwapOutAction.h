@@ -25,13 +25,12 @@ public:
     void BeginAction();
     void EndAction();
     cudaStream_t GetSwapSteam(){ return m_streamAsync; }
-    void deallocatePinnedBuffer();
     void ReleaseMemory();
 
 private:
     cudaStream_t m_streamAsync; 
-    bool m_isSwapping;
-    bool m_isFreed;
+    // this allocated the CPU memory for the GPU buffer, it is allocated upon
+    // initialization of the class
     void allocatePinnedBuffer();
 
 };

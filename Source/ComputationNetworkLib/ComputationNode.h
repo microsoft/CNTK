@@ -292,7 +292,7 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
-       m_syncManager = SynchronizationManager::GetSynchronizationManager(0.0f);
+       m_syncManager = SynchronizationManager::GetSynchronizationManager();
     }
     virtual ~ComputationNodeBase()
     {
