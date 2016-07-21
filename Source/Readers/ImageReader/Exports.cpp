@@ -39,7 +39,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
 {
     if (type == L"ImageDeserializer")
-        *deserializer = new ImageDataDeserializer(corpus, deserializerConfig);
+        *deserializer = createImageDataDeserializer(corpus, deserializerConfig).get();
     else
         // Unknown type.
         return false;
