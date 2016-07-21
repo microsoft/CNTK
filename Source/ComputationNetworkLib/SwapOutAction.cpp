@@ -52,6 +52,7 @@ SwapOutAction::SwapOutAction(Matrix<float> *GPUbuffer)
     }
 SwapOutAction::~SwapOutAction()
 {
+    // TODO: can we check if the memory was release before
     ReleaseMemory();
 }
 

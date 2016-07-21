@@ -60,11 +60,12 @@ private:
     std::unordered_map<int, Stats*> m_stepNumber2Stats; 
     std::unordered_map<int, bool> m_stepNumber2IsForward;
 
+    //these are for managing full memory swapping during the dryrun
     std::unordered_map<Matrix<float>*, SwapInAction*> m_buffer2SwapIn;
     std::unordered_map<Matrix<float>*, SwapOutAction*> m_buffer2SwapOut;
     std::unordered_map<Matrix<float>*, bool> m_buffer2IsFreed;
+
     std::unordered_map<Matrix<float>*, std::pair<int, int> > m_buffer2Dim;
-    std::unordered_map<Matrix<float>*, bool> m_buffer2Swappable;
     std::unordered_map<Matrix<float>*, std::pair<float, float> > m_buffer2SwapTime;
     std::set<Matrix<float> *> m_bufferSet;
     std::unordered_map<int, std::pair<float,float> > m_stepNumber2CumulativeSwapInTime;

@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
-inline int SampleSize(){ return 250; }
+inline int SampleSize(){ return 100; }
 void PrintPtrAttributes(float *ptr)
 {
     cudaPointerAttributes att;
@@ -68,15 +68,14 @@ void SynchronizationManager::CleanUp()
         {
             buffer = buffers[j];
 
-            if(m_buffer2Swappable.count(buffer) == 0)
-            {
-                //m_buffer2SwapOut[buffer]->deallocatePinnedBuffer();
+            if(m_buffer2SwapOut.count(buffer) == 0){ continue; }
 
-                m_buffer2SwapOut.erase(buffer);
-                m_buffer2IsFreed.erase(buffer);
-                m_buffer2SwapIn.erase(buffer);
-                m_buffer2Dim.erase(buffer);
-            }
+            m_buffer2SwapOut[buffer]->ReleaseMemory();
+            m_buffer2SwapOut.erase(buffer);
+            m_buffer2SwapIn.erase(buffer);
+
+            // adding this line causes and error during the 2nd actions, and I do not know why
+            //m_buffer2IsFreed.erase(buffer); 
         }
     }
 }
@@ -214,12 +213,11 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 
     if(!m_isExecuting)
     {
-            std::string name = GetStepName(node, isForward);
+        std::string name = GetStepName(node, isForward);
         if(m_currentState < ExecutingActions)
         {
             if(m_stepName2StepNumber.count(name) > 0)
             {
-
                 if(m_stepName2StepNumber[name] == 0 && isForward == true)
                 {
                     m_currentState = FindingSwapOrder;
@@ -227,73 +225,45 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
             }
         }
 
-        if(m_currentState <= FindingSwapOrder)
+        if(m_currentState < FindingSwapOrder)
         {
             RegisterBuffers(node, isForward);
-            //SwapInFreedBuffers(node, isForward);
+            SwapInFreedBuffers(node, isForward);
             GatherRuntimeStatistics(node, idx, fr, isForward);
         }
 
         if(m_currentState == FindingSwapOrder)
         {
-            //cout << "SWAP CALL " << endl;
             FindSwapOrder();
-            CleanUp();
             m_currentState = ExecutingActions;
+            CleanUp();
             m_isExecuting = true;
         }
     }
     else
     {
-        //cout << "IS SHAREBLE: " << node->IsValueSharable() << endl;
         std::string name = GetStepName(node, isForward);
         std::vector<SyncAction*> actionsToDo = m_stepName2Actions[name];
 
+        //if(m_buffer2IsFreed.size() > 0)
+            //SwapInFreedBuffers(node, isForward);
 
+        // we could manage swap in/outs with these buffers, but it makes it complicated to manage
+        // better keep the swap in/outs separate for dry run and execution
+        // everything must be swapped in (= not freed) before we can delete this memory
+        //bool temporarySwappingComplete = true;
+        //for(std::pair<Matrix<float>*,bool> pair : m_buffer2IsFreed)
+        //    temporarySwappingComplete &= !pair.second; 
+
+        //if(temporarySwappingComplete){ CleanUp(); }
 
         for (int i = 0; i < actionsToDo.size(); i++)
         {
-               //cout << name << endl;
                if(node->HasMBLayout())
-                //cout << "MBLAYOUT: " << node->GetSampleMatrixNumRows() << "x" << node->GetSampleMatrixNumCols() << endl;
-               //actionsToDo[i]->SetRows(node->GetSampleMatrixNumRows());
-               //actionsToDo[i]->SetCols(node->GetSampleMatrixNumCols());
-               //if(node->HasSampleLayout())
-               //{
-               //    TensorShape shape = node->GetSampleLayout();
-               //    int size = shape.GetRank();               
-               //    cout << "local tensor: ";
-               //    for(int k = 0; k < size; k++)
-               //         cout << shape.GetDim(k) << "x";
-               //    cout << endl;
-               //}
-               //for(int j = 0; j < node->GetNumInputs(); j++)
-               //{
-               //    if(!node->Input(j)->HasSampleLayout()){ continue; }
-               //    TensorShape shape = node->GetInputSampleLayout(j);
-               //    int size = shape.GetRank();               
-               //    cout << "TENSOR SHAPE: ";
-               //    for(int k = 0; k < size; k++)
-               //         cout << shape.GetDim(k) << "x";
-               //    cout << endl;
-               ////cout << "TENSOR SHAPE: " << ->GetDim(
-               //}
-               //if(node->HasMBLayout())
-               //{
-               //    int MBSize = node->GetSampleMatrixNumCols();
-               //    if(actionsToDo[i]->GetCols() != MBSize &&
-               //       actionsToDo[i]->GetRows() != MBSize)
-               //       {
-               //            //cout << actionsToDo[i]->GetRows() << "x" << actionsToDo[i]->GetCols() <<  " vs. " << MBSize << endl;
-               //            //actionsToDo[i]->SetCols(MBSize);
-
-               //       }
-               //}
                actionsToDo[i]->BeginAction();
         }
 
     }
-    //m_timer.tick("compute");
 }
 
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
@@ -305,7 +275,7 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
     {
         // end synchronize is called after the forward / backward pass, thus we can free
         // the memory now
-        //FreeBuffersForDryRun(node, isForward);
+        FreeBuffersForDryRun(node, isForward);
     }
     else
     {
@@ -324,22 +294,20 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
 
 void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
 {
+    if(node->IsValueSharable()){ return; }
+
     std::string name = GetStepName(node, isForward);
     int stepNumber = m_stepName2StepNumber[name];
     for(int i = 0; i < m_stepNumber2Buffer[stepNumber].size(); i++) 
     {
         Matrix<float> *buffer = m_stepNumber2Buffer[stepNumber][i]; 
+
+        if(m_buffer2IsFreed.count(buffer) == 0){ continue; }
         if(m_buffer2IsFreed[buffer])
         {
             SwapInAction *swp = m_buffer2SwapIn[buffer];
-            float* ptr = buffer->Data();
-            int rows = m_buffer2Dim[buffer].first;
-            int cols = m_buffer2Dim[buffer].second;
-
-            //TODO: set GPU id -> resize does this automatically?
-            buffer->Resize(rows,cols);
-            swp->BeginAction(); // initiate swapping
-            swp->EndAction(); // synchronize swapping
+            swp->BeginAction(); // begin swap in
+            swp->EndAction(); // end swap in
             m_buffer2IsFreed[buffer] = false;
         }
     }
@@ -362,12 +330,21 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
 
         if(m_buffer2IsFreed.count(buffer) > 0)
             if(m_buffer2IsFreed[buffer])
-                continue;
+                continue; // buffer is already freed
 
-        m_buffer2Dim[buffer] = std::make_pair<int,int>(buffer->GetNumRows(), buffer->GetNumCols());
-        //TODO: set GPU id -> resize does this automatically?
-        buffer->Resize(0,0,false); // force a shrink to 0 memory
+
+        if(m_buffer2SwapIn.count(buffer) == 0)
+        {
+            SwapOutAction *swpOut = new SwapOutAction(buffer);
+            SwapInAction *swpIn = new SwapInAction(swpOut, buffer);
+            m_buffer2SwapOut[buffer] = swpOut;
+            m_buffer2SwapIn[buffer] = swpIn;
+        }
+
+        m_buffer2SwapOut[buffer]->BeginAction(); // begin swap out
+        m_buffer2SwapOut[buffer]->EndAction(); // complete swap out
         m_buffer2IsFreed[buffer] = true;
+
     }
 }
 
