@@ -762,6 +762,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
+    SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager(0.0f);
+
     double learningRateTemp = learnRatePerSample;
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
@@ -941,7 +943,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                if(ismb == 0 && numMBsRun == 0 && !SynchronizationManager::GetSynchronizationManager(0.0f)->IsExecuting())
+                if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
                 {
                 	// we produce 100 gradients during the swap in/out sampling and because we apply gradients via
                 	// learning rate per sample this will move the weights in the wrong direction
@@ -949,16 +951,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 	double *ptr = (double*)(&learnRatePerSample);
                 	*ptr = 0.0;
 
-                    fprintf(stdout, "epoch: %i epoch, %zu ismb\n", epochNumber, ismb);
+                    fprintf(stderr, "Begin benchmarking for memory swapping...\n");
                     for(int i = 0; i < 1; i++)
                     {
                         //forward + backward pass for the synchronization manager
-                        fprintf(stdout, "iter: %i, mb: %i \n", i, numMBsRun);
                         net->ForwardProp(evaluationNodes);
                         net->ForwardProp(criterionNodes[0]);
                         net->Backprop(criterionNodes[0]);
                     }
-                    fprintf(stdout, "completed!");
+                    fprintf(stderr, "Memory swapping benchmarking complete!");
                 }
                 else
                 {

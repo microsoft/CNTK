@@ -107,6 +107,7 @@ public:
     void EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
     bool IsExecuting(){ return m_isExecuting; }
     void ClearActionsAndTheirMemory();
+    bool m_useMemorySwapping;
 	
 };
 
